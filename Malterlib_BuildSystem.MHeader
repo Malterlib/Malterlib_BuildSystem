@@ -1,0 +1,75 @@
+// Copyright © 2016 Hansoft AB 
+// Distributed under the MIT license, see license text in LICENSE.Malterlib
+
+Import "../Core/Lib_Malterlib.MTarget"
+
+%Group "{Malterlib}/{Lib_Malterlib_BuildSystem}"
+{
+	Property
+	{
+		MalterlibNoShortcuts false
+	}
+	
+	Compile
+	{
+		!!CompileDialect C
+		PrefixHeader "@('Source/Malterlib_BuildSystem.h'->MakeAbsolute())"
+	}
+	
+	%Group BuildSystem
+	{
+		%Group Include
+		{
+			Compile.Type "C++"
+			{
+				!!DocumentationEnabled true
+			}
+			%File "Include/Mib/BuildSystem/^*"
+		}
+		%File "Source/^*"
+		%Group Documentation
+		{
+			%File "Documentation/*"
+		}
+	}
+	%Dependency Lib_Malterlib_Concurrency
+	{
+		Dependency.Indirect true
+	}	
+}
+
+Property
+{
+	MalterlibLibrary_BuildSystem true
+	{
+		&
+		{
+			MalterlibLibrary_BuildSystem ""
+			MalterlibLibrary_All true
+		}
+	}
+	MalterlibSubLibraries "BuildSystem;@(MalterlibSubLibraries)"
+	{
+		!!MalterlibLibrary_BuildSystem true
+	}
+	MalterlibLibrarySeparate_Lib_Malterlib_BuildSystem true
+//	MalterlibSubLibrarySeparate_Lib_Malterlib_BuildSystem true
+	MalterlibIncludeRoots "@('Include'->MakeAbsolute());@(MalterlibIncludeRoots)"
+	{
+		!!MalterlibLibrary_BuildSystem true
+	}
+}
+
+%Group "{Test}/{Malterlib_BuildSystem}"
+{
+}
+
+Property
+{
+	!!MalterlibEnableInternalTests true
+	
+	MalterlibTests "Malterlib_BuildSystem;@(MalterlibTests)"
+	MalterlibTestFiles_Malterlib_BuildSystem "@('Test/*'->MakeAbsolute())"
+	MalterlibTestDependencies_Malterlib_BuildSystem "Lib_Malterlib_BuildSystem"
+	MalterlibTestExtraGroups_Malterlib_BuildSystem "{Test}/{Malterlib_BuildSystem}"
+}
