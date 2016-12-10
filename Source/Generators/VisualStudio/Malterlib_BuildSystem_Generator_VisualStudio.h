@@ -28,12 +28,13 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 	struct CGroup
 	{
-		CStr m_Name;
-		TCPointer<CGroup> m_pParent;
-
 		CStr const &f_GetPath() const;
 		CStr f_GetGroupPath() const;
 		CStr const &f_GetGUID();
+		
+		CStr m_Name;
+		TCPointer<CGroup> m_pParent;
+		
 	private:
 		CStr mp_GUID;
 
@@ -41,31 +42,37 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 	struct CProjectFile
 	{
+		CStr const &f_GetName() const;
+		CStr f_GetGroupPath() const;
+
 		TCPointer<CGroup> m_pGroup;
 		TCMap<CConfiguration, CEntityPointer> m_EnabledConfigs;
 		CFilePosition m_Position;
 		CStr m_VSType;
 		CStr m_VSFile;
 		zbool m_bWasGenerated;
-
-		CStr const &f_GetName() const;
-		CStr f_GetGroupPath() const;
 	};
 
 	struct CProjectDependency
 	{
+		CStr const &f_GetName() const;
+		
 		TCMap<CConfiguration, CEntityPointer> m_EnabledConfigs;
 		CFilePosition m_Position;
 		CStr m_VSFile;
-
-		CStr const &f_GetName() const;
-
 	};
 
 	struct CSolution;
 
 	struct CProject
 	{
+		CProject(CSolution *_pSolution);
+
+		CStr const &f_GetName() const;
+		CStr f_GetPath() const;
+		CStr const &f_GetGUID();
+		void fr_FindRecursiveDependencies(CBuildSystem const &_BuildSystem, TCSet<CStr> &_Stack, CProjectDependency const *_pDepend, TCMap<CStr, CProject> const &_Projects) const;
+		CStr f_GetSolutionTypeGUID() const;
 
 		TCMap<CStr, CProjectFile> m_Files;
 		TCMap<CStr, CGroup> m_Groups;
@@ -84,31 +91,38 @@ namespace NMib::NBuildSystem::NVisualStudio
 		ELanguageType m_LanguageType;
 		TCMap<CConfiguration, CStr> m_Platforms;
 
-		CProject(CSolution *_pSolution);
-
-		CStr const &f_GetName() const;
-		CStr f_GetPath() const;
-		CStr const &f_GetGUID();
-		void fr_FindRecursiveDependencies(CBuildSystem const &_BuildSystem, TCSet<CStr> &_Stack, CProjectDependency const *_pDepend, TCMap<CStr, CProject> const &_Projects) const;
-		CStr f_GetSolutionTypeGUID() const;
-
 	private:
 		CStr mp_GUID;
-
 	};
 
 	struct CSolutionFile
 	{
-		TCPointer<CGroup> m_pGroup;
-		CFilePosition m_Position;
-
 		CStr const &f_GetName() const;
 		CStr f_GetGroupPath() const;
+
+		TCPointer<CGroup> m_pGroup;
+		CFilePosition m_Position;
 	};
 
 	struct CSolution
 	{
+		struct CConfigDisplay
+		{
+			CStr m_Platform;
+			CStr m_Config;
+			
+			CEntityPointer m_pEntity;
+		};
+		
+		class CCompare
+		{
+		public:
+			inline_small CStr const &operator() (CSolution const &_Node) const;
+		};
 
+		CStr const &f_GetName() const;
+		void f_FindRecursiveDependencies(CBuildSystem const &_BuildSystem);
+		
 		TCMap<CStr, CGroup> m_Groups;
 		TCMap<CStr, CProject> m_Projects;
 		TCMap<CStr, CSolutionFile> m_SolutionFiles;
@@ -117,28 +131,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 		CStr m_EntityName;
 
-		struct CConfigDisplay
-		{
-			CStr m_Platform;
-			CStr m_Config;
-			
-			CEntityPointer m_pEntity;
-		};
-
 		TCMap<CConfiguration, CConfigDisplay> m_EnabledConfigs;
 
 		DMibIntrusiveLink(CSolution, TCAVLLink<>, m_Link);
-		class CCompare
-		{
-		public:
-			inline_small CStr const &operator() (CSolution const &_Node) const
-			{
-				return _Node.m_EntityName;
-			}
-		};
-
-		CStr const &f_GetName() const;
-		void f_FindRecursiveDependencies(CBuildSystem const &_BuildSystem);
 	};
 
 	struct CGeneratorState
@@ -149,20 +144,16 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 	struct CGeneratorInstance : public CGeneratorInterface
 	{
-		// Structs
-
 		enum EPropertyValidity
 		{
 			EPropertyValidity_Any
 			, EPropertyValidity_File
 			, EPropertyValidity_NotFile
 		};
+		
 		struct CValueProperties
 		{
-			CValueProperties()
-				: m_Validity(EPropertyValidity_Any)
-			{
-			}
+			CValueProperties();
 			
 			TCPointer<CEvaluatedProperty const> m_pVSParentName;
 			TCPointer<CEvaluatedProperty const> m_pVSEntityName;
@@ -187,23 +178,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 			zbool m_bMainValue;
 
-			bool operator < (CConfigValue const &_Right) const
-			{
-				if (m_Parent < _Right.m_Parent)
-					return true;
-				else if (m_Parent > _Right.m_Parent)
-					return false;
-				if (m_Entity < _Right.m_Entity)
-					return true;
-				else if (m_Entity > _Right.m_Entity)
-					return false;
-				if (m_Property < _Right.m_Property)
-					return true;
-				else if (m_Property > _Right.m_Property)
-					return false;
-
-				return m_Value < _Right.m_Value;
-			}
+			bool operator < (CConfigValue const &_Right) const;
 		};
 
 		struct CPrefixHeader
@@ -227,55 +202,19 @@ namespace NMib::NBuildSystem::NVisualStudio
 			TCSet<CStr> m_UntranslatedValues;
 		};
 
-		// Members
-
-		CBuildSystem const &m_BuildSystem;
-		CBuildSystemData const &m_BuildSystemData;
-		CBuildSystemData m_GeneratorSettingsData;
-
-		CGeneratorState m_State;
-		CStr m_OutputDir;
-		CStr m_RelativeBasePath;
-		CStr m_RelativeBasePathAbsolute;
-		
-		CEntityPointer m_pGeneratorSettings;
-		CEntityPointer m_pTargetSettings;
-		
 		struct CThreadLocal
 		{
+			bool f_FileExists(CStr const &_Path);
+			void f_CreateDirectory(CStr const &_Path);
+			
 			CStr m_CurrentOutputDir;
 			TCMap<TCMap<CStr, CStr>, TCMap<CStr, CPrefixHeader>> m_PrefixHeaders;
 			ELanguageType m_LanguageType;
 			TCMap<CStr, CStr> m_CurrentCompileTypes;
 
 			TCMap<CStr, zbool> m_FileExistsCache;
-			bool f_FileExists(CStr const &_Path)
-			{
-				auto pExists = m_FileExistsCache.f_FindEqual(_Path);
-				if (pExists)
-					return *pExists;
-				bool bExists = CFile::fs_FileExists(_Path, EFileAttrib_File);;
-				m_FileExistsCache[_Path] = bExists;
-				return bExists;
-			}
 			TCSet<CStr> m_CreateDirectoryCache;
-			void f_CreateDirectory(CStr const &_Path)
-			{
-				auto Mapped = m_CreateDirectoryCache(_Path);
-				if (Mapped.f_WasCreated())
-				{
-					CFile::fs_CreateDirectory(_Path);
-				}
-			}
 		};
-		
-		mutable TCThreadLocal<CThreadLocal> m_ThreadLocal;
-		
-		CStr m_Win32Platfrom;				
-
-		zbool m_bEnableSourceControl;
-
-		uint32 m_Version; // 2012, 2013 etc
 
 		CGeneratorInstance
 			(
@@ -334,21 +273,30 @@ namespace NMib::NBuildSystem::NVisualStudio
 		CStr f_GetNativePlatform(CStr const &_Platform);
 		CStr f_GetNativePlatform(ELanguageType _Language, CStr const &_Platform);
 
-		template <typename tf_CSet0, typename tf_CSet1>
-		bool fp_IsSameConfig(tf_CSet0 const &_Configs, tf_CSet1 const &_AllConfigs) const
-		{
-			for (auto iConfig = _Configs.f_GetIterator(); iConfig; ++iConfig)
-			{
-				if (!_AllConfigs.f_FindEqual(iConfig.f_GetKey()))
-					return false;
-			}
-			for (auto iConfig = _AllConfigs.f_GetIterator(); iConfig; ++iConfig)
-			{
-				if (!_Configs.f_FindEqual(iConfig.f_GetKey()))
-					return false;
-			}
+		CBuildSystem const &m_BuildSystem;
+		CBuildSystemData const &m_BuildSystemData;
+		CBuildSystemData m_GeneratorSettingsData;
 
-			return true;
-		}
+		CGeneratorState m_State;
+		CStr m_OutputDir;
+		CStr m_RelativeBasePath;
+		CStr m_RelativeBasePathAbsolute;
+		
+		CEntityPointer m_pGeneratorSettings;
+		CEntityPointer m_pTargetSettings;
+		
+		mutable TCThreadLocal<CThreadLocal> m_ThreadLocal;
+		
+		CStr m_Win32Platfrom;				
+
+		zbool m_bEnableSourceControl;
+
+		uint32 m_Version; // 2012, 2013 etc
+		
+	private:
+		template <typename tf_CSet0, typename tf_CSet1>
+		bool fp_IsSameConfig(tf_CSet0 const &_Configs, tf_CSet1 const &_AllConfigs) const;
 	};
 }
+
+#include "Malterlib_BuildSystem_Generator_VisualStudio.hpp"

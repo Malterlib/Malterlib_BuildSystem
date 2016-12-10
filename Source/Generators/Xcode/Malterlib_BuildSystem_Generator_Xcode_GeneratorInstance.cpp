@@ -95,4 +95,38 @@ namespace NMib::NBuildSystem::NXcode
 		return false;
 	}
 
+	bool CGeneratorInstance::CConfigValue::operator < (CConfigValue const &_Right) const
+	{
+		if (m_Parent < _Right.m_Parent)
+			return true;
+		else if (m_Parent > _Right.m_Parent)
+			return false;
+		if (m_Entity < _Right.m_Entity)
+			return true;
+		else if (m_Entity > _Right.m_Entity)
+			return false;
+		if (m_Property < _Right.m_Property)
+			return true;
+		else if (m_Property > _Right.m_Property)
+			return false;
+
+		if (m_Value < _Right.m_Value)
+			return true;
+		else if (m_Value > _Right.m_Value)
+			return false;
+		
+		return m_Values < _Right.m_Values;
+	}
+	
+	CGeneratorInstance::CThreadLocal::CThreadLocal()
+		: m_pXMLFile(nullptr)
+	{
+	}
+	
+	void CGeneratorInstance::CThreadLocal::f_CreateDirectory(CStr const &_Path)
+	{
+		auto Mapped = m_CreateDirectoryCache(_Path);
+		if (Mapped.f_WasCreated())
+			CFile::fs_CreateDirectory(_Path);
+	}
 }
