@@ -15,6 +15,7 @@ namespace NMib::NBuildSystem
 		, EPropertyType_Target
 		, EPropertyType_Workspace
 		, EPropertyType_Dependency
+		, EPropertyType_Import
 	};
 	
 	struct CPropertyKey

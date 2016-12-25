@@ -6,6 +6,25 @@
 
 namespace NMib::NBuildSystem
 {
+	bool NVisualStudio::CGeneratorInstance::CThreadLocal::f_FileExists(CStr const &_Path)
+	{
+		auto pExists = m_FileExistsCache.f_FindEqual(_Path);
+		if (pExists)
+			return *pExists;
+		bool bExists = CFile::fs_FileExists(_Path, EFileAttrib_File);;
+		m_FileExistsCache[_Path] = bExists;
+		return bExists;
+	}
+	
+	void NVisualStudio::CGeneratorInstance::CThreadLocal::f_CreateDirectory(CStr const &_Path)
+	{
+		auto Mapped = m_CreateDirectoryCache(_Path);
+		if (Mapped.f_WasCreated())
+		{
+			CFile::fs_CreateDirectory(_Path);
+		}
+	}
+		
 	class CBuildSystemGenerator_VisualStudio : public CBuildSystemGenerator
 	{
 	public:
@@ -25,6 +44,8 @@ namespace NMib::NBuildSystem
 			Values[CPropertyKey("GeneratorFamily")] = "VisualStudio";
 			Values[CPropertyKey("BuildSystemBasePath")] = _BuildSystem.f_GetBaseDir();
 			Values[CPropertyKey("BuildSystemOutputDir")] = _OutputDir;
+			Values[CPropertyKey("BuildSystemFile")] = _BuildSystem.f_GetGenerateSettings().m_SourceFile;
+			Values[CPropertyKey("BuildSystemName")] = CFile::fs_GetFileNoExt(_BuildSystem.f_GetGenerateSettings().m_SourceFile);
 
 			if (NSys::fg_Process_GetEnvironmentVariable(CStr("HostPlatform")).f_IsEmpty())
 				Values[CPropertyKey("HostPlatform")] = DMibStringize(DPlatform);

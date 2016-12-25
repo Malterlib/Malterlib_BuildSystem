@@ -21,9 +21,11 @@ namespace NMib::NBuildSystem::NXcode
 		ThreadLocal.mp_EvaluatedCompileFlags.f_Clear();
 		ThreadLocal.mp_OtherCPPFlags.f_Clear();
 		ThreadLocal.mp_OtherObjCPPFlags.f_Clear();
+		ThreadLocal.mp_OtherAssemblerFlags.f_Clear();
 		ThreadLocal.mp_OtherCFlags.f_Clear();
 		ThreadLocal.mp_OtherObjCFlags.f_Clear();
 		ThreadLocal.mp_MocOutputPatternCPP.f_Clear();
+		ThreadLocal.mp_BuildRules.f_Clear();
 
 		ThreadLocal.m_ProjectOutputDir = CFile::fs_AppendPath(_OutputDir, CStr(_Project.f_GetName() + ".xcodeproj"));
 		ThreadLocal.f_CreateDirectory(ThreadLocal.m_ProjectOutputDir);
@@ -62,16 +64,21 @@ namespace NMib::NBuildSystem::NXcode
 		CStr FileData;
 
 		auto fl_Output = [&] (CStr const& _Data)
-		{
-			FileData += _Data;
-			FileData += "\n";
-		};
+			{
+				FileData += _Data;
+				FileData += "\n";
+			}
+		;
 
 		fl_Output("// !$*UTF8*$!\n{\n\tarchiveVersion = 1;\n\tclasses = {\n\t};\n\tobjectVersion = 47;\n\tobjects = {\n");
 
 		fl_Output("/* Begin PBXBuildFile section */");
 		fp_GeneratePBXBuildFileSection(_Project, FileData);
 		fl_Output("/* End PBXBuildFile section */\n");
+
+		fl_Output("/* Begin PBXBuildRule section */");
+		fp_GeneratePBXBuildRule(_Project, FileData);
+		fl_Output("/* End PBXBuildRule section */\n");
 
 		fl_Output("/* Begin PBXContainerItemProxy section */");
 		fp_GeneratePBXContainerItemProxySection(_Project, FileData);
@@ -364,7 +371,11 @@ namespace NMib::NBuildSystem::NXcode
 				continue;
 
 			auto Value = fp_GetSingleConfigValue(IterFile->m_EnabledConfigs, EPropertyType_Compile, "Type");
+			auto CustomCommandLine = fp_GetSingleConfigValue(IterFile->m_EnabledConfigs, EPropertyType_Compile, "Custom_CommandLine");
+			
 			CStr Type = Value.m_Value;
+			if (!CustomCommandLine.m_Value.f_IsEmpty())
+				Type = "Custom";
 
 			if (Type.f_IsEmpty())
 				m_BuildSystem.fs_ThrowError(Value.m_Position, "No compile type found");
@@ -425,8 +436,9 @@ namespace NMib::NBuildSystem::NXcode
 			{
 				EBuildFileTypes FileType = ENone;
 
-				
-				if
+				if (IterFile->m_Type == "Custom")
+					FileType = ECustom;
+				else if
 					(
 						IterFile->m_Type == "C++"
 						|| IterFile->m_Type == "C"
@@ -462,12 +474,22 @@ namespace NMib::NBuildSystem::NXcode
 				bEvaluateCompileFlags = FileType != ENone;
 
 				CBuildFileRef& BuildRef = _Project.mp_OrderedBuildTypes[FileType].f_Insert();
+				BuildRef.m_FileName = IterFile->f_GetName();
 				BuildRef.m_Name = CFile::fs_GetFile(IterFile->f_GetName());
 				BuildRef.m_FileRefGUID = IterFile->f_GetFileRefGUID();
 				BuildRef.m_BuildGUID = IterFile->f_GetBuildRefGUID();
 				BuildRef.m_CompileFlagsGUID = IterFile->f_GetCompileFlagsGUID();
 				BuildRef.m_Type = IterFile->m_Type;
 				BuildRef.m_bHasCompilerFlags = (FileType == ECCompile || FileType == ECCompile_InitEarly || FileType == EQTMoc || FileType == EMalterlibFS);
+				
+				if (FileType == ECustom)
+				{
+					BuildRef.m_CustomCommandLine = CustomCommandLine.m_Value;
+					BuildRef.m_CustomWorkingDirectory = fp_GetSingleConfigValue(IterFile->m_EnabledConfigs, EPropertyType_Compile, fg_Format("Custom_WorkingDirectory")).m_Value;
+					CStr Output = fp_GetSingleConfigValue(IterFile->m_EnabledConfigs, EPropertyType_Compile, "Custom_Outputs").m_Value;
+					while (!Output.f_IsEmpty())
+						BuildRef.m_CustomOutputs.f_Insert(fg_GetStrSep(Output, ";"));
+				}
 				
 				auto TabWidth = fp_GetSingleConfigValue(IterFile->m_EnabledConfigs, EPropertyType_Compile, "TabWidth");
 				auto IndentWidth = fp_GetSingleConfigValue(IterFile->m_EnabledConfigs, EPropertyType_Compile, "IndentWidth");
@@ -529,6 +551,67 @@ namespace NMib::NBuildSystem::NXcode
 		}
 	}
 
+	void CGeneratorInstance::fp_GeneratePBXBuildRule(CProject &_Project, CStr &o_Output) const
+	{
+		TCSortedPerform<CStr> ToPerform;
+		
+		auto &ThreadLocal = *m_ThreadLocal;
+		if (!_Project.mp_OrderedBuildTypes.f_FindEqual(ECustom))
+			return;
+		auto &Type = _Project.mp_OrderedBuildTypes[ECustom];
+		mint FileIndex = 0;
+		for (auto iFile = Type.f_GetIterator(); iFile; ++iFile)
+		{
+			CStr GUID = fg_Format("{}{nfh,sl2,sf0}", iFile->m_BuildGUID, FileIndex);
+			CStr OutputFiles;
+			for (auto &Output : iFile->m_CustomOutputs)
+				fg_AddStrSep(OutputFiles, CStr::CFormat("\t\t\t\t{},") << Output.f_EscapeStr("\\\"\r\n\t", "\\\"rnt"), "\n");
+			
+			TCVector<CStr> ParsedParams;
+			NStr::CStr Params = iFile->m_CustomCommandLine;
+			while (!Params.f_IsEmpty())
+				ParsedParams.f_Insert(fg_GetStrSepEscaped(Params, " "));
+			
+			CStr GeneratedParams = CProcessLaunchParams::fs_GetParams(ParsedParams);
+
+			ToPerform.f_Add
+				(
+					GUID
+					,[pFile = &*iFile, OutputFiles, GUID, GeneratedParams, &o_Output]
+					{
+						o_Output 
+							+= CStr::CFormat
+							(
+R"-----(		{} /* PBXBuildRule */ = {{
+			isa = PBXBuildRule;
+			compilerSpec = com.apple.compilers.proxy.script;
+			filePatterns = {};
+			fileType = pattern.proxy;
+			isEditable = 1;
+			setIsAlternate = 1;
+			outputFiles = (
+{}
+			);
+			script = "cd \"{}\"\n{}\n";
+		};
+)-----"
+							)
+							<< GUID 
+							<< pFile->m_FileName.f_EscapeStr()
+							<< OutputFiles
+							<< pFile->m_CustomWorkingDirectory.f_EscapeStrNoQuotes("\\\"\r\n\t", "\\\"rnt")
+							<< GeneratedParams.f_EscapeStrNoQuotes("\\\"\r\n\t", "\\\"rnt")
+						;
+						
+					}
+				)
+			;
+			ThreadLocal.mp_BuildRules[GUID];
+		}
+		
+		ToPerform.f_Perform();
+	}
+	
 	void CGeneratorInstance::fp_GeneratePBXBuildFileSection(CProject &_Project, CStr& _Output) const
 	{
 		TCSortedPerform<CStr const &> ToPerform;
@@ -1330,6 +1413,9 @@ namespace NMib::NBuildSystem::NXcode
 
 			// Build rules
 			_Output += "\t\t\tbuildRules = (\n";
+			auto &ThreadLocal = *m_ThreadLocal;
+			for (auto &BuildRule : ThreadLocal.mp_BuildRules)
+				_Output += CStr::CFormat("\t\t\t\t{} /* PBXBuildRule */,\n") << BuildRule;
 			_Output += "\t\t\t);\n";
 
 			// Dependencies

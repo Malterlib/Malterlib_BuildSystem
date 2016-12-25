@@ -5,6 +5,36 @@
 
 namespace NMib::NBuildSystem
 {
+	void CBuildSystem::f_EvalGlobalWorkspaces
+		(
+			CBuildSystemData &_Destination
+			, TCMap<CStr, CEntity *> &_Targets
+		) const
+	{
+		fp_EvalGlobalWorkspaces
+			(
+				_Destination
+				, _Targets
+			)
+		;
+	}
+	
+	void CBuildSystem::f_EvaluateTargetsInWorkspace
+		(
+			CBuildSystemData &_Destination
+			, TCMap<CStr, CEntity *> const &_Targets
+			, CEntity &_Workspace
+		) const
+	{
+		fp_EvaluateTargetsInWorkspace
+			(
+				_Destination
+				, _Targets
+				, _Workspace
+			)
+		;
+	}
+	
 	void CBuildSystem::fp_EvaluateWorkspace
 		(
 			CBuildSystemData &_Destination

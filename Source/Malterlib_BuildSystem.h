@@ -48,6 +48,7 @@ namespace NMib::NBuildSystem
 		void f_GenerateWorkspaceFiles(CBuildSystemData &_BuildSystemData, CEntity & _Target) const;
 		void f_GenerateTargetFiles(CBuildSystemData &_BuildSystemData, CEntity & _Target) const;
 		void f_ExpandGlobalEntities(CBuildSystemData &_BuildSystemData) const;
+		void f_ExpandDynamicImports(CBuildSystemData &_BuildSystemData) const;
 		void f_ExpandGlobalTargetsAndWorkspaces(CBuildSystemData &_BuildSystemData) const;
 		void f_ExpandTargetDependencies(CBuildSystemData &_BuildSystemData, CEntity const &_Target, CDependenciesBackup &o_Backup) const;
 		void f_ExpandTargetFiles(CBuildSystemData &_BuildSystemData, CEntity const &_Target) const;
@@ -122,6 +123,7 @@ namespace NMib::NBuildSystem
 		bool f_EvalCondition(CEntity const &_Context, CCondition const &_Condition) const;
 		static void fs_ThrowError(CFilePosition const &_Position, CStr const &_Error);
 		static void fs_ThrowError(CFilePosition const &_Position, CStr const &_Error, TCVector<CBuildSystemError> const &_Errors);
+		void f_AddSourceFile(CStr const &_File) const;
 		
 	private:
 		struct CEvaluationContext
@@ -151,9 +153,9 @@ namespace NMib::NBuildSystem
 			zbool m_bNoDateCheck;
 		};
 
-		void fp_ParseCondition(CRegistryPreserveAndOrder_CStr &_Registry, CCondition &_ParentCondition, bool _bRoot = true);
-		void fp_ParseConfigurationConditions(CRegistryPreserveAndOrder_CStr &_Registry, CBuildSystemConfiguration &_Configuration);
-		void fp_ParseConfigurationType(CStr const &_Name, CRegistryPreserveAndOrder_CStr &_Registry);
+		void fp_ParseCondition(CRegistryPreserveAndOrder_CStr &_Registry, CCondition &_ParentCondition, bool _bRoot = true) const;
+		void fp_ParseConfigurationConditions(CRegistryPreserveAndOrder_CStr &_Registry, CBuildSystemConfiguration &_Configuration) const;
+		void fp_ParseConfigurationType(CStr const &_Name, CRegistryPreserveAndOrder_CStr &_Registry, TCMap<CStr, CConfigurationType> &o_Configurations) const;
 		void fp_ParsePropertyValue
 			(
 				EPropertyType _Type
@@ -161,15 +163,15 @@ namespace NMib::NBuildSystem
 				, TCLinkedList<CEntity *> &_Entities
 				, CRegistryPreserveAndOrder_CStr &_Registry
 				, CCondition const &_Conditions
-			)
+			) const
 		;
-		void fp_ParseProperty(TCLinkedList<CEntity *> &_Entities, CRegistryPreserveAndOrder_CStr &_Registry);
-		CEntity *fp_ParseEntity(CEntity &_Parent, CRegistryPreserveAndOrder_CStr &_Registry);
+		void fp_ParseProperty(TCLinkedList<CEntity *> &_Entities, CRegistryPreserveAndOrder_CStr &_Registry) const;
+		CEntity *fp_ParseEntity(CEntity &_Parent, CRegistryPreserveAndOrder_CStr &_Registry) const;
 		static void fsp_ThrowError(CFilePosition const &_Position, CStr const &_Error);
 		static void fsp_ThrowError(CFilePosition const &_Position, CStr const &_Error, TCVector<CBuildSystemError> const &_Errors);
 		static void fsp_ThrowError(CEntity const &_Entity, CFilePosition const &_Position, CStr const &_Error);
 		static void fsp_ThrowError(CRegistryPreserveAndOrder_CStr const &_Registry, CStr const &_Error);
-		void fp_ParseData();
+		void fp_ParseData(CEntity &_RootEntity, CRegistryPreserveAndOrder_CStr &_Registry, TCMap<CStr, CConfigurationType> *_pConfigurations) const;
 		bool fpr_EvalCondition
 			(
 				CEntity const &_Context
@@ -257,12 +259,25 @@ namespace NMib::NBuildSystem
 		void fp_EvaluateWorkspace(CBuildSystemData &_Destination, CEntity &_Entity) const;
 		void fp_UsedExternal(CStr const &_Name) const;
 		void fp_GenerateFiles(CBuildSystemData &_BuildSystemData, CEntity & _Entity, bool _bRecursive, EEntityType _Type) const;
+		CEntity *fp_AddEntity
+			(
+				CEntity &_Entity
+				, CEntity &_ParentEntity
+				, CEntityKey const &_NewKey
+				, CEntity *_pInsertAfter
+				, TCMap<CPropertyKey, CEvaluatedProperty> const *_pExtraProperties
+			) const
+		;
 		bool fp_ExpandEntity(CEntity &_Entity, CEntity &_ParentEntity, TCVector<CEntity *> *o_pCreated) const;
+		void fp_ExpandImport(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData) const;
+		CBuildSystemData::CImportData *fp_ExpandImportCMake(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData) const;
 		void fp_TracePropertyEval(bool _bSuccess, CEntity const &_Entity, CProperty const &_Property, CStr const &_Value) const;
 		
 		CGenerateSettings mp_GenerateSettings;
 
-		TCSet<CStr> mp_SourceFiles;
+		
+		align_cacheline mutable CMutualManyRead mp_SourceFilesLock;
+		mutable TCSet<CStr> mp_SourceFiles;
 		CFindCache mp_FindCache;
 		CRegistryPreserveAndOrder_CStr mp_Registry;
 
@@ -274,7 +289,7 @@ namespace NMib::NBuildSystem
 		mutable CRegistryPreserveAndOrder_CStr mp_UserSettingsRegistry;
 		mutable TCMap<CPropertyKey, CRegistryPreserveAndOrder_CStr const *> mp_UserSettingsProperties;
 
-		mutable CMutualManyRead mp_UsedExternalsLock;
+		align_cacheline mutable CMutualManyRead mp_UsedExternalsLock;
 		mutable TCSet<CStr> mp_UsedExternals;
 
 		CStr mp_FileLocation;
@@ -291,7 +306,7 @@ namespace NMib::NBuildSystem
 		mutable TCAtomic<bool> mp_FileChanged;
 		TCSet<CStr> mp_ValidTargets;
 		
-		mutable CMutual mp_GeneratedFilesLock;
+		align_cacheline mutable CMutual mp_GeneratedFilesLock;
 		mutable TCMap<CStr, CGeneratedFile> mp_GeneratedFiles;
 	};
 }

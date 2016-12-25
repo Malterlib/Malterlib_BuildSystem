@@ -341,7 +341,7 @@ namespace NMib::NBuildSystem
 		mp_BaseDir = CFile::fs_GetPath(mp_FileLocation);
 		mp_FileLocationFile = CFile::fs_GetFile(mp_FileLocation);
 
-		fp_ParseData();
+		fp_ParseData(mp_Data.m_RootEntity, mp_Registry, &mp_Data.m_ConfigurationTypes);
 		
 		fp64 Time2 = Clock.f_GetTime();
 		DConOut("Parsed data {fe2} s{\n}", Time2 - Time1);

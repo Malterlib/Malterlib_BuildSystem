@@ -9,7 +9,7 @@ namespace NMib::NBuildSystem
 		(
 			CRegistryPreserveAndOrder_CStr &_ResultRegistry
 			, TCSet<CStr> &_SourceFiles
-			, CFindCache &_FindCache
+			, CFindCache const &_FindCache
 		)
 		: mp_ResultRegistry(_ResultRegistry)
 		, mp_SourceFiles(_SourceFiles)
@@ -74,7 +74,7 @@ namespace NMib::NBuildSystem
 				[&](CRegistryPreserveAndOrder_CStr &_Registry)
 				{
 					bool bInclude = _Registry.f_GetName() == "Include";
-					bool bImport = _Registry.f_GetName() == "Import";
+					bool bImport = _Registry.f_GetName() == "Import" && !_Registry.f_GetThisValue().f_IsEmpty();
 					if (bInclude || bImport)
 					{
 						CStr File = _Registry.f_GetThisValue();
@@ -122,7 +122,7 @@ namespace NMib::NBuildSystem
 									return;
 								}
 
-								CStr FileData = CFile::fs_ReadStringFromFile(CStr(_File));
+								CStr FileData = CFile::fs_ReadStringFromFile(CStr(_File), true);
 								CStr Path = CFile::fs_GetPath(_File);
 								CRegistryPreserveAndOrder_CStr IncludedRegistry;
 								IncludedRegistry.f_ParseStr(FileData, _File);
@@ -155,8 +155,8 @@ namespace NMib::NBuildSystem
 		mp_FileLocation = CFile::fs_GetExpandedPath(_Path);
 		mp_SourceFiles[mp_FileLocation];
 		if (!CFile::fs_FileExists(mp_FileLocation, EFileAttrib_File))
-			DError(CStr(CStr::CFormat("Input file {} does not exist") << mp_FileLocation));
-		CStr FileData = CFile::fs_ReadStringFromFile(CStr(mp_FileLocation));
+			DError(CStr(CStr::CFormat("Input file '{}' does not exist") << mp_FileLocation));
+		CStr FileData = CFile::fs_ReadStringFromFile(CStr(mp_FileLocation), true);
 		CStr Path = CFile::fs_GetPath(mp_FileLocation);
 
 		CRegistryPreserveAndOrder_CStr TempRegistry;

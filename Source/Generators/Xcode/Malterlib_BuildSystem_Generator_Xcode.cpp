@@ -26,6 +26,8 @@ namespace NMib::NBuildSystem
 			Values[CPropertyKey("BuildSystemBasePath")] = _BuildSystem.f_GetBaseDir();
 			Values[CPropertyKey("BuildSystemOutputDir")] = _OutputDir;
 			Values[CPropertyKey("BuildSystemPlatform")] = "OSX";
+			Values[CPropertyKey("BuildSystemFile")] = _BuildSystem.f_GetGenerateSettings().m_SourceFile;
+			Values[CPropertyKey("BuildSystemName")] = CFile::fs_GetFileNoExt(_BuildSystem.f_GetGenerateSettings().m_SourceFile);
 			
 			if (NSys::fg_Process_GetEnvironmentVariable(CStr("HostPlatform")).f_IsEmpty())
 				Values[CPropertyKey("HostPlatform")] = DMibStringize(DPlatform);

@@ -5,6 +5,63 @@
 
 namespace NMib::NBuildSystem
 {
+	void CBuildSystem::f_ReEvaluateData(CEntity &_Entity) const
+	{
+		DMibCheck(_Entity.m_Key.m_Type != EEntityType_Target);
+		DMibCheck(_Entity.m_Key.m_Type != EEntityType_Workspace);
+		DMibCheck(_Entity.m_Key.m_Type != EEntityType_Root);
+		fp_EvaluateDataOrder(_Entity);
+	}
+
+	
+	CEntity const *CBuildSystem::f_EvaluateData
+		(
+			CBuildSystemData &_Destination
+			, TCMap<CPropertyKey, CStr> const &_InitialValues
+			, CEntity const *_pStartEntity
+			, TCMap<CPropertyKey, CStr> const *_pStartEntityInitialValues
+			, TCVector<CEntityKey> const *_pStartEntityInitialValuesLocation
+			, bool _bCopyTree
+			, bool _bAddEnvironment
+		) const
+	{
+		auto pRet = fp_EvaluateData
+			(
+				_Destination
+				, _InitialValues
+				, _pStartEntity
+				, _pStartEntityInitialValues
+				, _pStartEntityInitialValuesLocation
+				, _bCopyTree
+				, _bAddEnvironment
+				, true
+			)
+		;
+		return pRet;
+	}
+
+	CEntity const *CBuildSystem::f_EvaluateDataMain
+		(
+			CBuildSystemData &_Destination
+			, TCMap<CPropertyKey, CStr> const &_InitialValues
+		) const
+	{
+		auto pRet = fp_EvaluateData
+			(
+				_Destination
+				, _InitialValues
+				, nullptr
+				, nullptr
+				, nullptr
+				, true
+				, true
+				, false
+			)
+		;
+		
+		return pRet;
+	}
+	
 	void CBuildSystem::fp_EvaluateDataOrder(CEntity &_Entity) const
 	{
 		DMibLock(_Entity.m_Lock);

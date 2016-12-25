@@ -21,7 +21,14 @@ namespace NMib::NBuildSystem
 	
 	TCSet<CStr> CBuildSystem::f_GetSourceFiles() const
 	{
+		DMibLockRead(mp_SourceFilesLock);
 		return mp_SourceFiles;
+	}
+	
+	void CBuildSystem::f_AddSourceFile(CStr const &_File) const
+	{
+		DMibLock(mp_SourceFilesLock);
+		mp_SourceFiles[_File];
 	}
 
 	bool CBuildSystem::f_AddGeneratedFile(CStr const &_File, CStr const &_Data, CStr const &_Workspace, bool &_bWasCreated, bool _bNoDateCheck) const

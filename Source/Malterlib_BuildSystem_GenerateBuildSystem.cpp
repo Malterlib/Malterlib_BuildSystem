@@ -21,7 +21,12 @@ namespace NMib::NBuildSystem
 					TCMap<CPropertyKey, CStr> ConfigValues = _Values;
 					for (auto iTuple = _pConfig->m_Tuples.f_GetIterator(); iTuple; ++iTuple)
 						ConfigValues[CPropertyKey(iTuple->m_Type)] = iTuple->m_Name;
+					{
+						DMibLockRead(mp_SourceFilesLock);
+						_pConfig->m_Evaluated.m_SourceFiles = mp_SourceFiles;
+					}
 					f_EvaluateDataMain(_pConfig->m_Evaluated, ConfigValues);
+					f_ExpandDynamicImports(_pConfig->m_Evaluated);
 					f_ExpandGlobalTargetsAndWorkspaces(_pConfig->m_Evaluated);
 					TCMap<CStr, CEntity *> Targets;
 					f_EvalGlobalWorkspaces(_pConfig->m_Evaluated, Targets);
@@ -367,7 +372,7 @@ namespace NMib::NBuildSystem
 														fs_ThrowError
 															(
 																_Position
-																, CStr::CFormat("Could not find dependency '{}' using enty name '{}' in workspace") 
+																, CStr::CFormat("Could not find dependency '{}' using entity name '{}' in workspace") 
 																<< _DependencyName
 																<< _EntityName
 															)

@@ -480,6 +480,8 @@ namespace NMib::NBuildSystem
 
 					CStr WildCard = FunctionParams[0];
 
+					DMibLockRead(mp_SourceFilesLock);
+
 					for (auto iFile = mp_SourceFiles.f_GetIterator(); iFile; ++iFile)
 					{
 						if (NStr::fg_StrMatchWildcard(iFile->f_GetStr(), WildCard.f_GetStr()) == NStr::EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
@@ -683,6 +685,7 @@ namespace NMib::NBuildSystem
 			}
 			else if (Property == "SourceFiles")
 			{
+				DMibLockRead(mp_SourceFilesLock);
 				for (auto iFile = mp_SourceFiles.f_GetIterator(); iFile; ++iFile)
 					fg_AddStrSep(Ret, *iFile, ";");
 			}

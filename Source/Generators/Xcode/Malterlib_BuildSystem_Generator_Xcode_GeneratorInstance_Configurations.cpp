@@ -453,6 +453,7 @@ namespace NMib::NBuildSystem
 				auto &OtherCFlags = ThreadLocal.mp_OtherCFlags[Configuration];
 				auto &OtherObjCPPFlags = ThreadLocal.mp_OtherObjCPPFlags[Configuration];
 				auto &OtherObjCFlags = ThreadLocal.mp_OtherObjCFlags[Configuration];
+				auto &OtherAssemblerFlags = ThreadLocal.mp_OtherAssemblerFlags[Configuration];
 				auto &SettingsFromTypes = ThreadLocal.mp_XcodeSettingsFromTypes[Configuration];
 				
 				TCMap<CStr, zmint> SettingsNumber;
@@ -599,6 +600,11 @@ namespace NMib::NBuildSystem
 								else if (_FileType == "ObjC")
 								{
 									OtherObjCFlags += CStr::CFormat(" {}") << _Value;
+									return;
+								}
+								else if (_FileType == "Assembler")
+								{
+									OtherAssemblerFlags += CStr::CFormat(" {}") << _Value;
 									return;
 								}
 							}
@@ -921,6 +927,7 @@ namespace NMib::NBuildSystem
 				FileData += (CStr::CFormat("OTHER_OBJCFLAGS_ONLY = {}\n") << fl_EscVar(ThreadLocal.mp_OtherObjCFlags[_Configuration]));
 				FileData += (CStr::CFormat("OTHER_CPLUSPLUSFLAGS_ONLY = {}\n") << fl_EscVar(ThreadLocal.mp_OtherCPPFlags[_Configuration]));
 				FileData += (CStr::CFormat("OTHER_OBJCPLUSPLUSFLAGS_ONLY = {}\n") << fl_EscVar(ThreadLocal.mp_OtherObjCPPFlags[_Configuration]));
+				FileData += (CStr::CFormat("OTHER_ASSEMBLERFLAGS_ONLY = {}\n") << fl_EscVar(ThreadLocal.mp_OtherAssemblerFlags[_Configuration]));
 				FileData += (CStr::CFormat("MOC_OUTPUT_PATTERN_CPP = {}\n") << fl_EscVar(ThreadLocal.mp_MocOutputPatternCPP));
 				FileData += "MOC_OUTPUT_PATTERN_NOLINK = $(MOC_OUTPUT_PATTERN)\nMOC_OUTPUT_PATTERN_CPP_NOLINK = $(MOC_OUTPUT_PATTERN_CPP)\n";
 			}

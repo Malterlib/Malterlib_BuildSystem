@@ -153,7 +153,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		
 		struct CValueProperties
 		{
-			CValueProperties();
+			inline CValueProperties();
 			
 			TCPointer<CEvaluatedProperty const> m_pVSParentName;
 			TCPointer<CEvaluatedProperty const> m_pVSEntityName;
@@ -178,7 +178,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 			zbool m_bMainValue;
 
-			bool operator < (CConfigValue const &_Right) const;
+			inline bool operator < (CConfigValue const &_Right) const;
 		};
 
 		struct CPrefixHeader

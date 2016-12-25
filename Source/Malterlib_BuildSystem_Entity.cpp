@@ -236,6 +236,35 @@ namespace NMib::NBuildSystem
 		}
 	}
 	
+	void CEntity::f_MergeEntities(CEntity const &_Other)
+	{
+		if (_Other.m_ChildEntitiesOrdered.f_IsEmpty())
+			return;						
+		auto iChild = _Other.m_ChildEntitiesOrdered.f_GetIterator();
+		m_ChildEntitiesMap.f_BatchMapIfNotMapped
+			(
+				[&](TCMap<CEntityKey, CEntity>::CConditionalMapper & _Mapper) -> bool
+				{
+					auto Mapped = _Mapper(iChild->f_GetMapKey(), this);
+					auto &NewChild = *Mapped;
+					if (Mapped.f_WasCreated())
+					{
+						m_ChildEntitiesOrdered.f_Insert(NewChild);
+						NewChild.f_CopyFrom(*iChild, true, nullptr, false);						
+					}
+					else
+					{
+						NewChild.m_Condition.m_Children.f_Insert(_Other.m_Condition.m_Children);
+						NewChild.f_CopyProperties(*iChild);
+						NewChild.f_MergeEntities(*iChild);
+					}
+					++iChild;
+					return iChild;
+				}
+			)
+		;
+	}
+
 	void CEntity::f_CopyEntities(CEntity const &_Other, bool _bDirectCopy)
 	{
 		if (_Other.m_ChildEntitiesOrdered.f_IsEmpty())

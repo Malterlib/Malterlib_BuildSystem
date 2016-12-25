@@ -61,6 +61,7 @@ namespace NMib::NBuildSystem
 		void f_CopyProperties(CEntity const &_Other);
 		void f_ClearReferences();
 		void f_CopyEntities(CEntity const &_Other, bool _bDirectCopy = false);
+		void f_MergeEntities(CEntity const &_Other);
 		void f_SetProperties(CEntity const &_Other);
 		void f_SetEntities(CEntity const &_Other);
 		void f_CopyFrom(CEntity const &_Other, bool _bCopyChildren, CEntityKey const* _pKey = nullptr, bool _bDirectCopy = false);

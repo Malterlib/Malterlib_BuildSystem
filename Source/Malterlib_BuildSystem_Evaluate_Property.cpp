@@ -5,6 +5,52 @@
 
 namespace NMib::NBuildSystem
 {
+	CStr CBuildSystem::f_EvaluateEntityProperty
+		(
+			CEntity const &_Entity
+			, EPropertyType _Type
+			, CStr const &_Property
+			, CProperty const *&_pFromProperty
+		) const
+	{
+		CPropertyKey Key;
+		Key.m_Type = _Type;
+		Key.m_Name = _Property;
+		DMibLock(_Entity.m_Lock);
+		CEvaluationContext EvalContext(&_Entity.m_EvaluatedProperties);
+		return fp_EvaluateEntityProperty(_Entity, _Entity, Key, EvalContext, _pFromProperty);
+	}
+	
+	CStr CBuildSystem::f_EvaluateEntityPropertyUncached
+		(
+			CEntity const &_Entity
+			, EPropertyType _Type
+			, CStr const &_Property
+			, CProperty const *&_pFromProperty
+			, TCMap<CPropertyKey, CEvaluatedProperty> const *_pInitialProperties
+		) const
+	{
+		CPropertyKey Key;
+		Key.m_Type = _Type;
+		Key.m_Name = _Property;
+		TCMap<CPropertyKey, CEvaluatedProperty> EvaluatedProperties;
+		if (_pInitialProperties)
+			EvaluatedProperties = *_pInitialProperties;
+		CEvaluationContext EvalContext(&EvaluatedProperties);
+		return fp_EvaluateEntityProperty(_Entity, _Entity, Key, EvalContext, _pFromProperty);
+	}
+
+	CStr CBuildSystem::f_EvaluateEntityProperty(CEntity const &_Entity, EPropertyType _Type, CStr const &_Property) const
+	{
+		CPropertyKey Key;
+		Key.m_Type = _Type;
+		Key.m_Name = _Property;
+		DMibLock(_Entity.m_Lock);
+		CEvaluationContext EvalContext(&_Entity.m_EvaluatedProperties);
+		CProperty const *pFromProperty = nullptr;
+		return fp_EvaluateEntityProperty(_Entity, _Entity, Key, EvalContext, pFromProperty);
+	}
+
 	void CBuildSystem::fp_EvaluateAllProperties(CEntity &_Entity) const
 	{
 		DMibLock(_Entity.m_Lock);

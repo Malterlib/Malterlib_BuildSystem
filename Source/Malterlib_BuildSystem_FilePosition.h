@@ -9,9 +9,9 @@ namespace NMib::NBuildSystem
 {
 	struct CFilePosition
 	{
-		CFilePosition(CRegistryPreserveAndOrder_CStr const &_Position);
-		CFilePosition();
-		CFilePosition &operator = (CRegistryPreserveAndOrder_CStr const &_Position);
+		inline CFilePosition(CRegistryPreserveAndOrder_CStr const &_Position);
+		inline CFilePosition();
+		inline CFilePosition &operator = (CRegistryPreserveAndOrder_CStr const &_Position);
 		
 		CStr m_FileName;
 		int32 m_Line;

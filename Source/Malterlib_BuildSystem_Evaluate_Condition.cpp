@@ -5,6 +5,14 @@
 
 namespace NMib::NBuildSystem
 {
+	bool CBuildSystem::f_EvalCondition(CEntity const &_Context, CCondition const &_Condition) const
+	{
+		DMibRequire(_Condition.m_Type == EConditionType_Root);
+		DMibLock(_Context.m_Lock);
+		CEvaluationContext EvalContext(&_Context.m_EvaluatedProperties);
+		return fpr_EvalCondition(_Context, _Context, _Condition, EvalContext, false);
+	}
+
 	bool CBuildSystem::fp_EvalConditionSubject
 		(
 			CEntity const &_Context

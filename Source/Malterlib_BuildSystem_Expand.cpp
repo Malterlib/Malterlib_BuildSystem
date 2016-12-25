@@ -318,6 +318,35 @@ namespace NMib::NBuildSystem
 
 		fExpandEntities(fg_RemoveQualifiers(_Target));
 	}
+
+	CEntity *CBuildSystem::fp_AddEntity
+		(
+			CEntity &_Entity
+			, CEntity &_ParentEntity
+			, CEntityKey const &_NewKey
+			, CEntity *_pInsertAfter
+			, TCMap<CPropertyKey, CEvaluatedProperty> const *_pExtraProperties
+		) const
+	{
+		auto &NewEntity = _ParentEntity.m_ChildEntitiesMap(_NewKey, &_ParentEntity).f_GetResult();
+		
+		if (_pInsertAfter)
+			_ParentEntity.m_ChildEntitiesOrdered.f_InsertAfter(NewEntity, _pInsertAfter);
+		else
+			_ParentEntity.m_ChildEntitiesOrdered.f_Insert(NewEntity);
+		NewEntity.f_CopyFrom(_Entity, true, &_NewKey, true);
+		NewEntity.m_pCopiedFrom = nullptr;
+		NewEntity.m_EvaluatedProperties.f_Clear();
+		NewEntity.m_PotentialExplicitProperties.f_Clear();
+		NewEntity.m_PerFilePotentialExplicitProperties.f_Clear();
+		if (_pExtraProperties)
+			NewEntity.m_EvaluatedProperties += *_pExtraProperties;
+		
+		if (_NewKey.m_Type != EEntityType_Target && _NewKey.m_Type != EEntityType_Workspace)
+			f_ReEvaluateData(NewEntity);
+		
+		return &NewEntity;
+	}
 	
 	bool CBuildSystem::fp_ExpandEntity(CEntity &_Entity, CEntity &_ParentEntity, TCVector<CEntity *> *o_pCreated) const
 	{
@@ -352,8 +381,6 @@ namespace NMib::NBuildSystem
 					bAllowNonExisting = true;
 			}
 		}
-		
-		
 
 		TCVector<CStr> Entities;
 		while (!Data.f_IsEmpty())
@@ -508,25 +535,14 @@ namespace NMib::NBuildSystem
 						pParent->m_ChildEntitiesMap.f_Remove(pOldEntity);
 						//fsp_ThrowError(_Registry, CStr::CFormat("Entity {} already declared (when adding pattern {})") << FullFileName << SearchPath);
 					}
+
+					auto pNewEntity = fp_AddEntity(_Entity, *pParent, NewKey, pInsertAfterLocal ? pInsertAfter : nullptr, &TempEntity.m_EvaluatedProperties);
 					
-					auto &NewEntity = pParent->m_ChildEntitiesMap(NewKey, pParent).f_GetResult();
 					if (pInsertAfterLocal)
-					{
-						pParent->m_ChildEntitiesOrdered.f_InsertAfter(NewEntity, pInsertAfter);
-						pInsertAfter = &NewEntity;
-					}
-					else
-						pParent->m_ChildEntitiesOrdered.f_Insert(NewEntity);
-					NewEntity.f_CopyFrom(_Entity, true, &NewKey, true);
-					NewEntity.m_EvaluatedProperties.f_Clear();
-					NewEntity.m_PotentialExplicitProperties.f_Clear();
-					NewEntity.m_PerFilePotentialExplicitProperties.f_Clear();
-					NewEntity.m_EvaluatedProperties += TempEntity.m_EvaluatedProperties;
-					
+						pInsertAfter = pNewEntity; 
+
 					if (o_pCreated)
-						o_pCreated->f_Insert(&NewEntity);
-					
-					f_ReEvaluateData(NewEntity);
+						o_pCreated->f_Insert(pNewEntity);
 				}
 			}
 			else
@@ -548,20 +564,11 @@ namespace NMib::NBuildSystem
 					//fsp_ThrowError(_Registry, CStr::CFormat("Entity {} already declared (when adding pattern {})") << EntityName << SearchPath);
 				}
 				
-				auto &NewEntity = _ParentEntity.m_ChildEntitiesMap(NewKey, &_ParentEntity).f_GetResult();
-				_ParentEntity.m_ChildEntitiesOrdered.f_InsertAfter(NewEntity, pInsertAfter);
-				pInsertAfter = &NewEntity;
-				NewEntity.f_CopyFrom(_Entity, true, &NewKey, true);
-				NewEntity.m_pCopiedFrom = nullptr;
-				NewEntity.m_EvaluatedProperties.f_Clear();
-				NewEntity.m_PotentialExplicitProperties.f_Clear();
-				NewEntity.m_PerFilePotentialExplicitProperties.f_Clear();
-				NewEntity.m_EvaluatedProperties += TempEntity.m_EvaluatedProperties;
-				if (o_pCreated)
-					o_pCreated->f_Insert(&NewEntity);
+				auto pNewEntity = fp_AddEntity(_Entity, _ParentEntity, NewKey, pInsertAfter, &TempEntity.m_EvaluatedProperties);
+				pInsertAfter = pNewEntity;
 				
-				if (NewKey.m_Type != EEntityType_Target && NewKey.m_Type != EEntityType_Workspace)
-					f_ReEvaluateData(NewEntity);
+				if (o_pCreated)
+					o_pCreated->f_Insert(pNewEntity);
 			}
 		}
 		return true;

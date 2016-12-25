@@ -26,6 +26,14 @@ namespace NMib::NBuildSystem
 		
 		TCMap<CStr, CConfigurationType> m_ConfigurationTypes;
 		CEntity m_RootEntity = nullptr;
+
+		TCSet<CStr> m_SourceFiles;
+		struct CImportData
+		{
+			CEntity m_RootEntity = nullptr;
+			CRegistryPreserveAndOrder_CStr m_Registry;
+		};
+		TCLinkedList<CImportData> m_Imports;
 	};
 
 	struct CDependenciesBackup

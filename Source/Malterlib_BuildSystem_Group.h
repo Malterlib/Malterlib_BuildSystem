@@ -7,7 +7,7 @@ namespace NMib::NBuildSystem
 {
 	struct CGroupMember
 	{
-		CGroupMember(bool _bIsGroup = false);
+		inline CGroupMember(bool _bIsGroup = false);
 		
 		DLinkDS_Link(CGroupMember, m_GroupMemberLink);
 		bool m_bIsGroup;
@@ -15,7 +15,7 @@ namespace NMib::NBuildSystem
 	
 	struct CGroupInfo : public CGroupMember
 	{
-		CGroupInfo();
+		inline CGroupInfo();
 		
 		CStr const &f_GetPath() const;
 		CStr f_GetGroupPath() const;

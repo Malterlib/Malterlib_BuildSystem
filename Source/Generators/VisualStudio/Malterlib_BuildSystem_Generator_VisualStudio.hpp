@@ -32,28 +32,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 		return m_Value < _Right.m_Value;
 	}
-	
-	bool CGeneratorInstance::CThreadLocal::f_FileExists(CStr const &_Path)
-	{
-		auto pExists = m_FileExistsCache.f_FindEqual(_Path);
-		if (pExists)
-			return *pExists;
-		bool bExists = CFile::fs_FileExists(_Path, EFileAttrib_File);;
-		m_FileExistsCache[_Path] = bExists;
-		return bExists;
-	}
-	
-	void CGeneratorInstance::CThreadLocal::f_CreateDirectory(CStr const &_Path)
-	{
-		auto Mapped = m_CreateDirectoryCache(_Path);
-		if (Mapped.f_WasCreated())
-		{
-			CFile::fs_CreateDirectory(_Path);
-		}
-	}
-		
+
 	template <typename tf_CSet0, typename tf_CSet1>
-	bool CGeneratorInstance::fp_IsSameConfig(tf_CSet0 const &_Configs, tf_CSet1 const &_AllConfigs) const
+	bool NVisualStudio::CGeneratorInstance::fp_IsSameConfig(tf_CSet0 const &_Configs, tf_CSet1 const &_AllConfigs) const
 	{
 		for (auto iConfig = _Configs.f_GetIterator(); iConfig; ++iConfig)
 		{

@@ -5,6 +5,25 @@
 
 namespace NMib::NBuildSystem
 {
+	void CBuildSystem::f_EvaluateTarget
+		(
+			CBuildSystemData &_Destination
+			, TCMap<CStr, CEntity *> const &_Targets
+			, CEntity &_Entity
+		) const
+	{
+		DMibLock(_Entity.m_Lock);
+		TCLinkedList<CEntity *> ToEval;
+		
+		fp_EvaluateTarget(_Destination, _Targets, ToEval, _Entity);
+		
+		for (auto iChild = ToEval.f_GetIterator(); iChild;)
+		{
+			fpr_EvaluateData(**iChild);
+			++iChild;
+		}
+	}
+	
 	CEntity *CBuildSystem::fpr_FindChildTarget(CEntity &_Entity, CEntityKey const &_EntityKey) const
 	{
 		for (auto iEntity = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iEntity; ++iEntity)

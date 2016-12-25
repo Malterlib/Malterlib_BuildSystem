@@ -32,36 +32,26 @@ namespace NMib::NBuildSystem
 
 	EPropertyType fg_PropertyTypeFromStr(CStr const &_String)
 	{
-		if (_String == "Property" || _String == "")
-			return EPropertyType_Property;
-		else if (_String == "Compile")
-			return EPropertyType_Compile;
-		else if (_String == "Target")
-			return EPropertyType_Target;
-		else if (_String == "Workspace")
-			return EPropertyType_Workspace;
-		else if (_String == "Dependency")
-			return EPropertyType_Dependency;
-
-		return EPropertyType_Invalid;
+		if (_String == "Property" || _String == "") return EPropertyType_Property;
+		else if (_String == "Compile") return EPropertyType_Compile;
+		else if (_String == "Target") return EPropertyType_Target;
+		else if (_String == "Workspace") return EPropertyType_Workspace;
+		else if (_String == "Dependency") return EPropertyType_Dependency;
+		else if (_String == "Import") return EPropertyType_Import;
+		else return EPropertyType_Invalid;
 	}
 
 	CStr fg_PropertyTypeToStr(EPropertyType _Type)
 	{
 		switch (_Type)
 		{
-		case EPropertyType_Property:
-			return "Property";
-		case EPropertyType_Compile:
-			return "Compile";
-		case EPropertyType_Target:
-			return "Target";
-		case EPropertyType_Workspace:
-			return "Workspace";
-		case EPropertyType_Dependency:
-			return "Dependency";
+		case EPropertyType_Property: return "Property";
+		case EPropertyType_Compile: return "Compile";
+		case EPropertyType_Target: return "Target";
+		case EPropertyType_Workspace: return "Workspace";
+		case EPropertyType_Dependency: return "Dependency";
+		case EPropertyType_Import: return "Import";
+		default: DMibNeverGetHere; return CStr();
 		}
-		DMibNeverGetHere;
-		return CStr();
 	}
 }

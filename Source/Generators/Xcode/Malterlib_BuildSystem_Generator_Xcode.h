@@ -18,6 +18,7 @@ namespace NMib::NBuildSystem::NXcode
 	// These are ordered as Xcode requires them.
 	enum EBuildFileTypes
 	{
+		ECustom,
 		EMlTwk,
 		EMalterlibFS,
 		EQTRcc,
@@ -178,12 +179,16 @@ namespace NMib::NBuildSystem::NXcode
 
 	struct CBuildFileRef
 	{
+		CStr m_FileName;
 		CStr m_Name;
 		CStr m_BuildGUID;
 		CStr m_CompileFlagsGUID;
 		CStr m_Type;
 		CStr m_FileRefGUID;
 		bint m_bHasCompilerFlags;
+		TCVector<CStr> m_CustomOutputs;
+		CStr m_CustomCommandLine;
+		CStr m_CustomWorkingDirectory;
 	};
 
 	struct align_cacheline CProject
@@ -389,6 +394,8 @@ namespace NMib::NBuildSystem::NXcode
 			TCMap<CConfiguration, CStr> mp_OtherObjCPPFlags; // Required for moc files
 			TCMap<CConfiguration, CStr> mp_OtherCFlags; // Required for moc files
 			TCMap<CConfiguration, CStr> mp_OtherObjCFlags; // Required for moc files
+			TCMap<CConfiguration, CStr> mp_OtherAssemblerFlags; // Required for moc files
+			TCSet<CStr> mp_BuildRules;
 			CStr mp_MocOutputPatternCPP;
 			CStr m_ProjectOutputDir;
 			
@@ -412,7 +419,8 @@ namespace NMib::NBuildSystem::NXcode
 
 		void fp_GeneratePBXShellScriptBuildPhaseSection(CProject& _Project, CStr& _Output) const;
 
-		void fp_GeneratePBXBuildFileSection(CProject &_Project, CStr& _Output) const;
+		void fp_GeneratePBXBuildFileSection(CProject &_Project, CStr &o_Output) const;
+		void fp_GeneratePBXBuildRule(CProject &_Project, CStr& _Output) const;
 		void fp_GeneratePBXFileReferenceSection(CProject &_Project, CStr const& _OutputDir, CStr& _Output) const;
 		void fp_GeneratePBXGroupSection(CProject &_Project, CStr& _Output) const;
 		void fp_GeneratePBXProjectSection(CProject &_Project, CStr& _Output) const;
