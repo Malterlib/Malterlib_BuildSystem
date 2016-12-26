@@ -3,6 +3,7 @@
 
 #include <Mib/Core/Core>
 
+namespace
 {
 	class CGeneral_Tests : public NMib::NTest::CTest
 	{
