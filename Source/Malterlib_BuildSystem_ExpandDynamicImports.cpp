@@ -82,6 +82,9 @@ namespace NMib::NBuildSystem
 		fg_AddStrSep(HidePrefixes, f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "SharedTempDirectory"), ";");
 		fg_AddStrSep(HidePrefixes, CFile::fs_GetPath(FileName), ";");
 		LaunchParams.m_Environment["CMAKE_MALTERLIB_HIDEPREFIXES"] = HidePrefixes;
+#ifdef DPlatformFamily_OSX
+		LaunchParams.m_Environment["PATH"] = "/opt/local/bin:" + LaunchParams.m_Environment["PATH"];
+#endif
 		
 		LaunchParams.m_Environment.f_Remove("PRODUCT_SPECIFIC_LDFLAGS");
 		LaunchParams.m_Environment.f_Remove("SDKROOT");

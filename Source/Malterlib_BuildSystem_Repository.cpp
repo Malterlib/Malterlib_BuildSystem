@@ -226,6 +226,17 @@ namespace NMib::NBuildSystem
 			CDisableExceptionTraceScope DisableTrace;
 			
 			bool bChanged = false;
+
+			auto fLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir = {})
+				{
+					CProcessLaunchParams Params{_WorkingDir};
+#ifdef DPlatformFamily_OSX
+					Params.m_Environment["PATH"] = "/opt/local/bin:" + CStr(NSys::fg_Process_GetEnvironmentVariable(CStr("PATH")));
+#endif
+					CProcessLaunch::fs_LaunchTool("git", _Params, Params);
+				}
+			;
+
 			
 			if (!CFile::fs_FileExists(Location))
 			{
@@ -235,8 +246,8 @@ namespace NMib::NBuildSystem
 				{
 					try
 					{
-						CProcessLaunch::fs_LaunchTool("git", {"clone", _Repo.m_URL, Location});
-						CProcessLaunch::fs_LaunchTool("git", {"checkout", _Repo.m_DefaultBranch}, Location);
+						fLaunchGit({"clone", _Repo.m_URL, Location});
+						fLaunchGit({"checkout", _Repo.m_DefaultBranch}, Location);
 						bChanged = true;
 					}
 					catch (CException const &_Exception)
@@ -249,7 +260,7 @@ namespace NMib::NBuildSystem
 					CStr RelativeLocation = CFile::fs_MakePathRelative(Location, GitRoot);
 					try
 					{
-						CProcessLaunch::fs_LaunchTool("git", {"submodule", "add", "-b", _Repo.m_DefaultBranch, "--name", _Repo.m_SubmoduleName, _Repo.m_URL, RelativeLocation}, GitRoot);
+						fLaunchGit({"submodule", "add", "-b", _Repo.m_DefaultBranch, "--name", _Repo.m_SubmoduleName, _Repo.m_URL, RelativeLocation}, GitRoot);
 						CProcessLaunch::fs_LaunchTool
 							(
 								"git"
@@ -314,12 +325,12 @@ namespace NMib::NBuildSystem
 						if (*pCurrentRemote == RemoteURL)
 							continue;
 						DMibConOut2("Changing remote URL '{}={}' at '{}'{\n}", RemoteName, RemoteURL, Location);
-						CProcessLaunch::fs_LaunchTool("git", {"remote", "set-url", RemoteName, RemoteURL}, Location);
+						fLaunchGit({"remote", "set-url", RemoteName, RemoteURL}, Location);
 						continue;
 					}				
 					DMibConOut2("Adding remote '{}={}' at '{}'{\n}", RemoteName, RemoteURL, Location);
-					CProcessLaunch::fs_LaunchTool("git", {"remote", "add", RemoteName, RemoteURL}, Location);
-					CProcessLaunch::fs_LaunchTool("git", {"fetch", RemoteName}, Location);
+					fLaunchGit({"remote", "add", RemoteName, RemoteURL}, Location);
+					fLaunchGit({"fetch", RemoteName}, Location);
 				}
 			}
 				
