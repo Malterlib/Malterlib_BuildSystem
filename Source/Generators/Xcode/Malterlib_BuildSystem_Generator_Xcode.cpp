@@ -19,7 +19,6 @@ namespace NMib::NBuildSystem
 			CStr BuildSystemBase = _BuildSystem.f_GetBaseDir();
 			
 			// Disable &apos; encoding in output XML
-			TiXmlBase::SetXcodeOutputMode(true);
 			TCMap<CPropertyKey, CStr> Values;
 			Values[CPropertyKey("Generator")] = _BuildSystem.f_GetGenerateSettings().m_Generator;
 			Values[CPropertyKey("GeneratorFamily")] = "Xcode";

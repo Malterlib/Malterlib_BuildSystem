@@ -36,6 +36,10 @@ Import "../Core/Lib_Malterlib.MTarget"
 	{
 		Dependency.Indirect true
 	}	
+	%Dependency Lib_Malterlib_XML
+	{
+		Dependency.Indirect true
+	}
 }
 
 Property

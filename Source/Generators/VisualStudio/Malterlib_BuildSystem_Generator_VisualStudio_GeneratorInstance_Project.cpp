@@ -2,7 +2,7 @@
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Generator_VisualStudio.h"
-#include <AOCC/AOXMLUtils.h>
+#include <Mib/XML/XML>
 #include <Mib/Cryptography/UUID>
 
 namespace NMib::NBuildSystem::NVisualStudio
@@ -98,28 +98,28 @@ namespace NMib::NBuildSystem::NVisualStudio
 			FileName = CFile::fs_AppendPath(_OutputDir, CStr(CFile::fs_MakeNiceFilename(_Project.f_GetName()))) + ".csproj";
 		CStr PropsFileName = CFile::fs_AppendPath(_OutputDir, CStr(CFile::fs_MakeNiceFilename(_Project.f_GetName()))) + ".props";
 
-		CAOXmlUtils XMLFile;
-		CAOXmlUtils PropsXMLFile;
+		CXMLDocument XMLFile;
+		CXMLDocument PropsXMLFile;
 		{
 			// Project root
 			auto pPropsProject = PropsXMLFile.f_CreateDefaultDocument("Project");
-			CAOXmlUtils::f_SetAttribute(pPropsProject, "ToolsVersion", f_GetToolsVersion());
-			CAOXmlUtils::f_SetAttribute(pPropsProject, "xmlns", "http://schemas.microsoft.com/developer/msbuild/2003");
+			CXMLDocument::f_SetAttribute(pPropsProject, "ToolsVersion", f_GetToolsVersion());
+			CXMLDocument::f_SetAttribute(pPropsProject, "xmlns", "http://schemas.microsoft.com/developer/msbuild/2003");
 			
 			auto pProject = XMLFile.f_CreateDefaultDocument("Project");
-			CAOXmlUtils::f_SetAttribute(pProject, "DefaultTargets", "Build");
-			CAOXmlUtils::f_SetAttribute(pProject, "ToolsVersion", f_GetToolsVersion());
-			CAOXmlUtils::f_SetAttribute(pProject, "xmlns", "http://schemas.microsoft.com/developer/msbuild/2003");
+			CXMLDocument::f_SetAttribute(pProject, "DefaultTargets", "Build");
+			CXMLDocument::f_SetAttribute(pProject, "ToolsVersion", f_GetToolsVersion());
+			CXMLDocument::f_SetAttribute(pProject, "xmlns", "http://schemas.microsoft.com/developer/msbuild/2003");
 
 			if (LanguageType == ELanguageType_CSharp)
 			{
-				auto pImport = CAOXmlUtils::f_CreateElement(pProject, "Import");
-				CAOXmlUtils::f_SetAttribute(pImport, "Project", "$(MSBuildExtensionsPath)\\$(MSBuildToolsVersion)\\Microsoft.Common.props");
-				CAOXmlUtils::f_SetAttribute(pImport, "Condition", "Exists('$(MSBuildExtensionsPath)\\$(MSBuildToolsVersion)\\Microsoft.Common.props')");
+				auto pImport = CXMLDocument::f_CreateElement(pProject, "Import");
+				CXMLDocument::f_SetAttribute(pImport, "Project", "$(MSBuildExtensionsPath)\\$(MSBuildToolsVersion)\\Microsoft.Common.props");
+				CXMLDocument::f_SetAttribute(pImport, "Condition", "Exists('$(MSBuildExtensionsPath)\\$(MSBuildToolsVersion)\\Microsoft.Common.props')");
 			}
 			
 			// Framework Version
-			CAOXmlElement *pPreProjectPropertyGroup;
+			CXMLElement *pPreProjectPropertyGroup;
 			{
 
 				// External dependencies
@@ -127,10 +127,10 @@ namespace NMib::NBuildSystem::NVisualStudio
 				CFilePosition Position;
 				CStr TargetFrameworkVersion = fl_GetEntityPropertyGlobal(EPropertyType_Target, "TargetFrameworkVersion", Position);
 
-				auto pPropertyGroup = CAOXmlUtils::f_CreateElement(pProject, "PropertyGroup");
+				auto pPropertyGroup = CXMLDocument::f_CreateElement(pProject, "PropertyGroup");
 				pPreProjectPropertyGroup = pPropertyGroup;
 				if (!TargetFrameworkVersion.f_IsEmpty())
-					CAOXmlUtils::f_AddElementAndText(pPropertyGroup, "TargetFrameworkVersion", TargetFrameworkVersion);
+					CXMLDocument::f_AddElementAndText(pPropertyGroup, "TargetFrameworkVersion", TargetFrameworkVersion);
 			}
 
 			for (auto iConfig = _Project.m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
@@ -142,29 +142,29 @@ namespace NMib::NBuildSystem::NVisualStudio
 			// Configurations
 			if (LanguageType == ELanguageType_Native)
 			{
-				auto pConfigs = CAOXmlUtils::f_CreateElement(pProject, "ItemGroup");
-				CAOXmlUtils::f_SetAttribute(pConfigs, "Label", "ProjectConfigurations");
+				auto pConfigs = CXMLDocument::f_CreateElement(pProject, "ItemGroup");
+				CXMLDocument::f_SetAttribute(pConfigs, "Label", "ProjectConfigurations");
 				for (auto iConfig = _Project.m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
 				{
 					CStr Platform = _Project.m_Platforms[iConfig.f_GetKey()];
 
-					auto pConfig = CAOXmlUtils::f_CreateElement(pConfigs, "ProjectConfiguration");
-					CAOXmlUtils::f_SetAttribute(pConfig, "Include", iConfig.f_GetKey().m_Configuration + "|" + Platform);
-					auto pConfigName = CAOXmlUtils::f_CreateElement(pConfig, "Configuration");
-					CAOXmlUtils::f_AddText(pConfigName, iConfig.f_GetKey().m_Configuration);
-					auto pPlatformName = CAOXmlUtils::f_CreateElement(pConfig, "Platform");
-					CAOXmlUtils::f_AddText(pPlatformName, Platform);
+					auto pConfig = CXMLDocument::f_CreateElement(pConfigs, "ProjectConfiguration");
+					CXMLDocument::f_SetAttribute(pConfig, "Include", iConfig.f_GetKey().m_Configuration + "|" + Platform);
+					auto pConfigName = CXMLDocument::f_CreateElement(pConfig, "Configuration");
+					CXMLDocument::f_AddText(pConfigName, iConfig.f_GetKey().m_Configuration);
+					auto pPlatformName = CXMLDocument::f_CreateElement(pConfig, "Platform");
+					CXMLDocument::f_AddText(pPlatformName, Platform);
 				}
 			}
 			else if (LanguageType == ELanguageType_CSharp)
 			{
-				CAOXmlUtils::f_AddElementAndText(pPreProjectPropertyGroup, "AppDesignerFolder", "Properties");
+				CXMLDocument::f_AddElementAndText(pPreProjectPropertyGroup, "AppDesignerFolder", "Properties");
 
 				for (auto iConfig = _Project.m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
 				{
 					CStr Platform = _Project.m_Platforms[iConfig.f_GetKey()];
-					auto pConfig = CAOXmlUtils::f_CreateElement(pProject, "PropertyGroup");
-					CAOXmlUtils::f_SetAttribute
+					auto pConfig = CXMLDocument::f_CreateElement(pProject, "PropertyGroup");
+					CXMLDocument::f_SetAttribute
 						(
 							pConfig
 							, "Condition"
@@ -181,25 +181,25 @@ namespace NMib::NBuildSystem::NVisualStudio
 				auto pGlobals = pPreProjectPropertyGroup;
 				if (LanguageType == ELanguageType_Native)
 				{
-					pGlobals = CAOXmlUtils::f_CreateElement(pProject, "PropertyGroup");
-					CAOXmlUtils::f_SetAttribute(pGlobals, "Label", "Globals");
+					pGlobals = CXMLDocument::f_CreateElement(pProject, "PropertyGroup");
+					CXMLDocument::f_SetAttribute(pGlobals, "Label", "Globals");
 				}
 
-				CAOXmlUtils::f_AddElementAndText(pGlobals, "ProjectGuid", _Project.f_GetGUID());
+				CXMLDocument::f_AddElementAndText(pGlobals, "ProjectGuid", _Project.f_GetGUID());
 				if (LanguageType == ELanguageType_Native)
-					CAOXmlUtils::f_AddElementAndText(pGlobals, "RootNamespace", _Project.f_GetName());
+					CXMLDocument::f_AddElementAndText(pGlobals, "RootNamespace", _Project.f_GetName());
 				if (m_bEnableSourceControl)
 				{
-					CAOXmlUtils::f_AddElementAndText(pGlobals, "SccProjectName", "Perforce Project");
+					CXMLDocument::f_AddElementAndText(pGlobals, "SccProjectName", "Perforce Project");
 					CStr SccLocalPath = CFile::fs_MakePathRelative(m_BuildSystem.f_GetBaseDir(), _OutputDir).f_ReplaceChar('/', '\\');
-					CAOXmlUtils::f_AddElementAndText(pGlobals, "SccLocalPath", SccLocalPath);
-					CAOXmlUtils::f_AddElementAndText(pGlobals, "SccProvider", "MSSCCI:Perforce SCM");
+					CXMLDocument::f_AddElementAndText(pGlobals, "SccLocalPath", SccLocalPath);
+					CXMLDocument::f_AddElementAndText(pGlobals, "SccProvider", "MSSCCI:Perforce SCM");
 				}
 				if (LanguageType == ELanguageType_Native && m_Version == 2012)
 				{
-					auto pTargetsPath = CAOXmlUtils::f_AddElementAndText(pGlobals, "VCTargetsPath", "$(VCTargetsPath11)");
-					CAOXmlUtils::f_SetAttribute(pTargetsPath, "Condition", "'$(VCTargetsPath11)' != ''");
-					//CAOXmlUtils::f_SetAttribute(pTargetsPath, "Condition", "'$(VCTargetsPath11)' != '' and '$(VSVersion)' == '' and $(VisualStudioVersion) == ''");
+					auto pTargetsPath = CXMLDocument::f_AddElementAndText(pGlobals, "VCTargetsPath", "$(VCTargetsPath11)");
+					CXMLDocument::f_SetAttribute(pTargetsPath, "Condition", "'$(VCTargetsPath11)' != ''");
+					//CXMLDocument::f_SetAttribute(pTargetsPath, "Condition", "'$(VCTargetsPath11)' != '' and '$(VSVersion)' == '' and $(VisualStudioVersion) == ''");
 				}
 			}
 
@@ -229,8 +229,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 						DLockReadLocked(pInner->m_Lock);
 						for (auto iImport = pInner->m_EvaluatedProperties.f_GetIterator(); iImport; ++iImport)
 						{
-							auto pImport = CAOXmlUtils::f_CreateElement(pProject, "Import");
-							CAOXmlUtils::f_SetAttribute(pImport, "Project", iImport->m_Value);
+							auto pImport = CXMLDocument::f_CreateElement(pProject, "Import");
+							CXMLDocument::f_SetAttribute(pImport, "Project", iImport->m_Value);
 						}
 					}
 				}
@@ -240,19 +240,19 @@ namespace NMib::NBuildSystem::NVisualStudio
 			TCMap<CConfiguration, CConfigResult> TargetTypes;
 			
 			{
-				CAOXmlElement *pConfiguration = pPreProjectPropertyGroup;
+				CXMLElement *pConfiguration = pPreProjectPropertyGroup;
 				TCVector<CStr> SearchList;
 				if (LanguageType == ELanguageType_Native)
 				{
-					pConfiguration = CAOXmlUtils::f_CreateElement(pProject, "PropertyGroup");
-					CAOXmlUtils::f_SetAttribute(pConfiguration, "Label", "Configuration");
+					pConfiguration = CXMLDocument::f_CreateElement(pProject, "PropertyGroup");
+					CXMLDocument::f_SetAttribute(pConfiguration, "Label", "Configuration");
 				}
 
 				SearchList.f_Insert(SettingsPrefix + "Root");
 				if (LanguageType == ELanguageType_CSharp)
 					SearchList.f_Insert("DotNet_Root");
 
-				TCMap<CStr, CAOXmlElement *> Parents;
+				TCMap<CStr, CXMLElement *> Parents;
 				Parents[CStr()] = pConfiguration;
 				auto fl_AddTargetConfig
 					= [&](CStr const &_Type)
@@ -308,9 +308,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 			// Base path
 			{
 				CStr Path = CFile::fs_MakePathRelative(m_BuildSystem.f_GetBaseDir(), _OutputDir + "/Dummy").f_ReplaceChar('/', '\\');
-				auto pProperties = CAOXmlUtils::f_CreateElement(pProject, "PropertyGroup");
-				CAOXmlUtils::f_SetAttribute(pProperties, "Label", "Malterlib");
-				CAOXmlUtils::f_AddElementAndText(pProperties, "MalterlibBaseDir", CStr::CFormat("$([System.IO.Path]::GetFullPath(\"$(MSBuildProjectDirectory){}\\\"))") << Path);
+				auto pProperties = CXMLDocument::f_CreateElement(pProject, "PropertyGroup");
+				CXMLDocument::f_SetAttribute(pProperties, "Label", "Malterlib");
+				CXMLDocument::f_AddElementAndText(pProperties, "MalterlibBaseDir", CStr::CFormat("$([System.IO.Path]::GetFullPath(\"$(MSBuildProjectDirectory){}\\\"))") << Path);
 			}
 
 			// Props
@@ -326,8 +326,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 						DLockReadLocked(pInner->m_Lock);
 						for (auto iImport = pInner->m_EvaluatedProperties.f_GetIterator(); iImport; ++iImport)
 						{
-							auto pImport = CAOXmlUtils::f_CreateElement(pProject, "Import");
-							CAOXmlUtils::f_SetAttribute(pImport, "Project", iImport->m_Value);
+							auto pImport = CXMLDocument::f_CreateElement(pProject, "Import");
+							CXMLDocument::f_SetAttribute(pImport, "Project", iImport->m_Value);
 						}
 					}
 				}
@@ -336,17 +336,17 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 			// User proprety sheets
 			{
-				auto pImportGroup = CAOXmlUtils::f_CreateElement(pProject, "ImportGroup");
-				CAOXmlUtils::f_SetAttribute(pImportGroup, "Label", "PropertySheets");
+				auto pImportGroup = CXMLDocument::f_CreateElement(pProject, "ImportGroup");
+				CXMLDocument::f_SetAttribute(pImportGroup, "Label", "PropertySheets");
 				if (LanguageType == ELanguageType_Native)
 				{
-					auto pImport = CAOXmlUtils::f_CreateElement(pImportGroup, "Import");
-					CAOXmlUtils::f_SetAttribute(pImport, "Project", "$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props");
-					CAOXmlUtils::f_SetAttribute(pImport, "Condition", "exists('$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props')");
+					auto pImport = CXMLDocument::f_CreateElement(pImportGroup, "Import");
+					CXMLDocument::f_SetAttribute(pImport, "Project", "$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props");
+					CXMLDocument::f_SetAttribute(pImport, "Condition", "exists('$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props')");
 				}
 				{
-					auto pImport = CAOXmlUtils::f_CreateElement(pImportGroup, "Import");
-					CAOXmlUtils::f_SetAttribute(pImport, "Project", CFile::fs_GetFile(PropsFileName));
+					auto pImport = CXMLDocument::f_CreateElement(pImportGroup, "Import");
+					CXMLDocument::f_SetAttribute(pImport, "Project", CFile::fs_GetFile(PropsFileName));
 				}
 			}
 
@@ -354,80 +354,80 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 			if (LanguageType == ELanguageType_Native)
 			{
-				auto pPropertyGroup = CAOXmlUtils::f_CreateElement(pProject, "PropertyGroup");
-				CAOXmlUtils::f_AddElementAndText(pPropertyGroup, "_ProjectFileVersion", "10.0.21006.1");
+				auto pPropertyGroup = CXMLDocument::f_CreateElement(pProject, "PropertyGroup");
+				CXMLDocument::f_AddElementAndText(pPropertyGroup, "_ProjectFileVersion", "10.0.21006.1");
 			}
 
-			CAOXmlElement *pProjectPropertyGroup = nullptr;
-			CAOXmlElement *pProjectItemDefinitionGroup = nullptr;
+			CXMLElement *pProjectPropertyGroup = nullptr;
+			CXMLElement *pProjectItemDefinitionGroup = nullptr;
 
-			pProjectPropertyGroup = CAOXmlUtils::f_CreateElement(pPropsProject, "PropertyGroup");
+			pProjectPropertyGroup = CXMLDocument::f_CreateElement(pPropsProject, "PropertyGroup");
 			if (LanguageType == ELanguageType_Native)
-				pProjectItemDefinitionGroup = CAOXmlUtils::f_CreateElement(pPropsProject, "ItemDefinitionGroup");
+				pProjectItemDefinitionGroup = CXMLDocument::f_CreateElement(pPropsProject, "ItemDefinitionGroup");
 
-			CAOXmlElement *pCompileItemGroup_ClCompile = nullptr;
-			CAOXmlElement *pCompileItemGroup_ClCompileAsC = nullptr;
-			CAOXmlElement *pCompileItemGroup_ClCompileAsManaged = nullptr;
-			CAOXmlElement *pCompileItemGroup_ClCompileShared = nullptr;
-			CAOXmlElement *pCompileItemGroup_InnerClCompile = nullptr;
-			CAOXmlElement *pCompileItemGroup_InnerClCompileAsC = nullptr;
-			CAOXmlElement *pCompileItemGroup_InnerClCompileAsManaged = nullptr;
-			TCLinkedList<CAOXmlElement *> Files_C;
-			TCLinkedList<CAOXmlElement *> Files_Cpp;
-			TCLinkedList<CAOXmlElement *> Files_CppManaged;
+			CXMLElement *pCompileItemGroup_ClCompile = nullptr;
+			CXMLElement *pCompileItemGroup_ClCompileAsC = nullptr;
+			CXMLElement *pCompileItemGroup_ClCompileAsManaged = nullptr;
+			CXMLElement *pCompileItemGroup_ClCompileShared = nullptr;
+			CXMLElement *pCompileItemGroup_InnerClCompile = nullptr;
+			CXMLElement *pCompileItemGroup_InnerClCompileAsC = nullptr;
+			CXMLElement *pCompileItemGroup_InnerClCompileAsManaged = nullptr;
+			TCLinkedList<CXMLElement *> Files_C;
+			TCLinkedList<CXMLElement *> Files_Cpp;
+			TCLinkedList<CXMLElement *> Files_CppManaged;
 			if (LanguageType == ELanguageType_Native)
 			{
 				{
-					auto pItemGroup = CAOXmlUtils::f_CreateElement(pPropsProject, "ItemDefinitionGroup");
+					auto pItemGroup = CXMLDocument::f_CreateElement(pPropsProject, "ItemDefinitionGroup");
 
-					auto pCompile = CAOXmlUtils::f_CreateElement(pItemGroup, "ClCompile");
+					auto pCompile = CXMLDocument::f_CreateElement(pItemGroup, "ClCompile");
 					pCompileItemGroup_ClCompileShared = pCompile;
 				}
 				{
-					auto pTarget = CAOXmlUtils::f_CreateElement(pPropsProject, "Target");
+					auto pTarget = CXMLDocument::f_CreateElement(pPropsProject, "Target");
 
-					CAOXmlUtils::f_SetAttribute(pTarget, "Name", "TransformClCompileProperties_CompileAsC");
-					CAOXmlUtils::f_SetAttribute(pTarget, "BeforeTargets", "ClCompile");
-//						CAOXmlUtils::f_SetAttribute(pTarget, "DependsOnTargets", "PrepareForBuild");
+					CXMLDocument::f_SetAttribute(pTarget, "Name", "TransformClCompileProperties_CompileAsC");
+					CXMLDocument::f_SetAttribute(pTarget, "BeforeTargets", "ClCompile");
+//						CXMLDocument::f_SetAttribute(pTarget, "DependsOnTargets", "PrepareForBuild");
 				
-					auto pItemGroup = CAOXmlUtils::f_CreateElement(pTarget, "ItemGroup");
+					auto pItemGroup = CXMLDocument::f_CreateElement(pTarget, "ItemGroup");
 					pCompileItemGroup_ClCompileAsC = pItemGroup;
 
-					auto pCompile = CAOXmlUtils::f_CreateElement(pItemGroup, "ClCompile");
+					auto pCompile = CXMLDocument::f_CreateElement(pItemGroup, "ClCompile");
 					pCompileItemGroup_InnerClCompileAsC = pCompile;
 
-					CAOXmlUtils::f_SetAttribute(pCompile, "Condition", "'%(ClCompile.CompileAs)'=='CompileAsC'");
+					CXMLDocument::f_SetAttribute(pCompile, "Condition", "'%(ClCompile.CompileAs)'=='CompileAsC'");
 				}
 				{
-					auto pTarget = CAOXmlUtils::f_CreateElement(pPropsProject, "Target");
+					auto pTarget = CXMLDocument::f_CreateElement(pPropsProject, "Target");
 
-					CAOXmlUtils::f_SetAttribute(pTarget, "Name", "TransformClCompileProperties_CompileAsManaged");
-					CAOXmlUtils::f_SetAttribute(pTarget, "BeforeTargets", "ClCompile");
-//						CAOXmlUtils::f_SetAttribute(pTarget, "DependsOnTargets", "PrepareForBuild");
+					CXMLDocument::f_SetAttribute(pTarget, "Name", "TransformClCompileProperties_CompileAsManaged");
+					CXMLDocument::f_SetAttribute(pTarget, "BeforeTargets", "ClCompile");
+//						CXMLDocument::f_SetAttribute(pTarget, "DependsOnTargets", "PrepareForBuild");
 				
-					auto pItemGroup = CAOXmlUtils::f_CreateElement(pTarget, "ItemGroup");
+					auto pItemGroup = CXMLDocument::f_CreateElement(pTarget, "ItemGroup");
 					pCompileItemGroup_ClCompileAsManaged = pItemGroup;
 
-					auto pCompile = CAOXmlUtils::f_CreateElement(pItemGroup, "ClCompile");
+					auto pCompile = CXMLDocument::f_CreateElement(pItemGroup, "ClCompile");
 					pCompileItemGroup_InnerClCompileAsManaged = pCompile;
 
-					CAOXmlUtils::f_SetAttribute(pCompile, "Condition", "'%(ClCompile.CompileAs)'=='CompileAsManaged'");
+					CXMLDocument::f_SetAttribute(pCompile, "Condition", "'%(ClCompile.CompileAs)'=='CompileAsManaged'");
 				}
 			
 				{
-					auto pTarget = CAOXmlUtils::f_CreateElement(pPropsProject, "Target");
+					auto pTarget = CXMLDocument::f_CreateElement(pPropsProject, "Target");
 
-					CAOXmlUtils::f_SetAttribute(pTarget, "Name", "TransformClCompileProperties_NotCompileAsC");
-					CAOXmlUtils::f_SetAttribute(pTarget, "BeforeTargets", "ClCompile");
-//						CAOXmlUtils::f_SetAttribute(pTarget, "DependsOnTargets", "PrepareForBuild");
+					CXMLDocument::f_SetAttribute(pTarget, "Name", "TransformClCompileProperties_NotCompileAsC");
+					CXMLDocument::f_SetAttribute(pTarget, "BeforeTargets", "ClCompile");
+//						CXMLDocument::f_SetAttribute(pTarget, "DependsOnTargets", "PrepareForBuild");
 				
-					auto pItemGroup = CAOXmlUtils::f_CreateElement(pTarget, "ItemGroup");
+					auto pItemGroup = CXMLDocument::f_CreateElement(pTarget, "ItemGroup");
 					pCompileItemGroup_ClCompile = pItemGroup;
 
-					auto pCompile = CAOXmlUtils::f_CreateElement(pItemGroup, "ClCompile");
+					auto pCompile = CXMLDocument::f_CreateElement(pItemGroup, "ClCompile");
 					pCompileItemGroup_InnerClCompile = pCompile;
 
-					CAOXmlUtils::f_SetAttribute(pCompile, "Condition", "('%(ClCompile.CompileAs)'=='' or '%(ClCompile.CompileAs)'=='CompileAsCpp')");
+					CXMLDocument::f_SetAttribute(pCompile, "Condition", "('%(ClCompile.CompileAs)'=='' or '%(ClCompile.CompileAs)'=='CompileAsCpp')");
 				}
 			}
 
@@ -438,13 +438,13 @@ namespace NMib::NBuildSystem::NVisualStudio
 			};
 
 			TCMap<CStr, CCompilType> CompileTypes;
-			CAOXmlElement *pFileItemGroup = nullptr;
+			CXMLElement *pFileItemGroup = nullptr;
 			// Files
 			auto fl_GenerateFiles
 				= [&]()
 				{
 					if (!pFileItemGroup)
-						pFileItemGroup = CAOXmlUtils::f_CreateElement(pProject, "ItemGroup");
+						pFileItemGroup = CXMLDocument::f_CreateElement(pProject, "ItemGroup");
 					for (auto iFile = _Project.m_Files.f_GetIterator(); iFile; ++iFile)
 					{
 						if (iFile->m_bWasGenerated)
@@ -455,7 +455,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 						SearchList.f_Insert(SettingsPrefix + "Root");
 						if (LanguageType == ELanguageType_CSharp)
 							SearchList.f_Insert("DotNet_Root");
-						TCMap<CStr, CAOXmlElement *> Parents;
+						TCMap<CStr, CXMLElement *> Parents;
 						Parents[CStr()] = pFileItemGroup;
 						auto Entities
 							= f_AddConfigValue
@@ -483,15 +483,15 @@ namespace NMib::NBuildSystem::NVisualStudio
 							m_BuildSystem.fs_ThrowError((*iFile->m_EnabledConfigs.f_GetIterator())->m_Position, "Internal error");
 
 						auto Result = *Entities.f_GetIterator();
-						CStr VSType = CAOXmlUtils::f_GetValue(Result.m_pElement);
+						CStr VSType = CXMLDocument::f_GetValue(Result.m_pElement);
 						iFile->m_VSType = VSType;
-						iFile->m_VSFile = CAOXmlUtils::f_GetAttribute(Result.m_pElement, "Include");
+						iFile->m_VSFile = CXMLDocument::f_GetAttribute(Result.m_pElement, "Include");
 
 						if (LanguageType == ELanguageType_CSharp)
 						{
 							CStr GroupPath = iFile->f_GetGroupPath().f_ReplaceChar('/', '\\');
 							if (!GroupPath.f_IsEmpty())
-								CAOXmlUtils::f_AddElementAndText(Result.m_pElement, "Link", GroupPath + "\\" + CFile::fs_GetFile(iFile->m_VSFile));
+								CXMLDocument::f_AddElementAndText(Result.m_pElement, "Link", GroupPath + "\\" + CFile::fs_GetFile(iFile->m_VSFile));
 						}
 
 						CStr UntranslatedType;
@@ -560,7 +560,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 						if (LanguageType == ELanguageType_CSharp)
 							SearchLists.f_Insert("DotNet_CompileShared");
 						SearchLists.f_Insert("CompileShared");
-						TCMap<CStr, CAOXmlElement *> FileParents;
+						TCMap<CStr, CXMLElement *> FileParents;
 						FileParents[CStr()] = Result.m_pElement;
 
 						if (LanguageType == ELanguageType_Native)
@@ -600,7 +600,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			{
 				// Target
 				{
-					TCMap<CStr, CAOXmlElement *> ProjectParents;
+					TCMap<CStr, CXMLElement *> ProjectParents;
 					if (LanguageType == ELanguageType_Native)
 					{
 						ProjectParents[CStr()] = pProjectItemDefinitionGroup;
@@ -617,7 +617,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 					for (auto iType = TargetTypes.f_GetIterator(); iType; ++iType)
 					{
 						auto &List = SearchLists[iType.f_GetKey()];
-						CStr TargetType = CAOXmlUtils::f_GetNodeText(iType->m_pElement);
+						CStr TargetType = CXMLDocument::f_GetNodeText(iType->m_pElement);
 						DCheck(!TargetType.f_IsEmpty());
 						List.f_Insert(SettingsPrefix + TargetType);
 						
@@ -681,7 +681,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 					TCMap<CConfiguration, CBuildSystemData> Datas;
 					TCMap<CConfiguration, CEntityPointer> Configs;
 
-					TCMap<CStr, CAOXmlElement *> ProjectParents;
+					TCMap<CStr, CXMLElement *> ProjectParents;
 					if (LanguageType == ELanguageType_Native)
 					{
 						if (iType.f_GetKey() == "C")
@@ -852,7 +852,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 							{
 								for (auto iElement = iCondition->f_GetIterator(); iElement; ++iElement)
 								{
-									auto pNewElement = CAOXmlUtils::f_AddElementAndText(*iElement, "PrecompiledHeaderOutputFile", PCHFile);
+									auto pNewElement = CXMLDocument::f_AddElementAndText(*iElement, "PrecompiledHeaderOutputFile", PCHFile);
 #if 0
 									CStr Condition;
 									Condition = "'%(ClCompile.DefinedProperty_PrecompiledHeaderOutputFile)' != 'true'";
@@ -862,10 +862,10 @@ namespace NMib::NBuildSystem::NVisualStudio
 										Condition += iCondition.f_GetKey();
 										Condition += ")";
 									}
-									CAOXmlUtils::f_SetAttribute(pNewElement, "Condition", Condition);
+									CXMLDocument::f_SetAttribute(pNewElement, "Condition", Condition);
 #else
 									if (!iCondition.f_GetKey().f_IsEmpty())
-										CAOXmlUtils::f_SetAttribute(pNewElement, "Condition", iCondition.f_GetKey());
+										CXMLDocument::f_SetAttribute(pNewElement, "Condition", iCondition.f_GetKey());
 #endif
 								}
 							}
@@ -934,7 +934,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 			// Dependencies
 			{
-				auto pItemGroup = CAOXmlUtils::f_CreateElement(pProject, "ItemGroup");
+				auto pItemGroup = CXMLDocument::f_CreateElement(pProject, "ItemGroup");
 
 				// Project dependencies
 				{
@@ -989,11 +989,11 @@ namespace NMib::NBuildSystem::NVisualStudio
 							;
 						}
 
-						auto pReference = CAOXmlUtils::f_CreateElement(pItemGroup, "ProjectReference");
+						auto pReference = CXMLDocument::f_CreateElement(pItemGroup, "ProjectReference");
 						CStr DependencyProjectFile = CFile::fs_MakeNiceFilename(pDependProject->f_GetName()) + ".vcxproj";
-						CAOXmlUtils::f_SetAttribute(pReference, "Include", DependencyProjectFile);
-						CAOXmlUtils::f_AddElementAndText(pReference, "Project", pDependProject->f_GetGUID());
-						CAOXmlUtils::f_AddElementAndText(pReference, "Name", pDependProject->f_GetName());
+						CXMLDocument::f_SetAttribute(pReference, "Include", DependencyProjectFile);
+						CXMLDocument::f_AddElementAndText(pReference, "Project", pDependProject->f_GetGUID());
+						CXMLDocument::f_AddElementAndText(pReference, "Name", pDependProject->f_GetName());
 
 						TCVector<CStr> SearchLists;
 						SearchLists.f_Insert(SettingsPrefix + "Dependency");
@@ -1001,7 +1001,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 							SearchLists.f_Insert("DotNet_Dependency");
 
 						SearchLists.f_Insert("Dependency");
-						TCMap<CStr, CAOXmlElement *> FileParents;
+						TCMap<CStr, CXMLElement *> FileParents;
 						FileParents[CStr()] = pReference;
 
 						f_SetEvaluatedValues
@@ -1031,8 +1031,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 					while (!ExternalDependencies.f_IsEmpty())
 					{
 						CStr Dependency = fg_GetStrSep(ExternalDependencies, ";");
-						auto pReference = CAOXmlUtils::f_CreateElement(pItemGroup, "Reference");
-						CAOXmlUtils::f_SetAttribute(pReference, "Include", Dependency);
+						auto pReference = CXMLDocument::f_CreateElement(pItemGroup, "Reference");
+						CXMLDocument::f_SetAttribute(pReference, "Include", Dependency);
 					}
 				}
 			}
@@ -1050,8 +1050,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 						DLockReadLocked(pInner->m_Lock);
 						for (auto iImport = pInner->m_EvaluatedProperties.f_GetIterator(); iImport; ++iImport)
 						{
-							auto pImport = CAOXmlUtils::f_CreateElement(pProject, "Import");
-							CAOXmlUtils::f_SetAttribute(pImport, "Project", iImport->m_Value);
+							auto pImport = CXMLDocument::f_CreateElement(pProject, "Import");
+							CXMLDocument::f_SetAttribute(pImport, "Project", iImport->m_Value);
 						}
 					}
 				}
@@ -1061,16 +1061,16 @@ namespace NMib::NBuildSystem::NVisualStudio
 			{
 				mint nCompileTypes = 0;
 				bool bCppEnabled = false;
-				TCMap<CStr, TCLinkedList<CAOXmlElement *>> Same;
+				TCMap<CStr, TCLinkedList<CXMLElement *>> Same;
 				TCSet<CStr> FullyDefinedC;
 				TCSet<CStr> FullyDefinedManaged;
 				TCVector<TCSet<CStr> *> FullyDefined;
 				{
-					CAOXmlNode const *pChild = nullptr;
+					CXMLNode *pChild = nullptr;
 					bool bAdded = false;
-					while ((pChild = CAOXmlUtils::f_Iterate(pCompileItemGroup_InnerClCompileAsC, pChild)))
+					while ((pChild = CXMLDocument::f_Iterate(pCompileItemGroup_InnerClCompileAsC, pChild)))
 					{
-						if (pChild->Type() == TiXmlNode::ELEMENT)
+						if (auto pElement = pChild->ToElement())
 						{
 							if (!bAdded)
 							{
@@ -1078,9 +1078,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 								bAdded = true;
 								FullyDefined.f_Insert(&FullyDefinedC);
 							}
-							Same[CAOXmlUtils::f_GetAsString(pChild)].f_Insert((CAOXmlElement *)pChild);
-							CStr Name = CAOXmlUtils::f_GetValue(pChild);
-							CStr Value = CAOXmlUtils::f_GetNodeText(pChild);
+							Same[CXMLDocument::f_GetAsString(pChild)].f_Insert(pElement);
+							CStr Name = CXMLDocument::f_GetValue(pChild);
+							CStr Value = CXMLDocument::f_GetNodeText(pChild);
 
 							if (Value.f_Find(CStr(CStr::CFormat("%(ClCompile.{})") << Name)) < 0)
 								FullyDefinedC[Name];
@@ -1088,11 +1088,11 @@ namespace NMib::NBuildSystem::NVisualStudio
 					}
 				}
 				{
-					CAOXmlNode const *pChild = nullptr;
+					CXMLNode *pChild = nullptr;
 					bool bAdded = false;
-					while ((pChild = CAOXmlUtils::f_Iterate(pCompileItemGroup_InnerClCompileAsManaged, pChild)))
+					while ((pChild = CXMLDocument::f_Iterate(pCompileItemGroup_InnerClCompileAsManaged, pChild)))
 					{
-						if (pChild->Type() == TiXmlNode::ELEMENT)
+						if (auto pElement = pChild->ToElement())
 						{
 							if (!bAdded)
 							{
@@ -1100,9 +1100,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 								bAdded = true;
 								FullyDefined.f_Insert(&FullyDefinedManaged);
 							}
-							Same[CAOXmlUtils::f_GetAsString(pChild)].f_Insert((CAOXmlElement *)pChild);
-							CStr Name = CAOXmlUtils::f_GetValue(pChild);
-							CStr Value = CAOXmlUtils::f_GetNodeText(pChild);
+							Same[CXMLDocument::f_GetAsString(pChild)].f_Insert(pElement);
+							CStr Name = CXMLDocument::f_GetValue(pChild);
+							CStr Value = CXMLDocument::f_GetNodeText(pChild);
 
 							if (Value.f_Find(CStr(CStr::CFormat("%(ClCompile.{})") << Name)) < 0)
 								FullyDefinedManaged[Name];
@@ -1110,11 +1110,11 @@ namespace NMib::NBuildSystem::NVisualStudio
 					}
 				}
 				{
-					CAOXmlNode const *pChild = nullptr;
+					CXMLNode *pChild = nullptr;
 					bool bAdded = false;
-					while ((pChild = CAOXmlUtils::f_Iterate(pCompileItemGroup_InnerClCompile, pChild)))
+					while ((pChild = CXMLDocument::f_Iterate(pCompileItemGroup_InnerClCompile, pChild)))
 					{
-						if (pChild->Type() == TiXmlNode::ELEMENT)
+						if (auto pElement = pChild->ToElement())
 						{
 							if (!bAdded)
 							{
@@ -1122,7 +1122,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 								bAdded = true;
 								bCppEnabled = true;
 							}
-							Same[CAOXmlUtils::f_GetAsString(pChild)].f_Insert((CAOXmlElement *)pChild);
+							Same[CXMLDocument::f_GetAsString(pChild)].f_Insert((CXMLElement *)pChild);
 						}
 					}
 				}
@@ -1130,7 +1130,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 				if (nCompileTypes <= 1)
 				{
 					for (auto iSame = Same.f_GetIterator(); iSame; ++iSame)
-						pCompileItemGroup_ClCompileShared->InsertEndChild(*iSame->f_GetFirst());
+						pCompileItemGroup_ClCompileShared->InsertEndChild(CXMLDocument::f_DeepClone(iSame->f_GetFirst(), pCompileItemGroup_ClCompileShared->GetDocument()));
 				}
 				else
 				{
@@ -1138,11 +1138,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 					{
 						if (iSame->f_GetLen() >= nCompileTypes)
 						{
-							pCompileItemGroup_ClCompileShared->InsertEndChild(*iSame->f_GetFirst());
+							pCompileItemGroup_ClCompileShared->InsertEndChild(CXMLDocument::f_DeepClone(iSame->f_GetFirst(), pCompileItemGroup_ClCompileShared->GetDocument()));
 							for (auto iXml = iSame->f_GetIterator(); iXml; ++iXml)
-							{
-								(*iXml)->Parent()->RemoveChild(*iXml);
-							}
+								(*iXml)->Parent()->DeleteChild(*iXml);
 						}
 						else
 						{
@@ -1150,22 +1148,22 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 							auto pParent = pElement->Parent();
 
-							if (*pParent == *pCompileItemGroup_InnerClCompileAsC)
+							if (pParent == pCompileItemGroup_InnerClCompileAsC)
 							{
 								for (auto iFile = Files_C.f_GetIterator(); iFile; ++iFile)
 								{
-									CAOXmlNode *pChild = nullptr;
-									if ((pChild = CAOXmlUtils::f_Iterate((*iFile), pChild)))
-										(*iFile)->InsertBeforeChild(pChild, *pElement);
+									CXMLNode *pChild = nullptr;
+									if ((pChild = CXMLDocument::f_Iterate((*iFile), pChild)))
+										(*iFile)->InsertFirstChild(CXMLDocument::f_DeepClone(pElement, (*iFile)->GetDocument()));
 									else
-										(*iFile)->InsertEndChild(*pElement);
+										(*iFile)->InsertEndChild(CXMLDocument::f_DeepClone(pElement, (*iFile)->GetDocument()));
 								}
 							}
-							else if (*pParent == *pCompileItemGroup_InnerClCompileAsManaged)
+							else if (pParent == pCompileItemGroup_InnerClCompileAsManaged)
 							{
 								if (!bCppEnabled)
 								{
-									CStr Name = CAOXmlUtils::f_GetValue(pElement);
+									CStr Name = CXMLDocument::f_GetValue(pElement);
 									bool bFullyDefined = true;
 									for (auto iDefined = FullyDefined.f_GetIterator(); iDefined; ++iDefined)
 									{
@@ -1177,17 +1175,17 @@ namespace NMib::NBuildSystem::NVisualStudio
 									}
 									if (bFullyDefined)
 									{
-										pCompileItemGroup_ClCompileShared->InsertEndChild(*pElement);
+										pCompileItemGroup_ClCompileShared->InsertEndChild(CXMLDocument::f_DeepClone(pElement, pCompileItemGroup_ClCompileShared->GetDocument()));
 									}
 									else
 									{
 										for (auto iFile = Files_CppManaged.f_GetIterator(); iFile; ++iFile)
 										{
-											CAOXmlNode *pChild = nullptr;
-											if ((pChild = CAOXmlUtils::f_Iterate((*iFile), pChild)))
-												(*iFile)->InsertBeforeChild(pChild, *pElement);
+											CXMLNode *pChild = nullptr;
+											if ((pChild = CXMLDocument::f_Iterate((*iFile), pChild)))
+												(*iFile)->InsertFirstChild(CXMLDocument::f_DeepClone(pElement, (*iFile)->GetDocument()));
 											else
-												(*iFile)->InsertEndChild(*pElement);
+												(*iFile)->InsertEndChild(CXMLDocument::f_DeepClone(pElement, (*iFile)->GetDocument()));
 										}
 									}
 								}
@@ -1195,17 +1193,17 @@ namespace NMib::NBuildSystem::NVisualStudio
 								{
 									for (auto iFile = Files_CppManaged.f_GetIterator(); iFile; ++iFile)
 									{
-										CAOXmlNode *pChild = nullptr;
-										if ((pChild = CAOXmlUtils::f_Iterate((*iFile), pChild)))
-											(*iFile)->InsertBeforeChild(pChild, *pElement);
+										CXMLNode *pChild = nullptr;
+										if ((pChild = CXMLDocument::f_Iterate((*iFile), pChild)))
+											(*iFile)->InsertFirstChild(CXMLDocument::f_DeepClone(pElement, (*iFile)->GetDocument()));
 										else
-											(*iFile)->InsertEndChild(*pElement);
+											(*iFile)->InsertEndChild(CXMLDocument::f_DeepClone(pElement, (*iFile)->GetDocument()));
 									}
 								}
 							}
 							else
 							{
-								CStr Name = CAOXmlUtils::f_GetValue(pElement);
+								CStr Name = CXMLDocument::f_GetValue(pElement);
 								bool bFullyDefined = true;
 								for (auto iDefined = FullyDefined.f_GetIterator(); iDefined; ++iDefined)
 								{
@@ -1217,18 +1215,18 @@ namespace NMib::NBuildSystem::NVisualStudio
 								}
 								if (bFullyDefined)
 								{
-									pCompileItemGroup_ClCompileShared->InsertEndChild(*pElement);
+									pCompileItemGroup_ClCompileShared->InsertEndChild(CXMLDocument::f_DeepClone(pElement, pCompileItemGroup_ClCompileShared->GetDocument()));
 								}
 								else
 								{
-									DCheck(*pParent == *pCompileItemGroup_InnerClCompile);
+									DCheck(pParent == pCompileItemGroup_InnerClCompile);
 									for (auto iFile = Files_Cpp.f_GetIterator(); iFile; ++iFile)
 									{
-										CAOXmlNode *pChild = nullptr;
-										if ((pChild = CAOXmlUtils::f_Iterate((*iFile), pChild)))
-											(*iFile)->InsertBeforeChild(pChild, *pElement);
+										CXMLNode *pChild = nullptr;
+										if ((pChild = CXMLDocument::f_Iterate((*iFile), pChild)))
+											(*iFile)->InsertFirstChild(CXMLDocument::f_DeepClone(pElement, (*iFile)->GetDocument()));
 										else
-											(*iFile)->InsertEndChild(*pElement);
+											(*iFile)->InsertEndChild(CXMLDocument::f_DeepClone(pElement, (*iFile)->GetDocument()));
 									}
 								}
 							}
@@ -1236,16 +1234,14 @@ namespace NMib::NBuildSystem::NVisualStudio
 					}
 				}
 
-				pCompileItemGroup_ClCompile->Parent()->Parent()->RemoveChild(pCompileItemGroup_ClCompile->Parent());
-				pCompileItemGroup_ClCompileAsC->Parent()->Parent()->RemoveChild(pCompileItemGroup_ClCompileAsC->Parent());
-				pCompileItemGroup_ClCompileAsManaged->Parent()->Parent()->RemoveChild(pCompileItemGroup_ClCompileAsManaged->Parent());
-
+				pCompileItemGroup_ClCompile->Parent()->Parent()->DeleteChild(pCompileItemGroup_ClCompile->Parent());
+				pCompileItemGroup_ClCompileAsC->Parent()->Parent()->DeleteChild(pCompileItemGroup_ClCompileAsC->Parent());
+				pCompileItemGroup_ClCompileAsManaged->Parent()->Parent()->DeleteChild(pCompileItemGroup_ClCompileAsManaged->Parent());
 			}
-
 		}
 
 		{
-			CStr XMLData = XMLFile.f_GetAsString();
+			CStr XMLData = XMLFile.f_GetAsString(EXMLOutputDialect_VisualStudio);
 			bool bWasCreated;
 			if (!m_BuildSystem.f_AddGeneratedFile(FileName, XMLData, _Project.m_pSolution->f_GetName(), bWasCreated, false))
 				DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << FileName));
@@ -1260,7 +1256,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			_Project.m_FileName = FileName;
 		}
 		{
-			CStr XMLData = PropsXMLFile.f_GetAsString();
+			CStr XMLData = PropsXMLFile.f_GetAsString(EXMLOutputDialect_VisualStudio);
 			bool bWasCreated;
 			if (!m_BuildSystem.f_AddGeneratedFile(PropsFileName, XMLData, _Project.m_pSolution->f_GetName(), bWasCreated, false))
 				DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << FileName));
@@ -1277,36 +1273,36 @@ namespace NMib::NBuildSystem::NVisualStudio
 			
 		if (LanguageType == ELanguageType_Native)
 		{
-			CAOXmlUtils FilterXML;
+			CXMLDocument FilterXML;
 			auto pProject = FilterXML.f_CreateDefaultDocument("Project");
-			CAOXmlUtils::f_SetAttribute(pProject, "ToolsVersion", f_GetToolsVersion());
-			CAOXmlUtils::f_SetAttribute(pProject, "xmlns", "http://schemas.microsoft.com/developer/msbuild/2003");
+			CXMLDocument::f_SetAttribute(pProject, "ToolsVersion", f_GetToolsVersion());
+			CXMLDocument::f_SetAttribute(pProject, "xmlns", "http://schemas.microsoft.com/developer/msbuild/2003");
 
 			// Files
 			{
-				auto pItemGroup = CAOXmlUtils::f_CreateElement(pProject, "ItemGroup");
+				auto pItemGroup = CXMLDocument::f_CreateElement(pProject, "ItemGroup");
 				for (auto iFile = _Project.m_Files.f_GetIterator(); iFile; ++iFile)
 				{
-					auto pFileElement = CAOXmlUtils::f_CreateElement(pItemGroup, iFile->m_VSType);
-					CAOXmlUtils::f_SetAttribute(pFileElement, "Include", iFile->m_VSFile);
+					auto pFileElement = CXMLDocument::f_CreateElement(pItemGroup, iFile->m_VSType);
+					CXMLDocument::f_SetAttribute(pFileElement, "Include", iFile->m_VSFile);
 					CStr GroupPath = iFile->f_GetGroupPath().f_ReplaceChar('/', '\\');
 					if (!GroupPath.f_IsEmpty())
-						CAOXmlUtils::f_AddElementAndText(pFileElement, "Filter", GroupPath);
+						CXMLDocument::f_AddElementAndText(pFileElement, "Filter", GroupPath);
 				}
 			}
 
 			// Groups
 			{
-				auto pItemGroup = CAOXmlUtils::f_CreateElement(pProject, "ItemGroup");
+				auto pItemGroup = CXMLDocument::f_CreateElement(pProject, "ItemGroup");
 				for (auto iGroup = _Project.m_Groups.f_GetIterator(); iGroup; ++iGroup)
 				{
-					auto pGroupElement = CAOXmlUtils::f_CreateElement(pItemGroup, "Filter");
-					CAOXmlUtils::f_SetAttribute(pGroupElement, "Include", iGroup->f_GetPath().f_ReplaceChar('/','\\'));
-					CAOXmlUtils::f_AddElementAndText(pGroupElement, "UniqueIdentifier", iGroup->f_GetGUID());
+					auto pGroupElement = CXMLDocument::f_CreateElement(pItemGroup, "Filter");
+					CXMLDocument::f_SetAttribute(pGroupElement, "Include", iGroup->f_GetPath().f_ReplaceChar('/','\\'));
+					CXMLDocument::f_AddElementAndText(pGroupElement, "UniqueIdentifier", iGroup->f_GetGUID());
 				}
 			}
 
-			CStr XMLData = FilterXML.f_GetAsString();
+			CStr XMLData = FilterXML.f_GetAsString(EXMLOutputDialect_VisualStudio);
 			CStr FiltersFileName = FileName+".filters";
 			bool bWasCreated = false;
 			if (!m_BuildSystem.f_AddGeneratedFile(FiltersFileName, XMLData, _Project.m_pSolution->f_GetName(), bWasCreated, false))

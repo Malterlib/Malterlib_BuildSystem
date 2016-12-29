@@ -2,14 +2,14 @@
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Generator_Xcode.h"
-#include <AOCC/AOXMLUtils.h>
+#include <Mib/XML/XML>
 
 namespace NMib::NBuildSystem::NXcode
 {
 	void CGeneratorInstance::f_GenerateWorkspaceFile(CSolution &_Solution, CStr const &_OutputDir, mint _MaxWorkspaceNameLen) const
 	{
 		auto & ThreadLocal = *m_ThreadLocal;
-		CAOXmlUtils XMLFile(false);
+		CXMLDocument XMLFile(false);
 		auto pOldFile = ThreadLocal.m_pXMLFile;
 		ThreadLocal.m_pXMLFile = &XMLFile;
 		auto Cleanup = fg_OnScopeExit
@@ -72,7 +72,7 @@ namespace NMib::NBuildSystem::NXcode
 				MapProjectsToGroups[iProject->m_pGroup].f_Insert(iProject);
 		}
 		
-		TCFunction<void (CAOXmlElement* _pParent, CGroup* pGroup)> fl_OutputGroup = [&] (CAOXmlElement* _pParent, CGroup* pGroup)
+		TCFunction<void (CXMLElement* _pParent, CGroup* pGroup)> fl_OutputGroup = [&] (CXMLElement* _pParent, CGroup* pGroup)
 		{
 			if (!pGroup->m_OutputToWorkspace)
 			{
@@ -128,7 +128,7 @@ namespace NMib::NBuildSystem::NXcode
 		CStr FileName = CFile::fs_AppendPath(OutputDir,  CStr("contents.xcworkspacedata"));
 		bool bSchemeChanged = fp_GenerateBuildAllSchemes(_Solution, OutputDir, SchemesWithRunnables, SchemesWithBuildables);
 		{
-			CStr XMLData = XMLFile.f_GetAsString();
+			CStr XMLData = XMLFile.f_GetAsString(EXMLOutputDialect_Xcode);
 			bool bWasCreated;
 			if (!m_BuildSystem.f_AddGeneratedFile(FileName, XMLData, _Solution.f_GetName(), bWasCreated, false))
 				DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << FileName));
@@ -166,8 +166,8 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-<key>IDEWorkspaceSharedSettings_AutocreateContextsIfNeeded</key>
-<false/>
+	<key>IDEWorkspaceSharedSettings_AutocreateContextsIfNeeded</key>
+	<false/>
 </dict>
 </plist>
 )xxx";
@@ -194,7 +194,7 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 		
 		for (auto Iter = _Solution.m_EnabledConfigs.f_GetIterator(); Iter; ++Iter)
 		{
-			CAOXmlUtils XMLFile(false);
+			CXMLDocument XMLFile(false);
 			auto pOldFile = ThreadLocal.m_pXMLFile;
 			ThreadLocal.m_pXMLFile = &XMLFile;
 			auto Cleanup = fg_OnScopeExit
@@ -220,7 +220,7 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 				XMLFile.f_SetAttribute(pScheme, "LastUpgradeVersion", "0450");
 			XMLFile.f_SetAttribute(pScheme, "version", "1.3");
 			
-			auto fl_GenerateBuildReference = [&] (CAOXmlElement* _pParent, CProject& _Project)
+			auto fl_GenerateBuildReference = [&] (CXMLElement* _pParent, CProject& _Project)
 			{
 				auto pBuildReference = XMLFile.f_CreateElement(_pParent, "BuildableReference");
 				XMLFile.f_SetAttribute(pBuildReference, "BuildableIdentifier", "primary");
@@ -333,7 +333,7 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 			
 			CStr FileName = CFile::fs_AppendPath(OutputDir,  (CStr::CFormat("{}.xcscheme") << CFile::fs_MakeNiceFilename((CStr::CFormat("{} {}") << CStr("Build All") << Name).f_GetStr())).f_GetStr());
 			
-			CStr RawXMLData = XMLFile.f_GetAsString();
+			CStr RawXMLData = XMLFile.f_GetAsString(EXMLOutputDialect_Xcode);
 
 			// Now merge in any set by a user
 			if (NFile::CFile::fs_FileExists(FileName, EFileAttrib_File) && NFile::CFile::fs_FileExists(FileName + ".gen", EFileAttrib_File))
@@ -342,20 +342,20 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 				CFile::fs_WriteStringToVector(FileData, CStr(RawXMLData), false);
 				
 				if (CFile::fs_ReadFile(FileName + ".gen") == FileData)
-					XMLFile.f_ParseFile(FileName, true);
+					XMLFile.f_ParseFile(FileName);
 				else
 				{
-					CAOXmlUtils ExistingScheme;
-					ExistingScheme.f_ParseFile(FileName, true);
+					CXMLDocument ExistingScheme;
+					ExistingScheme.f_ParseFile(FileName);
 
-					CAOXmlUtils PrevScheme;
-					PrevScheme.f_ParseFile(FileName + ".gen", true);
+					CXMLDocument PrevScheme;
+					PrevScheme.f_ParseFile(FileName + ".gen");
 					fspr_MergeScheme(ExistingScheme.f_GetRootNode(), PrevScheme.f_GetRootNode(), XMLFile.f_GetRootNode());
 				}
 			}
 			
 			{
-				CStr XMLData = XMLFile.f_GetAsString();
+				CStr XMLData = XMLFile.f_GetAsString(EXMLOutputDialect_Xcode);
 				bool bWasCreated;
 				if (!m_BuildSystem.f_AddGeneratedFile(FileName, XMLData, _Solution.f_GetName(), bWasCreated, true))
 					DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << FileName));

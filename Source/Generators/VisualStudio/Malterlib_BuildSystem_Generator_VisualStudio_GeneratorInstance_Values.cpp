@@ -2,13 +2,13 @@
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Generator_VisualStudio.h"
-#include <AOCC/AOXMLUtils.h>
+#include <Mib/XML/XML>
 
 namespace NMib::NBuildSystem::NVisualStudio
 {
 	void CGeneratorInstance::f_SetEvaluatedValues
 		(
-			TCMap<CStr, CAOXmlElement *> const &_Parents
+			TCMap<CStr, CXMLElement *> const &_Parents
 			, TCMap<CConfiguration, CEntityPointer> const &_Configs
 			, TCMap<CConfiguration, CEntityPointer> const &_AllConfigs
 			, bool _bFile
@@ -146,7 +146,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			, CFilePosition const &_Position
 			, EPropertyType _PropType
 			, CStr const &_SourceType
-			, TCMap<CStr, CAOXmlElement *> const &_Parents
+			, TCMap<CStr, CXMLElement *> const &_Parents
 			, CStr const &_AddAsAttribute
 			, bool _bExcludeFromBuildCondition
 			, TCVector<CStr> const *_pSearchList
@@ -299,7 +299,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		TCSet<CStr> ProperityGroupParents;
 		for (auto iParent = _Parents.f_GetIterator(); iParent; ++iParent)
 		{
-			if (CAOXmlUtils::f_GetValue(*iParent) == "PropertyGroup")
+			if (CXMLDocument::f_GetValue(*iParent) == "PropertyGroup")
 				ProperityGroupParents[iParent.f_GetKey()];
 		}
 
@@ -539,9 +539,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 			//m_BuildSystem.fs_ThrowError(CFilePosition(), "Internal Error");
 
 		auto fl_AddValue
-			= [&](TCSet<CConfigValue> const &_Value, CStr const &_Condition, CValueConfigs const &_ValueConfigs) -> CAOXmlElement *
+			= [&](TCSet<CConfigValue> const &_Value, CStr const &_Condition, CValueConfigs const &_ValueConfigs) -> CXMLElement *
 			{
-				CAOXmlElement *pAddToElement = nullptr;
+				CXMLElement *pAddToElement = nullptr;
 				if (_AddAsAttribute.f_IsEmpty())
 				{
 					for (auto iValue = _Value.f_GetIterator(); iValue; ++iValue)
@@ -556,7 +556,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 						if (!iValue->m_Entity.f_IsEmpty())
 						{
 							bool bCreated;
-							pParentElement = CAOXmlUtils::f_GetOrCreateElement(pParentElement, iValue->m_Entity, bCreated);
+							pParentElement = CXMLDocument::f_GetOrCreateElement(pParentElement, iValue->m_Entity, bCreated);
 						}
 						CStr Condition;
 						if (!_Condition.f_IsEmpty() || _bPropertyCondition)
@@ -575,7 +575,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 								Condition = _Condition;
 						}
 
-						CAOXmlElement *pMainValue = nullptr;
+						CXMLElement *pMainValue = nullptr;
 						if (_bDontAllowRedefinition)
 						{
 							TCSet<CConfiguration> MatchedConfigs;
@@ -585,17 +585,17 @@ namespace NMib::NBuildSystem::NVisualStudio
 									MatchedConfigs[*iConfig];
 							}
 
-							auto XMLName = CAOXmlUtils::fs_ToXMLStr(iValue->m_Property);
-							for (auto pElement = pParentElement->FirstChildElement(false); pElement; pElement = pElement->NextSiblingElement(false))
+							auto XMLName = iValue->m_Property;
+							for (auto pElement = pParentElement->FirstChildElement(""); pElement; pElement = pElement->NextSiblingElement(""))
 							{
 								if (pElement->Value() == XMLName)
 								{
-									CStr OtherCondition = CAOXmlUtils::f_GetAttribute(pElement, "Condition");
+									CStr OtherCondition = CXMLDocument::f_GetAttribute(pElement, "Condition");
 
 									if (OtherCondition == Condition)
 									{
-										if (CAOXmlUtils::f_GetNodeText(pElement) != iValue->m_Value)
-											m_BuildSystem.fs_ThrowError(Position, CStr::CFormat("Same property specified differently for different compile types not supported (Value) {}: {} != {}") << iValue->m_Property << CAOXmlUtils::f_GetNodeText(pElement) << iValue->m_Value);
+										if (CXMLDocument::f_GetNodeText(pElement) != iValue->m_Value)
+											m_BuildSystem.fs_ThrowError(Position, CStr::CFormat("Same property specified differently for different compile types not supported (Value) {}: {} != {}") << iValue->m_Property << CXMLDocument::f_GetNodeText(pElement) << iValue->m_Value);
 										pMainValue = pElement;
 										continue;
 									}
@@ -668,10 +668,10 @@ namespace NMib::NBuildSystem::NVisualStudio
 							}
 
 							if (!pMainValue)
-								pMainValue = CAOXmlUtils::f_AddElementAndText(pParentElement, iValue->m_Property, iValue->m_Value);
+								pMainValue = CXMLDocument::f_AddElementAndText(pParentElement, iValue->m_Property, iValue->m_Value);
 						}
 						else
-							pMainValue = CAOXmlUtils::f_AddElementAndText(pParentElement, iValue->m_Property, iValue->m_Value);
+							pMainValue = CXMLDocument::f_AddElementAndText(pParentElement, iValue->m_Property, iValue->m_Value);
 
 						if (iValue->m_bMainValue)
 						{
@@ -691,14 +691,14 @@ namespace NMib::NBuildSystem::NVisualStudio
 							}
 						}
 						if (!Condition.f_IsEmpty())
-							CAOXmlUtils::f_SetAttribute(pMainValue, "Condition", Condition);
+							CXMLDocument::f_SetAttribute(pMainValue, "Condition", Condition);
 						if (_bAddPropertyDefined)
 						{
 							CStr InheritedValue = fl_GetInheritedValue(iValue->m_Parent, iValue->m_Property, iValue->m_Entity);
 
 							if (iValue->m_Value.f_Find(InheritedValue) < 0)
 							{
-								CAOXmlUtils::f_AddElementAndText(pParentElement, CStr::CFormat("DefinedProperty_{}") << iValue->m_Property, "true");
+								CXMLDocument::f_AddElementAndText(pParentElement, CStr::CFormat("DefinedProperty_{}") << iValue->m_Property, "true");
 							}									
 						}
 					}
@@ -729,7 +729,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 					if (!Value.m_Entity.f_IsEmpty())
 						m_BuildSystem.fs_ThrowError(Position, CStr::CFormat("Entity cannot be specified at file level"));
 						
-					auto pMainValue = CAOXmlUtils::f_CreateElement(pAddToElement, Value.m_Value);
+					auto pMainValue = CXMLDocument::f_CreateElement(pAddToElement, Value.m_Value);
 					CStr FileName = (*_Configs.f_GetIterator())->m_Key.m_Name;
 
 					if (m_BuildSystem.f_GetGenerateSettings().m_GenerationFlags & EGenerationFlag_AbsoluteFilePaths)
@@ -745,14 +745,14 @@ namespace NMib::NBuildSystem::NVisualStudio
 							FileName = RelativeName.f_ReplaceChar('/', '\\');
 					}
 						
-					CAOXmlUtils::f_SetAttribute(pMainValue, _AddAsAttribute, FileName);
+					CXMLDocument::f_SetAttribute(pMainValue, _AddAsAttribute, FileName);
 					pAddToElement = pMainValue;
 					if (_bExcludeFromBuildCondition)
 					{
 						if (!_Condition.f_IsEmpty())
 						{
-							auto pExcludeValue = CAOXmlUtils::f_AddElementAndText(pAddToElement, "ExcludedFromBuild", "true");
-							CAOXmlUtils::f_SetAttribute(pExcludeValue, "Condition", "!(" + _Condition + ")");
+							auto pExcludeValue = CXMLDocument::f_AddElementAndText(pAddToElement, "ExcludedFromBuild", "true");
+							CXMLDocument::f_SetAttribute(pExcludeValue, "Condition", "!(" + _Condition + ")");
 						}
 					}
 					for (auto iValue = _Value.f_GetIterator(); iValue; ++iValue)
@@ -768,12 +768,12 @@ namespace NMib::NBuildSystem::NVisualStudio
 						if (!iValue->m_Entity.f_IsEmpty())
 						{
 							bool bCreated;
-							pParentElement = CAOXmlUtils::f_GetOrCreateElement(pParentElement, iValue->m_Entity, bCreated);
+							pParentElement = CXMLDocument::f_GetOrCreateElement(pParentElement, iValue->m_Entity, bCreated);
 						}
-						auto pMainValue = CAOXmlUtils::f_AddElementAndText(pParentElement, iValue->m_Property, iValue->m_Value);
+						auto pMainValue = CXMLDocument::f_AddElementAndText(pParentElement, iValue->m_Property, iValue->m_Value);
 
 						if (!_Condition.f_IsEmpty())
-							CAOXmlUtils::f_SetAttribute(pMainValue, "Condition", _Condition);
+							CXMLDocument::f_SetAttribute(pMainValue, "Condition", _Condition);
 
 						if (_bAddPropertyDefined)
 						{
@@ -781,7 +781,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 							if (iValue->m_Value.f_Find(InheritedValue) < 0)
 							{
-								CAOXmlUtils::f_AddElementAndText(pParentElement, CStr::CFormat("DefinedProperty_{}") << iValue->m_Property, "true");
+								CXMLDocument::f_AddElementAndText(pParentElement, CStr::CFormat("DefinedProperty_{}") << iValue->m_Property, "true");
 							}									
 						}
 					}

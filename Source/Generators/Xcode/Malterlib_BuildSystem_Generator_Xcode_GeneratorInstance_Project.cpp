@@ -3,7 +3,8 @@
 
 #include "../../Malterlib_BuildSystem_Helpers.h"
 #include "Malterlib_BuildSystem_Generator_Xcode.h"
-#include <AOCC/AOXMLUtils.h>
+#include <Mib/Process/ProcessLaunch>
+#include <Mib/XML/XML>
 
 namespace NMib::NBuildSystem::NXcode
 {
@@ -1434,109 +1435,115 @@ R"-----(		{} /* PBXBuildRule */ = {{
 		}
 	}
 	
-	void CGeneratorInstance::fspr_MergeScheme(CAOXmlNode const* _pExistingNode, CAOXmlNode const* _pPrevNode, CAOXmlNode* _pNewNode)
+	void CGeneratorInstance::fspr_MergeScheme(CXMLNode const* _pExistingNode, CXMLNode const* _pPrevNode, CXMLNode* _pNewNode)
 	{
 		// Merge attributes.
-		TCSet<CAOXmlNode *> AlreadyMerged;
-		if (_pExistingNode->Type() == TiXmlNode::ELEMENT) // All nodes are guaranteed to be the same here
+		TCSet<CXMLNode *> AlreadyMerged;
+		if (auto *pElement = _pExistingNode->ToElement()) // All nodes are guaranteed to be the same here
 		{
 			// Find or create the corresponding element at this level
-			CAOXmlElement const* pExistingElement = _pExistingNode->ToElement();
-			CAOXmlElement const* pPrevElement = _pPrevNode->ToElement();
-			CAOXmlElement * pNewElement = _pNewNode->ToElement();
+			CXMLElement const *pExistingElement = _pExistingNode->ToElement();
+			CXMLElement const *pPrevElement = _pPrevNode->ToElement();
+			CXMLElement *pNewElement = _pNewNode->ToElement();
 
-			TCSet<std::string> ExistingAttributes;
-			TCSet<std::string> PrevAttributes;
-			TCSet<std::string> NewAttributes;
+			TCSet<CStr> ExistingAttributes;
+			TCSet<CStr> PrevAttributes;
+			TCSet<CStr> NewAttributes;
 			
-			for (CAOXmlAttribute* pAttribute = pExistingElement->FirstAttribute(false); pAttribute; pAttribute = pAttribute->Next(false))
+			for (CXMLAttribute const *pAttribute = pExistingElement->FirstAttribute(); pAttribute; pAttribute = pAttribute->Next())
 				ExistingAttributes[pAttribute->Name()];
 
-			for (CAOXmlAttribute* pAttribute = pPrevElement->FirstAttribute(false); pAttribute; pAttribute = pAttribute->Next(false))
+			for (CXMLAttribute const *pAttribute = pPrevElement->FirstAttribute(); pAttribute; pAttribute = pAttribute->Next())
 				PrevAttributes[pAttribute->Name()];
 
 			// Find change attributes
-			for (CAOXmlAttribute* pAttribute = pNewElement->FirstAttribute(false); pAttribute; )
+			for (CXMLAttribute const *pAttribute = pNewElement->FirstAttribute(); pAttribute; )
 			{
-				auto *pThisAttribute = pAttribute;
-				pAttribute = pAttribute->Next(false);
+				auto *pThisAttribute = const_cast<CXMLAttribute *>(pAttribute);
+				pAttribute = pAttribute->Next();
 				
 				auto Name = pThisAttribute->Name();
 				
 				if (!ExistingAttributes.f_Exists(Name) && PrevAttributes.f_Exists(Name))
 				{
 					// Removed by user
-					pNewElement->RemoveAttribute(Name);
+					pNewElement->DeleteAttribute(Name);
 					continue;
 				}
 				else if (ExistingAttributes.f_Exists(Name) && PrevAttributes.f_Exists(Name)) 
 					// This purposefully allows the config to override user setting if config added a new attribute that the user manually added previously
 				{
 					// Possibly changed by user
-					auto ExistingValue = pExistingElement->GetAttributeOrDefault(Name, std::string());
-					auto PrevValue = pPrevElement->GetAttributeOrDefault(Name, std::string());
+					CStr ExistingValue;
+					if (auto pAttribute = pExistingElement->Attribute(Name))
+						ExistingValue = pAttribute; 
+					CStr PrevValue;
+					if (auto pAttribute = pPrevElement->Attribute(Name))
+						PrevValue = pAttribute;
 					if (ExistingValue != PrevValue)
 					{
 						// User changed value, override
-						pThisAttribute->SetValue(ExistingValue);
+						pThisAttribute->SetAttribute(ExistingValue.f_GetStr());
 					}
 				}
 				NewAttributes[Name];
 			}
 			
 			// Find user added attributes
-			for (CAOXmlAttribute* pAttribute = pExistingElement->FirstAttribute(false); pAttribute; pAttribute = pAttribute->Next(false))
+			for (CXMLAttribute const *pAttribute = pExistingElement->FirstAttribute(); pAttribute; pAttribute = pAttribute->Next())
 			{
 				auto Name = pAttribute->Name();
 				
 				if (!NewAttributes.f_Exists(Name) && !PrevAttributes.f_Exists(Name))
 				{
 					// User added attribute, copy over
-					auto ExistingValue = pExistingElement->GetAttributeOrDefault(Name, std::string());
+					CStr ExistingValue;
+					if (auto pAttribute = pExistingElement->Attribute(Name))
+						ExistingValue = pAttribute;
 					pNewElement->SetAttribute(Name, ExistingValue);
 				}
 			}
 
 			//DConOut("pNewElement->GetText(): {}\n", pNewElement->Value().c_str());
 			//XMLFile.f_SetAttribute(pOverrideElement, CStr(pAttribute->Name().c_str()), CStr(pAttribute->Value().c_str()));
-			if (pNewElement->Value() == "CommandLineArguments")
+			if (fg_StrCmp(pNewElement->Value(), "CommandLineArguments") == 0)
 			{
 
-				TCMap<CStr, CAOXmlNode const*> ExistingArgs;
-				TCMap<CStr, CAOXmlNode const*> PrevArgs;
-				TCMap<CStr, CAOXmlNode *> NewArgs;
+				TCMap<CStr, CXMLNode const *> ExistingArgs;
+				TCMap<CStr, CXMLNode const *> PrevArgs;
+				TCMap<CStr, CXMLNode *> NewArgs;
 				
-				for (CAOXmlUtils::CConstNodeIterator iExistingChild(_pExistingNode); iExistingChild; ++iExistingChild)
+				for (CXMLDocument::CConstNodeIterator iExistingChild(_pExistingNode); iExistingChild; ++iExistingChild)
 				{
-					CAOXmlNode const* pNode = iExistingChild;
-					if (pNode->Type() != TiXmlNode::ELEMENT)
+					auto *pNode = iExistingChild->ToElement();
+					if (!pNode)
 						continue;
 					
-					CStr Argument = CAOXmlUtils::f_GetAttribute((CAOXmlElement*)pNode, "argument");
+					CStr Argument = CXMLDocument::f_GetAttribute(pNode, "argument");
 					
 					if (Argument.f_IsEmpty())
 						continue;
 					ExistingArgs[Argument] = pNode;
 				}
-				for (CAOXmlUtils::CNodeIterator iNewChild(_pNewNode); iNewChild; ++iNewChild)
+				for (CXMLDocument::CNodeIterator iNewChild(_pNewNode); iNewChild; ++iNewChild)
 				{
-					CAOXmlNode * pNode = iNewChild;
-					if (pNode->Type() != TiXmlNode::ELEMENT)
+					auto *pNode = iNewChild->ToElement();
+					if (!pNode)
 						continue;
 					
-					CStr Argument = CAOXmlUtils::f_GetAttribute((CAOXmlElement*)pNode, "argument");
+					CStr Argument = CXMLDocument::f_GetAttribute(pNode, "argument");
 					
 					if (Argument.f_IsEmpty())
 						continue;
 					NewArgs[Argument] = pNode;
 				}
-				for (CAOXmlUtils::CConstNodeIterator iPrevChild(_pPrevNode); iPrevChild; ++iPrevChild)
+				for (CXMLDocument::CConstNodeIterator iPrevChild(_pPrevNode); iPrevChild; ++iPrevChild)
 				{
-					CAOXmlNode const* pNode = iPrevChild;
-					if (pNode->Type() != TiXmlNode::ELEMENT)
+					auto *pNode = iPrevChild->ToElement();
+					if (!pNode)
 						continue;
 					
-					CStr Argument = CAOXmlUtils::f_GetAttribute((CAOXmlElement*)pNode, "argument");
+					CStr Argument = CXMLDocument::f_GetAttribute(pNode, "argument");
 					
 					if (Argument.f_IsEmpty())
 						continue;
@@ -1553,7 +1560,7 @@ R"-----(		{} /* PBXBuildRule */ = {{
 					else if (pPrevArg && !pExistingArg)
 					{
 						// Removed by user
-						pNewElement->RemoveChild(*iArg);
+						pNewElement->DeleteChild(*iArg);
 					}
 				}
 				for (auto iArg = ExistingArgs.f_GetIterator(); iArg; ++iArg)
@@ -1561,7 +1568,7 @@ R"-----(		{} /* PBXBuildRule */ = {{
 					if (!NewArgs.f_FindEqual(iArg.f_GetKey()) && !PrevArgs.f_FindEqual(iArg.f_GetKey()))
 					{
 						// Added by user
-						pNewElement->InsertEndChild(**iArg);
+						pNewElement->InsertEndChild(CXMLDocument::f_DeepClone(*iArg, pNewElement->GetDocument()));
 					}
 				}
 				
@@ -1569,16 +1576,16 @@ R"-----(		{} /* PBXBuildRule */ = {{
 			}
 		}
 				 
-		CAOXmlUtils::CConstNodeIterator iExistingChild(_pExistingNode);
-		CAOXmlUtils::CConstNodeIterator iPrevChild(_pPrevNode);
-		CAOXmlUtils::CNodeIterator iNewChild(_pNewNode);
+		CXMLDocument::CConstNodeIterator iExistingChild(_pExistingNode);
+		CXMLDocument::CConstNodeIterator iPrevChild(_pPrevNode);
+		CXMLDocument::CNodeIterator iNewChild(_pNewNode);
 		
 		
 		while (iExistingChild || iPrevChild || iNewChild)
 		{
-			CAOXmlNode const* pExistingChild = iExistingChild;
-			CAOXmlNode const* pPrevChild = iPrevChild;
-			CAOXmlNode * pNewChild = iNewChild;
+			CXMLNode const* pExistingChild = iExistingChild;
+			CXMLNode const* pPrevChild = iPrevChild;
+			CXMLNode * pNewChild = iNewChild;
 
 			++iExistingChild;
 			++iPrevChild;
@@ -1593,7 +1600,7 @@ R"-----(		{} /* PBXBuildRule */ = {{
 				else
 				{
 					// This node was added by user, lets add it back
-					_pNewNode->InsertEndChild(*pExistingChild);
+					_pNewNode->InsertEndChild(CXMLDocument::f_DeepClone(pExistingChild, _pNewNode->GetDocument()));
 				}
 			}
 			else if (!pExistingChild && pNewChild)
@@ -1605,7 +1612,7 @@ R"-----(		{} /* PBXBuildRule */ = {{
 				else
 				{
 					// This node was removed by user, lets remove it here as well
-					_pNewNode->RemoveChild(pNewChild);
+					_pNewNode->DeleteChild(pNewChild);
 				}
 			}
 			else
@@ -1614,8 +1621,8 @@ R"-----(		{} /* PBXBuildRule */ = {{
 						pExistingChild 
 						&& pPrevChild 
 						&& pNewChild
-						&& pExistingChild->Type() == pPrevChild->Type()
-						&& pExistingChild->Type() == pNewChild->Type()
+						&& CXMLDocument::f_GetNodeType(pExistingChild) == CXMLDocument::f_GetNodeType(pPrevChild)
+						&& CXMLDocument::f_GetNodeType(pExistingChild) == CXMLDocument::f_GetNodeType(pNewChild)
 						&& pExistingChild->Value() == pPrevChild->Value()
 						&& pExistingChild->Value() == pNewChild->Value()
 					)
@@ -1646,7 +1653,7 @@ R"-----(		{} /* PBXBuildRule */ = {{
 			if (Element.f_GetValue() == "false")
 				continue;
 			
-			CAOXmlUtils XMLFile(false);
+			CXMLDocument XMLFile(false);
 			auto pOldFile = ThreadLocal.m_pXMLFile;
 			ThreadLocal.m_pXMLFile = &XMLFile;
 			auto Cleanup = g_OnScopeExit > [&]
@@ -1670,7 +1677,7 @@ R"-----(		{} /* PBXBuildRule */ = {{
 				XMLFile.f_SetAttribute(pScheme, "LastUpgradeVersion", "0450");
 			XMLFile.f_SetAttribute(pScheme, "version", "1.3");
 
-			auto fl_GenerateBuildReference = [&] (CAOXmlElement* _pParent) -> CStr
+			auto fl_GenerateBuildReference = [&] (CXMLElement* _pParent) -> CStr
 			{
 				auto pBuildReference = XMLFile.f_CreateElement(_pParent, "BuildableReference");
 				XMLFile.f_SetAttribute(pBuildReference, "BuildableIdentifier", "primary");
@@ -1689,7 +1696,7 @@ R"-----(		{} /* PBXBuildRule */ = {{
 				return BuildableName;
 			};
 			
-			auto fl_GenerateRunnablePath = [&] (CAOXmlElement* _pParent) -> bool
+			auto fl_GenerateRunnablePath = [&] (CXMLElement* _pParent) -> bool
 			{
 				CElement const& Element = ThreadLocal.mp_EvaluatedTargetSettings[Configuration].m_Element["LocalDebuggerCommand"];
 				if (Element.f_GetValue().f_IsEmpty())
@@ -1819,7 +1826,7 @@ R"-----(		{} /* PBXBuildRule */ = {{
 			
 			CStr FileName = CFile::fs_AppendPath(OutputDir,  (CStr::CFormat("{}.xcscheme") << SchemeName).f_GetStr());
 			
-			CStr RawXMLData = XMLFile.f_GetAsString();
+			CStr RawXMLData = XMLFile.f_GetAsString(EXMLOutputDialect_Xcode);
 
 			// Now merge in any set by a user
 			if (NFile::CFile::fs_FileExists(FileName, EFileAttrib_File) && NFile::CFile::fs_FileExists(FileName + ".gen", EFileAttrib_File))
@@ -1828,21 +1835,21 @@ R"-----(		{} /* PBXBuildRule */ = {{
 				CFile::fs_WriteStringToVector(FileData, CStr(RawXMLData), false);
 				
 				if (CFile::fs_ReadFile(FileName + ".gen") == FileData)
-					XMLFile.f_ParseFile(FileName, true);
+					XMLFile.f_ParseFile(FileName);
 				else
 				{
-					CAOXmlUtils ExistingScheme;
-					ExistingScheme.f_ParseFile(FileName, true);
+					CXMLDocument ExistingScheme;
+					ExistingScheme.f_ParseFile(FileName);
 
-					CAOXmlUtils PrevScheme;
-					PrevScheme.f_ParseFile(FileName + ".gen", true);
+					CXMLDocument PrevScheme;
+					PrevScheme.f_ParseFile(FileName + ".gen");
 					fspr_MergeScheme(ExistingScheme.f_GetRootNode(), PrevScheme.f_GetRootNode(), XMLFile.f_GetRootNode());
 				}
 			}
 
 			// Output the newly generated file
 			{
-				CStr XMLData = XMLFile.f_GetAsString();
+				CStr XMLData = XMLFile.f_GetAsString(EXMLOutputDialect_Xcode);
 				bool bWasCreated;
 				if (!m_BuildSystem.f_AddGeneratedFile(FileName, XMLData, _Project.m_pSolution->f_GetName(), bWasCreated, true))
 					DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << FileName));

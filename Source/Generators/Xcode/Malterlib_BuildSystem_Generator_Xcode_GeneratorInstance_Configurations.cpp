@@ -2,7 +2,7 @@
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Generator_Xcode.h"
-#include <AOCC/AOXMLUtils.h>
+#include <Mib/XML/XML>
 
 namespace NMib::NStr
 {

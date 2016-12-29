@@ -4,7 +4,7 @@
 #pragma once
 
 #include "../../Malterlib_BuildSystem.h"
-#include <AOCC/AOXMLUtils.h>
+#include <Mib/XML/XML>
 
 namespace NMib::NBuildSystem::NXcode
 {
@@ -380,7 +380,7 @@ namespace NMib::NBuildSystem::NXcode
 
 			void f_CreateDirectory(CStr const &_Path);
 
-			CAOXmlUtils *m_pXMLFile;
+			CXMLDocument *m_pXMLFile;
 			TCMap<CStr> mp_EvaluatedTypesInUse;
 			TCMap<CConfiguration, TCMap<CStr, TCVector<CStr>>> mp_XcodeSettingsFromFiles;
 			TCMap<CConfiguration, TCSet<CStr>> mp_XcodeSettingsFromFilesExcluded;
@@ -436,7 +436,7 @@ namespace NMib::NBuildSystem::NXcode
 
 		void fp_GenerateToolRunScript(CProject& _Project, CStr const& _OutputDir) const;
 
-		static void fspr_MergeScheme(CAOXmlNode const* _pExistingNode, CAOXmlNode const* _pPrevNode, CAOXmlNode* _pNewNode);
+		static void fspr_MergeScheme(CXMLNode const* _pExistingNode, CXMLNode const* _pPrevNode, CXMLNode* _pNewNode);
 		bool fp_GenerateSchemes(CProject& _Project, TCMap<CConfiguration, TCSet<CStr>> &_Runnables, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable) const;
 		
 		void fp_AddExcludedFile(CConfiguration const &_Config, CStr const &_File) const;

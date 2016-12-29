@@ -4,7 +4,7 @@
 #pragma once
 
 #include "../../Malterlib_BuildSystem.h"
-#include <AOCC/AOXMLUtils.h>
+#include <Mib/XML/XML>
 
 namespace NMib::NBuildSystem::NVisualStudio
 {
@@ -184,7 +184,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		struct CPrefixHeader
 		{
 			TCSet<CConfiguration> m_Configurations;
-			TCMap<CStr, TCSet<CAOXmlElement *>> m_Elements;
+			TCMap<CStr, TCSet<CXMLElement *>> m_Elements;
 			zbool m_bUsed;
 			CFilePosition m_Position;
 		};
@@ -198,7 +198,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 		struct CConfigResult
 		{
-			CAOXmlElement *m_pElement;
+			CXMLElement *m_pElement;
 			TCSet<CStr> m_UntranslatedValues;
 		};
 
@@ -232,7 +232,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 		void f_SetEvaluatedValues
 			(
-				TCMap<CStr, CAOXmlElement *> const &_Parents
+				TCMap<CStr, CXMLElement *> const &_Parents
 				, TCMap<CConfiguration, CEntityPointer> const &_Configs
 				, TCMap<CConfiguration, CEntityPointer> const &_AllConfigs
 				, bool _bFile
@@ -254,7 +254,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 				, CFilePosition const &_Position
 				, EPropertyType _PropType
 				, CStr const &_SourceType
-				, TCMap<CStr, CAOXmlElement *> const &_Parents
+				, TCMap<CStr, CXMLElement *> const &_Parents
 				, CStr const &_AddAsAttribute
 				, bool _bExcludeFromBuildCondition
 				, TCVector<CStr> const *_pSearchList
