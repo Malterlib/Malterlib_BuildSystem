@@ -3,6 +3,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "Malterlib_BuildSystem_Find.h"
 #include "Malterlib_BuildSystem_Data.h"
 #include <Mib/Concurrency/ThreadSafeQueue>
@@ -317,3 +319,5 @@ namespace NMib::NBuildSystem
 }
 
 #include "Malterlib_BuildSystem.hpp"
+
+#endif
