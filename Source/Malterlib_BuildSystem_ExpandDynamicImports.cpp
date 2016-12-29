@@ -69,7 +69,7 @@ namespace NMib::NBuildSystem
 	
 	CBuildSystemData::CImportData *CBuildSystem::fp_ExpandImportCMake(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData) const
 	{
-		CStr FileName = _Entity.m_Key.m_Name;
+		CStr FileName = CFile::fs_GetExpandedPath(_Entity.m_Key.m_Name, CFile::fs_GetPath(_Entity.m_Position.m_FileName));
 		CStr TempDirectory = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "TempDirectory");
 		
 		CProcessLaunchParams LaunchParams;

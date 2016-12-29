@@ -127,7 +127,7 @@ namespace NMib::NBuildSystem
 				{
 					if (fg_CharIsAlphabetical(Character) || fg_CharIsNumber(Character) || Character == 0 || Character == '_')
 					{
-						if (Name == "Import" || Name == "Include")
+						if ((Name == "Import" || Name == "Include") && !Value.f_IsEmpty())
 							continue; // Error recovery to allow repositories to be handled
 						TCLinkedList<CEntity *> Entities;
 						Entities.f_Insert(&_RootEntity);
