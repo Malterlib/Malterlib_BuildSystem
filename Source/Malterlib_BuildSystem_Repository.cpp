@@ -158,10 +158,7 @@ namespace NMib::NBuildSystem
 			
 			CStr HeadRef = CFile::fs_ReadStringFromFile(GitDirectory + "/HEAD", true).f_TrimRight("\n");
 			if (HeadRef.f_StartsWith("ref: "))
-			{
-				CBuildSystem::fs_ThrowError(_Position, fg_Format("Unsupported HEAD ref. Expected 'ref: ' in '{}'", GitDirectory + "/HEAD"));
 				return CFile::fs_ReadStringFromFile(GitDirectory + "/" + HeadRef.f_Extract(5), true).f_TrimRight("\n");
-			}
 			else
 				return HeadRef;
 		}
