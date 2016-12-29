@@ -89,7 +89,14 @@ namespace NMib::NBuildSystem
 				CStr IgnoreContents;
 				if (CFile::fs_FileExists(GitIgnoreFile))
 					IgnoreContents = CFile::fs_ReadStringFromFile(GitIgnoreFile, true);
-				CStr IgnoreLine = fg_Format("/{}\n", CFile::fs_GetFile(_FileName));
+
+				ch8 const *pParse = IgnoreContents;
+				fg_ParseToEndOfLine(pParse);
+				ch8 const *pLineEnd = "\n";
+				if (*pParse == '\r')
+					pLineEnd = "\r\n";
+
+				CStr IgnoreLine = fg_Format("/{}{}", CFile::fs_GetFile(_FileName), pLineEnd);
 				if (IgnoreContents.f_Find(IgnoreLine) < 0)
 				{
 					IgnoreContents += IgnoreLine;
