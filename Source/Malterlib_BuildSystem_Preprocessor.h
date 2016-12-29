@@ -16,8 +16,13 @@ namespace NMib::NBuildSystem
 		CStr const &f_GetFileLocation();
 
 	private:
+		struct CError
+		{
+			CRegistryPreserveAndOrder_CStr *m_pRootRegistry;
+			CStr m_Error;
+		};
 		static void fsp_ThrowError(CRegistryPreserveAndOrder_CStr const &_Registry, CStr const &_Error);
-		void fpr_HandleIncludes(CRegistryPreserveAndOrder_CStr &_Registry, CStr const &_Path);
+		void fpr_HandleIncludes(CRegistryPreserveAndOrder_CStr &_Registry, CStr const &_Path, TCVector<CError> &o_Errors);
 		void fpr_FindFilesRecursive(CRegistryPreserveAndOrder_CStr &_Registry, TCVector<CStr> &o_Files, CStr const &_Path, CStr const &_ToFind);
 
 		CRegistryPreserveAndOrder_CStr &mp_ResultRegistry;

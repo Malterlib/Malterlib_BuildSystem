@@ -32,7 +32,7 @@ namespace NMib::NBuildSystem
 		CBuildSystem();
 		
 		void f_SetGeneratorInterface(CGeneratorInterface *_pInterface) const; 
-		bint f_Generate(CGenerateSettings const &_GenerateSettings);
+		bool f_Generate(CGenerateSettings const &_GenerateSettings, bool &o_bRetry);
 		void f_GenerateBuildSystem
 			(
 				TCMap<CConfiguration, TCUniquePointer<CConfiguraitonData>> &o_Configurations
@@ -272,6 +272,8 @@ namespace NMib::NBuildSystem
 		void fp_ExpandImport(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData) const;
 		CBuildSystemData::CImportData *fp_ExpandImportCMake(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData) const;
 		void fp_TracePropertyEval(bool _bSuccess, CEntity const &_Entity, CProperty const &_Property, CStr const &_Value) const;
+
+		bool fp_HandleRepositories() const;
 		
 		CGenerateSettings mp_GenerateSettings;
 
@@ -308,6 +310,9 @@ namespace NMib::NBuildSystem
 		
 		align_cacheline mutable CMutual mp_GeneratedFilesLock;
 		mutable TCMap<CStr, CGeneratedFile> mp_GeneratedFiles;
+		
+		EFileAttrib mp_SupportedAttributes = CFile::fs_GetSupportedAttributes();
+		EFileAttrib mp_ValidAttributes = CFile::fs_GetValidAttributes();
 	};
 }
 

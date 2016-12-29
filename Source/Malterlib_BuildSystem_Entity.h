@@ -19,6 +19,7 @@ namespace NMib::NBuildSystem
 		, EEntityType_GeneratorSetting
 		, EEntityType_GenerateFile
 		, EEntityType_Import
+		, EEntityType_Repository
 	};
 	
 	struct CEntityKey

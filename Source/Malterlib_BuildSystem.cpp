@@ -6,6 +6,8 @@
 
 #include "Malterlib_BuildSystem_GeneratorState.h"
 
+#include <Mib/Perforce/Wrapper>
+
 namespace NMib::NBuildSystem
 {
 	void fg_Malterlib_BuildSystem_MakeActive_VisualStudio();
@@ -84,6 +86,39 @@ namespace NMib::NBuildSystem
 					NSys::fg_Debug_DiffStrings(CFile::fs_ReadStringFromVector(OldFileContents), CFile::fs_ReadStringFromVector(_FileData), UniqueName, UniqueName);
 			}
 #			endif
+		if (CFile::fs_FileExists(_File))
+		{
+			EFileAttrib Attributes = CFile::fs_GetAttributes(_File);
+			if ((Attributes & EFileAttrib_ReadOnly) || (!(Attributes & EFileAttrib_UserWrite) && (mp_SupportedAttributes & EFileAttrib_UserWrite)))
+			{
+				bool bSuccess = false;
+				CStr Path = CFile::fs_GetPath(_File);
+				while (!Path.f_IsEmpty())
+				{
+					if (CFile::fs_FileExists(CFile::fs_AppendPath(Path, ".p4config")))
+					{
+						// Perforce checkout
+						try
+						{
+							CPerforceClientThrow Client;
+							Client.f_Login(CStr(), Path);
+							Client.f_OpenForEdit(_File);
+							DConOut("Opened file for edit in perforce: {}{\n}", _File);
+							bSuccess = true;
+						}
+						catch (NException::CException const &_Error)
+						{
+							DConErrOut("Failed to checkout via perforce:{\n}{}{\n}", _Error);
+						}
+						break;
+					}
+					Path = CFile::fs_GetPath(Path);
+				}
+				
+				if (!bSuccess)
+					CFile::fs_SetAttributes(_File, (Attributes & ~EFileAttrib_ReadOnly)  | (mp_SupportedAttributes & EFileAttrib_UserWrite) | mp_ValidAttributes);
+			}
+		}
 		if (CFile::fs_CopyFileDiff(_FileData, _File, NTime::CTime::fs_NowUTC(), _AddAttribs))
 		{
 			f_SetFileChanged(_File);

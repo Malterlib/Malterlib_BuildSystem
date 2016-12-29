@@ -12,20 +12,18 @@ namespace NMib::NBuildSystem
 {
 	CUniversallyUniqueIdentifier g_GeneratorStateUUIDNamespace("{8220886E-63BD-4F4E-B32B-71D68D7346D4}");
 	
-	bint CBuildSystem::f_Generate(CGenerateSettings const &_GenerateSettings)
+	bool CBuildSystem::f_Generate(CGenerateSettings const &_GenerateSettings, bool &o_bRetry)
 	{
+		o_bRetry = false;
 		CClock Clock;
 		Clock.f_Start();
 		
 		mp_GenerateSettings = _GenerateSettings;
 		
 		if (_GenerateSettings.m_GenerationFlags & EGenerationFlag_SingleThreaded)
-		{
 			g_ThreadPool.f_Construct(0);
-		}
 		else
 			g_ThreadPool.f_Construct();
-
 
 		// DMibScopeConOutTimer("Generate");
 		if (_GenerateSettings.m_Action != "Build" && _GenerateSettings.m_Action != "ReBuild")
@@ -119,7 +117,14 @@ namespace NMib::NBuildSystem
 								if (DiskTime != _File.m_WriteTime)
 								{
 									if (!bChanged.f_Exchange(true))
-										DConOut("Regenerating build system because file changed ({} != {}): {}{\n}", NTime::fg_GetFullTimeStr(DiskTime) << NTime::fg_GetFullTimeStr(_File.m_WriteTime) << FileName);
+									{
+										DConOut
+											(
+												"Regenerating build system because file changed ({} != {}): {}{\n}"
+												, NTime::fg_GetFullTimeStr(DiskTime) << NTime::fg_GetFullTimeStr(_File.m_WriteTime) << FileName
+											)
+										;
+									}
 									return true;
 								}
 							}
@@ -324,25 +329,45 @@ namespace NMib::NBuildSystem
 
 		CStr UserSettingsFileName = CStr::CFormat("{}/UserSettings.MSettings") << OutputDir;
 		mp_UserSettingsFile = UserSettingsFileName;
-		if (CFile::fs_FileExists(UserSettingsFileName))
+		bool bTryParsed = false;
+		try
 		{
-			CBuildSystemPreprocessor Preprocessor(mp_UserSettingsRegistry, mp_SourceFiles, mp_FindCache);
-			Preprocessor.f_ReadFile(UserSettingsFileName);
-			mp_Registry = mp_UserSettingsRegistry;
-		}
+			if (CFile::fs_FileExists(UserSettingsFileName))
+			{
+				CBuildSystemPreprocessor Preprocessor(mp_UserSettingsRegistry, mp_SourceFiles, mp_FindCache);
+				Preprocessor.f_ReadFile(UserSettingsFileName);
+				mp_Registry = mp_UserSettingsRegistry;
+			}
 
+			{
+				CBuildSystemPreprocessor Preprocessor(mp_Registry, mp_SourceFiles, mp_FindCache);
+				Preprocessor.f_ReadFile(_GenerateSettings.m_SourceFile);
+				mp_FileLocation = Preprocessor.f_GetFileLocation();
+			}
+			mp_SourceFiles[UserSettingsFileName];
+			mp_BaseDir = CFile::fs_GetPath(mp_FileLocation);
+			mp_FileLocationFile = CFile::fs_GetFile(mp_FileLocation);
+
+			bTryParsed = true;
+			fp_ParseData(mp_Data.m_RootEntity, mp_Registry, &mp_Data.m_ConfigurationTypes);
+		}
+		catch (CException const &)
 		{
-			CBuildSystemPreprocessor Preprocessor(mp_Registry, mp_SourceFiles, mp_FindCache);
-			Preprocessor.f_ReadFile(_GenerateSettings.m_SourceFile);
-			mp_FileLocation = Preprocessor.f_GetFileLocation();
+			if (!bTryParsed)
+				fp_ParseData(mp_Data.m_RootEntity, mp_Registry, &mp_Data.m_ConfigurationTypes);
+			if (fp_HandleRepositories())
+			{
+				o_bRetry = true;
+				return false;
+			}
+			else
+				throw;
 		}
-		mp_SourceFiles[UserSettingsFileName];
-
-		mp_BaseDir = CFile::fs_GetPath(mp_FileLocation);
-		mp_FileLocationFile = CFile::fs_GetFile(mp_FileLocation);
-
-		fp_ParseData(mp_Data.m_RootEntity, mp_Registry, &mp_Data.m_ConfigurationTypes);
-		
+		if (fp_HandleRepositories())
+		{
+			o_bRetry = true;
+			return false;
+		}
 		fp64 Time2 = Clock.f_GetTime();
 		DConOut("Parsed data {fe2} s{\n}", Time2 - Time1);
 

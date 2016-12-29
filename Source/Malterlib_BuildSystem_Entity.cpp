@@ -520,6 +520,7 @@ namespace NMib::NBuildSystem
 		else if (_String == "GeneratorSetting") return EEntityType_GeneratorSetting;
 		else if (_String == "GenerateFile") return EEntityType_GenerateFile;
 		else if (_String == "Import") return EEntityType_Import;
+		else if (_String == "Repository") return EEntityType_Repository;
 		else return EEntityType_Invalid;
 	}
 
@@ -536,6 +537,7 @@ namespace NMib::NBuildSystem
 		case EEntityType_GeneratorSetting: return "GeneratorSetting";
 		case EEntityType_GenerateFile: return "GenerateFile";
 		case EEntityType_Import: return "Import";
+		case EEntityType_Repository: return "Repository";
 		default: DMibNeverGetHere; return CStr();
 		}
 	}

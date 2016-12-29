@@ -38,6 +38,7 @@ namespace NMib::NBuildSystem
 		else if (_String == "Workspace") return EPropertyType_Workspace;
 		else if (_String == "Dependency") return EPropertyType_Dependency;
 		else if (_String == "Import") return EPropertyType_Import;
+		else if (_String == "Repository") return EPropertyType_Repository;
 		else return EPropertyType_Invalid;
 	}
 
@@ -51,6 +52,7 @@ namespace NMib::NBuildSystem
 		case EPropertyType_Workspace: return "Workspace";
 		case EPropertyType_Dependency: return "Dependency";
 		case EPropertyType_Import: return "Import";
+		case EPropertyType_Repository: return "Repository";
 		default: DMibNeverGetHere; return CStr();
 		}
 	}

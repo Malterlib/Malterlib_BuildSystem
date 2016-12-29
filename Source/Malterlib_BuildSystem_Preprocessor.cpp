@@ -67,7 +67,7 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	void CBuildSystemPreprocessor::fpr_HandleIncludes(CRegistryPreserveAndOrder_CStr &_RootRegistry, CStr const &_Path)
+	void CBuildSystemPreprocessor::fpr_HandleIncludes(CRegistryPreserveAndOrder_CStr &_RootRegistry, CStr const &_Path, TCVector<CError> &o_Errors)
 	{
 		_RootRegistry.f_TransformFunc
 			(
@@ -95,9 +95,10 @@ namespace NMib::NBuildSystem
 							if (Files.f_IsEmpty())
 							{
 								if (bInclude)
-									fsp_ThrowError(_Registry, CStr::CFormat("No files found for included pattern '{}'") << FullPath);
+									o_Errors.f_Insert(CError{&_Registry, CStr::CFormat("No files found for included pattern '{}'") << FullPath});
 								else
-									fsp_ThrowError(_Registry, CStr::CFormat("No files found for imported pattern '{}'") << FullPath);
+									o_Errors.f_Insert(CError{&_Registry, CStr::CFormat("No files found for imported pattern '{}'") << FullPath});
+								return;
 							}
 						}
 						else
@@ -105,9 +106,10 @@ namespace NMib::NBuildSystem
 							if (!CFile::fs_FileExists(FullPath, EFileAttrib_File))
 							{
 								if (bInclude)
-									fsp_ThrowError(_Registry, CStr::CFormat("Include file '{}' does not exist") << FullPath);
+									o_Errors.f_Insert(CError{&_Registry, CStr::CFormat("Include file '{}' does not exist") << FullPath});
 								else
-									fsp_ThrowError(_Registry, CStr::CFormat("Import file '{}' does not exist") << FullPath);
+									o_Errors.f_Insert(CError{&_Registry, CStr::CFormat("Import file '{}' does not exist") << FullPath});
+								return;
 							}
 							Files.f_Insert(FullPath);
 						}
@@ -127,7 +129,7 @@ namespace NMib::NBuildSystem
 								CRegistryPreserveAndOrder_CStr IncludedRegistry;
 								IncludedRegistry.f_ParseStr(FileData, _File);
 
-								fpr_HandleIncludes(IncludedRegistry, Path);
+								fpr_HandleIncludes(IncludedRegistry, Path, o_Errors);
 
 								auto pPrevious = &_Registry;
 								for (auto iChild = IncludedRegistry.f_GetChildIterator(); iChild; )
@@ -176,8 +178,10 @@ namespace NMib::NBuildSystem
 			pPrevious = pChild;
 		}
 
-		fpr_HandleIncludes(mp_ResultRegistry, Path);
-			
+		TCVector<CError> Errors;
+		fpr_HandleIncludes(mp_ResultRegistry, Path, Errors);
+		if (!Errors.f_IsEmpty())
+			fsp_ThrowError(*Errors.f_GetFirst().m_pRootRegistry, Errors.f_GetFirst().m_Error);
 	}
 
 	CStr const &CBuildSystemPreprocessor::f_GetFileLocation()

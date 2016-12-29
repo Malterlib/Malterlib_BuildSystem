@@ -127,6 +127,8 @@ namespace NMib::NBuildSystem
 				{
 					if (fg_CharIsAlphabetical(Character) || fg_CharIsNumber(Character) || Character == 0 || Character == '_')
 					{
+						if (Name == "Import" || Name == "Include")
+							continue; // Error recovery to allow repositories to be handled
 						TCLinkedList<CEntity *> Entities;
 						Entities.f_Insert(&_RootEntity);
 						fp_ParseProperty(Entities, Registry);
@@ -481,6 +483,12 @@ namespace NMib::NBuildSystem
 			if (_Parent.m_Key.m_Type != EEntityType_Root)
 				fsp_ThrowError(_Registry, "Dynamic import can only be specified at root");
 		}
+		else if (Type == EEntityType_Repository)
+		{
+			bAllowChildren = true;
+			if (_Parent.m_Key.m_Type != EEntityType_Root)
+				fsp_ThrowError(_Registry, "Repositories can only be specified at root");
+		}
 		else if (Type == EEntityType_GenerateFile)
 		{
 			bAllowChildren = false;
@@ -518,12 +526,13 @@ namespace NMib::NBuildSystem
 		case EEntityType_GenerateFile:
 		case EEntityType_Workspace:
 		case EEntityType_Import:
+		case EEntityType_Repository:
 			{
 				auto pOldEntity = _Parent.m_ChildEntitiesMap.f_FindEqual(Key);
 
 				if (pOldEntity)
 				{
-					if (Type == EEntityType_Import)
+					if (Type == EEntityType_Import || Type == EEntityType_Repository)
 					{
 						pRetEntity = pOldEntity;
 						pEntity = &TempEntity;
@@ -595,9 +604,7 @@ namespace NMib::NBuildSystem
 			default:
 				{
 					if (fg_CharIsAlphabetical(Character) || fg_CharIsNumber(Character) || Character == 0 || Character == '_')
-					{
 						fp_ParseProperty(Entities, Registry);
-					}
 					else
 						fsp_ThrowError(Registry, CStr::CFormat("Unrecognized operator '{}'") << Name.f_Left(1));
 				}
@@ -606,7 +613,11 @@ namespace NMib::NBuildSystem
 		}
 		
 		if (bMergeEntity)
-			pRetEntity->f_CopyFrom(TempEntity, true);
+		{
+			pRetEntity->f_CopyProperties(TempEntity);
+			pRetEntity->f_MergeEntities(TempEntity);
+			pRetEntity->m_Position = TempEntity.m_Position;
+		}
 		
 		return pRetEntity;
 	}
