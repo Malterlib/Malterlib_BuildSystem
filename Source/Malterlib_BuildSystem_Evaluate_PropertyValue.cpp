@@ -825,6 +825,13 @@ namespace NMib::NBuildSystem
 
 				Ret = CFile::fs_GetFileNoExt(Ret);
 			}
+			else if (Function == "GetDrive")
+			{
+				if (FunctionParams.f_GetLen() != 0)
+					fsp_ThrowError(_Position, "GetDrive takes zero parameters");
+
+				Ret = CFile::fs_GetDrive(Ret);
+			}
 			else if (Function == "MakeRelative")
 			{
 				if (FunctionParams.f_GetLen() != 1)

@@ -3,6 +3,7 @@
 
 #include "Malterlib_BuildSystem_Generator_VisualStudio.h"
 #include <Mib/XML/XML>
+#include <Mib/Process/ProcessLaunch>
 
 namespace NMib::NBuildSystem::NVisualStudio
 {
@@ -20,6 +21,19 @@ namespace NMib::NBuildSystem::NVisualStudio
 		else if (m_Version == 2015)
 			return "14.0";
 		DError("Implement this");
+	}
+
+	CStr CGeneratorInstance::f_GetVisualStudioRoot() const
+	{
+		uint32 VSVersion = 0;
+		switch (m_Version)
+		{
+		case 2012: VSVersion = 110; break;
+		case 2013: VSVersion = 120; break;
+		case 2015: VSVersion = 140; break;
+		default: DError("Implement this");
+		}
+		return CFile::fs_GetExpandedPath(NSys::fg_Process_GetEnvironmentVariable(fg_Format("VS{}COMNTOOLS", VSVersion)) + "../..");
 	}
 
 	CGeneratorInstance::CGeneratorInstance
@@ -57,7 +71,18 @@ namespace NMib::NBuildSystem::NVisualStudio
 		_BuildSystem.f_EvaluateAllGeneratorSettings(*pSettings);
 
 		CStr EnableSourceControl = NSys::fg_Process_GetEnvironmentVariable(CStr("MalterlibEnableSourceControl"));
-		if (EnableSourceControl == "true" || EnableSourceControl == "")
+		if (EnableSourceControl == "")
+		{
+			m_bEnableSourceControl = false;
+			CStr Path = m_BuildSystem.f_GetBaseDir();
+			while (Path.f_IsEmpty())
+			{
+				if (CFile::fs_FileExists(Path + "/.p4config"))
+					m_bEnableSourceControl = true;
+				Path = CFile::fs_GetPath(Path);
+			}
+		}		
+		else if (EnableSourceControl == "true")
 			m_bEnableSourceControl = true;
 
 	}
@@ -65,6 +90,82 @@ namespace NMib::NBuildSystem::NVisualStudio
 	CStr CGeneratorInstance::f_GetExpandedPath(CStr const &_Path, CStr const& _Base) const
 	{
 		return CFile::fs_GetExpandedPath(_Path.f_Replace(m_RelativeBasePathAbsolute, m_BuildSystem.f_GetBaseDir()), _Base);
+	}
+
+	TCMap<CStr, CStr> CGeneratorInstance::f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const
+	{
+#ifndef DPlatformFamily_Windows
+		DError("Cannot get build environment for Visual Studio on this platform");
+#else
+		if (_Platform != "Windows")
+			DMibError("Unable to get build environment for non-Windows platform");
+
+		CMutual *pEnvironmentLock;
+		{
+			DLock(m_GetEnvironmentLock);
+			if (auto *pCachedEnvironment = m_CachedBuildEnvironment.f_FindEqual(_Architecture))
+				return *pCachedEnvironment;
+			pEnvironmentLock = &m_GetEnvironmentLocks[_Architecture];
+		}
+		DLock(*pEnvironmentLock);
+		{
+			DLock(m_GetEnvironmentLock);
+			if (auto *pCachedEnvironment = m_CachedBuildEnvironment.f_FindEqual(_Architecture))
+				return *pCachedEnvironment;
+		}
+ 		CStr VisualStudioRoot = f_GetVisualStudioRoot();
+
+		CStr VCVarsDirectory = VisualStudioRoot + "/VC";
+
+		CStr VSArchitecture;
+#ifdef DArchitecture_x86
+		if (_Architecture == "x64")
+			VSArchitecture = "x86_amd64";
+		else if (_Architecture == "x86")
+			VSArchitecture = "x86";
+		else if (_Architecture == "arm")
+			VSArchitecture = "x86_arm";
+		else
+			DError(fg_Format("Unsupported VS architecture: {}", _Architecture));
+#elif DArchitecture_x64
+		if (_Architecture == "x64")
+			VSArchitecture = "amd64";
+		else if (_Architecture == "x86")
+			VSArchitecture = "amd64_x86";
+		else if (_Architecture == "arm")
+			VSArchitecture = "amd64_arm";
+		else
+			DError(fg_Format("Unsupported VS architecture: {}", _Architecture));
+#else
+		DError("Cannot get build environment for Visual Studio on this architecture");
+#endif
+
+		CProcessLaunchParams Params{VCVarsDirectory};
+		Params.m_bShowLaunched = false;
+		CStr Output = CProcessLaunch::fs_LaunchTool("cmd.exe", {"/c", fg_Format("vcvarsall.bat {} & set", VSArchitecture)}, Params);
+
+		TCMap<CStr, CStr> Environment;
+		ch8 const *pParse = Output;
+
+		while (*pParse)
+		{
+			fg_ParseWhiteSpace(pParse);
+			auto *pStart = pParse;
+			fg_ParseToEndOfLine(pParse);
+			CStr Line(pStart, pParse - pStart);
+			CStr Key = fg_GetStrSep(Line, "=");
+			if (Key.f_IsEmpty())
+				continue;
+			Environment[Key] = Line;
+		}
+
+		{
+			DLock(m_GetEnvironmentLock);
+			m_CachedBuildEnvironment[_Architecture] = Environment;
+		}
+		return Environment;
+#endif
+		return {};
 	}
 
 	bool CGeneratorInstance::f_GetBuiltin(CStr const &_Value, CStr &_Result) const

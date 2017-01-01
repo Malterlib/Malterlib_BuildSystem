@@ -290,6 +290,8 @@ namespace NMib::NBuildSystem::NXcode
 		
 		virtual bool f_GetBuiltin(CStr const &_Value, CStr &_Result) const override;
 		virtual CStr f_GetExpandedPath(CStr const &_Path, CStr const& _Base) const override;
+		virtual TCMap<CStr, CStr> f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const override;
+
 		void f_GenerateProjectFile(CProject &_Project, CStr const &_OutputDir, TCMap<CConfiguration, TCSet<CStr>> &_Runnables, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable) const;
 		void f_GenerateWorkspaceFile(CSolution &_Solution, CStr const &_OutputDir, mint _MaxWorkspaceNameLen) const;
 		

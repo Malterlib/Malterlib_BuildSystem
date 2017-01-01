@@ -49,6 +49,11 @@ namespace NMib::NBuildSystem::NXcode
 		return CFile::fs_GetExpandedPath(_Path.f_Replace(m_RelativeBasePathAbsolute, m_BuildSystem.f_GetBaseDir()), _Base);
 	}
 
+	TCMap<CStr, CStr> CGeneratorInstance::f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const
+	{
+		return {};
+	}
+
 	bool CGeneratorInstance::f_GetBuiltin(CStr const &_Value, CStr &_Result) const
 	{
 		// TODO

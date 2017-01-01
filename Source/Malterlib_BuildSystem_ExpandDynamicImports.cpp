@@ -71,13 +71,15 @@ namespace NMib::NBuildSystem
 	{
 		CStr FileName = CFile::fs_GetExpandedPath(_Entity.m_Key.m_Name, CFile::fs_GetPath(_Entity.m_Position.m_FileName));
 		CStr TempDirectory = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "TempDirectory");
+		CStr Platform = f_EvaluateEntityProperty(_Entity, EPropertyType_Property, "Platform");
+		CStr Architecture = f_EvaluateEntityProperty(_Entity, EPropertyType_Property, "Architecture");
 		
 		CProcessLaunchParams LaunchParams;
 		LaunchParams.m_bAllowExecutableLocate = true;
 		LaunchParams.m_WorkingDirectory = TempDirectory;
 		LaunchParams.m_bSeparateStdErr = false;
 		LaunchParams.m_bMergeEnvironment = false;
-		LaunchParams.m_Environment = NSys::fg_Process_GetEnvironmentVariables();
+		LaunchParams.m_Environment = mp_GeneratorInterface->f_GetBuildEnvironment(Platform, Architecture);
 		CStr HidePrefixes;
 		fg_AddStrSep(HidePrefixes, f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "SharedTempDirectory"), ";");
 		fg_AddStrSep(HidePrefixes, CFile::fs_GetPath(FileName), ";");
@@ -89,7 +91,6 @@ namespace NMib::NBuildSystem
 		LaunchParams.m_Environment.f_Remove("PRODUCT_SPECIFIC_LDFLAGS");
 		LaunchParams.m_Environment.f_Remove("SDKROOT");
 		
-		CStr Platform = f_EvaluateEntityProperty(_Entity, EPropertyType_Property, "Platform");
 		CStr CmakeLanguages = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_Languages");
 		while (!CmakeLanguages.f_IsEmpty())
 		{
@@ -169,6 +170,9 @@ namespace NMib::NBuildSystem
 		CStr StdErr;
 		
 		CStr CmakeExecutable = CFile::fs_GetProgramDirectory() + "/cmake";
+#ifdef DPlatformFamily_Windows
+		CmakeExecutable += ".exe";
+#endif
 		f_AddSourceFile(CmakeExecutable);
 		
 		CStr CmakeRealExecutable = CmakeExecutable;
@@ -191,6 +195,8 @@ namespace NMib::NBuildSystem
 			CFile::fs_DeleteDirectoryRecursive(TempDirectory);
 			CFile::fs_CreateDirectory(TempDirectory);
 		}
+
+		LaunchParams.m_bShowLaunched = false;
 		
 		CClock Clock{true};
 		uint32 ExitCode = 0;

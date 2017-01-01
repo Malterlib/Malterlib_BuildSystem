@@ -62,6 +62,12 @@ namespace NMib::NBuildSystem::NVisualStudio
 			ClCompileSuffix = fl_GetEntityPropertyGlobal(EPropertyType_Target, "ClCompileSuffix", Position);
 		}
 
+		CStr WindowsTargetVersion;
+		{
+			CFilePosition Position;
+			WindowsTargetVersion = fl_GetEntityPropertyGlobal(EPropertyType_Target, "PlatformVersion", Position);
+		}
+
 		ELanguageType LanguageType = ELanguageType_Native;
 		{
 			CFilePosition Position;
@@ -74,6 +80,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			else
 				m_BuildSystem.fs_ThrowError(Position, CStr::CFormat("Language '{}' not supported") << Language);
 		}
+
 
 		CStr SettingsPrefix;
 		if (LanguageType == ELanguageType_Native)
@@ -201,6 +208,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 					CXMLDocument::f_SetAttribute(pTargetsPath, "Condition", "'$(VCTargetsPath11)' != ''");
 					//CXMLDocument::f_SetAttribute(pTargetsPath, "Condition", "'$(VCTargetsPath11)' != '' and '$(VSVersion)' == '' and $(VisualStudioVersion) == ''");
 				}
+				if (!WindowsTargetVersion.f_IsEmpty())
+					CXMLDocument::f_AddElementAndText(pGlobals, "WindowsTargetPlatformVersion", WindowsTargetVersion);
 			}
 
 			// Default imports
