@@ -451,7 +451,7 @@ namespace NMib::NBuildSystem
 				Registry.f_SetValueNoPath(CFile::fs_MakePathRelative(iConfig.f_GetKey(), BasePath), iConfig->m_Hash);
 			
 			CStr FileName = iFile.f_GetKey();
-			CStr FileContents = Registry.f_GenerateStr();
+			CStr FileContents = Registry.f_GenerateStr().f_Replace(DMibNewLine, "\n");
 
 			bool bWasCreated = false;
 			if (!f_AddGeneratedFile(FileName, FileContents, "", bWasCreated, false))
