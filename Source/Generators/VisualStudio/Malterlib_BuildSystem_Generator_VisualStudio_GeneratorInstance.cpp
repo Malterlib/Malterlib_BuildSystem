@@ -95,7 +95,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 	TCMap<CStr, CStr> CGeneratorInstance::f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const
 	{
 #ifndef DPlatformFamily_Windows
-		DError("Cannot get build environment for Visual Studio on this platform");
+		return NSys::fg_Process_GetEnvironmentVariables();
 #else
 		if (_Platform != "Windows")
 			DMibError("Unable to get build environment for non-Windows platform");

@@ -20,7 +20,7 @@ namespace NMib::NBuildSystem
 			}
 			TCMap<CStr, CStr> f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const override
 			{
-				return {};
+				return NSys::fg_Process_GetEnvironmentVariables();
 			}
 		};
 		
