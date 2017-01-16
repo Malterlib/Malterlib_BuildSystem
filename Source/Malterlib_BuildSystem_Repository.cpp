@@ -266,13 +266,7 @@ namespace NMib::NBuildSystem
 					try
 					{
 						fLaunchGit({"submodule", "add", "-b", _Repo.m_DefaultBranch, "--name", _Repo.m_SubmoduleName, _Repo.m_URL, RelativeLocation}, GitRoot);
-						CProcessLaunch::fs_LaunchTool
-							(
-								"git"
-								, {"config", "-f", ".gitmodules", fg_Format("submodule.{}.fetchRecurseSubmodules", _Repo.m_SubmoduleName), "on-demand"}
-								, GitRoot
-							)
-						;
+						fLaunchGit({"config", "-f", ".gitmodules", fg_Format("submodule.{}.fetchRecurseSubmodules", _Repo.m_SubmoduleName), "on-demand"}, GitRoot);
 						bChanged = true;
 					}
 					catch (CException const &_Exception)
@@ -290,20 +284,8 @@ namespace NMib::NBuildSystem
 				DMibConOut2("Checking out specific hash '{}' at '{}'{\n}", ConfigHash, Location);
 				try
 				{
-					CProcessLaunch::fs_LaunchTool
-						(
-							"git"
-							, {"fetch"}
-							, Location
-						)
-					;
-					CProcessLaunch::fs_LaunchTool
-						(
-							"git"
-							, {"checkout", ConfigHash}
-							, Location
-						)
-					;
+					fLaunchGit({"fetch"}, Location);
+					fLaunchGit({"checkout", ConfigHash}, Location);
 				}
 				catch (CException const &_Exception)
 				{

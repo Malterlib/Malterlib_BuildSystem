@@ -75,10 +75,13 @@ namespace NMib::NBuildSystem::NVisualStudio
 		{
 			m_bEnableSourceControl = false;
 			CStr Path = m_BuildSystem.f_GetBaseDir();
-			while (Path.f_IsEmpty())
+			while (!Path.f_IsEmpty())
 			{
 				if (CFile::fs_FileExists(Path + "/.p4config"))
+				{
 					m_bEnableSourceControl = true;
+					break;
+				}
 				Path = CFile::fs_GetPath(Path);
 			}
 		}		

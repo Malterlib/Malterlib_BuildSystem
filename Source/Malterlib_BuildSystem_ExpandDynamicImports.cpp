@@ -87,7 +87,27 @@ namespace NMib::NBuildSystem
 #ifdef DPlatformFamily_OSX
 		LaunchParams.m_Environment["PATH"] = "/opt/local/bin:" + LaunchParams.m_Environment["PATH"];
 #endif
-		
+
+		{
+			CStr Path;
+			CStr CmakePath = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_Path");
+			while (!CmakePath.f_IsEmpty())
+			{
+#ifdef DPlatformFamily_Windows
+				fg_AddStrSep(Path, fg_GetStrSep(CmakePath, ";").f_ReplaceChar('/', '\\'), ";");
+#else
+				fg_AddStrSep(Path, fg_GetStrSep(CmakePath, ";"), ":");
+#endif
+			}
+			if (!Path.f_IsEmpty())
+			{
+#ifdef DPlatformFamily_Windows
+				LaunchParams.m_Environment["PATH"] = Path + ";" + LaunchParams.m_Environment["PATH"];
+#else
+				LaunchParams.m_Environment["PATH"] = Path + ":" + LaunchParams.m_Environment["PATH"];
+#endif
+			}
+		}
 		LaunchParams.m_Environment.f_Remove("PRODUCT_SPECIFIC_LDFLAGS");
 		LaunchParams.m_Environment.f_Remove("SDKROOT");
 		
@@ -198,6 +218,8 @@ namespace NMib::NBuildSystem
 
 		LaunchParams.m_bShowLaunched = false;
 		
+		//DMibConOut("ENV: {}\n", LaunchParams.m_Environment);
+		//DMibConOut("Params: {}\n", Params);
 		CClock Clock{true};
 		uint32 ExitCode = 0;
 		if (!CProcessLaunch::fs_LaunchBlock(CmakeExecutable, Params, StdOut, StdErr, ExitCode, LaunchParams))
@@ -217,7 +239,7 @@ namespace NMib::NBuildSystem
 		{
 			auto ProjectFiles = CFile::fs_FindFiles(fg_Format("{}/*.MHeader", TempDirectory));
 			if (ProjectFiles.f_IsEmpty())
-				DMibError("No MHeader files found after generating cmake");
+				DMibError(fg_Format("No MHeader files found after generating cmake: {}", StdOut + StdErr));
 			for (auto &File : ProjectFiles)
 				fg_AddStrSep(Projects, CFile::fs_GetFileNoExt(File), ";");
 		}
