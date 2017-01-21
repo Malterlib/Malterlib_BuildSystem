@@ -20,7 +20,7 @@ namespace NMib::NBuildSystem
 			}
 			TCMap<CStr, CStr> f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const override
 			{
-				return NSys::fg_Process_GetEnvironmentVariables();
+				return fg_GetSys()->f_Environment();
 			}
 		};
 		
@@ -235,7 +235,7 @@ namespace NMib::NBuildSystem
 				{
 					CProcessLaunchParams Params{_WorkingDir};
 #ifdef DPlatformFamily_OSX
-					Params.m_Environment["PATH"] = "/opt/local/bin:" + CStr(NSys::fg_Process_GetEnvironmentVariable(CStr("PATH")));
+					Params.m_Environment["PATH"] = "/opt/local/bin:" + CStr(fg_GetSys()->f_GetEnvironmentVariable("PATH"));
 #endif
 					Params.m_bShowLaunched = false;
 					CProcessLaunch::fs_LaunchTool("git", _Params, Params);

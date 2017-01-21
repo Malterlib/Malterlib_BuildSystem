@@ -51,7 +51,7 @@ namespace NMib::NBuildSystem::NXcode
 
 	TCMap<CStr, CStr> CGeneratorInstance::f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const
 	{
-		return NSys::fg_Process_GetEnvironmentVariables();
+		return fg_GetSys()->f_Environment();
 	}
 
 	bool CGeneratorInstance::f_GetBuiltin(CStr const &_Value, CStr &_Result) const

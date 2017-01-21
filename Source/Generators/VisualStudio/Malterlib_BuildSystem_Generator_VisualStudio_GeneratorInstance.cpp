@@ -33,7 +33,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		case 2015: VSVersion = 140; break;
 		default: DError("Implement this");
 		}
-		return CFile::fs_GetExpandedPath(NSys::fg_Process_GetEnvironmentVariable(fg_Format("VS{}COMNTOOLS", VSVersion)) + "../..");
+		return CFile::fs_GetExpandedPath(fg_GetSys()->f_GetEnvironmentVariable(fg_Format("VS{}COMNTOOLS", VSVersion)) + "../..");
 	}
 
 	CGeneratorInstance::CGeneratorInstance
@@ -70,7 +70,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		m_pGeneratorSettings = fg_Explicit(pSettings);
 		_BuildSystem.f_EvaluateAllGeneratorSettings(*pSettings);
 
-		CStr EnableSourceControl = NSys::fg_Process_GetEnvironmentVariable(CStr("MalterlibEnableSourceControl"));
+		CStr EnableSourceControl = fg_GetSys()->f_GetEnvironmentVariable("MalterlibEnableSourceControl");
 		if (EnableSourceControl == "")
 		{
 			m_bEnableSourceControl = false;
@@ -98,7 +98,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 	TCMap<CStr, CStr> CGeneratorInstance::f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const
 	{
 #ifndef DPlatformFamily_Windows
-		return NSys::fg_Process_GetEnvironmentVariables();
+		return fg_GetSys()->f_Environment();
 #else
 		if (_Platform != "Windows")
 			DMibError("Unable to get build environment for non-Windows platform");

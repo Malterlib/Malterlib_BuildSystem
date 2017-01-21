@@ -248,7 +248,7 @@ namespace NMib::NBuildSystem
 					for (auto iEnv = State.m_Environment.f_GetIterator(); iEnv; ++iEnv)
 					{
 						//DConOut("{} = {}" DNewLine, iEnv.f_GetKey() << *iEnv);
-						CStr Value = NSys::fg_Process_GetEnvironmentVariable(CStr(iEnv.f_GetKey()));
+						CStr Value = fg_GetSys()->f_GetEnvironmentVariable(iEnv.f_GetKey());
 						
 						if (Value != *iEnv)
 						{
@@ -497,7 +497,7 @@ namespace NMib::NBuildSystem
 
 			for (auto iEnv = mp_UsedExternals.f_GetIterator(); iEnv; ++iEnv)
 			{
-				CStr Value = NSys::fg_Process_GetEnvironmentVariable(CStr(*iEnv));
+				CStr Value = fg_GetSys()->f_GetEnvironmentVariable(*iEnv);
 				State.m_Environment[*iEnv] = Value;
 			}
 

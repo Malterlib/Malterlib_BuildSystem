@@ -201,7 +201,7 @@ namespace NMib::NBuildSystem
 	{
 		TCMap<CPropertyKey, CStr> Values = _InitialValues;
 
-		TCMap<CStr, CStr> Environment = NSys::fg_Process_GetEnvironmentVariables();
+		TCMap<CStr, CStr> Environment = fg_GetSys()->f_Environment();
 
 		for (auto iEnv = Environment.f_GetIterator(); iEnv; ++iEnv)
 		{

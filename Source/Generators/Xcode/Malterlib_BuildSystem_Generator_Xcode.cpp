@@ -28,11 +28,11 @@ namespace NMib::NBuildSystem
 			Values[CPropertyKey("BuildSystemFile")] = _BuildSystem.f_GetGenerateSettings().m_SourceFile;
 			Values[CPropertyKey("BuildSystemName")] = CFile::fs_GetFileNoExt(_BuildSystem.f_GetGenerateSettings().m_SourceFile);
 			
-			if (NSys::fg_Process_GetEnvironmentVariable(CStr("HostPlatform")).f_IsEmpty())
+			if (fg_GetSys()->f_GetEnvironmentVariable("HostPlatform").f_IsEmpty())
 				Values[CPropertyKey("HostPlatform")] = DMibStringize(DPlatform);
-			if (NSys::fg_Process_GetEnvironmentVariable(CStr("HostPlatformFamily")).f_IsEmpty())
+			if (fg_GetSys()->f_GetEnvironmentVariable("HostPlatformFamily").f_IsEmpty())
 				Values[CPropertyKey("HostPlatformFamily")] = DMibStringize(DPlatformFamily);
-			if (NSys::fg_Process_GetEnvironmentVariable(CStr("HostArchitecture")).f_IsEmpty())
+			if (fg_GetSys()->f_GetEnvironmentVariable("HostArchitecture").f_IsEmpty())
 				Values[CPropertyKey("HostArchitecture")] = DMibStringize(DArchitecture);
 
 			TCMap<CConfiguration, TCUniquePointer<CConfiguraitonData>> Configurations;
