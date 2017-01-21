@@ -142,9 +142,30 @@ namespace NMib::NBuildSystem::NVisualStudio
 #else
 		DError("Cannot get build environment for Visual Studio on this architecture");
 #endif
-
 		CProcessLaunchParams Params{VCVarsDirectory};
 		Params.m_bShowLaunched = false;
+		Params.m_Environment = fg_GetSys()->f_Environment();
+		Params.m_Environment.f_Remove("PKG_CONFIG_PATH");
+		Params.m_bMergeEnvironment = false;
+
+		CStr NewPaths;
+		CStr CurrentPaths = Params.m_Environment["PATH"];
+		while (!CurrentPaths.f_IsEmpty())
+		{
+			CStr Path = fg_GetStrSep(CurrentPaths, ";");
+
+			if (Path.f_FindNoCase("\\Git\\") >= 0)
+				continue;
+			if (Path.f_FindNoCase("\\Strawberry\\c\\") >= 0)
+				continue;
+			if (Path.f_FindNoCase("\\Gnu32\\") >= 0)
+				continue;
+			if (Path.f_FindNoCase("\\GnuWin32\\") >= 0)
+				continue;
+			fg_AddStrSep(NewPaths, Path, ";");
+		}
+		Params.m_Environment["PATH"] = NewPaths;
+		
 		CStr Output = CProcessLaunch::fs_LaunchTool("cmd.exe", {"/c", fg_Format("vcvarsall.bat {} & set", VSArchitecture)}, Params);
 
 		TCMap<CStr, CStr> Environment;
