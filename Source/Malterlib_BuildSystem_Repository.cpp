@@ -18,7 +18,7 @@ namespace NMib::NBuildSystem
 			{
 				return CFile::fs_GetExpandedPath(_Path, _Base);
 			}
-			TCMap<CStr, CStr> f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const override
+			CSystemEnvironment f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const override
 			{
 				return fg_GetSys()->f_Environment();
 			}

@@ -227,7 +227,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		~CGeneratorInstance();
 		virtual bool f_GetBuiltin(CStr const &_Value, CStr &_Result) const override;
 		virtual CStr f_GetExpandedPath(CStr const &_Path, CStr const& _Base) const override;
-		virtual TCMap<CStr, CStr> f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const override;
+		virtual CSystemEnvironment f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const override;
 
 		CStr f_GetToolsVersion() const;
 		CStr f_GetVisualStudioRoot() const;

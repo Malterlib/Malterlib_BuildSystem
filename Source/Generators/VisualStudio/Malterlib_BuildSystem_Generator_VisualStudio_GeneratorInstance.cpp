@@ -95,7 +95,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		return CFile::fs_GetExpandedPath(_Path.f_Replace(m_RelativeBasePathAbsolute, m_BuildSystem.f_GetBaseDir()), _Base);
 	}
 
-	TCMap<CStr, CStr> CGeneratorInstance::f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const
+	CSystemEnvironment CGeneratorInstance::f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const
 	{
 #ifndef DPlatformFamily_Windows
 		return fg_GetSys()->f_Environment();
@@ -144,12 +144,11 @@ namespace NMib::NBuildSystem::NVisualStudio
 #endif
 		CProcessLaunchParams Params{VCVarsDirectory};
 		Params.m_bShowLaunched = false;
-		Params.m_Environment = fg_GetSys()->f_Environment();
-		Params.m_Environment.f_Remove("PKG_CONFIG_PATH");
-		Params.m_bMergeEnvironment = false;
+		auto Environment = fg_GetSys()->f_Environment();
+		Environment.f_Remove("PKG_CONFIG_PATH");
 
 		CStr NewPaths;
-		CStr CurrentPaths = Params.m_Environment["PATH"];
+		CStr CurrentPaths = Environment["PATH"];
 		while (!CurrentPaths.f_IsEmpty())
 		{
 			CStr Path = fg_GetStrSep(CurrentPaths, ";");
@@ -164,11 +163,13 @@ namespace NMib::NBuildSystem::NVisualStudio
 				continue;
 			fg_AddStrSep(NewPaths, Path, ";");
 		}
-		Params.m_Environment["PATH"] = NewPaths;
+		Environment["PATH"] = NewPaths;
+		Params.m_Environment = Environment;
+		Params.m_bMergeEnvironment = false;
 		
 		CStr Output = CProcessLaunch::fs_LaunchTool("cmd.exe", {"/c", fg_Format("vcvarsall.bat {} & set", VSArchitecture)}, Params);
 
-		TCMap<CStr, CStr> Environment;
+		Environment.f_Clear();
 		ch8 const *pParse = Output;
 
 		while (*pParse)
@@ -189,7 +190,6 @@ namespace NMib::NBuildSystem::NVisualStudio
 		}
 		return Environment;
 #endif
-		return {};
 	}
 
 	bool CGeneratorInstance::f_GetBuiltin(CStr const &_Value, CStr &_Result) const
