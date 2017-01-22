@@ -59,6 +59,7 @@ namespace NMib::NBuildSystem
 		struct CConfigFile
 		{
 			TCMap<CStr, CRepositoryConfig> m_Configs;
+			CStr m_LineEndings = "\n";
 		};
 		
 		struct CStateHandler
@@ -121,7 +122,15 @@ namespace NMib::NBuildSystem
 				if (CFile::fs_FileExists(_FileName))
 				{
 					CRegistry_CStr Registry;
-					Registry.f_ParseStr(CFile::fs_ReadStringFromFile(_FileName, true), _FileName);
+					CStr FileContents = CFile::fs_ReadStringFromFile(_FileName, true);
+					{
+						ch8 const *pParse = FileContents;
+						fg_ParseToEndOfLine(pParse);
+						if (*pParse == '\r')
+							ConfigFile.m_LineEndings = "\r\n";
+					}
+
+					Registry.f_ParseStr(FileContents, _FileName);
 					for (auto &Child : Registry.f_GetChildren())
 						ConfigFile.m_Configs[CFile::fs_GetExpandedPath(Child.f_GetName(), BasePath)].m_Hash = Child.f_GetThisValue();
 				}
@@ -433,7 +442,7 @@ namespace NMib::NBuildSystem
 				Registry.f_SetValueNoPath(CFile::fs_MakePathRelative(iConfig.f_GetKey(), BasePath), iConfig->m_Hash);
 			
 			CStr FileName = iFile.f_GetKey();
-			CStr FileContents = Registry.f_GenerateStr().f_Replace(DMibNewLine, "\n");
+			CStr FileContents = Registry.f_GenerateStr().f_Replace(DMibNewLine, iFile->m_LineEndings);
 
 			bool bWasCreated = false;
 			if (!f_AddGeneratedFile(FileName, FileContents, "", bWasCreated, false))
