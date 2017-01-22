@@ -14,6 +14,10 @@ Import "../Core/Lib_Malterlib.MTarget"
 	{
 		!!CompileDialect C
 		PrefixHeader "@('Source/Malterlib_BuildSystem.h'->MakeAbsolute())"
+		PreprocessorDefines "DMalterlibBuildSystem_EmbedCMake;@(Compile.PreprocessorDefines)"
+		{
+			!!MalterlibBuildSystemEmbedCMake true
+		}
 	}
 	
 	%Group BuildSystem
@@ -39,6 +43,24 @@ Import "../Core/Lib_Malterlib.MTarget"
 	%Dependency Lib_Malterlib_XML
 	{
 		Dependency.Indirect true
+	}
+	%Group EmbedCMake
+	{
+		!!MalterlibBuildSystemEmbedCMake true
+		Dependency.Indirect true
+		
+		%Dependency Lib_CMakeLib
+		%Dependency Lib_cmlibuv
+		%Dependency Lib_cmjsoncpp
+		%Dependency Lib_cmlibarchive
+		%Dependency Lib_cmliblzma
+		%Dependency Lib_cmbzip2
+		%Dependency Lib_cmexpat
+		%Dependency Lib_cmcompress
+		%Dependency Lib_cmcurl
+		%Dependency Lib_cmzlib
+		%Dependency Lib_cmlibrhash
+		%Dependency Lib_cmsys
 	}
 }
 

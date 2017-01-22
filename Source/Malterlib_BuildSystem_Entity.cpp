@@ -225,6 +225,31 @@ namespace NMib::NBuildSystem
 			)
 		;
 	}
+	
+	void CEntity::f_CopyPropertiesAndEval(CEntity const &_Other)
+	{
+		if (_Other.m_PropertiesEvalOrder.f_IsEmpty())
+			return;
+		auto iProp = _Other.m_PropertiesEvalOrder.f_GetIterator();
+		m_Properties.f_BatchMapIfNotMapped
+			(
+				[&](TCMap<CPropertyKey, TCLinkedList<CProperty>>::CConditionalMapper & _Mapper) -> bool
+				{
+					auto Mapped = _Mapper(iProp->m_Key);
+					auto & NewProp = (*Mapped).f_Insert();
+					NewProp = *iProp;
+					m_PropertiesEvalOrder.f_Insert(NewProp);
+					m_PotentialExplicitProperties[iProp->m_Key].f_Insert(&NewProp);
+					
+					if (NewProp.m_Condition.f_NeedPerFile())
+						m_PerFilePotentialExplicitProperties[iProp->m_Key].f_Insert(&NewProp);
+					
+					++iProp;
+					return iProp;
+				}
+			)
+		;
+	}
 
 	void CEntity::f_ClearReferences()
 	{
@@ -368,7 +393,17 @@ namespace NMib::NBuildSystem
 	void CEntity::f_CopyFromWithCopyFrom(CEntity const &_Other, bool _bCopyChildren)
 	{
 		if (_Other.m_pCopiedFrom)
-			f_CopyFrom(*_Other.m_pCopiedFrom, false);
+		{
+			auto &Source = *_Other.m_pCopiedFrom;
+			m_Key = Source.m_Key;
+			m_Condition = Source.m_Condition;
+			m_Position = Source.m_Position;
+			if (Source.m_pCopiedFrom)
+				m_pCopiedFrom = _Other.m_pCopiedFrom;
+			else
+				m_pCopiedFrom = fg_Explicit(&Source);
+			f_CopyProperties(_Other);
+		}
 		else
 			f_CopyFrom(_Other, false);
 

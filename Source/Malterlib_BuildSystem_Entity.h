@@ -60,6 +60,7 @@ namespace NMib::NBuildSystem
 		CStr f_GetPath() const;
 		CStr f_GetPathForGetProperty() const;
 		void f_CopyProperties(CEntity const &_Other);
+		void f_CopyPropertiesAndEval(CEntity const &_Other);
 		void f_ClearReferences();
 		void f_CopyEntities(CEntity const &_Other, bool _bDirectCopy = false);
 		void f_MergeEntities(CEntity const &_Other);

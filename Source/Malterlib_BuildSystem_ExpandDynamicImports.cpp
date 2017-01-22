@@ -87,7 +87,6 @@ namespace NMib::NBuildSystem
 #ifdef DPlatformFamily_OSX
 		LaunchParams.m_Environment["PATH"] = "/opt/local/bin:" + LaunchParams.m_Environment["PATH"];
 #endif
-
 		{
 			CStr Path;
 			CStr CmakePath = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_Path");
@@ -122,12 +121,28 @@ namespace NMib::NBuildSystem
 			LaunchParams.m_Environment[fg_Format("CMAKE_MALTERLIB_LANGUAGE_{}", Language)] = MalterlibType;		
 		}
 		
-		TCVector<CStr> Params =
-			{
-				"-G"
-				, "Malterlib - Ninja"
-				, CFile::fs_GetPath(FileName)
-			}
+		CStr CmakeExecutable; 
+		TCVector<CStr> Params;
+		
+#		ifdef DMalterlibBuildSystem_EmbedCMake
+			CmakeExecutable = CFile::fs_GetProgramPath(); 
+			Params.f_Insert("CMake");
+#		else
+			CmakeExecutable = CFile::fs_GetProgramDirectory() + "/cmake";
+#			ifdef DPlatformFamily_Windows
+				CmakeExecutable += ".exe";
+#			endif
+			f_AddSourceFile(CmakeExecutable);
+#		endif
+		
+		Params.f_Insert
+			(
+				{
+					"-G"
+					, "Malterlib - Ninja"
+					, CFile::fs_GetPath(FileName)
+				}
+			)
 		;			
 		
 		Params.f_Insert("-DCMAKE_BUILD_TYPE=" + f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_Config"));
@@ -188,12 +203,6 @@ namespace NMib::NBuildSystem
 		
 		CStr StdOut;
 		CStr StdErr;
-		
-		CStr CmakeExecutable = CFile::fs_GetProgramDirectory() + "/cmake";
-#ifdef DPlatformFamily_Windows
-		CmakeExecutable += ".exe";
-#endif
-		f_AddSourceFile(CmakeExecutable);
 		
 		CStr CmakeRealExecutable = CmakeExecutable;
 		if (CFile::fs_GetAttributes(CmakeExecutable) & EFileAttrib_Link)
@@ -313,7 +322,7 @@ namespace NMib::NBuildSystem
 			for (auto &Child : pImport->m_RootEntity.m_ChildEntitiesOrdered)
 				Child.f_CopyProperties(_Entity);
 			
-			_BuildSystemData.m_RootEntity.f_CopyProperties(pImport->m_RootEntity);
+			_ParentEntity.f_CopyPropertiesAndEval(pImport->m_RootEntity);
 			
 			auto *pInsertAfter = &_Entity;
 			for (auto iEntity = pImport->m_RootEntity.m_ChildEntitiesOrdered.f_GetIterator(); iEntity;)
