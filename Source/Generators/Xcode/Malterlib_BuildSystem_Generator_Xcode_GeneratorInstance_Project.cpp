@@ -593,7 +593,7 @@ R"-----(		{} /* PBXBuildRule */ = {{
 			outputFiles = (
 {}
 			);
-			script = "cd \"{}\"\n{}\n";
+			script = "export PATH=$MalterlibBuildSystemExecutablePath:$PATH\ncd \"{}\"\n{}\n";
 		};
 )-----"
 							)

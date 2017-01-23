@@ -5,6 +5,9 @@
 #include "Malterlib_BuildSystem_Preprocessor.h"
 
 #include <Mib/Process/ProcessLaunch>
+#include <Mib/File/MalterlibFS>
+#include <Mib/File/VirtualFSs/MalterlibFS>
+#include <Mib/Cryptography/Hashes/SHA>
 
 namespace NMib::NBuildSystem
 {
@@ -67,12 +70,112 @@ namespace NMib::NBuildSystem
 		}
 	}
 	
+	CBuildSystemData::CImportData *CBuildSystem::fp_ExpandImportCMake_FromGeneratedDiretory
+		(
+			CEntity &_Entity
+			, CEntity &_ParentEntity
+			, CBuildSystemData &_BuildSystemData
+			, CStr const &_Directory
+		) const
+	{
+		CStr Projects = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_Projects");
+		if (Projects.f_IsEmpty())
+		{
+			auto ProjectFiles = CFile::fs_FindFiles(fg_Format("{}/*.MHeader", _Directory));
+			if (ProjectFiles.f_IsEmpty())
+				DMibError(fg_Format("No MHeader files found in CMake generated directory"));
+			for (auto &File : ProjectFiles)
+				fg_AddStrSep(Projects, CFile::fs_GetFileNoExt(File), ";");
+		}
+
+		auto &Import = _BuildSystemData.m_Imports.f_Insert();
+		
+		{
+			CBuildSystemPreprocessor Preprocessor(Import.m_Registry, _BuildSystemData.m_SourceFiles, mp_FindCache);
+			while (!Projects.f_IsEmpty())
+			{
+				CStr Project = fg_GetStrSep(Projects, ";");
+				
+				CStr ProjectFileName = fg_Format("{}/{}.MHeader", _Directory, Project);
+				
+				Preprocessor.f_ReadFile(ProjectFileName);
+				_BuildSystemData.m_SourceFiles[ProjectFileName];
+				
+				CStr Dependencies = CFile::fs_ReadStringFromFile(fg_Format("{}/{}.MHeader.dependencies", _Directory, Project), true);
+				
+				TCSet<CStr> SourceFileToAdd;
+				ch8 const *pParse = Dependencies.f_GetStr();
+				while (*pParse)
+				{
+					ch8 const *pStart = pParse;
+					fg_ParseToEndOfLine(pParse);
+					SourceFileToAdd[CFile::fs_GetExpandedPath(CStr(pStart, pParse - pStart), _Directory)];
+					fg_ParseEndOfLine(pParse);
+				}				
+				
+				{
+					DMibLock(mp_SourceFilesLock);
+					mp_SourceFiles += SourceFileToAdd;
+				}
+			}
+		}
+		return &Import;
+	}
+	
 	CBuildSystemData::CImportData *CBuildSystem::fp_ExpandImportCMake(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData) const
 	{
+		CStr GeneratorVersion = "8";
+		CStr CmakeCacheDirectory = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_CacheDirectory");
+		CStr FullRebuildVersion = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_FullRebuildVersion");
+		
+		if (!CmakeCacheDirectory.f_IsEmpty() && CFile::fs_FileExists(CmakeCacheDirectory + "/Dependencies.sha512"))
+		{
+			CFile::CFindFilesOptions FindOptions{CmakeCacheDirectory + "/*.dependencies", true};
+			FindOptions.m_AttribMask = EFileAttrib_File;
+
+			auto FoundFiles = CFile::fs_FindFiles(FindOptions); 
+
+			TCSet<CStr> DependencyFiles;
+			
+			for (auto &File : FoundFiles)
+			{
+				CStr FileContents = CFile::fs_ReadStringFromFile(File.m_Path, true);
+				
+				if (CFile::fs_GetExtension(File.m_Path) == "dependencies")
+				{
+					ch8 const *pParse = FileContents;
+					while (*pParse)
+					{
+						auto pLineStart = pParse;
+						fg_ParseToEndOfLine(pParse);
+						CStr Line(pLineStart, pParse - pLineStart);
+						fg_ParseEndOfLine(pParse);
+						DependencyFiles[CFile::fs_GetExpandedPath(Line, CFile::fs_GetPath(File.m_Path))];
+					}
+				}
+			}
+
+			CHash_SHA512 DependenciesHash;
+			DependenciesHash.f_AddData(GeneratorVersion.f_GetStr(), GeneratorVersion.f_GetLen());
+			DependenciesHash.f_AddData(FullRebuildVersion.f_GetStr(), FullRebuildVersion.f_GetLen());
+
+			for (auto &File : DependencyFiles)
+			{
+				auto DependencyData = CFile::fs_ReadFile(File);
+				DependenciesHash.f_AddData(DependencyData.f_GetArray(), DependencyData.f_GetLen());
+			}
+			
+			if (CFile::fs_ReadStringFromFile(CmakeCacheDirectory + "/Dependencies.sha512", true) == DependenciesHash.f_GetDigest().f_GetString())
+				return fp_ExpandImportCMake_FromGeneratedDiretory(_Entity, _ParentEntity, _BuildSystemData, CmakeCacheDirectory);
+			DMibConOut("Import cache out of date (CMake): {}\n", CmakeCacheDirectory);
+		}
+				
 		CStr FileName = CFile::fs_GetExpandedPath(_Entity.m_Key.m_Name, CFile::fs_GetPath(_Entity.m_Position.m_FileName));
 		CStr TempDirectory = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "TempDirectory");
 		CStr Platform = f_EvaluateEntityProperty(_Entity, EPropertyType_Property, "Platform");
 		CStr Architecture = f_EvaluateEntityProperty(_Entity, EPropertyType_Property, "Architecture");
+		CStr CacheExcludePatterns = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_CacheExcludePatterns");
+		CStr CacheReplaceContents = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_CacheReplaceContents");
 		
 		CProcessLaunchParams LaunchParams;
 		LaunchParams.m_bAllowExecutableLocate = true;
@@ -109,6 +212,8 @@ namespace NMib::NBuildSystem
 		}
 		LaunchParams.m_Environment.f_Remove("PRODUCT_SPECIFIC_LDFLAGS");
 		LaunchParams.m_Environment.f_Remove("SDKROOT");
+		LaunchParams.m_Environment["CMAKE_MALTERLIB_BASEDIR"] = f_GetBaseDir();
+		
 		
 		CStr CmakeLanguages = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_Languages");
 		while (!CmakeLanguages.f_IsEmpty())
@@ -213,7 +318,6 @@ namespace NMib::NBuildSystem
 		
 		CFile::fs_CreateDirectory(TempDirectory);
 		
-		CStr FullRebuildVersion = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_FullRebuildVersion");
 		CStr FullRebuildVersionFile = TempDirectory + "/MalterlibFullRebuildVersion";
 		CStr LastFullRebuildVersion;
 		if (CFile::fs_FileExists(FullRebuildVersionFile))
@@ -224,17 +328,235 @@ namespace NMib::NBuildSystem
 			CFile::fs_DeleteDirectoryRecursive(TempDirectory);
 			CFile::fs_CreateDirectory(TempDirectory);
 		}
-
+		
 		LaunchParams.m_bShowLaunched = false;
 		
 		//DMibConOut("ENV: {}\n", LaunchParams.m_Environment);
-		//DMibConOut("Params: {}\n", Params);
+		//DMibConOut2("Params ({}): {}\n", CmakeExecutable, Params);
 		CClock Clock{true};
 		uint32 ExitCode = 0;
 		if (!CProcessLaunch::fs_LaunchBlock(CmakeExecutable, Params, StdOut, StdErr, ExitCode, LaunchParams))
 			DMibError(fg_Format("Failed to launch cmake: {}", StdOut + StdErr));
-		
+
 		//DMibConOut("Output: {}\n", StdOut + StdErr);
+		
+		CStr ProjectSourceDirectory = TempDirectory;
+		
+		if (!CmakeCacheDirectory.f_IsEmpty())
+		{
+			ProjectSourceDirectory = CmakeCacheDirectory;
+			CFile::fs_CreateDirectory(CmakeCacheDirectory);
+			
+			CFile::CFindFilesOptions FindOptions{TempDirectory + "/*", true};
+			FindOptions.m_AttribMask = EFileAttrib_File;
+			while (!CacheExcludePatterns.f_IsEmpty())
+				FindOptions.m_ExcludePatterns.f_Insert(fg_GetStrSep(CacheExcludePatterns, ";"));
+
+			TCVector<TCTuple<CStr, CStr>> ReplaceContents; 
+			while (!CacheReplaceContents.f_IsEmpty())
+			{
+				CStr Replace = fg_GetStrSep(CacheReplaceContents, ";");
+				CStr Key = fg_GetStrSep(Replace, "=");
+				ReplaceContents.f_Insert(fg_Tuple(Key, Replace));
+			}
+
+			auto FoundFiles = CFile::fs_FindFiles(FindOptions); 
+			mint PathPrefixLen = TempDirectory.f_GetLen() + 1;
+			
+			CStr SourceBase = CFile::fs_GetPath(FileName);
+			CStr SourceBaseFind = SourceBase + "/";  
+			CStr BaseDir = f_GetBaseDir();
+			CStr BaseDirFind = BaseDir + "/";  
+			CStr TempDirectoryFind = TempDirectory + "/";  
+			TCSet<CStr> WrittenFiles;
+			
+			TCSet<CStr> DependencyFiles;
+			
+			for (auto &File : FoundFiles)
+			{
+				CStr RelativePath = File.m_Path.f_Extract(PathPrefixLen);
+				CStr DestPath = CFile::fs_AppendPath(CmakeCacheDirectory, RelativePath);
+				CStr DestPathDirectory = CFile::fs_GetPath(DestPath);
+				CStr RelativeSource = CFile::fs_MakePathRelative(SourceBase, DestPathDirectory);
+				CStr RelativeDest = CFile::fs_MakePathRelative(CmakeCacheDirectory, DestPathDirectory);
+				CStr RelativeBase = CFile::fs_MakePathRelative(BaseDir, DestPathDirectory);
+
+				CStr RelativeSourceBare = RelativeSource;
+				CStr RelativeDestBare = RelativeDest;
+				CStr RelativeBaseBare = RelativeBase;
+				
+				if (!RelativeSource.f_IsEmpty())
+					RelativeSource += "/";
+				if (!RelativeDest.f_IsEmpty())
+					RelativeDest += "/";
+				if (!RelativeBase.f_IsEmpty())
+					RelativeBase += "/";
+				
+				CStr FileContents = CFile::fs_ReadStringFromFile(File.m_Path, true);
+				
+				if (CFile::fs_GetExtension(File.m_Path) == "dependencies")
+				{
+					CStr NewFileContents;
+					ch8 const *pParse = FileContents;
+					while (*pParse)
+					{
+						auto pLineStart = pParse;
+						fg_ParseToEndOfLine(pParse);
+						CStr Line(pLineStart, pParse - pLineStart);
+						fg_ParseEndOfLine(pParse);
+						if (Line.f_StartsWith(TempDirectory))
+						{
+							bool bExcluded = false;
+							for (auto &ExcludePattern : FindOptions.m_ExcludePatterns)
+							{
+								if (fg_StrMatchWildcard(Line.f_GetStr(), ExcludePattern.f_GetStr()) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
+								{
+									bExcluded = true;
+									break;
+								}
+							}
+							if (bExcluded)
+								continue;
+						}
+						else if (Line.f_Find("/CMakeRoot/") >= 0)
+							continue;
+						
+						DependencyFiles[Line];
+						
+						NewFileContents += Line;
+						NewFileContents += "\n";
+					}
+					FileContents = fg_Move(NewFileContents);
+				}
+				
+				FileContents = FileContents.f_Replace(TempDirectoryFind, RelativeDest);
+				FileContents = FileContents.f_Replace(TempDirectory, RelativeDestBare);
+				FileContents = FileContents.f_Replace(SourceBaseFind, RelativeSource);
+				FileContents = FileContents.f_Replace(SourceBase, RelativeSourceBare);
+				FileContents = FileContents.f_Replace(BaseDirFind, RelativeBase);
+				FileContents = FileContents.f_Replace(BaseDir, RelativeBaseBare);
+				
+				for (auto &Replace : ReplaceContents)
+					FileContents = FileContents.f_Replace(fg_Get<0>(Replace), fg_Get<1>(Replace));
+				
+				if (CFile::fs_GetExtension(File.m_Path) == "MHeader")
+				{
+					auto fGetStripped = [&](CStr const &_String, bool _bExpand = true)
+						{
+							CStr Stripped = _String.f_Replace("@('", "").f_Replace("'->MakeAbsolute())", "");
+							if (!_bExpand)
+								return Stripped;
+							return CFile::fs_GetExpandedPath(Stripped, DestPathDirectory);
+						}
+					;
+					CRegistryPreserveAndOrder_CStr Registry;
+					Registry.f_ParseStr(FileContents, File.m_Path);
+					TCMap<CStr, CStr> RemappedOutputs;
+					Registry.f_TransformFunc
+						(
+							[&](CRegistryPreserveAndOrder_CStr &o_This)
+							{
+								auto pWorkingDirectory = o_This.f_GetChild("Custom_WorkingDirectory");
+								if (!pWorkingDirectory)
+									return;
+								CStr RelativeWorkingDir = fGetStripped(pWorkingDirectory->f_GetThisValue(), false);
+								CStr WorkingDirectory = CFile::fs_GetExpandedPath(RelativeWorkingDir, DestPathDirectory);
+								
+								if (WorkingDirectory == RelativeWorkingDir)
+									return;
+								
+								CStr OutputsString = o_This.f_GetValue("Custom_Outputs", ""); 
+								TCVector<CStr> Outputs;
+								TCVector<CStr> OriginalOutputs;
+								while (!OutputsString.f_IsEmpty())
+								{
+									auto &Original = OriginalOutputs.f_Insert(fg_GetStrSep(OutputsString, ";"));
+									Outputs.f_Insert(fGetStripped(Original));
+								}
+								
+								
+								CStr CommandLine = o_This.f_GetValue("Custom_CommandLine", "");
+
+								TCVector<CStr> CommandLineParams;
+								while (!CommandLine.f_IsEmpty())
+								{
+									CStr Param = fg_GetStrSepEscaped(CommandLine, " ");
+									
+									CStr WorkingDirParam = CFile::fs_GetExpandedPath(Param, WorkingDirectory);
+									CStr StrippedParam = fGetStripped(Param);
+									CStr *pWorkingDirOutput = nullptr;
+									CStr *pStrippedOutput = nullptr;
+									mint iOutput = 0;
+									for (auto &Output : Outputs)
+									{
+										if (StrippedParam == Output)
+										{
+											pStrippedOutput = &Output;
+											break;
+										}
+										if (WorkingDirParam == Output)
+										{
+											pWorkingDirOutput = &Output;
+											break;
+										}
+										++iOutput;
+									}
+									if (pStrippedOutput)
+										RemappedOutputs[StrippedParam] = Param = OriginalOutputs[iOutput] = fg_Format("@(Target:Target.IntermediateDirectory->MakeAbsolute()){}", fGetStripped(Param, false));
+									else if (pWorkingDirOutput)
+										RemappedOutputs[WorkingDirParam] = Param = OriginalOutputs[iOutput] = fg_Format("@(Target:Target.IntermediateDirectory->MakeAbsolute()){}/{}", RelativeWorkingDir, Param); 
+									
+									CommandLineParams.f_Insert(Param);
+								}
+								
+								for (auto &Output : OriginalOutputs)
+									fg_AddStrSep(OutputsString, Output, ";");
+
+								o_This.f_SetValue("Custom_Outputs", OutputsString); 
+								o_This.f_SetValue("Custom_CommandLine", CProcessLaunchParams::fs_GetParams(CommandLineParams));
+							}
+						)
+					;
+					Registry.f_TransformFunc
+						(
+							[&](CRegistryPreserveAndOrder_CStr &o_This)
+							{
+								CStr ExpandedPath = fGetStripped(o_This.f_GetThisValue());
+								auto *pRempped = RemappedOutputs.f_FindEqual(ExpandedPath);
+								if (pRempped)
+									o_This.f_SetThisValue(*pRempped);
+							}
+						)
+					;
+					
+					FileContents = Registry.f_GenerateStr(); 
+				}
+				
+				CFile::fs_CreateDirectory(CFile::fs_GetPath(DestPath));
+				CFile::fs_WriteStringToFile(DestPath, FileContents, false);
+				CFile::fs_SetAttributes(DestPath, File.m_Attribs | EFileAttrib_UnixAttributesValid);
+				
+				WrittenFiles[DestPath];
+			}
+			
+			for (auto &File : CFile::fs_FindFiles(CmakeCacheDirectory + "/*", EFileAttrib_File, true))
+			{
+				if (!WrittenFiles.f_FindEqual(File))
+					CFile::fs_DeleteFile(File);
+			}
+			
+			CHash_SHA512 DependenciesHash;
+			DependenciesHash.f_AddData(GeneratorVersion.f_GetStr(), GeneratorVersion.f_GetLen());
+			DependenciesHash.f_AddData(FullRebuildVersion.f_GetStr(), FullRebuildVersion.f_GetLen());
+
+			for (auto &File : DependencyFiles)
+			{
+				auto DependencyData = CFile::fs_ReadFile(File);
+				DependenciesHash.f_AddData(DependencyData.f_GetArray(), DependencyData.f_GetLen());
+			}
+			
+			CFile::fs_WriteStringToFile(CmakeCacheDirectory + "/Dependencies.sha512", DependenciesHash.f_GetDigest().f_GetString(), false);
+		}
 		
 		CFile::fs_WriteStringToFile(FullRebuildVersionFile, FullRebuildVersion, false);
 		
@@ -243,48 +565,7 @@ namespace NMib::NBuildSystem
 		if (ExitCode)
 			DMibError(fg_Format("cmake failed: {}", StdOut + StdErr));
 		
-		CStr Projects = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_Projects");
-		if (Projects.f_IsEmpty())
-		{
-			auto ProjectFiles = CFile::fs_FindFiles(fg_Format("{}/*.MHeader", TempDirectory));
-			if (ProjectFiles.f_IsEmpty())
-				DMibError(fg_Format("No MHeader files found after generating cmake: {}", StdOut + StdErr));
-			for (auto &File : ProjectFiles)
-				fg_AddStrSep(Projects, CFile::fs_GetFileNoExt(File), ";");
-		}
-
-		auto &Import = _BuildSystemData.m_Imports.f_Insert();
-		
-		{
-			CBuildSystemPreprocessor Preprocessor(Import.m_Registry, _BuildSystemData.m_SourceFiles, mp_FindCache);
-			while (!Projects.f_IsEmpty())
-			{
-				CStr Project = fg_GetStrSep(Projects, ";");
-				
-				CStr ProjectFileName = fg_Format("{}/{}.MHeader", TempDirectory, Project);
-				
-				Preprocessor.f_ReadFile(ProjectFileName);
-				_BuildSystemData.m_SourceFiles[ProjectFileName];
-				
-				CStr Dependencies = CFile::fs_ReadStringFromFile(fg_Format("{}/{}.MHeader.dependencies", TempDirectory, Project), true);
-				
-				TCSet<CStr> SourceFileToAdd;
-				ch8 const *pParse = Dependencies.f_GetStr();
-				while (*pParse)
-				{
-					ch8 const *pStart = pParse;
-					fg_ParseToEndOfLine(pParse);
-					SourceFileToAdd[CStr(pStart, pParse - pStart)];
-					fg_ParseEndOfLine(pParse);
-				}				
-				
-				{
-					DMibLock(mp_SourceFilesLock);
-					mp_SourceFiles += SourceFileToAdd;
-				}
-			}
-		}
-		return &Import;
+		return fp_ExpandImportCMake_FromGeneratedDiretory(_Entity, _ParentEntity, _BuildSystemData, ProjectSourceDirectory);
 	}
 
 	void CBuildSystem::fp_ExpandImport(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData) const

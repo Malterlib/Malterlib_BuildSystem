@@ -273,6 +273,7 @@ namespace NMib::NBuildSystem
 		bool fp_ExpandEntity(CEntity &_Entity, CEntity &_ParentEntity, TCVector<CEntity *> *o_pCreated) const;
 		void fp_ExpandImport(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData) const;
 		CBuildSystemData::CImportData *fp_ExpandImportCMake(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData) const;
+		CBuildSystemData::CImportData *fp_ExpandImportCMake_FromGeneratedDiretory(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData, CStr const &_Directory) const;
 		void fp_TracePropertyEval(bool _bSuccess, CEntity const &_Entity, CProperty const &_Property, CStr const &_Value) const;
 
 		bool fp_HandleRepositories() const;
