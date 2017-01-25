@@ -716,6 +716,8 @@ namespace NMib::NBuildSystem
 		{
 			if (Property == "Identity")
 				Ret = pOriginalContext->m_Key.m_Name;
+			else if (Property == "IdentityAsAbsolutePath")
+				Ret = CFile::fs_GetExpandedPath(pOriginalContext->m_Key.m_Name, CFile::fs_GetPath(pOriginalContext->m_Position.m_FileName));
 			else if (Property == "IdentityPath")
 				Ret = pOriginalContext->m_Position.m_FileName;
 			else if (Property == "Type")

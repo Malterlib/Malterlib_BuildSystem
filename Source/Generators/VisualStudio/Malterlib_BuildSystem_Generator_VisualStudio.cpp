@@ -221,10 +221,10 @@ namespace NMib::NBuildSystem
 						
 						for (auto iFile = TargetInfo.m_Files.f_GetIterator(); iFile; ++iFile)
 						{
-							auto &FileName = iFile.f_GetKey();
+							auto &FileKey = iFile.f_GetKey();
 							auto &FileInfo = *iFile;
 
-							auto &File = Target.m_Files[FileName];
+							auto &File = Target.m_Files[FileKey];
 							File.m_Position = FileInfo.m_pEntity->m_Position;
 							File.m_EnabledConfigs[Config] = FileInfo.m_pEntity;
 							if (FileInfo.m_pGroup)

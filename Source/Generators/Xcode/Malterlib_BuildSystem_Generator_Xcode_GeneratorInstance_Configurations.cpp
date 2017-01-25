@@ -343,54 +343,10 @@ namespace NMib::NBuildSystem
 			}
 		}
 
-		void CGeneratorInstance::fp_ProcessExcludedFiles(CStr const &_OutputDir) const
+		void CGeneratorInstance::fp_AddExcludedFile(CConfiguration const &_Config, CProjectFile &_File) const
 		{
 			auto & ThreadLocal = *m_ThreadLocal;
-			for (auto iConfig = ThreadLocal.mp_XcodeSettingsFromFiles.f_GetIterator(); iConfig; ++iConfig)
-			{
-				auto pExcluded = iConfig->f_FindEqual("EXCLUDED_SOURCE_FILE_NAMES");
-				if (pExcluded)
-				{
-					TCSet<CStr> ExcludedAbsolute;
-					for (auto iExcluded = pExcluded->f_GetIterator(); iExcluded; ++iExcluded)
-					{
-//							CStr Absolute = CFile::fs_GetExpandedPath(*iExcluded, m_RelativeBasePathAbsolute);
-						//CStr Relative = CFile::fs_MakePathRelative((*iExcluded), _OutputDir);
-						//Relative = Relative.f_Replace("../", "");
-						CStr Relative;
-						if (m_XcodeVersion < 5)
-							Relative = CFile::fs_MakePathRelative((*iExcluded), _OutputDir);
-						else
-							Relative = CFile::fs_GetExpandedPath((*iExcluded), _OutputDir);
-						//CStr Absolute = CFile::fs_GetExpandedPath((*iExcluded), _OutputDir);//.f_Replace(".", "\\.");
-//							CStr Absolute = CFile::fs_GetFile(*iExcluded);
-/*							if (Absolute.f_StartsWith(_OutputDir))
-						{
-							CStr Relative = CFile::fs_MakePathRelative((*iExcluded), _OutputDir);
-							Absolute = "$(SRCROOT)/" + Relative;
-						}*/
-						
-						ExcludedAbsolute[Relative];
-					}
-					TCVector<CStr> NewExcluded;
-					for (auto iExcluded = ExcludedAbsolute.f_GetIterator(); iExcluded; ++iExcluded)
-					{
-						NewExcluded.f_Insert(*iExcluded);
-					}
-					*pExcluded = NewExcluded;
-				}
-			}
-		}
-
-		void CGeneratorInstance::fp_AddExcludedFile(CConfiguration const &_Config, CStr const &_File) const
-		{
-			auto & ThreadLocal = *m_ThreadLocal;
-			auto Mapped = ThreadLocal.mp_XcodeSettingsFromFilesExcluded[_Config](_File);
-			if (!Mapped.f_WasCreated())
-				return;
-			
-			ThreadLocal.mp_XcodeSettingsFromFiles[_Config]["EXCLUDED_SOURCE_FILE_NAMES"].f_Insert(_File);
-			
+			auto Mapped = ThreadLocal.mp_XcodeExcludedFileRefs[_Config][_File.f_GetFileRefGUID()];
 		}
 
 		CStr CGeneratorInstance::fp_MakeNiceSharedFlagValue(CStr const& _Type) const
@@ -756,11 +712,11 @@ namespace NMib::NBuildSystem
 
 				// Compiler flags per file
 				{
-					auto &XcodeSettingsFromFiles = ThreadLocal.mp_XcodeSettingsFromFiles[Configuration];
+					auto &ExcludedFileRefs = ThreadLocal.mp_XcodeExcludedFileRefs[Configuration];
 					for (auto iFile = _Project.m_Files.f_GetIterator(); iFile; ++iFile)
 					{
 						if (!iFile->m_EnabledConfigs.f_Exists(Configuration))
-							fp_AddExcludedFile(Configuration, iFile->f_GetName());
+							fp_AddExcludedFile(Configuration, *iFile);
 						else if (iFile->m_bHasCompilerFlags)
 						{
 							CConfigResult const& ConfigData = ThreadLocal.mp_EvaluatedCompileFlags[iFile->f_GetBuildRefGUID()][Configuration];
@@ -815,10 +771,10 @@ namespace NMib::NBuildSystem
 											if (iFlag->f_GetValue() == "true" && iFile->m_LastKnownFileType.f_Find("nolink") == -1)
 												iFile->m_LastKnownFileType += "nolink";
 										}
-										else if (iFlag->m_Property == "EXCLUDED_SOURCE_FILE_NAMES")
+										else if (iFlag->m_Property == "EXCLUDED_FILE_REFS")
 										{
 											if (iFlag->f_GetValue() == "true")
-												XcodeSettingsFromFiles[iFlag->m_Property].f_Insert(iFile->f_GetName());
+												ExcludedFileRefs[iFile->f_GetFileRefGUID()];
 										}
 										else
 										{
@@ -935,39 +891,27 @@ namespace NMib::NBuildSystem
 			// Overridden flags
 			{
 				for (auto iFlag = ThreadLocal.mp_EvaluatedOverriddenCompileFlags[_Configuration].f_GetIterator(); iFlag; ++iFlag)
-				{					
 					FileData += (CStr::CFormat("{} = {}\n") << iFlag.f_GetKey() << fl_EscVar(*iFlag));
-				}
 			}
 
 			// Compile flags
 			{
 				for (auto iFlag = ThreadLocal.mp_CompileFlagsValues.f_GetIterator(); iFlag; ++iFlag)
-				{
 					FileData += (CStr::CFormat("{} = {}\n") << iFlag.f_GetKey() << fl_EscVar((*iFlag)[_Configuration]));
-				}
 			}
 
 			// Xcode settings
 			{
 				for (auto ISetting = ThreadLocal.mp_XcodeSettingsFromTypes[_Configuration].f_GetIterator(); ISetting; ++ISetting)
-				{
 					FileData += CStr::CFormat("{} = {}\n") << ISetting.f_GetKey() << fl_EscVar(*ISetting);
-				}
-				for (auto ISetting = ThreadLocal.mp_XcodeSettingsFromFiles[_Configuration].f_GetIterator(); ISetting; ++ISetting)
-				{
-					FileData += CStr::CFormat("{} =") << ISetting.f_GetKey();
-					for (auto IFile = ISetting->f_GetIterator(); IFile; ++IFile)
-					{
-						CStr File;
-						if (ISetting.f_GetKey() == "EXCLUDED_SOURCE_FILE_NAMES")
-							File = *IFile;
-						else
-							File = CFile::fs_MakePathRelative((*IFile), _OutputDir);
-						FileData += CStr::CFormat(" {}") << fl_EscVar(File);
-					}
-					FileData += "\n";
-				}
+			}
+			
+			// Excluded files
+			{
+				FileData += "EXCLUDED_FILE_REFS =";
+				for (auto &FileRef : ThreadLocal.mp_XcodeExcludedFileRefs[_Configuration])
+					FileData += CStr::CFormat(" {}") << FileRef;
+				FileData += "\n";
 			}
 
 			// MLSRCROOT

@@ -70,7 +70,7 @@ namespace NMib::NBuildSystem
 		}
 	}
 	
-	CBuildSystemData::CImportData *CBuildSystem::fp_ExpandImportCMake_FromGeneratedDiretory
+	CBuildSystemData::CImportData *CBuildSystem::fp_ExpandImportCMake_FromGeneratedDirectory
 		(
 			CEntity &_Entity
 			, CEntity &_ParentEntity
@@ -124,10 +124,128 @@ namespace NMib::NBuildSystem
 	
 	CBuildSystemData::CImportData *CBuildSystem::fp_ExpandImportCMake(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData) const
 	{
-		CStr GeneratorVersion = "8";
 		CStr CmakeCacheDirectory = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_CacheDirectory");
-		CStr FullRebuildVersion = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_FullRebuildVersion");
+
+		CStr LockDirectory = CmakeCacheDirectory;
+		CStr TempDirectory = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "TempDirectory");
 		
+		if (LockDirectory.f_IsEmpty())
+			LockDirectory = TempDirectory;
+
+		// Dependent variables
+		CStr GeneratorVersion = "11";
+		CStr FullRebuildVersion = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_FullRebuildVersion");
+		CStr CacheExcludePatterns = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_CacheExcludePatterns");
+		CStr CacheReplaceContents = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_CacheReplaceContents");
+		CStr CmakeLanguages = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_Languages");
+		CStr CmakeConfig = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_Config");
+		CStr CmakeVariables = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_Variables");
+
+		CStr HashContents = fg_Format("Config (Not checked): {}\n", f_EvaluateEntityProperty(_Entity, EPropertyType_Property, "FullConfiguration"));
+		auto fAddStringHash = [&](CHash_SHA512 &o_DependenciesHash, CStr const &_String, ch8 const *_pVariableName)
+			{
+				HashContents += CStr::CFormat("{}: {}\n") << _pVariableName << _String;
+				//DMibConOut2("{} : {}\n", CmakeCacheDirectory, _String);
+				o_DependenciesHash.f_AddData(_String.f_GetStr(), _String.f_GetLen());
+			}
+		;
+		
+		auto fInitHash = [&](CHash_SHA512 &o_DependenciesHash)
+			{
+				fAddStringHash(o_DependenciesHash, GeneratorVersion, "GeneratorVersion");
+				fAddStringHash(o_DependenciesHash, FullRebuildVersion, "Import.CMake_FullRebuildVersion");
+				fAddStringHash(o_DependenciesHash, CacheExcludePatterns, "Import.CMake_CacheExcludePatterns");
+				fAddStringHash(o_DependenciesHash, CacheReplaceContents, "Import.CMake_CacheReplaceContents");
+				fAddStringHash(o_DependenciesHash, CmakeLanguages, "Import.CMake_Languages");
+				fAddStringHash(o_DependenciesHash, CmakeConfig, "Import.CMake_Config");
+				fAddStringHash(o_DependenciesHash, CmakeVariables, "Ipmort.CMake_Variables");
+			}
+		;
+		
+		CStr FileName = CFile::fs_GetExpandedPath(_Entity.m_Key.m_Name, CFile::fs_GetPath(_Entity.m_Position.m_FileName));
+		
+		CStr SharedTempDirectory = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "SharedTempDirectory");
+		CStr Platform = f_EvaluateEntityProperty(_Entity, EPropertyType_Property, "Platform");
+		CStr Architecture = f_EvaluateEntityProperty(_Entity, EPropertyType_Property, "Architecture");
+		CStr CmakePath = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_Path");
+		CStr CmakeVariablesWithPaths = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_VariablesWithPaths");
+		CStr CmakeSystemName = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_SystemName");
+		CStr CmakeSystemProcessor = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_SystemProcessor");;
+		CStr CmakeCompiler = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_CCompiler");
+		CStr CmakeCompilerTarget = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_CCompilerTarget");
+		CStr CmakeCxxCompiler = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_CxxCompiler");
+		CStr CmakeCxxCompilerTarget = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_CxxCompilerTarget");
+		CStr CmakeReplacePrefixes = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_ReplacePrefixes");
+		
+		auto fInitConfigHash = [&](CHash_SHA512 &o_DependenciesHash)
+			{
+				fInitHash(o_DependenciesHash);
+				fAddStringHash(o_DependenciesHash, FileName, "FileName");
+				fAddStringHash(o_DependenciesHash, SharedTempDirectory, "Import.SharedTempDirectory");
+				fAddStringHash(o_DependenciesHash, Platform, "Platform");
+				fAddStringHash(o_DependenciesHash, Architecture, "Architecture");
+				fAddStringHash(o_DependenciesHash, CmakePath, "Import.CMake_Path");
+				fAddStringHash(o_DependenciesHash, CmakeVariablesWithPaths, "Import.CMake_VariablesWithPaths");
+				fAddStringHash(o_DependenciesHash, CmakeSystemName, "Import.CMake_SystemName");
+				fAddStringHash(o_DependenciesHash, CmakeSystemProcessor, "Import.CMake_SystemProcessor");
+				fAddStringHash(o_DependenciesHash, CmakeCompiler, "Import.CMake_CCompiler");
+				fAddStringHash(o_DependenciesHash, CmakeCompilerTarget, "Import.CMake_CCompilerTarget");
+				fAddStringHash(o_DependenciesHash, CmakeCxxCompiler, "Import.CMake_CxxCompiler");
+				fAddStringHash(o_DependenciesHash, CmakeCxxCompilerTarget, "Import.CMake_CxxCompilerTarget");
+			}
+		;
+		
+		CHash_SHA512 ConfigHash;
+		fInitConfigHash(ConfigHash);
+		CStr ConfigHashString = ConfigHash.f_GetDigest().f_GetString();
+		CStr ConfigHashContents = HashContents;
+		
+		auto fReturn = [&](CStr const &_Directory, CStr const &_Hash)
+			{
+				if (_Hash.f_IsEmpty())
+					fsp_ThrowError(_Entity.m_Position, "CMake generation failed");
+				if (_Hash != ConfigHashString)
+				{
+					fsp_ThrowError
+						(
+							_Entity.m_Position
+							, fg_Format
+							(
+								"Trying to use same cmake cache directory with different settings {}:\n---\n{}---\n{}"
+								, LockDirectory
+								, ConfigHashContents
+								, mp_CMakeGeneratedContents[LockDirectory]
+							)
+						)
+					;
+				}
+				return fp_ExpandImportCMake_FromGeneratedDirectory(_Entity, _ParentEntity, _BuildSystemData, _Directory);
+			}
+		;
+		
+		CMutual *pCMakeGenerateLock;
+		{
+			DLock(mp_CMakeGenerateLock);
+			auto pHash = mp_CMakeGenerated.f_FindEqual(LockDirectory);
+			if (pHash)
+				return fReturn(LockDirectory, *pHash);
+			pCMakeGenerateLock = &mp_CMakeGenerateLocks[LockDirectory];
+		}
+		DLock(*pCMakeGenerateLock);
+		{
+			DLock(mp_CMakeGenerateLock);
+			auto pHash = mp_CMakeGenerated.f_FindEqual(LockDirectory);
+			if (pHash)
+				return fReturn(LockDirectory, *pHash);
+		}
+		
+		auto SetInvalidGenerated = g_OnScopeExit > [&]
+			{
+				DLock(mp_CMakeGenerateLock);
+				mp_CMakeGenerated[LockDirectory];
+			}
+		;
+
 		if (!CmakeCacheDirectory.f_IsEmpty() && CFile::fs_FileExists(CmakeCacheDirectory + "/Dependencies.sha512"))
 		{
 			CFile::CFindFilesOptions FindOptions{CmakeCacheDirectory + "/*.dependencies", true};
@@ -156,8 +274,7 @@ namespace NMib::NBuildSystem
 			}
 
 			CHash_SHA512 DependenciesHash;
-			DependenciesHash.f_AddData(GeneratorVersion.f_GetStr(), GeneratorVersion.f_GetLen());
-			DependenciesHash.f_AddData(FullRebuildVersion.f_GetStr(), FullRebuildVersion.f_GetLen());
+			fInitHash(DependenciesHash);
 
 			for (auto &File : DependencyFiles)
 			{
@@ -166,16 +283,15 @@ namespace NMib::NBuildSystem
 			}
 			
 			if (CFile::fs_ReadStringFromFile(CmakeCacheDirectory + "/Dependencies.sha512", true) == DependenciesHash.f_GetDigest().f_GetString())
-				return fp_ExpandImportCMake_FromGeneratedDiretory(_Entity, _ParentEntity, _BuildSystemData, CmakeCacheDirectory);
+			{
+				DLock(mp_CMakeGenerateLock);
+				mp_CMakeGenerated[LockDirectory] = ConfigHashString;
+				mp_CMakeGeneratedContents[LockDirectory] = ConfigHashContents;
+				return fReturn(LockDirectory, ConfigHashString);
+			}
 			DMibConOut("Import cache out of date (CMake): {}\n", CmakeCacheDirectory);
 		}
-				
-		CStr FileName = CFile::fs_GetExpandedPath(_Entity.m_Key.m_Name, CFile::fs_GetPath(_Entity.m_Position.m_FileName));
-		CStr TempDirectory = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "TempDirectory");
-		CStr Platform = f_EvaluateEntityProperty(_Entity, EPropertyType_Property, "Platform");
-		CStr Architecture = f_EvaluateEntityProperty(_Entity, EPropertyType_Property, "Architecture");
-		CStr CacheExcludePatterns = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_CacheExcludePatterns");
-		CStr CacheReplaceContents = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_CacheReplaceContents");
+		
 		
 		CProcessLaunchParams LaunchParams;
 		LaunchParams.m_bAllowExecutableLocate = true;
@@ -184,15 +300,15 @@ namespace NMib::NBuildSystem
 		LaunchParams.m_bMergeEnvironment = false;
 		LaunchParams.m_Environment = mp_GeneratorInterface->f_GetBuildEnvironment(Platform, Architecture);
 		CStr HidePrefixes;
-		fg_AddStrSep(HidePrefixes, f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "SharedTempDirectory"), ";");
+		fg_AddStrSep(HidePrefixes, SharedTempDirectory, ";");
 		fg_AddStrSep(HidePrefixes, CFile::fs_GetPath(FileName), ";");
 		LaunchParams.m_Environment["CMAKE_MALTERLIB_HIDEPREFIXES"] = HidePrefixes;
+		LaunchParams.m_Environment["CMAKE_MALTERLIB_REPLACEPREFIXES"] = CmakeReplacePrefixes;
 #ifdef DPlatformFamily_OSX
 		LaunchParams.m_Environment["PATH"] = "/opt/local/bin:" + LaunchParams.m_Environment["PATH"];
 #endif
 		{
 			CStr Path;
-			CStr CmakePath = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_Path");
 			while (!CmakePath.f_IsEmpty())
 			{
 #ifdef DPlatformFamily_Windows
@@ -213,17 +329,17 @@ namespace NMib::NBuildSystem
 		LaunchParams.m_Environment.f_Remove("PRODUCT_SPECIFIC_LDFLAGS");
 		LaunchParams.m_Environment.f_Remove("SDKROOT");
 		LaunchParams.m_Environment["CMAKE_MALTERLIB_BASEDIR"] = f_GetBaseDir();
-		
-		
-		CStr CmakeLanguages = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_Languages");
-		while (!CmakeLanguages.f_IsEmpty())
 		{
-			CStr Mapping = fg_GetStrSep(CmakeLanguages, ";");
-			if (Mapping.f_IsEmpty())
-				continue;
-			CStr Language = fg_GetStrSep(Mapping, "=");
-			CStr MalterlibType = Mapping;
-			LaunchParams.m_Environment[fg_Format("CMAKE_MALTERLIB_LANGUAGE_{}", Language)] = MalterlibType;		
+			auto Temp = CmakeLanguages; 
+			while (!Temp.f_IsEmpty())
+			{
+				CStr Mapping = fg_GetStrSep(Temp, ";");
+				if (Mapping.f_IsEmpty())
+					continue;
+				CStr Language = fg_GetStrSep(Mapping, "=");
+				CStr MalterlibType = Mapping;
+				LaunchParams.m_Environment[fg_Format("CMAKE_MALTERLIB_LANGUAGE_{}", Language)] = MalterlibType;		
+			}
 		}
 		
 		CStr CmakeExecutable; 
@@ -250,44 +366,42 @@ namespace NMib::NBuildSystem
 			)
 		;			
 		
-		Params.f_Insert("-DCMAKE_BUILD_TYPE=" + f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_Config"));
+		Params.f_Insert("-DCMAKE_BUILD_TYPE=" + CmakeConfig);
 		
 		{
-			CStr CmakeVariables = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_Variables");
-			while (!CmakeVariables.f_IsEmpty())
+			for (mint i = 0; i < 2; ++i)
 			{
-				CStr Variable = fg_GetStrSep(CmakeVariables, ";");
-				if (Variable.f_IsEmpty())
-					continue;
-				Params.f_Insert("-D" + Variable);
+				CStr Temp;
+				if (i == 0)
+					Temp = CmakeVariables;
+				else
+					Temp = CmakeVariablesWithPaths;
+				while (!Temp.f_IsEmpty())
+				{
+					CStr Variable = fg_GetStrSep(Temp, ";");
+					if (Variable.f_IsEmpty())
+						continue;
+					Params.f_Insert("-D" + Variable);
+				}
 			}
-			CStr SystemName = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_SystemName");
-			if (!SystemName.f_IsEmpty())
-				Params.f_Insert("-DCMAKE_SYSTEM_NAME=" + SystemName);
-			CStr SystemProcessor = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_SystemProcessor");;
-			if (!SystemProcessor.f_IsEmpty())
-				Params.f_Insert("-DCMAKE_SYSTEM_PROCESSOR=" + SystemProcessor);
-			CStr Compiler = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_CCompiler");
-			if (!Compiler.f_IsEmpty())
-				Params.f_Insert("-DCMAKE_C_COMPILER=" + Compiler);
-			CStr CompilerTarget = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_CCompilerTarget");
-			if (!CompilerTarget.f_IsEmpty())
-				Params.f_Insert("-DCMAKE_C_COMPILER_TARGET=" + CompilerTarget);
-			CStr CxxCompiler = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_CxxCompiler");
-			if (!CxxCompiler.f_IsEmpty())
-				Params.f_Insert("-DCMAKE_CXX_COMPILER=" + CxxCompiler);
-			CStr CxxCompilerTarget = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_CxxCompilerTarget");
-			if (!CxxCompilerTarget.f_IsEmpty())
-				Params.f_Insert("-DCMAKE_CXX_COMPILER_TARGET=" + CxxCompilerTarget);
+			
+			if (!CmakeSystemName.f_IsEmpty())
+				Params.f_Insert("-DCMAKE_SYSTEM_NAME=" + CmakeSystemName);
+			if (!CmakeSystemProcessor.f_IsEmpty())
+				Params.f_Insert("-DCMAKE_SYSTEM_PROCESSOR=" + CmakeSystemProcessor);
+			if (!CmakeCompiler.f_IsEmpty())
+				Params.f_Insert("-DCMAKE_C_COMPILER=" + CmakeCompiler);
+			if (!CmakeCompilerTarget.f_IsEmpty())
+				Params.f_Insert("-DCMAKE_C_COMPILER_TARGET=" + CmakeCompilerTarget);
+			if (!CmakeCxxCompiler.f_IsEmpty())
+				Params.f_Insert("-DCMAKE_CXX_COMPILER=" + CmakeCxxCompiler);
+			if (!CmakeCxxCompilerTarget.f_IsEmpty())
+				Params.f_Insert("-DCMAKE_CXX_COMPILER_TARGET=" + CmakeCxxCompilerTarget);
 			
 			Params.f_Insert("-DCMAKE_TOOLCHAIN_NO_PREFIX=1");
 			
 			if (Platform != DMibStringize(DPlatform))
 			{
-				//Params.f_Insert("-DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER");
-				//Params.f_Insert("-DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY");
-				//Params.f_Insert("-DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY");
-				
 				CStr SysRoot = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_SysRoot");
 				if (!SysRoot.f_IsEmpty())
 				{
@@ -301,8 +415,6 @@ namespace NMib::NBuildSystem
 				CStr CxxCompilerExternalToolchain = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_CxxExternalToolChain");
 				if (!CxxCompilerExternalToolchain.f_IsEmpty())
 					Params.f_Insert("-DCMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN=" + CxxCompilerExternalToolchain);
-				
-				//
 			}
 		}
 		
@@ -340,24 +452,27 @@ namespace NMib::NBuildSystem
 
 		//DMibConOut("Output: {}\n", StdOut + StdErr);
 		
-		CStr ProjectSourceDirectory = TempDirectory;
-		
 		if (!CmakeCacheDirectory.f_IsEmpty())
 		{
-			ProjectSourceDirectory = CmakeCacheDirectory;
 			CFile::fs_CreateDirectory(CmakeCacheDirectory);
 			
 			CFile::CFindFilesOptions FindOptions{TempDirectory + "/*", true};
 			FindOptions.m_AttribMask = EFileAttrib_File;
-			while (!CacheExcludePatterns.f_IsEmpty())
-				FindOptions.m_ExcludePatterns.f_Insert(fg_GetStrSep(CacheExcludePatterns, ";"));
-
-			TCVector<TCTuple<CStr, CStr>> ReplaceContents; 
-			while (!CacheReplaceContents.f_IsEmpty())
 			{
-				CStr Replace = fg_GetStrSep(CacheReplaceContents, ";");
-				CStr Key = fg_GetStrSep(Replace, "=");
-				ReplaceContents.f_Insert(fg_Tuple(Key, Replace));
+				CStr Temp = CacheExcludePatterns;
+				while (!Temp.f_IsEmpty())
+					FindOptions.m_ExcludePatterns.f_Insert(fg_GetStrSep(Temp, ";"));
+			}
+
+			TCVector<TCTuple<CStr, CStr>> ReplaceContents;
+			{
+				CStr Temp = CacheReplaceContents;
+				while (!Temp.f_IsEmpty())
+				{
+					CStr Replace = fg_GetStrSep(Temp, ";");
+					CStr Key = fg_GetStrSep(Replace, "=");
+					ReplaceContents.f_Insert(fg_Tuple(Key, Replace));
+				}
 			}
 
 			auto FoundFiles = CFile::fs_FindFiles(FindOptions); 
@@ -502,9 +617,9 @@ namespace NMib::NBuildSystem
 										++iOutput;
 									}
 									if (pStrippedOutput)
-										RemappedOutputs[StrippedParam] = Param = OriginalOutputs[iOutput] = fg_Format("@(Target:Target.IntermediateDirectory->MakeAbsolute()){}", fGetStripped(Param, false));
+										RemappedOutputs[StrippedParam] = Param = OriginalOutputs[iOutput] = fg_Format("@(Target:Target.IntermediateDirectory->MakeAbsolute())/{}", fGetStripped(Param, false));
 									else if (pWorkingDirOutput)
-										RemappedOutputs[WorkingDirParam] = Param = OriginalOutputs[iOutput] = fg_Format("@(Target:Target.IntermediateDirectory->MakeAbsolute()){}/{}", RelativeWorkingDir, Param); 
+										RemappedOutputs[WorkingDirParam] = Param = OriginalOutputs[iOutput] = fg_Format("@(Target:Target.IntermediateDirectory->MakeAbsolute())/{}/{}", RelativeWorkingDir, Param); 
 									
 									CommandLineParams.f_Insert(Param);
 								}
@@ -546,8 +661,7 @@ namespace NMib::NBuildSystem
 			}
 			
 			CHash_SHA512 DependenciesHash;
-			DependenciesHash.f_AddData(GeneratorVersion.f_GetStr(), GeneratorVersion.f_GetLen());
-			DependenciesHash.f_AddData(FullRebuildVersion.f_GetStr(), FullRebuildVersion.f_GetLen());
+			fInitHash(DependenciesHash);
 
 			for (auto &File : DependencyFiles)
 			{
@@ -564,8 +678,14 @@ namespace NMib::NBuildSystem
 		
 		if (ExitCode)
 			DMibError(fg_Format("cmake failed: {}", StdOut + StdErr));
-		
-		return fp_ExpandImportCMake_FromGeneratedDiretory(_Entity, _ParentEntity, _BuildSystemData, ProjectSourceDirectory);
+
+		{
+			DLock(mp_CMakeGenerateLock);
+			SetInvalidGenerated.f_Clear();
+			mp_CMakeGenerated[LockDirectory] = ConfigHashString;
+			mp_CMakeGeneratedContents[LockDirectory] = ConfigHashContents;
+			return fReturn(LockDirectory, ConfigHashString);
+		}
 	}
 
 	void CBuildSystem::fp_ExpandImport(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData) const

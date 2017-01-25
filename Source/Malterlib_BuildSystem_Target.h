@@ -23,6 +23,17 @@ namespace NMib::NBuildSystem
 		CEntityMutablePointer m_pEntity;
 	};
 	
+	struct CFileKey
+	{
+		CStr m_FileName;
+		CStr m_GroupPath;
+		
+		bool operator < (CFileKey const &_Other) const
+		{
+			return fg_TupleReferences(m_FileName, m_GroupPath) < fg_TupleReferences(_Other.m_FileName, _Other.m_GroupPath);
+		}
+	};
+	
 	struct align_cacheline CTargetInfo : public CGroupMember
 	{
 		CTargetInfo(CWorkspaceInfo *_pSolution);
@@ -45,7 +56,7 @@ namespace NMib::NBuildSystem
 		DLinkDS_List(CTargetDependencyInfo, m_Link) m_DependenciesOrdered;
 		TCSet<CStr> m_TriedDependenciesMap;
 		
-		TCMap<CStr, CTargetFileInfo> m_Files;
+		TCMap<CFileKey, CTargetFileInfo> m_Files;
 		
 		CDependenciesBackup m_DependenciesBackup;
 	};

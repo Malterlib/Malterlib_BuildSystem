@@ -74,7 +74,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		void fr_FindRecursiveDependencies(CBuildSystem const &_BuildSystem, TCSet<CStr> &_Stack, CProjectDependency const *_pDepend, TCMap<CStr, CProject> const &_Projects) const;
 		CStr f_GetSolutionTypeGUID() const;
 
-		TCMap<CStr, CProjectFile> m_Files;
+		TCMap<CFileKey, CProjectFile> m_Files;
 		TCMap<CStr, CGroup> m_Groups;
 		TCMap<CStr, CProjectDependency> m_Dependencies;
 

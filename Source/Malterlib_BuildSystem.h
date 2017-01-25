@@ -53,6 +53,7 @@ namespace NMib::NBuildSystem
 		void f_ExpandDynamicImports(CBuildSystemData &_BuildSystemData) const;
 		void f_ExpandGlobalTargetsAndWorkspaces(CBuildSystemData &_BuildSystemData) const;
 		void f_ExpandTargetDependencies(CBuildSystemData &_BuildSystemData, CEntity const &_Target, CDependenciesBackup &o_Backup) const;
+		void f_ExpandTargetGroups(CBuildSystemData &_BuildSystemData, CEntity const &_Target) const;
 		void f_ExpandTargetFiles(CBuildSystemData &_BuildSystemData, CEntity const &_Target) const;
 		void f_ExpandWorkspaceTargets(CBuildSystemData &_BuildSystemData, CEntity const &_Target) const;
 		void f_ExpandWorkspaceEntities(CBuildSystemData &_BuildSystemData, CEntity const &_Target) const;
@@ -273,7 +274,7 @@ namespace NMib::NBuildSystem
 		bool fp_ExpandEntity(CEntity &_Entity, CEntity &_ParentEntity, TCVector<CEntity *> *o_pCreated) const;
 		void fp_ExpandImport(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData) const;
 		CBuildSystemData::CImportData *fp_ExpandImportCMake(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData) const;
-		CBuildSystemData::CImportData *fp_ExpandImportCMake_FromGeneratedDiretory(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData, CStr const &_Directory) const;
+		CBuildSystemData::CImportData *fp_ExpandImportCMake_FromGeneratedDirectory(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData, CStr const &_Directory) const;
 		void fp_TracePropertyEval(bool _bSuccess, CEntity const &_Entity, CProperty const &_Property, CStr const &_Value) const;
 
 		bool fp_HandleRepositories() const;
@@ -313,6 +314,11 @@ namespace NMib::NBuildSystem
 		
 		align_cacheline mutable CMutual mp_GeneratedFilesLock;
 		mutable TCMap<CStr, CGeneratedFile> mp_GeneratedFiles;
+		
+		align_cacheline mutable CMutual mp_CMakeGenerateLock;
+		mutable TCMap<CStr, CMutual> mp_CMakeGenerateLocks;
+		mutable TCMap<CStr, CStr> mp_CMakeGenerated;
+		mutable TCMap<CStr, CStr> mp_CMakeGeneratedContents;
 		
 		EFileAttrib mp_SupportedAttributes = CFile::fs_GetSupportedAttributes();
 		EFileAttrib mp_ValidAttributes = CFile::fs_GetValidAttributes();

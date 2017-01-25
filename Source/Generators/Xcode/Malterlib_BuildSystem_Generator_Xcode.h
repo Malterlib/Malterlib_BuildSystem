@@ -125,14 +125,17 @@ namespace NMib::NBuildSystem::NXcode
 		uint8 m_UsesTabs = 0; // 0 means unset, 1 = uses tabs, 2 = uses spaces
 
 		CStr const &f_GetName() const;
+		CStr const &f_GetNameGroupPath() const;
 		CStr f_GetGroupPath() const;
 		CStr const& f_GetFileRefGUID();
+		CStr const& f_GetFileNameGUID();
 		CStr const& f_GetBuildRefGUID();
 		CStr const& f_GetLastKnownFileType();
 		CStr const& f_GetCompileFlagsGUID();
 
 	private:
 		CStr mp_FileRefGUID;
+		CStr mp_FileNameGUID;
 		CStr mp_BuildRefGUID;
 		CStr mp_CompileFlagsGUID;
 	};
@@ -179,16 +182,16 @@ namespace NMib::NBuildSystem::NXcode
 
 	struct CBuildFileRef
 	{
+		CConfiguration m_Configuration;
 		CStr m_FileName;
 		CStr m_Name;
 		CStr m_BuildGUID;
 		CStr m_CompileFlagsGUID;
 		CStr m_Type;
 		CStr m_FileRefGUID;
+		CStr m_FileNameGUID;
 		bint m_bHasCompilerFlags;
-		TCVector<CStr> m_CustomOutputs;
-		CStr m_CustomCommandLine;
-		CStr m_CustomWorkingDirectory;
+		mint m_nCustomOutputs = 0;
 	};
 
 	struct align_cacheline CProject
@@ -206,7 +209,7 @@ namespace NMib::NBuildSystem::NXcode
 		CStr const& f_GetBuildConfigurationListGUID();
 		void fr_FindRecursiveDependencies(CBuildSystem const &_BuildSystem, TCSet<CStr> &_Stack, CProjectDependency const *_pDepend, TCMap<CStr, CProject> const &_Projects) const;
 
-		TCMap<CStr, CProjectFile> m_Files;
+		TCMap<CFileKey, CProjectFile> m_Files;
 		TCMap<CStr, CGroup> m_Groups;
 		TCMap<CStr, CProjectDependency> m_DependenciesMap;
 		DLinkDS_List(CProjectDependency, m_Link) m_DependenciesOrdered;
@@ -384,8 +387,7 @@ namespace NMib::NBuildSystem::NXcode
 
 			CXMLDocument *m_pXMLFile;
 			TCMap<CStr> mp_EvaluatedTypesInUse;
-			TCMap<CConfiguration, TCMap<CStr, TCVector<CStr>>> mp_XcodeSettingsFromFiles;
-			TCMap<CConfiguration, TCSet<CStr>> mp_XcodeSettingsFromFilesExcluded;
+			TCMap<CConfiguration, TCSet<CStr>> mp_XcodeExcludedFileRefs;
 			TCMap<CConfiguration, TCMap<CStr, CStr>> mp_XcodeSettingsFromTypes;
 			TCMap<CStr, TCMap<CConfiguration, CStr>> mp_CompileFlagsValues;
 			TCMap<CConfiguration, TCMap<CStr, CStr>> mp_EvaluatedOverriddenCompileFlags;
@@ -441,8 +443,7 @@ namespace NMib::NBuildSystem::NXcode
 		static void fspr_MergeScheme(CXMLNode const* _pExistingNode, CXMLNode const* _pPrevNode, CXMLNode* _pNewNode);
 		bool fp_GenerateSchemes(CProject& _Project, TCMap<CConfiguration, TCSet<CStr>> &_Runnables, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable) const;
 		
-		void fp_AddExcludedFile(CConfiguration const &_Config, CStr const &_File) const;
-		void fp_ProcessExcludedFiles(CStr const &_OutputPath) const;
+		void fp_AddExcludedFile(CConfiguration const &_Config, CProjectFile &_File) const;
 
 		// Values
 

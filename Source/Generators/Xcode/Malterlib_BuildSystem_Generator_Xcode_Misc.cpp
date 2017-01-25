@@ -201,20 +201,36 @@ namespace NMib::NBuildSystem::NXcode
 
 	CStr const &CProjectFile::f_GetName() const
 	{
-		return TCMap<CStr, CProjectFile>::fs_GetKey(*this);
+		return TCMap<CFileKey, CProjectFile>::fs_GetKey(*this).m_FileName;
 	}
+	
+	CStr const &CProjectFile::f_GetNameGroupPath() const
+	{
+		return TCMap<CFileKey, CProjectFile>::fs_GetKey(*this).m_GroupPath;
+	}
+	
 	CStr CProjectFile::f_GetGroupPath() const
 	{
 		if (m_pGroup)
 			return m_pGroup->f_GetPath();
 		return CStr();
 	}
+	
+	CStr const& CProjectFile::f_GetFileNameGUID()
+	{
+		if (!mp_FileNameGUID.f_IsEmpty())
+			return mp_FileNameGUID;
+
+		mp_FileNameGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorUUIDNamespace, f_GetName()).f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		return mp_FileNameGUID;
+	}
+	
 	CStr const& CProjectFile::f_GetFileRefGUID()
 	{
 		if (!mp_FileRefGUID.f_IsEmpty())
 			return mp_FileRefGUID;
 
-		mp_FileRefGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorUUIDNamespace, f_GetName()).f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_FileRefGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorUUIDNamespace, f_GetName() + f_GetNameGroupPath()).f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
 		return mp_FileRefGUID;
 	}
 	CStr const& CProjectFile::f_GetBuildRefGUID()
@@ -222,7 +238,7 @@ namespace NMib::NBuildSystem::NXcode
 		if (!mp_BuildRefGUID.f_IsEmpty())
 			return mp_BuildRefGUID;
 
-		mp_BuildRefGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorUUIDNamespace, f_GetName() + "BuildRef").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_BuildRefGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorUUIDNamespace, f_GetName() + f_GetNameGroupPath() + "BuildRef").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
 		return mp_BuildRefGUID;
 	}
 	CStr const& CProjectFile::f_GetLastKnownFileType()

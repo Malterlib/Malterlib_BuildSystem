@@ -797,8 +797,10 @@ namespace NMib::NBuildSystem::NVisualStudio
 							bool bFile = false;
 
 							{
-								auto pFile = _Project.m_Files.f_FindEqual(FullHeaderPath);
-								if (pFile)
+								CFileKey Key;
+								Key.m_FileName = FullHeaderPath;
+								auto pFile = _Project.m_Files.f_FindLargestLessThanEqual(Key);
+								if (pFile && pFile->f_GetName() == FullHeaderPath)
 								{
 									EnabledConfigs = pFile->m_EnabledConfigs;
 									FilePos = pFile->m_Position;
@@ -846,8 +848,13 @@ namespace NMib::NBuildSystem::NVisualStudio
 								CFile::fs_WriteStringToVector(FileData, CStr(FileContents));
 								m_BuildSystem.f_WriteFile(FileData, FileName);
 							}
+							
+							CFileKey FileKey;
+							FileKey.m_FileName = FileName;
+							if (pGroup)
+								FileKey.m_GroupPath = pGroup->f_GetGroupPath();
 
-							auto FileMap = _Project.m_Files(FileName);
+							auto FileMap = _Project.m_Files(FileKey);
 
 							auto &File = FileMap.f_GetResult();
 

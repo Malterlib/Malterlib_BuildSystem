@@ -742,6 +742,7 @@ namespace NMib::NBuildSystem
 										_Workspace.m_Targets
 										, [&](CTargetInfo &_Target)
 										{
+											f_ExpandTargetGroups(ConfigData.m_Evaluated, *_Target.m_pOuterEntity);
 											f_ExpandTargetFiles(ConfigData.m_Evaluated, *_Target.m_pOuterEntity);
 											f_GenerateTargetFiles(ConfigData.m_Evaluated, *_Target.m_pOuterEntity);
 											
@@ -798,8 +799,13 @@ namespace NMib::NBuildSystem
 														case EEntityType_File:
 															{
 																CStr EntityName = ChildEntity.m_Key.m_Name;
+																
+																CFileKey FileKey;
+																FileKey.m_FileName = EntityName;
+																if (_pParentGroup)
+																	FileKey.m_GroupPath = _pParentGroup->f_GetGroupPath();
 
-																auto FileMap = _Target.m_Files(EntityName);
+																auto FileMap = _Target.m_Files(FileKey);
 
 																auto &File = FileMap.f_GetResult();
 

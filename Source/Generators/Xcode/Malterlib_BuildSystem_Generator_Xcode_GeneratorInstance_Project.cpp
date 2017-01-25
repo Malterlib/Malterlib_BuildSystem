@@ -12,8 +12,7 @@ namespace NMib::NBuildSystem::NXcode
 	{
 		auto & ThreadLocal = *m_ThreadLocal;
 		ThreadLocal.mp_EvaluatedTypesInUse.f_Clear();
-		ThreadLocal.mp_XcodeSettingsFromFiles.f_Clear();
-		ThreadLocal.mp_XcodeSettingsFromFilesExcluded.f_Clear();
+		ThreadLocal.mp_XcodeExcludedFileRefs.f_Clear();
 		ThreadLocal.mp_XcodeSettingsFromTypes.f_Clear();
 		ThreadLocal.mp_CompileFlagsValues.f_Clear();
 		ThreadLocal.mp_EvaluatedOverriddenCompileFlags.f_Clear();
@@ -39,8 +38,6 @@ namespace NMib::NBuildSystem::NXcode
 		fp_EvaluateDependencies(_Project);
 		fp_GenerateCompilerFlags(_Project);
 
-		fp_ProcessExcludedFiles(_OutputDir);
-		
 		fp_GenerateBuildConfigurationFiles(_Project, _OutputDir, _Project.m_NativeTarget.m_BuildConfigurationList, false);
 		fp_GenerateBuildConfigurationFiles(_Project, _OutputDir, _Project.m_BuildConfigurationList, true);
 		fp_GenerateToolRunScript(_Project, _OutputDir);
@@ -478,6 +475,7 @@ namespace NMib::NBuildSystem::NXcode
 				BuildRef.m_FileName = IterFile->f_GetName();
 				BuildRef.m_Name = CFile::fs_GetFile(IterFile->f_GetName());
 				BuildRef.m_FileRefGUID = IterFile->f_GetFileRefGUID();
+				BuildRef.m_FileNameGUID = IterFile->f_GetFileNameGUID(); 
 				BuildRef.m_BuildGUID = IterFile->f_GetBuildRefGUID();
 				BuildRef.m_CompileFlagsGUID = IterFile->f_GetCompileFlagsGUID();
 				BuildRef.m_Type = IterFile->m_Type;
@@ -485,11 +483,31 @@ namespace NMib::NBuildSystem::NXcode
 				
 				if (FileType == ECustom)
 				{
-					BuildRef.m_CustomCommandLine = CustomCommandLine.m_Value;
-					BuildRef.m_CustomWorkingDirectory = fp_GetSingleConfigValue(IterFile->m_EnabledConfigs, EPropertyType_Compile, fg_Format("Custom_WorkingDirectory")).m_Value;
+					TCVector<CStr> ParsedParams;
+					NStr::CStr Params = CustomCommandLine.m_Value;
+					while (!Params.f_IsEmpty())
+						ParsedParams.f_Insert(fg_GetStrSepEscaped(Params, " "));
+					
+					CStr GeneratedParams = CProcessLaunchParams::fs_GetParams(ParsedParams);
+					
+					CStr CompilerFlags = fg_Format("MalterlibCustomBuildCommandLine=$'{}'", CustomCommandLine.m_Value.f_EscapeStrNoQuotes("\\'\r\n\t", "\\'rnt"));
+					
+					CStr WorkingDirectory = fp_GetSingleConfigValue(IterFile->m_EnabledConfigs, EPropertyType_Compile, fg_Format("Custom_WorkingDirectory")).m_Value;
+					CompilerFlags += CStr::CFormat("; MalterlibCustomBuildWorkingDir=$'{}'") << WorkingDirectory.f_EscapeStrNoQuotes("\\'\r\n\t", "\\'rnt");
+					
 					CStr Output = fp_GetSingleConfigValue(IterFile->m_EnabledConfigs, EPropertyType_Compile, "Custom_Outputs").m_Value;
 					while (!Output.f_IsEmpty())
-						BuildRef.m_CustomOutputs.f_Insert(fg_GetStrSep(Output, ";"));
+					{
+						CStr ThisOutput = fg_GetStrSep(Output, ";");
+						CStr VarName = fg_Format("MalterlibCustomBuildOutput_{}_{}", BuildRef.m_FileNameGUID, BuildRef.m_nCustomOutputs);
+						for (auto &Config : IterFile->m_EnabledConfigs)
+							ThreadLocal.mp_XcodeSettingsFromTypes[IterFile->m_EnabledConfigs.fs_GetKey(Config)][VarName] = ThisOutput;
+						++BuildRef.m_nCustomOutputs;
+					}
+					BuildRef.m_bHasCompilerFlags = true;
+					
+					for (auto &Config : IterFile->m_EnabledConfigs)
+						ThreadLocal.mp_CompileFlagsValues[BuildRef.m_CompileFlagsGUID][IterFile->m_EnabledConfigs.fs_GetKey(Config)] = CompilerFlags;
 				}
 				
 				auto TabWidth = fp_GetSingleConfigValue(IterFile->m_EnabledConfigs, EPropertyType_Compile, "TabWidth");
@@ -560,25 +578,30 @@ namespace NMib::NBuildSystem::NXcode
 		if (!_Project.mp_OrderedBuildTypes.f_FindEqual(ECustom))
 			return;
 		auto &Type = _Project.mp_OrderedBuildTypes[ECustom];
-		mint FileIndex = 0;
+		struct CFileInfo
+		{
+			CStr m_GUID;
+			mint m_nCustomOutputs = 0;
+		};
+		
+		TCMap<CStr, CFileInfo> FileInfos;
 		for (auto iFile = Type.f_GetIterator(); iFile; ++iFile)
 		{
-			CStr GUID = fg_Format("{}{nfh,sl2,sf0}", iFile->m_BuildGUID, FileIndex);
+			auto &FileInfo = FileInfos[iFile->m_FileName];
+			FileInfo.m_GUID = iFile->m_FileNameGUID;
+			FileInfo.m_nCustomOutputs = fg_Max(FileInfo.m_nCustomOutputs, iFile->m_nCustomOutputs);
+		}
+		
+		for (auto iFile = FileInfos.f_GetIterator(); iFile; ++iFile)
+		{
 			CStr OutputFiles;
-			for (auto &Output : iFile->m_CustomOutputs)
-				fg_AddStrSep(OutputFiles, CStr::CFormat("\t\t\t\t{},") << Output.f_EscapeStr("\\\"\r\n\t", "\\\"rnt"), "\n");
+			for (mint i = 0; i < iFile->m_nCustomOutputs; ++i)
+				fg_AddStrSep(OutputFiles, fg_Format("\t\t\t\t\"$MalterlibCustomBuildOutput_{}_{}\"", iFile->m_GUID, i), "\n");
 			
-			TCVector<CStr> ParsedParams;
-			NStr::CStr Params = iFile->m_CustomCommandLine;
-			while (!Params.f_IsEmpty())
-				ParsedParams.f_Insert(fg_GetStrSepEscaped(Params, " "));
-			
-			CStr GeneratedParams = CProcessLaunchParams::fs_GetParams(ParsedParams);
-
 			ToPerform.f_Add
 				(
-					GUID
-					,[pFile = &*iFile, OutputFiles, GUID, GeneratedParams, &o_Output]
+					iFile->m_GUID
+					,[FileName = iFile.f_GetKey(), OutputFiles, GUID = iFile->m_GUID, &o_Output]
 					{
 						o_Output 
 							+= CStr::CFormat
@@ -593,21 +616,19 @@ R"-----(		{} /* PBXBuildRule */ = {{
 			outputFiles = (
 {}
 			);
-			script = "export PATH=$MalterlibBuildSystemExecutablePath:$PATH\ncd \"{}\"\n{}\n";
+			script = "#!/bin/bash\nexport PATH=$MalterlibBuildSystemExecutablePath:$PATH\neval $OTHER_INPUT_FILE_FLAGS\ncd \"$MalterlibCustomBuildWorkingDir\"\neval $MalterlibCustomBuildCommandLine\n";
 		};
 )-----"
 							)
 							<< GUID 
-							<< pFile->m_FileName.f_EscapeStr()
+							<< FileName.f_EscapeStr()
 							<< OutputFiles
-							<< pFile->m_CustomWorkingDirectory.f_EscapeStrNoQuotes("\\\"\r\n\t", "\\\"rnt")
-							<< GeneratedParams.f_EscapeStrNoQuotes("\\\"\r\n\t", "\\\"rnt")
 						;
 						
 					}
 				)
 			;
-			ThreadLocal.mp_BuildRules[GUID];
+			ThreadLocal.mp_BuildRules[iFile->m_GUID];
 		}
 		
 		ToPerform.f_Perform();

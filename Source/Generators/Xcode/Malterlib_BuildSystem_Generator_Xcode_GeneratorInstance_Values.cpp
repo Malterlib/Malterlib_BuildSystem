@@ -141,6 +141,7 @@ namespace NMib::NBuildSystem::NXcode
 		bool bFirst = true;
 		
 		CGeneratorInstance::CSingleValue Ret;
+		CConfiguration const *pFromConfig = nullptr;
 		
 		for (auto iConfig = _Configs.f_GetIterator(); iConfig; ++iConfig)
 		{
@@ -156,6 +157,7 @@ namespace NMib::NBuildSystem::NXcode
 				else
 					Ret.m_Position = (*iConfig)->m_Position;
 				pSavedFromProperty = pFromProperty;
+				pFromConfig = &iConfig.f_GetKey();
 			}
 			else
 			{
@@ -169,8 +171,8 @@ namespace NMib::NBuildSystem::NXcode
 					TCVector<CBuildSystemError> OtherErrors;
 					CBuildSystemError &Error = OtherErrors.f_Insert();
 					Error.m_Position = Ret.m_Position;
-					Error.m_Error = CStr::CFormat("note: Differs from: {}") << Ret.m_Value;
-					m_BuildSystem.fs_ThrowError(Position, CStr::CFormat("Property value cannot be varied per configuration: {}") << Value << Ret.m_Value, OtherErrors);
+					Error.m_Error = CStr::CFormat("note: Differs from ({}): {}") << pFromConfig->f_GetFullName() << Ret.m_Value;
+					m_BuildSystem.fs_ThrowError(Position, CStr::CFormat("Property value cannot be varied per configuration ({}): {}") << iConfig.f_GetKey().f_GetFullName() << Value, OtherErrors);
 				}
 			}
 		}

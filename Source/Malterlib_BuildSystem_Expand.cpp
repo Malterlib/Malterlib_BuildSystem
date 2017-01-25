@@ -88,7 +88,7 @@ namespace NMib::NBuildSystem
 			
 			TCVector<CEntityKey> Path;
 			
-			TCFunction<void (CEntity &_Entity)> fExpandFile
+			TCFunction<void (CEntity &_Entity)> fExpandDependency
 				= [&](CEntity &_Entity)
 				{
 					for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
@@ -103,7 +103,7 @@ namespace NMib::NBuildSystem
 							)
 						{
 							Path.f_Insert(Child.m_Key);
-							fExpandFile(Child);
+							fExpandDependency(Child);
 							Path.f_Remove(Path.f_GetLen() - 1);
 							continue;
 						}
@@ -118,13 +118,13 @@ namespace NMib::NBuildSystem
 				}
 			;
 
-			fExpandFile(fg_RemoveQualifiers(_Target));
+			fExpandDependency(fg_RemoveQualifiers(_Target));
 		}
 		else
 		{
 			// Remove old
 			{
-				TCFunction<void (CEntity &_Entity)> fExpandFile
+				TCFunction<void (CEntity &_Entity)> fExpandDependency
 					= [&](CEntity &_Entity)
 					{
 						for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
@@ -138,7 +138,7 @@ namespace NMib::NBuildSystem
 									|| Key.m_Type == EEntityType_Group 
 								)
 							{
-								fExpandFile(Child);
+								fExpandDependency(Child);
 								continue;
 							}
 
@@ -150,7 +150,7 @@ namespace NMib::NBuildSystem
 					}
 				;
 
-				fExpandFile(fg_RemoveQualifiers(_Target));
+				fExpandDependency(fg_RemoveQualifiers(_Target));
 			}
 			// Restore
 			{
@@ -183,7 +183,7 @@ namespace NMib::NBuildSystem
 		}
 		// Expand entities
 		{
-			TCFunction<void (CEntity &_Entity)> fExpandFile
+			TCFunction<void (CEntity &_Entity)> fExpandDependency
 				= [&](CEntity &_Entity)
 				{
 					for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
@@ -197,7 +197,7 @@ namespace NMib::NBuildSystem
 								|| Key.m_Type == EEntityType_Group 
 							)
 						{
-							fExpandFile(Child);
+							fExpandDependency(Child);
 							continue;
 						}
 
@@ -211,9 +211,43 @@ namespace NMib::NBuildSystem
 					}
 				}
 			;
-			fExpandFile(fg_RemoveQualifiers(_Target));
+			fExpandDependency(fg_RemoveQualifiers(_Target));
 		}
 
+	}
+
+	void CBuildSystem::f_ExpandTargetGroups(CBuildSystemData &_BuildSystemData, CEntity const &_Target) const
+	{
+		DRequire(_Target.m_Key.m_Type == EEntityType_Target);
+		TCFunction<void (CEntity &_Entity)> fExpandGroup
+			= [&](CEntity &_Entity)
+			{
+				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
+				{
+					auto &Child = *iChild;
+					++iChild;
+					auto &Key = Child.f_GetMapKey();
+					if
+						(
+							(Key.m_Type == EEntityType_Target)
+							|| Key.m_Type == EEntityType_Group 
+						)
+					{
+						fExpandGroup(Child);
+					}
+
+					if (Key.m_Type != EEntityType_Group)
+						continue;
+
+					if (!fp_ExpandEntity(Child, _Entity, nullptr))
+						continue;
+
+					_Entity.m_ChildEntitiesMap.f_Remove(Key);
+				}
+			}
+		;
+
+		fExpandGroup(fg_RemoveQualifiers(_Target));
 	}
 	
 	void CBuildSystem::f_ExpandTargetFiles(CBuildSystemData &_BuildSystemData, CEntity const &_Target) const
