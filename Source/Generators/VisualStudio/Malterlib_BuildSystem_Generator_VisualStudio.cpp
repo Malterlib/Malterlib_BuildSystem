@@ -224,10 +224,10 @@ namespace NMib::NBuildSystem
 							auto &FileKey = iFile.f_GetKey();
 							auto &FileInfo = *iFile;
 
-							auto &File = Target.m_Files[FileKey];
+							auto &File = Target.m_Files[FileKey.m_FileName];
 							File.m_Position = FileInfo.m_pEntity->m_Position;
 							File.m_EnabledConfigs[Config] = FileInfo.m_pEntity;
-							if (FileInfo.m_pGroup)
+							if (FileInfo.m_pGroup && !File.m_pGroup)
 							{
 								auto pGroup = TargetGroupMapping.f_FindEqual(&*FileInfo.m_pGroup);
 								DCheck(pGroup);

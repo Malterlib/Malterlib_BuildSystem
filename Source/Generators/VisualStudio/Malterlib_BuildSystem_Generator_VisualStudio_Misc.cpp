@@ -34,7 +34,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 	CStr const &CProjectFile::f_GetName() const
 	{
-		return TCMap<CFileKey, CProjectFile>::fs_GetKey(*this).m_FileName;
+		return TCMap<CStr, CProjectFile>::fs_GetKey(*this);
 	}
 	CStr CProjectFile::f_GetGroupPath() const
 	{
