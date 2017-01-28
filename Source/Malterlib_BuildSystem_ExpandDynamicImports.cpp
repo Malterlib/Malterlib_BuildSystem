@@ -500,6 +500,13 @@ namespace NMib::NBuildSystem
 				CStr RelativeDestBare = RelativeDest;
 				CStr RelativeBaseBare = RelativeBase;
 				
+				if (RelativeSourceBare.f_IsEmpty())
+					RelativeSourceBare = ".";
+				if (RelativeDestBare.f_IsEmpty())
+					RelativeDestBare = ".";
+				if (RelativeBaseBare.f_IsEmpty())
+					RelativeBaseBare = ".";
+				
 				if (!RelativeSource.f_IsEmpty())
 					RelativeSource += "/";
 				if (!RelativeDest.f_IsEmpty())
