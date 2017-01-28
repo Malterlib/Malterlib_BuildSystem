@@ -132,6 +132,8 @@ namespace NMib::NBuildSystem
 		if (LockDirectory.f_IsEmpty())
 			LockDirectory = TempDirectory;
 
+		bool bUpdateCache = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_UpdateCache") == "true";
+		
 		// Dependent variables
 		CStr GeneratorVersion = "11";
 		CStr FullRebuildVersion = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_FullRebuildVersion");
@@ -257,10 +259,9 @@ namespace NMib::NBuildSystem
 			
 			for (auto &File : FoundFiles)
 			{
-				CStr FileContents = CFile::fs_ReadStringFromFile(File.m_Path, true);
-				
 				if (CFile::fs_GetExtension(File.m_Path) == "dependencies")
 				{
+					CStr FileContents = CFile::fs_ReadStringFromFile(File.m_Path, true);
 					ch8 const *pParse = FileContents;
 					while (*pParse)
 					{
@@ -278,12 +279,17 @@ namespace NMib::NBuildSystem
 
 			for (auto &File : DependencyFiles)
 			{
-				auto DependencyData = CFile::fs_ReadFile(File);
-				DependenciesHash.f_AddData(DependencyData.f_GetArray(), DependencyData.f_GetLen());
+				CStr FileContents = CFile::fs_ReadStringFromFile(File, true).f_Replace("\r\n", "\n");
+				DependenciesHash.f_AddData(FileContents.f_GetStr(), FileContents.f_GetLen());
 			}
 			
-			if (CFile::fs_ReadStringFromFile(CmakeCacheDirectory + "/Dependencies.sha512", true) == DependenciesHash.f_GetDigest().f_GetString())
+			bool bCacheUpToDate = CFile::fs_ReadStringFromFile(CmakeCacheDirectory + "/Dependencies.sha512", true) == DependenciesHash.f_GetDigest().f_GetString();
+			if (bCacheUpToDate || !bUpdateCache)
 			{
+				if (!bCacheUpToDate)
+				{
+					DMibConOut("WARNING: Import cache out of date (CMake), but updating has been disabled with Import.CMake_UpdateCache: {}\n", CmakeCacheDirectory);
+				}
 				DLock(mp_CMakeGenerateLock);
 				mp_CMakeGenerated[LockDirectory] = ConfigHashString;
 				mp_CMakeGeneratedContents[LockDirectory] = ConfigHashContents;
@@ -624,9 +630,21 @@ namespace NMib::NBuildSystem
 										++iOutput;
 									}
 									if (pStrippedOutput)
-										RemappedOutputs[StrippedParam] = Param = OriginalOutputs[iOutput] = fg_Format("@(Target:Target.IntermediateDirectory->MakeAbsolute())/{}", fGetStripped(Param, false));
+									{
+										RemappedOutputs[StrippedParam] 
+											= Param 
+											= OriginalOutputs[iOutput] 
+											= fg_Format("@(Target:Target.IntermediateDirectory->MakeAbsolute())/{}", fGetStripped(Param, false))
+										;
+									}
 									else if (pWorkingDirOutput)
-										RemappedOutputs[WorkingDirParam] = Param = OriginalOutputs[iOutput] = fg_Format("@(Target:Target.IntermediateDirectory->MakeAbsolute())/{}/{}", RelativeWorkingDir, Param); 
+									{
+										RemappedOutputs[WorkingDirParam] 
+											= Param 
+											= OriginalOutputs[iOutput] 
+											= fg_Format("@(Target:Target.IntermediateDirectory->MakeAbsolute())/{}/{}", RelativeWorkingDir, Param)
+										;
+									}
 									
 									CommandLineParams.f_Insert(Param);
 								}
@@ -654,9 +672,12 @@ namespace NMib::NBuildSystem
 					FileContents = Registry.f_GenerateStr(); 
 				}
 				
-				CFile::fs_CreateDirectory(CFile::fs_GetPath(DestPath));
-				CFile::fs_WriteStringToFile(DestPath, FileContents, false);
-				CFile::fs_SetAttributes(DestPath, File.m_Attribs | EFileAttrib_UnixAttributesValid);
+				{
+					CFile::fs_CreateDirectory(CFile::fs_GetPath(DestPath));
+					TCVector<uint8> BinaryFileContents;
+					CFile::fs_WriteStringToVector(BinaryFileContents, FileContents, false);
+					f_WriteFile(BinaryFileContents, DestPath, File.m_Attribs | EFileAttrib_UnixAttributesValid);
+				}
 				
 				WrittenFiles[DestPath];
 			}
@@ -672,11 +693,15 @@ namespace NMib::NBuildSystem
 
 			for (auto &File : DependencyFiles)
 			{
-				auto DependencyData = CFile::fs_ReadFile(File);
-				DependenciesHash.f_AddData(DependencyData.f_GetArray(), DependencyData.f_GetLen());
+				CStr FileContents = CFile::fs_ReadStringFromFile(File, true).f_Replace("\r\n", "\n");
+				DependenciesHash.f_AddData(FileContents.f_GetStr(), FileContents.f_GetLen());
 			}
-			
-			CFile::fs_WriteStringToFile(CmakeCacheDirectory + "/Dependencies.sha512", DependenciesHash.f_GetDigest().f_GetString(), false);
+
+			{
+				TCVector<uint8> BinaryFileContents;
+				CFile::fs_WriteStringToVector(BinaryFileContents, DependenciesHash.f_GetDigest().f_GetString(), false);
+				f_WriteFile(BinaryFileContents, CmakeCacheDirectory + "/Dependencies.sha512");
+			}
 		}
 		
 		CFile::fs_WriteStringToFile(FullRebuildVersionFile, FullRebuildVersion, false);
