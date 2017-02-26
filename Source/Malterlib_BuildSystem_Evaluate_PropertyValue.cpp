@@ -3,6 +3,9 @@
 
 #include "Malterlib_BuildSystem.h"
 #include <Mib/Cryptography/UUID>
+#ifdef DPlatformFamily_Windows
+#include <Mib/Core/PlatformSpecific/WindowsRegistry>
+#endif
 
 namespace NMib::NBuildSystem
 {
@@ -668,6 +671,35 @@ namespace NMib::NBuildSystem
 							)
 						;
 					}
+				}
+				else if (Function == "ReadWindowsRegistry")
+				{
+#ifdef DPlatformFamily_Windows
+					if (FunctionParams.f_GetLen() != 3)
+						fsp_ThrowError(_Position, "ReadWindowsRegistry takes three parameters: <Root> <Key> <ValueName>");
+
+					using ERegRoot = NMib::NPlatform::CWin32_Registry::ERegRoot;
+					ERegRoot RegRoot;
+					CStr Root = FunctionParams[0];
+					if (Root == "LocalMachine")
+						RegRoot = ERegRoot::ERegRoot_LocalMachine;
+					else if (Root == "CurrentUser")
+						RegRoot = ERegRoot::ERegRoot_CurrentUser;
+					else if (Root == "Classes")
+						RegRoot = ERegRoot::ERegRoot_Classes;
+					else if (Root == "Win64_LocalMachine")
+						RegRoot = ERegRoot::ERegRoot_Win64_LocalMachine;
+					else if (Root == "Win64_CurrentUser")
+						RegRoot = ERegRoot::ERegRoot_Win64_CurrentUser;
+					else if (Root == "Win64_Classes")
+						RegRoot = ERegRoot::ERegRoot_Win64_Classes;
+
+					NMib::NPlatform::CWin32_Registry Registry{RegRoot};
+					if (Registry.f_ValueExists(FunctionParams[1], FunctionParams[2]))
+						Ret = Registry.f_Read_Str(FunctionParams[1], FunctionParams[2]);
+#else
+					Ret = "";
+#endif
 				}
 				else
 					fsp_ThrowError(_Position, CStr::CFormat("Builtin function not found '{}'") << Function);

@@ -4,6 +4,9 @@
 #include "Malterlib_BuildSystem_Generator_VisualStudio.h"
 #include <Mib/XML/XML>
 #include <Mib/Process/ProcessLaunch>
+#ifdef DPlatformFamily_Windows
+#include <Mib/Core/PlatformSpecific/WindowsRegistry>
+#endif
 
 namespace NMib::NBuildSystem::NVisualStudio
 {
@@ -20,6 +23,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 			return "12.0";
 		else if (m_Version == 2015)
 			return "14.0";
+		else if (m_Version == 2017)
+			return "15.0";
 		DError("Implement this");
 	}
 
@@ -31,6 +36,15 @@ namespace NMib::NBuildSystem::NVisualStudio
 		case 2012: VSVersion = 110; break;
 		case 2013: VSVersion = 120; break;
 		case 2015: VSVersion = 140; break;
+		case 2017: 
+			{
+#ifdef DPlatformFamily_Windows
+				NMib::NPlatform::CWin32_Registry Registry;
+				
+				CStr Path = Registry.f_Read_Str("SOFTWARE\\WOW6432Node\\Microsoft\\VisualStudio\\SxS\\VS7", "15.0");
+				return Path;
+#endif
+			}
 		default: DError("Implement this");
 		}
 		return CFile::fs_GetExpandedPath(fg_GetSys()->f_GetEnvironmentVariable(fg_Format("VS{}COMNTOOLS", VSVersion)) + "../..");
@@ -48,7 +62,6 @@ namespace NMib::NBuildSystem::NVisualStudio
 		, m_OutputDir(_OutputDir)
 		, m_Win32Platfrom("Win32")
 	{
-
 		m_Version = _BuildSystem.f_GetGenerateSettings().m_Generator.f_Replace("VisualStudio", "").f_ToInt(uint32(2012));
 
 		m_RelativeBasePath = CFile::fs_MakePathRelative(m_BuildSystem.f_GetBaseDir(), m_OutputDir + "/Files/Temp");
@@ -118,7 +131,12 @@ namespace NMib::NBuildSystem::NVisualStudio
 		}
  		CStr VisualStudioRoot = f_GetVisualStudioRoot();
 
-		CStr VCVarsDirectory = VisualStudioRoot + "/VC";
+		CStr VCVarsDirectory;
+
+		if (m_Version >= 2017)
+			VCVarsDirectory = VisualStudioRoot + "/VC/Auxiliary/Build";
+		else
+			VisualStudioRoot + "/VC";
 
 		CStr VSArchitecture;
 #ifdef DArchitecture_x86
@@ -253,6 +271,11 @@ namespace NMib::NBuildSystem::NVisualStudio
 		else if (_Value == "SourceFileName")
 		{
 			_Result = "%(Filename)";
+			return true;
+		}
+		else if (_Value == "VisualStudioRoot")
+		{
+			_Result = f_GetVisualStudioRoot();
 			return true;
 		}
 		return false;
