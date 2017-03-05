@@ -610,7 +610,14 @@ namespace NMib::NBuildSystem
 																}
 
 																CTargetInfo *pDependentTarget = fGetTarget(EntityName, DependencyName, pEntity->m_Position, EntityNameFull);
-																
+
+																if (pDependentTarget->m_TriedDependenciesMap(pDependentTarget->f_GetName()).f_WasCreated())
+																	bDependencyAdded = true;
+
+																auto &Dep = _pTarget->m_DependenciesMap(pDependentTarget->f_GetName()).f_GetResult();
+																_pTarget->m_DependenciesOrdered.f_Insert(Dep);
+																Dep.m_pEntity = fg_Explicit(pEntity);
+
 																CStr FollowIndirectDependencies = f_EvaluateEntityProperty
 																	(
 																		*pDependentTarget->m_pInnerEntity
@@ -621,14 +628,7 @@ namespace NMib::NBuildSystem
 																
 																if (FollowIndirectDependencies != "true")
 																	continue;
-
-																if (pDependentTarget->m_TriedDependenciesMap(pDependentTarget->f_GetName()).f_WasCreated())
-																	bDependencyAdded = true;
-
-																auto &Dep = _pTarget->m_DependenciesMap(pDependentTarget->f_GetName()).f_GetResult();
-																_pTarget->m_DependenciesOrdered.f_Insert(Dep);
-																Dep.m_pEntity = fg_Explicit(pEntity);
-
+																
 																auto const *pToProcess = &*pDependentTarget->m_pOuterEntity;
 																while (pToProcess->m_pCopiedFrom)
 																	pToProcess = pToProcess->m_pCopiedFrom.f_Get();
