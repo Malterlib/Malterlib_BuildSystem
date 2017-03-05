@@ -610,6 +610,17 @@ namespace NMib::NBuildSystem
 																}
 
 																CTargetInfo *pDependentTarget = fGetTarget(EntityName, DependencyName, pEntity->m_Position, EntityNameFull);
+																
+																CStr FollowIndirectDependencies = f_EvaluateEntityProperty
+																	(
+																		*pDependentTarget->m_pInnerEntity
+																		, EPropertyType_Target
+																		, "FollowIndirectDependencies"
+																	)
+																;
+																
+																if (FollowIndirectDependencies != "true")
+																	continue;
 
 																if (pDependentTarget->m_TriedDependenciesMap(pDependentTarget->f_GetName()).f_WasCreated())
 																	bDependencyAdded = true;
