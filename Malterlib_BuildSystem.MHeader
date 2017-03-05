@@ -46,7 +46,11 @@ Import "../Core/Lib_Malterlib.MTarget"
 	}
 	%Group EmbedCMake
 	{
-		!!MalterlibBuildSystemEmbedCMake true
+		&
+		{
+			MalterlibBuildSystemEmbedCMake true
+			!DocumentationEnabled true
+		}
 		Dependency.Indirect true
 		
 		%Dependency Lib_CMakeLib
