@@ -279,6 +279,8 @@ namespace NMib::NBuildSystem
 
 			for (auto &File : DependencyFiles)
 			{
+				if (!CFile::fs_FileExists(File))
+					continue;
 				CStr FileContents = CFile::fs_ReadStringFromFile(File, true).f_Replace("\r\n", "\n");
 				DependenciesHash.f_AddData(FileContents.f_GetStr(), FileContents.f_GetLen());
 			}
