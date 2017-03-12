@@ -684,12 +684,6 @@ namespace NMib::NBuildSystem
 				WrittenFiles[DestPath];
 			}
 			
-			for (auto &File : CFile::fs_FindFiles(CmakeCacheDirectory + "/*", EFileAttrib_File, true))
-			{
-				if (!WrittenFiles.f_FindEqual(File))
-					CFile::fs_DeleteFile(File);
-			}
-			
 			CHash_SHA512 DependenciesHash;
 			fInitHash(DependenciesHash);
 
@@ -703,6 +697,13 @@ namespace NMib::NBuildSystem
 				TCVector<uint8> BinaryFileContents;
 				CFile::fs_WriteStringToVector(BinaryFileContents, DependenciesHash.f_GetDigest().f_GetString(), false);
 				f_WriteFile(BinaryFileContents, CmakeCacheDirectory + "/Dependencies.sha512");
+				WrittenFiles[CmakeCacheDirectory + "/Dependencies.sha512"];
+			}
+			
+			for (auto &File : CFile::fs_FindFiles(CmakeCacheDirectory + "/*", EFileAttrib_File, true))
+			{
+				if (!WrittenFiles.f_FindEqual(File))
+					CFile::fs_DeleteFile(File);
 			}
 		}
 		

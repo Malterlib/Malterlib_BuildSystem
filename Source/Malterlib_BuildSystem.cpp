@@ -131,7 +131,10 @@ namespace NMib::NBuildSystem
 								}
 												
 								if (!bSuccess)
+								{
+									DConOut2("Removed file write protection: {} = {}{\n}", _Destination, Path);
 									CFile::fs_SetAttributes(_Destination, (Attributes & ~EFileAttrib_ReadOnly)  | (mp_SupportedAttributes & EFileAttrib_UserWrite) | mp_ValidAttributes);
+								}
 							}
 						}
 						break;
