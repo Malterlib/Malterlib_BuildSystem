@@ -35,6 +35,7 @@ namespace NMib::NBuildSystem
 		}
 	}
 
+#ifndef DDocumentation_Doxygen
 	template <typename t_CSortKey>
 	TCSortedPerform<t_CSortKey &>::CToSortBy::CToSortBy(t_CSortKey &_SortKey)
 		: m_pSortBy(&_SortKey)
@@ -64,4 +65,5 @@ namespace NMib::NBuildSystem
 			(*iPerform->m_pFunctor)();
 		}
 	}
+#endif
 }
