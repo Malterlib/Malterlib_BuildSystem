@@ -54,6 +54,7 @@ namespace NMib::NBuildSystem::NXcode
 		CStr m_Name;
 		TCMap<CConfiguration, CStr> m_Script;
 		TCMap<CConfiguration, CStr> m_ScriptNames;
+		
 		TCVector<CStr> m_Inputs;
 		TCVector<CStr> m_Outputs;
 		bool m_bPostBuild = false;
@@ -85,6 +86,7 @@ namespace NMib::NBuildSystem::NXcode
 
 		TCVector<CBuildConfiguration> m_BuildConfigurationList;
 		TCMap<CStr, CBuildScript> m_BuildScripts;
+		TCMap<CConfiguration, CStr> m_ScriptExports;
 
 	private:
 		CStr mp_GUID;

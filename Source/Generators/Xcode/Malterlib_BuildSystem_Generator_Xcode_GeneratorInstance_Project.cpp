@@ -1913,14 +1913,6 @@ R"-----(		{} /* PBXBuildRule */ = {{
 
 			// Pre build scripts
 
-			CStr FormatClean;
-			FormatClean += "\t\t\t\"{}\")\n";
-			FormatClean += "\t\t\t\texport MalterlibDependencyFile=\"{}\"\n";
-			FormatClean += "\t\t\t\tbash {}\n";
-			FormatClean += "\t\t\t\texit $?\n";
-			FormatClean += "\t\t\t;;\n";
-			
-			
 			for (auto iConfig = ThreadLocal.mp_EvaluatedTargetSettings.f_GetIterator(); iConfig; ++iConfig)
 			{
 				CConfiguration const& Configuration = iConfig.f_GetKey();
@@ -1932,7 +1924,15 @@ R"-----(		{} /* PBXBuildRule */ = {{
 				
 				if (auto pCommandLine_Clean = iConfig->m_Element.f_FindEqual("CommandLine_Clean"))
 				{
-					CleanScript += (CStr::CFormat(FormatClean) << DependencyFile << Name << pCommandLine_Clean->f_GetValue());
+					CleanScript += CStr::CFormat("\t\t\t\"{}\")\n") << Name;
+					CleanScript += CStr::CFormat("\t\t\t\texport MalterlibDependencyFile=\"{}\"\n") << DependencyFile;
+					if (auto pExports = _Project.m_NativeTarget.m_ScriptExports.f_FindEqual(iConfig.f_GetKey()))
+						CleanScript += CStr::CFormat("\t\t\t\t{}\n") << *pExports;
+					CleanScript += CStr::CFormat("\t\t\t\tbash {}\n") << pCommandLine_Clean->f_GetValue();
+					CleanScript += "\t\t\t\texit $?\n";
+					CleanScript += "\t\t\t;;\n";
+					
+					
 					bCleanScript = true;
 				}
 
@@ -1940,6 +1940,8 @@ R"-----(		{} /* PBXBuildRule */ = {{
 				{
 					BuildScript += (CStr::CFormat("\t\t\t\"{}\")\n") << Name);
 					BuildScript += CStr::CFormat("\t\t\t\texport MalterlibDependencyFile=\"{}\"\n") << DependencyFile;
+					if (auto pExports = _Project.m_NativeTarget.m_ScriptExports.f_FindEqual(iConfig.f_GetKey()))
+						BuildScript += CStr::CFormat("\t\t\t\t{}\n") << *pExports;
 					
 					for (auto iScript = _Project.m_NativeTarget.m_BuildScripts.f_GetIterator(); iScript; ++iScript)
 					{
@@ -1996,7 +1998,11 @@ R"-----(		{} /* PBXBuildRule */ = {{
 			if (bBuildScript || bCleanScript)
 			{
 				_Project.m_GeneratedBuildScript = true;
-				ScriptData = (CStr::CFormat("#!/bin/bash\n\nexport PATH=$MalterlibBuildSystemExecutablePath:$PATH\ncase $ACTION in\n\t\"\")\n\t\t{}\n\t\t;;\n\t\"clean\")\n\t\t{}\n\t\t;;\nesac\nexit 0")
+				ScriptData = "#!/bin/bash\n\n";
+				ScriptData += "export PATH=$MalterlibBuildSystemExecutablePath:$PATH\n";
+				
+				
+				ScriptData += (CStr::CFormat("case $ACTION in\n\t\"\")\n\t\t{}\n\t\t;;\n\t\"clean\")\n\t\t{}\n\t\t;;\nesac\nexit 0")
 													<< BuildScript
 													<< CleanScript);
 			}

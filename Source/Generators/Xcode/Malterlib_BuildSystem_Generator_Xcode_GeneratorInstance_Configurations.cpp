@@ -952,6 +952,10 @@ namespace NMib::NBuildSystem
 						bAdditionalLibraries = true;
 					else if (!bDoneAdditionalLibraries && iElement->m_Property == "OTHER_LIBTOOLFLAGS" && m_XcodeVersion >= 6)
 						bAdditionalLibraries = true;
+					else if (iElement->m_Property == "ExportScriptEnvironmentContents")
+					{
+						_Project.m_NativeTarget.m_ScriptExports[_Configuration] = iElement->f_GetValue();
+					}
 
 					CStr Extra;
 					CStr ExtraAfter;
