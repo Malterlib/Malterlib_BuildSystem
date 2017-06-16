@@ -160,8 +160,18 @@ namespace NMib::NBuildSystem
 								++pParse;
 						}
 					}
+					else
+					{
+						fg_ParseAlphaNumericAndChars(pParse, "_");
+
+						if (*pParse == '(' && Type.f_IsEmpty() && Property.f_IsEmpty())
+						{
+							Type = "Builtin";
+							Property = "Function";
+							bFunction = true;
+						}
+					}
 					
-					fg_ParseAlphaNumericAndChars(pParse, "_");
 					if (*pParse == ':')
 					{
 						EntityContext = _Value.f_Extract(pStart - pParseStart, pParse - pStart);
@@ -251,7 +261,7 @@ namespace NMib::NBuildSystem
 						Property = _Value.f_Extract(pStart - pParseStart, pParse - pStart);
 				}
 				else
-					fsp_ThrowError(_Position, "Syntax error in property evaluation (Expected alpha character)");
+					fsp_ThrowError(_Position, fg_Format("Syntax error in property evaluation (Expected alpha character): {}", _Value));
 			}
 		}
 
@@ -275,7 +285,13 @@ namespace NMib::NBuildSystem
 		{
 			if (Property == "Function")
 			{
-				if (Function == "RelativeBase")
+				if (Function == "Error")
+				{
+					if (FunctionParams.f_GetLen() != 1)
+						fsp_ThrowError(_Position, "Error takes one parameter");
+					fsp_ThrowError(_Position, FunctionParams[0]);
+				}
+				else if (Function == "RelativeBase")
 				{
 					if (FunctionParams.f_GetLen() != 1)
 						fsp_ThrowError(_Position, "RelativeBase takes one parameter");
@@ -876,9 +892,13 @@ namespace NMib::NBuildSystem
 			}
 			else if (Function == "MakeAbsolute")
 			{
-				if (FunctionParams.f_GetLen() != 0)
-					fsp_ThrowError(_Position, "MakeAbsolute takes zero parameters");
-				Ret = mp_GeneratorInterface->f_GetExpandedPath(Ret, CFile::fs_GetPath(_Position.m_FileName));
+				if (FunctionParams.f_GetLen() > 1)
+					fsp_ThrowError(_Position, "MakeAbsolute takes one or zero parameters");
+				
+				if (FunctionParams.f_GetLen() == 1)
+					Ret = mp_GeneratorInterface->f_GetExpandedPath(Ret, FunctionParams[0]);
+				else
+					Ret = mp_GeneratorInterface->f_GetExpandedPath(Ret, CFile::fs_GetPath(_Position.m_FileName));
 			}
 			else if (Function == "FindFilesIn")
 			{

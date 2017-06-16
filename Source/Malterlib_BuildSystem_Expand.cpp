@@ -480,13 +480,8 @@ namespace NMib::NBuildSystem
 					CFindOptions FindOptions(SearchPath, Attribs);
 					FindOptions.m_bRecursive = RecursiveStart >= 0;
 					
-					if (bAllowNonExisting)
-					{
-						if (bWildcardSearch)
-							fsp_ThrowError(_Entity.m_Position, CStr::CFormat("Wildcard search cannot be combined with Compile.AllowNonExisting {}") << SearchPath);
-							
+					if (bAllowNonExisting && !bWildcardSearch)
 						Files.f_Insert(SearchPath);
-					}
 					else
 					{
 						if (bWildcardSearch)
@@ -512,7 +507,7 @@ namespace NMib::NBuildSystem
 								Files.f_Insert(FindOptions.m_Path);
 							}
 						}
-						if (Files.f_IsEmpty())
+						if (Files.f_IsEmpty() && !bAllowNonExisting)
 							fsp_ThrowError(_Entity.m_Position, CStr::CFormat("No file found for pattern {}") << SearchPath);
 					}
 				}
