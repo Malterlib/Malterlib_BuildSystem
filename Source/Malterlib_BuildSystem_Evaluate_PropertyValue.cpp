@@ -492,6 +492,13 @@ namespace NMib::NBuildSystem
 						}
 					}
 				}
+				else if (Function == "ReadFile")
+				{
+					if (FunctionParams.f_GetLen() != 1)
+						fsp_ThrowError(_Position, "ReadFile takes one parameter");
+
+					Ret = CFile::fs_ReadStringFromFile(FunctionParams[0], true);
+				}
 				else if (Function == "SourceFiles")
 				{
 					if (FunctionParams.f_GetLen() != 1)
@@ -987,6 +994,30 @@ namespace NMib::NBuildSystem
 				{
 					ch8 ToFind[] = {Character, 0};
 					Ret = Ret.f_Replace(ToFind, ToReplaceWith);
+				}
+			}
+			else if (Function == "FindGetLine")
+			{
+				if (FunctionParams.f_GetLen() != 1)
+					fsp_ThrowError(_Position, "FindGetLine takes one parameters");
+				
+				ch8 const *pPattern = FunctionParams[0].f_GetStr();
+
+				ch8 const *pParse = Ret.f_GetStr();
+				while (*pParse)
+				{
+					auto pParseStart = pParse;
+					fg_ParseToEndOfLine(pParse);
+					
+					CStr Line(pParseStart, pParse - pParseStart);
+					
+					if (fg_StrMatchWildcard(Line.f_GetStr(), pPattern) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
+					{
+						Ret = Line;
+						break;
+					}
+					
+					fg_ParseEndOfLine(pParse);
 				}
 			}
 			else if (Function == "Find")
