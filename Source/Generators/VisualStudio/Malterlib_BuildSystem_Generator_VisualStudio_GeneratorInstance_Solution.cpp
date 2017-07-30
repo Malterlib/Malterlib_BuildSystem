@@ -68,6 +68,12 @@ namespace NMib::NBuildSystem::NVisualStudio
 				<< ProjectPath
 				<< iProject->f_GetGUID()
 			;
+			if (m_bEnableSourceControl)
+			{
+				FileData += "	GlobalSection(PerforceSourceControlProviderSolutionProperties) = preSolution\r\n";
+				FileData += "		SolutionIsControlled = True\r\n";
+				FileData += "	EndGlobalSection\r\n";
+			}
 
 			FileData += "EndProject\r\n";
 		}
@@ -81,6 +87,12 @@ namespace NMib::NBuildSystem::NVisualStudio
 		for (auto iGroup = _Solution.m_Groups.f_GetIterator(); iGroup; ++iGroup)
 		{
 			FileData += CStr::CFormat("Project(\"{{2150E333-8FDC-42A3-9474-1A3956D46DE8}\") = \"{0}\", \"{0}\", \"{1}\"\r\n") << iGroup->m_Name << iGroup->f_GetGUID();
+			if (m_bEnableSourceControl)
+			{
+				FileData += "	GlobalSection(PerforceSourceControlProviderSolutionProperties) = preSolution\r\n";
+				FileData += "		SolutionIsControlled = True\r\n";
+				FileData += "	EndGlobalSection\r\n";
+			}
 
 			auto pFiles = GroupToFile.f_FindEqual(&(*iGroup));
 			if (pFiles)
@@ -101,27 +113,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 		// Source control
 		if (m_bEnableSourceControl)
 		{
-			FileData += "	GlobalSection(SourceCodeControl) = preSolution\r\n";
-			FileData += CStr::CFormat("		SccNumberOfProjects = {}\r\n") << _Solution.m_Projects.f_GetLen();
-			FileData += "		CanCheckoutShared = true\r\n";
-
-			mint iProjectNum = 0;
-			CStr RelativeSolutionDir = CFile::fs_MakePathRelative(m_BuildSystem.f_GetBaseDir(), SolutionDir).f_Replace("/", "\\\\");
-			for (auto iProject = _Solution.m_Projects.f_GetIterator(); iProject; ++iProject, ++iProjectNum)
-			{
-				{
-					CStr RelativeDir = CFile::fs_MakePathRelative(iProject->m_FileName, SolutionDir).f_Replace("/", "\\\\");
-					FileData += CStr::CFormat("		SccProjectUniqueName{} = {}\r\n") << iProjectNum << RelativeDir;
-				}
-				{
-					CStr RelativeDir = CFile::fs_MakePathRelative(CFile::fs_GetPath(iProject->m_FileName), m_BuildSystem.f_GetBaseDir()).f_Replace("/", "\\\\");
-					FileData += CStr::CFormat("		SccProjectFilePathRelativizedFromConnection{} = {}\\\\\r\n") << iProjectNum << RelativeDir;
-				}
-				FileData += CStr::CFormat("		SccProjectName{} = Perforce\\u0020Project\r\n") << iProjectNum;
-				FileData += CStr::CFormat("		SccLocalPath{} = {}\r\n") << iProjectNum << RelativeSolutionDir;
-				FileData += CStr::CFormat("		SccProvider{} = MSSCCI:Perforce\\u0020SCM\r\n") << iProjectNum;
-			}
-
+			FileData += "	GlobalSection(PerforceSourceControlProviderSolutionProperties) = preSolution\r\n";
+			FileData += "		SolutionIsControlled = True\r\n";
 			FileData += "	EndGlobalSection\r\n";
 		}
 

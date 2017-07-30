@@ -195,13 +195,6 @@ namespace NMib::NBuildSystem::NVisualStudio
 				CXMLDocument::f_AddElementAndText(pGlobals, "ProjectGuid", _Project.f_GetGUID());
 				if (LanguageType == ELanguageType_Native)
 					CXMLDocument::f_AddElementAndText(pGlobals, "RootNamespace", _Project.f_GetName());
-				if (m_bEnableSourceControl)
-				{
-					CXMLDocument::f_AddElementAndText(pGlobals, "SccProjectName", "Perforce Project");
-					CStr SccLocalPath = CFile::fs_MakePathRelative(m_BuildSystem.f_GetBaseDir(), _OutputDir).f_ReplaceChar('/', '\\');
-					CXMLDocument::f_AddElementAndText(pGlobals, "SccLocalPath", SccLocalPath);
-					CXMLDocument::f_AddElementAndText(pGlobals, "SccProvider", "MSSCCI:Perforce SCM");
-				}
 				if (LanguageType == ELanguageType_Native && m_Version == 2012)
 				{
 					auto pTargetsPath = CXMLDocument::f_AddElementAndText(pGlobals, "VCTargetsPath", "$(VCTargetsPath11)");
@@ -210,6 +203,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 				}
 				if (!WindowsTargetVersion.f_IsEmpty())
 					CXMLDocument::f_AddElementAndText(pGlobals, "WindowsTargetPlatformVersion", WindowsTargetVersion);
+				if (m_bEnableSourceControl)
+					CXMLDocument::f_AddElementAndText(pGlobals, "SccProvider", "Perforce Source Control Provider:{8D316614-311A-48F4-85F7-DF7020F62357}");
 			}
 
 			// Default imports
