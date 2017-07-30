@@ -101,38 +101,30 @@ namespace NMib::NBuildSystem
 					case CFile::EDiffCopyChange_FileChanged:
 						{
 							EFileAttrib Attributes = CFile::fs_GetAttributes(_Destination);
-											
+
 							if ((Attributes & EFileAttrib_ReadOnly) || (!(Attributes & EFileAttrib_UserWrite) && (mp_SupportedAttributes & EFileAttrib_UserWrite)))
 							{
 								bool bSuccess = false;
-								CStr Path = CFile::fs_GetPath(_Destination);
-								while (!Path.f_IsEmpty())
+								// Perforce checkout
+								try
 								{
-									if (CFile::fs_FileExists(CFile::fs_AppendPath(Path, ".p4config")))
+									CPerforceClientThrow Client;
+									if (CPerforceClientThrow::fs_GetFromP4Config(_Destination, Client))
 									{
-										// Perforce checkout
-										try
-										{
-											CPerforceClientThrow Client;
-											Client.f_Login(CStr(), Path);
-											Client.f_OpenForEdit(_Destination);
-											DConOut("Opened file for edit in perforce: {}{\n}", _Destination);
-											bSuccess = true;
-										}
-										catch (NException::CException const &_Error)
-										{
-											CStr Error = _Error.f_GetErrorStr();
-											DConErrOut("Failed to checkout via perforce:{\n}{}{\n}", Error);
-										}
-										break;
+										Client.f_OpenForEdit(_Destination);
+										DConOut("Opened file for edit in Perforce: {}{\n}", _Destination);
+										bSuccess = true;
 									}
-													
-									Path = CFile::fs_GetPath(Path);
 								}
-												
+								catch (NException::CException const &_Error)
+								{
+									CStr Error = _Error.f_GetErrorStr();
+									DConErrOut("Failed to checkout via Perforce:{\n}{}{\n}", Error);
+								}
+
 								if (!bSuccess)
 								{
-									DConOut2("Removed file write protection: {} = {}{\n}", _Destination, Path);
+									DConOut2("Removed file write protection: {}{\n}", _Destination);
 									CFile::fs_SetAttributes(_Destination, (Attributes & ~EFileAttrib_ReadOnly)  | (mp_SupportedAttributes & EFileAttrib_UserWrite) | mp_ValidAttributes);
 								}
 							}

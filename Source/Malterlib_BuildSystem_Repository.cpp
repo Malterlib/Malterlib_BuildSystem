@@ -8,6 +8,8 @@ namespace NMib::NBuildSystem
 {
 	namespace
 	{
+		TCAggregate<CMutual> g_SubmoduleAddLock = {DAggregateInit};
+
 		struct CLocalGeneratorInteface : public CGeneratorInterface
 		{
 			bool f_GetBuiltin(CStr const &_Value, CStr &_Result) const override
@@ -67,7 +69,11 @@ namespace NMib::NBuildSystem
 			void f_SetHash(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Hash)
 			{
 				DLock(mp_Lock);
-				mp_NewConfigFiles[_FileName].m_Configs[_RepoPath].m_Hash = _Hash;
+				auto &ConfigFile = mp_NewConfigFiles[_FileName];
+				ConfigFile.m_Configs[_RepoPath].m_Hash = _Hash;
+
+				if (auto *pFile = mp_ConfigFiles.f_FindEqual(_FileName))
+					ConfigFile.m_LineEndings = pFile->m_LineEndings;
 			}
 
 			CStr f_GetHash(CStr const &_FileName, CStr const &_RepoPath)
@@ -274,6 +280,7 @@ namespace NMib::NBuildSystem
 					CStr RelativeLocation = CFile::fs_MakePathRelative(Location, GitRoot);
 					try
 					{
+						DLock(*g_SubmoduleAddLock); // Currently git has race issues with submodule adds
 						fLaunchGit({"submodule", "add", "-b", _Repo.m_DefaultBranch, "--name", _Repo.m_SubmoduleName, _Repo.m_URL, RelativeLocation}, GitRoot);
 						fLaunchGit({"config", "-f", ".gitmodules", fg_Format("submodule.{}.fetchRecurseSubmodules", _Repo.m_SubmoduleName), "on-demand"}, GitRoot);
 						bChanged = true;

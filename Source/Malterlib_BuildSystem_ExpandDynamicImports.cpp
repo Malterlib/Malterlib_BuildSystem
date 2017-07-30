@@ -8,6 +8,7 @@
 #include <Mib/File/MalterlibFS>
 #include <Mib/File/VirtualFSs/MalterlibFS>
 #include <Mib/Cryptography/Hashes/SHA>
+#include <Mib/Perforce/Wrapper>
 
 namespace NMib::NBuildSystem
 {
@@ -700,10 +701,36 @@ namespace NMib::NBuildSystem
 				WrittenFiles[CmakeCacheDirectory + "/Dependencies.sha512"];
 			}
 			
+			EFileAttrib SupportedAttributes = CFile::fs_GetSupportedAttributes();
+			EFileAttrib ValidAttributes = CFile::fs_GetValidAttributes();
+
 			for (auto &File : CFile::fs_FindFiles(CmakeCacheDirectory + "/*", EFileAttrib_File, true))
 			{
 				if (!WrittenFiles.f_FindEqual(File))
+				{
+					EFileAttrib Attributes = CFile::fs_GetAttributes(File);
+
+					if ((Attributes & EFileAttrib_ReadOnly) || (!(Attributes & EFileAttrib_UserWrite) && (SupportedAttributes & EFileAttrib_UserWrite)))
+					{
+						try
+						{
+							CPerforceClientThrow Client;
+							if (CPerforceClientThrow::fs_GetFromP4Config(File, Client))
+							{
+								Client.f_Delete(File);
+								DConOut2("Deleted file in Perforce: {}{\n}", File);
+								continue;
+							}
+						}
+						catch (NException::CException const &_Error)
+						{
+							CStr Error = _Error.f_GetErrorStr();
+							DConErrOut("Failed delete file in Perforce:{\n}{}{\n}", Error);
+						}
+						CFile::fs_SetAttributes(File, (Attributes & ~EFileAttrib_ReadOnly)  | (SupportedAttributes & EFileAttrib_UserWrite) | ValidAttributes);
+					}
 					CFile::fs_DeleteFile(File);
+				}
 			}
 		}
 		
