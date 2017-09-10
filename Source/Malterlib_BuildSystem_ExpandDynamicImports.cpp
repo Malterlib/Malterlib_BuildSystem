@@ -286,7 +286,9 @@ namespace NMib::NBuildSystem
 				DependenciesHash.f_AddData(FileContents.f_GetStr(), FileContents.f_GetLen());
 			}
 			
-			bool bCacheUpToDate = CFile::fs_ReadStringFromFile(CmakeCacheDirectory + "/Dependencies.sha512", true) == DependenciesHash.f_GetDigest().f_GetString();
+			CStr LastDependenciesHash = CFile::fs_ReadStringFromFile(CmakeCacheDirectory + "/Dependencies.sha512", true);
+			CStr NewDependenciesHash = DependenciesHash.f_GetDigest().f_GetString();
+			bool bCacheUpToDate = NewDependenciesHash == LastDependenciesHash;
 			if (bCacheUpToDate || !bUpdateCache)
 			{
 				if (!bCacheUpToDate)
@@ -298,9 +300,8 @@ namespace NMib::NBuildSystem
 				mp_CMakeGeneratedContents[LockDirectory] = ConfigHashContents;
 				return fReturn(LockDirectory, ConfigHashString);
 			}
-			DMibConOut("Import cache out of date (CMake): {}\n", CmakeCacheDirectory);
+			DMibConOut2("Import cache out of date (CMake): {}\n", CmakeCacheDirectory);
 		}
-		
 		
 		CProcessLaunchParams LaunchParams;
 		LaunchParams.m_bAllowExecutableLocate = true;
@@ -552,8 +553,6 @@ namespace NMib::NBuildSystem
 						else if (Line.f_Find("/CMakeRoot/") >= 0)
 							continue;
 						
-						DependencyFiles[Line];
-						
 						NewFileContents += Line;
 						NewFileContents += "\n";
 					}
@@ -673,6 +672,19 @@ namespace NMib::NBuildSystem
 					;
 					
 					FileContents = Registry.f_GenerateStr(); 
+				}
+				else if (CFile::fs_GetExtension(File.m_Path) == "dependencies")
+				{
+					ch8 const *pParse = FileContents;
+					while (*pParse)
+					{
+						auto pLineStart = pParse;
+						fg_ParseToEndOfLine(pParse);
+						CStr Line(pLineStart, pParse - pLineStart);
+						fg_ParseEndOfLine(pParse);
+
+						DependencyFiles[CFile::fs_GetExpandedPath(Line, CFile::fs_GetPath(DestPath))];
+					}
 				}
 				
 				{

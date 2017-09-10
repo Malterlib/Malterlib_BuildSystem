@@ -142,7 +142,7 @@ namespace NMib::NBuildSystem
 		{
 			TCFunction<void (CEntity &_Entity)> flr_FindTargets;
 			auto fl_FindTargets
-				= [this, &flr_FindTargets, &_Targets](CEntity &_Entity)
+				= [&flr_FindTargets, &_Targets](CEntity &_Entity)
 				{
 					for (auto iEntity = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iEntity; ++iEntity)
 					{
