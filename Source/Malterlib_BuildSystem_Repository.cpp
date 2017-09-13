@@ -340,7 +340,7 @@ namespace NMib::NBuildSystem
 			return bChanged;
 		}
 	}
-	bool CBuildSystem::fp_HandleRepositories() const
+	bool CBuildSystem::fp_HandleRepositories()
 	{
 		CLocalGeneratorInteface LocalInterface;
 		auto pOldInterface = fg_Move(mp_GeneratorInterface);
@@ -353,9 +353,10 @@ namespace NMib::NBuildSystem
 		
 		TCMap<CStr, CReposLocation> Repos;
 		
-		for (auto iChild = mp_Data.m_RootEntity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; ++iChild)
+		f_ExpandRepositoryEntities(mp_Data);
+		
+		for (auto &ChildEntity : mp_Data.m_RootEntity.m_ChildEntitiesOrdered)
 		{
-			auto &ChildEntity = *iChild;
 			if (ChildEntity.m_Key.m_Type != EEntityType_Repository)
 				continue;
 			if (!f_EvalCondition(ChildEntity, ChildEntity.m_Condition))

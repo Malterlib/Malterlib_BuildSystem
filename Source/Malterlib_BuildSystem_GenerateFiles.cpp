@@ -105,8 +105,10 @@ namespace NMib::NBuildSystem
 						bool bUnicodeBOM = f_EvaluateEntityProperty(TempEntity, EPropertyType_Property, "UnicodeBOM") != "false";
 						bool bUTF16 = f_EvaluateEntityProperty(TempEntity, EPropertyType_Property, "UTF16") == "true";
 						bool bExecutable = f_EvaluateEntityProperty(TempEntity, EPropertyType_Property, "Executable") == "true";
-						bool bNoDateCheck = f_EvaluateEntityProperty(TempEntity, EPropertyType_Property, "NoDateCheck") == "true";
 						bool bUnixLineEnds = f_EvaluateEntityProperty(TempEntity, EPropertyType_Property, "UnixLineEnds") == "true";
+						bool bSymlink = f_EvaluateEntityProperty(TempEntity, EPropertyType_Property, "Symlink") == "true";
+						bool bSymlinkDirectory = f_EvaluateEntityProperty(TempEntity, EPropertyType_Property, "SymlinkDirectory") == "true";
+						bool bNoDateCheck = f_EvaluateEntityProperty(TempEntity, EPropertyType_Property, "NoDateCheck") == "true" || bSymlink;
 						
 						Contents = Contents.f_Replace("\r\n", "\n");
 						if (!bUnixLineEnds)
@@ -121,28 +123,56 @@ namespace NMib::NBuildSystem
 						if (bWasCreated)
 						{
 							CFile::fs_CreateDirectory(CFile::fs_GetPath(Path));
-							TCVector<uint8> FileDataVector;
-							if (bUTF16)
+							if (bSymlink)
 							{
-								NStr::CWStr UTF16 = fg_ForceStrUTF16(Contents);
-								uint8 BOM[] = {0xFF, 0xFE};
-								if (bUnicodeBOM)
-									FileDataVector.f_Insert(BOM, sizeof(BOM));
-								FileDataVector.f_Insert((const uint8 *)UTF16.f_GetStr(), UTF16.f_GetLen()*sizeof(ch16));
+								do
+								{
+									if (CFile::fs_FileExists(Path))
+									{
+										try
+										{
+											auto Resolved = CFile::fs_ResolveSymbolicLink(Path);
+											if (Resolved == Contents)
+												break;
+											DConErrOut2("Deleting invalid symlink '{}': {} != {}", Path, Resolved, Contents);
+										}
+										catch (CExceptionFile const &)
+										{
+											DConErrOut2("Deleting invalid symlink '{}'", Path);
+										}
+										CFile::fs_DeleteFile(Path);
+									}
+
+									CFile::fs_CreateSymbolicLink(Contents, Path, bSymlinkDirectory ? EFileAttrib_Directory : EFileAttrib_None, ESymbolicLinkFlag_Relative);
+								}
+								while (false)
+									;
 							}
 							else
-								CFile::fs_WriteStringToVector(FileDataVector, CStr(Contents), bUnicodeBOM);
+							{
+								TCVector<uint8> FileDataVector;
+								if (bUTF16)
+								{
+									NStr::CWStr UTF16 = fg_ForceStrUTF16(Contents);
+									uint8 BOM[] = {0xFF, 0xFE};
+									if (bUnicodeBOM)
+										FileDataVector.f_Insert(BOM, sizeof(BOM));
+									FileDataVector.f_Insert((const uint8 *)UTF16.f_GetStr(), UTF16.f_GetLen()*sizeof(ch16));
+								}
+								else
+									CFile::fs_WriteStringToVector(FileDataVector, CStr(Contents), bUnicodeBOM);
 
-							f_WriteFile(FileDataVector, Path);
-							
-							auto OldAttribs = CFile::fs_GetAttributes(CStr(Path));
-							auto NewAttribs = OldAttribs;
-							if (bExecutable)
-								NewAttribs |= EFileAttrib_Executable;
-							else
-								NewAttribs &= ~EFileAttrib_Executable;
-							if (NewAttribs != OldAttribs)
-								CFile::fs_SetAttributes(CStr(Path), NewAttribs);
+								f_WriteFile(FileDataVector, Path);
+								
+								auto OldAttribs = CFile::fs_GetAttributes(CStr(Path));
+								auto NewAttribs = OldAttribs;
+								if (bExecutable)
+									NewAttribs |= EFileAttrib_Executable;
+								else
+									NewAttribs &= ~EFileAttrib_Executable;
+								if (NewAttribs != OldAttribs)
+									CFile::fs_SetAttributes(CStr(Path), NewAttribs);
+							}
 						}
 
 						if (ToGenerate.m_pParent->m_Key.m_Type != EEntityType_Root)

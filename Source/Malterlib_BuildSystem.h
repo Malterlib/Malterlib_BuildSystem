@@ -49,6 +49,7 @@ namespace NMib::NBuildSystem
 		void f_GenerateGlobalFiles(CBuildSystemData &_BuildSystemData) const;
 		void f_GenerateWorkspaceFiles(CBuildSystemData &_BuildSystemData, CEntity & _Target) const;
 		void f_GenerateTargetFiles(CBuildSystemData &_BuildSystemData, CEntity & _Target) const;
+		void f_ExpandRepositoryEntities(CBuildSystemData &_BuildSystemData) const;
 		void f_ExpandGlobalEntities(CBuildSystemData &_BuildSystemData) const;
 		void f_ExpandDynamicImports(CBuildSystemData &_BuildSystemData) const;
 		void f_ExpandGlobalTargetsAndWorkspaces(CBuildSystemData &_BuildSystemData) const;
@@ -277,7 +278,7 @@ namespace NMib::NBuildSystem
 		CBuildSystemData::CImportData *fp_ExpandImportCMake_FromGeneratedDirectory(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData, CStr const &_Directory) const;
 		void fp_TracePropertyEval(bool _bSuccess, CEntity const &_Entity, CProperty const &_Property, CStr const &_Value) const;
 
-		bool fp_HandleRepositories() const;
+		bool fp_HandleRepositories();
 		
 		CGenerateSettings mp_GenerateSettings;
 

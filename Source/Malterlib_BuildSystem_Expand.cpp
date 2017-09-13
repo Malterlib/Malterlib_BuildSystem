@@ -35,6 +35,29 @@ namespace NMib::NBuildSystem
 		;
 		fExpandEntities(_BuildSystemData.m_RootEntity);
 	}
+
+	void CBuildSystem::f_ExpandRepositoryEntities(CBuildSystemData &_BuildSystemData) const
+	{
+		TCFunction<void (CEntity &_Entity, bool _bInWorkspace)> fExpandEntities
+			= [&](CEntity &_Entity, bool _bInWorkspace)
+			{
+				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
+				{
+					auto &Child = *iChild;
+					++iChild;
+					auto &Key = Child.f_GetMapKey();
+					if (Key.m_Type != EEntityType_Repository)
+						continue;
+					
+					if (!fp_ExpandEntity(Child, _Entity, nullptr))
+						continue;
+
+					_Entity.m_ChildEntitiesMap.f_Remove(Key);
+				}
+			}
+		;
+		fExpandEntities(_BuildSystemData.m_RootEntity, false);
+	}
 	
 	void CBuildSystem::f_ExpandGlobalEntities(CBuildSystemData &_BuildSystemData) const
 	{
@@ -416,12 +439,12 @@ namespace NMib::NBuildSystem
 			}
 		}
 
-		TCVector<CStr> Entities;
+		TCSet<CStr> Entities;
 		while (!Data.f_IsEmpty())
 		{
 			CStr Entity = fg_GetStrSep(Data, ";");
 			if (!Entity.f_IsEmpty())
-				Entities.f_Insert(Entity);
+				Entities[Entity];
 		}
 
 		CEntity *pInsertAfter = &_Entity;
