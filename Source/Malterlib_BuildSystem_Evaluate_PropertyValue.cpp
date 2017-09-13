@@ -907,6 +907,48 @@ namespace NMib::NBuildSystem
 				else
 					Ret = mp_GeneratorInterface->f_GetExpandedPath(Ret, CFile::fs_GetPath(_Position.m_FileName));
 			}
+			else if (Function == "ContainsListElement")
+			{
+				if (FunctionParams.f_GetLen() != 2)
+					fsp_ThrowError(_Position, "IsInList takes two parameters: Separator, Value");
+				
+				CStr const &List = Ret;
+				CStr const &Separator = FunctionParams[0];
+				CStr const &Value = FunctionParams[1];
+				
+				ch8 const *pParse = List;
+				ch8 const *pParseEnd = List.f_GetStr() + List.f_GetLen();
+				
+				bool bFound = false;
+				
+				while (*pParse)
+				{
+					aint iSeparator = fg_StrFind(pParse, Separator);
+					
+					if (iSeparator < 0)
+					{
+						if (NStr::CStrPtr(pParse, pParseEnd - pParse) == Value)
+							bFound = true;
+						
+						break;
+					}
+					else
+					{
+						if (NStr::CStrPtr(pParse, iSeparator) == Value)
+						{
+							bFound = true;
+							break;
+						}
+					}
+					
+					pParse += iSeparator + 1;
+				}
+				
+				if (bFound)
+					Ret = "true";
+				else
+					Ret = "false";
+			}
 			else if (Function == "FindFilesIn")
 			{
 				if (FunctionParams.f_GetLen() != 1)
