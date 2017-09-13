@@ -90,6 +90,22 @@ namespace NMib::NBuildSystem
 			{
 				return mp_NewConfigFiles;
 			}
+
+			TCMap<CStr, CConfigFile> f_GetMergedFiles()
+			{
+				TCMap<CStr, CConfigFile> Files;
+				Files = mp_NewConfigFiles;
+				for (auto &ConfigFile : mp_ConfigFiles)
+				{
+					auto *pConfigFile = Files.f_FindEqual(mp_ConfigFiles.fs_GetKey(ConfigFile));
+					
+					if (!pConfigFile)
+						Files[mp_ConfigFiles.fs_GetKey(ConfigFile)] = ConfigFile;
+					else
+						pConfigFile->m_Configs += ConfigFile.m_Configs;
+				}
+				return Files;
+			}
 			
 			void f_AddGitIgnore(CStr const &_FileName, CBuildSystem const &_BuildSystem)
 			{
@@ -440,7 +456,8 @@ namespace NMib::NBuildSystem
 			)
 		;
 		
-		for (auto iFile = StateHandler.f_GetNewFiles().f_GetIterator(); iFile; ++iFile)
+		auto MergedFiles = StateHandler.f_GetMergedFiles();
+		for (auto iFile = MergedFiles.f_GetIterator(); iFile; ++iFile)
 		{
 			CRegistry_CStr Registry;
 			
