@@ -3,6 +3,7 @@
 
 #include "Malterlib_BuildSystem.h"
 #include <Mib/Cryptography/UUID>
+#include <Mib/Process/ProcessLaunch>
 #ifdef DPlatformFamily_Windows
 #include <Mib/Core/PlatformSpecific/WindowsRegistry>
 #endif
@@ -108,6 +109,42 @@ namespace NMib::NBuildSystem
 		Return.f_AddStr(pCopyStart, pParse - pCopyStart);
 		
 		return Return;
+	}
+	
+	namespace
+	{
+		struct CExecuteCommandState
+		{
+			struct CFileState
+			{
+				CTime m_WriteTime;
+				template <typename tf_CStream>
+				void f_Stream(tf_CStream &_Stream)
+				{
+					_Stream % m_WriteTime;
+				}
+			};
+			
+			TCMap<CStr, CFileState> m_States;
+			TCVector<CStr> m_Parameters;
+			
+			template <typename tf_CStream>
+			void f_Stream(tf_CStream &_Stream)
+			{
+				uint32 Version = 0x101;
+				_Stream % Version;
+				if (Version < 0x101)
+					DMibError("Invalid CExecuteCommandState version");
+				_Stream % m_States;
+				_Stream % m_Parameters;
+			}
+			
+			void f_AddFile(CStr const &_FileName)
+			{
+				auto &State = m_States[_FileName];
+				State.m_WriteTime = CFile::fs_GetWriteTime(_FileName);
+			}
+		};
 	}
 	
 	CStr CBuildSystem::fp_GetPropertyValue
@@ -723,6 +760,86 @@ namespace NMib::NBuildSystem
 #else
 					Ret = "";
 #endif
+				}
+				else if (Function == "ExecuteCommand")
+				{
+					if (FunctionParams.f_GetLen() < 3)
+						fsp_ThrowError(_Position, "ExecuteCommand takes at least three parameters: StateFile Inputs Executable [Params...]");
+					auto Params = FunctionParams;
+					Params.f_Remove(0, 3);
+					CStr GenerateStateFile = FunctionParams[0];
+					CStr InputsString = FunctionParams[1];
+					CStr Executable = FunctionParams[2];
+					
+					TCVector<CStr> Inputs;
+					
+					while (!InputsString.f_IsEmpty())
+						Inputs.f_Insert(fg_GetStrSep(InputsString, ";"));
+					
+					if (GenerateStateFile.f_IsEmpty())
+						fsp_ThrowError(_Position, "You need to specify states file");
+				
+					if (CFile::fs_FileExists(GenerateStateFile))
+					{
+						try
+						{
+							CExecuteCommandState State;
+							TCBinaryStreamFile<> Stream;
+							Stream.f_Open(GenerateStateFile, EFileOpen_Read);
+							Stream >> State;
+							
+							bool bAllValid = true;
+							for (auto &Input : Inputs)
+							{
+								auto *pState = State.m_States.f_FindEqual(Input);
+								if (!pState)
+								{
+									bAllValid = false;
+									break;
+								}
+								if (pState->m_WriteTime != CFile::fs_GetWriteTime(Input))
+								{
+									bAllValid = false;
+									break;
+								}
+							}
+							
+							if (bAllValid && FunctionParams == State.m_Parameters)
+							{
+								Stream >> Ret;
+								return Ret;
+							}
+						}
+						catch (CException const &_Exception)
+						{
+							DConErrOut2("Failed to check ExecuteCommmand state: {}\n", _Exception);
+						}
+					}
+
+					try
+					{
+						Ret = CProcessLaunch::fs_LaunchTool(Executable, Params);
+					}
+					catch (CException const &_Exception)
+					{
+						fsp_ThrowError(_Position, fg_Format("ExecuteCommand({vs,vb}) failed: {}", FunctionParams, _Exception));
+					}
+
+					CExecuteCommandState State;
+					for (auto &Input : Inputs)
+					{
+						f_AddSourceFile(Input);
+						State.f_AddFile(Input);
+					}
+					
+					State.m_Parameters = FunctionParams;
+
+					CBinaryStreamMemory<> Stream;
+					Stream << State;
+					Stream << Ret;
+					
+					CFile::fs_CreateDirectory(CFile::fs_GetPath(GenerateStateFile));
+					f_WriteFile(Stream.f_MoveVector(), GenerateStateFile);
 				}
 				else
 					fsp_ThrowError(_Position, CStr::CFormat("Builtin function not found '{}'") << Function);
