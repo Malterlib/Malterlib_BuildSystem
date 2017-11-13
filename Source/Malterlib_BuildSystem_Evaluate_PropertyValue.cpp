@@ -785,7 +785,7 @@ namespace NMib::NBuildSystem
 						{
 							CExecuteCommandState State;
 							TCBinaryStreamFile<> Stream;
-							Stream.f_Open(GenerateStateFile, EFileOpen_Read);
+							Stream.f_Open(GenerateStateFile, EFileOpen_Read | EFileOpen_ShareAll);
 							Stream >> State;
 							
 							bool bAllValid = true;
@@ -818,7 +818,10 @@ namespace NMib::NBuildSystem
 
 					try
 					{
-						Ret = CProcessLaunch::fs_LaunchTool(Executable, Params);
+						CProcessLaunchParams LaunchParams;
+						LaunchParams.m_bShowLaunched = false;
+						LaunchParams.m_bCreateNewProcessGroup = true;
+						Ret = CProcessLaunch::fs_LaunchTool(Executable, Params, LaunchParams);
 					}
 					catch (CException const &_Exception)
 					{
