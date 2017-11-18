@@ -43,10 +43,20 @@ namespace NMib::NBuildSystem
 							LaunchResult.f_SetResult();
 							return;
 						}
-						Launches.f_Launch(Repo, {"push", Repo.m_DefaultBranch}, fg_LogAllFunctor()) > [Launches, LaunchResult](TCAsyncResult<void> &&_Result)
+
+						TCActorResultVector<void> PushResults;
+
+						for (auto &Remote : _Remotes)
+							Launches.f_Launch(Repo, {"push", Remote, _Branches.m_Current}, fg_LogAllFunctor()) > PushResults.f_AddResult();
+
+						PushResults.f_GetResults() > LaunchResult / [=](TCVector<TCAsyncResult<void>> &&_PushResults)
 							{
 								Launches.f_RepoDone();
-								LaunchResult.f_SetResult(_Result);
+
+								if (!fg_CombineResults(LaunchResult, fg_Move(_PushResults)))
+									return;
+
+								LaunchResult.f_SetResult();
 							}
 						;
 					}
