@@ -21,7 +21,11 @@ namespace NMib::NBuildSystem
 					CStr Key = fg_GetStrSep(Value, "=");
 
 					if (Key == "Name")
+					{
+						if (!bTypeSpecified)
+							RepoFilter.m_Type = "";
 						RepoFilter.m_NameWildcard = Value;
+					}
 					else if (Key == "Type")
 					{
 						RepoFilter.m_Type = Value;
