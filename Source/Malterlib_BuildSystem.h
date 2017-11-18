@@ -43,7 +43,7 @@ namespace NMib::NBuildSystem
 				, CStr const &_DependencyFilesName
 			) const
 		;
-		inline_always CGenerateSettings const& f_GetGenerateSettings() const;
+		inline_always CGenerateSettings const &f_GetGenerateSettings() const;
 		CStr f_GetBaseDir() const;
 		bool f_AddGeneratedFile(CStr const &_File, CStr const &_Data, CStr const &_Workspace, bool &_bWasCreated, bool _bNoDateCheck) const;
 		void f_GenerateGlobalFiles(CBuildSystemData &_BuildSystemData) const;
@@ -128,7 +128,36 @@ namespace NMib::NBuildSystem
 		static void fs_ThrowError(CFilePosition const &_Position, CStr const &_Error);
 		static void fs_ThrowError(CFilePosition const &_Position, CStr const &_Error, TCVector<CBuildSystemError> const &_Errors);
 		void f_AddSourceFile(CStr const &_File) const;
-		
+
+		NStr::CStr f_GetEnvironmentVariable(NStr::CStr const &_Name, NStr::CStr const &_Default = {}, bool *o_pExists = nullptr) const;
+
+		struct CRepoFilter
+		{
+			CStr m_NameWildcard;
+			CStr m_Type;
+			TCSet<CStr> m_Tags;
+			bool m_bOnlyChanged = false;
+		};
+
+		enum ERepoCleanupBranchesFlag
+		{
+			ERepoCleanupBranchesFlag_None = 0
+			, ERepoCleanupBranchesFlag_Pretend = DBit(0)
+			, ERepoCleanupBranchesFlag_Remote = DBit(1)
+		};
+
+		enum ERepoStatusFlag
+		{
+			ERepoStatusFlag_None = 0
+			, ERepoStatusFlag_Verbose = DBit(0)
+			, ERepoStatusFlag_UpdateRemotes = DBit(1)
+			, ERepoStatusFlag_ShowUntracked = DBit(2)
+			, ERepoStatusFlag_Quiet = DBit(3)
+			, ERepoStatusFlag_AllBranches = DBit(4)
+			, ERepoStatusFlag_UseDefaultUpstreamBranch = DBit(5)
+			, ERepoStatusFlag_OpenSourceTree = DBit(6)
+		};
+
 	private:
 		struct CEvaluationContext
 		{
@@ -152,9 +181,9 @@ namespace NMib::NBuildSystem
 		{
 			CStr m_Contents;
 			TCSet<CStr> m_Workspaces;
-			zbool m_bGeneral;
-			zbool m_bAdded;
-			zbool m_bNoDateCheck;
+			bool m_bGeneral = false;
+			bool m_bAdded = false;
+			bool m_bNoDateCheck = false;
 		};
 
 		void fp_ParseCondition(CRegistryPreserveAndOrder_CStr &_Registry, CCondition &_ParentCondition, bool _bRoot = true) const;
@@ -279,10 +308,17 @@ namespace NMib::NBuildSystem
 		void fp_TracePropertyEval(bool _bSuccess, CEntity const &_Entity, CProperty const &_Property, CStr const &_Value) const;
 
 		bool fp_HandleRepositories();
-		
+
+		void fp_Repository_ForEachRepo(CRepoFilter const &_Filter, bool _bParallell, TCVector<CStr> const &_Params);
+		void fp_Repository_Branch(CRepoFilter const &_Filter, CStr const &_Branch);
+		void fp_Repository_Unbranch(CRepoFilter const &_Filter);
+		void fp_Repository_CleanupBranches(CRepoFilter const &_Filter, ERepoCleanupBranchesFlag _Flags);
+		void fp_Repository_Status(CRepoFilter const &_Filter, ERepoStatusFlag _Flags);
+		void fp_Repository_Push(CRepoFilter const &_Filter, TCVector<CStr> const &_Remotes);
+		void fp_HandleAction(CStr const &_Action, TCVector<CStr> const &_Params);
+
 		CGenerateSettings mp_GenerateSettings;
 
-		
 		align_cacheline mutable CMutualManyRead mp_SourceFilesLock;
 		mutable TCSet<CStr> mp_SourceFiles;
 		CFindCache mp_FindCache;
@@ -301,13 +337,15 @@ namespace NMib::NBuildSystem
 
 		CStr mp_FileLocation;
 		CStr mp_BaseDir;
-		
+		CStr mp_OutputDir;
+
 		CTime mp_Now;
 		CTime mp_NowUTC;
 		
 		CStr mp_UserSettingsFile;
 		CStr mp_FileLocationFile;
 		CStr mp_GeneratorStateFileName;
+		TCMap<CStr, CStr> mp_Environment;
 		CStr mp_GenerateWorkspace;
 		zbool mp_ValidTargetsValid;
 		mutable TCAtomic<bool> mp_FileChanged;

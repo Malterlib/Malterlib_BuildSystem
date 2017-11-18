@@ -196,9 +196,7 @@ namespace NMib::NBuildSystem
 	{
 		TCMap<CPropertyKey, CStr> Values = _InitialValues;
 
-		TCMap<CStr, CStr> Environment = fg_GetSys()->f_Environment();
-
-		for (auto iEnv = Environment.f_GetIterator(); iEnv; ++iEnv)
+		for (auto iEnv = mp_Environment.f_GetIterator(); iEnv; ++iEnv)
 		{
 			CPropertyKey Key;
 			Key.m_Name = iEnv.f_GetKey();
@@ -214,5 +212,18 @@ namespace NMib::NBuildSystem
 	{
 		return fp_EvaluateConfigurationTuples(_InitialValues);
 	}
-	
+
+	NStr::CStr CBuildSystem::f_GetEnvironmentVariable(NStr::CStr const &_Name, NStr::CStr const &_Default, bool *o_pExists) const
+	{
+		auto *pVariable = mp_Environment.f_FindEqual(_Name);
+		if (pVariable)
+		{
+			if (o_pExists)
+				*o_pExists = true;
+			return *pVariable;
+		}
+		if (o_pExists)
+			*o_pExists = false;
+		return _Default;
+	}
 }

@@ -47,7 +47,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			}
 		default: DError("Implement this");
 		}
-		return CFile::fs_GetExpandedPath(fg_GetSys()->f_GetEnvironmentVariable(fg_Format("VS{}COMNTOOLS", VSVersion)) + "../..");
+		return CFile::fs_GetExpandedPath(m_BuildSystem.f_GetEnvironmentVariable(fg_Format("VS{}COMNTOOLS", VSVersion)) + "../..");
 	}
 
 	CGeneratorInstance::CGeneratorInstance
@@ -83,7 +83,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		m_pGeneratorSettings = fg_Explicit(pSettings);
 		_BuildSystem.f_EvaluateAllGeneratorSettings(*pSettings);
 
-		CStr EnableSourceControl = fg_GetSys()->f_GetEnvironmentVariable("MalterlibEnableSourceControl");
+		CStr EnableSourceControl = m_BuildSystem.f_GetEnvironmentVariable("MalterlibEnableSourceControl");
 		if (EnableSourceControl == "")
 		{
 			m_bEnableSourceControl = false;

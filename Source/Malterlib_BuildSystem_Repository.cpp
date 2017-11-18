@@ -2,7 +2,10 @@
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem.h"
+#include "Malterlib_BuildSystem_Repository.h"
 #include <Mib/Process/ProcessLaunch>
+#include <Mib/Process/ProcessLaunchActor>
+#include <Mib/Encoding/EJSON>
 
 namespace NMib::NBuildSystem
 {
@@ -25,235 +28,103 @@ namespace NMib::NBuildSystem
 				return fg_GetSys()->f_Environment();
 			}
 		};
-		
-		struct CRepository
-		{
-			CStr const &f_GetName() const
-			{
-				return TCMap<CStr, CRepository>::fs_GetKey(*this);
-			}
-			
-			CStr m_ConfigFile;
-			CStr m_StateFile;
-			CStr m_URL;
-			CStr m_DefaultBranch;
-			CStr m_Submodule;
-			CStr m_SubmoduleName;
-			TCMap<CStr, CStr> m_Remotes;
-			CFilePosition m_Position;
-		};
-		
-		struct CReposLocation
-		{
-			CStr const &f_GetPath() const
-			{
-				return TCMap<CStr, CReposLocation>::fs_GetKey(*this);
-			}
-			
-			TCMap<CStr, CRepository> m_Repositories; 
-		};
-		
-		struct CRepositoryConfig
-		{
-			CStr m_Hash;
-		};
-		
-		struct CConfigFile
-		{
-			TCMap<CStr, CRepositoryConfig> m_Configs;
-			CStr m_LineEndings = "\n";
-		};
-		
-		struct CStateHandler
-		{
-			void f_SetHash(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Hash)
-			{
-				DLock(mp_Lock);
-				auto &ConfigFile = mp_NewConfigFiles[_FileName];
-				ConfigFile.m_Configs[_RepoPath].m_Hash = _Hash;
+	}
 
-				if (auto *pFile = mp_ConfigFiles.f_FindEqual(_FileName))
-					ConfigFile.m_LineEndings = pFile->m_LineEndings;
-			}
-
-			CStr f_GetHash(CStr const &_FileName, CStr const &_RepoPath)
-			{
-				DLock(mp_Lock);
-				auto &ConfigFile = fp_GetConfigFile(_FileName);
-				auto *pConfig = ConfigFile.m_Configs.f_FindEqual(_RepoPath);
-				if (!pConfig)
-					return {};
-				return pConfig->m_Hash;
-			}
-			
-			TCMap<CStr, CConfigFile> const &f_GetNewFiles()
-			{
-				return mp_NewConfigFiles;
-			}
-
-			TCMap<CStr, CConfigFile> f_GetMergedFiles()
-			{
-				TCMap<CStr, CConfigFile> Files;
-				Files = mp_NewConfigFiles;
-				for (auto &ConfigFile : mp_ConfigFiles)
-				{
-					auto *pConfigFile = Files.f_FindEqual(mp_ConfigFiles.fs_GetKey(ConfigFile));
-					
-					if (!pConfigFile)
-						Files[mp_ConfigFiles.fs_GetKey(ConfigFile)] = ConfigFile;
-					else
-						pConfigFile->m_Configs += ConfigFile.m_Configs;
-				}
-				return Files;
-			}
-			
-			void f_AddGitIgnore(CStr const &_FileName, CBuildSystem const &_BuildSystem)
-			{
-				DLock(mp_Lock);
-				if (!mp_GitIgnores(_FileName).f_WasCreated())
-					return;
-				CStr GitIgnoreFile = CFile::fs_GetPath(_FileName) + "/.gitignore";
-				CStr IgnoreContents;
-				if (CFile::fs_FileExists(GitIgnoreFile))
-					IgnoreContents = CFile::fs_ReadStringFromFile(GitIgnoreFile, true);
-
-				ch8 const *pParse = IgnoreContents;
-				fg_ParseToEndOfLine(pParse);
-				ch8 const *pLineEnd = "\n";
-				if (*pParse == '\r')
-					pLineEnd = "\r\n";
-
-				CStr IgnoreLine = fg_Format("/{}{}", CFile::fs_GetFile(_FileName), pLineEnd);
-				if (IgnoreContents.f_Find(IgnoreLine) < 0)
-				{
-					IgnoreContents += IgnoreLine;
-					TCVector<uint8> FileData;
-					CFile::fs_WriteStringToVector(FileData, CStr(IgnoreContents), false);
-					_BuildSystem.f_WriteFile(FileData, GitIgnoreFile);
-				}
-			}
-			
-		private:
-			CConfigFile const &fp_GetConfigFile(CStr const &_FileName)
-			{
-				DLock(mp_Lock);
-				if (auto *pFile = mp_ConfigFiles.f_FindEqual(_FileName))
-					return *pFile;
-				auto &ConfigFile = mp_ConfigFiles[_FileName];
-				CStr BasePath = CFile::fs_GetPath(_FileName);
-				if (CFile::fs_FileExists(_FileName))
-				{
-					CRegistry_CStr Registry;
-					CStr FileContents = CFile::fs_ReadStringFromFile(_FileName, true);
-					{
-						ch8 const *pParse = FileContents;
-						fg_ParseToEndOfLine(pParse);
-						if (*pParse == '\r')
-							ConfigFile.m_LineEndings = "\r\n";
-					}
-
-					Registry.f_ParseStr(FileContents, _FileName);
-					for (auto &Child : Registry.f_GetChildren())
-						ConfigFile.m_Configs[CFile::fs_GetExpandedPath(Child.f_GetName(), BasePath)].m_Hash = Child.f_GetThisValue();
-				}
-				
-				return ConfigFile;
-			}
-			
-			CMutual mp_Lock;
-			TCMap<CStr, CConfigFile> mp_ConfigFiles;
-			TCMap<CStr, CConfigFile> mp_NewConfigFiles;
-			TCSet<CStr> mp_GitIgnores;
-		};
-		
-		CStr fg_GetGitRoot(CStr const &_Directory)
+	namespace NRepository
+	{
+		void CStateHandler::f_SetHash(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Hash)
 		{
-			CStr CurrentDirectory = _Directory;
-			while (!CurrentDirectory.f_IsEmpty())
-			{
-				if (CFile::fs_FileExists(CurrentDirectory + "/.git", EFileAttrib_Directory))
-					return CurrentDirectory;
-				CurrentDirectory = CFile::fs_GetPath(CurrentDirectory);
-			}
-			
-			return {};
+			DLock(mp_Lock);
+			auto &ConfigFile = mp_NewConfigFiles[_FileName];
+			ConfigFile.m_Configs[_RepoPath].m_Hash = _Hash;
+
+			if (auto *pFile = mp_ConfigFiles.f_FindEqual(_FileName))
+				ConfigFile.m_LineEndings = pFile->m_LineEndings;
 		}
 
-		CStr fg_GetGitDataDir(CStr const &_GitRoot, CFilePosition const &_Position)
+		CStr CStateHandler::f_GetHash(CStr const &_FileName, CStr const &_RepoPath)
 		{
-			CStr GitDirectory = _GitRoot + "/.git";
-			if (CFile::fs_FileExists(GitDirectory, EFileAttrib_File))
+			DLock(mp_Lock);
+			auto &ConfigFile = fp_GetConfigFile(_FileName);
+			auto *pConfig = ConfigFile.m_Configs.f_FindEqual(_RepoPath);
+			if (!pConfig)
+				return {};
+			return pConfig->m_Hash;
+		}
+
+		TCMap<CStr, CConfigFile> const &CStateHandler::f_GetNewFiles()
+		{
+			return mp_NewConfigFiles;
+		}
+
+		TCMap<CStr, CConfigFile> CStateHandler::f_GetMergedFiles()
+		{
+			TCMap<CStr, CConfigFile> Files;
+			Files = mp_NewConfigFiles;
+			for (auto &ConfigFile : mp_ConfigFiles)
 			{
-				CStr FileContents = CFile::fs_ReadStringFromFile(GitDirectory, true).f_TrimRight("\n");
-				if (!FileContents.f_StartsWith("gitdir: "))
-					CBuildSystem::fs_ThrowError(_Position, fg_Format("Unsupported git directory. Expected 'gitdir: ' in '{}'", GitDirectory));
-				GitDirectory = CFile::fs_GetExpandedPath(FileContents.f_Extract(8), _GitRoot);	
+				auto *pConfigFile = Files.f_FindEqual(mp_ConfigFiles.fs_GetKey(ConfigFile));
+
+				if (!pConfigFile)
+					Files[mp_ConfigFiles.fs_GetKey(ConfigFile)] = ConfigFile;
+				else
+					pConfigFile->m_Configs += ConfigFile.m_Configs;
 			}
-			if (!CFile::fs_FileExists(GitDirectory, EFileAttrib_Directory))
-				CBuildSystem::fs_ThrowError(_Position, fg_Format("Missing git directory: {}", GitDirectory));
-			return GitDirectory; 
+			return Files;
 		}
-		
-		CStr fg_GetGitHeadHash(CStr const &_GitRoot, CFilePosition const &_Position)
+
+		void CStateHandler::f_AddGitIgnore(CStr const &_FileName, CBuildSystem const &_BuildSystem)
 		{
-			CStr GitDirectory = fg_GetGitDataDir(_GitRoot, _Position);
-			
-			CStr HeadRef = CFile::fs_ReadStringFromFile(GitDirectory + "/HEAD", true).f_TrimRight("\n");
-			if (HeadRef.f_StartsWith("ref: "))
-				return CFile::fs_ReadStringFromFile(GitDirectory + "/" + HeadRef.f_Extract(5), true).f_TrimRight("\n");
-			else
-				return HeadRef;
-		}
-		
-		TCMap<CStr, CStr> fg_GetGitRemotes(CStr const &_GitRoot, CFilePosition const &_Position)
-		{
-			CStr GitDirectory = fg_GetGitDataDir(_GitRoot, _Position);
-			
-			CStr Config = CFile::fs_ReadStringFromFile(GitDirectory + "/config", true);
-			
-			TCMap<CStr, CStr> Remotes;
-			
-			auto pParse = Config.f_GetStr();
-			CStr LastRemote;
-			while (*pParse)
+			DLock(mp_Lock);
+			if (!mp_GitIgnores(_FileName).f_WasCreated())
+				return;
+			CStr GitIgnoreFile = CFile::fs_GetPath(_FileName) + "/.gitignore";
+			CStr IgnoreContents;
+			if (CFile::fs_FileExists(GitIgnoreFile))
+				IgnoreContents = CFile::fs_ReadStringFromFile(GitIgnoreFile, true);
+
+			ch8 const *pParse = IgnoreContents;
+			fg_ParseToEndOfLine(pParse);
+			ch8 const *pLineEnd = "\n";
+			if (*pParse == '\r')
+				pLineEnd = "\r\n";
+
+			CStr IgnoreLine = fg_Format("/{}{}", CFile::fs_GetFile(_FileName), pLineEnd);
+			if (IgnoreContents.f_Find(IgnoreLine) < 0)
 			{
-				fg_ParseWhiteSpace(pParse);
-				if (fg_StrStartsWith(pParse, "[remote"))
+				IgnoreContents += IgnoreLine;
+				TCVector<uint8> FileData;
+				CFile::fs_WriteStringToVector(FileData, CStr(IgnoreContents), false);
+				_BuildSystem.f_WriteFile(FileData, GitIgnoreFile);
+			}
+		}
+
+		CConfigFile const &CStateHandler::fp_GetConfigFile(CStr const &_FileName)
+		{
+			DLock(mp_Lock);
+			if (auto *pFile = mp_ConfigFiles.f_FindEqual(_FileName))
+				return *pFile;
+			auto &ConfigFile = mp_ConfigFiles[_FileName];
+			CStr BasePath = CFile::fs_GetPath(_FileName);
+			if (CFile::fs_FileExists(_FileName))
+			{
+				CRegistry_CStr Registry;
+				CStr FileContents = CFile::fs_ReadStringFromFile(_FileName, true);
 				{
-					pParse += 7;
-					fg_ParseWhiteSpace(pParse);
-					auto pStart = pParse;
-					fg_ParseEscape<'\"'>(pParse, '\"');
-					
-					CStr RemoteName(pStart, pParse - pStart);
-					LastRemote = fg_RemoveEscape<'\"'>(RemoteName);
-				}
-				else if (fg_StrStartsWith(pParse, "url =") && !LastRemote.f_IsEmpty())
-				{
-					pParse += 5;
-					fg_ParseWhiteSpace(pParse);
-					auto pStart = pParse;
+					ch8 const *pParse = FileContents;
 					fg_ParseToEndOfLine(pParse);
-					CStr URL(pStart, pParse - pStart);
-					Remotes[LastRemote] = URL;
+					if (*pParse == '\r')
+						ConfigFile.m_LineEndings = "\r\n";
 				}
-				else if (*pParse == '[')
-					LastRemote.f_Clear();
-				fg_ParseToEndOfLine(pParse);
-				fg_ParseEndOfLine(pParse);
+
+				Registry.f_ParseStr(FileContents, _FileName);
+				for (auto &Child : Registry.f_GetChildren())
+					ConfigFile.m_Configs[CFile::fs_GetExpandedPath(Child.f_GetName(), BasePath)].m_Hash = Child.f_GetThisValue();
 			}
-			
-			Remotes.f_Remove("origin");
-			
-			return Remotes;
+
+			return ConfigFile;
 		}
 
-		bool fg_IsSubmodule(CStr const &_GitRoot)
-		{
-			CStr GitDirectory = _GitRoot + "/.git";
-			return CFile::fs_FileExists(GitDirectory, EFileAttrib_File);
-		}
-		
 		bool fg_HandleRepository(CStr const &_ReposDirectory, CRepository const &_Repo, CStateHandler &o_StateHandler, CBuildSystem const &_BuildSystem)
 		{
 			CStr Location = _ReposDirectory + "/" + _Repo.f_GetName();
@@ -273,7 +144,8 @@ namespace NMib::NBuildSystem
 				}
 			;
 
-			
+			CStr ConfigHash = o_StateHandler.f_GetHash(_Repo.m_ConfigFile, Location);
+
 			if (!CFile::fs_FileExists(Location))
 			{
 				DMibConOut("Adding external repository: {}{\n}", Location);
@@ -282,8 +154,8 @@ namespace NMib::NBuildSystem
 				{
 					try
 					{
-						fLaunchGit({"clone", _Repo.m_URL, Location});
-						fLaunchGit({"checkout", _Repo.m_DefaultBranch}, Location);
+						fLaunchGit({"clone", "-n", _Repo.m_URL, Location});
+						fLaunchGit({"checkout", "-B", _Repo.m_DefaultBranch, ConfigHash}, Location);
 						bChanged = true;
 					}
 					catch (CException const &_Exception)
@@ -307,21 +179,26 @@ namespace NMib::NBuildSystem
 					}
 				}
 			}
+			else
+			{
+				CStr GitRoot = fg_GetGitRoot(Location);
+				if (GitRoot.f_IsEmpty() || _Repo.m_Submodule != "true")
+					o_StateHandler.f_AddGitIgnore(Location, _BuildSystem);
+			}
 			
 			CStr CurrentHash = o_StateHandler.f_GetHash(_Repo.m_StateFile, Location);
-			CStr ConfigHash = o_StateHandler.f_GetHash(_Repo.m_ConfigFile, Location);
-			
+
 			if (CurrentHash != ConfigHash && !ConfigHash.f_IsEmpty() && !fg_IsSubmodule(Location))
 			{
 				DMibConOut2("Checking out specific hash '{}' at '{}'{\n}", ConfigHash, Location);
 				try
 				{
-					fLaunchGit({"fetch"}, Location);
-					fLaunchGit({"checkout", ConfigHash}, Location);
+					fLaunchGit({"fetch", "--all"}, Location);
+					fLaunchGit({"rebase", ConfigHash}, Location);
 				}
 				catch (CException const &_Exception)
 				{
-					CBuildSystem::fs_ThrowError(_Repo.m_Position, fg_Format("Failed to checkout hash '{}' for repository: {}", ConfigHash, _Exception));
+					CBuildSystem::fs_ThrowError(_Repo.m_Position, fg_Format("Failed to rebase on hash '{}' for repository: {}", ConfigHash, _Exception));
 				}
 				bChanged = true;
 			}
@@ -355,7 +232,142 @@ namespace NMib::NBuildSystem
 				
 			return bChanged;
 		}
+
+		TCVector<TCMap<CStr, CReposLocation>> fg_GetRepos(CBuildSystem &_BuildSystem, CBuildSystemData &_Data)
+		{
+			TCMap<CStr, CReposLocation> Repos;
+
+			TCMap<CStr, CFilePosition> RepoRoots;
+
+			for (auto &ChildEntity : _Data.m_RootEntity.m_ChildEntitiesOrdered)
+			{
+				if (ChildEntity.m_Key.m_Type != EEntityType_Repository)
+					continue;
+				if (!_BuildSystem.f_EvalCondition(ChildEntity, ChildEntity.m_Condition))
+					continue;
+
+				CStr Location = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "Location");
+
+				if (Location.f_IsEmpty())
+					_BuildSystem.fs_ThrowError(ChildEntity.m_Position, "You have to specify Repository.Location");
+
+				CStr ReposDirectory = CFile::fs_GetPath(Location);
+
+				auto &ReposLocation = Repos[ReposDirectory];
+
+				auto RepoMap = ReposLocation.m_Repositories(CFile::fs_GetFile(Location));
+
+				if (!RepoMap.f_WasCreated())
+					_BuildSystem.fs_ThrowError(ChildEntity.m_Position, fg_Format("Duplicate repository location: {}", Location));
+
+				if (!RepoRoots(Location, ChildEntity.m_Position).f_WasCreated())
+				{
+					CBuildSystemError Error;
+					Error.m_Error = "Other specification";
+					Error.m_Position = RepoRoots[Location];
+
+					_BuildSystem.fs_ThrowError(ChildEntity.m_Position, "Repository location already specified specified previously", fg_CreateVector(Error));
+				}
+
+				auto &Repo = *RepoMap;
+				Repo.m_Location = Location;
+				Repo.m_ConfigFile = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "ConfigFile");
+				Repo.m_StateFile = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "StateFile");
+				Repo.m_URL = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "URL");
+				Repo.m_DefaultBranch = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "DefaultBranch");
+				Repo.m_DefaultUpstreamBranch = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "DefaultUpstreamBranch");
+				Repo.m_Tags.f_AddContainer(_BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "Tags").f_Split(";"));
+				Repo.m_Submodule = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "Submodule");
+				Repo.m_SubmoduleName = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "SubmoduleName");
+				Repo.m_Type = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "Type");
+				CStr Remotes = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "Remotes");
+				while (!Remotes.f_IsEmpty())
+				{
+					CStr RemoteString = fg_GetStrSep(Remotes, ";");
+					if (RemoteString.f_IsEmpty())
+						continue;
+					CStr Name = fg_GetStrSep(RemoteString, "=");
+					if (Repo.m_Remotes.f_FindEqual(Name))
+						_BuildSystem.fs_ThrowError(ChildEntity.m_Position, fg_Format("Same remote '{}' specified multiple times", Name));
+					Repo.m_Remotes[Name] = RemoteString;
+				}
+				Repo.m_Position = ChildEntity.m_Position;
+
+				if (Repo.m_URL.f_IsEmpty())
+					_BuildSystem.fs_ThrowError(ChildEntity.m_Position, "You have to specify Repository.URL");
+				if (Repo.m_ConfigFile.f_IsEmpty())
+					_BuildSystem.fs_ThrowError(ChildEntity.m_Position, "You have to specify Repository.ConfigFile");
+				if (Repo.m_StateFile.f_IsEmpty())
+					_BuildSystem.fs_ThrowError(ChildEntity.m_Position, "You have to specify Repository.StateFile");
+				if (Repo.m_ConfigFile == Repo.m_StateFile)
+					_BuildSystem.fs_ThrowError(ChildEntity.m_Position, "You have to specify Repository.ConfigFile and Repository.StateFile must not be same file");
+				if (Repo.m_DefaultBranch.f_IsEmpty())
+					_BuildSystem.fs_ThrowError(ChildEntity.m_Position, "You have to specify Repository.DefaultBranch");
+				if (Repo.m_Submodule == "true" && Repo.m_SubmoduleName.f_IsEmpty())
+					_BuildSystem.fs_ThrowError(ChildEntity.m_Position, "You have to specify Repository.SubmoduleName");
+
+			}
+
+			TCVector<TCMap<CStr, CReposLocation>> ReposOrdered;
+
+			TCSet<CStr> AddedRepos;
+
+			while (true)
+			{
+				bool bDoneSomething = false;
+				bool bAllAdded = true;
+				TCSet<CStr> ToAddRepos;
+				CFilePosition LeftFilePos;
+
+				TCMap<CStr, CReposLocation> *pTheseRepos = nullptr;
+
+				for (auto &RepoLocation : Repos)
+				{
+					for (auto &Repo : RepoLocation.m_Repositories)
+					{
+						if (AddedRepos.f_FindEqual(Repo.m_Location))
+							continue;
+
+						bAllAdded = false;
+
+						auto *pDependency = RepoRoots.f_FindLargestLessThanEqual(Repo.m_ConfigFile);
+						if (pDependency)
+						{
+							auto &DependencyRoot = RepoRoots.fs_GetKey(*pDependency);
+							if (Repo.m_ConfigFile.f_StartsWith(DependencyRoot))
+							{
+								if (!AddedRepos.f_FindEqual(DependencyRoot))
+								{
+									LeftFilePos = Repo.m_Position;
+									continue;
+								}
+							}
+						}
+
+						if (!pTheseRepos)
+							pTheseRepos = &ReposOrdered.f_Insert();
+
+						(*pTheseRepos)[RepoLocation.f_GetPath()].m_Repositories[Repo.f_GetName()] = Repo;
+						ToAddRepos[Repo.m_Location];
+						bDoneSomething = true;
+					}
+				}
+				AddedRepos += ToAddRepos;
+
+				if (bAllAdded)
+					break;
+
+				if (!bDoneSomething)
+					_BuildSystem.fs_ThrowError(LeftFilePos, "Circular dependency in repositories");
+			}
+
+			return ReposOrdered;
+		}
+
 	}
+
+	using namespace NRepository;
+
 	bool CBuildSystem::fp_HandleRepositories()
 	{
 		CLocalGeneratorInteface LocalInterface;
@@ -366,95 +378,46 @@ namespace NMib::NBuildSystem
 			}
 		;
 		mp_GeneratorInterface = &LocalInterface;
-		
-		TCMap<CStr, CReposLocation> Repos;
-		
-		f_ExpandRepositoryEntities(mp_Data);
-		
-		for (auto &ChildEntity : mp_Data.m_RootEntity.m_ChildEntitiesOrdered)
-		{
-			if (ChildEntity.m_Key.m_Type != EEntityType_Repository)
-				continue;
-			if (!f_EvalCondition(ChildEntity, ChildEntity.m_Condition))
-				continue;
 
-			CStr Location = f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "Location");
-			
-			if (Location.f_IsEmpty())
-				fsp_ThrowError(ChildEntity.m_Position, "You have to specify Repository.Location");
-			
-			CStr ReposDirectory = CFile::fs_GetPath(Location); 
-			
-			auto &ReposLocation = Repos[ReposDirectory];
-			
-			auto RepoMap = ReposLocation.m_Repositories(CFile::fs_GetFile(Location));
-			
-			if (!RepoMap.f_WasCreated())
-				fsp_ThrowError(ChildEntity.m_Position, fg_Format("Duplicate repository location: {}", Location));
-			
-			auto &Repo = *RepoMap;
-			Repo.m_ConfigFile = f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "ConfigFile");
-			Repo.m_StateFile = f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "StateFile");
-			Repo.m_URL = f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "URL");
-			Repo.m_DefaultBranch = f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "DefaultBranch");
-			Repo.m_Submodule = f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "Submodule");
-			Repo.m_SubmoduleName = f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "SubmoduleName");
-			CStr Remotes = f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "Remotes");
-			while (!Remotes.f_IsEmpty())
-			{
-				CStr RemoteString = fg_GetStrSep(Remotes, ";");
-				if (RemoteString.f_IsEmpty())
-					continue;
-				CStr Name = fg_GetStrSep(RemoteString, "=");
-				if (Repo.m_Remotes.f_FindEqual(Name))
-					fsp_ThrowError(ChildEntity.m_Position, fg_Format("Same remote '{}' specified multiple times", Name));
-				Repo.m_Remotes[Name] = RemoteString; 
-			}
-			Repo.m_Position = ChildEntity.m_Position;
-			
-			if (Repo.m_URL.f_IsEmpty())
-				fsp_ThrowError(ChildEntity.m_Position, "You have to specify Repository.URL");
-			if (Repo.m_ConfigFile.f_IsEmpty())
-				fsp_ThrowError(ChildEntity.m_Position, "You have to specify Repository.ConfigFile");
-			if (Repo.m_StateFile.f_IsEmpty())
-				fsp_ThrowError(ChildEntity.m_Position, "You have to specify Repository.StateFile");
-			if (Repo.m_ConfigFile == Repo.m_StateFile)
-				fsp_ThrowError(ChildEntity.m_Position, "You have to specify Repository.ConfigFile and Repository.StateFile must not be same file");
-			if (Repo.m_DefaultBranch.f_IsEmpty())
-				fsp_ThrowError(ChildEntity.m_Position, "You have to specify Repository.DefaultBranch");
-			if (Repo.m_Submodule == "true" && Repo.m_SubmoduleName.f_IsEmpty())
-				fsp_ThrowError(ChildEntity.m_Position, "You have to specify Repository.SubmoduleName");
-		}
-		
+		f_ExpandRepositoryEntities(mp_Data);
+
+		TCVector<TCMap<CStr, CReposLocation>> ReposOrdered = fg_GetRepos(*this, mp_Data);
+
 		TCAtomic<bool> bChanged;
 		
 		CStateHandler StateHandler;
-		
-		fg_ParallellForEach
-			(
-				Repos
-				, [&](auto &_Repos)
-				{
-					CStr ReposDirectory = _Repos.f_GetPath();
-					CFile::fs_CreateDirectory(ReposDirectory);
-					
-					StateHandler.f_AddGitIgnore(ReposDirectory + "/RepoLock.MRepoState", *this);
-					
-					CLockFile LockFile{ReposDirectory + "/RepoLock.MRepoState"};
-					LockFile.f_LockWithException(5.0*60.0);
-					fg_ParallellForEach
-						(
-							_Repos.m_Repositories
-							, [&](auto &_Repo)
-							{
-								if (fg_HandleRepository(ReposDirectory, _Repo, StateHandler, *this))
-									bChanged.f_Exchange(true);
-							}
-						)
-					;
-				}
-			)
-		;
+
+		for (auto &Repos : ReposOrdered)
+		{
+			fg_ParallellForEach
+				(
+					Repos
+					, [&](auto &_Repos)
+					{
+						CStr ReposDirectory = _Repos.f_GetPath();
+						CFile::fs_CreateDirectory(ReposDirectory);
+
+						StateHandler.f_AddGitIgnore(ReposDirectory + "/RepoLock.MRepoState", *this);
+
+						CLockFile LockFile{ReposDirectory + "/RepoLock.MRepoState"};
+						LockFile.f_LockWithException(5.0*60.0);
+						fg_ParallellForEach
+							(
+								_Repos.m_Repositories
+								, [&](auto &_Repo)
+								{
+									if (fg_HandleRepository(ReposDirectory, _Repo, StateHandler, *this))
+										bChanged.f_Exchange(true);
+								}
+							)
+						;
+					}
+				)
+			;
+
+			if (bChanged.f_Load())
+				break;
+		}
 		
 		auto MergedFiles = StateHandler.f_GetMergedFiles();
 		for (auto iFile = MergedFiles.f_GetIterator(); iFile; ++iFile)

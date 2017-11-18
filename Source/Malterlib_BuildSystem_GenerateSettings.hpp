@@ -14,6 +14,7 @@ namespace NMib::NBuildSystem
 		_Stream << m_Workspace;
 		_Stream << m_Action;
 		_Stream << m_GenerationFlags;
+		_Stream << m_ActionParams;
 	}
 
 	template <typename tf_CStream>
@@ -25,5 +26,6 @@ namespace NMib::NBuildSystem
 		_Stream >> m_Workspace;
 		_Stream >> m_Action;
 		_Stream >> m_GenerationFlags;
+		_Stream >> m_ActionParams;
 	}
 }

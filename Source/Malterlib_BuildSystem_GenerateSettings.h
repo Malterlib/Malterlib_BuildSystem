@@ -10,6 +10,8 @@ namespace NMib::NBuildSystem
 		EGenerationFlag_None 				= 0
 		, EGenerationFlag_AbsoluteFilePaths 	= DMibBit(0)
 		, EGenerationFlag_SingleThreaded		= DMibBit(1)
+		, EGenerationFlag_UseCachedEnvironment	= DMibBit(2)
+		, EGenerationFlag_DisableUserSettings	= DMibBit(3)
 	};
 
 	struct CGenerateSettings
@@ -28,6 +30,7 @@ namespace NMib::NBuildSystem
 		CStr m_Generator;
 		CStr m_Workspace;
 		CStr m_Action;
+		TCVector<CStr> m_ActionParams;
 		EGenerationFlag m_GenerationFlags;
 	};
 }

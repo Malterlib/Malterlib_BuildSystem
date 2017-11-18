@@ -7,6 +7,7 @@
 
 #include <Mib/Core/RuntimeType>
 #include <Mib/Cryptography/UUID>
+#include <Mib/Encoding/EJSON>
 
 namespace NMib::NBuildSystem
 {
@@ -26,8 +27,11 @@ namespace NMib::NBuildSystem
 			g_ThreadPool.f_Construct();
 
 		// DMibScopeConOutTimer("Generate");
-		if (_GenerateSettings.m_Action != "Build" && _GenerateSettings.m_Action != "ReBuild")
+		if (_GenerateSettings.m_Action == "Clean")
 			return false; // For now we don't support clean
+
+		bool bBuildAction = _GenerateSettings.m_Action == "Build" || _GenerateSettings.m_Action == "ReBuild";
+
 		TCUniquePointer<CBuildSystemGenerator> pGenerator 
 			= fg_Explicit(fg_CreateRuntimeType<CBuildSystemGenerator>(NMib::NStr::CStr("CBuildSystemGenerator_") + _GenerateSettings.m_Generator));
 
@@ -36,14 +40,16 @@ namespace NMib::NBuildSystem
 
 		CStr FileLocation = CFile::fs_GetExpandedPath(_GenerateSettings.m_SourceFile);
 
-		CStr OutputDir = _GenerateSettings.m_OutputDir;
-		if (OutputDir.f_IsEmpty())
-			OutputDir = CFile::fs_GetPath(FileLocation);
+		CStr OutputDir;
 
-		OutputDir = CFile::fs_AppendPath(OutputDir, CStr::CFormat("BuildSystem/{}") << _GenerateSettings.m_Generator);
+		if (_GenerateSettings.m_OutputDir.f_IsEmpty())
+			OutputDir = "{}/BuildSystem/Default"_f << CFile::fs_GetPath(FileLocation);
+		else
+			OutputDir = CFile::fs_GetExpandedPath(_GenerateSettings.m_OutputDir);
 
 		CStr RelativeFileLocation = CFile::fs_MakePathRelative(FileLocation, OutputDir);
 
+		mp_OutputDir = OutputDir;
 		mp_GenerateWorkspace = _GenerateSettings.m_Workspace;
 
 		CStr GlobalGeneratorStateFileName;
@@ -70,219 +76,248 @@ namespace NMib::NBuildSystem
 
 			WorkspaceGeneratorStateFileName = CFile::fs_AppendPath(OutputDir, "GeneratorStates/" + UniqueIdentifier.f_GetAsString() + ".MGeneratorState");
 		}
-		mp_GeneratorStateFileName = GlobalGeneratorStateFileName;
 
-		if (CFile::fs_FileExists(WorkspaceGeneratorStateFileName, EFileAttrib_File))
+		CStr EnvironmentStateFile = CFile::fs_AppendPath(OutputDir, "Environment.json");
+
+		mp_GeneratorStateFileName = GlobalGeneratorStateFileName;
+		bool bUseCachedEnvironment = (_GenerateSettings.m_GenerationFlags & EGenerationFlag_UseCachedEnvironment) != EGenerationFlag_None;
+
+		if (bUseCachedEnvironment)
 		{
-			CGeneratorState State;
+			if (!CFile::fs_FileExists(EnvironmentStateFile, EFileAttrib_File))
+				DMibError("Cached environment not found at: {}"_f << EnvironmentStateFile);
+
+			mp_Environment.f_Clear();
 			try
 			{
-				TCVector<uint8> FileData = CFile::fs_ReadFileTry(WorkspaceGeneratorStateFileName);
-				CBinaryStreamMemory<> Stream;
-				Stream.f_Open(FileData);
-				Stream >> State;
+				for (auto &EnvVar : CEJSON::fs_FromString(CFile::fs_ReadStringFromFile(EnvironmentStateFile, true), EnvironmentStateFile).f_Object())
+					mp_Environment[EnvVar.f_Name()] = EnvVar.f_Value().f_String();
 			}
-			catch (...)
+			catch (NException::CException const &_Exception)
 			{
-				State = CGeneratorState();
+				DMibError("Failed to parse Environment.json: {}"_f << _Exception);
 			}
-
-			if (!State.m_SourceFiles.f_IsEmpty() && _GenerateSettings.m_Action == "Build")
-			{
-				TCAtomic<bool> bChanged;
-
-				// DMibScopeConOutTimer("Check source files");
-
-				auto fl_FileChanged
-					= [&bChanged, &OutputDir](CGeneratorState::CProcessedFile const &_File) -> bool
-					{
-						CStr FileName = CFile::fs_GetExpandedPath(_File.f_GetFileName(), OutputDir);
-						
-						try
-						{
-							if (_File.m_bNoDateCheck)
-							{
-								if (!CFile::fs_FileExists(FileName))
-								{
-									if (!bChanged.f_Exchange(true))
-										DConOut("Regenerating build system because file is missing: {}{\n}", FileName);
-									return true;
-								}
-							}
-							else
-							{
-								CFile File;
-								File.f_Open(FileName, EFileOpen_ReadAttribs | EFileOpen_ShareAll);
-								NTime::CTime DiskTime = File.f_GetWriteTime();
-								if (DiskTime != _File.m_WriteTime)
-								{
-									if (!bChanged.f_Exchange(true))
-									{
-										DConOut
-											(
-												"Regenerating build system because file changed ({} != {}): {}{\n}"
-												, NTime::fg_GetFullTimeStr(DiskTime) << NTime::fg_GetFullTimeStr(_File.m_WriteTime) << FileName
-											)
-										;
-									}
-									return true;
-								}
-							}
-						}
-						catch (...)
-						{
-							if (!bChanged.f_Exchange(true))
-								DConOut("Regenerating build system because file is missing: {}{\n}", FileName);
-							return true;
-						}
-						return false;
-					}
-				;
-
-				auto OldExeFile = *State.m_ExeFile.f_FindSmallest();
-				
-				if (!bChanged)
-				{
-					//CTimerConOutScope Scope("Source files");
-					State.m_ExeFile.f_Clear();
-					auto &ExeFile = State.m_ExeFile[CFile::fs_MakePathRelative(CStr(CFile::fs_GetProgramPath()), OutputDir)];
-					ExeFile = OldExeFile;
-					if (fl_FileChanged(ExeFile))
-						bChanged = true;
-					for (auto iFile = State.m_SourceFiles.f_GetIterator(); iFile && !bChanged; ++iFile)
-					{
-						if (fl_FileChanged(*iFile))
-						{
-							bChanged = true;
-							break;
-						}
-					}
-				}
-
-				if (!bChanged)
-				{
-					//CTimerConOutScope Scope("Source files");
-					for (auto iFile = State.m_ReferencedFiles.f_GetIterator(); iFile && !bChanged; ++iFile)
-					{
-						if (fl_FileChanged(*iFile))
-						{
-							bChanged = true;
-							break;
-						}
-					}
-				}
-				
-				if (!bChanged)
-				{
-					//CTimerConOutScope Scope("Generated files");
-					TCVector<TCVector<CGeneratorState::CProcessedFile *>> ToProcess;
-					auto *pCurrentInsert = &ToProcess.f_Insert();
-					mint nFiles = 0;
-					for (auto iFile = State.m_GeneratedFiles.f_GetIterator(); iFile; ++iFile)
-					{
-						++nFiles;
-						pCurrentInsert->f_Insert(&*iFile);
-						if (pCurrentInsert->f_GetLen() >= 1024)
-							pCurrentInsert = &ToProcess.f_Insert();
-					}
-					fg_ParallellForEach
-						(
-							ToProcess
-							, [&](TCVector<CGeneratorState::CProcessedFile *> const &_Files)
-							{
-								for (auto pFile : _Files)
-									fl_FileChanged(*pFile);
-							}
-						)
-					;
-					/*
-					for (auto iFile = State.m_GeneratedFiles.f_GetIterator(); iFile && !bChanged; ++iFile)
-					{
-						if (fl_FileChanged(*iFile))
-						{
-							bChanged = true;
-						}
-					}*/
-				}
-				
-				if (!bChanged)
-				{
-					//CTimerConOutScope Scope("Source searches");
-					for (auto iSearch = State.m_SourceSearches.f_GetIterator(); iSearch; ++iSearch)
-					{
-						auto &Search = *iSearch;
-						auto &FindOptions = iSearch.f_GetKey();
-						auto Files = mp_FindCache.f_FindFiles(FindOptions, false);
-						bool bChangedLocal = false;
-						if (Files.f_GetLen() != Search.f_GetLen())
-							bChangedLocal = true;
-						else
-						{
-							auto iLeft = Files.f_GetIterator();
-							auto iRight = Search.f_GetIterator();
-							for (;iLeft; ++iLeft, ++iRight)
-							{
-								if (iLeft->m_Path != iRight->m_Path)
-								{
-									bChangedLocal = true;
-									break;
-								}
-								if ((iLeft->m_Attribs & (EFileAttrib_File | EFileAttrib_Directory)) != (iRight->m_Attribs & (EFileAttrib_File | EFileAttrib_Directory)))
-								{
-									bChangedLocal = true;
-									break;
-								}
-							}
-						}
-						if (bChangedLocal)
-						{
-							DConOut("Regenerating build system because search changed: {}" DNewLine, FindOptions.m_Path);
-							bChanged = true;
-							break;
-						}
-					}
-				}
-
-				if (!bChanged)
-				{
-					for (auto iEnv = State.m_Environment.f_GetIterator(); iEnv; ++iEnv)
-					{
-						//DConOut("{} = {}" DNewLine, iEnv.f_GetKey() << *iEnv);
-						CStr Value = fg_GetSys()->f_GetEnvironmentVariable(iEnv.f_GetKey());
-						
-						if (Value != *iEnv)
-						{
-							DConOut("Regenerating build system because env var '{}' changed: '{}' != '{}'" DNewLine, iEnv.f_GetKey() << Value << *iEnv);
-							bChanged = true;
-							break;
-						}
-						
-					}
-				}
-
-				if (uint32(mp_GenerateSettings.m_GenerationFlags) != State.m_GenerationFlags)
-				{
-					DConOut("Regenerating build system because generation flags changed {} != {}" DNewLine, mp_GenerateSettings.m_GenerationFlags << State.m_GenerationFlags);
-					bChanged = true;
-				}
-
-				if (!bChanged)
-				{
-					fp64 Time1 = Clock.f_GetTime();
-					DConOut("Checked for changes {fe2} s{\n}", Time1);
-					
-					return false;
-				}
-			}
-			else
-				DConOut("Regenerating build system because there are no source files in state" DNewLine, 0);
 		}
 		else
-			DConOut("Regenerating build system because there is no state file" DNewLine, 0);
+			mp_Environment = fg_GetSys()->f_Environment();
+
+		if (bBuildAction)
+		{
+			if (CFile::fs_FileExists(WorkspaceGeneratorStateFileName, EFileAttrib_File))
+			{
+				CGeneratorState State;
+				try
+				{
+					TCVector<uint8> FileData = CFile::fs_ReadFileTry(WorkspaceGeneratorStateFileName);
+					CBinaryStreamMemory<> Stream;
+					Stream.f_Open(FileData);
+					Stream >> State;
+				}
+				catch (...)
+				{
+					State = CGeneratorState();
+				}
+
+				if (!State.m_SourceFiles.f_IsEmpty() && _GenerateSettings.m_Action == "Build")
+				{
+					TCAtomic<bool> bChanged;
+
+					// DMibScopeConOutTimer("Check source files");
+
+					auto fl_FileChanged
+						= [&bChanged, &OutputDir](CGeneratorState::CProcessedFile const &_File) -> bool
+						{
+							CStr FileName = CFile::fs_GetExpandedPath(_File.f_GetFileName(), OutputDir);
+
+							try
+							{
+								if (_File.m_bNoDateCheck)
+								{
+									if (!CFile::fs_FileExists(FileName))
+									{
+										if (!bChanged.f_Exchange(true))
+											DConOut("Regenerating build system because file is missing: {}{\n}", FileName);
+										return true;
+									}
+								}
+								else
+								{
+									CFile File;
+									File.f_Open(FileName, EFileOpen_ReadAttribs | EFileOpen_ShareAll);
+									NTime::CTime DiskTime = File.f_GetWriteTime();
+									if (DiskTime != _File.m_WriteTime)
+									{
+										if (!bChanged.f_Exchange(true))
+										{
+											DConOut
+												(
+													"Regenerating build system because file changed ({} != {}): {}{\n}"
+													, NTime::fg_GetFullTimeStr(DiskTime) << NTime::fg_GetFullTimeStr(_File.m_WriteTime) << FileName
+												)
+											;
+										}
+										return true;
+									}
+								}
+							}
+							catch (...)
+							{
+								if (!bChanged.f_Exchange(true))
+									DConOut("Regenerating build system because file is missing: {}{\n}", FileName);
+								return true;
+							}
+							return false;
+						}
+					;
+
+					auto OldExeFile = *State.m_ExeFile.f_FindSmallest();
+
+					if (!bChanged)
+					{
+						//CTimerConOutScope Scope("Source files");
+						State.m_ExeFile.f_Clear();
+						auto &ExeFile = State.m_ExeFile[CFile::fs_MakePathRelative(CStr(CFile::fs_GetProgramPath()), OutputDir)];
+						ExeFile = OldExeFile;
+						if (fl_FileChanged(ExeFile))
+							bChanged = true;
+						for (auto iFile = State.m_SourceFiles.f_GetIterator(); iFile && !bChanged; ++iFile)
+						{
+							if (fl_FileChanged(*iFile))
+							{
+								bChanged = true;
+								break;
+							}
+						}
+					}
+
+					if (!bChanged)
+					{
+						//CTimerConOutScope Scope("Source files");
+						for (auto iFile = State.m_ReferencedFiles.f_GetIterator(); iFile && !bChanged; ++iFile)
+						{
+							if (fl_FileChanged(*iFile))
+							{
+								bChanged = true;
+								break;
+							}
+						}
+					}
+
+					if (!bChanged)
+					{
+						//CTimerConOutScope Scope("Generated files");
+						TCVector<TCVector<CGeneratorState::CProcessedFile *>> ToProcess;
+						auto *pCurrentInsert = &ToProcess.f_Insert();
+						mint nFiles = 0;
+						for (auto iFile = State.m_GeneratedFiles.f_GetIterator(); iFile; ++iFile)
+						{
+							++nFiles;
+							pCurrentInsert->f_Insert(&*iFile);
+							if (pCurrentInsert->f_GetLen() >= 1024)
+								pCurrentInsert = &ToProcess.f_Insert();
+						}
+						fg_ParallellForEach
+							(
+								ToProcess
+								, [&](TCVector<CGeneratorState::CProcessedFile *> const &_Files)
+								{
+									for (auto pFile : _Files)
+										fl_FileChanged(*pFile);
+								}
+							)
+						;
+						/*
+						for (auto iFile = State.m_GeneratedFiles.f_GetIterator(); iFile && !bChanged; ++iFile)
+						{
+							if (fl_FileChanged(*iFile))
+							{
+								bChanged = true;
+							}
+						}*/
+					}
+
+					if (!bChanged)
+					{
+						//CTimerConOutScope Scope("Source searches");
+						for (auto iSearch = State.m_SourceSearches.f_GetIterator(); iSearch; ++iSearch)
+						{
+							auto &Search = *iSearch;
+							auto &FindOptions = iSearch.f_GetKey();
+							auto Files = mp_FindCache.f_FindFiles(FindOptions, false);
+							bool bChangedLocal = false;
+							if (Files.f_GetLen() != Search.f_GetLen())
+								bChangedLocal = true;
+							else
+							{
+								auto iLeft = Files.f_GetIterator();
+								auto iRight = Search.f_GetIterator();
+								for (;iLeft; ++iLeft, ++iRight)
+								{
+									if (iLeft->m_Path != iRight->m_Path)
+									{
+										bChangedLocal = true;
+										break;
+									}
+									if ((iLeft->m_Attribs & (EFileAttrib_File | EFileAttrib_Directory)) != (iRight->m_Attribs & (EFileAttrib_File | EFileAttrib_Directory)))
+									{
+										bChangedLocal = true;
+										break;
+									}
+								}
+							}
+							if (bChangedLocal)
+							{
+								DConOut("Regenerating build system because search changed: {}" DNewLine, FindOptions.m_Path);
+								bChanged = true;
+								break;
+							}
+						}
+					}
+
+					if (!bChanged)
+					{
+						for (auto iEnv = State.m_Environment.f_GetIterator(); iEnv; ++iEnv)
+						{
+							//DConOut("{} = {}" DNewLine, iEnv.f_GetKey() << *iEnv);
+							CStr Value = f_GetEnvironmentVariable(iEnv.f_GetKey());
+
+							if (Value != *iEnv)
+							{
+								DConOut("Regenerating build system because env var '{}' changed: '{}' != '{}'" DNewLine, iEnv.f_GetKey() << Value << *iEnv);
+								bChanged = true;
+								break;
+							}
+
+						}
+					}
+
+					if (uint32(mp_GenerateSettings.m_GenerationFlags) != State.m_GenerationFlags)
+					{
+						DConOut("Regenerating build system because generation flags changed {} != {}" DNewLine, mp_GenerateSettings.m_GenerationFlags << State.m_GenerationFlags);
+						bChanged = true;
+					}
+
+					if (!bChanged)
+					{
+						fp64 Time1 = Clock.f_GetTime();
+						DConOut("Checked for changes {fe2} s{\n}", Time1);
+
+						return false;
+					}
+				}
+				else
+					DConOut("Regenerating build system because there are no source files in state" DNewLine, 0);
+			}
+			else
+				DConOut("Regenerating build system because there is no state file" DNewLine, 0);
+
+		}
 
 		fp64 Time1 = Clock.f_GetTime();
-		DConOut("Checked for changes {fe2} s{\n}", Time1);
-			
+
+		if (bBuildAction)
+			DConOut("Checked for changes {fe2} s{\n}", Time1);
+
 		CGeneratorState GlobalState;
 
 		if (CFile::fs_FileExists(GlobalGeneratorStateFileName, EFileAttrib_File))
@@ -327,12 +362,15 @@ namespace NMib::NBuildSystem
 			}
 		}
 
+		bool bDisableUserSettings = (_GenerateSettings.m_GenerationFlags & EGenerationFlag_DisableUserSettings) != EGenerationFlag_None;
+
 		CStr UserSettingsFileName = CStr::CFormat("{}/UserSettings.MSettings") << OutputDir;
 		mp_UserSettingsFile = UserSettingsFileName;
+
 		bool bTryParsed = false;
 		try
 		{
-			if (CFile::fs_FileExists(UserSettingsFileName))
+			if (!bDisableUserSettings && CFile::fs_FileExists(UserSettingsFileName))
 			{
 				CBuildSystemPreprocessor Preprocessor(mp_UserSettingsRegistry, mp_SourceFiles, mp_FindCache);
 				Preprocessor.f_ReadFile(UserSettingsFileName);
@@ -344,7 +382,11 @@ namespace NMib::NBuildSystem
 				Preprocessor.f_ReadFile(_GenerateSettings.m_SourceFile);
 				mp_FileLocation = Preprocessor.f_GetFileLocation();
 			}
-			mp_SourceFiles[UserSettingsFileName];
+			if (!bDisableUserSettings)
+				mp_SourceFiles[UserSettingsFileName];
+
+			mp_SourceFiles[EnvironmentStateFile];
+
 			mp_BaseDir = CFile::fs_GetPath(mp_FileLocation);
 			mp_FileLocationFile = CFile::fs_GetFile(mp_FileLocation);
 
@@ -363,11 +405,19 @@ namespace NMib::NBuildSystem
 			else
 				throw;
 		}
+
 		if (fp_HandleRepositories())
 		{
 			o_bRetry = true;
 			return false;
 		}
+
+		if (!bBuildAction)
+		{
+			fp_HandleAction(_GenerateSettings.m_Action, _GenerateSettings.m_ActionParams);
+			return false;
+		}
+
 		fp64 Time2 = Clock.f_GetTime();
 		DConOut("Parsed data {fe2} s{\n}", Time2 - Time1);
 
@@ -375,6 +425,7 @@ namespace NMib::NBuildSystem
 
 		fp64 Time3 = Clock.f_GetTime();
 
+		if (!bDisableUserSettings)
 		{
 			auto StringData = mp_UserSettingsRegistry.f_GenerateStr();
 
@@ -383,6 +434,22 @@ namespace NMib::NBuildSystem
 
 			CFile::fs_CreateDirectory(CFile::fs_GetPath(UserSettingsFileName));
 			CFile::fs_CopyFileDiff(FileDate, UserSettingsFileName, CTime::fs_NowUTC());
+		}
+
+		if (!bUseCachedEnvironment)
+		{
+			try
+			{
+				CEJSON JSON;
+				for (auto &EnvVar : mp_Environment)
+					JSON[mp_Environment.fs_GetKey(EnvVar)] = EnvVar;
+
+				CFile::fs_WriteStringToFile(EnvironmentStateFile, JSON.f_ToString());
+			}
+			catch (NException::CException const &_Exception)
+			{
+				DMibError("Failed to save Environment.json: {}"_f << _Exception);
+			}
 		}
 
 		{
@@ -497,7 +564,7 @@ namespace NMib::NBuildSystem
 
 			for (auto iEnv = mp_UsedExternals.f_GetIterator(); iEnv; ++iEnv)
 			{
-				CStr Value = fg_GetSys()->f_GetEnvironmentVariable(*iEnv);
+				CStr Value = f_GetEnvironmentVariable(*iEnv);
 				State.m_Environment[*iEnv] = Value;
 			}
 
@@ -519,7 +586,7 @@ namespace NMib::NBuildSystem
 				CFile::fs_CopyFileDiff(Stream.f_MoveVector(), GlobalGeneratorStateFileName, CTime::fs_NowUTC());
 			}
 		}
-		
+
 		TCVector<CStr> DeletedFiles;
 		TCSet<CStr> PotentiallyOrphanedDirectories;
 
