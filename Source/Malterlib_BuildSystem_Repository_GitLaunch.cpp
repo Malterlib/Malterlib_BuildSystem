@@ -59,7 +59,7 @@ namespace NMib::NBuildSystem::NRepository
 		for (auto &RepoOutput : m_DeferredOutput)
 		{
 			auto &RepoName = m_DeferredOutput.fs_GetKey(RepoOutput);
-			LongestRepo = fg_Max(LongestRepo, RepoName.f_GetLen());
+			LongestRepo = fg_Max(LongestRepo, mint(RepoName.f_GetLen()));
 		}
 
 		bool bDidOutputSection = false;
@@ -123,7 +123,7 @@ namespace NMib::NBuildSystem::NRepository
 					Name = "{}"_f << CFile::fs_MakePathRelative(Repo.m_Location, State.m_BaseDir);
 				else
 					Name = ".";
-				State.m_LongestRepo = fg_Max(State.m_LongestRepo, Name.f_GetLen());
+				State.m_LongestRepo = fg_Max(State.m_LongestRepo, mint(Name.f_GetLen()));
 				++State.m_nRepos;
 			}
 		}
