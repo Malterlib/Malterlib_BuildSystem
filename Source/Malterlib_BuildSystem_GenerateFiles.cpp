@@ -132,13 +132,18 @@ namespace NMib::NBuildSystem
 										try
 										{
 											auto Resolved = CFile::fs_ResolveSymbolicLink(Path);
+#ifdef DPlatformFamily_Windows
+											if (Resolved.f_CmpNoCase(Contents) == 0)
+												break;
+#else
 											if (Resolved == Contents)
 												break;
-											DConErrOut2("Deleting invalid symlink '{}': {} != {}", Path, Resolved, Contents);
+#endif
+											DConErrOut2("Deleting invalid symlink '{}': {} != {}\n", Path, Resolved, Contents);
 										}
 										catch (CExceptionFile const &)
 										{
-											DConErrOut2("Deleting invalid symlink '{}'", Path);
+											DConErrOut2("Deleting invalid symlink '{}'\n", Path);
 										}
 										CFile::fs_DeleteFile(Path);
 									}
