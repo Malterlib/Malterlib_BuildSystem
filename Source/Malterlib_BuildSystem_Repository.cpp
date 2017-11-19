@@ -219,10 +219,21 @@ namespace NMib::NBuildSystem
 			o_StateHandler.f_SetHash(_Repo.m_StateFile, Location, GitHeadHash);
 			o_StateHandler.f_SetHash(_Repo.m_ConfigFile, Location, GitHeadHash);
 			o_StateHandler.f_AddGitIgnore(_Repo.m_StateFile, _BuildSystem);
+
+			auto CurrentRemotes = fg_GetGitRemotes(Location, _Repo.m_Position);
+
+			if (!_Repo.m_URL.f_IsEmpty())
+			{
+				auto pCurrentRemote = CurrentRemotes.f_FindEqual("origin");
+				if (pCurrentRemote && *pCurrentRemote != _Repo.m_URL)
+				{
+					DMibConOut2("Changing origin URL 'origin={}' at '{}'{\n}", _Repo.m_URL, Location);
+					fLaunchGit({"remote", "set-url", "origin", _Repo.m_URL}, Location);
+				}
+			}
 			
 			if (!_Repo.m_Remotes.f_IsEmpty())
 			{
-				auto CurrentRemotes = fg_GetGitRemotes(Location, _Repo.m_Position);
 				for (auto iRemote = _Repo.m_Remotes.f_GetIterator(); iRemote; ++iRemote)
 				{
 					auto &RemoteName = iRemote.f_GetKey();

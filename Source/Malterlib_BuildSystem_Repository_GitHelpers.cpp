@@ -82,8 +82,6 @@ namespace NMib::NBuildSystem::NRepository
 			fg_ParseEndOfLine(pParse);
 		}
 
-		Remotes.f_Remove("origin");
-
 		return Remotes;
 	}
 
