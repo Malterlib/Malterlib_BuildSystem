@@ -5,14 +5,14 @@
 
 namespace NMib::NBuildSystem::NRepository
 {
-	CGitLaunches::CState::CState(CStr const &_BaseDir, EGitLaunchesOutputFlag _OutputFlags)
+	CGitLaunches::CState::CState(CStr const &_BaseDir, CStr const &_ProgressDescription)
 		: m_BaseDir(_BaseDir)
-		, m_OutputFlags(_OutputFlags)
+		, m_ProgressDescription(_ProgressDescription)
 	{
 	}
 
-	CGitLaunches::CGitLaunches(CStr const &_BaseDir, EGitLaunchesOutputFlag _OutputFlags)
-		: m_pState(fg_Construct(_BaseDir, _OutputFlags))
+	CGitLaunches::CGitLaunches(CStr const &_BaseDir, CStr const &_ProgressDescription)
+		: m_pState(fg_Construct(_BaseDir, _ProgressDescription))
 	{
 	}
 
@@ -51,9 +51,6 @@ namespace NMib::NBuildSystem::NRepository
 
 	CGitLaunches::CState::~CState()
 	{
-		if (!(m_OutputFlags & EGitLaunchesOutputFlag_DeferOutput))
-			return;
-
 		mint LongestRepo = 0;
 
 		for (auto &RepoOutput : m_DeferredOutput)
@@ -100,7 +97,9 @@ namespace NMib::NBuildSystem::NRepository
 
 		State.m_nDoneRepos += _nDone;
 
-		CUStr ToOutput = CStr{"  {}/{} repos done"_f << State.m_nDoneRepos.f_Load() << State.m_nRepos};
+		CUStr ToOutput = CStr{"  {}: {}/{} repos done"_f << State.m_ProgressDescription << State.m_nDoneRepos.f_Load() << State.m_nRepos};
+		if (State.m_nDoneRepos == State.m_nRepos)
+			ToOutput = CStr{"{sj*}"_f << "" << ToOutput.f_GetLen()}; // Clear previous output
 
 		DMibConOut2("{}\x1B[{}D", ToOutput, ToOutput.f_GetLen());
 	}
@@ -134,7 +133,6 @@ namespace NMib::NBuildSystem::NRepository
 	void CGitLaunches::f_Output(EOutputType _OutputType, CStr const &_Section, CStr const &_Output) const
 	{
 		auto &State = *m_pState;
-		DRequire(State.m_OutputFlags & EGitLaunchesOutputFlag_DeferOutput);
 
 		CDeferredOutput Dererred;
 		Dererred.m_OutputType = _OutputType;
@@ -153,23 +151,14 @@ namespace NMib::NBuildSystem::NRepository
 
 		auto &RepoName = fg_Const(State.m_RepoNames)[_Repo.m_Location];
 
-		if (State.m_OutputFlags & EGitLaunchesOutputFlag_DeferOutput)
+		CDeferredOutput Dererred;
+		Dererred.m_OutputType = _OutputType;
+		Dererred.m_Lines = _Output.f_SplitLine();
+
 		{
-			CDeferredOutput Dererred;
-			Dererred.m_OutputType = _OutputType;
-			Dererred.m_Lines = _Output.f_SplitLine();
-
-			{
-				DLock(State.m_DeferredOutputLock);
-				State.m_DeferredOutput[_Prefix + RepoName].f_Insert(fg_Move(Dererred));
-			}
-			return;
+			DLock(State.m_DeferredOutputLock);
+			State.m_DeferredOutput[_Prefix + RepoName].f_Insert(fg_Move(Dererred));
 		}
-
-		DRequire(_Prefix.f_IsEmpty());
-
-		for (auto &Line : _Output.f_SplitLine())
-			fg_OutputRepoLine(_OutputType, RepoName, State.m_LongestRepo, Line);
 	}
 
 	TCContinuation<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::f_Launch(CRepository const &_Repo, TCVector<CStr> const &_Params) const
@@ -250,15 +239,6 @@ namespace NMib::NBuildSystem::NRepository
 				}
 				else
 					Result.f_SetResult();
-
-				if
-					(
-					 	bDidOutput
-					 	&& !(This.m_pState->m_OutputFlags & EGitLaunchesOutputFlag_DeferOutput)
-					)
-				{
-					fg_OutputSectionLine();
-				}
 			}
 		;
 

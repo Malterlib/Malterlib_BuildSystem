@@ -11,7 +11,7 @@ namespace NMib::NBuildSystem
 	{
 		CFilteredRepos FilteredRepositories = fg_GetFilteredRepos(_Filter, *this, mp_Data);
 
-		CGitLaunches Launches{mp_BaseDir};
+		CGitLaunches Launches{mp_BaseDir, "Running for each repo"};
 		
 		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 

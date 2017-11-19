@@ -98,14 +98,9 @@ namespace NMib::NBuildSystem::NRepository
 		TCSet<CStr> mp_GitIgnores;
 	};
 
-	enum EGitLaunchesOutputFlag
-	{
-		EGitLaunchesOutputFlag_None = 0
-		, EGitLaunchesOutputFlag_DeferOutput = DBit(0)
-	};
 	struct CGitLaunches
 	{
-		CGitLaunches(CStr const &_BaseDir, EGitLaunchesOutputFlag _Flags = EGitLaunchesOutputFlag_DeferOutput);
+		CGitLaunches(CStr const &_BaseDir, CStr const &_ProgressDescription);
 
 		void f_MeasureRepos(TCVector<TCVector<CRepository *>> const &_FilteredRepositories);
 
@@ -128,7 +123,7 @@ namespace NMib::NBuildSystem::NRepository
 
 		struct CState
 		{
-			CState(CStr const &_BaseDir, EGitLaunchesOutputFlag _Flags);
+			CState(CStr const &_BaseDir, CStr const &_ProgressDescription);
 			~CState();
 
 			CMutual m_Lock;
@@ -139,7 +134,7 @@ namespace NMib::NBuildSystem::NRepository
 			mint m_LongestRepo = 0;
 			mint m_nRepos = 0;
 			TCAtomic<mint> m_nDoneRepos = 0;
-			EGitLaunchesOutputFlag m_OutputFlags;
+			CStr m_ProgressDescription;
 
 			CMutual m_DeferredOutputLock;
 			TCMap<CStr, TCVector<CDeferredOutput>> m_DeferredOutput;

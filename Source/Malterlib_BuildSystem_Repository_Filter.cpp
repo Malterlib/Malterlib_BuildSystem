@@ -7,7 +7,7 @@ namespace NMib::NBuildSystem::NRepository
 {
 	CFilteredRepos fg_GetFilteredRepos(CBuildSystem::CRepoFilter const &_Filter, CBuildSystem &_BuildSystem, CBuildSystemData &_Data)
 	{
-		CGitLaunches Launches{_BuildSystem.f_GetBaseDir()};
+		CGitLaunches Launches{_BuildSystem.f_GetBaseDir(), "Getting filtered repos"};
 
 		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 

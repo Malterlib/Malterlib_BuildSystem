@@ -31,12 +31,6 @@ namespace NMib::NBuildSystem
 	{
 		CFilteredRepos FilteredRepositories = fg_GetFilteredRepos(_Filter, *this, mp_Data);
 
-		CGitLaunches Launches{mp_BaseDir, EGitLaunchesOutputFlag_DeferOutput};
-
-		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
-
-		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
-
 		TCVector<CRepository> AllRepos;
 		for (auto &Repos : FilteredRepositories.m_FilteredRepositories)
 		{
@@ -46,15 +40,17 @@ namespace NMib::NBuildSystem
 
 		if (_Flags & ERepoStatusFlag_UpdateRemotes)
 		{
-			CGitLaunches Launches{mp_BaseDir, EGitLaunchesOutputFlag_DeferOutput};
+			CGitLaunches Launches{mp_BaseDir, "Fetching remotes"};
 			Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
+
+			CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
 			TCActorResultVector<void> Results;
 
 			for (auto Repo : AllRepos)
 			{
 				TCContinuation<void> Continuation;
-				Launches.f_Launch(Repo, {"fetch", "--all"}, fg_LogAllFunctor()) > [=](TCAsyncResult<void> &&_Result)
+				Launches.f_Launch(Repo, {"fetch", "--all", "-q"}, fg_LogAllFunctor()) > [=](TCAsyncResult<void> &&_Result)
 					{
 						Continuation.f_SetResult(_Result);
 						Launches.f_RepoDone();
@@ -67,6 +63,10 @@ namespace NMib::NBuildSystem
 			for (auto &Result : Results.f_GetResults().f_CallSync())
 				Result.f_Access();
 		}
+
+		CGitLaunches Launches{mp_BaseDir, "Getting repo status"};
+		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
+		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
 
 		bool bOpenSourceTree = _Flags & ERepoStatusFlag_OpenSourceTree;
 		bool bUseDefaultUpstream = _Flags & ERepoStatusFlag_UseDefaultUpstreamBranch;
