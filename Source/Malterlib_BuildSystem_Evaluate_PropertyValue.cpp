@@ -535,6 +535,8 @@ namespace NMib::NBuildSystem
 						fsp_ThrowError(_Position, "ReadFile takes one parameter");
 
 					Ret = CFile::fs_ReadStringFromFile(FunctionParams[0], true);
+
+					f_AddSourceFile(FunctionParams[0]);
 				}
 				else if (Function == "SourceFiles")
 				{
