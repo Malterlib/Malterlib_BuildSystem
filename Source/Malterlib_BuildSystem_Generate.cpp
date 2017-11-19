@@ -90,7 +90,8 @@ namespace NMib::NBuildSystem
 			mp_Environment.f_Clear();
 			try
 			{
-				for (auto &EnvVar : CEJSON::fs_FromString(CFile::fs_ReadStringFromFile(EnvironmentStateFile, true), EnvironmentStateFile).f_Object())
+				auto EnvironmentJSON = CEJSON::fs_FromString(CFile::fs_ReadStringFromFile(EnvironmentStateFile, true), EnvironmentStateFile);
+				for (auto &EnvVar : EnvironmentJSON.f_Object())
 					mp_Environment[EnvVar.f_Name()] = EnvVar.f_Value().f_String();
 			}
 			catch (NException::CException const &_Exception)
@@ -367,6 +368,8 @@ namespace NMib::NBuildSystem
 		CStr UserSettingsFileName = CStr::CFormat("{}/UserSettings.MSettings") << OutputDir;
 		mp_UserSettingsFile = UserSettingsFileName;
 
+		auto GeneratorValues = pGenerator->f_GetValues(*this, OutputDir);
+
 		bool bTryParsed = false;
 		try
 		{
@@ -397,7 +400,7 @@ namespace NMib::NBuildSystem
 		{
 			if (!bTryParsed)
 				fp_ParseData(mp_Data.m_RootEntity, mp_Registry, &mp_Data.m_ConfigurationTypes);
-			if (fp_HandleRepositories())
+			if (fp_HandleRepositories(GeneratorValues))
 			{
 				o_bRetry = true;
 				return false;
@@ -406,7 +409,7 @@ namespace NMib::NBuildSystem
 				throw;
 		}
 
-		if (fp_HandleRepositories())
+		if (fp_HandleRepositories(GeneratorValues))
 		{
 			o_bRetry = true;
 			return false;
@@ -417,6 +420,9 @@ namespace NMib::NBuildSystem
 			fp_HandleAction(_GenerateSettings.m_Action, _GenerateSettings.m_ActionParams);
 			return false;
 		}
+
+		// Clear out evaluated properties from repositories
+		mp_Data.m_RootEntity.m_EvaluatedProperties.f_Clear();
 
 		fp64 Time2 = Clock.f_GetTime();
 		DConOut("Parsed data {fe2} s{\n}", Time2 - Time1);

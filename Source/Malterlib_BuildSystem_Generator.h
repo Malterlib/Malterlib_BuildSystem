@@ -9,6 +9,7 @@ namespace NMib::NBuildSystem
 	{
 	public:
 		virtual ~CBuildSystemGenerator();
+		virtual TCMap<CPropertyKey, CStr> f_GetValues(CBuildSystem const &_BuildSystem, CStr const &_OutputDir) = 0;
 		virtual void f_Generate(CBuildSystem const &_BuildSystem, CBuildSystemData const &_BuildSystemData, CStr const &_OutputDir) = 0;
 	};
 	

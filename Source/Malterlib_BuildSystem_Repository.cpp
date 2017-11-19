@@ -380,7 +380,7 @@ namespace NMib::NBuildSystem
 
 	using namespace NRepository;
 
-	bool CBuildSystem::fp_HandleRepositories()
+	bool CBuildSystem::fp_HandleRepositories(TCMap<CPropertyKey, CStr> const &_Values)
 	{
 		CLocalGeneratorInteface LocalInterface;
 		auto pOldInterface = fg_Move(mp_GeneratorInterface);
@@ -391,6 +391,7 @@ namespace NMib::NBuildSystem
 		;
 		mp_GeneratorInterface = &LocalInterface;
 
+		f_InitEntityForEvaluation(mp_Data.m_RootEntity, _Values);
 		f_ExpandRepositoryEntities(mp_Data);
 
 		TCVector<TCMap<CStr, CReposLocation>> ReposOrdered = fg_GetRepos(*this, mp_Data);
@@ -455,7 +456,7 @@ namespace NMib::NBuildSystem
 				f_WriteFile(FileData, FileName);
 			}
 		}
-		
+
 		return bChanged.f_Load();
 	}
 }

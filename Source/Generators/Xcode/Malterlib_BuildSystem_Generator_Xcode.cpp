@@ -10,6 +10,27 @@ namespace NMib::NBuildSystem
 	{
 	public:
 
+		TCMap<CPropertyKey, CStr> f_GetValues(CBuildSystem const &_BuildSystem, CStr const &_OutputDir) override
+		{
+			TCMap<CPropertyKey, CStr> Values;
+			Values[CPropertyKey("Generator")] = _BuildSystem.f_GetGenerateSettings().m_Generator;
+			Values[CPropertyKey("GeneratorFamily")] = "Xcode";
+			Values[CPropertyKey("BuildSystemBasePath")] = _BuildSystem.f_GetBaseDir();
+			Values[CPropertyKey("BuildSystemOutputDir")] = _OutputDir;
+			Values[CPropertyKey("BuildSystemPlatform")] = "OSX";
+			Values[CPropertyKey("BuildSystemFile")] = _BuildSystem.f_GetGenerateSettings().m_SourceFile;
+			Values[CPropertyKey("BuildSystemName")] = CFile::fs_GetFileNoExt(_BuildSystem.f_GetGenerateSettings().m_SourceFile);
+
+			if (_BuildSystem.f_GetEnvironmentVariable("HostPlatform").f_IsEmpty())
+				Values[CPropertyKey("HostPlatform")] = DMibStringize(DPlatform);
+			if (_BuildSystem.f_GetEnvironmentVariable("HostPlatformFamily").f_IsEmpty())
+				Values[CPropertyKey("HostPlatformFamily")] = DMibStringize(DPlatformFamily);
+			if (_BuildSystem.f_GetEnvironmentVariable("HostArchitecture").f_IsEmpty())
+				Values[CPropertyKey("HostArchitecture")] = DMibStringize(DArchitecture);
+
+			return Values;
+		}
+
 		virtual void f_Generate(CBuildSystem const &_BuildSystem, CBuildSystemData const &_BuildSystemData, CStr const &_OutputDir) override
 		{
 			CClock Clock;
@@ -19,21 +40,7 @@ namespace NMib::NBuildSystem
 			CStr BuildSystemBase = _BuildSystem.f_GetBaseDir();
 			
 			// Disable &apos; encoding in output XML
-			TCMap<CPropertyKey, CStr> Values;
-			Values[CPropertyKey("Generator")] = _BuildSystem.f_GetGenerateSettings().m_Generator;
-			Values[CPropertyKey("GeneratorFamily")] = "Xcode";
-			Values[CPropertyKey("BuildSystemBasePath")] = _BuildSystem.f_GetBaseDir();
-			Values[CPropertyKey("BuildSystemOutputDir")] = _OutputDir;
-			Values[CPropertyKey("BuildSystemPlatform")] = "OSX";
-			Values[CPropertyKey("BuildSystemFile")] = _BuildSystem.f_GetGenerateSettings().m_SourceFile;
-			Values[CPropertyKey("BuildSystemName")] = CFile::fs_GetFileNoExt(_BuildSystem.f_GetGenerateSettings().m_SourceFile);
-			
-			if (_BuildSystem.f_GetEnvironmentVariable("HostPlatform").f_IsEmpty())
-				Values[CPropertyKey("HostPlatform")] = DMibStringize(DPlatform);
-			if (_BuildSystem.f_GetEnvironmentVariable("HostPlatformFamily").f_IsEmpty())
-				Values[CPropertyKey("HostPlatformFamily")] = DMibStringize(DPlatformFamily);
-			if (_BuildSystem.f_GetEnvironmentVariable("HostArchitecture").f_IsEmpty())
-				Values[CPropertyKey("HostArchitecture")] = DMibStringize(DArchitecture);
+			TCMap<CPropertyKey, CStr> Values = f_GetValues(_BuildSystem, _OutputDir);
 
 			TCMap<CConfiguration, TCUniquePointer<CConfiguraitonData>> Configurations;
 

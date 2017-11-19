@@ -307,7 +307,7 @@ namespace NMib::NBuildSystem
 		CBuildSystemData::CImportData *fp_ExpandImportCMake_FromGeneratedDirectory(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData, CStr const &_Directory) const;
 		void fp_TracePropertyEval(bool _bSuccess, CEntity const &_Entity, CProperty const &_Property, CStr const &_Value) const;
 
-		bool fp_HandleRepositories();
+		bool fp_HandleRepositories(TCMap<CPropertyKey, CStr> const &_Values);
 
 		void fp_Repository_ForEachRepo(CRepoFilter const &_Filter, bool _bParallell, TCVector<CStr> const &_Params);
 		void fp_Repository_Branch(CRepoFilter const &_Filter, CStr const &_Branch);
