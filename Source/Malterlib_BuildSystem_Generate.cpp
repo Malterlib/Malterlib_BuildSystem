@@ -429,11 +429,11 @@ namespace NMib::NBuildSystem
 		{
 			auto StringData = mp_UserSettingsRegistry.f_GenerateStr();
 
-			TCVector<uint8> FileDate;
-			CFile::fs_WriteStringToVector(FileDate, StringData);
+			TCVector<uint8> FileData;
+			CFile::fs_WriteStringToVector(FileData, StringData);
 
 			CFile::fs_CreateDirectory(CFile::fs_GetPath(UserSettingsFileName));
-			CFile::fs_CopyFileDiff(FileDate, UserSettingsFileName, CTime::fs_NowUTC());
+			CFile::fs_CopyFileDiff(FileData, UserSettingsFileName, CTime::fs_NowUTC());
 		}
 
 		if (!bUseCachedEnvironment)
@@ -444,7 +444,11 @@ namespace NMib::NBuildSystem
 				for (auto &EnvVar : mp_Environment)
 					JSON[mp_Environment.fs_GetKey(EnvVar)] = EnvVar;
 
-				CFile::fs_WriteStringToFile(EnvironmentStateFile, JSON.f_ToString());
+				TCVector<uint8> FileData;
+				CFile::fs_WriteStringToVector(FileData, JSON.f_ToString());
+
+				CFile::fs_CreateDirectory(CFile::fs_GetPath(EnvironmentStateFile));
+				CFile::fs_CopyFileDiff(FileData, EnvironmentStateFile, CTime::fs_NowUTC());
 			}
 			catch (NException::CException const &_Exception)
 			{

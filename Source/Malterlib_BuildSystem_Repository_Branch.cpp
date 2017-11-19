@@ -26,13 +26,11 @@ namespace NMib::NBuildSystem::NRepository
 			OutBranch["OnlyChanged"] = Branch.m_bOnlyChanged;
 		}
 
-		CFile::fs_CreateDirectory(CFile::fs_GetPath(BranchSettingsFile));
-		CFile::fs_WriteStringToFile(BranchSettingsFile + ".temp", SettingsJson.f_ToString());
+		TCVector<uint8> FileData;
+		CFile::fs_WriteStringToVector(FileData, SettingsJson.f_ToString());
 
-		if (CFile::fs_FileExists(BranchSettingsFile))
-			CFile::fs_AtomicReplaceFile(BranchSettingsFile + ".temp", BranchSettingsFile);
-		else
-			CFile::fs_RenameFile(BranchSettingsFile + ".temp", BranchSettingsFile);
+		CFile::fs_CreateDirectory(CFile::fs_GetPath(BranchSettingsFile));
+		CFile::fs_CopyFileDiff(FileData, BranchSettingsFile, CTime::fs_NowUTC());
 	}
 
 	void CBranchSettings::f_ReadSettings()

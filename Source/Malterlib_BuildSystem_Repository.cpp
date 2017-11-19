@@ -155,7 +155,13 @@ namespace NMib::NBuildSystem
 					try
 					{
 						fLaunchGit({"clone", "-n", _Repo.m_URL, Location});
-						fLaunchGit({"checkout", "-B", _Repo.m_DefaultBranch, ConfigHash}, Location);
+
+						TCVector<CStr> Params = {"checkout", "-B", _Repo.m_DefaultBranch};
+
+						if (!ConfigHash.f_IsEmpty())
+							Params.f_Insert(ConfigHash);
+
+						fLaunchGit(Params, Location);
 						bChanged = true;
 					}
 					catch (CException const &_Exception)
