@@ -200,7 +200,13 @@ namespace NMib::NBuildSystem
 				try
 				{
 					fLaunchGit({"fetch", "--all"}, Location);
-					fLaunchGit({"rebase", ConfigHash}, Location);
+					if (_BuildSystem.f_GetEnvironmentVariable("MalterlibRepositoryHardReset", "") == "true")
+					{
+						fLaunchGit({"checkout", "-f", "-B", _Repo.m_DefaultBranch, ConfigHash}, Location);
+						fLaunchGit({"clean", "-fd"}, Location);
+					}
+					else
+						fLaunchGit({"rebase", ConfigHash}, Location);
 				}
 				catch (CException const &_Exception)
 				{
