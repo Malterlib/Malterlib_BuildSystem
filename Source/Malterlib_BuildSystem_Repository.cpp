@@ -194,13 +194,24 @@ namespace NMib::NBuildSystem
 			
 			CStr CurrentHash = o_StateHandler.f_GetHash(_Repo.m_StateFile, Location);
 
-			if (CurrentHash != ConfigHash && !ConfigHash.f_IsEmpty() && !fg_IsSubmodule(Location))
+			bool bForceReset = _BuildSystem.f_GetEnvironmentVariable("MalterlibRepositoryHardReset", "") == "true";
+
+			if
+				(
+					!ConfigHash.f_IsEmpty()
+				 	&&
+				 	(
+					 	CurrentHash != ConfigHash
+					 	|| (bForceReset && fg_GetGitHeadHash(Location, _Repo.m_Position) != ConfigHash)
+					)
+				 	&& !fg_IsSubmodule(Location)
+				)
 			{
 				DMibConOut2("Checking out specific hash '{}' at '{}'{\n}", ConfigHash, Location);
 				try
 				{
 					fLaunchGit({"fetch", "--all"}, Location);
-					if (_BuildSystem.f_GetEnvironmentVariable("MalterlibRepositoryHardReset", "") == "true")
+					if (bForceReset)
 					{
 						fLaunchGit({"checkout", "-f", "-B", _Repo.m_DefaultBranch, ConfigHash}, Location);
 						fLaunchGit({"clean", "-fd"}, Location);
