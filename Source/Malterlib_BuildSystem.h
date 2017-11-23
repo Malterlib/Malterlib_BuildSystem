@@ -329,7 +329,16 @@ namespace NMib::NBuildSystem
 		void fp_Repository_CleanupBranches(CRepoFilter const &_Filter, ERepoCleanupBranchesFlag _Flags);
 		void fp_Repository_Status(CRepoFilter const &_Filter, ERepoStatusFlag _Flags);
 		void fp_Repository_Push(CRepoFilter const &_Filter, TCVector<CStr> const &_Remotes);
-		void fp_Repository_ListCommits(CRepoFilter const &_Filter, CStr const &_From, CStr const &_To, ERepoListCommitsFlag _Flags, TCVector<CWildcardColumn> const &_ColumnWildcards);
+		void fp_Repository_ListCommits
+			(
+			 	CRepoFilter const &_Filter
+			 	, CStr const &_From
+			 	, CStr const &_To
+			 	, ERepoListCommitsFlag _Flags
+			 	, TCVector<CWildcardColumn> const &_ColumnWildcards
+			 	, CStr const &_Prefix
+			)
+		;
 		void fp_HandleAction(CStr const &_Action, TCVector<CStr> const &_Params);
 
 		CGenerateSettings mp_GenerateSettings;

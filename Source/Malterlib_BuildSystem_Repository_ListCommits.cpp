@@ -112,6 +112,7 @@ namespace NMib::NBuildSystem
 		 	, CStr const &_To
 		 	, ERepoListCommitsFlag _Flags
 		 	, TCVector<CWildcardColumn> const &_WildcardColumns
+		 	, CStr const &_Prefix
 		)
 	{
 		TCSharedPointer<CFilteredRepos> pFilteredRepositories = fg_Construct(fg_GetFilteredRepos(_Filter, *this, mp_Data));
@@ -353,12 +354,12 @@ namespace NMib::NBuildSystem
 			auto *pEndCommit = State.m_EndCommits.f_FindEqual(Location);
 			if (!pStartCommit)
 			{
-				DConOut("{}: Missing start commit\n", Location);
+				DConOut2("{}{}: Missing start commit\n", _Prefix, Location);
 				continue;
 			}
 			if (!pEndCommit)
 			{
-				DConOut("{}: Missing end commit\n", Location);
+				DConOut2("{}{}: Missing end commit\n", _Prefix, Location);
 				continue;
 			}
 			fg_GetLogEntriesFull(Launches, *pRepository, *pStartCommit, *pEndCommit) > CommitsResults.f_AddResult(Location);
@@ -487,6 +488,7 @@ namespace NMib::NBuildSystem
 
 			auto fOutputDivider = [&](EDivider _Type)
 				{
+					ToOutput += _Prefix;
 					ToOutput += fColor(pBorderColor);
 
 					switch (_Type)
@@ -595,6 +597,8 @@ namespace NMib::NBuildSystem
 
 						for (mint i = 0; i < TallestColumn; ++i)
 						{
+							if (_bReal)
+								ToOutput += _Prefix;
 							for (auto &Column : Columns)
 							{
 								auto &Output = ColumnOutput[Column];
@@ -618,6 +622,7 @@ namespace NMib::NBuildSystem
 
 			fOutputDivider(EDivider_Top);
 
+			ToOutput += _Prefix;
 			for (auto &Column : Columns)
 			{
 				ToOutput += str_utf32("{2}|{3} {4}{sz*,sf ,a-}{3} "_f)
@@ -635,11 +640,11 @@ namespace NMib::NBuildSystem
 			fOutputAll(fRealOutput, true);
 
 			fOutputDivider(EDivider_Bottom);
-			ToOutput += "\n\n";
+			ToOutput += str_utf32("{0}\n{0}\n"_f) << _Prefix;
 
-			DConOutRaw(CStr{(str_utf32("{}/¯{sz*,sf¯}¯\\{}\n"_f) << fColor(pBorderColor) << "" << RelativePath.f_GetLen() << fColor(CColors::mc_Default)).f_GetStr()});
-			DConOut2("{1}|{2} {3}{}{2} {1}|{2}\n", RelativePath, fColor(pBorderColor), fColor(CColors::mc_Default), fColor(pHeadingColor));
-			DConOutRaw(CStr{(str_utf32("{2}|{3} {sz*,sf } {2}|{3}\n"_f) << "" << RelativePath.f_GetLen() << fColor(pBorderColor) << fColor(CColors::mc_Default)).f_GetStr()});
+			DConOutRaw(CStr{(str_utf32("{}{}/¯{sz*,sf¯}¯\\{}\n"_f) << _Prefix << fColor(pBorderColor) << "" << RelativePath.f_GetLen() << fColor(CColors::mc_Default)).f_GetStr()});
+			DConOut2("{}{2}|{3} {4}{}{3} {2}|{3}\n", _Prefix, RelativePath, fColor(pBorderColor), fColor(CColors::mc_Default), fColor(pHeadingColor));
+			DConOutRaw(CStr{(str_utf32("{}{3}|{4} {sz*,sf } {3}|{4}\n"_f) << _Prefix << "" << RelativePath.f_GetLen() << fColor(pBorderColor) << fColor(CColors::mc_Default)).f_GetStr()});
 			DConOutRaw(ToOutput);
 		}
 	}

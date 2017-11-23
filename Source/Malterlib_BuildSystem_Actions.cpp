@@ -170,6 +170,7 @@ namespace NMib::NBuildSystem
 
 			ERepoListCommitsFlag Flags = ERepoListCommitsFlag_UpdateRemotes | ERepoListCommitsFlag_Color;
 			TCVector<CWildcardColumn> WildcardColumns;
+			CStr Prefix;
 
 			for (; !Params.f_IsEmpty(); Params.f_Remove(0))
 			{
@@ -189,6 +190,8 @@ namespace NMib::NBuildSystem
 						WildcardColumns.f_Insert({Name, Wildcard});
 					}
 				}
+				else if (Param.f_StartsWith("--prefix="))
+					Prefix = Param.f_Extract(9);
 				else if (FromRef.f_IsEmpty())
 					FromRef = Param;
 				else if (ToRef.f_IsEmpty())
@@ -203,7 +206,7 @@ namespace NMib::NBuildSystem
 			if (ToRef.f_IsEmpty())
 				DMibError("Missing ToRef");
 
-			fp_Repository_ListCommits(RepoFilter, FromRef, ToRef, Flags, WildcardColumns);
+			fp_Repository_ListCommits(RepoFilter, FromRef, ToRef, Flags, WildcardColumns, Prefix);
 		}
 		else
 			DMibError("Uknown action: {}"_f << _Action);
