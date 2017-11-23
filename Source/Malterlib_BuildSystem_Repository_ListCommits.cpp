@@ -46,6 +46,9 @@ namespace NMib::NBuildSystem
 
 		TCVector<CUStr> fg_LineBreak(CUStr const &_String, mint _Length)
 		{
+			if (_String.f_Trim().f_IsEmpty())
+				return {""};
+
 			// Combining Diacritical Marks (0300–036F), since version 1.0, with modifications in subsequent versions down to 4.1
 			// Combining Diacritical Marks Extended (1AB0–1AFF), version 7.0
 			// Combining Diacritical Marks Supplement (1DC0–1DFF), versions 4.1 to 5.2
@@ -57,8 +60,15 @@ namespace NMib::NBuildSystem
 			ch32 const *pLastWord = nullptr;
 
 			mint Len = 0;
+			mint MaxLen = _Length;
 
 			TCVector<CUStr> Output;
+
+			auto fOutputLine = [&](ch32 const *_pStart, mint _Len)
+				{
+					Output.f_Insert(CUStr{_pStart, _Len});
+				}
+			;
 
 			while (*pParse)
 			{
@@ -77,11 +87,11 @@ namespace NMib::NBuildSystem
 					++pParse;
 					Char = *pParse;
 				}
-				if (Len == _Length)
+				if (Len == MaxLen)
 				{
 					if (pLastWord)
 					{
-						Output.f_Insert(CUStr(pParseStart, pLastWord - pParseStart));
+						fOutputLine(pParseStart, pLastWord - pParseStart);
 						pParseStart = pLastWord;
 						while (fg_CharIsWhiteSpace(*pParseStart))
 							++pParseStart;
@@ -89,17 +99,19 @@ namespace NMib::NBuildSystem
 					}
 					else
 					{
-						Output.f_Insert(CUStr(pParseStart, pParse - pParseStart));
+						fOutputLine(pParseStart, pParse - pParseStart);
 						pParseStart = pParse;
 					}
+
 					pLastWord = nullptr;
 					Len = 0;
 				}
 				if (fg_CharIsWhiteSpace(Char))
 					pLastWord = pParse;
 			}
+
 			if (pParseStart != pParse)
-				Output.f_Insert(CUStr(pParseStart, pParse - pParseStart));
+				fOutputLine(pParseStart, pParse - pParseStart);
 
 			return Output;
 		}
@@ -464,7 +476,30 @@ namespace NMib::NBuildSystem
 			auto fRealOutput = [&](CStr const &_Column, CUStr const &_String, ch8 const *_pColor = "")
 				{
 					mint NeededLen = MaxLengths[_Column] + (_String.f_GetLen() - fg_VisibleStrLen(_String));
-					ToOutput += CUStr::CFormat(str_utf32("{2}|{3} {4}{sz*,sf ,a-}{3} ")) << _String << NeededLen << fColor(pBorderColor) << fColor(CColors::mc_Default) << fColor(_pColor);
+
+					CUStr PaddedString = CUStr::CFormat(str_utf32("{sz*,sf ,a-}")) << _String << NeededLen;
+
+					ch32 const *pParse = PaddedString;
+
+					if (*pParse == '[')
+					{
+						while (*pParse && *pParse != ']')
+							++pParse;
+						if (*pParse == ']')
+						{
+							++pParse;
+							mint SectionLen = pParse - PaddedString.f_GetStr();
+							PaddedString = str_utf32("{2}{}{3}{4}{}"_f)
+								<< PaddedString.f_Left(SectionLen)
+								<< PaddedString.f_Extract(SectionLen)
+								<< fColor(DColor_256(39))
+								<< fColor(CColors::mc_Default)
+								<< fColor(_pColor)
+							;
+						}
+					}
+
+					ToOutput += CUStr::CFormat(str_utf32("{1}|{2} {3}{}{2} ")) << PaddedString << fColor(pBorderColor) << fColor(CColors::mc_Default) << fColor(_pColor);
 				}
 			;
 
@@ -554,9 +589,16 @@ namespace NMib::NBuildSystem
 						auto fAddColumnOutput = [&](CStr const &_Column, CStr const &_Value, ch8 const *_pColor = "")
 							{
 								auto &Output = ColumnOutput[_Column];
+								bool bWasMultiple = false;
 								for (auto &LongLine : _Value.f_SplitLine())
 								{
-									for (auto &Line : fg_LineBreak(LongLine, MaxColumnWidth[_Column]))
+									if (bWasMultiple && !LongLine.f_Trim().f_IsEmpty())
+										Output.f_Insert().m_pColor = _pColor;
+
+									auto NewLines = fg_LineBreak(LongLine, MaxColumnWidth[_Column]);
+									bWasMultiple = NewLines.f_GetLen() > 1;
+
+									for (auto &Line : NewLines)
 									{
 										auto &Entry = Output.f_Insert();
 										Entry.m_String = Line;
