@@ -225,7 +225,10 @@ namespace NMib::NBuildSystem::NRepository
 			{
 				if (_Result.m_ExitCode)
 				{
-					Continuation.f_SetException(DMibErrorInstance(_Result.f_GetErrorOut()));
+					CStr Output = _Result.f_GetCombinedOut();
+					if (Output.f_IsEmpty())
+						Output = "Error status from git: {}"_f << _Result.m_ExitCode;
+					Continuation.f_SetException(DMibErrorInstance(Output));
 					return;
 				}
 
@@ -239,6 +242,102 @@ namespace NMib::NBuildSystem::NRepository
 					auto &LogEntry = LogEntries.f_Insert();
 					LogEntry.m_Description = Line;
 					LogEntry.m_Hash = fg_GetStrSep(LogEntry.m_Description, " ");
+				}
+
+				Continuation.f_SetResult(fg_Move(LogEntries));
+			}
+		;
+
+		return Continuation;
+	}
+
+	TCContinuation<TCVector<CLogEntryFull>> fg_GetLogEntriesFull(CGitLaunches const &_GitLaunches, CRepository const &_Repo, CStr const &_From, CStr const &_To)
+	{
+		TCContinuation<TCVector<CLogEntryFull>> Continuation;
+
+		_GitLaunches.f_Launch(_Repo, {"log", "{}..{}"_f << _From << _To, "--pretty=raw"})
+			> Continuation / [Continuation](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
+			{
+				if (_Result.m_ExitCode)
+				{
+					Continuation.f_SetException(DMibErrorInstance(_Result.f_GetErrorOut()));
+					return;
+				}
+
+				TCVector<CLogEntryFull> LogEntries;
+
+				CLogEntryFull *pCurrentEntry;
+
+				auto fParseDate = [](CStr const &_String, CTime &o_Time) -> CStr
+					{
+						ch8 const *pParseStart = _String.f_GetStr();
+						ch8 const *pParse = pParseStart + _String.f_GetLen() - 1;
+						while (pParse >= pParseStart && *pParse != ' ')
+							--pParse;
+						--pParse;
+						while (pParse >= pParseStart && *pParse != ' ')
+							--pParse;
+
+						if (pParse >= pParseStart)
+						{
+							CStr User(pParseStart, pParse - pParseStart);
+
+							++pParse;
+							CStr TimeZone = pParse;
+							CStr Date = fg_GetStrSep(TimeZone, " ");
+
+							if (TimeZone.f_GetLen() != 5)
+								return _String;
+
+							o_Time = CTimeConvert::fs_FromCreateFromUnixSeconds(Date.f_ToInt());
+
+							bool bNegative = TimeZone[0] != '+';
+							auto TimeSpan = CTimeSpanConvert::fs_CreateHourSpan(TimeZone.f_Extract(1, 2).f_ToInt());
+							TimeSpan += CTimeSpanConvert::fs_CreateMinuteSpan(TimeZone.f_Extract(3, 2).f_ToInt());
+
+							if (bNegative)
+								o_Time -= TimeSpan;
+							else
+								o_Time += TimeSpan;
+
+							return User;
+						}
+
+						return _String;
+					}
+				;
+
+				for (auto &Line : _Result.f_GetStdOut().f_SplitLine())
+				{
+					if (Line.f_StartsWith("commit "))
+					{
+						pCurrentEntry = &LogEntries.f_Insert();
+						pCurrentEntry->m_Commit = Line.f_Extract(7);
+						continue;
+					}
+
+					if (!pCurrentEntry)
+						continue;
+
+					auto &LogEntry = *pCurrentEntry;
+
+					if (Line.f_StartsWith("tree "))
+						LogEntry.m_Tree = Line.f_Extract(5);
+					else if (Line.f_StartsWith("parent "))
+						LogEntry.m_Parent = Line.f_Extract(7);
+					else if (Line.f_StartsWith("author "))
+						LogEntry.m_Author = fParseDate(Line.f_Extract(7), LogEntry.m_AuthorDate);
+					else if (Line.f_StartsWith("committer "))
+						LogEntry.m_Committer = fParseDate(Line.f_Extract(10), LogEntry.m_CommitterDate);
+					else if (LogEntry.m_FirstLine.f_IsEmpty())
+					{
+						if (Line.f_IsEmpty())
+							continue;
+						LogEntry.m_FirstLine = Line.f_Extract(4);
+						LogEntry.m_Message = LogEntry.m_FirstLine;
+					}
+					else
+						fg_AddStrSep(LogEntry.m_Message, Line.f_Extract(4), "\n");
 				}
 
 				Continuation.f_SetResult(fg_Move(LogEntries));

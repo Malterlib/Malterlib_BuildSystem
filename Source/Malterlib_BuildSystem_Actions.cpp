@@ -159,6 +159,52 @@ namespace NMib::NBuildSystem
 
 			fp_Repository_Push(RepoFilter, Params);
 		}
+		else if (_Action == "list-commits")
+		{
+			RepoFilter.m_Type = "";
+			RepoFilter.m_bOnlyChanged = false;
+			fParseFilter();
+
+			CStr FromRef;
+			CStr ToRef;
+
+			ERepoListCommitsFlag Flags = ERepoListCommitsFlag_UpdateRemotes | ERepoListCommitsFlag_Color;
+			TCVector<CWildcardColumn> WildcardColumns;
+
+			for (; !Params.f_IsEmpty(); Params.f_Remove(0))
+			{
+				auto &Param = Params.f_GetFirst();
+				if (Param == "-l")
+					Flags &= ~ERepoListCommitsFlag_UpdateRemotes;
+				else if (Param == "--no-color")
+					Flags &= ~ERepoListCommitsFlag_Color;
+				else if (Param == "--compact")
+					Flags |= ERepoListCommitsFlag_Compact;
+				else if (Param.f_StartsWith("--columns="))
+				{
+					for (auto &Column : Param.f_Extract(10).f_Split(";"))
+					{
+						CStr Wildcard = Column;
+						CStr Name = fg_GetStrSep(Wildcard, ":");
+						WildcardColumns.f_Insert({Name, Wildcard});
+					}
+				}
+				else if (FromRef.f_IsEmpty())
+					FromRef = Param;
+				else if (ToRef.f_IsEmpty())
+					ToRef = Param;
+				else
+					DMibError("Extra params found: {vs}"_f << Params);
+			}
+
+			if (FromRef.f_IsEmpty())
+				DMibError("Missing FromRef");
+
+			if (ToRef.f_IsEmpty())
+				DMibError("Missing ToRef");
+
+			fp_Repository_ListCommits(RepoFilter, FromRef, ToRef, Flags, WildcardColumns);
+		}
 		else
 			DMibError("Uknown action: {}"_f << _Action);
 	}

@@ -99,28 +99,35 @@ namespace NMib::NBuildSystem
 			}
 		}
 
+		CConfigFile CStateHandler::fs_ParseConfigFile(CStr const &_Contents, CStr const &_FileName)
+		{
+			CConfigFile ConfigFile;
+
+			CRegistry_CStr Registry;
+			{
+				ch8 const *pParse = _Contents;
+				fg_ParseToEndOfLine(pParse);
+				if (*pParse == '\r')
+					ConfigFile.m_LineEndings = "\r\n";
+			}
+
+			CStr BasePath = CFile::fs_GetPath(_FileName);
+
+			Registry.f_ParseStr(_Contents, _FileName);
+			for (auto &Child : Registry.f_GetChildren())
+				ConfigFile.m_Configs[CFile::fs_GetExpandedPath(Child.f_GetName(), BasePath)].m_Hash = Child.f_GetThisValue();
+
+			return ConfigFile;
+		}
+
 		CConfigFile const &CStateHandler::fp_GetConfigFile(CStr const &_FileName)
 		{
 			DLock(mp_Lock);
 			if (auto *pFile = mp_ConfigFiles.f_FindEqual(_FileName))
 				return *pFile;
 			auto &ConfigFile = mp_ConfigFiles[_FileName];
-			CStr BasePath = CFile::fs_GetPath(_FileName);
 			if (CFile::fs_FileExists(_FileName))
-			{
-				CRegistry_CStr Registry;
-				CStr FileContents = CFile::fs_ReadStringFromFile(_FileName, true);
-				{
-					ch8 const *pParse = FileContents;
-					fg_ParseToEndOfLine(pParse);
-					if (*pParse == '\r')
-						ConfigFile.m_LineEndings = "\r\n";
-				}
-
-				Registry.f_ParseStr(FileContents, _FileName);
-				for (auto &Child : Registry.f_GetChildren())
-					ConfigFile.m_Configs[CFile::fs_GetExpandedPath(Child.f_GetName(), BasePath)].m_Hash = Child.f_GetThisValue();
-			}
+				ConfigFile = fs_ParseConfigFile(CFile::fs_ReadStringFromFile(_FileName, true), _FileName);
 
 			return ConfigFile;
 		}

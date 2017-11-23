@@ -88,6 +88,7 @@ namespace NMib::NBuildSystem::NRepository
 		TCMap<CStr, CConfigFile> const &f_GetNewFiles();
 		TCMap<CStr, CConfigFile> f_GetMergedFiles();
 		void f_AddGitIgnore(CStr const &_FileName, CBuildSystem const &_BuildSystem);
+		static CConfigFile fs_ParseConfigFile(CStr const &_Contents, CStr const &_FileName);
 
 	private:
 		CConfigFile const &fp_GetConfigFile(CStr const &_FileName);
@@ -198,6 +199,19 @@ namespace NMib::NBuildSystem::NRepository
 		CStr m_Description;
 	};
 
+	struct CLogEntryFull
+	{
+		CStr m_Commit;
+		CStr m_Tree;
+		CStr m_Parent;
+		CStr m_Author;
+		CTime m_AuthorDate;
+		CStr m_Committer;
+		CTime m_CommitterDate;
+		CStr m_FirstLine;
+		CStr m_Message;
+	};
+
 	CStr fg_GetGitRoot(CStr const &_Directory);
 	CStr fg_GetGitDataDir(CStr const &_GitRoot, CFilePosition const &_Position);
 	CStr fg_GetGitHeadHash(CStr const &_GitRoot, CFilePosition const &_Position);
@@ -213,6 +227,7 @@ namespace NMib::NBuildSystem::NRepository
 	TCContinuation<CGitBranches> fg_GetBranches(CGitLaunches const &_GitLaunches, CRepository const &_Repo, bool _bRemote);
 	TCContinuation<TCVector<CStr>> fg_GetRemotes(CGitLaunches const &_GitLaunches, CRepository const &_Repo);
 	TCContinuation<TCVector<CLogEntry>> fg_GetLogEntries(CGitLaunches const &_GitLaunches, CRepository const &_Repo, CStr const &_From, CStr const &_To);
+	TCContinuation<TCVector<CLogEntryFull>> fg_GetLogEntriesFull(CGitLaunches const &_GitLaunches, CRepository const &_Repo, CStr const &_From, CStr const &_To);
 
 	bool fg_BranchExists(CRepository const &_Repo, CStr const &_Branch);
 	NStr::CStr fg_GetBranch(CRepository const &_Repo);

@@ -158,6 +158,20 @@ namespace NMib::NBuildSystem
 			, ERepoStatusFlag_OpenSourceTree = DBit(6)
 		};
 
+		enum ERepoListCommitsFlag
+		{
+			ERepoListCommitsFlag_None = 0
+			, ERepoListCommitsFlag_UpdateRemotes = DBit(0)
+			, ERepoListCommitsFlag_Color = DBit(1)
+			, ERepoListCommitsFlag_Compact = DBit(2)
+		};
+
+		struct CWildcardColumn
+		{
+			CStr m_Name;
+			CStr m_Wildcard;
+		};
+
 	private:
 		struct CEvaluationContext
 		{
@@ -315,6 +329,7 @@ namespace NMib::NBuildSystem
 		void fp_Repository_CleanupBranches(CRepoFilter const &_Filter, ERepoCleanupBranchesFlag _Flags);
 		void fp_Repository_Status(CRepoFilter const &_Filter, ERepoStatusFlag _Flags);
 		void fp_Repository_Push(CRepoFilter const &_Filter, TCVector<CStr> const &_Remotes);
+		void fp_Repository_ListCommits(CRepoFilter const &_Filter, CStr const &_From, CStr const &_To, ERepoListCommitsFlag _Flags, TCVector<CWildcardColumn> const &_ColumnWildcards);
 		void fp_HandleAction(CStr const &_Action, TCVector<CStr> const &_Params);
 
 		CGenerateSettings mp_GenerateSettings;
