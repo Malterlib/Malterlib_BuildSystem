@@ -71,7 +71,7 @@ namespace NMib::NBuildSystem
 		bool bOpenSourceTree = _Flags & ERepoStatusFlag_OpenSourceTree;
 		bool bUseDefaultUpstream = _Flags & ERepoStatusFlag_UseDefaultUpstreamBranch;
 
-		TCActorResultVector<bool> Results;
+		TCActorResultVector<bool> RepoResults;
 
 		for (auto Repo : AllRepos)
 		{
@@ -102,7 +102,7 @@ namespace NMib::NBuildSystem
 					TCActorResultVector<bool> BranchResults;
 					for (auto &Branch : Branches)
 					{
-						TCContinuation<bool> Continuation;
+						TCContinuation<bool> BranchContinuation;
 
 						TCActorResultMap<CStr, TCVector<CLogEntry>> ToPush;
 						TCActorResultMap<CStr, TCVector<CLogEntry>> ToPull;
@@ -113,6 +113,8 @@ namespace NMib::NBuildSystem
 							CStr RemoteBranch = "{}/{}"_f << Remote << Branch;
 							CStr PullRemoteBranch = RemoteBranch;
 							CStr MissingRemoteBranch = RemoteBranch;
+
+							CStr RemotePullBranchName;
 
 							if (bUseDefaultUpstream && Branch == Repo.m_DefaultBranch && !Repo.m_DefaultUpstreamBranch.f_IsEmpty() && !State.f_HasRemoteBranch(RemoteBranch))
 								PullRemoteBranch = "{}/{}"_f << Remote << Repo.m_DefaultUpstreamBranch;
@@ -127,6 +129,17 @@ namespace NMib::NBuildSystem
 
 							if (State.f_HasRemoteBranch(PullRemoteBranch))
 								fg_GetLogEntries(Launches, Repo, Branch, PullRemoteBranch) > ToPull.f_AddResult(Remote);
+
+							if (Branch != Repo.m_DefaultBranch && !Repo.m_DefaultBranch.f_IsEmpty())
+							{
+								CStr AgainstDefaultName = "{}/{}"_f << Remote << Repo.m_DefaultBranch;
+								CStr ExtraRemoteBranch = "{}/{}"_f << Remote << Repo.m_DefaultBranch;
+								if (State.f_HasRemoteBranch(ExtraRemoteBranch))
+								{
+									fg_GetLogEntries(Launches, Repo, ExtraRemoteBranch, Branch) > ToPush.f_AddResult(AgainstDefaultName);
+									fg_GetLogEntries(Launches, Repo, Branch, ExtraRemoteBranch) > ToPull.f_AddResult(AgainstDefaultName);
+								}
+							}
 						}
 
 						ToPush.f_GetResults()
@@ -142,7 +155,7 @@ namespace NMib::NBuildSystem
 									(
 									 	!fg_CombineResults
 									 	(
-										 	Continuation
+										 	BranchContinuation
 										 	, fg_Move(_ToPush)
 										 	, [&](CStr const &_Remote, TCVector<CLogEntry> &&_Log)
 										 	{
@@ -151,6 +164,8 @@ namespace NMib::NBuildSystem
 										)
 									)
 								{
+									CStr Error = BranchContinuation.m_pData->m_Result.f_GetExceptionStr();
+									Launches.f_Output(EOutputType_Error, Repo, "Error getting to push for branch '{}': {}"_f << Branch << Error);
 									return;
 								}
 
@@ -158,7 +173,7 @@ namespace NMib::NBuildSystem
 									(
 									 	!fg_CombineResults
 									 	(
-										 	Continuation
+										 	BranchContinuation
 										 	, fg_Move(_ToPull)
 										 	, [&](CStr const &_Remote, TCVector<CLogEntry> &&_Log)
 										 	{
@@ -167,6 +182,8 @@ namespace NMib::NBuildSystem
 										)
 									)
 								{
+									CStr Error = BranchContinuation.m_pData->m_Result.f_GetExceptionStr();
+									Launches.f_Output(EOutputType_Error, Repo, "Error getting to pull for branch '{}': {}"_f << Branch << Error);
 									return;
 								}
 
@@ -288,7 +305,7 @@ namespace NMib::NBuildSystem
 
 								if (!bIsChanged && (_Flags & ERepoStatusFlag_Quiet))
 								{
-									Continuation.f_SetResult(bIsChanged);
+									BranchContinuation.f_SetResult(bIsChanged);
 									return;
 								}
 
@@ -314,7 +331,7 @@ namespace NMib::NBuildSystem
 
 								if (!(_Flags & ERepoStatusFlag_Verbose))
 								{
-									Continuation.f_SetResult(bIsChanged);
+									BranchContinuation.f_SetResult(bIsChanged);
 									return;
 								}
 
@@ -462,11 +479,11 @@ namespace NMib::NBuildSystem
 									}
 								}
 
-								Continuation.f_SetResult(bIsChanged);
+								BranchContinuation.f_SetResult(bIsChanged);
 							}
 						;
 
-						Continuation.f_Dispatch() > BranchResults.f_AddResult();
+						BranchContinuation > BranchResults.f_AddResult();
 					}
 
 					BranchResults.f_GetResults() > Continuation / [=](TCVector<TCAsyncResult<bool>> &&_Results)
@@ -507,12 +524,12 @@ namespace NMib::NBuildSystem
 				}
 			;
 
-			Continuation.f_Dispatch() > Results.f_AddResult();
+			Continuation > RepoResults.f_AddResult();
 		}
 
 		bool bActionNeeded = false;
-		for (auto &Result : Results.f_GetResults().f_CallSync())
-			bActionNeeded = bActionNeeded || *Result;
+		for (auto &Result : RepoResults.f_GetResults().f_CallSync())
+			bActionNeeded = *Result || bActionNeeded;
 
 		if (bActionNeeded)
 			DConErrOut2("\a");
