@@ -77,7 +77,7 @@ namespace NMib::NBuildSystem
 		{
 			TCContinuation<bool> Continuation;
 
-			fg_GetLocalFileChanges(Launches, Repo, _Flags & ERepoStatusFlag_ShowUntracked)
+			fg_GetLocalFileChanges(Launches, Repo, !(_Flags & ERepoStatusFlag_ShowOnlyTracked))
 				+ fg_GetRemotes(Launches, Repo)
 				+ fg_GetBranches(Launches, Repo, false)
 				+ fg_GetBranches(Launches, Repo, true)

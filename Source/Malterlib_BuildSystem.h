@@ -151,7 +151,7 @@ namespace NMib::NBuildSystem
 			ERepoStatusFlag_None = 0
 			, ERepoStatusFlag_Verbose = DBit(0)
 			, ERepoStatusFlag_UpdateRemotes = DBit(1)
-			, ERepoStatusFlag_ShowUntracked = DBit(2)
+			, ERepoStatusFlag_ShowOnlyTracked = DBit(2)
 			, ERepoStatusFlag_Quiet = DBit(3)
 			, ERepoStatusFlag_AllBranches = DBit(4)
 			, ERepoStatusFlag_UseDefaultUpstreamBranch = DBit(5)

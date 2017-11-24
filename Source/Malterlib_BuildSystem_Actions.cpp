@@ -132,8 +132,8 @@ namespace NMib::NBuildSystem
 					Flags |= ERepoStatusFlag_Verbose;
 				else if (Param == "-r" || Param == "--remote")
 					Flags |= ERepoStatusFlag_UpdateRemotes;
-				else if (Param == "-u" || Param == "--untracked")
-					Flags |= ERepoStatusFlag_ShowUntracked;
+				else if (Param == "-t" || Param == "--only-tracked")
+					Flags |= ERepoStatusFlag_ShowOnlyTracked;
 				else if (Param == "-q" || Param == "--quiet")
 					Flags |= ERepoStatusFlag_Quiet;
 				else if (Param == "-a" || Param == "--all-braches")
