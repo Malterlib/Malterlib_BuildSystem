@@ -16,6 +16,7 @@ namespace NMib::NBuildSystem
 		_Stream << m_WriteTime;
 		_Stream << m_Workspaces;
 		_Stream << m_bNoDateCheck;
+		_Stream << m_bKeepGeneratedFile;
 	}
 
 	template <typename tf_CStream>
@@ -24,6 +25,7 @@ namespace NMib::NBuildSystem
 		_Stream >> m_WriteTime;
 		_Stream >> m_Workspaces;
 		_Stream >> m_bNoDateCheck;
+		_Stream >> m_bKeepGeneratedFile;
 	}
 	
 	template <typename tf_CStream>

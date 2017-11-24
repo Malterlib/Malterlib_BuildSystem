@@ -109,13 +109,14 @@ namespace NMib::NBuildSystem
 						bool bSymlink = f_EvaluateEntityProperty(TempEntity, EPropertyType_Property, "Symlink") == "true";
 						bool bSymlinkDirectory = f_EvaluateEntityProperty(TempEntity, EPropertyType_Property, "SymlinkDirectory") == "true";
 						bool bNoDateCheck = f_EvaluateEntityProperty(TempEntity, EPropertyType_Property, "NoDateCheck") == "true" || bSymlink;
-						
+						bool bKeepGeneratedFile = f_EvaluateEntityProperty(TempEntity, EPropertyType_Property, "KeepGeneratedFile") == "true";
+
 						Contents = Contents.f_Replace("\r\n", "\n");
 						if (!bUnixLineEnds)
 							Contents = Contents.f_Replace("\n", "\r\n");
 
 						bool bWasCreated;
-						if (!f_AddGeneratedFile(Path, Contents, Workspace, bWasCreated, bNoDateCheck))
+						if (!f_AddGeneratedFile(Path, Contents, Workspace, bWasCreated, bNoDateCheck, bKeepGeneratedFile))
 						{
 							fsp_ThrowError(iChild->m_Position, fg_Format("Same file generated with different data: {}", Path));
 						}

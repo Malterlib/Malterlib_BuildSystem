@@ -547,6 +547,7 @@ namespace NMib::NBuildSystem
 				auto &File = State.m_GeneratedFiles[FileName];
 				File.m_WriteTime = GeneratedWriteTimes[iFile.f_GetKey()];
 				File.m_bNoDateCheck = iFile->m_bNoDateCheck;
+				File.m_bKeepGeneratedFile = iFile->m_bKeepGeneratedFile;
 			}
 
 			for (auto iFile = mp_GeneratedFiles.f_GetIterator(); iFile; ++iFile)
@@ -556,6 +557,7 @@ namespace NMib::NBuildSystem
 				File.m_WriteTime = GeneratedWriteTimes[iFile.f_GetKey()];
 				File.m_Workspaces += iFile->m_Workspaces;
 				File.m_bNoDateCheck = iFile->m_bNoDateCheck;
+				File.m_bKeepGeneratedFile = iFile->m_bKeepGeneratedFile;
 			}
 			
 
@@ -602,6 +604,9 @@ namespace NMib::NBuildSystem
 
 		for (auto iFile = BeforeGlobalState.m_GeneratedFiles.f_GetIterator(); iFile; ++iFile)
 		{
+			if (iFile->m_bKeepGeneratedFile)
+				continue;
+
 			if (!GlobalState.m_GeneratedFiles.f_FindEqual(iFile.f_GetKey()))
 			{
 				CStr FileName = CFile::fs_GetExpandedPath(iFile.f_GetKey(), OutputDir);

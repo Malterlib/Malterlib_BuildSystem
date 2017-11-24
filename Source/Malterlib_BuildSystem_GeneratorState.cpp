@@ -5,13 +5,6 @@
 
 namespace NMib::NBuildSystem
 {
-	CGeneratorState::CProcessedFile::CProcessedFile()
-		: m_bNoDateCheck(false)
-	{
-	}
-
-	CGeneratorState::CGeneratorState()
-		: m_GenerationFlags(EGenerationFlag_None)
-	{
-	}
+	CGeneratorState::CProcessedFile::CProcessedFile() = default;
+	CGeneratorState::CGeneratorState() = default;
 }

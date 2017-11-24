@@ -33,7 +33,7 @@ namespace NMib::NBuildSystem
 		mp_SourceFiles[_File];
 	}
 
-	bool CBuildSystem::f_AddGeneratedFile(CStr const &_File, CStr const &_Data, CStr const &_Workspace, bool &_bWasCreated, bool _bNoDateCheck) const
+	bool CBuildSystem::f_AddGeneratedFile(CStr const &_File, CStr const &_Data, CStr const &_Workspace, bool &_bWasCreated, bool _bNoDateCheck, bool _bKeepGeneratedFile) const
 	{
 		DMibLock(mp_GeneratedFilesLock);
 		auto &File = mp_GeneratedFiles[_File];
@@ -56,6 +56,8 @@ namespace NMib::NBuildSystem
 		File.m_Workspaces[_Workspace];
 		if (_bNoDateCheck)
 			File.m_bNoDateCheck = true;
+		if (_bKeepGeneratedFile)
+			File.m_bKeepGeneratedFile = true;
 
 		return true;
 	}

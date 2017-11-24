@@ -12,7 +12,7 @@ namespace NMib::NBuildSystem
 	{
 		enum 
 		{
-			EFileVersion = 0x117
+			EFileVersion = 0x118
 		};
 
 		struct CProcessedFile
@@ -27,7 +27,8 @@ namespace NMib::NBuildSystem
 
 			TCSet<CStr> m_Workspaces;
 			NTime::CTime m_WriteTime;
-			uint8 m_bNoDateCheck;
+			uint8 m_bNoDateCheck = false;
+			uint8 m_bKeepGeneratedFile = false;
 		};
 		
 		CGeneratorState();
@@ -43,7 +44,7 @@ namespace NMib::NBuildSystem
 		TCMap<CStr, CProcessedFile> m_GeneratedFiles;
 		TCMap<CFindOptions, TCVector<CFile::CFoundFile>> m_SourceSearches;
 		TCMap<CStr, CStr> m_Environment;
-		EGenerationFlag m_GenerationFlags;
+		EGenerationFlag m_GenerationFlags = EGenerationFlag_None;
 	};
 }
 

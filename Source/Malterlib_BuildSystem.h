@@ -45,7 +45,7 @@ namespace NMib::NBuildSystem
 		;
 		inline_always CGenerateSettings const &f_GetGenerateSettings() const;
 		CStr f_GetBaseDir() const;
-		bool f_AddGeneratedFile(CStr const &_File, CStr const &_Data, CStr const &_Workspace, bool &_bWasCreated, bool _bNoDateCheck) const;
+		bool f_AddGeneratedFile(CStr const &_File, CStr const &_Data, CStr const &_Workspace, bool &_bWasCreated, bool _bNoDateCheck, bool _bKeepGeneratedFile = false) const;
 		void f_GenerateGlobalFiles(CBuildSystemData &_BuildSystemData) const;
 		void f_GenerateWorkspaceFiles(CBuildSystemData &_BuildSystemData, CEntity & _Target) const;
 		void f_GenerateTargetFiles(CBuildSystemData &_BuildSystemData, CEntity & _Target) const;
@@ -198,6 +198,7 @@ namespace NMib::NBuildSystem
 			bool m_bGeneral = false;
 			bool m_bAdded = false;
 			bool m_bNoDateCheck = false;
+			bool m_bKeepGeneratedFile = false;
 		};
 
 		void fp_ParseCondition(CRegistryPreserveAndOrder_CStr &_Registry, CCondition &_ParentCondition, bool _bRoot = true) const;
