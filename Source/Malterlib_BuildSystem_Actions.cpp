@@ -130,7 +130,7 @@ namespace NMib::NBuildSystem
 				auto &Param = Params.f_GetFirst();
 				if (Param == "-v" || Param == "--verbose")
 					Flags |= ERepoStatusFlag_Verbose;
-				else if (Param == "-r" || Param == "--remote")
+				else if (Param == "-r" || Param == "--update-remotes")
 					Flags |= ERepoStatusFlag_UpdateRemotes;
 				else if (Param == "-t" || Param == "--only-tracked")
 					Flags |= ERepoStatusFlag_ShowOnlyTracked;
@@ -144,6 +144,23 @@ namespace NMib::NBuildSystem
 					Flags |= ERepoStatusFlag_OpenSourceTree;
 				else if (Param == "-p" || Param == "--need-action-on-push")
 					Flags |= ERepoStatusFlag_NeedActionOnPush;
+				else if (Param == "-h" || Param == "--help")
+				{
+					DMibConOut2
+						(
+							"-v --verbose\n"
+						 	"-r --update-remotes\n"
+							"-t --only-tracked\n"
+							"-q --quiet\n"
+							"-a --all-braches\n"
+							"-b --use-default-upstream-branch\n"
+							"-s --open-source-tree\n"
+							"-p --need-action-on-push\n"
+							"-h --help\n"
+						)
+					;
+					return;
+				}
 				else
 					DMibError("Unknown option: {}"_f << Param);
 			}
