@@ -156,6 +156,7 @@ namespace NMib::NBuildSystem
 			, ERepoStatusFlag_AllBranches = DBit(4)
 			, ERepoStatusFlag_UseDefaultUpstreamBranch = DBit(5)
 			, ERepoStatusFlag_OpenSourceTree = DBit(6)
+			, ERepoStatusFlag_NeedActionOnPush = DBit(7)
 		};
 
 		enum ERepoListCommitsFlag

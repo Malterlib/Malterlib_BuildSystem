@@ -189,6 +189,11 @@ namespace NMib::NBuildSystem
 
 								bool bHasRemotes = !ToRemotePush.f_IsEmpty() || !ToLocalPull.f_IsEmpty();
 								bool bIsChanged = !ToPushMissing.f_IsEmpty();
+								bool bNeedAction = false;
+
+								if ((_Flags & ERepoStatusFlag_NeedActionOnPush) && !ToPushMissing.f_IsEmpty())
+									bNeedAction = true;
+
 								bool bIsCurrentBranch = Branch == State.m_LocalBranches.m_Current;
 
 								bool bHasDifferentUpstream =
@@ -203,6 +208,7 @@ namespace NMib::NBuildSystem
 								if (bIsCurrentBranch && !State.m_LocalChanges.f_IsEmpty())
 								{
 									bIsChanged = true;
+									bNeedAction = true;
 
 									Messages.f_Insert
 										(
@@ -223,6 +229,8 @@ namespace NMib::NBuildSystem
 									if (ToPush.f_IsEmpty())
 										continue;
 									bIsChanged = true;
+									if (_Flags & ERepoStatusFlag_NeedActionOnPush)
+										bNeedAction = true;
 									RemotesWithAction[ToRemotePush.fs_GetKey(ToPush)];
 								}
 
@@ -231,6 +239,7 @@ namespace NMib::NBuildSystem
 									if (ToPull.f_IsEmpty())
 										continue;
 									bIsChanged = true;
+									bNeedAction = true;
 									RemotesWithAction[ToLocalPull.fs_GetKey(ToPull)];
 								}
 
@@ -331,7 +340,7 @@ namespace NMib::NBuildSystem
 
 								if (!(_Flags & ERepoStatusFlag_Verbose))
 								{
-									BranchContinuation.f_SetResult(bIsChanged);
+									BranchContinuation.f_SetResult(bNeedAction);
 									return;
 								}
 
@@ -479,7 +488,7 @@ namespace NMib::NBuildSystem
 									}
 								}
 
-								BranchContinuation.f_SetResult(bIsChanged);
+								BranchContinuation.f_SetResult(bNeedAction);
 							}
 						;
 

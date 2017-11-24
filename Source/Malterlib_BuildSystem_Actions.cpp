@@ -142,6 +142,8 @@ namespace NMib::NBuildSystem
 					Flags |= ERepoStatusFlag_UseDefaultUpstreamBranch;
 				else if (Param == "-s" || Param == "--open-source-tree")
 					Flags |= ERepoStatusFlag_OpenSourceTree;
+				else if (Param == "-p" || Param == "--need-action-on-push")
+					Flags |= ERepoStatusFlag_NeedActionOnPush;
 				else
 					DMibError("Unknown option: {}"_f << Param);
 			}
