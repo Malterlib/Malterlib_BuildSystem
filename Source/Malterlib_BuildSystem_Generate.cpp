@@ -125,14 +125,14 @@ namespace NMib::NBuildSystem
 
 					// DMibScopeConOutTimer("Check source files");
 
-					auto fl_FileChanged
+					auto fFileChanged
 						= [&bChanged, &OutputDir](CGeneratorState::CProcessedFile const &_File) -> bool
 						{
 							CStr FileName = CFile::fs_GetExpandedPath(_File.f_GetFileName(), OutputDir);
 
-							try
+							if (_File.m_bNoDateCheck)
 							{
-								if (_File.m_bNoDateCheck)
+								try
 								{
 									if (!CFile::fs_FileExists(FileName))
 									{
@@ -141,7 +141,17 @@ namespace NMib::NBuildSystem
 										return true;
 									}
 								}
-								else
+								catch (...)
+								{
+									if (!bChanged.f_Exchange(true))
+										DConOut("Regenerating build system because file is missing: {}{\n}", FileName);
+									return true;
+								}
+							}
+							else
+							{
+#ifdef DPlatformFamily_Windows
+								try
 								{
 									CFile File;
 									File.f_Open(FileName, EFileOpen_ReadAttribs | EFileOpen_ShareAll);
@@ -160,12 +170,71 @@ namespace NMib::NBuildSystem
 										return true;
 									}
 								}
-							}
-							catch (...)
-							{
-								if (!bChanged.f_Exchange(true))
-									DConOut("Regenerating build system because file is missing: {}{\n}", FileName);
-								return true;
+								catch (...)
+								{
+									try
+									{
+										CFile File;
+										File.f_Open(FileName, EFileOpen_Directory | EFileOpen_ReadAttribs | EFileOpen_ShareAll);
+										NTime::CTime DiskTime = File.f_GetWriteTime();
+										if (DiskTime != _File.m_WriteTime)
+										{
+											if (!bChanged.f_Exchange(true))
+											{
+												DConOut
+													(
+														"Regenerating build system because file changed ({} != {}): {}{\n}"
+														, NTime::fg_GetFullTimeStr(DiskTime) << NTime::fg_GetFullTimeStr(_File.m_WriteTime) << FileName
+													)
+												;
+											}
+											return true;
+										}
+									}
+									catch (CException const &_Exception)
+									{
+										if (!bChanged.f_Exchange(true))
+											DConOut2("Regenerating build system because file date check failed: {}{\n}{}{\n}", FileName, _Exception);
+										return true;
+									}
+									catch (...)
+									{
+										if (!bChanged.f_Exchange(true))
+											DConOut("Regenerating build system because file is missing: {}{\n}", FileName);
+										return true;
+									}
+								}
+#else
+								try
+								{
+									NTime::CTime DiskTime = CFile::fs_GetWriteTime(FileName);
+									if (DiskTime != _File.m_WriteTime)
+									{
+										if (!bChanged.f_Exchange(true))
+										{
+											DConOut
+												(
+													"Regenerating build system because file changed ({} != {}): {}{\n}"
+													, NTime::fg_GetFullTimeStr(DiskTime) << NTime::fg_GetFullTimeStr(_File.m_WriteTime) << FileName
+												)
+											;
+										}
+										return true;
+									}
+								}
+								catch (CException const &_Exception)
+								{
+									if (!bChanged.f_Exchange(true))
+										DConOut2("Regenerating build system because file date check failed: {}{\n}{}{\n}", FileName, _Exception);
+									return true;
+								}
+								catch (...)
+								{
+									if (!bChanged.f_Exchange(true))
+										DConOut("Regenerating build system because file is missing: {}{\n}", FileName);
+									return true;
+								}
+#endif
 							}
 							return false;
 						}
@@ -175,104 +244,108 @@ namespace NMib::NBuildSystem
 
 					if (!bChanged)
 					{
-						//CTimerConOutScope Scope("Source files");
 						State.m_ExeFile.f_Clear();
 						auto &ExeFile = State.m_ExeFile[CFile::fs_MakePathRelative(CStr(CFile::fs_GetProgramPath()), OutputDir)];
 						ExeFile = OldExeFile;
-						if (fl_FileChanged(ExeFile))
+						if (fFileChanged(ExeFile))
 							bChanged = true;
-						for (auto iFile = State.m_SourceFiles.f_GetIterator(); iFile && !bChanged; ++iFile)
-						{
-							if (fl_FileChanged(*iFile))
-							{
-								bChanged = true;
-								break;
-							}
-						}
 					}
 
 					if (!bChanged)
 					{
-						//CTimerConOutScope Scope("Source files");
-						for (auto iFile = State.m_ReferencedFiles.f_GetIterator(); iFile && !bChanged; ++iFile)
-						{
-							if (fl_FileChanged(*iFile))
-							{
-								bChanged = true;
-								break;
-							}
-						}
-					}
+						TCVector<TCFunctionMutable<void ()>> ToProcess;
 
-					if (!bChanged)
-					{
-						//CTimerConOutScope Scope("Generated files");
-						TCVector<TCVector<CGeneratorState::CProcessedFile *>> ToProcess;
-						auto *pCurrentInsert = &ToProcess.f_Insert();
-						mint nFiles = 0;
-						for (auto iFile = State.m_GeneratedFiles.f_GetIterator(); iFile; ++iFile)
-						{
-							++nFiles;
-							pCurrentInsert->f_Insert(&*iFile);
-							if (pCurrentInsert->f_GetLen() >= 1024)
-								pCurrentInsert = &ToProcess.f_Insert();
-						}
-						fg_ParallellForEach
-							(
-								ToProcess
-								, [&](TCVector<CGeneratorState::CProcessedFile *> const &_Files)
+						TCVector<CGeneratorState::CProcessedFile *> CurrentInsert;
+
+						auto fAddFiles = [&](auto &&_Files)
+							{
+								for (auto iFile = _Files.f_GetIterator(); iFile; ++iFile)
 								{
-									for (auto pFile : _Files)
-										fl_FileChanged(*pFile);
+									CurrentInsert.f_Insert(&*iFile);
+									if (CurrentInsert.f_GetLen() >= 128)
+									{
+										ToProcess.f_Insert
+											(
+											 	[Files = fg_Move(CurrentInsert), &fFileChanged]() mutable
+											 	{
+													for (auto pFile : Files)
+														fFileChanged(*pFile);
+												}
+											)
+										;
+									}
+								}
+							}
+						;
+
+						fAddFiles(State.m_SourceFiles);
+						fAddFiles(State.m_ReferencedFiles);
+						fAddFiles(State.m_GeneratedFiles);
+						ToProcess.f_Insert
+							(
+								[Files = fg_Move(CurrentInsert), &fFileChanged]() mutable
+								{
+									for (auto pFile : Files)
+										fFileChanged(*pFile);
 								}
 							)
 						;
-						/*
-						for (auto iFile = State.m_GeneratedFiles.f_GetIterator(); iFile && !bChanged; ++iFile)
-						{
-							if (fl_FileChanged(*iFile))
-							{
-								bChanged = true;
-							}
-						}*/
-					}
 
-					if (!bChanged)
-					{
-						//CTimerConOutScope Scope("Source searches");
-						for (auto iSearch = State.m_SourceSearches.f_GetIterator(); iSearch; ++iSearch)
-						{
-							auto &Search = *iSearch;
-							auto &FindOptions = iSearch.f_GetKey();
-							auto Files = mp_FindCache.f_FindFiles(FindOptions, false);
-							bool bChangedLocal = false;
-							if (Files.f_GetLen() != Search.f_GetLen())
-								bChangedLocal = true;
-							else
+						auto fSearchChanged = [&](TCVector<CFile::CFoundFile> const &_Search)
 							{
-								auto iLeft = Files.f_GetIterator();
-								auto iRight = Search.f_GetIterator();
-								for (;iLeft; ++iLeft, ++iRight)
+								auto &Search = _Search;
+								auto &FindOptions = TCMap<CFindOptions, TCVector<CFile::CFoundFile>>::fs_GetKey(_Search);
+								auto Files = mp_FindCache.f_FindFiles(FindOptions, false);
+								bool bChangedLocal = false;
+								if (Files.f_GetLen() != Search.f_GetLen())
+									bChangedLocal = true;
+								else
 								{
-									if (iLeft->m_Path != iRight->m_Path)
+									auto iLeft = Files.f_GetIterator();
+									auto iRight = Search.f_GetIterator();
+									for (;iLeft; ++iLeft, ++iRight)
 									{
-										bChangedLocal = true;
-										break;
-									}
-									if ((iLeft->m_Attribs & (EFileAttrib_File | EFileAttrib_Directory)) != (iRight->m_Attribs & (EFileAttrib_File | EFileAttrib_Directory)))
-									{
-										bChangedLocal = true;
-										break;
+										if (iLeft->m_Path != iRight->m_Path)
+										{
+											bChangedLocal = true;
+											break;
+										}
+										if ((iLeft->m_Attribs & (EFileAttrib_File | EFileAttrib_Directory)) != (iRight->m_Attribs & (EFileAttrib_File | EFileAttrib_Directory)))
+										{
+											bChangedLocal = true;
+											break;
+										}
 									}
 								}
+								if (bChangedLocal)
+								{
+									if (!bChanged.f_Exchange(true))
+										DConOut("Regenerating build system because search changed: {}" DNewLine, FindOptions.m_Path);
+								}
 							}
-							if (bChangedLocal)
-							{
-								DConOut("Regenerating build system because search changed: {}" DNewLine, FindOptions.m_Path);
-								bChanged = true;
-								break;
-							}
+						;
+
+						for (auto iSearch = State.m_SourceSearches.f_GetIterator(); iSearch; ++iSearch)
+						{
+							ToProcess.f_Insert
+								(
+									[pSearch = &*iSearch, &fSearchChanged]() mutable
+									{
+										fSearchChanged(*pSearch);
+									}
+								)
+							;
 						}
+
+						fg_ParallellForEach
+							(
+								ToProcess
+								, [&](auto &&_fToProcess)
+								{
+									_fToProcess();
+								}
+							)
+						;
 					}
 
 					if (!bChanged)
