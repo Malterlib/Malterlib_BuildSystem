@@ -134,7 +134,8 @@ namespace NMib::NBuildSystem
 			LockDirectory = TempDirectory;
 
 		bool bUpdateCache = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_UpdateCache") == "true";
-		
+		bool bVerbose = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_Verbose") == "true";
+
 		// Dependent variables
 		CStr GeneratorVersion = "11";
 		CStr FullRebuildVersion = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_FullRebuildVersion");
@@ -752,6 +753,9 @@ namespace NMib::NBuildSystem
 		
 		if (ExitCode)
 			DMibError(fg_Format("cmake failed: {}", StdOut + StdErr));
+
+		if (bVerbose)
+			DMibConErrOut2("{}\n{}\n", StdOut, StdErr);
 
 		{
 			DLock(mp_CMakeGenerateLock);
