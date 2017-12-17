@@ -222,9 +222,11 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 			
 			auto fl_GenerateBuildReference = [&] (CXMLElement* _pParent, CProject& _Project)
 			{
+				auto &NativeTarget = _Project.m_NativeTargets[Configuration];
+
 				auto pBuildReference = XMLFile.f_CreateElement(_pParent, "BuildableReference");
 				XMLFile.f_SetAttribute(pBuildReference, "BuildableIdentifier", "primary");
-				XMLFile.f_SetAttribute(pBuildReference, "BlueprintIdentifier", _Project.m_NativeTarget.f_GetGUID());
+				XMLFile.f_SetAttribute(pBuildReference, "BlueprintIdentifier", NativeTarget.f_GetGUID());
 				
 				CStr BuildableName;
 				auto pBuildable = _Buildable.f_FindEqual(Configuration);
@@ -248,23 +250,26 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 				
 				auto pBuildActionEntries = XMLFile.f_CreateElement(pBuildAction, "BuildActionEntries");
 				
-				for (auto iProject = _Solution.m_Projects.f_GetIterator(); iProject; ++iProject)
+				for (auto &Project : _Solution.m_Projects)
 				{
-					if (iProject->m_EnabledProjectConfigs.f_Exists(Configuration))
+					if (!Project.m_EnabledProjectConfigs.f_Exists(Configuration))
+						continue;
+
+					if (!Project.m_NativeTargets.f_Exists(Configuration))
+						continue;
+
+					auto iConfig = Project.m_EnabledProjectConfigs[Configuration];
+					CStr Value = m_BuildSystem.f_EvaluateEntityProperty(*iConfig, EPropertyType_Target, "Disabled");
+					if (Value != "true")
 					{
-						auto iConfig = iProject->m_EnabledProjectConfigs[Configuration];
-						CStr Value = m_BuildSystem.f_EvaluateEntityProperty(*iConfig, EPropertyType_Target, "Disabled");
-						if (Value != "true")
-						{
-							auto pBuildActionEntry = XMLFile.f_CreateElement(pBuildActionEntries, "BuildActionEntry");
-							XMLFile.f_SetAttribute(pBuildActionEntry, "buildForTesting", "YES");
-							XMLFile.f_SetAttribute(pBuildActionEntry, "buildForRunning", "YES");
-							XMLFile.f_SetAttribute(pBuildActionEntry, "buildForProfiling", "YES");
-							XMLFile.f_SetAttribute(pBuildActionEntry, "buildForArchiving", "YES");
-							XMLFile.f_SetAttribute(pBuildActionEntry, "buildForAnalyzing", "YES");
-						
-							fl_GenerateBuildReference(pBuildActionEntry, *iProject);
-						}
+						auto pBuildActionEntry = XMLFile.f_CreateElement(pBuildActionEntries, "BuildActionEntry");
+						XMLFile.f_SetAttribute(pBuildActionEntry, "buildForTesting", "YES");
+						XMLFile.f_SetAttribute(pBuildActionEntry, "buildForRunning", "YES");
+						XMLFile.f_SetAttribute(pBuildActionEntry, "buildForProfiling", "YES");
+						XMLFile.f_SetAttribute(pBuildActionEntry, "buildForArchiving", "YES");
+						XMLFile.f_SetAttribute(pBuildActionEntry, "buildForAnalyzing", "YES");
+
+						fl_GenerateBuildReference(pBuildActionEntry, Project);
 					}
 				}
 			}

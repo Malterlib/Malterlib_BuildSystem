@@ -365,7 +365,9 @@ namespace NMib::NBuildSystem
 						}
 					}
 
-					if (uint32(mp_GenerateSettings.m_GenerationFlags) != State.m_GenerationFlags)
+					EGenerationFlag InterestingGenerationFlags = EGenerationFlag_AbsoluteFilePaths | EGenerationFlag_DisableUserSettings;
+
+					if ((mp_GenerateSettings.m_GenerationFlags & InterestingGenerationFlags) != (State.m_GenerationFlags & InterestingGenerationFlags))
 					{
 						DConOut("Regenerating build system because generation flags changed {} != {}" DNewLine, mp_GenerateSettings.m_GenerationFlags << State.m_GenerationFlags);
 						bChanged = true;

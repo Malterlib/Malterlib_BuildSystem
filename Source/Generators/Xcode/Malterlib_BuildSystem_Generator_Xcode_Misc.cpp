@@ -60,49 +60,18 @@ namespace NMib::NBuildSystem::NXcode
 		return mp_ProductReferenceGUID;
 	}
 
+	CStr CProjectDependency::CPerConfig::f_GetName(CProjectDependency const &_Dependency, ch8 const *_pIdentifier) const
+	{
+		return "{} {}{}"_f << _Dependency.f_GetName() << f_Configuration().f_GetFullName() << _pIdentifier;
+	}
+
 	CStr const& CProjectDependency::f_GetFileRefGUID()
 	{
 		if (!mp_DependencyFileRefGUID.f_IsEmpty())
 			return mp_DependencyFileRefGUID;
 
-		mp_DependencyFileRefGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorUUIDNamespace, f_GetName() + "dependencyName").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_DependencyFileRefGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorUUIDNamespace, f_GetName() +"dependencyName").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
 		return mp_DependencyFileRefGUID;
-	}
-
-	CStr const& CProjectDependency::f_GetBuildRefGUID()
-	{
-		if (!mp_DependencyBuildRefGUID.f_IsEmpty())
-			return mp_DependencyBuildRefGUID;
-
-		mp_DependencyBuildRefGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorUUIDNamespace, f_GetName() + "dependencyBuildName").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
-		return mp_DependencyBuildRefGUID;
-	}
-
-	CStr const& CProjectDependency::f_GetContainerItemGUID()
-	{
-		if (!mp_DependencyContainerItemGUID.f_IsEmpty())
-			return mp_DependencyContainerItemGUID;
-
-		mp_DependencyContainerItemGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorUUIDNamespace, f_GetName() + "PBXContainerItemProxy").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
-		return mp_DependencyContainerItemGUID;
-	}
-
-	CStr const& CProjectDependency::f_GetContainerItemProductGUID()
-	{
-		if (!mp_DependencyItemProductGUID.f_IsEmpty())
-			return mp_DependencyItemProductGUID;
-
-		mp_DependencyItemProductGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorUUIDNamespace, f_GetName() + "PBXContainerItemProductProxy").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
-		return mp_DependencyItemProductGUID;
-	}
-
-	CStr const& CProjectDependency::f_GetReferenceProxyGUID()
-	{
-		if (!mp_DependencyReferenceProxyGUID.f_IsEmpty())
-			return mp_DependencyReferenceProxyGUID;
-
-		mp_DependencyReferenceProxyGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorUUIDNamespace, f_GetName() + "PBXReferenceProxy").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
-		return mp_DependencyReferenceProxyGUID;
 	}
 
 	CStr const& CProjectDependency::f_GetProductRefGroupGUID()
@@ -113,13 +82,22 @@ namespace NMib::NBuildSystem::NXcode
 		mp_DependencyProductRefGroupGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorUUIDNamespace, f_GetName() + "productReference").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
 		return mp_DependencyProductRefGroupGUID;
 	}
-	
-	CStr const& CProjectDependency::f_GetTargetGUID()
+
+	CStr const& CProjectDependency::CPerConfig::f_GetContainerItemGUID(CProjectDependency const &_Dependency)
+	{
+		if (!mp_DependencyContainerItemGUID.f_IsEmpty())
+			return mp_DependencyContainerItemGUID;
+
+		mp_DependencyContainerItemGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorUUIDNamespace, f_GetName(_Dependency, "PBXContainerItemProxy")).f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		return mp_DependencyContainerItemGUID;
+	}
+
+	CStr const& CProjectDependency::CPerConfig::f_GetTargetGUID(CProjectDependency const &_Dependency)
 	{
 		if (!mp_DependencyTargetGUID.f_IsEmpty())
 			return mp_DependencyTargetGUID;
 
-		mp_DependencyTargetGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorUUIDNamespace, f_GetName() + "PBXTargetDependency").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_DependencyTargetGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorUUIDNamespace, f_GetName(_Dependency, "PBXTargetDependency")).f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
 		return mp_DependencyTargetGUID;
 	}
 
@@ -142,7 +120,7 @@ namespace NMib::NBuildSystem::NXcode
 		return CFile::fs_GetFileNoExt(m_Path);
 	}
 	
-	CStr const& CBuildConfiguration::f_GetGUID()
+	CStr const &CBuildConfiguration::f_GetGUID() const
 	{
 		if (!mp_GUID.f_IsEmpty())
 			return mp_GUID;
@@ -152,7 +130,7 @@ namespace NMib::NBuildSystem::NXcode
 		return mp_GUID;
 	}
 
-	CStr const& CBuildConfiguration::f_GetFileRefGUID()
+	CStr const &CBuildConfiguration::f_GetFileRefGUID() const
 	{
 		if (!mp_FileRefGUID.f_IsEmpty())
 			return mp_FileRefGUID;
@@ -161,20 +139,20 @@ namespace NMib::NBuildSystem::NXcode
 		return mp_FileRefGUID;
 	}
 
-	CStr const& CBuildScript::f_GetGUID()
+	CStr const &CBuildScript::f_GetGUID(CConfiguration const &_Configuration) const
 	{
 		if (!mp_GUID.f_IsEmpty())
 			return mp_GUID;
 
-		mp_GUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorUUIDNamespace, m_Name + "PBXShellScriptBuildPhase").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_GUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorUUIDNamespace, m_Name + _Configuration.f_GetFullName() + "PBXShellScriptBuildPhase").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
 		return mp_GUID;
 	}
 
-	CStr const& CBuildScript::f_GetScriptSetting()
+	CStr const &CBuildScript::f_GetScriptSetting() const
 	{
 		if (!mp_BuildSetting.f_IsEmpty())
 			return mp_BuildSetting;
-		mp_BuildSetting = CStr::CFormat("\\\"${0}\\\" ; export ErrorReturn=$? ; if [ $ErrorReturn != 0 ] ; then echo Script \\\"${0}\\\" failed with exit code $ErrorReturn ; exit 1 ; fi\\n") << m_Name;
+		mp_BuildSetting = CStr::CFormat("echo \\\"{0}\\\"; \\\"{0}\\\" ; export ErrorReturn=$? ; if [ $ErrorReturn != 0 ] ; then echo Script \\\"{0}\\\" failed with exit code $ErrorReturn ; exit 1 ; fi\\n") << m_ScriptName;
 		return mp_BuildSetting;
 	}
 
@@ -216,15 +194,6 @@ namespace NMib::NBuildSystem::NXcode
 		return CStr();
 	}
 	
-	CStr const& CProjectFile::f_GetFileNameGUID()
-	{
-		if (!mp_FileNameGUID.f_IsEmpty())
-			return mp_FileNameGUID;
-
-		mp_FileNameGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorUUIDNamespace, f_GetName()).f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
-		return mp_FileNameGUID;
-	}
-	
 	CStr const& CProjectFile::f_GetFileRefGUID()
 	{
 		if (!mp_FileRefGUID.f_IsEmpty())
@@ -233,14 +202,27 @@ namespace NMib::NBuildSystem::NXcode
 		mp_FileRefGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorUUIDNamespace, f_GetName() + f_GetNameGroupPath()).f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
 		return mp_FileRefGUID;
 	}
-	CStr const& CProjectFile::f_GetBuildRefGUID()
-	{
-		if (!mp_BuildRefGUID.f_IsEmpty())
-			return mp_BuildRefGUID;
 
-		mp_BuildRefGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorUUIDNamespace, f_GetName() + f_GetNameGroupPath() + "BuildRef").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
-		return mp_BuildRefGUID;
+	CStr const& CProjectFile::f_GetBuildRefGUID(CConfiguration const &_Configuration)
+	{
+		auto &BuildRefGUID = mp_BuildRefGUIDs[_Configuration];
+		if (!BuildRefGUID.f_IsEmpty())
+			return BuildRefGUID;
+
+		BuildRefGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorUUIDNamespace, f_GetName() + f_GetNameGroupPath() + _Configuration.f_GetFullName() + "BuildRef").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		return BuildRefGUID;
 	}
+
+	CStr const& CProjectFile::f_GetBuildRuleGUID(CConfiguration const &_Configuration)
+	{
+		auto &BuildRuleGUID = mp_BuildRuleGUIDs[_Configuration];
+		if (!BuildRuleGUID.f_IsEmpty())
+			return BuildRuleGUID;
+
+		BuildRuleGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorUUIDNamespace, f_GetName() + _Configuration.f_GetFullName() + "BuildRule").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		return BuildRuleGUID;
+	}
+
 	CStr const& CProjectFile::f_GetLastKnownFileType()
 	{
 		if (!m_LastKnownFileType.f_IsEmpty())
@@ -254,7 +236,7 @@ namespace NMib::NBuildSystem::NXcode
 		if (!mp_CompileFlagsGUID.f_IsEmpty())
 			return mp_CompileFlagsGUID;
 
-		mp_CompileFlagsGUID = (CStr::CFormat("XFile{}") << f_GetBuildRefGUID()).f_GetStr();
+		mp_CompileFlagsGUID = (CStr::CFormat("XFile{}") << f_GetFileRefGUID()).f_GetStr();
 		return mp_CompileFlagsGUID;
 	}
 

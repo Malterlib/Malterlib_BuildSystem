@@ -129,6 +129,53 @@ namespace NMib::NBuildSystem::NXcode
 		}
 	}
 
+	auto CGeneratorInstance::fp_GetConfigValues(TCMap<CConfiguration, CEntityPointer> const &_Configs, EPropertyType _PropType, CStr const &_Property) const
+		-> TCMap<CConfiguration, CSingleValue>
+	{
+		TCMap<CConfiguration, CSingleValue> RetValues;
+
+		for (auto iConfig = _Configs.f_GetIterator(); iConfig; ++iConfig)
+		{
+			auto &Ret = RetValues[iConfig.f_GetKey()];
+			CProperty const *pFromProperty = nullptr;
+			CStr Value = m_BuildSystem.f_EvaluateEntityProperty(**iConfig, _PropType, _Property, pFromProperty);
+
+			Ret.m_Value = Value;
+			if (pFromProperty)
+				Ret.m_Position = pFromProperty->m_Position;
+			else
+				Ret.m_Position = (*iConfig)->m_Position;
+		}
+
+		return RetValues;
+	}
+
+	auto CGeneratorInstance::fp_GetConfigValue
+		(
+		 	TCMap<CConfiguration, CEntityPointer> const &_Configs
+		 	, CConfiguration const &_Configuration
+		 	, EPropertyType _PropType
+		 	, CStr const &_Property
+		) const
+	 	-> CSingleValue
+	{
+		CGeneratorInstance::CSingleValue Ret;
+		auto pEntity = _Configs.f_FindEqual(_Configuration);
+		if (!pEntity)
+			DMibError("Could not find config in enabled configs");
+
+		CProperty const *pFromProperty = nullptr;
+		CStr Value = m_BuildSystem.f_EvaluateEntityProperty(**pEntity, _PropType, _Property, pFromProperty);
+
+		Ret.m_Value = Value;
+		if (pFromProperty)
+			Ret.m_Position = pFromProperty->m_Position;
+		else
+			Ret.m_Position = (*pEntity)->m_Position;
+
+		return Ret;
+	}
+
 	CGeneratorInstance::CSingleValue CGeneratorInstance::fp_GetSingleConfigValue
 		(
 			TCMap<CConfiguration, CEntityPointer> const &_Configs
@@ -136,8 +183,6 @@ namespace NMib::NBuildSystem::NXcode
 			, CStr const &_Property
 		) const
 	{
-		CProperty const *pSavedFromProperty = nullptr;
-		
 		bool bFirst = true;
 		
 		CGeneratorInstance::CSingleValue Ret;
@@ -156,7 +201,6 @@ namespace NMib::NBuildSystem::NXcode
 					Ret.m_Position = pFromProperty->m_Position;
 				else
 					Ret.m_Position = (*iConfig)->m_Position;
-				pSavedFromProperty = pFromProperty;
 				pFromConfig = &iConfig.f_GetKey();
 			}
 			else

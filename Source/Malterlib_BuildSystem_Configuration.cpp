@@ -19,4 +19,9 @@ namespace NMib::NBuildSystem
 	{
 		return CStr::CFormat("{} {}") << m_Platform << m_Configuration;
 	}
+
+	CStr CConfiguration::f_GetFullSafeName() const
+	{
+		return (CStr::CFormat("{}_{}") << m_Platform << m_Configuration).f_GetStr().f_Replace(" ", "").f_Replace("(", "").f_Replace(")", "");
+	}
 }

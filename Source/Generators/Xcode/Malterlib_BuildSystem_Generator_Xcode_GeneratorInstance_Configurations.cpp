@@ -30,7 +30,32 @@ namespace NMib::NBuildSystem
 {
 	namespace NXcode
 	{
-		void CGeneratorInstance::fp_GenerateBuildConfigurationFiles(CProject& _Project, CStr const& _OutputDir, TCVector<CBuildConfiguration>& _ConfigList, bint _bProject) const
+		void CGeneratorInstance::fp_GenerateBuildConfigurationFiles(CProject& _Project, CStr const& _OutputDir) const
+		{
+			CStr OutputDir = CFile::fs_AppendPath(_OutputDir, _Project.f_GetName());
+
+			auto &ThreadLocal = *m_ThreadLocal;
+			ThreadLocal.f_CreateDirectory(OutputDir);
+
+			for (auto &NativeTarget : _Project.m_NativeTargets)
+			{
+				auto &Configuration = _Project.m_NativeTargets.fs_GetKey(NativeTarget);
+
+				CStr OutputFile = CFile::fs_AppendPath(OutputDir, CStr("Configurations"));
+				ThreadLocal.f_CreateDirectory(OutputFile);
+
+				OutputFile = CFile::fs_AppendPath(OutputFile, (CStr::CFormat("{} {}.xcconfig") << Configuration.m_Platform << Configuration.m_Configuration).f_GetStr());
+
+				fp_GenerateBuildConfigurationFile(_Project, Configuration, OutputFile, _OutputDir);
+
+				CBuildConfiguration& BuildConfig = NativeTarget.m_BuildConfiguration;
+				BuildConfig.m_Name = CFile::fs_GetFileNoExt(OutputFile);
+				BuildConfig.m_Path = OutputFile;
+				BuildConfig.m_bProject = true;
+			}
+		}
+
+		void CGeneratorInstance::fp_GenerateBuildConfigurationFilesList(CProject& _Project, CStr const& _OutputDir, TCVector<CBuildConfiguration>& _ConfigList) const
 		{
 			CStr OutputDir = CFile::fs_AppendPath(_OutputDir, _Project.f_GetName());
 			
@@ -46,13 +71,10 @@ namespace NMib::NBuildSystem
 
 				OutputFile = CFile::fs_AppendPath(OutputFile, (CStr::CFormat("{} {}.xcconfig") << Configuration.m_Platform << Configuration.m_Configuration).f_GetStr());
 
-				if (!_bProject)
-					fp_GenerateBuildConfigurationFile(_Project, Configuration, OutputFile, _OutputDir);
-
 				CBuildConfiguration& BuildConfig = _ConfigList.f_Insert();
 				BuildConfig.m_Name = CFile::fs_GetFileNoExt(OutputFile);
 				BuildConfig.m_Path = OutputFile;
-				BuildConfig.m_bProject = _bProject;
+				BuildConfig.m_bProject = false;
 			}
 		}
 
@@ -78,197 +100,105 @@ namespace NMib::NBuildSystem
 					, CStr()
 					, TargetTypes);		
 
-				for (auto iTarget = TargetTypes.f_GetIterator(); iTarget; ++iTarget)
+				for (auto &Target : TargetTypes)
 				{
-					CStr ThisTargetType = iTarget->m_Element["Type"].f_GetValue();
-					if (_Project.m_NativeTarget.m_Type.f_IsEmpty())
-					{
-						_Project.m_NativeTarget.m_Type = ThisTargetType;
-					}
-					else if (ThisTargetType != _Project.m_NativeTarget.m_Type)
-					{
-						m_BuildSystem.fs_ThrowError((*_Project.m_EnabledProjectConfigs.f_GetIterator())->m_Position, CStr::CFormat("Multiple target types found when only one is allowed '{}' != '{}'") << ThisTargetType << _Project.m_NativeTarget.m_Type);
-					}
+					auto &Configuration = TargetTypes.fs_GetKey(Target);
+
+					CStr ThisTargetType = Target.m_Element["Type"].f_GetValue();
+
+					auto &NativeTarget = _Project.m_NativeTargets[Configuration];
+
+					NativeTarget.m_Type = ThisTargetType;
+
+					if (NativeTarget.m_Type.f_IsEmpty())
+						NativeTarget.m_Type = ThisTargetType;
+					else if (ThisTargetType != NativeTarget.m_Type)
+						m_BuildSystem.fs_ThrowError((*_Project.m_EnabledProjectConfigs.f_GetIterator())->m_Position, CStr::CFormat("INTERNAL ERROR: Multiple target types found when only one is allowed '{}' != '{}'") << ThisTargetType << NativeTarget.m_Type);
 				}
 			}
 
-			TCVector<CStr> SearchList;
-			SearchList.f_Insert(_Project.m_NativeTarget.m_Type + CStr::fs_ToStr(m_XcodeVersion));
-			SearchList.f_Insert(_Project.m_NativeTarget.m_Type);
-			if (_Project.m_NativeTarget.m_Type != "StaticLibrary" && _Project.m_NativeTarget.m_Type != "Makefile")
-				SearchList.f_Insert("SharedApplication");
-			else if (_Project.m_NativeTarget.m_Type == "Makefile")
-				SearchList.f_Insert("SharedMakefile");
-
-			SearchList.f_Insert("SharedTarget");
-
-			fp_SetEvaluatedValues(
-				_Project.m_EnabledProjectConfigs
-				, _Project.m_EnabledProjectConfigs
-				, false
-				, EPropertyType_Target
-				, &SearchList
-				, nullptr
-				, CStr()
-				, false
-				, false
-				, ThreadLocal.mp_EvaluatedTargetSettings);	
-
-			// Build scripts
+			for (auto &NativeTarget : _Project.m_NativeTargets)
 			{
-				bint bFoundPostBuildScript = false;
-				CBuildScript PostBuildScript;
-				PostBuildScript.m_bPostBuild = true;
-				mint nPostbuildInputs = 0;
-				mint nPostbuildOutputs = 0;
+				auto &Configuration = _Project.m_NativeTargets.fs_GetKey(NativeTarget);
 
-				bint bFoundPreBuildScript = false;
-				CBuildScript PreBuildScript;
-				PreBuildScript.m_bPreBuild = true;
-				mint nPrebuildInputs = 0;
-				mint nPrebuildOutputs = 0;
+				TCVector<CStr> SearchList;
+				SearchList.f_Insert(NativeTarget.m_Type + CStr::fs_ToStr(m_XcodeVersion));
+				SearchList.f_Insert(NativeTarget.m_Type);
+				if (NativeTarget.m_Type != "StaticLibrary" && NativeTarget.m_Type != "Makefile")
+					SearchList.f_Insert("SharedApplication");
+				else if (NativeTarget.m_Type == "Makefile")
+					SearchList.f_Insert("SharedMakefile");
 
-				for (auto iConfig = ThreadLocal.mp_EvaluatedTargetSettings.f_GetIterator(); iConfig; ++iConfig)
+				SearchList.f_Insert("SharedTarget");
+
+				auto *pEnabledConfig = _Project.m_EnabledProjectConfigs.f_FindEqual(Configuration);
+				DCheck(pEnabledConfig);
+
+				TCMap<CConfiguration, CEntityPointer> EnabledConfigs;
+				EnabledConfigs[Configuration] = *pEnabledConfig;
+
+				fp_SetEvaluatedValues
+					(
+						EnabledConfigs
+					  	, EnabledConfigs
+						, false
+						, EPropertyType_Target
+						, &SearchList
+						, nullptr
+						, CStr()
+						, false
+						, false
+						, ThreadLocal.mp_EvaluatedTargetSettings
+					)
+				;
+
+				// Build scripts
 				{
-					if (iConfig->m_Element.f_Exists("PostBuildScript"))
-					{
-						auto & InputsElement = iConfig->m_Element["PostBuildScriptInputs"];
-						auto & OutputsElement = iConfig->m_Element["PostBuildScriptOutputs"];
-						TCVector<CStr> Inputs = fg_StrSplit(InputsElement.f_GetValue(), ';');
-						TCVector<CStr> Outputs = fg_StrSplit(OutputsElement.f_GetValue(), ';');
-						nPostbuildInputs = fg_Max(Inputs.f_GetLen(), nPostbuildInputs);
-						nPostbuildOutputs = fg_Max(Outputs.f_GetLen(), nPostbuildOutputs);
-					}
-					if (iConfig->m_Element.f_Exists("PreBuildScript"))
-					{
-						auto & InputsElement = iConfig->m_Element["PreBuildScriptInputs"];
-						auto & OutputsElement = iConfig->m_Element["PreBuildScriptOutputs"];
-						TCVector<CStr> Inputs = fg_StrSplit(InputsElement.f_GetValue(), ';');
-						TCVector<CStr> Outputs = fg_StrSplit(OutputsElement.f_GetValue(), ';');
-						nPrebuildInputs = fg_Max(Inputs.f_GetLen(), nPrebuildInputs);
-						nPrebuildOutputs = fg_Max(Outputs.f_GetLen(), nPrebuildOutputs);
-					}
-				}
+					bint bFoundPostBuildScript = false;
+					CBuildScript PostBuildScript;
+					PostBuildScript.m_bPostBuild = true;
 
-				for (mint iInput = 0; iInput < nPostbuildInputs; ++iInput)
-					PostBuildScript.m_Inputs.f_Insert(fg_Format("$(PostBuildScriptInput{})", iInput));
-				for (mint iOutput = 0; iOutput < nPostbuildOutputs; ++iOutput)
-					PostBuildScript.m_Outputs.f_Insert(fg_Format("$(PostBuildScriptOutput{})", iOutput));
-				
-				for (mint iInput = 0; iInput < nPrebuildInputs; ++iInput)
-					PreBuildScript.m_Inputs.f_Insert(fg_Format("$(PreBuildScriptInput{})", iInput));
-				for (mint iOutput = 0; iOutput < nPrebuildOutputs; ++iOutput)
-					PreBuildScript.m_Outputs.f_Insert(fg_Format("$(PreBuildScriptOutput{})", iOutput));
-				
-				for (auto iConfig = ThreadLocal.mp_EvaluatedTargetSettings.f_GetIterator(); iConfig; ++iConfig)
-				{
-					if (iConfig->m_Element.f_Exists("PostBuildScript"))
+					bint bFoundPreBuildScript = false;
+					CBuildScript PreBuildScript;
+					PreBuildScript.m_bPreBuild = true;
+
+					auto pEvaluated = ThreadLocal.mp_EvaluatedTargetSettings.f_FindEqual(Configuration);
+
+					if (pEvaluated)
 					{
-						
-						CElement const& BuildScript = iConfig->m_Element["PostBuildScript"];
-						PostBuildScript.m_Name = BuildScript.m_Property;
-						PostBuildScript.m_Script[iConfig.f_GetKey()] = BuildScript.f_GetValue();
-						
-						auto & InputsElement = iConfig->m_Element["PostBuildScriptInputs"];
-						auto & OutputsElement = iConfig->m_Element["PostBuildScriptOutputs"];
-						
-						TCVector<CStr> Inputs = fg_StrSplit(InputsElement.f_GetValue(), ';');
-						TCVector<CStr> Outputs = fg_StrSplit(OutputsElement.f_GetValue(), ';');
-						
+						if (pEvaluated->m_Element.f_Exists("PostBuildScript"))
 						{
-							{
-								mint iInput = 0;
-								for (auto & Input : Inputs)
-								{
-									auto &Element = iConfig->m_Element[fg_Format("PostBuildScriptInput{}", iInput)];
-									Element.m_Property = fg_Format("PostBuildScriptInput{}", iInput);
-									Element.f_SetValue(Input);
-									++iInput;
-								}
-								for (; !Inputs.f_IsEmpty() && iInput < nPostbuildInputs; ++iInput)
-								{
-									auto &Element = iConfig->m_Element[fg_Format("PostBuildScriptInput{}", iInput)];
-									Element.m_Property = fg_Format("PostBuildScriptInput{}", iInput);
-									Element.f_SetValue(Inputs[0]);
-								}
-							}
-							{
-								mint iOutput = 0;
-								for (auto & Output : Outputs)
-								{
-									auto &Element = iConfig->m_Element[fg_Format("PostBuildScriptOutput{}", iOutput)];
-									Element.m_Property = fg_Format("PostBuildScriptOutput{}", iOutput);
-									Element.f_SetValue(Output);
-									++iOutput;
-								}
-								for (; !Outputs.f_IsEmpty() && iOutput < nPostbuildOutputs; ++iOutput)
-								{
-									auto &Element = iConfig->m_Element[fg_Format("PostBuildScriptOutput{}", iOutput)];
-									Element.m_Property = fg_Format("PostBuildScriptOutput{}", iOutput);
-									Element.f_SetValue(Outputs[0]);
-								}
-							}
+							bFoundPostBuildScript = true;
+
+							auto & InputsElement = pEvaluated->m_Element["PostBuildScriptInputs"];
+							auto & OutputsElement = pEvaluated->m_Element["PostBuildScriptOutputs"];
+							PostBuildScript.m_Inputs = fg_StrSplit(InputsElement.f_GetValue(), ';');
+							PostBuildScript.m_Outputs = fg_StrSplit(OutputsElement.f_GetValue(), ';');
+
+							CElement const& BuildScript = pEvaluated->m_Element["PostBuildScript"];
+							PostBuildScript.m_Name = BuildScript.m_Property;
+							PostBuildScript.m_Script = BuildScript.f_GetValue();
 						}
-						
-						bFoundPostBuildScript = true;
-						
-					}
-					if (iConfig->m_Element.f_Exists("PreBuildScript"))
-					{
-
-						CElement const& BuildScript = iConfig->m_Element["PreBuildScript"];
-						PreBuildScript.m_Name = BuildScript.m_Property;
-						PreBuildScript.m_Script[iConfig.f_GetKey()] = BuildScript.f_GetValue();
-
-						auto & InputsElement = iConfig->m_Element["PreBuildScriptInputs"];
-						auto & OutputsElement = iConfig->m_Element["PreBuildScriptOutputs"];
-						
-						TCVector<CStr> Inputs = fg_StrSplit(InputsElement.f_GetValue(), ';');
-						TCVector<CStr> Outputs = fg_StrSplit(OutputsElement.f_GetValue(), ';');
-						
+						if (pEvaluated->m_Element.f_Exists("PreBuildScript"))
 						{
-							{
-								mint iInput = 0;
-								for (auto & Input : Inputs)
-								{
-									auto &Element = iConfig->m_Element[fg_Format("PreBuildScriptInput{}", iInput)];
-									Element.m_Property = fg_Format("PreBuildScriptInput{}", iInput);
-									Element.f_SetValue(Input);
-									++iInput;
-								}
-								for (; !Inputs.f_IsEmpty() && iInput < nPrebuildInputs; ++iInput)
-								{
-									auto &Element = iConfig->m_Element[fg_Format("PreBuildScriptInput{}", iInput)];
-									Element.m_Property = fg_Format("PreBuildScriptInput{}", iInput);
-									Element.f_SetValue(Inputs[0]);
-								}
-							}
-							{
-								mint iOutput = 0;
-								for (auto & Output : Outputs)
-								{
-									auto &Element = iConfig->m_Element[fg_Format("PreBuildScriptOutput{}", iOutput)];
-									Element.m_Property = fg_Format("PreBuildScriptOutput{}", iOutput);
-									Element.f_SetValue(Output);
-									++iOutput;
-								}
-								for (; !Outputs.f_IsEmpty() && iOutput < nPrebuildOutputs; ++iOutput)
-								{
-									auto &Element = iConfig->m_Element[fg_Format("PreBuildScriptOutput{}", iOutput)];
-									Element.m_Property = fg_Format("PreBuildScriptOutput{}", iOutput);
-									Element.f_SetValue(Outputs[0]);
-								}
-							}
-						}
-						
-						bFoundPreBuildScript = true;
-					}
-				}
+							bFoundPreBuildScript = true;
 
-				if (bFoundPostBuildScript)
-					_Project.m_NativeTarget.m_BuildScripts[PostBuildScript.m_Name] = fg_Move(PostBuildScript);
-				if (bFoundPreBuildScript)
-					_Project.m_NativeTarget.m_BuildScripts[PreBuildScript.m_Name] = fg_Move(PreBuildScript);
+							auto & InputsElement = pEvaluated->m_Element["PreBuildScriptInputs"];
+							auto & OutputsElement = pEvaluated->m_Element["PreBuildScriptOutputs"];
+							PreBuildScript.m_Inputs = fg_StrSplit(InputsElement.f_GetValue(), ';');
+							PreBuildScript.m_Outputs = fg_StrSplit(OutputsElement.f_GetValue(), ';');
+
+							CElement const& BuildScript = pEvaluated->m_Element["PreBuildScript"];
+							PreBuildScript.m_Name = BuildScript.m_Property;
+							PreBuildScript.m_Script = BuildScript.f_GetValue();
+						}
+					}
+
+					if (bFoundPostBuildScript)
+						NativeTarget.m_BuildScripts[PostBuildScript.m_Name] = fg_Move(PostBuildScript);
+					if (bFoundPreBuildScript)
+						NativeTarget.m_BuildScripts[PreBuildScript.m_Name] = fg_Move(PreBuildScript);
+				}
 			}
 		}
 
@@ -277,33 +207,17 @@ namespace NMib::NBuildSystem
 			for (auto iDependency = _Project.m_DependenciesOrdered.f_GetIterator(); iDependency; ++iDependency)
 			{
 				auto &Dependency = *iDependency;
-				bool bInvalid = false;
+
+				TCMap<CConfiguration, CEntityPointer> EnabledConfigurations;
+
 				for (auto iConfig = Dependency.m_EnabledConfigs.f_GetIterator(); iConfig; ++iConfig)
 				{
-					if (!_Project.m_EnabledProjectConfigs.f_FindEqual(iConfig.f_GetKey()))
-					{
-						bInvalid = true;
-						break;
-					}
+					if (_Project.m_EnabledProjectConfigs.f_FindEqual(iConfig.f_GetKey()))
+						EnabledConfigurations[iConfig.f_GetKey()] = *iConfig;
 				}
-				for (auto iConfig = _Project.m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
-				{
-					if (!Dependency.m_EnabledConfigs.f_FindEqual(iConfig.f_GetKey()))
-					{
-						bInvalid = true;
-						break;
-					}
-				}
-				if (bInvalid)
-				{
-					CStr Configs0;
-					for (auto iConfig = Dependency.m_EnabledConfigs.f_GetIterator(); iConfig; ++iConfig)
-						fg_AddStrSep(Configs0, iConfig.f_GetKey().f_GetFullName(), "\n");
-					CStr Configs1;
-					for (auto iConfig = _Project.m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
-						fg_AddStrSep(Configs1, iConfig.f_GetKey().f_GetFullName(), "\n");
-					m_BuildSystem.fs_ThrowError(Dependency.m_Position, fg_Format("Dependencies cannot be varied per configuration ({}):\n{}\n!=\n{}\n", _Project.f_GetName(), Configs0, Configs1));
-				}
+
+				if (EnabledConfigurations.f_IsEmpty())
+					continue;
 
 				CStr ProjectDependency = iDependency->f_GetName();
 				auto pDependProject = _Project.m_pSolution->m_Projects.f_FindEqual(ProjectDependency);
@@ -311,35 +225,22 @@ namespace NMib::NBuildSystem
 				if (!pDependProject)
 					m_BuildSystem.fs_ThrowError(Dependency.m_Position, CStr::CFormat("Dependency {} not found in workspace") << ProjectDependency);
 
-				for (auto iConfig = _Project.m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
+				for (auto &Entity : EnabledConfigurations)
 				{
-					if (!pDependProject->m_EnabledProjectConfigs.f_FindEqual(iConfig.f_GetKey()))
-						m_BuildSystem.fs_ThrowError(
-						Dependency.m_Position
-						, CStr::CFormat("Dependency project does not have required configuration {} - {}") 
-						<< iConfig.f_GetKey().m_Platform 
-						<< iConfig.f_GetKey().m_Configuration
-						);
+					auto &Configuration = EnabledConfigurations.fs_GetKey(Entity);
+					if (!pDependProject->m_EnabledProjectConfigs.f_FindEqual(Configuration))
+					{
+						m_BuildSystem.fs_ThrowError
+							(
+							 	Dependency.m_Position
+							 	, "Dependency project does not have required configuration {} - {}"_f << Configuration.m_Platform << Configuration.m_Configuration
+							)
+						;
+					}
 				}
 
-				TCVector<CStr> SearchLists;
-				SearchLists.f_Insert("Dependency");
 
-				TCMap<CConfiguration, CConfigResult> Entities;
-
-				fp_SetEvaluatedValues(
-					Dependency.m_EnabledConfigs
-					, _Project.m_EnabledProjectConfigs
-					, false
-					, EPropertyType_Dependency
-					, &SearchLists
-					, nullptr
-					, CStr()
-					, false
-					, false
-					, Entities);
-
-				fp_CalculateDependencyProductPath(*pDependProject, Dependency);
+				fp_CalculateDependencyProductPath(*pDependProject, Dependency, EnabledConfigurations);
 			}
 		}
 
@@ -430,7 +331,7 @@ namespace NMib::NBuildSystem
 						{
 							CStr TranslatedType = iFile->m_Type;
 							
-							CConfigResult const& ConfigData = ThreadLocal.mp_EvaluatedCompileFlags[iFile->f_GetBuildRefGUID()][Configuration];
+							CConfigResult const& ConfigData = ThreadLocal.mp_EvaluatedCompileFlags[iFile->f_GetCompileFlagsGUID()][Configuration];
 							CConfigResult const& TypeConfigData = MergedSharedSettings[TranslatedType];
 
 							auto &File = SharedFlags[TranslatedType];
@@ -719,7 +620,7 @@ namespace NMib::NBuildSystem
 							fp_AddExcludedFile(Configuration, *iFile);
 						else if (iFile->m_bHasCompilerFlags)
 						{
-							CConfigResult const& ConfigData = ThreadLocal.mp_EvaluatedCompileFlags[iFile->f_GetBuildRefGUID()][Configuration];
+							CConfigResult const& ConfigData = ThreadLocal.mp_EvaluatedCompileFlags[iFile->f_GetCompileFlagsGUID()][Configuration];
 							
 							// Generate compiler flags for this file for any properties that exist in the overridden properties map (take them from
 							// the shared flags if they do not override them)
@@ -906,14 +807,6 @@ namespace NMib::NBuildSystem
 					FileData += CStr::CFormat("{} = {}\n") << ISetting.f_GetKey() << fl_EscVar(*ISetting);
 			}
 			
-			// Excluded files
-			{
-				FileData += "EXCLUDED_FILE_REFS =";
-				for (auto &FileRef : ThreadLocal.mp_XcodeExcludedFileRefs[_Configuration])
-					FileData += CStr::CFormat(" {}") << FileRef;
-				FileData += "\n";
-			}
-
 			// MLSRCROOT
 			{
 				FileData += (CStr::CFormat("MLSRCROOT = {}\n") << fl_EscVar(m_RelativeBasePathAbsolute));
@@ -954,7 +847,7 @@ namespace NMib::NBuildSystem
 						bAdditionalLibraries = true;
 					else if (iElement->m_Property == "ExportScriptEnvironmentContents")
 					{
-						_Project.m_NativeTarget.m_ScriptExports[_Configuration] = iElement->f_GetValue();
+						_Project.m_NativeTargets[_Configuration].m_ScriptExport = iElement->f_GetValue();
 					}
 
 					CStr Extra;
@@ -971,10 +864,10 @@ namespace NMib::NBuildSystem
 						ExtraAfter = " $DependencyLibraries";
 					}
 
-					if (auto pBuildScript = _Project.m_NativeTarget.m_BuildScripts.f_FindEqual(iElement->m_Property))
+					if (auto pBuildScript = _Project.m_NativeTargets[_Configuration].m_BuildScripts.f_FindEqual(iElement->m_Property))
 					{
 						CStr ScriptName = _OutputFile + "." + iElement->m_Property + ".sh";
-						pBuildScript->m_ScriptNames[_Configuration] = ScriptName;
+						pBuildScript->m_ScriptName = ScriptName;
 						fp_GenerateBuildConfigurationScriptFile(_Project, _Configuration, ScriptName, _OutputDir, iElement->f_GetValue());
 						FileData += (CStr::CFormat("{} = {}\n") << iElement->m_Property << ScriptName);
 					}
@@ -996,7 +889,11 @@ namespace NMib::NBuildSystem
 				TCLinkedList<CLinkGroup> NonLinkerGroups;
 				for (auto iDependency = _Project.m_DependenciesOrdered.f_GetIterator(); iDependency; ++iDependency)
 				{
-					auto &PerConfig = iDependency->m_PerConfig[_Configuration];
+					auto *pPerConfig = iDependency->m_PerConfig.f_FindEqual(_Configuration);
+					if (!pPerConfig)
+						continue;
+
+					auto &PerConfig = *pPerConfig;
 					
 					if (PerConfig.m_bLink)
 					{

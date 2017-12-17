@@ -34,7 +34,8 @@ namespace NMib::NBuildSystem
 		bool operator == (CConfiguration const &_Right) const;
 
 		CStr f_GetFullName() const;
-		
+		CStr f_GetFullSafeName() const;
+
 		CStr m_Platform;
 		CStr m_PlatformBase;
 		CStr m_Configuration;

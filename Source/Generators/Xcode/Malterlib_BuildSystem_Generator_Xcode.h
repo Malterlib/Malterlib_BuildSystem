@@ -16,53 +16,61 @@ namespace NMib::NBuildSystem::NXcode
 	extern CStr g_ReservedGeneratorGroup;
 
 	// These are ordered as Xcode requires them.
-	enum EBuildFileTypes
+	enum EBuildFileType
 	{
-		ECustom,
-		EMlTwk,
-		EMalterlibFS,
-		EQTRcc,
-		EQTMoc,
-		EQTUic,
-		ECCompile_InitEarly,
-		ECCompile,
-		ECInclude,
-		ENone,
+		EBuildFileType_Custom,
+		EBuildFileType_MlTwk,
+		EBuildFileType_MalterlibFS,
+		EBuildFileType_QTRcc,
+		EBuildFileType_QTMoc,
+		EBuildFileType_QTUic,
+		EBuildFileType_CCompileInitEarly,
+		EBuildFileType_CCompile,
+		EBuildFileType_CInclude,
+		EBuildFileType_None,
+	};
+
+	struct CUniqueTargetConfiguration
+	{
+		CConfiguration m_Configuration;
+		CStr m_CompileType;
+
+		bool operator < (CUniqueTargetConfiguration const &_Right) const;
 	};
 
 	struct CBuildConfiguration
 	{
 		CStr f_GetFile() const;
 		CStr f_GetFileNoExt() const;
-		CStr const& f_GetFileRefGUID();
-		CStr const& f_GetGUID();
+		CStr const &f_GetFileRefGUID() const;
+		CStr const &f_GetGUID() const;
 
 		CStr m_Name;
 		CStr m_Path;
 		bint m_bProject;
 		
 	private:
-		CStr mp_GUID;
-		CStr mp_FileRefGUID;
+		mutable CStr mp_GUID;
+		mutable CStr mp_FileRefGUID;
 	};
 
 	struct CBuildScript
 	{
-		CStr const& f_GetGUID();
-		CStr const& f_GetScriptSetting();
+		CStr const &f_GetGUID(CConfiguration const &_Configuration) const;
+		CStr const &f_GetScriptSetting() const;
 		
 		CStr m_Name;
-		TCMap<CConfiguration, CStr> m_Script;
-		TCMap<CConfiguration, CStr> m_ScriptNames;
-		
+		CStr m_Script;
+		CStr m_ScriptName;
 		TCVector<CStr> m_Inputs;
 		TCVector<CStr> m_Outputs;
+
 		bool m_bPostBuild = false;
 		bool m_bPreBuild = false;
 		
 	private:
-		CStr mp_BuildSetting;
-		CStr mp_GUID;
+		mutable CStr mp_BuildSetting;
+		mutable CStr mp_GUID;
 	};
 
 	struct CNativeTarget
@@ -81,12 +89,14 @@ namespace NMib::NBuildSystem::NXcode
 		CStr m_ProductType;
 		CStr m_ProductPath;
 		CStr m_ProductSourceTree;
-		int32 m_BuildActionMask;
 		CStr m_Type;
 
-		TCVector<CBuildConfiguration> m_BuildConfigurationList;
+		CBuildConfiguration m_BuildConfiguration;
 		TCMap<CStr, CBuildScript> m_BuildScripts;
-		TCMap<CConfiguration, CStr> m_ScriptExports;
+		CStr m_ScriptExport;
+
+		int32 m_BuildActionMask;
+		bool m_bGeneratedBuildScript = false;
 
 	private:
 		CStr mp_GUID;
@@ -130,15 +140,16 @@ namespace NMib::NBuildSystem::NXcode
 		CStr const &f_GetNameGroupPath() const;
 		CStr f_GetGroupPath() const;
 		CStr const& f_GetFileRefGUID();
-		CStr const& f_GetFileNameGUID();
-		CStr const& f_GetBuildRefGUID();
+		CStr const& f_GetBuildRefGUID(CConfiguration const &_Configuration);
+		CStr const& f_GetBuildRuleGUID(CConfiguration const &_Configuration);
 		CStr const& f_GetLastKnownFileType();
 		CStr const& f_GetCompileFlagsGUID();
 
 	private:
 		CStr mp_FileRefGUID;
 		CStr mp_FileNameGUID;
-		CStr mp_BuildRefGUID;
+		TCMap<CConfiguration, CStr> mp_BuildRefGUIDs;
+		TCMap<CConfiguration, CStr> mp_BuildRuleGUIDs;
 		CStr mp_CompileFlagsGUID;
 	};
 
@@ -146,23 +157,29 @@ namespace NMib::NBuildSystem::NXcode
 	{
 		struct CPerConfig
 		{
+			CConfiguration const &f_Configuration() const;
+
+			CStr f_GetName(CProjectDependency const &_Dependency, ch8 const *_pIdentifier) const;
+
+			CStr const &f_GetContainerItemGUID(CProjectDependency const &_Dependency);
+			CStr const &f_GetTargetGUID(CProjectDependency const &_Dependency);
+
 			CStr m_CalculatedDependencyName;
 			CStr m_CalculatedDependencyExtension;
 			CStr m_CalculatedPath;
 			CStr m_SearchPath;
 			CStr m_LinkerGroup;
 			bool m_bLink = false;
+
+		private:
+			CStr mp_DependencyContainerItemGUID;
+			CStr mp_DependencyTargetGUID;
 		};
 
 		CStr const &f_GetName() const;
-		CStr const& f_GetFileRefGUID();
-		CStr const& f_GetBuildRefGUID();
-		CStr const& f_GetContainerItemGUID();
-		CStr const& f_GetContainerItemProductGUID();
-		CStr const& f_GetTargetGUID();
-		CStr const& f_GetReferenceProxyGUID();
-		CStr const& f_GetProductRefGroupGUID();
-		
+		CStr const &f_GetProductRefGroupGUID();
+		CStr const &f_GetFileRefGUID();
+
 		DLinkDS_Link(CProjectDependency, m_Link);
 		TCMap<CConfiguration, CEntityPointer> m_EnabledConfigs;
 		CFilePosition m_Position;
@@ -171,29 +188,31 @@ namespace NMib::NBuildSystem::NXcode
 		TCMap<CConfiguration, CPerConfig> m_PerConfig;
 
 	private:
-		CStr mp_DependencyFileRefGUID;
-		CStr mp_DependencyBuildRefGUID;
-		CStr mp_DependencyContainerItemGUID;
-		CStr mp_DependencyItemProductGUID;
-		CStr mp_DependencyTargetGUID;
-		CStr mp_DependencyReferenceProxyGUID;
 		CStr mp_DependencyProductRefGroupGUID;
+		CStr mp_DependencyFileRefGUID;
 	};
 
 	struct CSolution;
+
+	struct CCustomBuildRule
+	{
+		CStr m_GUID;
+		CStr m_MalterlibCustomBuildCommandLine;
+		CStr m_WorkingDirectory;
+		TCVector<CStr> m_Outputs;
+	};
 
 	struct CBuildFileRef
 	{
 		CConfiguration m_Configuration;
 		CStr m_FileName;
 		CStr m_Name;
-		CStr m_BuildGUID;
+		TCMap<CConfiguration, CStr> m_BuildGUIDs;
+		TCMap<CConfiguration, CCustomBuildRule> m_BuildRules;
 		CStr m_CompileFlagsGUID;
 		CStr m_Type;
 		CStr m_FileRefGUID;
-		CStr m_FileNameGUID;
 		bint m_bHasCompilerFlags;
-		mint m_nCustomOutputs = 0;
 	};
 
 	struct align_cacheline CProject
@@ -216,12 +235,13 @@ namespace NMib::NBuildSystem::NXcode
 		TCMap<CStr, CProjectDependency> m_DependenciesMap;
 		DLinkDS_List(CProjectDependency, m_Link) m_DependenciesOrdered;
 
-		CNativeTarget m_NativeTarget;
-		TCMap<EBuildFileTypes, TCVector<CBuildFileRef>> mp_OrderedBuildTypes;
+		TCMap<CConfiguration, CNativeTarget> m_NativeTargets;
+		TCMap<CUniqueTargetConfiguration, CNativeTarget> m_UniqueNativeTargets;
+
+		TCMap<EBuildFileType, TCVector<CBuildFileRef>> mp_OrderedBuildTypes;
 		TCVector<CBuildConfiguration> m_BuildConfigurationList;
 
 		CStr m_EntityName;
-		bool m_GeneratedBuildScript = false;
 
 		CSolution *m_pSolution;
 
@@ -401,7 +421,7 @@ namespace NMib::NBuildSystem::NXcode
 			TCMap<CConfiguration, CStr> mp_OtherCFlags; // Required for moc files
 			TCMap<CConfiguration, CStr> mp_OtherObjCFlags; // Required for moc files
 			TCMap<CConfiguration, CStr> mp_OtherAssemblerFlags; // Required for moc files
-			TCSet<CStr> mp_BuildRules;
+			TCMap<CConfiguration, TCSet<CStr>> mp_BuildRules;
 			CStr mp_MocOutputPatternCPP;
 			CStr m_ProjectOutputDir;
 			
@@ -410,16 +430,14 @@ namespace NMib::NBuildSystem::NXcode
 		
 		bool fp_GenerateBuildAllSchemes(CSolution &_Solution, CStr const &_OutputDir, TCMap<CConfiguration, TCSet<CStr>> &_Runnables, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable) const;
 
-		void fp_CalculateDependencyProductPath(CProject& _Project, CProjectDependency& _Dependency) const;
+		void fp_CalculateDependencyProductPath(CProject &_Project, CProjectDependency &_Dependency, TCMap<CConfiguration, CEntityPointer> const &_EnabledConfigurations) const;
 
-		void fp_GenerateBuildConfigurationFiles(CProject& _Project, CStr const& _OutputDir, TCVector<CBuildConfiguration>& _ConfigList, bint _bProject) const;
+		void fp_GenerateBuildConfigurationFilesList(CProject& _Project, CStr const& _OutputDir, TCVector<CBuildConfiguration>& _ConfigList) const;
+		void fp_GenerateBuildConfigurationFiles(CProject& _Project, CStr const& _OutputDir) const;
 		void fp_GenerateBuildConfigurationFile(CProject& _Project, CConfiguration const& _Configuration, CStr const& _OutputFile, CStr const& _OutputDir) const;
 		void fp_GenerateBuildConfigurationScriptFile(CProject& _Project, CConfiguration const& _Configuration, CStr const& _OutputFile, CStr const& _OutputDir, CStr const &_Contents) const;
 		void fp_GenerateCompilerFlags(CProject& _Project) const;
 		CStr fp_MakeNiceSharedFlagValue(CStr const& _Type) const;
-#if 0
-		void fp_GeneratePBXHeadersBuildPhaseSection(CProject &_Project, CStr& _Output) const;
-#endif
 		void fp_GeneratePBXSourcesBuildPhaseSection(CProject &_Project, CStr& _Output) const;
 		void fp_GeneratePBXFrameworksBuildPhaseSection(CProject &_Project, CStr& _Output) const;
 
@@ -430,8 +448,6 @@ namespace NMib::NBuildSystem::NXcode
 		void fp_GeneratePBXFileReferenceSection(CProject &_Project, CStr const& _OutputDir, CStr& _Output) const;
 		void fp_GeneratePBXGroupSection(CProject &_Project, CStr& _Output) const;
 		void fp_GeneratePBXProjectSection(CProject &_Project, CStr& _Output) const;
-
-		void fp_GeneratePBXReferenceProxySection(CProject &_Project, CStr& _Output) const;
 
 		void fp_GeneratePBXLegacyTargetSection(CProject& _Project, CStr& _Output) const;
 		void fp_GeneratePBXNativeTargetSection(CProject &_Project, CStr& _Output) const;
@@ -487,7 +503,9 @@ namespace NMib::NBuildSystem::NXcode
 		;
 
 		CSingleValue fp_GetSingleConfigValue(TCMap<CConfiguration, CEntityPointer> const &_Configs, EPropertyType _PropType, CStr const &_Property) const;
-		
+		CSingleValue fp_GetConfigValue(TCMap<CConfiguration, CEntityPointer> const &_Configs, CConfiguration const &_Configuration, EPropertyType _PropType, CStr const &_Property) const;
+		TCMap<CConfiguration, CSingleValue> fp_GetConfigValues(TCMap<CConfiguration, CEntityPointer> const &_Configs, EPropertyType _PropType, CStr const &_Property) const;
+
 		template <typename tf_CSet0, typename tf_CSet1>
 		bool fp_IsSameConfig(tf_CSet0 const &_Configs, tf_CSet1 const &_AllConfigs) const;
 
