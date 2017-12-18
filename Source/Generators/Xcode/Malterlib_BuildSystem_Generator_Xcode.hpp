@@ -49,12 +49,7 @@ namespace NMib::NBuildSystem::NXcode
 		return true;
 	}
 
-	bool CUniqueTargetConfiguration::operator < (CUniqueTargetConfiguration const &_Right) const
-	{
-		return fg_TupleReferences(m_Configuration, m_CompileType) < fg_TupleReferences(_Right.m_Configuration, _Right.m_CompileType);
-	}
-
-	CConfiguration const &CProjectDependency::CPerConfig::f_Configuration() const
+	inline_always CConfiguration const &CProjectDependency::CPerConfig::f_Configuration() const
 	{
 		return TCMap<CConfiguration, CPerConfig>::fs_GetKey(*this);
 	}

@@ -222,7 +222,7 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 			
 			auto fl_GenerateBuildReference = [&] (CXMLElement* _pParent, CProject& _Project)
 			{
-				auto &NativeTarget = _Project.m_NativeTargets[Configuration];
+				auto &NativeTarget = _Project.f_GetDefaultNativeTarget(Configuration);
 
 				auto pBuildReference = XMLFile.f_CreateElement(_pParent, "BuildableReference");
 				XMLFile.f_SetAttribute(pBuildReference, "BuildableIdentifier", "primary");

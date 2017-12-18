@@ -354,6 +354,14 @@ namespace NMib::NBuildSystem::NXcode
 		}
 	}
 
+	CNativeTarget &CProject::f_GetDefaultNativeTarget(CConfiguration const &_Configuration)
+	{
+		auto &Targets = m_NativeTargets[_Configuration];
+		if (Targets.f_IsEmpty())
+			return Targets.f_Insert();
+		return Targets.f_GetFirst();
+	}
+
 	CStr const &CSolutionFile::f_GetName() const
 	{
 		return TCMap<CStr, CSolutionFile>::fs_GetKey(*this);

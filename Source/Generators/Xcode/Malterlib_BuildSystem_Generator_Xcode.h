@@ -30,14 +30,6 @@ namespace NMib::NBuildSystem::NXcode
 		EBuildFileType_None,
 	};
 
-	struct CUniqueTargetConfiguration
-	{
-		CConfiguration m_Configuration;
-		CStr m_CompileType;
-
-		bool operator < (CUniqueTargetConfiguration const &_Right) const;
-	};
-
 	struct CBuildConfiguration
 	{
 		CStr f_GetFile() const;
@@ -45,7 +37,8 @@ namespace NMib::NBuildSystem::NXcode
 		CStr const &f_GetFileRefGUID() const;
 		CStr const &f_GetGUID() const;
 
-		CStr m_Name;
+		CStr m_ConfigName;
+		CStr m_ConfigFileName;
 		CStr m_Path;
 		bint m_bProject;
 		
@@ -85,18 +78,26 @@ namespace NMib::NBuildSystem::NXcode
 #endif
 		
 		CStr m_Name;
+		CStr m_XcodeProductName;
 		CStr m_ProductName;
 		CStr m_ProductType;
 		CStr m_ProductPath;
 		CStr m_ProductSourceTree;
 		CStr m_Type;
+		CStr m_CType;
+
+		TCVector<CNativeTarget *> m_CTargets;
 
 		CBuildConfiguration m_BuildConfiguration;
 		TCMap<CStr, CBuildScript> m_BuildScripts;
 		CStr m_ScriptExport;
 
+		TCSet<CStr> m_IncludedTypes;
+		TCSet<CStr> m_ExcludedTypes;
+
 		int32 m_BuildActionMask;
 		bool m_bGeneratedBuildScript = false;
+		bool m_bDefaultTarget = false;
 
 	private:
 		CStr mp_GUID;
@@ -186,6 +187,7 @@ namespace NMib::NBuildSystem::NXcode
 		
 		CStr m_Type;
 		TCMap<CConfiguration, CPerConfig> m_PerConfig;
+		bool m_bInternal = false;
 
 	private:
 		CStr mp_DependencyProductRefGroupGUID;
@@ -199,6 +201,7 @@ namespace NMib::NBuildSystem::NXcode
 		CStr m_GUID;
 		CStr m_MalterlibCustomBuildCommandLine;
 		CStr m_WorkingDirectory;
+		CStr m_OutputType;
 		TCVector<CStr> m_Outputs;
 	};
 
@@ -209,6 +212,7 @@ namespace NMib::NBuildSystem::NXcode
 		CStr m_Name;
 		TCMap<CConfiguration, CStr> m_BuildGUIDs;
 		TCMap<CConfiguration, CCustomBuildRule> m_BuildRules;
+		TCSet<CConfiguration> m_Disabled;
 		CStr m_CompileFlagsGUID;
 		CStr m_Type;
 		CStr m_FileRefGUID;
@@ -230,13 +234,14 @@ namespace NMib::NBuildSystem::NXcode
 		CStr const& f_GetBuildConfigurationListGUID();
 		void fr_FindRecursiveDependencies(CBuildSystem const &_BuildSystem, TCSet<CStr> &_Stack, CProjectDependency const *_pDepend, TCMap<CStr, CProject> const &_Projects) const;
 
+		CNativeTarget &f_GetDefaultNativeTarget(CConfiguration const &_Configuration);
+
 		TCMap<CFileKey, CProjectFile> m_Files;
 		TCMap<CStr, CGroup> m_Groups;
 		TCMap<CStr, CProjectDependency> m_DependenciesMap;
 		DLinkDS_List(CProjectDependency, m_Link) m_DependenciesOrdered;
 
-		TCMap<CConfiguration, CNativeTarget> m_NativeTargets;
-		TCMap<CUniqueTargetConfiguration, CNativeTarget> m_UniqueNativeTargets;
+		TCMap<CConfiguration, TCLinkedList<CNativeTarget>> m_NativeTargets;
 
 		TCMap<EBuildFileType, TCVector<CBuildFileRef>> mp_OrderedBuildTypes;
 		TCVector<CBuildConfiguration> m_BuildConfigurationList;
@@ -378,9 +383,9 @@ namespace NMib::NBuildSystem::NXcode
 			CStr m_Property;
 			TCSet<CStr> m_ValueSet;
 			CStr m_Value;
+			CFilePosition m_Position;
 			bool m_bXcodeProperty = false;
 			bool m_bUseValues = false;
-			CFilePosition m_Position;
 		};
 
 		struct CValueConfigs
@@ -408,8 +413,8 @@ namespace NMib::NBuildSystem::NXcode
 			void f_CreateDirectory(CStr const &_Path);
 
 			CXMLDocument *m_pXMLFile;
+			TCMap<CConfiguration, TCSet<CStr>> mp_UsedCTypes;
 			TCMap<CStr> mp_EvaluatedTypesInUse;
-			TCMap<CConfiguration, TCSet<CStr>> mp_XcodeExcludedFileRefs;
 			TCMap<CConfiguration, TCMap<CStr, CStr>> mp_XcodeSettingsFromTypes;
 			TCMap<CStr, TCMap<CConfiguration, CStr>> mp_CompileFlagsValues;
 			TCMap<CConfiguration, TCMap<CStr, CStr>> mp_EvaluatedOverriddenCompileFlags;
@@ -421,7 +426,7 @@ namespace NMib::NBuildSystem::NXcode
 			TCMap<CConfiguration, CStr> mp_OtherCFlags; // Required for moc files
 			TCMap<CConfiguration, CStr> mp_OtherObjCFlags; // Required for moc files
 			TCMap<CConfiguration, CStr> mp_OtherAssemblerFlags; // Required for moc files
-			TCMap<CConfiguration, TCSet<CStr>> mp_BuildRules;
+			TCMap<CConfiguration, TCMap<CStr, CStr>> mp_BuildRules;
 			CStr mp_MocOutputPatternCPP;
 			CStr m_ProjectOutputDir;
 			
@@ -434,7 +439,7 @@ namespace NMib::NBuildSystem::NXcode
 
 		void fp_GenerateBuildConfigurationFilesList(CProject& _Project, CStr const& _OutputDir, TCVector<CBuildConfiguration>& _ConfigList) const;
 		void fp_GenerateBuildConfigurationFiles(CProject& _Project, CStr const& _OutputDir) const;
-		void fp_GenerateBuildConfigurationFile(CProject& _Project, CConfiguration const& _Configuration, CStr const& _OutputFile, CStr const& _OutputDir) const;
+		void fp_GenerateBuildConfigurationFile(CProject& _Project, CConfiguration const& _Configuration, CStr const& _OutputFile, CStr const& _OutputDir, CNativeTarget const &_NativeTarget) const;
 		void fp_GenerateBuildConfigurationScriptFile(CProject& _Project, CConfiguration const& _Configuration, CStr const& _OutputFile, CStr const& _OutputDir, CStr const &_Contents) const;
 		void fp_GenerateCompilerFlags(CProject& _Project) const;
 		CStr fp_MakeNiceSharedFlagValue(CStr const& _Type) const;
@@ -461,8 +466,6 @@ namespace NMib::NBuildSystem::NXcode
 		static void fspr_MergeScheme(CXMLNode const* _pExistingNode, CXMLNode const* _pPrevNode, CXMLNode* _pNewNode);
 		bool fp_GenerateSchemes(CProject& _Project, TCMap<CConfiguration, TCSet<CStr>> &_Runnables, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable) const;
 		
-		void fp_AddExcludedFile(CConfiguration const &_Config, CProjectFile &_File) const;
-
 		// Values
 
 		void fp_EvaluateFiles(CProject& _Project) const;

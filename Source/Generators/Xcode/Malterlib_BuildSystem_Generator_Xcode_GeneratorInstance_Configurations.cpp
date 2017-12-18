@@ -37,21 +37,30 @@ namespace NMib::NBuildSystem
 			auto &ThreadLocal = *m_ThreadLocal;
 			ThreadLocal.f_CreateDirectory(OutputDir);
 
-			for (auto &NativeTarget : _Project.m_NativeTargets)
+			CStr OutputFileDirectory = CFile::fs_AppendPath(OutputDir, CStr("Configurations"));
+			ThreadLocal.f_CreateDirectory(OutputFileDirectory);
+
+			for (auto &NativeTargets : _Project.m_NativeTargets)
 			{
-				auto &Configuration = _Project.m_NativeTargets.fs_GetKey(NativeTarget);
+				auto &Configuration = _Project.m_NativeTargets.fs_GetKey(NativeTargets);
 
-				CStr OutputFile = CFile::fs_AppendPath(OutputDir, CStr("Configurations"));
-				ThreadLocal.f_CreateDirectory(OutputFile);
+				for (auto &NativeTarget : NativeTargets)
+				{
+					CStr OutputFile;
 
-				OutputFile = CFile::fs_AppendPath(OutputFile, (CStr::CFormat("{} {}.xcconfig") << Configuration.m_Platform << Configuration.m_Configuration).f_GetStr());
+					if (NativeTarget.m_bDefaultTarget)
+						OutputFile = CFile::fs_AppendPath(OutputFileDirectory, "{} {}.xcconfig"_f << Configuration.m_Platform << Configuration.m_Configuration);
+					else
+						OutputFile = CFile::fs_AppendPath(OutputFileDirectory, "{} {} {}.xcconfig"_f << Configuration.m_Platform << Configuration.m_Configuration << NativeTarget.m_CType);
 
-				fp_GenerateBuildConfigurationFile(_Project, Configuration, OutputFile, _OutputDir);
+					fp_GenerateBuildConfigurationFile(_Project, Configuration, OutputFile, _OutputDir, NativeTarget);
 
-				CBuildConfiguration& BuildConfig = NativeTarget.m_BuildConfiguration;
-				BuildConfig.m_Name = CFile::fs_GetFileNoExt(OutputFile);
-				BuildConfig.m_Path = OutputFile;
-				BuildConfig.m_bProject = true;
+					CBuildConfiguration& BuildConfig = NativeTarget.m_BuildConfiguration;
+					BuildConfig.m_ConfigName = "{} {}"_f << Configuration.m_Platform << Configuration.m_Configuration;
+					BuildConfig.m_ConfigFileName = CFile::fs_GetFile(OutputFile);
+					BuildConfig.m_Path = OutputFile;
+					BuildConfig.m_bProject = true;
+				}
 			}
 		}
 
@@ -72,7 +81,8 @@ namespace NMib::NBuildSystem
 				OutputFile = CFile::fs_AppendPath(OutputFile, (CStr::CFormat("{} {}.xcconfig") << Configuration.m_Platform << Configuration.m_Configuration).f_GetStr());
 
 				CBuildConfiguration& BuildConfig = _ConfigList.f_Insert();
-				BuildConfig.m_Name = CFile::fs_GetFileNoExt(OutputFile);
+				BuildConfig.m_ConfigName = "{} {}"_f << Configuration.m_Platform << Configuration.m_Configuration;
+				BuildConfig.m_ConfigFileName = CFile::fs_GetFile(OutputFile);
 				BuildConfig.m_Path = OutputFile;
 				BuildConfig.m_bProject = false;
 			}
@@ -106,7 +116,7 @@ namespace NMib::NBuildSystem
 
 					CStr ThisTargetType = Target.m_Element["Type"].f_GetValue();
 
-					auto &NativeTarget = _Project.m_NativeTargets[Configuration];
+					auto &NativeTarget = _Project.f_GetDefaultNativeTarget(Configuration);
 
 					NativeTarget.m_Type = ThisTargetType;
 
@@ -117,9 +127,10 @@ namespace NMib::NBuildSystem
 				}
 			}
 
-			for (auto &NativeTarget : _Project.m_NativeTargets)
+			for (auto &NativeTargets : _Project.m_NativeTargets)
 			{
-				auto &Configuration = _Project.m_NativeTargets.fs_GetKey(NativeTarget);
+				auto &Configuration = _Project.m_NativeTargets.fs_GetKey(NativeTargets);
+				auto &NativeTarget = _Project.f_GetDefaultNativeTarget(Configuration);
 
 				TCVector<CStr> SearchList;
 				SearchList.f_Insert(NativeTarget.m_Type + CStr::fs_ToStr(m_XcodeVersion));
@@ -242,12 +253,6 @@ namespace NMib::NBuildSystem
 
 				fp_CalculateDependencyProductPath(*pDependProject, Dependency, EnabledConfigurations);
 			}
-		}
-
-		void CGeneratorInstance::fp_AddExcludedFile(CConfiguration const &_Config, CProjectFile &_File) const
-		{
-			auto & ThreadLocal = *m_ThreadLocal;
-			auto Mapped = ThreadLocal.mp_XcodeExcludedFileRefs[_Config][_File.f_GetFileRefGUID()];
 		}
 
 		CStr CGeneratorInstance::fp_MakeNiceSharedFlagValue(CStr const& _Type) const
@@ -613,79 +618,73 @@ namespace NMib::NBuildSystem
 
 				// Compiler flags per file
 				{
-					auto &ExcludedFileRefs = ThreadLocal.mp_XcodeExcludedFileRefs[Configuration];
 					for (auto iFile = _Project.m_Files.f_GetIterator(); iFile; ++iFile)
 					{
 						if (!iFile->m_EnabledConfigs.f_Exists(Configuration))
-							fp_AddExcludedFile(Configuration, *iFile);
-						else if (iFile->m_bHasCompilerFlags)
+							continue;
+
+						if (!iFile->m_bHasCompilerFlags)
+							continue;
+
+						CConfigResult const& ConfigData = ThreadLocal.mp_EvaluatedCompileFlags[iFile->f_GetCompileFlagsGUID()][Configuration];
+
+						// Generate compiler flags for this file for any properties that exist in the overridden properties map (take them from
+						// the shared flags if they do not override them)
+						CStr FlagsForFile = fl_GenerateFlags(ConfigData, iFile->m_Type, false);
+						if (!FlagsForFile.f_IsEmpty())
 						{
-							CConfigResult const& ConfigData = ThreadLocal.mp_EvaluatedCompileFlags[iFile->f_GetCompileFlagsGUID()][Configuration];
-							
-							// Generate compiler flags for this file for any properties that exist in the overridden properties map (take them from
-							// the shared flags if they do not override them)
-							CStr FlagsForFile = fl_GenerateFlags(ConfigData, iFile->m_Type, false);
-							if (!FlagsForFile.f_IsEmpty())
-							{
-								auto & OverriddenType = GeneratedOverriddenFlags[iFile->m_Type];
-								auto MappedOveridden = OverriddenType(FlagsForFile);
-								if (MappedOveridden.f_WasCreated())
-									*MappedOveridden = ++SettingsNumber[iFile->m_Type];
+							auto & OverriddenType = GeneratedOverriddenFlags[iFile->m_Type];
+							auto MappedOveridden = OverriddenType(FlagsForFile);
+							if (MappedOveridden.f_WasCreated())
+								*MappedOveridden = ++SettingsNumber[iFile->m_Type];
 
-								ThreadLocal.mp_CompileFlagsValues[iFile->f_GetCompileFlagsGUID()][Configuration] = fl_GetSharedFlags(iFile->m_Type, *MappedOveridden, false);
-							}			
+							ThreadLocal.mp_CompileFlagsValues[iFile->f_GetCompileFlagsGUID()][Configuration] = fl_GetSharedFlags(iFile->m_Type, *MappedOveridden, false);
+						}
 
-							// Some special flags
+						// Some special flags
+						{
+							for (auto iFlag = ConfigData.m_Element.f_GetIterator(); iFlag; ++iFlag)
 							{
-								for (auto iFlag = ConfigData.m_Element.f_GetIterator(); iFlag; ++iFlag)
+								if (iFlag->m_bXcodeProperty)
 								{
-									if (iFlag->m_bXcodeProperty)
+									if (iFlag->m_Property == "GCC_PRECOMPILE_PREFIX_HEADER" || iFlag->m_Property == "GCC_PREFIX_HEADER")
 									{
-										if (iFlag->m_Property == "GCC_PRECOMPILE_PREFIX_HEADER" || iFlag->m_Property == "GCC_PREFIX_HEADER")
+										if (SettingsFromTypes.f_Exists(iFlag->m_Property))
 										{
-											if (SettingsFromTypes.f_Exists(iFlag->m_Property))
-											{
-												if (iFlag->f_GetValue() != SettingsFromTypes[iFlag->m_Property])
-													m_BuildSystem.fs_ThrowError(iFile->m_Position, "Prefix headers and PrecompilePrefixHeaders per file type are not supported");
-											}
-											
-											SettingsFromTypes[iFlag->m_Property] = iFlag->f_GetValue();
+											if (iFlag->f_GetValue() != SettingsFromTypes[iFlag->m_Property])
+												m_BuildSystem.fs_ThrowError(iFile->m_Position, "Prefix headers and PrecompilePrefixHeaders per file type are not supported");
 										}
-										else if (iFlag->m_Property == "MOC_OUTPUT_PATTERN")
+
+										SettingsFromTypes[iFlag->m_Property] = iFlag->f_GetValue();
+									}
+									else if (iFlag->m_Property == "MOC_OUTPUT_PATTERN")
+									{
+										if (iFlag->f_GetValue().f_Find(CFile::fs_GetFile(iFile->f_GetName())) > -1)
+											m_BuildSystem.fs_ThrowError(iFile->m_Position, "Moc output pattern settings per file are not supported");
+										else if (CFile::fs_GetExtension(iFile->f_GetName()) == "cpp")
 										{
-											if (iFlag->f_GetValue().f_Find(CFile::fs_GetFile(iFile->f_GetName())) > -1)
+											if (!ThreadLocal.mp_MocOutputPatternCPP.f_IsEmpty() && ThreadLocal.mp_MocOutputPatternCPP != iFlag->f_GetValue())
 												m_BuildSystem.fs_ThrowError(iFile->m_Position, "Moc output pattern settings per file are not supported");
-											else if (CFile::fs_GetExtension(iFile->f_GetName()) == "cpp")
-											{
-												if (!ThreadLocal.mp_MocOutputPatternCPP.f_IsEmpty() && ThreadLocal.mp_MocOutputPatternCPP != iFlag->f_GetValue())
-													m_BuildSystem.fs_ThrowError(iFile->m_Position, "Moc output pattern settings per file are not supported");
-												else if (ThreadLocal.mp_MocOutputPatternCPP.f_IsEmpty())
-													ThreadLocal.mp_MocOutputPatternCPP = iFlag->f_GetValue();
-											}
-											else
-											{
-												ThreadLocal.mp_EvaluatedTypeCompileFlags[iFile->m_Type][Configuration].m_Element["MOC_OUTPUT_PATTERN"].f_SetValue(iFlag->f_GetValue());
-											}
-										}
-										else if (iFlag->m_Property == "FilesExcludedFromCompile")
-										{
-											if (iFlag->f_GetValue() == "true" && iFile->m_LastKnownFileType.f_Find("nolink") == -1)
-												iFile->m_LastKnownFileType += "nolink";
-										}
-										else if (iFlag->m_Property == "EXCLUDED_FILE_REFS")
-										{
-											if (iFlag->f_GetValue() == "true")
-												ExcludedFileRefs[iFile->f_GetFileRefGUID()];
+											else if (ThreadLocal.mp_MocOutputPatternCPP.f_IsEmpty())
+												ThreadLocal.mp_MocOutputPatternCPP = iFlag->f_GetValue();
 										}
 										else
 										{
-											//DMibTrace("Excluded {} = {}\n", iFlag->m_Property << iFlag->m_Value);
+											ThreadLocal.mp_EvaluatedTypeCompileFlags[iFile->m_Type][Configuration].m_Element["MOC_OUTPUT_PATTERN"].f_SetValue(iFlag->f_GetValue());
 										}
+									}
+									else if (iFlag->m_Property == "FilesExcludedFromCompile")
+									{
+										if (iFlag->f_GetValue() == "true" && iFile->m_LastKnownFileType.f_Find("nolink") == -1)
+											iFile->m_LastKnownFileType += "nolink";
+									}
+									else
+									{
+										//DMibTrace("Excluded {} = {}\n", iFlag->m_Property << iFlag->m_Value);
 									}
 								}
 							}
 						}
-
 					}
 				}
 
@@ -753,14 +752,44 @@ namespace NMib::NBuildSystem
 			}
 		}
 
+		struct CLinkConfig
+		{
+			CProjectDependency::CPerConfig *m_pPerConfig = nullptr;
+			bool m_bInternal = false;
+		};
 		struct CLinkGroup
 		{
 			DLinkDS_Link(CLinkGroup, m_Link);
-			TCLinkedList<CProjectDependency::CPerConfig *> m_Configs;
+			TCLinkedList<CLinkConfig> m_Configs;
 			CStr m_Name;
 		};
 
-		void CGeneratorInstance::fp_GenerateBuildConfigurationFile(CProject& _Project, CConfiguration const& _Configuration, CStr const& _OutputFile, CStr const& _OutputDir) const
+		TCSet<CStr> g_PathModSettings =
+			{
+				"BUILD_DIR"
+				, "BUILD_ROOT"
+				, "CONFIGURATION_TEMP_DIR"
+				, "OBJROOT"
+				, "PROJECT_DERIVED_FILE_DIR"
+				, "PROJECT_TEMP_DIR"
+				, "PROJECT_TEMP_ROOT"
+				, "SHARED_PRECOMPS_DIR"
+				, "SYMROOT"
+				, "TARGET_TEMP_DIR"
+				, "TEMP_FILES_DIR"
+				, "TEMP_FILE_DIR"
+				, "TEMP_ROOT"
+			}
+		;
+
+		void CGeneratorInstance::fp_GenerateBuildConfigurationFile
+			(
+			 	CProject& _Project
+			 	, CConfiguration const& _Configuration
+			 	, CStr const& _OutputFile
+			 	, CStr const& _OutputDir
+			 	, CNativeTarget const &_NativeTarget
+			) const
 		{
 			auto &ThreadLocal = *m_ThreadLocal;
 			CStr FileData;
@@ -780,31 +809,62 @@ namespace NMib::NBuildSystem
 			
 			// Other CPP Flags
 			{
-				FileData += (CStr::CFormat("OTHER_CFLAGS_ONLY = {}\n") << fl_EscVar(ThreadLocal.mp_OtherCFlags[_Configuration]));
-				FileData += (CStr::CFormat("OTHER_OBJCFLAGS_ONLY = {}\n") << fl_EscVar(ThreadLocal.mp_OtherObjCFlags[_Configuration]));
-				FileData += (CStr::CFormat("OTHER_CPLUSPLUSFLAGS_ONLY = {}\n") << fl_EscVar(ThreadLocal.mp_OtherCPPFlags[_Configuration]));
-				FileData += (CStr::CFormat("OTHER_OBJCPLUSPLUSFLAGS_ONLY = {}\n") << fl_EscVar(ThreadLocal.mp_OtherObjCPPFlags[_Configuration]));
-				FileData += (CStr::CFormat("OTHER_ASSEMBLERFLAGS_ONLY = {}\n") << fl_EscVar(ThreadLocal.mp_OtherAssemblerFlags[_Configuration]));
+				if (_NativeTarget.m_CType == "C")
+					FileData += (CStr::CFormat("OTHER_CFLAGS = {}\n") << fl_EscVar(ThreadLocal.mp_OtherCFlags[_Configuration]));
+				else if (_NativeTarget.m_CType == "ObjC")
+					FileData += (CStr::CFormat("OTHER_CFLAGS = {}\n") << fl_EscVar(ThreadLocal.mp_OtherObjCFlags[_Configuration]));
+				else if (_NativeTarget.m_CType == "C++")
+					FileData += (CStr::CFormat("OTHER_CPLUSPLUSFLAGS = {}\n") << fl_EscVar(ThreadLocal.mp_OtherCPPFlags[_Configuration]));
+				else if (_NativeTarget.m_CType == "ObjC++")
+					FileData += (CStr::CFormat("OTHER_CPLUSPLUSFLAGS = {}\n") << fl_EscVar(ThreadLocal.mp_OtherObjCPPFlags[_Configuration]));
+				else if (_NativeTarget.m_CType == "Assembler")
+					FileData += (CStr::CFormat("OTHER_CFLAGS = {}\n") << fl_EscVar(ThreadLocal.mp_OtherAssemblerFlags[_Configuration]));
+
 				FileData += (CStr::CFormat("MOC_OUTPUT_PATTERN_CPP = {}\n") << fl_EscVar(ThreadLocal.mp_MocOutputPatternCPP));
 				FileData += "MOC_OUTPUT_PATTERN_NOLINK = $(MOC_OUTPUT_PATTERN)\nMOC_OUTPUT_PATTERN_CPP_NOLINK = $(MOC_OUTPUT_PATTERN_CPP)\n";
 			}
 
+			auto fOutputConfigValue = [&](CStr const &_Key, CStr const &_Value)
+				{
+					if (!_NativeTarget.m_bDefaultTarget)
+					{
+						if (g_PathModSettings.f_FindEqual(_Key))
+						{
+							FileData += "{} = {}\n"_f << _Key << fl_EscVar("{}/{}"_f << _Value << _NativeTarget.m_CType);
+							return;
+						}
+						else if (_Key == "PRODUCT_NAME")
+						{
+							FileData += "{} = {}\n"_f << _Key << fl_EscVar(_Value + _NativeTarget.m_CType);
+							return;
+						}
+						else if (_Key == "MACH_O_TYPE")
+						{
+							FileData += "{} = {}\n"_f << _Key << fl_EscVar("staticlib");
+							return;
+						}
+					}
+
+					FileData += "{} = {}\n"_f << _Key << fl_EscVar(_Value);
+				}
+			;
+
 			// Overridden flags
 			{
 				for (auto iFlag = ThreadLocal.mp_EvaluatedOverriddenCompileFlags[_Configuration].f_GetIterator(); iFlag; ++iFlag)
-					FileData += (CStr::CFormat("{} = {}\n") << iFlag.f_GetKey() << fl_EscVar(*iFlag));
+					fOutputConfigValue(iFlag.f_GetKey(), *iFlag);
 			}
 
 			// Compile flags
 			{
 				for (auto iFlag = ThreadLocal.mp_CompileFlagsValues.f_GetIterator(); iFlag; ++iFlag)
-					FileData += (CStr::CFormat("{} = {}\n") << iFlag.f_GetKey() << fl_EscVar((*iFlag)[_Configuration]));
+					fOutputConfigValue(iFlag.f_GetKey(), (*iFlag)[_Configuration]);
 			}
 
 			// Xcode settings
 			{
 				for (auto ISetting = ThreadLocal.mp_XcodeSettingsFromTypes[_Configuration].f_GetIterator(); ISetting; ++ISetting)
-					FileData += CStr::CFormat("{} = {}\n") << ISetting.f_GetKey() << fl_EscVar(*ISetting);
+					fOutputConfigValue(ISetting.f_GetKey(), *ISetting);
 			}
 			
 			// MLSRCROOT
@@ -825,18 +885,23 @@ namespace NMib::NBuildSystem
 
 					if (iElement->m_Property == "LIBRARY_SEARCH_PATHS")
 					{
-						CStr NewValue;
 						CStr Value = iElement->f_GetValue();
-						while(!Value.f_IsEmpty())
+
+						if (_NativeTarget.m_bDefaultTarget)
 						{
-							CStr ThisValue = fg_GetStrSep(Value, ";");
-							if (ThisValue.f_IsEmpty())
-								continue;
-							NewValue += CStr::CFormat("\"{}\" ") << ThisValue;
+							CStr NewValue;
+							while(!Value.f_IsEmpty())
+							{
+								CStr ThisValue = fg_GetStrSep(Value, ";");
+								if (ThisValue.f_IsEmpty())
+									continue;
+								NewValue += CStr::CFormat("\"{}\" ") << ThisValue;
+							}
+							iElement->f_SetValue(NewValue);
+							Value = NewValue;
 						}
-						iElement->f_SetValue(NewValue);
 						
-						if (NewValue.f_IsEmpty())
+						if (Value.f_IsEmpty())
 							continue;
 
 						bSearchPaths = true;
@@ -845,9 +910,9 @@ namespace NMib::NBuildSystem
 						bAdditionalLibraries = true;
 					else if (!bDoneAdditionalLibraries && iElement->m_Property == "OTHER_LIBTOOLFLAGS" && m_XcodeVersion >= 6)
 						bAdditionalLibraries = true;
-					else if (iElement->m_Property == "ExportScriptEnvironmentContents")
+					else if (iElement->m_Property == "ExportScriptEnvironmentContents" && _NativeTarget.m_bDefaultTarget)
 					{
-						_Project.m_NativeTargets[_Configuration].m_ScriptExport = iElement->f_GetValue();
+						_Project.f_GetDefaultNativeTarget(_Configuration).m_ScriptExport = iElement->f_GetValue();
 					}
 
 					CStr Extra;
@@ -864,17 +929,24 @@ namespace NMib::NBuildSystem
 						ExtraAfter = " $DependencyLibraries";
 					}
 
-					if (auto pBuildScript = _Project.m_NativeTargets[_Configuration].m_BuildScripts.f_FindEqual(iElement->m_Property))
+					if (auto pBuildScript = _Project.f_GetDefaultNativeTarget(_Configuration).m_BuildScripts.f_FindEqual(iElement->m_Property))
 					{
-						CStr ScriptName = _OutputFile + "." + iElement->m_Property + ".sh";
-						pBuildScript->m_ScriptName = ScriptName;
-						fp_GenerateBuildConfigurationScriptFile(_Project, _Configuration, ScriptName, _OutputDir, iElement->f_GetValue());
-						FileData += (CStr::CFormat("{} = {}\n") << iElement->m_Property << ScriptName);
+						if (_NativeTarget.m_bDefaultTarget)
+						{
+							CStr ScriptName = _OutputFile + "." + iElement->m_Property + ".sh";
+							pBuildScript->m_ScriptName = ScriptName;
+							fp_GenerateBuildConfigurationScriptFile(_Project, _Configuration, ScriptName, _OutputDir, pBuildScript->m_Script);
+							FileData += (CStr::CFormat("{} = {}\n") << iElement->m_Property << ScriptName);
+						}
 					}
 					else if (!iElement->m_Property.f_IsEmpty())
 					{
-						iElement->f_SetValue(iElement->f_GetValue().f_Replace("\r\n", "\n").f_Replace("\n", "\\n"));
-						FileData += (CStr::CFormat("{} = {}{}{}\n") << iElement->m_Property << Extra << fl_EscVar(iElement->f_GetValue()) << ExtraAfter);
+						if (_NativeTarget.m_bDefaultTarget)
+							iElement->f_SetValue(iElement->f_GetValue().f_Replace("\r\n", "\n").f_Replace("\n", "\\n"));
+						if (bAdditionalLibraries)
+							FileData += (CStr::CFormat("{} = {}{}{}\n") << iElement->m_Property << Extra << fl_EscVar(iElement->f_GetValue()) << ExtraAfter);
+						else
+							fOutputConfigValue(iElement->m_Property, iElement->f_GetValue());
 					}
 				}
 			}
@@ -895,7 +967,7 @@ namespace NMib::NBuildSystem
 
 					auto &PerConfig = *pPerConfig;
 					
-					if (PerConfig.m_bLink)
+					if (PerConfig.m_bLink && _NativeTarget.m_bDefaultTarget)
 					{
 						CLinkGroup *pGroup;
 						if (PerConfig.m_LinkerGroup.f_IsEmpty())
@@ -908,7 +980,10 @@ namespace NMib::NBuildSystem
 							Group.m_Name = PerConfig.m_LinkerGroup;
 							LinkerGroupsOrdered.f_Insert(Group);
 						}
-						Group.m_Configs.f_Insert(&PerConfig);
+						CLinkConfig LinkConfig;
+						LinkConfig.m_pPerConfig = &PerConfig;
+						LinkConfig.m_bInternal = iDependency->m_bInternal;
+						Group.m_Configs.f_Insert(LinkConfig);
 						LinkSearchPaths += (CStr::CFormat("\"{}\" ") << PerConfig.m_SearchPath);
 					}
 				}
@@ -917,8 +992,18 @@ namespace NMib::NBuildSystem
 				{
 					if (!iLinkerGroup->m_Name.f_IsEmpty())
 						Link += "-Xlinker -( ";
-					for (auto iDependency = iLinkerGroup->m_Configs.f_GetIterator(); iDependency; ++iDependency)
-						Link += (CStr::CFormat("\"{}/{}\" ") << (*iDependency)->m_SearchPath << (*iDependency)->m_CalculatedPath);
+					for (auto &LinkConfig : iLinkerGroup->m_Configs)
+					{
+						if (LinkConfig.m_bInternal && _NativeTarget.m_ProductType != "com.apple.product-type.library.static")
+						{
+							if (_Configuration.m_PlatformBase.f_StartsWith("OSX"))
+								Link += "-force_load \"{}/{}\" "_f << LinkConfig.m_pPerConfig->m_SearchPath << LinkConfig.m_pPerConfig->m_CalculatedPath;
+							else
+								Link += "-Xlinker --whole-archive \"{}/{}\" -Xlinker --no-whole-archive "_f << LinkConfig.m_pPerConfig->m_SearchPath << LinkConfig.m_pPerConfig->m_CalculatedPath;
+						}
+						else
+							Link += "\"{}/{}\" "_f << LinkConfig.m_pPerConfig->m_SearchPath << LinkConfig.m_pPerConfig->m_CalculatedPath;
+					}
 					if (!iLinkerGroup->m_Name.f_IsEmpty())
 						Link += "-Xlinker -) ";
 				}
