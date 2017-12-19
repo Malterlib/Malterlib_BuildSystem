@@ -814,9 +814,9 @@ namespace NMib::NBuildSystem
 				else if (_NativeTarget.m_CType == "ObjC")
 					FileData += (CStr::CFormat("OTHER_CFLAGS = {}\n") << fl_EscVar(ThreadLocal.mp_OtherObjCFlags[_Configuration]));
 				else if (_NativeTarget.m_CType == "C++")
-					FileData += (CStr::CFormat("OTHER_CPLUSPLUSFLAGS = {}\n") << fl_EscVar(ThreadLocal.mp_OtherCPPFlags[_Configuration]));
+					FileData += (CStr::CFormat("OTHER_CFLAGS = {}\n") << fl_EscVar(ThreadLocal.mp_OtherCPPFlags[_Configuration]));
 				else if (_NativeTarget.m_CType == "ObjC++")
-					FileData += (CStr::CFormat("OTHER_CPLUSPLUSFLAGS = {}\n") << fl_EscVar(ThreadLocal.mp_OtherObjCPPFlags[_Configuration]));
+					FileData += (CStr::CFormat("OTHER_CFLAGS = {}\n") << fl_EscVar(ThreadLocal.mp_OtherObjCPPFlags[_Configuration]));
 				else if (_NativeTarget.m_CType == "Assembler")
 					FileData += (CStr::CFormat("OTHER_CFLAGS = {}\n") << fl_EscVar(ThreadLocal.mp_OtherAssemblerFlags[_Configuration]));
 
@@ -826,11 +826,35 @@ namespace NMib::NBuildSystem
 
 			auto fOutputConfigValue = [&](CStr const &_Key, CStr const &_Value)
 				{
+					if (_Key == "MALTERLIB_GENERATOR_CLANG")
+					{
+						CStr Value = fl_EscVar(_Value);
+						CStr ValuePlusPlus = fl_EscVar(_Value + "++");
+
+						FileData += "MALTERLIB_GENERATOR_CLANG = {}\n"_f << Value;
+						FileData += "CC = {}\n"_f << Value;
+						FileData += "CPLUSPLUS = {}\n"_f << ValuePlusPlus;
+						FileData += "LD = {}\n"_f << Value;
+						FileData += "LDPLUSPLUS = {}\n"_f << ValuePlusPlus;
+						FileData += "CLANG = {}\n"_f << Value;
+						FileData += "CLANG_ANALYZER_EXEC = {}\n"_f << Value;
+					}
+
 					if (!_NativeTarget.m_bDefaultTarget)
 					{
 						if (g_PathModSettings.f_FindEqual(_Key))
 						{
 							FileData += "{} = {}\n"_f << _Key << fl_EscVar("{}/{}"_f << _Value << _NativeTarget.m_CType);
+							return;
+						}
+						else if (_Key == "EXECUTABLE_FOLDER_PATH")
+						{
+							FileData += "{} = \n"_f << _Key;
+							return;
+						}
+						else if (_Key == "EXECUTABLE_EXTENSION")
+						{
+							FileData += "{} = a\n"_f << _Key;
 							return;
 						}
 						else if (_Key == "PRODUCT_NAME")
@@ -873,6 +897,7 @@ namespace NMib::NBuildSystem
 			}
 
 			bint bDoneAdditionalLibraries = false;
+			CStr LDFlagsFirst;
 //				bint bDoneSearchPaths = false;
 
 			// Per configuration target settings
@@ -908,6 +933,8 @@ namespace NMib::NBuildSystem
 					}
 					else if (!bDoneAdditionalLibraries && iElement->m_Property == "OTHER_LDFLAGS")
 						bAdditionalLibraries = true;
+					else if (!bDoneAdditionalLibraries && iElement->m_Property == "LDFlagsFirst")
+						LDFlagsFirst = iElement->f_GetValue();
 					else if (!bDoneAdditionalLibraries && iElement->m_Property == "OTHER_LIBTOOLFLAGS" && m_XcodeVersion >= 6)
 						bAdditionalLibraries = true;
 					else if (iElement->m_Property == "ExportScriptEnvironmentContents" && _NativeTarget.m_bDefaultTarget)
@@ -925,7 +952,7 @@ namespace NMib::NBuildSystem
 					else if (bAdditionalLibraries)
 					{
 						bDoneAdditionalLibraries = true;
-						Extra = "$DependencyLibraries ";
+						Extra = "$LDFlagsFirst $DependencyLibrariesForced $DependencyLibraries ";
 						ExtraAfter = " $DependencyLibraries";
 					}
 
@@ -955,7 +982,8 @@ namespace NMib::NBuildSystem
 			{
 				CStr LinkSearchPaths;
 				CStr Link;
-				
+				CStr LinkForced;
+
 				DLinkDS_List(CLinkGroup, m_Link) LinkerGroupsOrdered;
 				TCMap<CStr, CLinkGroup> LinkerGroups;
 				TCLinkedList<CLinkGroup> NonLinkerGroups;
@@ -997,9 +1025,9 @@ namespace NMib::NBuildSystem
 						if (LinkConfig.m_bInternal && _NativeTarget.m_ProductType != "com.apple.product-type.library.static")
 						{
 							if (_Configuration.m_PlatformBase.f_StartsWith("OSX"))
-								Link += "-force_load \"{}/{}\" "_f << LinkConfig.m_pPerConfig->m_SearchPath << LinkConfig.m_pPerConfig->m_CalculatedPath;
+								LinkForced += "-force_load \"{}/{}\" "_f << LinkConfig.m_pPerConfig->m_SearchPath << LinkConfig.m_pPerConfig->m_CalculatedPath;
 							else
-								Link += "-Xlinker --whole-archive \"{}/{}\" -Xlinker --no-whole-archive "_f << LinkConfig.m_pPerConfig->m_SearchPath << LinkConfig.m_pPerConfig->m_CalculatedPath;
+								LinkForced += "-Xlinker --whole-archive \"{}/{}\" -Xlinker --no-whole-archive "_f << LinkConfig.m_pPerConfig->m_SearchPath << LinkConfig.m_pPerConfig->m_CalculatedPath;
 						}
 						else
 							Link += "\"{}/{}\" "_f << LinkConfig.m_pPerConfig->m_SearchPath << LinkConfig.m_pPerConfig->m_CalculatedPath;
@@ -1009,13 +1037,15 @@ namespace NMib::NBuildSystem
 				}
 
 				//FileData += (CStr::CFormat("DependencySearchPaths = {}\n") << fl_EscVar(LinkSearchPaths));
-				FileData += (CStr::CFormat("DependencyLibraries = {}\n") << fl_EscVar(Link));
+				FileData += "DependencyLibrariesForced = {}\n"_f << fl_EscVar(LinkForced);
+				FileData += "DependencyLibraries = {}\n"_f << fl_EscVar(Link);
+				FileData += "LDFlagsFirst = {}\n"_f << fl_EscVar(LDFlagsFirst);
 
 				if (!bDoneAdditionalLibraries)
 				{
 					if (m_XcodeVersion >= 6)
-						FileData += "OTHER_LIBTOOLFLAGS = $DependencyLibraries\n";
-					FileData += "OTHER_LDFLAGS = $DependencyLibraries\n";
+						FileData += "OTHER_LIBTOOLFLAGS = $DependencyLibrariesForced $DependencyLibraries\n";
+					FileData += "OTHER_LDFLAGS = $LDFlagsFirst $DependencyLibrariesForced $DependencyLibraries\n";
 				}
 				//if (!bDoneSearchPaths)
 				//	FileData += "LIBRARY_SEARCH_PATHS = $DependencySearchPaths\n";
