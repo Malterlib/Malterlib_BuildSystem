@@ -39,7 +39,37 @@ namespace NMib::NBuildSystem::NRepository
 
 		CStr HeadRef = CFile::fs_ReadStringFromFile(GitDirectory + "/HEAD", true).f_TrimRight("\n");
 		if (HeadRef.f_StartsWith("ref: "))
-			return CFile::fs_ReadStringFromFile(GitDirectory + "/" + HeadRef.f_Extract(5), true).f_TrimRight("\n");
+		{
+			HeadRef = HeadRef.f_Extract(5);
+			{
+				CStr RefFile = "{}/{}"_f << GitDirectory << + HeadRef;
+				if (CFile::fs_FileExists(RefFile))
+					return CFile::fs_ReadStringFromFile(RefFile, true).f_TrimRight("\n");
+			}
+
+			CStr PackedRefs;
+			{
+				CStr PackedRefFile = "{}/packed-refs"_f << GitDirectory;
+				if (CFile::fs_FileExists(PackedRefFile))
+					PackedRefs = CFile::fs_ReadStringFromFile(PackedRefFile, true).f_TrimRight("\n");
+			}
+
+			for (auto &Line : PackedRefs.f_SplitLine())
+			{
+				if (Line.f_StartsWith("#"))
+					continue;
+				CStr CommitHash;
+				CStr Ref;
+				aint nParsed = 0;
+				(CStr::CParse("{} {}") >> CommitHash >> Ref).f_Parse(Line, nParsed);
+				if (nParsed != 2)
+					continue;
+				if (Ref == HeadRef)
+					return CommitHash;
+			}
+
+			DMibError("Hash for {} was not found in {}"_f << HeadRef << GitDirectory);
+		}
 		else
 			return HeadRef;
 	}
@@ -351,7 +381,34 @@ namespace NMib::NBuildSystem::NRepository
 	{
 		CStr GitDirectory = fg_GetGitDataDir(_Repo.m_Location, _Repo.m_Position);
 
-		return CFile::fs_FileExists("{}/refs/heads/{}"_f << GitDirectory << _Branch);
+		if (CFile::fs_FileExists("{}/refs/heads/{}"_f << GitDirectory << _Branch))
+			return true;
+
+		CStr PackedRefs;
+		{
+			CStr PackedRefFile = "{}/packed-refs"_f << GitDirectory;
+			if (!CFile::fs_FileExists(PackedRefFile))
+				return false;
+			PackedRefs = CFile::fs_ReadStringFromFile(PackedRefFile, true).f_TrimRight("\n");
+		}
+
+		CStr BranchRef = "refs/heads/{}"_f << _Branch;
+
+		for (auto &Line : PackedRefs.f_SplitLine())
+		{
+			if (Line.f_StartsWith("#"))
+				continue;
+			CStr CommitHash;
+			CStr Ref;
+			aint nParsed = 0;
+			(CStr::CParse("{} {}") >> CommitHash >> Ref).f_Parse(Line, nParsed);
+			if (nParsed != 2)
+				continue;
+			if (Ref == BranchRef)
+				return true;
+		}
+
+		return false;
 	}
 
 	NStr::CStr fg_GetBranch(CRepository const &_Repo)
