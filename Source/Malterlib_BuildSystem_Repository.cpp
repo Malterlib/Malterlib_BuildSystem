@@ -12,22 +12,6 @@ namespace NMib::NBuildSystem
 	namespace
 	{
 		TCAggregate<CMutual> g_SubmoduleAddLock = {DAggregateInit};
-
-		struct CLocalGeneratorInteface : public CGeneratorInterface
-		{
-			bool f_GetBuiltin(CStr const &_Value, CStr &_Result) const override
-			{
-				return false;
-			}
-			CStr f_GetExpandedPath(CStr const &_Path, CStr const& _Base) const override
-			{
-				return CFile::fs_GetExpandedPath(_Path, _Base);
-			}
-			CSystemEnvironment f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const override
-			{
-				return fg_GetSys()->f_Environment();
-			}
-		};
 	}
 
 	namespace NRepository
@@ -132,7 +116,14 @@ namespace NMib::NBuildSystem
 			return ConfigFile;
 		}
 
-		bool fg_HandleRepository(CStr const &_ReposDirectory, CRepository const &_Repo, CStateHandler &o_StateHandler, CBuildSystem const &_BuildSystem)
+		bool fg_HandleRepository
+			(
+			 	CStr const &_ReposDirectory
+			 	, CRepository const &_Repo
+			 	, CStateHandler &o_StateHandler
+			 	, CBuildSystem const &_BuildSystem
+			 	, TCMap<CStr, CRepository const *> const &_AllRepositories
+			)
 		{
 			CStr Location = _ReposDirectory + "/" + _Repo.f_GetName();
 			
@@ -140,28 +131,94 @@ namespace NMib::NBuildSystem
 			
 			bool bChanged = false;
 
-			auto fLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir = {})
+			auto fLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir)
 				{
 					CProcessLaunchParams Params{_WorkingDir};
 #ifdef DPlatformFamily_OSX
 					Params.m_Environment["PATH"] = "/opt/local/bin:" + CStr(fg_GetSys()->f_GetEnvironmentVariable("PATH"));
 #endif
 					Params.m_bShowLaunched = false;
-					CProcessLaunch::fs_LaunchTool("git", _Params, Params);
+					return CProcessLaunch::fs_LaunchTool("git", _Params, Params);
+				}
+			;
+			auto fLaunchGitQuestion = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir)
+				{
+					CProcessLaunchParams Params{_WorkingDir};
+#ifdef DPlatformFamily_OSX
+					Params.m_Environment["PATH"] = "/opt/local/bin:" + CStr(fg_GetSys()->f_GetEnvironmentVariable("PATH"));
+#endif
+					Params.m_bShowLaunched = false;
+					uint32 ExitCode = 1;
+					CStr StdErr;
+					CStr StdOut;
+					CProcessLaunch::fs_LaunchBlock("git", _Params, StdOut, StdErr, ExitCode, Params);
+					if (!StdErr.f_IsEmpty())
+						DMibError("Failed to ask git question: {}"_f << StdErr);
+					return ExitCode == 0;
+				}
+			;
+			auto fTryLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir) -> CStr
+				{
+					CProcessLaunchParams Params{_WorkingDir};
+#ifdef DPlatformFamily_OSX
+					Params.m_Environment["PATH"] = "/opt/local/bin:" + CStr(fg_GetSys()->f_GetEnvironmentVariable("PATH"));
+#endif
+					Params.m_bShowLaunched = false;
+					uint32 ExitCode = 1;
+					CStr StdOut;
+					CStr StdErr;
+					CProcessLaunch::fs_LaunchBlock("git", _Params, StdOut, StdErr, ExitCode, Params);
+
+					if (ExitCode == 0)
+						return {};
+
+					if (!StdErr.f_IsEmpty())
+						return StdErr;
+
+					if (!StdOut.f_IsEmpty())
+						return StdOut;
+
+					return "Unknown error";
 				}
 			;
 
 			CStr ConfigHash = o_StateHandler.f_GetHash(_Repo.m_ConfigFile, Location);
 
+			auto fOutputInfo = [&](EOutputType _OutputType, CStr const &_Info)
+				{
+					ch8 const *pRepoColor = CColors::mc_StatusNormal;
+					switch (_OutputType)
+					{
+					case EOutputType_Normal: pRepoColor = CColors::mc_StatusNormal; break;
+					case EOutputType_Warning: pRepoColor = CColors::mc_StatusWarning; break;
+					case EOutputType_Error: pRepoColor = CColors::mc_StatusError; break;
+					}
+
+					CStr RepoName = CFile::fs_MakePathRelative(_Repo.m_Location, _BuildSystem.f_GetBaseDir());
+
+					CStr ReplacedRepo = RepoName.f_Replace("/", "{}{}/{}"_f << CColors::mc_Default << DColor_256(250) << pRepoColor ^ 1);
+					DMibConOut2
+						(
+							"{}{}{}   {}\n"
+							, pRepoColor
+							, ReplacedRepo
+							, CColors::mc_Default
+							, _Info
+						)
+					;
+				}
+			;
+
+
 			if (!CFile::fs_FileExists(Location))
 			{
-				DMibConOut("Adding external repository: {}{\n}", Location);
+				fOutputInfo(EOutputType_Normal, "Adding external repository at: {}"_f << Location);
 				CStr GitRoot = fg_GetGitRoot(Location);
 				if (GitRoot.f_IsEmpty() || _Repo.m_Submodule != "true")
 				{
 					try
 					{
-						fLaunchGit({"clone", "-n", _Repo.m_URL, Location});
+						fLaunchGit({"clone", "-n", _Repo.m_URL, Location}, "");
 
 						TCVector<CStr> Params = {"checkout", "-B", _Repo.m_DefaultBranch};
 
@@ -214,21 +271,163 @@ namespace NMib::NBuildSystem
 				 	&& !fg_IsSubmodule(Location)
 				)
 			{
-				DMibConOut2("Checking out specific hash '{}' at '{}'{\n}", ConfigHash, Location);
+				fOutputInfo(EOutputType_Normal, "Reconciling against hash '{}'"_f << ConfigHash);
+
 				try
 				{
 					fLaunchGit({"fetch", "--all"}, Location);
+					bool bShouldReset = false;
+					bool bIsNewer = false;
+					if (!bForceReset)
+					{
+						do
+						{
+							if (fLaunchGitQuestion({"merge-base", "--is-ancestor", CurrentHash, ConfigHash}, Location))
+								break;
+
+							if (fLaunchGitQuestion({"merge-base", "--is-ancestor", ConfigHash, CurrentHash}, Location))
+							{
+								bIsNewer = true;
+								break;
+							}
+
+							if (!fLaunchGit({"status", "--porcelain"}, Location).f_IsEmpty())
+								break;
+
+							auto *pRepo = _AllRepositories.f_FindLargestLessThanEqual(_Repo.m_ConfigFile);
+							if (!pRepo || !_Repo.m_ConfigFile.f_StartsWith((*pRepo)->m_Location))
+							{
+								fOutputInfo(EOutputType_Warning, "Cloud not find containing repo for config file '{}'\n"_f << _Repo.m_ConfigFile);
+								break;
+							}
+
+							auto &Repo = **pRepo;
+
+							CStr RelativeLocation = CFile::fs_MakePathRelative(_Repo.m_Location, Repo.m_Location);
+
+							CStr History = fLaunchGit({"log", "-p", "origin/{}"_f << Repo.m_DefaultBranch, "--", _Repo.m_ConfigFile}, Repo.m_Location);
+							CStr FilteredHistory;
+							CStr LookFor = "+{} "_f << RelativeLocation;
+
+							bool bFoundConfig = false;
+							bool bFoundCurrent = false;
+							for (auto &Line : History.f_SplitLine())
+							{
+								if (!Line.f_StartsWith(LookFor))
+									continue;
+								CStr Commit = Line.f_Extract(LookFor.f_GetLen());
+								if (Commit == ConfigHash)
+								{
+									if (bFoundCurrent)
+									{
+										bIsNewer = true;
+										break;
+									}
+									bFoundConfig = true;
+								}
+								if (Commit == CurrentHash)
+								{
+									if (bFoundConfig)
+									{
+										bShouldReset = true; // Our current commit is in origin history, it should be safe to do a reset
+										break;
+									}
+									bFoundCurrent = true;
+								}
+							}
+						}
+						while (false)
+							;
+					}
+
 					if (bForceReset)
 					{
+						fOutputInfo(EOutputType_Warning, "Force Resetting");
 						fLaunchGit({"checkout", "-f", "-B", _Repo.m_DefaultBranch, ConfigHash}, Location);
 						fLaunchGit({"clean", "-fd"}, Location);
 					}
-					else
-						fLaunchGit({"rebase", ConfigHash}, Location);
+					else if (bShouldReset)
+					{
+						fOutputInfo(EOutputType_Warning, "Resetting");
+						fLaunchGit({"reset", "--hard", ConfigHash}, Location);
+					}
+					else if (!bIsNewer)
+					{
+						fOutputInfo(EOutputType_Normal, "Rebasing");
+
+						TCSet<CStr> AllConfigFiles;
+						for (auto &pRepository : _AllRepositories)
+							AllConfigFiles[pRepository->m_ConfigFile];
+
+						auto fResolveConflicts = [&](CStr const &_ConflictingFiles) -> bool
+							{
+								bool bAllResolved = true;
+								for (auto &File : _ConflictingFiles.f_SplitLine())
+								{
+									CStr FullPath = CFile::fs_AppendPath(_Repo.m_Location, File);
+
+									if (AllConfigFiles.f_FindEqual(FullPath))
+									{
+										fOutputInfo(EOutputType_Warning, "Ignoring conflict in config file '{}'"_f << File);
+										fLaunchGit({"checkout", "--ours", "--", File}, Location);
+										fLaunchGit({"add", File}, Location);
+									}
+									else
+										bAllResolved = false;
+								}
+								return bAllResolved;
+							}
+						;
+
+						bool bAllResolved = true;
+						if (auto RebaseError = fTryLaunchGit({"rebase", "--autostash", ConfigHash}, Location))
+						{
+							while (bAllResolved)
+							{
+								CStr ConflictingFiles = fLaunchGit({"diff", "--name-only", "--diff-filter=U"}, Location);
+								if (ConflictingFiles.f_IsEmpty())
+								{
+									bAllResolved = false;
+									break;
+								}
+
+								if (!fResolveConflicts(ConflictingFiles))
+									bAllResolved = false;
+
+								if (bAllResolved)
+								{
+									if (fLaunchGit({"status", "--porcelain"}, Location).f_IsEmpty())
+									{
+										if (!fTryLaunchGit({"rebase", "--skip"}, Location))
+											break;
+									}
+									else
+									{
+										if (!fTryLaunchGit({"rebase", "--continue"}, Location))
+											break;
+									}
+								}
+							}
+
+							if (!bAllResolved)
+							{
+								fOutputInfo(EOutputType_Error, "Failed to automatically resolve rebase conflicts:\n\n{}\n"_f << RebaseError.f_Trim());
+								DMibError("Aborting, resolve conflicts manually");
+							}
+						}
+
+						if (bAllResolved)
+						{
+							CStr ConflictingFiles = fLaunchGit({"diff", "--name-only", "--diff-filter=U"}, Location);
+							if (!ConflictingFiles.f_IsEmpty())
+								fResolveConflicts(ConflictingFiles);
+						}
+					}
 				}
 				catch (CException const &_Exception)
 				{
-					CBuildSystem::fs_ThrowError(_Repo.m_Position, fg_Format("Failed to rebase on hash '{}' for repository: {}", ConfigHash, _Exception));
+					fOutputInfo(EOutputType_Error, "Reconcile error: "_f << _Exception.f_GetErrorStr().f_Trim());
+					CBuildSystem::fs_ThrowError(_Repo.m_Position, "Failed to reconcile hash '{}': {}"_f << ConfigHash << _Exception.f_GetErrorStr().f_Trim());
 				}
 				bChanged = true;
 			}
@@ -245,7 +444,7 @@ namespace NMib::NBuildSystem
 				auto pCurrentRemote = CurrentRemotes.f_FindEqual("origin");
 				if (pCurrentRemote && *pCurrentRemote != _Repo.m_URL)
 				{
-					DMibConOut2("Changing origin URL 'origin={}' at '{}'{\n}", _Repo.m_URL, Location);
+					fOutputInfo(EOutputType_Normal, "Changing origin URL 'origin={}'"_f << _Repo.m_URL);
 					fLaunchGit({"remote", "set-url", "origin", _Repo.m_URL}, Location);
 				}
 			}
@@ -261,11 +460,11 @@ namespace NMib::NBuildSystem
 					{
 						if (*pCurrentRemote == RemoteURL)
 							continue;
-						DMibConOut2("Changing remote URL '{}={}' at '{}'{\n}", RemoteName, RemoteURL, Location);
+						fOutputInfo(EOutputType_Normal, "Changing remote URL '{}={}'"_f << RemoteName << RemoteURL);
 						fLaunchGit({"remote", "set-url", RemoteName, RemoteURL}, Location);
 						continue;
 					}				
-					DMibConOut2("Adding remote '{}={}' at '{}'{\n}", RemoteName, RemoteURL, Location);
+					fOutputInfo(EOutputType_Normal, "Adding remote '{}={}'"_f << RemoteName << RemoteURL);
 					fLaunchGit({"remote", "add", RemoteName, RemoteURL}, Location);
 					fLaunchGit({"fetch", RemoteName}, Location);
 				}
@@ -409,24 +608,30 @@ namespace NMib::NBuildSystem
 
 	using namespace NRepository;
 
-	bool CBuildSystem::fp_HandleRepositories(TCMap<CPropertyKey, CStr> const &_Values)
+	CBuildSystem::ERetry CBuildSystem::fp_HandleRepositories(TCMap<CPropertyKey, CStr> const &_Values, bool _bSkipRepoUpdate)
 	{
-		CLocalGeneratorInteface LocalInterface;
-		auto pOldInterface = fg_Move(mp_GeneratorInterface);
-		auto Cleanup = g_OnScopeExit > [&]
-			{
-				mp_GeneratorInterface = fg_Move(pOldInterface);
-			}
-		;
-		mp_GeneratorInterface = &LocalInterface;
-
 		f_InitEntityForEvaluation(mp_Data.m_RootEntity, _Values);
 		f_ExpandRepositoryEntities(mp_Data);
 
+		if (_bSkipRepoUpdate)
+			return ERetry_None;
+
 		TCVector<TCMap<CStr, CReposLocation>> ReposOrdered = fg_GetRepos(*this, mp_Data);
 
+		TCMap<CStr, CRepository const *> AllRepositories;
+
+		for (auto &Repos : ReposOrdered)
+		{
+			for (auto &ReposLocation : Repos)
+			{
+				for (auto &Repo : ReposLocation.m_Repositories)
+					AllRepositories[Repo.m_Location] = &Repo;
+			}
+		}
+
 		TCAtomic<bool> bChanged;
-		
+		TCAtomic<bool> bBinariesChange;
+
 		CStateHandler StateHandler;
 
 		for (auto &Repos : ReposOrdered)
@@ -448,8 +653,13 @@ namespace NMib::NBuildSystem
 								_Repos.m_Repositories
 								, [&](auto &_Repo)
 								{
-									if (fg_HandleRepository(ReposDirectory, _Repo, StateHandler, *this))
+									if (fg_HandleRepository(ReposDirectory, _Repo, StateHandler, *this, AllRepositories))
+									{
 										bChanged.f_Exchange(true);
+										CStr RelativePath = CFile::fs_MakePathRelative(_Repo.m_Location, f_GetBaseDir());
+										if (RelativePath.f_StartsWith("Binaries/"))
+											bBinariesChange.f_Exchange(true);
+									}
 								}
 							)
 						;
@@ -486,6 +696,14 @@ namespace NMib::NBuildSystem
 			}
 		}
 
-		return bChanged.f_Load();
+		if (bChanged.f_Load())
+		{
+			if (bBinariesChange.f_Load())
+				return ERetry_Relaunch;
+			else
+				return ERetry_Again;
+		}
+
+		return ERetry_None;
 	}
 }

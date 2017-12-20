@@ -32,9 +32,16 @@ namespace NMib::NBuildSystem
 	{
 	public:
 		CBuildSystem();
+
+		enum ERetry
+		{
+			ERetry_None
+			, ERetry_Again
+			, ERetry_Relaunch
+		};
 		
 		void f_SetGeneratorInterface(CGeneratorInterface *_pInterface) const; 
-		bool f_Generate(CGenerateSettings const &_GenerateSettings, bool &o_bRetry);
+		bool f_Generate(CGenerateSettings const &_GenerateSettings, ERetry &o_Retry);
 		void f_GenerateBuildSystem
 			(
 				TCMap<CConfiguration, TCUniquePointer<CConfiguraitonData>> &o_Configurations
@@ -323,7 +330,7 @@ namespace NMib::NBuildSystem
 		CBuildSystemData::CImportData *fp_ExpandImportCMake_FromGeneratedDirectory(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData, CStr const &_Directory) const;
 		void fp_TracePropertyEval(bool _bSuccess, CEntity const &_Entity, CProperty const &_Property, CStr const &_Value) const;
 
-		bool fp_HandleRepositories(TCMap<CPropertyKey, CStr> const &_Values);
+		ERetry fp_HandleRepositories(TCMap<CPropertyKey, CStr> const &_Values, bool _bSkipRepoUpdate);
 
 		void fp_Repository_ForEachRepo(CRepoFilter const &_Filter, bool _bParallell, TCVector<CStr> const &_Params);
 		void fp_Repository_Branch(CRepoFilter const &_Filter, CStr const &_Branch);

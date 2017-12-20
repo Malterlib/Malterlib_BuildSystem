@@ -12,10 +12,29 @@
 namespace NMib::NBuildSystem
 {
 	CUniversallyUniqueIdentifier g_GeneratorStateUUIDNamespace("{8220886E-63BD-4F4E-B32B-71D68D7346D4}");
-	
-	bool CBuildSystem::f_Generate(CGenerateSettings const &_GenerateSettings, bool &o_bRetry)
+
+	namespace
 	{
-		o_bRetry = false;
+		struct CLocalGeneratorInteface : public CGeneratorInterface
+		{
+			bool f_GetBuiltin(CStr const &_Value, CStr &_Result) const override
+			{
+				return false;
+			}
+			CStr f_GetExpandedPath(CStr const &_Path, CStr const& _Base) const override
+			{
+				return CFile::fs_GetExpandedPath(_Path, _Base);
+			}
+			CSystemEnvironment f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const override
+			{
+				return fg_GetSys()->f_Environment();
+			}
+		};
+	}
+	
+	bool CBuildSystem::f_Generate(CGenerateSettings const &_GenerateSettings, ERetry &o_Retry)
+	{
+		o_Retry = ERetry_None;
 		CClock Clock;
 		Clock.f_Start();
 		
@@ -445,55 +464,74 @@ namespace NMib::NBuildSystem
 
 		auto GeneratorValues = pGenerator->f_GetValues(*this, OutputDir);
 
-		bool bTryParsed = false;
-		try
 		{
-			if (!bDisableUserSettings && CFile::fs_FileExists(UserSettingsFileName))
+			CLocalGeneratorInteface LocalInterface;
+			auto pOldInterface = fg_Move(mp_GeneratorInterface);
+			auto Cleanup = g_OnScopeExit > [&]
+				{
+					mp_GeneratorInterface = fg_Move(pOldInterface);
+				}
+			;
+			mp_GeneratorInterface = &LocalInterface;
+
+			bool bTryParsed = false;
+			try
 			{
-				CBuildSystemPreprocessor Preprocessor(mp_UserSettingsRegistry, mp_SourceFiles, mp_FindCache);
-				Preprocessor.f_ReadFile(UserSettingsFileName);
-				mp_Registry = mp_UserSettingsRegistry;
-			}
+				if (!bDisableUserSettings && CFile::fs_FileExists(UserSettingsFileName))
+				{
+					CBuildSystemPreprocessor Preprocessor(mp_UserSettingsRegistry, mp_SourceFiles, mp_FindCache);
+					Preprocessor.f_ReadFile(UserSettingsFileName);
+					mp_Registry = mp_UserSettingsRegistry;
+				}
 
-			{
-				CBuildSystemPreprocessor Preprocessor(mp_Registry, mp_SourceFiles, mp_FindCache);
-				Preprocessor.f_ReadFile(_GenerateSettings.m_SourceFile);
-				mp_FileLocation = Preprocessor.f_GetFileLocation();
-			}
-			if (!bDisableUserSettings)
-				mp_SourceFiles[UserSettingsFileName];
+				{
+					CBuildSystemPreprocessor Preprocessor(mp_Registry, mp_SourceFiles, mp_FindCache);
+					Preprocessor.f_ReadFile(_GenerateSettings.m_SourceFile);
+					mp_FileLocation = Preprocessor.f_GetFileLocation();
+				}
+				if (!bDisableUserSettings)
+					mp_SourceFiles[UserSettingsFileName];
 
-			mp_SourceFiles[EnvironmentStateFile];
+				mp_SourceFiles[EnvironmentStateFile];
 
-			mp_BaseDir = CFile::fs_GetPath(mp_FileLocation);
-			mp_FileLocationFile = CFile::fs_GetFile(mp_FileLocation);
+				mp_BaseDir = CFile::fs_GetPath(mp_FileLocation);
+				mp_FileLocationFile = CFile::fs_GetFile(mp_FileLocation);
 
-			bTryParsed = true;
-			fp_ParseData(mp_Data.m_RootEntity, mp_Registry, &mp_Data.m_ConfigurationTypes);
-		}
-		catch (CException const &)
-		{
-			if (!bTryParsed)
+				bTryParsed = true;
 				fp_ParseData(mp_Data.m_RootEntity, mp_Registry, &mp_Data.m_ConfigurationTypes);
-			if (fp_HandleRepositories(GeneratorValues))
+			}
+			catch (CException const &)
 			{
-				o_bRetry = true;
+				if (!bTryParsed)
+					fp_ParseData(mp_Data.m_RootEntity, mp_Registry, &mp_Data.m_ConfigurationTypes);
+				if (auto Retry = fp_HandleRepositories(GeneratorValues, false))
+				{
+					o_Retry = Retry;
+					return false;
+				}
+				else
+					throw;
+			}
+
+			auto ActionParams = _GenerateSettings.m_ActionParams;
+			bool bSkipRepoUpdate = false;
+			if (!ActionParams.f_IsEmpty() && ActionParams.f_GetFirst() == "--skip-update")
+			{
+				ActionParams.f_Remove(0);
+				bSkipRepoUpdate = true;
+			}
+
+			if (auto Retry = fp_HandleRepositories(GeneratorValues, bSkipRepoUpdate))
+			{
+				o_Retry = Retry;
 				return false;
 			}
-			else
-				throw;
-		}
 
-		if (fp_HandleRepositories(GeneratorValues))
-		{
-			o_bRetry = true;
-			return false;
-		}
-
-		if (!bBuildAction)
-		{
-			fp_HandleAction(_GenerateSettings.m_Action, _GenerateSettings.m_ActionParams);
-			return false;
+			if (!bBuildAction)
+			{
+				fp_HandleAction(_GenerateSettings.m_Action, ActionParams);
+				return false;
+			}
 		}
 
 		// Clear out evaluated properties from repositories
