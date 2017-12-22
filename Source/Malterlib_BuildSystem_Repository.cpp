@@ -153,7 +153,7 @@ namespace NMib::NBuildSystem
 					CStr StdOut;
 					CProcessLaunch::fs_LaunchBlock("git", _Params, StdOut, StdErr, ExitCode, Params);
 					if (!StdErr.f_IsEmpty())
-						DMibError("Failed to ask git question: {}"_f << StdErr);
+						DMibError("Failed to ask git question {vs}: {}{}"_f << _Params << StdErr << StdOut);
 					return ExitCode == 0;
 				}
 			;
@@ -212,7 +212,11 @@ namespace NMib::NBuildSystem
 
 			if (!CFile::fs_FileExists(Location))
 			{
-				fOutputInfo(EOutputType_Normal, "Adding external repository at: {}"_f << Location);
+				if (ConfigHash.f_IsEmpty())
+					fOutputInfo(EOutputType_Normal, "Adding external repository");
+				else
+					fOutputInfo(EOutputType_Normal, "Adding external repository at commit {}"_f << ConfigHash);
+
 				CStr GitRoot = fg_GetGitRoot(Location);
 				if (GitRoot.f_IsEmpty() || _Repo.m_Submodule != "true")
 				{
@@ -257,16 +261,18 @@ namespace NMib::NBuildSystem
 			}
 			
 			CStr CurrentHash = o_StateHandler.f_GetHash(_Repo.m_StateFile, Location);
+			CStr HeadHash = fg_GetGitHeadHash(Location, _Repo.m_Position);
 
 			bool bForceReset = _BuildSystem.f_GetEnvironmentVariable("MalterlibRepositoryHardReset", "") == "true";
 
 			if
 				(
 					!ConfigHash.f_IsEmpty()
+				 	&& HeadHash != ConfigHash
 				 	&&
 				 	(
 					 	CurrentHash != ConfigHash
-					 	|| (bForceReset && fg_GetGitHeadHash(Location, _Repo.m_Position) != ConfigHash)
+					 	|| bForceReset
 					)
 				 	&& !fg_IsSubmodule(Location)
 				)
@@ -282,10 +288,10 @@ namespace NMib::NBuildSystem
 					{
 						do
 						{
-							if (fLaunchGitQuestion({"merge-base", "--is-ancestor", CurrentHash, ConfigHash}, Location))
+							if (fLaunchGitQuestion({"merge-base", "--is-ancestor", HeadHash, ConfigHash}, Location))
 								break;
 
-							if (fLaunchGitQuestion({"merge-base", "--is-ancestor", ConfigHash, CurrentHash}, Location))
+							if (fLaunchGitQuestion({"merge-base", "--is-ancestor", ConfigHash, HeadHash}, Location))
 							{
 								bIsNewer = true;
 								break;
@@ -325,7 +331,7 @@ namespace NMib::NBuildSystem
 									}
 									bFoundConfig = true;
 								}
-								if (Commit == CurrentHash)
+								if (Commit == HeadHash)
 								{
 									if (bFoundConfig)
 									{
