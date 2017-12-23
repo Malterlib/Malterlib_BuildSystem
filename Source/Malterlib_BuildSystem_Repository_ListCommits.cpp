@@ -259,12 +259,13 @@ namespace NMib::NBuildSystem
 							if (!pEndConfigFile)
 								continue;
 
+							CStr RelativePath = CFile::fs_MakePathRelative(ConfigFile, Owner.m_Location);
+
 							auto pStartHash = pStartConfigFile->m_Configs.f_FindEqual(Repo.m_Location);
-							if (!pStartHash)
-							{
-								fReportError("No start config hash found for: {}"_f << Repo.m_Location);
-								continue;
-							}
+							if (pStartHash)
+								State.m_StartCommits[Repo.m_Location] = pStartHash->m_Hash;
+							else
+								State.m_StartCommits[Repo.m_Location];
 
 							auto pEndHash = pEndConfigFile->m_Configs.f_FindEqual(Repo.m_Location);
 							if (!pEndHash)
@@ -273,9 +274,7 @@ namespace NMib::NBuildSystem
 								continue;
 							}
 
-							CStr RelativePath = CFile::fs_MakePathRelative(ConfigFile, Owner.m_Location);
 
-							State.m_StartCommits[Repo.m_Location] = pStartHash->m_Hash;
 							State.m_EndCommits[Repo.m_Location] = pEndHash->m_Hash;
 
 							bResolved = true;
@@ -364,12 +363,12 @@ namespace NMib::NBuildSystem
 			auto &Location = pRepository->m_Location;
 			auto *pStartCommit = State.m_StartCommits.f_FindEqual(Location);
 			auto *pEndCommit = State.m_EndCommits.f_FindEqual(Location);
-			if (!pStartCommit)
+			if (!pStartCommit || pStartCommit->f_IsEmpty())
 			{
 				DConOut2("{}{}: Missing start commit\n", _Prefix, Location);
 				continue;
 			}
-			if (!pEndCommit)
+			if (!pEndCommit || pEndCommit->f_IsEmpty())
 			{
 				DConOut2("{}{}: Missing end commit\n", _Prefix, Location);
 				continue;
