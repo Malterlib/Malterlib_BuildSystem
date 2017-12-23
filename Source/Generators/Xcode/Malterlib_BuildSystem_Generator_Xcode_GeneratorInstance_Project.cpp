@@ -781,7 +781,7 @@ fi
 
 							CStr CreateOutputDirs;
 							for (auto &OutputDir : OutputDirs)
-								fg_AddStrSep(CreateOutputDirs, "mkdir -p \\\"{}\\\""_f << OutputDir.f_EscapeStrNoQuotes("\\'\r\n\t", "\\'rnt").f_Replace("\\", "\\\\"), "\\n");
+								fg_AddStrSep(CreateOutputDirs, "mkdir -p \\\"{}\\\""_f << OutputDir.f_EscapeStrNoQuotes(), "\\n");
 
 							o_Output
 								+= CStr::CFormat
@@ -796,7 +796,7 @@ fi
 				outputFiles = (
 	{}
 				);
-								 script = "#!/bin/bash\nexport PATH=$MalterlibBuildSystemExecutablePath:$PATH\neval $OTHER_INPUT_FILE_FLAGS\n{}\ncd \"{}\"\n{}\n";
+								 script = "#!/bin/bash\nexport PATH=\"$MalterlibBuildSystemExecutablePath:$PATH\"\neval $OTHER_INPUT_FILE_FLAGS\n{}\ncd \"{}\"\n{}\n";
 			};
 	)-----"
 								)
@@ -804,8 +804,8 @@ fi
 								<< FileName.f_EscapeStr()
 								<< OutputFiles
 								<< CreateOutputDirs
-								<< BuildRule.m_WorkingDirectory.f_EscapeStrNoQuotes("\\'\r\n\t", "\\'rnt").f_Replace("\\", "\\\\")
-								<< BuildRule.m_MalterlibCustomBuildCommandLine
+								<< BuildRule.m_WorkingDirectory.f_EscapeStrNoQuotes()
+								<< BuildRule.m_MalterlibCustomBuildCommandLine.f_EscapeStrNoQuotes()
 							;
 
 						}
