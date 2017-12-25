@@ -47,7 +47,11 @@ namespace NMib::NBuildSystem
 			}
 		;
 
-		if (_Action == "git" || _Action == "sgit" || _Action == "cgit" || _Action == "scgit")
+		if (_Action == "update_repos")
+		{
+			return;
+		}
+		else if (_Action == "git" || _Action == "sgit" || _Action == "cgit" || _Action == "scgit")
 		{
 			RepoFilter.m_Type = "Malterlib";
 			RepoFilter.m_bOnlyChanged = _Action == "cgit" || _Action == "scgit";

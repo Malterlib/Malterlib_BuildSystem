@@ -134,6 +134,7 @@ namespace NMib::NBuildSystem
 		bool f_EvalCondition(CEntity const &_Context, CCondition const &_Condition) const;
 		static void fs_ThrowError(CFilePosition const &_Position, CStr const &_Error);
 		static void fs_ThrowError(CFilePosition const &_Position, CStr const &_Error, TCVector<CBuildSystemError> const &_Errors);
+		static void fs_ThrowError(CRegistryPreserveAndOrder_CStr const &_Registry, CStr const &_Error);
 		void f_AddSourceFile(CStr const &_File) const;
 
 		NStr::CStr f_GetEnvironmentVariable(NStr::CStr const &_Name, NStr::CStr const &_Default = {}, bool *o_pExists = nullptr) const;
@@ -209,7 +210,6 @@ namespace NMib::NBuildSystem
 			bool m_bKeepGeneratedFile = false;
 		};
 
-		void fp_ParseCondition(CRegistryPreserveAndOrder_CStr &_Registry, CCondition &_ParentCondition, bool _bRoot = true) const;
 		void fp_ParseConfigurationConditions(CRegistryPreserveAndOrder_CStr &_Registry, CBuildSystemConfiguration &_Configuration) const;
 		void fp_ParseConfigurationType(CStr const &_Name, CRegistryPreserveAndOrder_CStr &_Registry, TCMap<CStr, CConfigurationType> &o_Configurations) const;
 		void fp_ParsePropertyValue
@@ -349,6 +349,7 @@ namespace NMib::NBuildSystem
 			)
 		;
 		void fp_HandleAction(CStr const &_Action, TCVector<CStr> const &_Params);
+		void fp_SaveEnvironment();
 
 		CGenerateSettings mp_GenerateSettings;
 
@@ -378,6 +379,7 @@ namespace NMib::NBuildSystem
 		CStr mp_UserSettingsFile;
 		CStr mp_FileLocationFile;
 		CStr mp_GeneratorStateFileName;
+		TCMap<CStr, CStr> mp_SaveEnvironment;
 		TCMap<CStr, CStr> mp_Environment;
 		CStr mp_GenerateWorkspace;
 		zbool mp_ValidTargetsValid;

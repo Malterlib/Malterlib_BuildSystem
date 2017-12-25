@@ -92,7 +92,7 @@ namespace NMib::NBuildSystem
 		auto &Import = _BuildSystemData.m_Imports.f_Insert();
 		
 		{
-			CBuildSystemPreprocessor Preprocessor(Import.m_Registry, _BuildSystemData.m_SourceFiles, mp_FindCache);
+			CBuildSystemPreprocessor Preprocessor(Import.m_Registry, _BuildSystemData.m_SourceFiles, mp_FindCache, mp_Environment);
 			while (!Projects.f_IsEmpty())
 			{
 				CStr Project = fg_GetStrSep(Projects, ";");
@@ -777,7 +777,7 @@ namespace NMib::NBuildSystem
 		else
 		{
 			auto &Import = _BuildSystemData.m_Imports.f_Insert();
-			CBuildSystemPreprocessor Preprocessor(Import.m_Registry, _BuildSystemData.m_SourceFiles, mp_FindCache);
+			CBuildSystemPreprocessor Preprocessor(Import.m_Registry, _BuildSystemData.m_SourceFiles, mp_FindCache, mp_Environment);
 			Preprocessor.f_ReadFile(FileName);
 			_BuildSystemData.m_SourceFiles[FileName];
 			pImport = &Import;

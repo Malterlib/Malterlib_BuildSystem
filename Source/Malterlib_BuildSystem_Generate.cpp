@@ -31,6 +31,29 @@ namespace NMib::NBuildSystem
 			}
 		};
 	}
+
+	void CBuildSystem::fp_SaveEnvironment()
+	{
+		try
+		{
+			CEJSON JSON;
+			for (auto &EnvVar : mp_SaveEnvironment)
+				JSON[mp_SaveEnvironment.fs_GetKey(EnvVar)] = EnvVar;
+
+			TCVector<uint8> FileData;
+			CFile::fs_WriteStringToVector(FileData, JSON.f_ToString());
+
+			CStr EnvironmentStateFile = CFile::fs_AppendPath(mp_OutputDir, "Environment.json");
+
+			CFile::fs_CreateDirectory(CFile::fs_GetPath(EnvironmentStateFile));
+			CFile::fs_CopyFileDiff(FileData, EnvironmentStateFile, CTime::fs_NowUTC());
+		}
+		catch (NException::CException const &_Exception)
+		{
+			DMibError("Failed to save Environment.json: {}"_f << _Exception);
+		}
+
+	}
 	
 	bool CBuildSystem::f_Generate(CGenerateSettings const &_GenerateSettings, ERetry &o_Retry)
 	{
@@ -104,8 +127,13 @@ namespace NMib::NBuildSystem
 		if (bUseCachedEnvironment)
 		{
 			if (!CFile::fs_FileExists(EnvironmentStateFile, EFileAttrib_File))
-				DMibError("Cached environment not found at: {}"_f << EnvironmentStateFile);
+			{
+				DMibConErrOut2("Cached environment was not found at: {}. Saving current environment.", EnvironmentStateFile);
+				mp_Environment = mp_SaveEnvironment = fg_GetSys()->f_Environment();
+				fp_SaveEnvironment();
+			}
 
+			mp_SaveEnvironment.f_Clear();
 			mp_Environment.f_Clear();
 			try
 			{
@@ -117,9 +145,29 @@ namespace NMib::NBuildSystem
 			{
 				DMibError("Failed to parse Environment.json: {}"_f << _Exception);
 			}
+			mp_SaveEnvironment = mp_Environment;
 		}
 		else
-			mp_Environment = fg_GetSys()->f_Environment();
+			mp_SaveEnvironment = mp_Environment = fg_GetSys()->f_Environment();
+
+		CStr OverrideEnvironmentFile = CFile::fs_AppendPath(OutputDir, "OverrideEnvironment.json");
+		bool bFoundOverrideEnvironmentFile = false;
+		{
+			if (CFile::fs_FileExists(OverrideEnvironmentFile, EFileAttrib_File))
+			{
+				bFoundOverrideEnvironmentFile = true;
+				try
+				{
+					auto EnvironmentJSON = CEJSON::fs_FromString(CFile::fs_ReadStringFromFile(OverrideEnvironmentFile, true), OverrideEnvironmentFile);
+					for (auto &EnvVar : EnvironmentJSON.f_Object())
+						mp_Environment[EnvVar.f_Name()] = EnvVar.f_Value().f_String();
+				}
+				catch (NException::CException const &_Exception)
+				{
+					DMibError("Failed to parse Environment.json: {}"_f << _Exception);
+				}
+			}
+		}
 
 		if (bBuildAction)
 		{
@@ -172,21 +220,33 @@ namespace NMib::NBuildSystem
 #ifdef DPlatformFamily_Windows
 								try
 								{
-									CFile File;
-									File.f_Open(FileName, EFileOpen_ReadAttribs | EFileOpen_ShareAll);
-									NTime::CTime DiskTime = File.f_GetWriteTime();
-									if (DiskTime != _File.m_WriteTime)
+									if (!_File.m_WriteTime.f_IsValid())
 									{
-										if (!bChanged.f_Exchange(true))
+										if (CFile::fs_FileExists(FileName))
 										{
-											DConOut
-												(
-													"Regenerating build system because file changed ({} != {}): {}{\n}"
-													, NTime::fg_GetFullTimeStr(DiskTime) << NTime::fg_GetFullTimeStr(_File.m_WriteTime) << FileName
-												)
-											;
+											if (!bChanged.f_Exchange(true))
+												DConOut2("Regenerating build system because file now exists: {}{\n}", FileName);
+											return true;
 										}
-										return true;
+									}
+									else
+									{
+										CFile File;
+										File.f_Open(FileName, EFileOpen_ReadAttribs | EFileOpen_ShareAll);
+										NTime::CTime DiskTime = File.f_GetWriteTime();
+										if (DiskTime != _File.m_WriteTime)
+										{
+											if (!bChanged.f_Exchange(true))
+											{
+												DConOut
+													(
+														"Regenerating build system because file changed ({} != {}): {}{\n}"
+														, NTime::fg_GetFullTimeStr(DiskTime) << NTime::fg_GetFullTimeStr(_File.m_WriteTime) << FileName
+													)
+												;
+											}
+											return true;
+										}
 									}
 								}
 								catch (...)
@@ -226,19 +286,31 @@ namespace NMib::NBuildSystem
 #else
 								try
 								{
-									NTime::CTime DiskTime = CFile::fs_GetWriteTime(FileName);
-									if (DiskTime != _File.m_WriteTime)
+									if (!_File.m_WriteTime.f_IsValid())
 									{
-										if (!bChanged.f_Exchange(true))
+										if (CFile::fs_FileExists(FileName))
 										{
-											DConOut
-												(
-													"Regenerating build system because file changed ({} != {}): {}{\n}"
-													, NTime::fg_GetFullTimeStr(DiskTime) << NTime::fg_GetFullTimeStr(_File.m_WriteTime) << FileName
-												)
-											;
+											if (!bChanged.f_Exchange(true))
+												DConOut2("Regenerating build system because file now exists: {}{\n}", FileName);
+											return true;
 										}
-										return true;
+									}
+									else
+									{
+										NTime::CTime DiskTime = CFile::fs_GetWriteTime(FileName);
+										if (DiskTime != _File.m_WriteTime)
+										{
+											if (!bChanged.f_Exchange(true))
+											{
+												DConOut
+													(
+														"Regenerating build system because file changed ({} != {}): {}{\n}"
+														, NTime::fg_GetFullTimeStr(DiskTime) << NTime::fg_GetFullTimeStr(_File.m_WriteTime) << FileName
+													)
+												;
+											}
+											return true;
+										}
 									}
 								}
 								catch (CException const &_Exception)
@@ -479,13 +551,13 @@ namespace NMib::NBuildSystem
 			{
 				if (!bDisableUserSettings && CFile::fs_FileExists(UserSettingsFileName))
 				{
-					CBuildSystemPreprocessor Preprocessor(mp_UserSettingsRegistry, mp_SourceFiles, mp_FindCache);
+					CBuildSystemPreprocessor Preprocessor(mp_UserSettingsRegistry, mp_SourceFiles, mp_FindCache, mp_Environment);
 					Preprocessor.f_ReadFile(UserSettingsFileName);
 					mp_Registry = mp_UserSettingsRegistry;
 				}
 
 				{
-					CBuildSystemPreprocessor Preprocessor(mp_Registry, mp_SourceFiles, mp_FindCache);
+					CBuildSystemPreprocessor Preprocessor(mp_Registry, mp_SourceFiles, mp_FindCache, mp_Environment);
 					Preprocessor.f_ReadFile(_GenerateSettings.m_SourceFile);
 					mp_FileLocation = Preprocessor.f_GetFileLocation();
 				}
@@ -493,6 +565,7 @@ namespace NMib::NBuildSystem
 					mp_SourceFiles[UserSettingsFileName];
 
 				mp_SourceFiles[EnvironmentStateFile];
+				mp_SourceFiles[OverrideEnvironmentFile];
 
 				mp_BaseDir = CFile::fs_GetPath(mp_FileLocation);
 				mp_FileLocationFile = CFile::fs_GetFile(mp_FileLocation);
@@ -556,24 +629,7 @@ namespace NMib::NBuildSystem
 		}
 
 		if (!bUseCachedEnvironment)
-		{
-			try
-			{
-				CEJSON JSON;
-				for (auto &EnvVar : mp_Environment)
-					JSON[mp_Environment.fs_GetKey(EnvVar)] = EnvVar;
-
-				TCVector<uint8> FileData;
-				CFile::fs_WriteStringToVector(FileData, JSON.f_ToString());
-
-				CFile::fs_CreateDirectory(CFile::fs_GetPath(EnvironmentStateFile));
-				CFile::fs_CopyFileDiff(FileData, EnvironmentStateFile, CTime::fs_NowUTC());
-			}
-			catch (NException::CException const &_Exception)
-			{
-				DMibError("Failed to save Environment.json: {}"_f << _Exception);
-			}
-		}
+			fp_SaveEnvironment();
 
 		{
 			CGeneratorState State;

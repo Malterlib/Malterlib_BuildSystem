@@ -23,7 +23,9 @@ namespace NMib::NBuildSystem
 	{
 		inline_always CCondition();
 		bool f_NeedPerFile() const;
-		
+		static void fs_ParseCondition(CRegistryPreserveAndOrder_CStr &_Registry, CCondition &_ParentCondition, bool _bRoot = true);
+		bool f_SimpleEval(TCMap<CStr, CStr> const &_Values) const;
+
 		TCLinkedList<CCondition> m_Children;
 		
 		CStr m_Subject;

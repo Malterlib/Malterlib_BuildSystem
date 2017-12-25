@@ -2,6 +2,7 @@
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Preprocessor.h"
+#include "Malterlib_BuildSystem_Condition.h"
 
 namespace NMib::NBuildSystem
 {
@@ -10,10 +11,12 @@ namespace NMib::NBuildSystem
 			CRegistryPreserveAndOrder_CStr &_ResultRegistry
 			, TCSet<CStr> &_SourceFiles
 			, CFindCache const &_FindCache
+			, TCMap<CStr, CStr> const &_Environment
 		)
 		: mp_ResultRegistry(_ResultRegistry)
 		, mp_SourceFiles(_SourceFiles)
 		, mp_FindCache(_FindCache)
+		, mp_Environment(_Environment)
 	{
 	}
 
@@ -77,73 +80,85 @@ namespace NMib::NBuildSystem
 					bool bImport = _Registry.f_GetName() == "Import" && !_Registry.f_GetThisValue().f_IsEmpty();
 					if (bInclude || bImport)
 					{
-						CStr File = _Registry.f_GetThisValue();
+						bool bDoInclude = true;
+						if (_Registry.f_HasChildren())
+						{
+							CCondition Condition;
+							for (auto &Child : _Registry.f_GetChildren())
+								CCondition::fs_ParseCondition(Child, Condition);
+							if (!Condition.f_SimpleEval(mp_Environment))
+								bDoInclude = false;
+						}
 						auto pParent = _Registry.f_GetParent();
-						
+
 						if (pParent->f_GetParent() && bImport)
 							fsp_ThrowError(_Registry, "You can only import at root scope");
 
-						CStr FullPath = CFile::fs_GetExpandedPath(File, _Path);
-
-						TCVector<CStr> Files;
-						
-						if (FullPath.f_FindChars("*?") >= 0)
+						if (bDoInclude)
 						{
-							// Wildcard search
-							fpr_FindFilesRecursive(_Registry, Files, CStr(), FullPath);
-							
-							if (Files.f_IsEmpty())
-							{
-								if (bInclude)
-									o_Errors.f_Insert(CError{&_Registry, CStr::CFormat("No files found for included pattern '{}'") << FullPath});
-								else
-									o_Errors.f_Insert(CError{&_Registry, CStr::CFormat("No files found for imported pattern '{}'") << FullPath});
-								return;
-							}
-						}
-						else
-						{
-							if (!CFile::fs_FileExists(FullPath, EFileAttrib_File))
-							{
-								if (bInclude)
-									o_Errors.f_Insert(CError{&_Registry, CStr::CFormat("Include file '{}' does not exist") << FullPath});
-								else
-									o_Errors.f_Insert(CError{&_Registry, CStr::CFormat("Import file '{}' does not exist") << FullPath});
-								return;
-							}
-							Files.f_Insert(FullPath);
-						}
+							CStr File = _Registry.f_GetThisValue();
+							CStr FullPath = CFile::fs_GetExpandedPath(File, _Path);
 
-						auto fl_AddFile
-							= [&](CStr const &_File)
+							TCVector<CStr> Files;
+
+							if (FullPath.f_FindChars("*?") >= 0)
 							{
-								auto SourceFile = mp_SourceFiles(_File);
-								if (bImport && !SourceFile.f_WasCreated())
+								// Wildcard search
+								fpr_FindFilesRecursive(_Registry, Files, CStr(), FullPath);
+
+								if (Files.f_IsEmpty())
 								{
-									// Already imported
+									if (bInclude)
+										o_Errors.f_Insert(CError{&_Registry, CStr::CFormat("No files found for included pattern '{}'") << FullPath});
+									else
+										o_Errors.f_Insert(CError{&_Registry, CStr::CFormat("No files found for imported pattern '{}'") << FullPath});
 									return;
 								}
-
-								CStr FileData = CFile::fs_ReadStringFromFile(CStr(_File), true);
-								CStr Path = CFile::fs_GetPath(_File);
-								CRegistryPreserveAndOrder_CStr IncludedRegistry;
-								IncludedRegistry.f_ParseStr(FileData, _File);
-
-								fpr_HandleIncludes(IncludedRegistry, Path, o_Errors);
-
-								auto pPrevious = &_Registry;
-								for (auto iChild = IncludedRegistry.f_GetChildIterator(); iChild; )
-								{
-									auto pChild = iChild.f_GetCurrent();
-									++iChild;
-									pParent->f_MoveChild(pChild, pPrevious);
-									pPrevious = pChild;
-								}
 							}
-						;
-						
-						for (auto &File : Files)
-							fl_AddFile(File);
+							else
+							{
+								if (!CFile::fs_FileExists(FullPath, EFileAttrib_File))
+								{
+									if (bInclude)
+										o_Errors.f_Insert(CError{&_Registry, CStr::CFormat("Include file '{}' does not exist") << FullPath});
+									else
+										o_Errors.f_Insert(CError{&_Registry, CStr::CFormat("Import file '{}' does not exist") << FullPath});
+									return;
+								}
+								Files.f_Insert(FullPath);
+							}
+
+							auto fl_AddFile
+								= [&](CStr const &_File)
+								{
+									auto SourceFile = mp_SourceFiles(_File);
+									if (bImport && !SourceFile.f_WasCreated())
+									{
+										// Already imported
+										return;
+									}
+
+									CStr FileData = CFile::fs_ReadStringFromFile(CStr(_File), true);
+									CStr Path = CFile::fs_GetPath(_File);
+									CRegistryPreserveAndOrder_CStr IncludedRegistry;
+									IncludedRegistry.f_ParseStr(FileData, _File);
+
+									fpr_HandleIncludes(IncludedRegistry, Path, o_Errors);
+
+									auto pPrevious = &_Registry;
+									for (auto iChild = IncludedRegistry.f_GetChildIterator(); iChild; )
+									{
+										auto pChild = iChild.f_GetCurrent();
+										++iChild;
+										pParent->f_MoveChild(pChild, pPrevious);
+										pPrevious = pChild;
+									}
+								}
+							;
+
+							for (auto &File : Files)
+								fl_AddFile(File);
+						}
 
 						pParent->f_DeleteChild(&_Registry);
 					}

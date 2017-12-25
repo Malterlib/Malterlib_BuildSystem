@@ -692,7 +692,7 @@ namespace NMib::NBuildSystem
 
 			bool bWasCreated = false;
 			if (!f_AddGeneratedFile(FileName, FileContents, "", bWasCreated, false))
-				fs_ThrowError({}, CStr::CFormat("File '{}' already generated with other contents") << FileName);
+				fs_ThrowError(CFilePosition{}, CStr::CFormat("File '{}' already generated with other contents") << FileName);
 
 			if (bWasCreated)
 			{

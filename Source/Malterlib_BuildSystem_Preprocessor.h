@@ -10,7 +10,7 @@ namespace NMib::NBuildSystem
 	class CBuildSystemPreprocessor
 	{
 	public:
-		CBuildSystemPreprocessor(CRegistryPreserveAndOrder_CStr &_ResultRegistry, TCSet<CStr> &_SourceFiles, CFindCache const &_FindCache);
+		CBuildSystemPreprocessor(CRegistryPreserveAndOrder_CStr &_ResultRegistry, TCSet<CStr> &_SourceFiles, CFindCache const &_FindCache, TCMap<CStr, CStr> const &_Environment);
 
 		void f_ReadFile(CStr const &_Path);
 		CStr const &f_GetFileLocation();
@@ -21,6 +21,7 @@ namespace NMib::NBuildSystem
 			CRegistryPreserveAndOrder_CStr *m_pRootRegistry;
 			CStr m_Error;
 		};
+
 		static void fsp_ThrowError(CRegistryPreserveAndOrder_CStr const &_Registry, CStr const &_Error);
 		void fpr_HandleIncludes(CRegistryPreserveAndOrder_CStr &_Registry, CStr const &_Path, TCVector<CError> &o_Errors);
 		void fpr_FindFilesRecursive(CRegistryPreserveAndOrder_CStr &_Registry, TCVector<CStr> &o_Files, CStr const &_Path, CStr const &_ToFind);
@@ -28,6 +29,7 @@ namespace NMib::NBuildSystem
 		CRegistryPreserveAndOrder_CStr &mp_ResultRegistry;
 		TCSet<CStr> &mp_SourceFiles;
 		CFindCache const &mp_FindCache;
+		TCMap<CStr, CStr> const &mp_Environment;
 		CStr mp_FileLocation;
 	};
 }

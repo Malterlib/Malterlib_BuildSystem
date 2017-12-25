@@ -14,7 +14,12 @@ namespace NMib::NBuildSystem
 	{
 		fsp_ThrowError(_Position, _Error, _Errors);
 	}
-	
+
+	void CBuildSystem::fs_ThrowError(CRegistryPreserveAndOrder_CStr const &_Registry, CStr const &_Error)
+	{
+		fsp_ThrowError(_Registry, _Error);
+	}
+
 	void CBuildSystem::fsp_ThrowError(CEntity const &_Entity, CFilePosition const &_Position, CStr const &_Error)
 	{
 		CStr Error = NMib::NStr::CStr::CFormat(DMibPFileLineFormat " error: {}") << _Position.m_FileName << _Position.m_Line << _Error;
