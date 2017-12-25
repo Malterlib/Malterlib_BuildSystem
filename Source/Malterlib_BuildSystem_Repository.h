@@ -46,6 +46,7 @@ namespace NMib::NBuildSystem::NRepository
 			return TCMap<CStr, CRepository>::fs_GetKey(*this);
 		}
 
+		CStr m_Identity;
 		CStr m_Location;
 		CStr m_ConfigFile;
 		CStr m_StateFile;
@@ -73,6 +74,7 @@ namespace NMib::NBuildSystem::NRepository
 	struct CRepositoryConfig
 	{
 		CStr m_Hash;
+		bool m_bExternalPath = false;
 	};
 
 	struct CConfigFile
@@ -83,8 +85,10 @@ namespace NMib::NBuildSystem::NRepository
 
 	struct CStateHandler
 	{
-		void f_SetHash(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Hash);
-		CStr f_GetHash(CStr const &_FileName, CStr const &_RepoPath);
+		CStateHandler(CStr const &_BasePath);
+
+		void f_SetHash(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Hash, CStr const &_Identifier);
+		CStr f_GetHash(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Identifier);
 		TCMap<CStr, CConfigFile> const &f_GetNewFiles();
 		TCMap<CStr, CConfigFile> f_GetMergedFiles();
 		void f_AddGitIgnore(CStr const &_FileName, CBuildSystem const &_BuildSystem);
@@ -93,6 +97,7 @@ namespace NMib::NBuildSystem::NRepository
 	private:
 		CConfigFile const &fp_GetConfigFile(CStr const &_FileName);
 
+		CStr const mp_BasePath;
 		CMutual mp_Lock;
 		TCMap<CStr, CConfigFile> mp_ConfigFiles;
 		TCMap<CStr, CConfigFile> mp_NewConfigFiles;

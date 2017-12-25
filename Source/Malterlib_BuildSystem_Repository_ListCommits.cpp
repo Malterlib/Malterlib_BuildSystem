@@ -168,7 +168,7 @@ namespace NMib::NBuildSystem
 
 		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
-		CStateHandler StateHandler;
+		CStateHandler StateHandler{mp_BaseDir};
 
 		bool bColor = _Flags & ERepoListCommitsFlag_Color;
 		bool bCompact = _Flags & ERepoListCommitsFlag_Compact;

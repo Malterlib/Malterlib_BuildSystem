@@ -16,21 +16,42 @@ namespace NMib::NBuildSystem
 
 	namespace NRepository
 	{
-		void CStateHandler::f_SetHash(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Hash)
+		CStateHandler::CStateHandler(CStr const &_BasePath)
+			: mp_BasePath(_BasePath)
+		{
+		}
+
+		void CStateHandler::f_SetHash(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Hash, CStr const &_Identifier)
 		{
 			DLock(mp_Lock);
+
+			bool bExternalPath = false;
+			CStr Identifier = _RepoPath;
+			if (!_RepoPath.f_StartsWith(mp_BasePath))
+			{
+				Identifier = _Identifier;
+				bExternalPath = true;
+			}
+
 			auto &ConfigFile = mp_NewConfigFiles[_FileName];
-			ConfigFile.m_Configs[_RepoPath].m_Hash = _Hash;
+			auto &Config = ConfigFile.m_Configs[Identifier];
+			Config.m_Hash = _Hash;
+			Config.m_bExternalPath = bExternalPath;
 
 			if (auto *pFile = mp_ConfigFiles.f_FindEqual(_FileName))
 				ConfigFile.m_LineEndings = pFile->m_LineEndings;
 		}
 
-		CStr CStateHandler::f_GetHash(CStr const &_FileName, CStr const &_RepoPath)
+		CStr CStateHandler::f_GetHash(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Identifier)
 		{
 			DLock(mp_Lock);
 			auto &ConfigFile = fp_GetConfigFile(_FileName);
-			auto *pConfig = ConfigFile.m_Configs.f_FindEqual(_RepoPath);
+
+			CStr Identifier = _RepoPath;
+			if (!_RepoPath.f_StartsWith(mp_BasePath))
+				Identifier = _Identifier;
+
+			auto *pConfig = ConfigFile.m_Configs.f_FindEqual(Identifier);
 			if (!pConfig)
 				return {};
 			return pConfig->m_Hash;
@@ -99,7 +120,16 @@ namespace NMib::NBuildSystem
 
 			Registry.f_ParseStr(_Contents, _FileName);
 			for (auto &Child : Registry.f_GetChildren())
-				ConfigFile.m_Configs[CFile::fs_GetExpandedPath(Child.f_GetName(), BasePath)].m_Hash = Child.f_GetThisValue();
+			{
+				if (Child.f_GetName().f_StartsWith("~"))
+				{
+					auto &Config = ConfigFile.m_Configs[Child.f_GetName().f_Extract(1)];
+					Config.m_Hash = Child.f_GetThisValue();
+				}
+				else
+					ConfigFile.m_Configs[CFile::fs_GetExpandedPath(Child.f_GetName(), BasePath)].m_Hash = Child.f_GetThisValue();
+
+			}
 
 			return ConfigFile;
 		}
@@ -182,7 +212,7 @@ namespace NMib::NBuildSystem
 				}
 			;
 
-			CStr ConfigHash = o_StateHandler.f_GetHash(_Repo.m_ConfigFile, Location);
+			CStr ConfigHash = o_StateHandler.f_GetHash(_Repo.m_ConfigFile, Location, _Repo.m_Identity);
 
 			auto fOutputInfo = [&](EOutputType _OutputType, CStr const &_Info)
 				{
@@ -260,7 +290,7 @@ namespace NMib::NBuildSystem
 					o_StateHandler.f_AddGitIgnore(Location, _BuildSystem);
 			}
 			
-			CStr CurrentHash = o_StateHandler.f_GetHash(_Repo.m_StateFile, Location);
+			CStr CurrentHash = o_StateHandler.f_GetHash(_Repo.m_StateFile, Location, _Repo.m_Identity);
 			CStr HeadHash = fg_GetGitHeadHash(Location, _Repo.m_Position);
 
 			bool bForceReset = _BuildSystem.f_GetEnvironmentVariable("MalterlibRepositoryHardReset", "") == "true";
@@ -439,8 +469,8 @@ namespace NMib::NBuildSystem
 			}
 			
 			CStr GitHeadHash = fg_GetGitHeadHash(Location, _Repo.m_Position);
-			o_StateHandler.f_SetHash(_Repo.m_StateFile, Location, GitHeadHash);
-			o_StateHandler.f_SetHash(_Repo.m_ConfigFile, Location, GitHeadHash);
+			o_StateHandler.f_SetHash(_Repo.m_StateFile, Location, GitHeadHash, _Repo.m_Identity);
+			o_StateHandler.f_SetHash(_Repo.m_ConfigFile, Location, GitHeadHash, _Repo.m_Identity);
 			o_StateHandler.f_AddGitIgnore(_Repo.m_StateFile, _BuildSystem);
 
 			auto CurrentRemotes = fg_GetGitRemotes(Location, _Repo.m_Position);
@@ -516,6 +546,7 @@ namespace NMib::NBuildSystem
 				}
 
 				auto &Repo = *RepoMap;
+				Repo.m_Identity = ChildEntity.m_Key.m_Name;
 				Repo.m_Location = Location;
 				Repo.m_ConfigFile = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "ConfigFile");
 				Repo.m_StateFile = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "StateFile");
@@ -638,7 +669,7 @@ namespace NMib::NBuildSystem
 		TCAtomic<bool> bChanged;
 		TCAtomic<bool> bBinariesChange;
 
-		CStateHandler StateHandler;
+		CStateHandler StateHandler{mp_BaseDir};
 
 		for (auto &Repos : ReposOrdered)
 		{
@@ -685,7 +716,13 @@ namespace NMib::NBuildSystem
 			CStr BasePath = CFile::fs_GetPath(iFile.f_GetKey());
 			
 			for (auto iConfig = iFile->m_Configs.f_GetIterator(); iConfig; ++iConfig)
-				Registry.f_SetValueNoPath(CFile::fs_MakePathRelative(iConfig.f_GetKey(), BasePath), iConfig->m_Hash);
+			{
+				auto &Config = *iConfig;
+				if (Config.m_bExternalPath)
+					Registry.f_SetValueNoPath("~" + iConfig.f_GetKey(), Config.m_Hash);
+				else
+					Registry.f_SetValueNoPath(CFile::fs_MakePathRelative(iConfig.f_GetKey(), BasePath), Config.m_Hash);
+			}
 			
 			CStr FileName = iFile.f_GetKey();
 			CStr FileContents = Registry.f_GenerateStr().f_Replace(DMibNewLine, iFile->m_LineEndings);
