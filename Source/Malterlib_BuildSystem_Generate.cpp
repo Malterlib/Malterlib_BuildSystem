@@ -128,7 +128,7 @@ namespace NMib::NBuildSystem
 		{
 			if (!CFile::fs_FileExists(EnvironmentStateFile, EFileAttrib_File))
 			{
-				DMibConErrOut2("Cached environment was not found at: {}. Saving current environment.", EnvironmentStateFile);
+				DMibConErrOut2("Cached environment was not found at: {}. Saving current environment.\n", EnvironmentStateFile);
 				mp_Environment = mp_SaveEnvironment = fg_GetSys()->f_Environment();
 				fp_SaveEnvironment();
 			}
