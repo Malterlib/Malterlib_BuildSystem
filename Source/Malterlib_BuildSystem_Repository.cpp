@@ -136,6 +136,7 @@ namespace NMib::NBuildSystem
 				{
 					auto &Config = ConfigFile.m_Configs[Child.f_GetName().f_Extract(1)];
 					Config.m_Hash = Child.f_GetThisValue();
+					Config.m_bExternalPath = true;
 				}
 				else
 					ConfigFile.m_Configs[CFile::fs_GetExpandedPath(Child.f_GetName(), BasePath)].m_Hash = Child.f_GetThisValue();
