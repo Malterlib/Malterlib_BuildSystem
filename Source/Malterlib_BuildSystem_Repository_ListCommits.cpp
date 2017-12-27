@@ -356,6 +356,8 @@ namespace NMib::NBuildSystem
 
 		TCActorResultMap<CStr, TCVector<CLogEntryFull>> CommitsResults;
 
+		TCSet<CStr> NoStartCommits;
+
 		for (auto &pRepository : RepositoryByLocation)
 		{
 			auto &Location = pRepository->m_Location;
@@ -368,7 +370,10 @@ namespace NMib::NBuildSystem
 			}
 			CStr StartCommit;
 			if (!pStartCommit || pStartCommit->f_IsEmpty())
+			{
+				NoStartCommits[Location];
 				StartCommit = *pEndCommit;
+			}
 			else
 				StartCommit = *pStartCommit;
 			fg_GetLogEntriesFull(Launches, *pRepository, StartCommit, *pEndCommit) > CommitsResults.f_AddResult(Location);
@@ -443,15 +448,24 @@ namespace NMib::NBuildSystem
 
 			auto LogEntries = *LogEntriesResult;
 
-			if (LogEntries.f_IsEmpty())
+			if (NoStartCommits.f_FindEqual(Repo))
 			{
+				LogEntries.f_Clear();
 				auto &DummyLogEntry = LogEntries.f_Insert();
 				DummyLogEntry.m_Commit = "No start commit was found, new repo?";
 			}
+			else if (LogEntries.f_IsEmpty())
+				continue;
 
 			CStr RelativePath = CFile::fs_MakePathRelative(Repo, mp_BaseDir);
 			if (RelativePath == "")
 				RelativePath = ".";
+			else if (!Repo.f_StartsWith(mp_BaseDir))
+			{
+				auto pRepository = RepositoryByLocation.f_FindEqual(Repo);
+				if (pRepository)
+					RelativePath = "~" + (*pRepository)->m_Identity;
+			}
 
 			TCMap<CStr, zuint32> MaxLengths;
 
