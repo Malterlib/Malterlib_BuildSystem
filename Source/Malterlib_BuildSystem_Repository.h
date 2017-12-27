@@ -81,6 +81,8 @@ namespace NMib::NBuildSystem::NRepository
 	{
 		TCMap<CStr, CRepositoryConfig> m_Configs;
 		CStr m_LineEndings = "\n";
+
+		CRepositoryConfig const *f_GetConfig(CRepository const &_Repo, CStr const &_BasePath);
 	};
 
 	struct CStateHandler

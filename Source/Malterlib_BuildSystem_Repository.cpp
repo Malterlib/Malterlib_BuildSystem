@@ -16,6 +16,17 @@ namespace NMib::NBuildSystem
 
 	namespace NRepository
 	{
+		CRepositoryConfig const *CConfigFile::f_GetConfig(CRepository const &_Repo, CStr const &_BasePath)
+		{
+			CStr Identifier;
+			if (!_Repo.m_Location.f_StartsWith(_BasePath))
+				Identifier = _Repo.m_Identity;
+			else
+				Identifier = _Repo.m_Location;
+
+			return m_Configs.f_FindEqual(Identifier);
+		}
+
 		CStateHandler::CStateHandler(CStr const &_BasePath)
 			: mp_BasePath(_BasePath)
 		{

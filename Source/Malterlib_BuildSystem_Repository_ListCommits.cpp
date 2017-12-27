@@ -252,8 +252,6 @@ namespace NMib::NBuildSystem
 						if (!State.m_StartedGitShow(ConfigFile).f_WasCreated())
 						{
 							auto pStartConfigFile = State.m_StartConfigFiles.f_FindEqual(ConfigFile);
-							if (!pStartConfigFile)
-								continue;
 
 							auto pEndConfigFile = State.m_EndConfigFiles.f_FindEqual(ConfigFile);
 							if (!pEndConfigFile)
@@ -261,13 +259,18 @@ namespace NMib::NBuildSystem
 
 							CStr RelativePath = CFile::fs_MakePathRelative(ConfigFile, Owner.m_Location);
 
-							auto pStartHash = pStartConfigFile->m_Configs.f_FindEqual(Repo.m_Location);
-							if (pStartHash)
-								State.m_StartCommits[Repo.m_Location] = pStartHash->m_Hash;
+							if (pStartConfigFile)
+							{
+								auto pStartHash = pStartConfigFile->f_GetConfig(Repo, mp_BaseDir);
+								if (pStartHash)
+									State.m_StartCommits[Repo.m_Location] = pStartHash->m_Hash;
+								else
+									State.m_StartCommits[Repo.m_Location];
+							}
 							else
 								State.m_StartCommits[Repo.m_Location];
 
-							auto pEndHash = pEndConfigFile->m_Configs.f_FindEqual(Repo.m_Location);
+							auto pEndHash = pEndConfigFile->f_GetConfig(Repo, mp_BaseDir);
 							if (!pEndHash)
 							{
 								fReportError("No end config hash found for: {}"_f << Repo.m_Location);
@@ -309,12 +312,6 @@ namespace NMib::NBuildSystem
 									return;
 								}
 
-								if (_StartResult->m_ExitCode)
-								{
-									fReportError("Get start config file failed: {}"_f << _StartResult->f_GetCombinedOut());
-									return;
-								}
-
 								if (_EndResult->m_ExitCode)
 								{
 									fReportError("Get end config file failed: {}"_f << _EndResult->f_GetCombinedOut());
@@ -323,7 +320,8 @@ namespace NMib::NBuildSystem
 
 								try
 								{
-									State.m_StartConfigFiles[ConfigFile] = CStateHandler::fs_ParseConfigFile(_StartResult->f_GetStdOut(), ConfigFile);
+									if (_StartResult->m_ExitCode == 0)
+										State.m_StartConfigFiles[ConfigFile] = CStateHandler::fs_ParseConfigFile(_StartResult->f_GetStdOut(), ConfigFile);
 									State.m_EndConfigFiles[ConfigFile] = CStateHandler::fs_ParseConfigFile(_EndResult->f_GetStdOut(), ConfigFile);
 								}
 								catch (NException::CException const &_Exception)
@@ -363,21 +361,20 @@ namespace NMib::NBuildSystem
 			auto &Location = pRepository->m_Location;
 			auto *pStartCommit = State.m_StartCommits.f_FindEqual(Location);
 			auto *pEndCommit = State.m_EndCommits.f_FindEqual(Location);
-			if (!pStartCommit || pStartCommit->f_IsEmpty())
-			{
-				DConOut2("{}{}: Missing start commit\n", _Prefix, Location);
-				continue;
-			}
 			if (!pEndCommit || pEndCommit->f_IsEmpty())
 			{
 				DConOut2("{}{}: Missing end commit\n", _Prefix, Location);
 				continue;
 			}
-			fg_GetLogEntriesFull(Launches, *pRepository, *pStartCommit, *pEndCommit) > CommitsResults.f_AddResult(Location);
+			CStr StartCommit;
+			if (!pStartCommit || pStartCommit->f_IsEmpty())
+				StartCommit = *pEndCommit;
+			else
+				StartCommit = *pStartCommit;
+			fg_GetLogEntriesFull(Launches, *pRepository, StartCommit, *pEndCommit) > CommitsResults.f_AddResult(Location);
 		}
 
 		auto LogEntriesPerRepo = CommitsResults.f_GetResults().f_CallSync();
-
 
 		struct CWildcardColumn
 		{
@@ -440,12 +437,17 @@ namespace NMib::NBuildSystem
 			}
 		;
 
-		for (auto &LogEntries : LogEntriesPerRepo)
+		for (auto &LogEntriesResult : LogEntriesPerRepo)
 		{
-			CStr Repo = LogEntriesPerRepo.fs_GetKey(LogEntries);
+			CStr Repo = LogEntriesPerRepo.fs_GetKey(LogEntriesResult);
 
-			if (LogEntries->f_IsEmpty())
-				continue;
+			auto LogEntries = *LogEntriesResult;
+
+			if (LogEntries.f_IsEmpty())
+			{
+				auto &DummyLogEntry = LogEntries.f_Insert();
+				DummyLogEntry.m_Commit = "No start commit was found, new repo?";
+			}
 
 			CStr RelativePath = CFile::fs_MakePathRelative(Repo, mp_BaseDir);
 			if (RelativePath == "")
@@ -580,7 +582,7 @@ namespace NMib::NBuildSystem
 
 			auto fOutputAll = [&](auto &&_fOutput, bool _bReal) -> void
 				{
-					for (auto &LogEntry : *LogEntries)
+					for (auto &LogEntry : LogEntries)
 					{
 						TCMap<CStr, TCVector<COutputEntry>> ColumnOutput;
 						mint TallestColumn = 0;
@@ -654,7 +656,7 @@ namespace NMib::NBuildSystem
 							if (_bReal)
 								ToOutput += str_utf32("{}|{}\n"_f) << fColor(pBorderColor) << fColor(CColors::mc_Default);
 						}
-						if (_bReal && (&LogEntry != &(*LogEntries).f_GetLast()))
+						if (_bReal && (&LogEntry != &LogEntries.f_GetLast()))
 							fOutputDivider(EDivider_Middle);
 					}
 				}
