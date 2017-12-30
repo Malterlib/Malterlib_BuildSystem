@@ -808,6 +808,9 @@ namespace NMib::NBuildSystem
 							
 							if (bAllValid && FunctionParams == State.m_Parameters)
 							{
+								for (auto &Input : Inputs)
+									f_AddSourceFile(Input);
+
 								Stream >> Ret;
 								return Ret;
 							}
