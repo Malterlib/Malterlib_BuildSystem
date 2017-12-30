@@ -301,11 +301,47 @@ namespace NMib::NBuildSystem
 				if (GitRoot.f_IsEmpty() || _Repo.m_Submodule != "true")
 					o_StateHandler.f_AddGitIgnore(Location, _BuildSystem);
 			}
-			
-			CStr CurrentHash = o_StateHandler.f_GetHash(_Repo.m_StateFile, Location, _Repo.m_Identity);
-			CStr HeadHash = fg_GetGitHeadHash(Location, _Repo.m_Position);
 
 			bool bForceReset = _BuildSystem.f_GetEnvironmentVariable("MalterlibRepositoryHardReset", "") == "true";
+
+			auto CurrentRemotes = fg_GetGitRemotes(Location, _Repo.m_Position);
+			auto WantedRemotes = _Repo.m_Remotes;
+			WantedRemotes["origin"] = _Repo.m_URL;
+
+			if (!WantedRemotes.f_IsEmpty())
+			{
+				for (auto iRemote = WantedRemotes.f_GetIterator(); iRemote; ++iRemote)
+				{
+					auto &RemoteName = iRemote.f_GetKey();
+					auto &RemoteURL = *iRemote;
+					auto pCurrentRemote = CurrentRemotes.f_FindEqual(RemoteName);
+					if (pCurrentRemote)
+					{
+						if (*pCurrentRemote == RemoteURL)
+							continue;
+						fOutputInfo(EOutputType_Normal, "Changing remote URL '{}={}'"_f << RemoteName << RemoteURL);
+						fLaunchGit({"remote", "set-url", RemoteName, RemoteURL}, Location);
+						continue;
+					}
+					fOutputInfo(EOutputType_Normal, "Adding remote '{}={}'"_f << RemoteName << RemoteURL);
+					fLaunchGit({"remote", "add", RemoteName, RemoteURL}, Location);
+					fLaunchGit({"fetch", RemoteName}, Location);
+				}
+				if (bForceReset)
+				{
+					for (auto iRemote = CurrentRemotes.f_GetIterator(); iRemote; ++iRemote)
+					{
+						auto &RemoteName = iRemote.f_GetKey();
+						if (WantedRemotes.f_FindEqual(RemoteName))
+							continue;
+						fOutputInfo(EOutputType_Normal, "Removing remote '{}'"_f << RemoteName);
+						fLaunchGit({"remote", "remove", RemoteName}, Location);
+					}
+				}
+			}
+
+			CStr CurrentHash = o_StateHandler.f_GetHash(_Repo.m_StateFile, Location, _Repo.m_Identity);
+			CStr HeadHash = fg_GetGitHeadHash(Location, _Repo.m_Position);
 
 			if
 				(
@@ -485,39 +521,6 @@ namespace NMib::NBuildSystem
 			o_StateHandler.f_SetHash(_Repo.m_ConfigFile, Location, GitHeadHash, _Repo.m_Identity);
 			o_StateHandler.f_AddGitIgnore(_Repo.m_StateFile, _BuildSystem);
 
-			auto CurrentRemotes = fg_GetGitRemotes(Location, _Repo.m_Position);
-
-			if (!_Repo.m_URL.f_IsEmpty())
-			{
-				auto pCurrentRemote = CurrentRemotes.f_FindEqual("origin");
-				if (pCurrentRemote && *pCurrentRemote != _Repo.m_URL)
-				{
-					fOutputInfo(EOutputType_Normal, "Changing origin URL 'origin={}'"_f << _Repo.m_URL);
-					fLaunchGit({"remote", "set-url", "origin", _Repo.m_URL}, Location);
-				}
-			}
-			
-			if (!_Repo.m_Remotes.f_IsEmpty())
-			{
-				for (auto iRemote = _Repo.m_Remotes.f_GetIterator(); iRemote; ++iRemote)
-				{
-					auto &RemoteName = iRemote.f_GetKey();
-					auto &RemoteURL = *iRemote;
-					auto pCurrentRemote = CurrentRemotes.f_FindEqual(RemoteName);
-					if (pCurrentRemote)
-					{
-						if (*pCurrentRemote == RemoteURL)
-							continue;
-						fOutputInfo(EOutputType_Normal, "Changing remote URL '{}={}'"_f << RemoteName << RemoteURL);
-						fLaunchGit({"remote", "set-url", RemoteName, RemoteURL}, Location);
-						continue;
-					}				
-					fOutputInfo(EOutputType_Normal, "Adding remote '{}={}'"_f << RemoteName << RemoteURL);
-					fLaunchGit({"remote", "add", RemoteName, RemoteURL}, Location);
-					fLaunchGit({"fetch", RemoteName}, Location);
-				}
-			}
-				
 			return bChanged;
 		}
 
