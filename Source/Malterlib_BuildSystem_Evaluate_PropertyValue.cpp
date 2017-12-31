@@ -1248,6 +1248,18 @@ namespace NMib::NBuildSystem
 
 				Ret = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorFunctionUUIDHashUUIDNamespace, Ret).f_GetAsString(UUIDFormat);
 			}
+			else if (Function == "HashSHA256")
+			{
+				if (FunctionParams.f_GetLen() != 1)
+					fsp_ThrowError(_Position, "HashSHA256 takes one parameter, the length of the string");
+
+				mint HashLen = FunctionParams[0].f_ToInt(mint(64));
+
+				NDataProcessing::CHash_SHA256 Hash;
+				Hash.f_AddData(Ret.f_GetStr(), Ret.f_GetLen());
+
+				Ret = Hash.f_GetDigest().f_GetString().f_Left(HashLen);
+			}
 			else if (Function == "FormatInt")
 			{
 				if (FunctionParams.f_GetLen() != 1)
