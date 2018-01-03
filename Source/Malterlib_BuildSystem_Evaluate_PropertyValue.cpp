@@ -673,7 +673,7 @@ namespace NMib::NBuildSystem
 				else if (Function == "ExplodeList")
 				{
 					if (FunctionParams.f_GetLen() != 3)
-						fsp_ThrowError(_Position, "ExplodeList takes three parameters: ExpandList(<Source>, <Separator>, <Template>)");
+						fsp_ThrowError(_Position, "ExplodeList takes three parameters: ExplodeList(<Source>, <Separator>, <Template>)");
 
 					CStr Source = FunctionParams[0];
 					CStr Separator = FunctionParams[1];
@@ -694,24 +694,33 @@ namespace NMib::NBuildSystem
 						TCMap<CPropertyKey, CEvaluatedProperty> TempProperties;
 						
 						CPropertyKey Key;
-						Key.m_Name = "Explodee";
 						Key.m_Type = EPropertyType_Property;
 
-						auto& Explodee = TempProperties[Key];
 						CStr Value =  fg_GetStrSep(Source, Separator);
-						ExplodeStackEntry = Explodee.m_Value = Value;
-						Explodee.m_Type = EEvaluatedPropertyType_External;
-						Explodee.m_pProperty = &mp_ExternalProperty;
-						
+						ExplodeStackEntry.m_Value = Value;
+						ExplodeStackEntry.m_ExplodedValue = Ret;
+
+						{
+							Key.m_Name = "Explodee";
+							auto &Property = TempProperties[Key];
+
+							Property.m_Value = Value;
+							Property.m_Type = EEvaluatedPropertyType_External;
+							Property.m_pProperty = &mp_ExternalProperty;
+						}
+
 						{
 							mint i = 0;
 							for (auto iEntry = _EvalContext.m_ExplodeListStack.f_GetIterator(); iEntry; ++iEntry, ++i)
 							{
-								Key.m_Name = fg_Format("Explodee{}", i);
-								auto& Explodee = TempProperties[Key];
-								Explodee.m_Value = *iEntry;
-								Explodee.m_Type = EEvaluatedPropertyType_External;
-								Explodee.m_pProperty = &mp_ExternalProperty;
+								{
+									Key.m_Name = fg_Format("Explodee{}", i);
+									auto &Property = TempProperties[Key];
+
+									Property.m_Value = iEntry->m_Value;
+									Property.m_Type = EEvaluatedPropertyType_External;
+									Property.m_pProperty = &mp_ExternalProperty;
+								}
 							}
 						}
 						
@@ -724,6 +733,95 @@ namespace NMib::NBuildSystem
 						CProperty const* pProperty;
 
 						Ret += fp_EvaluateEntityProperty
+							(
+								_Context
+								, _OriginalContext
+								, TemplateKey
+								, _EvalContext
+								, pProperty
+							)
+						;
+					}
+				}
+				else if (Function == "Explode")
+				{
+					if (FunctionParams.f_GetLen() != 3)
+						fsp_ThrowError(_Position, "Explode takes three parameters: Explode(<Source>, <Separator>, <Template>)");
+
+					CStr Source = FunctionParams[0];
+					CStr Separator = FunctionParams[1];
+					CStr Template = FunctionParams[2];
+					//Template = fp_GetPropertyValue(_Context, _OriginalContext, Template, _Position, _EvalContext);
+
+					auto &ExplodeStackEntry = _EvalContext.m_ExplodeListStack.f_InsertFirst();
+
+					auto CleanUp
+						= g_OnScopeExit > [&]()
+						{
+							_EvalContext.m_ExplodeListStack.f_Remove(ExplodeStackEntry);
+						}
+					;
+
+					while (!Source.f_IsEmpty())
+					{
+						TCMap<CPropertyKey, CEvaluatedProperty> TempProperties;
+
+						CPropertyKey Key;
+						Key.m_Type = EPropertyType_Property;
+
+						CStr Value =  fg_GetStrSep(Source, Separator);
+						ExplodeStackEntry.m_Value = Value;
+						ExplodeStackEntry.m_ExplodedValue = Ret;
+
+						{
+							Key.m_Name = "Explodee";
+							auto &Property = TempProperties[Key];
+
+							Property.m_Value = Value;
+							Property.m_Type = EEvaluatedPropertyType_External;
+							Property.m_pProperty = &mp_ExternalProperty;
+						}
+						{
+							Key.m_Name = "ExplodedValue";
+							auto &Property = TempProperties[Key];
+
+							Property.m_Value = Ret;
+							Property.m_Type = EEvaluatedPropertyType_External;
+							Property.m_pProperty = &mp_ExternalProperty;
+						}
+
+						{
+							mint i = 0;
+							for (auto iEntry = _EvalContext.m_ExplodeListStack.f_GetIterator(); iEntry; ++iEntry, ++i)
+							{
+								{
+									Key.m_Name = fg_Format("Explodee{}", i);
+									auto &Property = TempProperties[Key];
+
+									Property.m_Value = iEntry->m_Value;
+									Property.m_Type = EEvaluatedPropertyType_External;
+									Property.m_pProperty = &mp_ExternalProperty;
+								}
+								{
+									Key.m_Name = fg_Format("ExplodedValue{}", i);
+									auto &Property = TempProperties[Key];
+
+									Property.m_Value = iEntry->m_ExplodedValue;
+									Property.m_Type = EEvaluatedPropertyType_External;
+									Property.m_pProperty = &mp_ExternalProperty;
+								}
+							}
+						}
+
+						CChangePropertiesScope ChangeProperties(_EvalContext, &TempProperties);
+
+						CPropertyKey TemplateKey;
+						TemplateKey.m_Name = Template;
+						TemplateKey.m_Type = EPropertyType_Property;
+
+						CProperty const* pProperty;
+
+						Ret = fp_EvaluateEntityProperty
 							(
 								_Context
 								, _OriginalContext

@@ -182,13 +182,19 @@ namespace NMib::NBuildSystem
 		};
 
 	private:
+		struct CExplodeStackEntry
+		{
+			CStr m_ExplodedValue;
+			CStr m_Value;
+		};
+
 		struct CEvaluationContext
 		{
 			inline_always CEvaluationContext(TCMap<CPropertyKey, CEvaluatedProperty> *_pEvaluatedProperties);
 			
 			TCMap<CPropertyKey, TCSet<CEntity const *>> m_EvalStack;
 			TCMap<CPropertyKey, CEvaluatedProperty> *m_pEvaluatedProperties;
-			TCLinkedList<CStr> m_ExplodeListStack;
+			TCLinkedList<CExplodeStackEntry> m_ExplodeListStack;
 		};
 
 		struct CChangePropertiesScope
