@@ -142,7 +142,7 @@ namespace NMib::NBuildSystem
 		{
 			TCFunction<void (CEntity &_Entity)> flr_FindTargets;
 			auto fl_FindTargets
-				= [&flr_FindTargets, &_Targets](CEntity &_Entity)
+				= [&flr_FindTargets, &_Targets, this](CEntity &_Entity)
 				{
 					for (auto iEntity = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iEntity; ++iEntity)
 					{
@@ -151,7 +151,8 @@ namespace NMib::NBuildSystem
 						{
 						case EEntityType_Group:
 							{
-								flr_FindTargets(ChildEntity);
+								if (f_EvaluateEntityProperty(ChildEntity, EPropertyType_Group, "HideTargets") != "true")
+									flr_FindTargets(ChildEntity);
 							}
 							break;
 						case EEntityType_Target:
@@ -175,7 +176,10 @@ namespace NMib::NBuildSystem
 				auto &ChildEntity = *iChild;
 				++iChild;
 				if (ChildEntity.m_Key.m_Type == EEntityType_Group)
-					fl_FindTargets(ChildEntity);
+				{
+					if (f_EvaluateEntityProperty(ChildEntity, EPropertyType_Group, "HideTargets") != "true")
+						fl_FindTargets(ChildEntity);
+				}
 				else if (ChildEntity.m_Key.m_Type == EEntityType_Workspace)
 				{
 					if (!f_EvalCondition(ChildEntity, ChildEntity.m_Condition))

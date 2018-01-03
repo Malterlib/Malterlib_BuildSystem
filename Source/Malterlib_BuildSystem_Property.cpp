@@ -39,6 +39,7 @@ namespace NMib::NBuildSystem
 		else if (_String == "Dependency") return EPropertyType_Dependency;
 		else if (_String == "Import") return EPropertyType_Import;
 		else if (_String == "Repository") return EPropertyType_Repository;
+		else if (_String == "Group") return EPropertyType_Group;
 		else return EPropertyType_Invalid;
 	}
 
@@ -53,6 +54,7 @@ namespace NMib::NBuildSystem
 		case EPropertyType_Dependency: return "Dependency";
 		case EPropertyType_Import: return "Import";
 		case EPropertyType_Repository: return "Repository";
+		case EPropertyType_Group: return "Group";
 		default: DMibNeverGetHere; return CStr();
 		}
 	}
