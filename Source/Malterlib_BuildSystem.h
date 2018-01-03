@@ -324,7 +324,7 @@ namespace NMib::NBuildSystem
 				, TCMap<CPropertyKey, CEvaluatedProperty> const *_pExtraProperties
 			) const
 		;
-		bool fp_ExpandEntity(CEntity &_Entity, CEntity &_ParentEntity, TCVector<CEntity *> *o_pCreated) const;
+		CEntity *fp_ExpandEntity(CEntity &_Entity, CEntity &_ParentEntity, TCVector<CEntity *> *o_pCreated) const;
 		void fp_ExpandImport(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData) const;
 		CBuildSystemData::CImportData *fp_ExpandImportCMake(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData) const;
 		CBuildSystemData::CImportData *fp_ExpandImportCMake_FromGeneratedDirectory(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData, CStr const &_Directory) const;

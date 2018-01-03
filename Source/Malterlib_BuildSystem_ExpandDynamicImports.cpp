@@ -31,12 +31,17 @@ namespace NMib::NBuildSystem
 					if (Key.m_Type != EEntityType_Import)
 						continue;
 
-					if (!fp_ExpandEntity(Child, _Entity, nullptr))
-					{
+					auto pLastInserted = fp_ExpandEntity(Child, _Entity, nullptr);
+					if (!pLastInserted)
 						continue;
-					}
 
 					_Entity.m_ChildEntitiesMap.f_Remove(Key);
+					
+					if (pLastInserted != &Child)
+					{
+						iChild = pLastInserted;
+						++iChild;
+					}
 				}
 			}
 		;
