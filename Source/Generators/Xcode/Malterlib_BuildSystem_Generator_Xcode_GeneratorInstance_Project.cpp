@@ -135,7 +135,7 @@ namespace NMib::NBuildSystem::NXcode
 
 				CStr Arch = EvaluatedSettings.m_Element["NATIVE_ARCH_ACTUAL"].f_GetValue();
 				CStr BuildDir = EvaluatedSettings.m_Element["BUILD_DIR"].f_GetValue();
-				CStr ObjectPath = "{}/Objects-normal/{}"_f << BuildDir << Arch;
+				CStr ObjectPath = "{}/$(OBJECT_FILE_DIR_$CURRENT_VARIANT:file)/{}"_f << BuildDir << Arch;
 				CStr DummyPath = "{}/Dummy.o"_f << ObjectPath;
 				CStr LibraryPath = "{}/{}"_f << PerConfig.m_SearchPath << PerConfig.m_CalculatedPath;
 
