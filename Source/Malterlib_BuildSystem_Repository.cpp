@@ -251,8 +251,21 @@ namespace NMib::NBuildSystem
 				}
 			;
 
+			bool bCloneNew = false;
+			if (CFile::fs_FileExists(Location))
+			{
+				auto Files = CFile::fs_FindFiles(Location + "/*");
+				if (Files.f_IsEmpty())
+				{
+					fOutputInfo(EOutputType_Warning, "Removing empty repo directory");
+					CFile::fs_DeleteDirectory(Location);
+					bCloneNew = true;
+				}
+			}
+			else
+				bCloneNew = true;
 
-			if (!CFile::fs_FileExists(Location))
+			if (bCloneNew)
 			{
 				if (ConfigHash.f_IsEmpty())
 					fOutputInfo(EOutputType_Normal, "Adding external repository");
