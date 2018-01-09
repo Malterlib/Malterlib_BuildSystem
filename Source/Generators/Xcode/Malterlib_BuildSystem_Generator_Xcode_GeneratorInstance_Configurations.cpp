@@ -1040,6 +1040,7 @@ namespace NMib::NBuildSystem
 				FileData += "DependencyLibrariesForced = {}\n"_f << fl_EscVar(LinkForced);
 				FileData += "DependencyLibraries = {}\n"_f << fl_EscVar(Link);
 				FileData += "LDFlagsFirst = {}\n"_f << fl_EscVar(LDFlagsFirst);
+				FileData += "MalterlibXcodeObjectFileDirName = $(OBJECT_FILE_DIR_$CURRENT_VARIANT:file)\n"_f << fl_EscVar(Link);
 
 				if (!bDoneAdditionalLibraries)
 				{
