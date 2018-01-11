@@ -1018,7 +1018,7 @@ namespace NMib::NBuildSystem
 				
 				for (auto iLinkerGroup = LinkerGroupsOrdered.f_GetIterator(); iLinkerGroup; ++iLinkerGroup)
 				{
-					if (!iLinkerGroup->m_Name.f_IsEmpty())
+					if (!iLinkerGroup->m_Name.f_IsEmpty() && _NativeTarget.m_ProductType != "com.apple.product-type.library.static")
 						Link += "-Xlinker -( ";
 					for (auto &LinkConfig : iLinkerGroup->m_Configs)
 					{
@@ -1032,7 +1032,7 @@ namespace NMib::NBuildSystem
 						else
 							Link += "\"{}/{}\" "_f << LinkConfig.m_pPerConfig->m_SearchPath << LinkConfig.m_pPerConfig->m_CalculatedPath;
 					}
-					if (!iLinkerGroup->m_Name.f_IsEmpty())
+					if (!iLinkerGroup->m_Name.f_IsEmpty() && _NativeTarget.m_ProductType != "com.apple.product-type.library.static")
 						Link += "-Xlinker -) ";
 				}
 
