@@ -877,7 +877,7 @@ namespace NMib::NBuildSystem
 					else
 						RepoName = Repo.m_Location;
 
-					MaxRepoWidth = fg_Max(MaxRepoWidth, RepoName.f_GetLen());
+					MaxRepoWidth = fg_Max(MaxRepoWidth, (mint)RepoName.f_GetLen());
 				}
 			}
 		}
