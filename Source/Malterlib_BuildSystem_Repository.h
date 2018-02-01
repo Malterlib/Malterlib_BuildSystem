@@ -46,6 +46,8 @@ namespace NMib::NBuildSystem::NRepository
 			return TCMap<CStr, CRepository>::fs_GetKey(*this);
 		}
 
+		CStr f_GetIdentifierName(CStr const &_BasePath, CStr const &_Root) const;
+
 		CStr m_Identity;
 		CStr m_Location;
 		CStr m_ConfigFile;
@@ -224,7 +226,15 @@ namespace NMib::NBuildSystem::NRepository
 	CStr fg_GetGitHeadHash(CStr const &_GitRoot, CFilePosition const &_Position);
 	TCMap<CStr, CStr> fg_GetGitRemotes(CStr const &_GitRoot, CFilePosition const &_Position);
 	bool fg_IsSubmodule(CStr const &_GitRoot);
-	bool fg_HandleRepository(CStr const &_ReposDirectory, CRepository const &_Repo, CStateHandler &o_StateHandler, CBuildSystem const &_BuildSystem);
+	bool fg_HandleRepository
+		(
+		 	CStr const &_ReposDirectory
+		 	, CRepository const &_Repo
+		 	, CStateHandler &o_StateHandler
+		 	, CBuildSystem const &_BuildSystem
+		 	, TCMap<CStr, EHandleRepositoryAction> const &_Actions
+		)
+	;
 	TCVector<TCMap<CStr, CReposLocation>> fg_GetRepos(CBuildSystem &_BuildSystem, CBuildSystemData &_Data);
 
 	TCFunctionMovable<CStr (CProcessLaunchActor::CSimpleLaunchResult const &_Result)> fg_LogAllFunctor();

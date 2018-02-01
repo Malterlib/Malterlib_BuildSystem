@@ -7,6 +7,40 @@
 #include <Mib/Process/ProcessLaunchActor>
 #include <Mib/Encoding/EJSON>
 
+static CStr g_ReconcileHelp = R"---(
+Changes in sub-repositories needs to be reconciled.
+
+Choose how you want to reconcile changes:
+
+Accept recommended actions : {0}./mib update_repos --reconcile=*:auto{1}
+Reset all                  : {0}./mib update_repos --reconcile=*:reset{1}
+Rebase all                 : {0}./mib update_repos --reconcile=*:rebase{1}
+
+To choose separate action for different repositories you can specify wildcards. The last matching wildcard wins:
+{0}./mib update_repos --reconcile=*:recommended,External/*:reset{1}
+
+To show current status without reconciling use:
+{0}./mib status --skip-update -q{1}
+)---"_f /**/
+	<< NMib::NBuildSystem::NRepository::CColors::mc_RepositoryName
+	<< NMib::NBuildSystem::NRepository::CColors::mc_Default
+;
+
+#if 0
+static constexpr ch8 const mc_Default[] = DColor_Reset;
+
+		static constexpr ch8 const mc_StatusNormal[] = DColor_Reset DColor_256(118);
+		static constexpr ch8 const mc_StatusWarning[] = DColor_Reset DColor_256(207);
+		static constexpr ch8 const mc_StatusError[] = DColor_Reset DColor_Bold DColor_256(198);
+
+		static constexpr ch8 const mc_RepositoryName[] = DColor_Reset DColor_256(221);
+		static constexpr ch8 const mc_BranchName[] = DColor_Reset;
+
+		static constexpr ch8 const mc_ToCommit[] = DColor_Reset DColor_256(46);
+		static constexpr ch8 const mc_ToPush[] = DColor_Reset DColor_256(32);
+		static constexpr ch8 const mc_ToPull[] = DColor_Reset DColor_256(9);
+#endif
+
 namespace NMib::NBuildSystem
 {
 	namespace
@@ -16,6 +50,13 @@ namespace NMib::NBuildSystem
 
 	namespace NRepository
 	{
+		CStr CRepository::f_GetIdentifierName(CStr const &_BasePath, CStr const &_Root) const
+		{
+			if (!m_Location.f_StartsWith(_Root))
+				return "~" + m_Identity;
+			return CFile::fs_MakePathRelative(m_Location, _BasePath);
+		}
+
 		CRepositoryConfig const *CConfigFile::f_GetConfig(CRepository const &_Repo, CStr const &_BasePath)
 		{
 			CStr Identifier;
@@ -165,9 +206,13 @@ namespace NMib::NBuildSystem
 			 	, CStateHandler &o_StateHandler
 			 	, CBuildSystem const &_BuildSystem
 			 	, TCMap<CStr, CRepository const *> const &_AllRepositories
+			 	, EHandleRepositoryAction _ReconcileAction
+			 	, mint _MaxRepoWidth
 			)
 		{
 			CStr Location = _ReposDirectory + "/" + _Repo.f_GetName();
+			CStr BaseDir = _BuildSystem.f_GetBaseDir();
+			CStr RepositoryIdentifier = _Repo.f_GetIdentifierName(BaseDir, BaseDir);
 			
 			CDisableExceptionTraceScope DisableTrace;
 			
@@ -197,6 +242,23 @@ namespace NMib::NBuildSystem
 					if (!StdErr.f_IsEmpty())
 						DMibError("Failed to ask git question {vs}: {}{}"_f << _Params << StdErr << StdOut);
 					return ExitCode == 0;
+				}
+			;
+			auto fLaunchGitNonEmpty = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir)
+				{
+					CProcessLaunchParams Params{_WorkingDir};
+#ifdef DPlatformFamily_OSX
+					Params.m_Environment["PATH"] = "/opt/local/bin:" + CStr(fg_GetSys()->f_GetEnvironmentVariable("PATH"));
+#endif
+					Params.m_bShowLaunched = false;
+					uint32 ExitCode = 1;
+					CStr StdErr;
+					CStr StdOut;
+					CProcessLaunch::fs_LaunchBlock("git", _Params, StdOut, StdErr, ExitCode, Params);
+					if (ExitCode)
+						return false;
+
+					return !StdOut.f_IsEmpty();
 				}
 			;
 			auto fTryLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir) -> CStr
@@ -236,7 +298,13 @@ namespace NMib::NBuildSystem
 					case EOutputType_Error: pRepoColor = CColors::mc_StatusError; break;
 					}
 
-					CStr RepoName = CFile::fs_MakePathRelative(_Repo.m_Location, _BuildSystem.f_GetBaseDir());
+					CStr RepoName;
+					if (_Repo.m_Location.f_StartsWith(BaseDir))
+						RepoName = CFile::fs_MakePathRelative(_Repo.m_Location, BaseDir);
+					else
+						RepoName = _Repo.m_Location;
+
+					RepoName = "{sj*,a-}"_f << fg_TempCopy(RepoName) << _MaxRepoWidth;
 
 					CStr ReplacedRepo = RepoName.f_Replace("/", "{}{}/{}"_f << CColors::mc_Default << DColor_256(250) << pRepoColor ^ 1);
 					DMibConOut2
@@ -368,46 +436,74 @@ namespace NMib::NBuildSystem
 				 	&& !fg_IsSubmodule(Location)
 				)
 			{
-				fOutputInfo(EOutputType_Normal, "Reconciling against hash '{}'"_f << ConfigHash);
-
+				bool bPassException = false;
 				try
 				{
 					fLaunchGit({"fetch", "--all"}, Location);
-					bool bShouldReset = false;
-					bool bIsNewer = false;
-					if (!bForceReset)
+
+					if (bForceReset)
 					{
+						fOutputInfo(EOutputType_Warning, "Force Resetting to '{}'"_f << ConfigHash);
+						fLaunchGit({"checkout", "-f", "-B", _Repo.m_DefaultBranch, ConfigHash}, Location);
+						fLaunchGit({"clean", "-fd"}, Location);
+					}
+					else
+					{
+						EHandleRepositoryAction RecommendedAction = EHandleRepositoryAction_None;
+
 						do
 						{
 							if (fLaunchGitQuestion({"merge-base", "--is-ancestor", HeadHash, ConfigHash}, Location))
+							{
+								if (!fLaunchGit({"status", "--porcelain"}, Location).f_IsEmpty())
+									RecommendedAction = EHandleRepositoryAction_Rebase;
+								else
+									RecommendedAction = EHandleRepositoryAction_Reset;
 								break;
+							}
 
 							if (fLaunchGitQuestion({"merge-base", "--is-ancestor", ConfigHash, HeadHash}, Location))
 							{
-								bIsNewer = true;
+								RecommendedAction = EHandleRepositoryAction_None;
 								break;
 							}
 
 							if (!fLaunchGit({"status", "--porcelain"}, Location).f_IsEmpty())
+							{
+								RecommendedAction = EHandleRepositoryAction_ManualResolve;
 								break;
+							}
+
+							bool bIsOnRemote = false;
+
+							if (fLaunchGitNonEmpty({"branch", "-r", "--contains", HeadHash}, Location) || fLaunchGitNonEmpty({"tag", "--contains", HeadHash}, Location))
+								bIsOnRemote = true;
+
+							if (bIsOnRemote)
+								RecommendedAction = EHandleRepositoryAction_Reset;
+							else
+								RecommendedAction = EHandleRepositoryAction_ManualResolve;
 
 							auto *pRepo = _AllRepositories.f_FindLargestLessThanEqual(_Repo.m_ConfigFile);
 							if (!pRepo || !_Repo.m_ConfigFile.f_StartsWith((*pRepo)->m_Location))
 							{
-								fOutputInfo(EOutputType_Warning, "Cloud not find containing repo for config file '{}'\n"_f << _Repo.m_ConfigFile);
+								//fOutputInfo(EOutputType_Warning, "Could not find containing repo for config file '{}'"_f << _Repo.m_ConfigFile);
 								break;
 							}
 
 							auto &Repo = **pRepo;
 
-							CStr RelativeLocation = CFile::fs_MakePathRelative(_Repo.m_Location, Repo.m_Location);
+							CStr ConfigDir = CFile::fs_GetPath(_Repo.m_ConfigFile);
+
+							CStr RepoIdentifier = _Repo.f_GetIdentifierName(ConfigDir, BaseDir);
 
 							CStr History = fLaunchGit({"log", "-p", "origin/{}"_f << Repo.m_DefaultBranch, "--", _Repo.m_ConfigFile}, Repo.m_Location);
 							CStr FilteredHistory;
-							CStr LookFor = "+{} "_f << RelativeLocation;
+							CStr LookFor = "+{} "_f << RepoIdentifier;
 
 							bool bFoundConfig = false;
 							bool bFoundCurrent = false;
+
 							for (auto &Line : History.f_SplitLine())
 							{
 								if (!Line.f_StartsWith(LookFor))
@@ -417,7 +513,7 @@ namespace NMib::NBuildSystem
 								{
 									if (bFoundCurrent)
 									{
-										bIsNewer = true;
+										RecommendedAction = EHandleRepositoryAction_None;
 										break;
 									}
 									bFoundConfig = true;
@@ -426,7 +522,7 @@ namespace NMib::NBuildSystem
 								{
 									if (bFoundConfig)
 									{
-										bShouldReset = true; // Our current commit is in origin history, it should be safe to do a reset
+										RecommendedAction = EHandleRepositoryAction_Reset; // Our current commit is in origin history, it should be safe to do a reset
 										break;
 									}
 									bFoundCurrent = true;
@@ -435,94 +531,149 @@ namespace NMib::NBuildSystem
 						}
 						while (false)
 							;
-					}
 
-					if (bForceReset)
-					{
-						fOutputInfo(EOutputType_Warning, "Force Resetting");
-						fLaunchGit({"checkout", "-f", "-B", _Repo.m_DefaultBranch, ConfigHash}, Location);
-						fLaunchGit({"clean", "-fd"}, Location);
-					}
-					else if (bShouldReset)
-					{
-						fOutputInfo(EOutputType_Warning, "Resetting");
-						fLaunchGit({"reset", "--hard", ConfigHash}, Location);
-					}
-					else if (!bIsNewer)
-					{
-						fOutputInfo(EOutputType_Normal, "Rebasing");
+						EHandleRepositoryAction Action = EHandleRepositoryAction_None;
 
-						TCSet<CStr> AllConfigFiles;
-						for (auto &pRepository : _AllRepositories)
-							AllConfigFiles[pRepository->m_ConfigFile];
+						if (_ReconcileAction == EHandleRepositoryAction_Auto)
+							Action = RecommendedAction;
+						else if (_ReconcileAction != EHandleRepositoryAction_None)
+							Action = _ReconcileAction;
 
-						auto fResolveConflicts = [&](CStr const &_ConflictingFiles) -> bool
-							{
-								bool bAllResolved = true;
-								for (auto &File : _ConflictingFiles.f_SplitLine())
-								{
-									CStr FullPath = CFile::fs_AppendPath(_Repo.m_Location, File);
-
-									if (AllConfigFiles.f_FindEqual(FullPath))
-									{
-										fOutputInfo(EOutputType_Warning, "Ignoring conflict in config file '{}'"_f << File);
-										fLaunchGit({"checkout", "--ours", "--", File}, Location);
-										fLaunchGit({"add", File}, Location);
-									}
-									else
-										bAllResolved = false;
-								}
-								return bAllResolved;
-							}
-						;
-
-						bool bAllResolved = true;
-						if (auto RebaseError = fTryLaunchGit({"rebase", "--autostash", ConfigHash}, Location))
+						if (Action == EHandleRepositoryAction_Reset)
 						{
-							while (bAllResolved)
+							if (fLaunchGit({"rev-parse", "--abbrev-ref", "HEAD"}, Location).f_Trim() == "HEAD")
 							{
-								CStr ConflictingFiles = fLaunchGit({"diff", "--name-only", "--diff-filter=U"}, Location);
-								if (ConflictingFiles.f_IsEmpty())
-								{
-									bAllResolved = false;
-									break;
-								}
-
-								if (!fResolveConflicts(ConflictingFiles))
-									bAllResolved = false;
-
-								if (bAllResolved)
-								{
-									if (fLaunchGit({"status", "--porcelain"}, Location).f_IsEmpty())
-									{
-										if (!fTryLaunchGit({"rebase", "--skip"}, Location))
-											break;
-									}
-									else
-									{
-										if (!fTryLaunchGit({"rebase", "--continue"}, Location))
-											break;
-									}
-								}
+								fOutputInfo(EOutputType_Warning, "Resetting to {} and recovering from detached head"_f << ConfigHash);
+								fLaunchGit({"checkout", "-f", "-B", _Repo.m_DefaultBranch, ConfigHash}, Location); // Recover from detached head
 							}
-
-							if (!bAllResolved)
+							else
 							{
-								fOutputInfo(EOutputType_Error, "Failed to automatically resolve rebase conflicts:\n\n{}\n"_f << RebaseError.f_Trim());
-								DMibError("Aborting, resolve conflicts manually");
+								fOutputInfo(EOutputType_Warning, "Resetting to {}"_f << ConfigHash);
+								fLaunchGit({"reset", "--hard", ConfigHash}, Location);
 							}
 						}
-
-						if (bAllResolved)
+						else if (Action == EHandleRepositoryAction_Rebase)
 						{
-							CStr ConflictingFiles = fLaunchGit({"diff", "--name-only", "--diff-filter=U"}, Location);
-							if (!ConflictingFiles.f_IsEmpty())
-								fResolveConflicts(ConflictingFiles);
+							fOutputInfo(EOutputType_Normal, "Rebasing on top of {}"_f << ConfigHash);
+
+							TCSet<CStr> AllConfigFiles;
+							for (auto &pRepository : _AllRepositories)
+								AllConfigFiles[pRepository->m_ConfigFile];
+
+							auto fResolveConflicts = [&](CStr const &_ConflictingFiles) -> bool
+								{
+									bool bAllResolved = true;
+									for (auto &File : _ConflictingFiles.f_SplitLine())
+									{
+										CStr FullPath = CFile::fs_AppendPath(_Repo.m_Location, File);
+
+										if (AllConfigFiles.f_FindEqual(FullPath))
+										{
+											fOutputInfo(EOutputType_Warning, "Ignoring conflict in config file '{}'"_f << File);
+											fLaunchGit({"checkout", "--ours", "--", File}, Location);
+											fLaunchGit({"add", File}, Location);
+										}
+										else
+											bAllResolved = false;
+									}
+									return bAllResolved;
+								}
+							;
+
+							bool bAllResolved = true;
+							if (auto RebaseError = fTryLaunchGit({"rebase", "--autostash", ConfigHash}, Location))
+							{
+								while (bAllResolved)
+								{
+									CStr ConflictingFiles = fLaunchGit({"diff", "--name-only", "--diff-filter=U"}, Location);
+									if (ConflictingFiles.f_IsEmpty())
+									{
+										bAllResolved = false;
+										break;
+									}
+
+									if (!fResolveConflicts(ConflictingFiles))
+										bAllResolved = false;
+
+									if (bAllResolved)
+									{
+										if (fLaunchGit({"status", "--porcelain"}, Location).f_IsEmpty())
+										{
+											if (!fTryLaunchGit({"rebase", "--skip"}, Location))
+												break;
+										}
+										else
+										{
+											if (!fTryLaunchGit({"rebase", "--continue"}, Location))
+												break;
+										}
+									}
+								}
+
+								if (!bAllResolved)
+								{
+									fOutputInfo(EOutputType_Error, "Failed to automatically resolve rebase conflicts:\n\n{}\n"_f << RebaseError.f_Trim());
+									DMibError("Aborting, resolve conflicts manually");
+								}
+							}
+
+							if (bAllResolved)
+							{
+								CStr ConflictingFiles = fLaunchGit({"diff", "--name-only", "--diff-filter=U"}, Location);
+								if (!ConflictingFiles.f_IsEmpty())
+									fResolveConflicts(ConflictingFiles);
+							}
+						}
+						else if (Action == EHandleRepositoryAction_ManualResolve)
+						{
+							fOutputInfo(EOutputType_Error, "Manual reconcile against {} needed"_f << ConfigHash);
+							bPassException = true;
+							DMibError("Manual reconcile needed");
+						}
+						else if (_ReconcileAction != EHandleRepositoryAction_Auto)
+						{
+							CStr ActionStr;
+
+							EOutputType OutputType = EOutputType_Warning;
+							switch (RecommendedAction)
+							{
+							case EHandleRepositoryAction_None:
+								ActionStr = "(Leave as is)";
+								break;
+							case EHandleRepositoryAction_ManualResolve:
+								ActionStr = "(Resolve manually)";
+								OutputType = EOutputType_Error;
+								break;
+							case EHandleRepositoryAction_Reset:
+								ActionStr = "reset";
+								break;
+							case EHandleRepositoryAction_Rebase:
+								ActionStr = "rebase";
+								break;
+							case EHandleRepositoryAction_Auto:
+							default:
+								ActionStr = "internal error";
+								break;
+							}
+
+							fOutputInfo
+								(
+								 	OutputType
+								 	, "{}{}{} recommended for {}{}{} -> {}{}{}"_f
+								 	<< CColors::mc_RepositoryName << ActionStr << CColors::mc_Default
+								 	<< CColors::mc_ToPush << HeadHash << CColors::mc_Default
+								 	<< CColors::mc_ToPush << ConfigHash << CColors::mc_Default
+								)
+							;
+							bPassException = true;
+							DMibError(g_ReconcileHelp);
 						}
 					}
 				}
 				catch (CException const &_Exception)
 				{
+					if (bPassException)
+						throw;
 					fOutputInfo(EOutputType_Error, "Reconcile error: "_f << _Exception.f_GetErrorStr().f_Trim());
 					CBuildSystem::fs_ThrowError(_Repo.m_Position, "Failed to reconcile hash '{}': {}"_f << ConfigHash << _Exception.f_GetErrorStr().f_Trim());
 				}
@@ -673,7 +824,7 @@ namespace NMib::NBuildSystem
 
 	using namespace NRepository;
 
-	CBuildSystem::ERetry CBuildSystem::fp_HandleRepositories(TCMap<CPropertyKey, CStr> const &_Values, bool _bSkipRepoUpdate)
+	CBuildSystem::ERetry CBuildSystem::fp_HandleRepositories(TCMap<CPropertyKey, CStr> const &_Values, bool _bSkipRepoUpdate, TCMap<CStr, EHandleRepositoryAction> const &_Actions)
 	{
 		f_InitEntityForEvaluation(mp_Data.m_RootEntity, _Values);
 		f_ExpandRepositoryEntities(mp_Data);
@@ -699,6 +850,38 @@ namespace NMib::NBuildSystem
 
 		CStateHandler StateHandler{mp_BaseDir};
 
+		auto fGetReconcileAction = [&](CRepository const &_Repo)
+			{
+				EHandleRepositoryAction Action = EHandleRepositoryAction_None;
+				for (auto &WildcardAction : _Actions)
+				{
+					auto &Wildcard = _Actions.fs_GetKey(WildcardAction);
+					if (fg_StrMatchWildcard(_Repo.f_GetIdentifierName(mp_BaseDir, mp_BaseDir).f_GetStr(), Wildcard.f_GetStr()) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
+						Action = WildcardAction;
+				}
+
+				return Action;
+			}
+		;
+
+		mint MaxRepoWidth = 0;
+		for (auto &Repos : ReposOrdered)
+		{
+			for (auto &Repos : Repos)
+			{
+				for (auto &Repo : Repos.m_Repositories)
+				{
+					CStr RepoName;
+					if (Repo.m_Location.f_StartsWith(mp_BaseDir))
+						RepoName = CFile::fs_MakePathRelative(Repo.m_Location, mp_BaseDir);
+					else
+						RepoName = Repo.m_Location;
+
+					MaxRepoWidth = fg_Max(MaxRepoWidth, RepoName.f_GetLen());
+				}
+			}
+		}
+
 		for (auto &Repos : ReposOrdered)
 		{
 			fg_ParallellForEach
@@ -718,7 +901,7 @@ namespace NMib::NBuildSystem
 								_Repos.m_Repositories
 								, [&](auto &_Repo)
 								{
-									if (fg_HandleRepository(ReposDirectory, _Repo, StateHandler, *this, AllRepositories))
+									if (fg_HandleRepository(ReposDirectory, _Repo, StateHandler, *this, AllRepositories, fGetReconcileAction(_Repo), MaxRepoWidth))
 									{
 										bChanged.f_Exchange(true);
 										CStr RelativePath = CFile::fs_MakePathRelative(_Repo.m_Location, f_GetBaseDir());

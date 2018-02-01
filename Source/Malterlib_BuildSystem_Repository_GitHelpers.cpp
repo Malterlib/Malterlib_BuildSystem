@@ -204,6 +204,9 @@ namespace NMib::NBuildSystem::NRepository
 					if (Branch.f_IsEmpty())
 						continue;
 
+					if (Branch.f_StartsWith("(HEAD detached"))
+						Branch = "HEAD";
+
 					GitBranches.m_Branches[Branch];
 
 					if (Line.f_StartsWith("* "))

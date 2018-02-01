@@ -546,29 +546,71 @@ namespace NMib::NBuildSystem
 			;
 			mp_GeneratorInterface = &LocalInterface;
 
+			TCMap<CStr, EHandleRepositoryAction> RepositoryActions;
+
+			auto ActionParams = _GenerateSettings.m_ActionParams;
+			bool bSkipRepoUpdate = false;
+			{
+				CDisableExceptionTraceScope DisableTrace;
+				auto OldActionParams = fg_Move(ActionParams);
+				for (auto &Param : OldActionParams)
+				{
+					if (Param == "--skip-update")
+					{
+						bSkipRepoUpdate = true;
+						continue;
+					}
+
+					if (Param.f_StartsWith("--reconcile="))
+					{
+						for (auto &RepoOptions : Param.f_Extract(12).f_Split(","))
+						{
+							CStr WildCard;
+							CStr ActionStr;
+							aint nParsed = 0;
+							(CStr::CParse("{}:{}") >> WildCard >> ActionStr).f_Parse(RepoOptions, nParsed);
+							if (nParsed != 2)
+								DError("Invalid format for --reconcile. Expected --reconcile=Wildcard:Action[,Wildcard:Action]...");
+							EHandleRepositoryAction Action;
+							if (ActionStr == "auto")
+								Action = EHandleRepositoryAction_Auto;
+							else if (ActionStr == "reset")
+								Action = EHandleRepositoryAction_Reset;
+							else if (ActionStr == "rebase")
+								Action = EHandleRepositoryAction_Rebase;
+							else
+								DError("Invalid format for --reconcile. Expected action to be one of: [auto, reset, rebase]");
+							RepositoryActions[WildCard] = Action;
+						}
+						continue;
+					}
+
+					ActionParams.f_Insert(Param);
+				}
+			}
+
 			bool bTryParsed = false;
 			try
 			{
+				mp_FileLocation = CFile::fs_GetExpandedPath(_GenerateSettings.m_SourceFile);
+				mp_BaseDir = CFile::fs_GetPath(mp_FileLocation);
+				mp_FileLocationFile = CFile::fs_GetFile(mp_FileLocation);
+
 				if (!bDisableUserSettings && CFile::fs_FileExists(UserSettingsFileName))
 				{
 					CBuildSystemPreprocessor Preprocessor(mp_UserSettingsRegistry, mp_SourceFiles, mp_FindCache, mp_Environment);
 					Preprocessor.f_ReadFile(UserSettingsFileName);
 					mp_Registry = mp_UserSettingsRegistry;
 				}
-
 				{
 					CBuildSystemPreprocessor Preprocessor(mp_Registry, mp_SourceFiles, mp_FindCache, mp_Environment);
 					Preprocessor.f_ReadFile(_GenerateSettings.m_SourceFile);
-					mp_FileLocation = Preprocessor.f_GetFileLocation();
 				}
 				if (!bDisableUserSettings)
 					mp_SourceFiles[UserSettingsFileName];
 
 				mp_SourceFiles[EnvironmentStateFile];
 				mp_SourceFiles[OverrideEnvironmentFile];
-
-				mp_BaseDir = CFile::fs_GetPath(mp_FileLocation);
-				mp_FileLocationFile = CFile::fs_GetFile(mp_FileLocation);
 
 				bTryParsed = true;
 				fp_ParseData(mp_Data.m_RootEntity, mp_Registry, &mp_Data.m_ConfigurationTypes);
@@ -577,7 +619,7 @@ namespace NMib::NBuildSystem
 			{
 				if (!bTryParsed)
 					fp_ParseData(mp_Data.m_RootEntity, mp_Registry, &mp_Data.m_ConfigurationTypes);
-				if (auto Retry = fp_HandleRepositories(GeneratorValues, false))
+				if (auto Retry = fp_HandleRepositories(GeneratorValues, bSkipRepoUpdate, RepositoryActions))
 				{
 					o_Retry = Retry;
 					return false;
@@ -586,15 +628,7 @@ namespace NMib::NBuildSystem
 					throw;
 			}
 
-			auto ActionParams = _GenerateSettings.m_ActionParams;
-			bool bSkipRepoUpdate = false;
-			if (!ActionParams.f_IsEmpty() && ActionParams.f_GetFirst() == "--skip-update")
-			{
-				ActionParams.f_Remove(0);
-				bSkipRepoUpdate = true;
-			}
-
-			if (auto Retry = fp_HandleRepositories(GeneratorValues, bSkipRepoUpdate))
+			if (auto Retry = fp_HandleRepositories(GeneratorValues, bSkipRepoUpdate, RepositoryActions))
 			{
 				o_Retry = Retry;
 				return false;

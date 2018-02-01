@@ -28,6 +28,15 @@ namespace NMib::NBuildSystem
 
 namespace NMib::NBuildSystem
 {
+	enum EHandleRepositoryAction
+	{
+		EHandleRepositoryAction_None
+		, EHandleRepositoryAction_Auto
+		, EHandleRepositoryAction_ManualResolve
+		, EHandleRepositoryAction_Reset
+		, EHandleRepositoryAction_Rebase
+	};
+
 	class CBuildSystem
 	{
 	public:
@@ -336,7 +345,7 @@ namespace NMib::NBuildSystem
 		CBuildSystemData::CImportData *fp_ExpandImportCMake_FromGeneratedDirectory(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData, CStr const &_Directory) const;
 		void fp_TracePropertyEval(bool _bSuccess, CEntity const &_Entity, CProperty const &_Property, CStr const &_Value) const;
 
-		ERetry fp_HandleRepositories(TCMap<CPropertyKey, CStr> const &_Values, bool _bSkipRepoUpdate);
+		ERetry fp_HandleRepositories(TCMap<CPropertyKey, CStr> const &_Values, bool _bSkipRepoUpdate, TCMap<CStr, EHandleRepositoryAction> const &_Actions);
 
 		void fp_Repository_ForEachRepo(CRepoFilter const &_Filter, bool _bParallell, TCVector<CStr> const &_Params);
 		void fp_Repository_Branch(CRepoFilter const &_Filter, CStr const &_Branch);

@@ -7,6 +7,8 @@ namespace NMib::NBuildSystem
 {
 	void CBuildSystem::fp_HandleAction(CStr const &_Action, TCVector<CStr> const &_Params)
 	{
+		CDisableExceptionTraceScope DisableTrace;
+
 		TCVector<CStr> Params = _Params;
 
 		CRepoFilter RepoFilter;
@@ -49,6 +51,8 @@ namespace NMib::NBuildSystem
 
 		if (_Action == "update_repos")
 		{
+			if (!Params.f_IsEmpty())
+				DMibError("Extra params found: {vs}"_f << Params);
 			return;
 		}
 		else if (_Action == "git" || _Action == "sgit" || _Action == "cgit" || _Action == "scgit")
