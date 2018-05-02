@@ -141,9 +141,34 @@ namespace NMib::NBuildSystem
 		bool bUpdateCache = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_UpdateCache") == "true";
 		bool bVerbose = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_Verbose") == "true";
 
+#ifdef DPlatformFamily_Windows
+		auto fReplace = [&](auto &&_String, auto &&_Find, auto &&_ReplaceWith)
+			{
+				return _String.f_ReplaceNoCase(_Find, _ReplaceWith);
+			}
+		;
+		auto fStartsWith = [&](auto &&_String, auto &&_Find)
+			{
+				return _String.f_StartsWithNoCase(_Find);
+			}
+		;
+#else
+		auto fReplace = [&](auto &&_String, auto &&_Find, auto &&_ReplaceWith)
+			{
+				return _String.f_Replace(_Find, _ReplaceWith);
+			}
+		;
+		auto fStartsWith = [&](auto &&_String, auto &&_Find)
+			{
+				return _String.f_StartsWith(_Find);
+			}
+		;
+#endif
+
 		// Dependent variables
-		CStr GeneratorVersion = "11";
-		CStr FullRebuildVersion = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_FullRebuildVersion");
+		CStr GeneratorVersion = "12";
+		CStr GeneratorFullRebuildVersion = "2";
+		CStr FullRebuildVersion = "{}-{}"_f << f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_FullRebuildVersion") << GeneratorFullRebuildVersion;
 		CStr CacheExcludePatterns = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_CacheExcludePatterns");
 		CStr CacheReplaceContents = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_CacheReplaceContents");
 		CStr CmakeLanguages = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_Languages");
@@ -542,7 +567,7 @@ namespace NMib::NBuildSystem
 						fg_ParseToEndOfLine(pParse);
 						CStr Line(pLineStart, pParse - pLineStart);
 						fg_ParseEndOfLine(pParse);
-						if (Line.f_StartsWith(TempDirectory))
+						if (fStartsWith(Line, TempDirectory))
 						{
 							bool bExcluded = false;
 							for (auto &ExcludePattern : FindOptions.m_ExcludePatterns)
@@ -565,15 +590,15 @@ namespace NMib::NBuildSystem
 					FileContents = fg_Move(NewFileContents);
 				}
 				
-				FileContents = FileContents.f_Replace(TempDirectoryFind, RelativeDest);
-				FileContents = FileContents.f_Replace(TempDirectory, RelativeDestBare);
-				FileContents = FileContents.f_Replace(SourceBaseFind, RelativeSource);
-				FileContents = FileContents.f_Replace(SourceBase, RelativeSourceBare);
-				FileContents = FileContents.f_Replace(BaseDirFind, RelativeBase);
-				FileContents = FileContents.f_Replace(BaseDir, RelativeBaseBare);
+				FileContents = fReplace(FileContents, TempDirectoryFind, RelativeDest);
+				FileContents = fReplace(FileContents, TempDirectory, RelativeDestBare);
+				FileContents = fReplace(FileContents, SourceBaseFind, RelativeSource);
+				FileContents = fReplace(FileContents, SourceBase, RelativeSourceBare);
+				FileContents = fReplace(FileContents, BaseDirFind, RelativeBase);
+				FileContents = fReplace(FileContents, BaseDir, RelativeBaseBare);
 				
 				for (auto &Replace : ReplaceContents)
-					FileContents = FileContents.f_Replace(fg_Get<0>(Replace), fg_Get<1>(Replace));
+					FileContents = fReplace(FileContents, fg_Get<0>(Replace), fg_Get<1>(Replace));
 				
 				if (CFile::fs_GetExtension(File.m_Path) == "MHeader")
 				{
@@ -587,7 +612,11 @@ namespace NMib::NBuildSystem
 					;
 					CRegistryPreserveAndOrder_CStr Registry;
 					Registry.f_ParseStr(FileContents, File.m_Path);
+#ifdef DPlatformFamily_Windows
+					TCMap<CStr, CStr, CCompare_TStrNoCase> RemappedOutputs;
+#else
 					TCMap<CStr, CStr> RemappedOutputs;
+#endif
 					Registry.f_TransformFunc
 						(
 							[&](CRegistryPreserveAndOrder_CStr &o_This)
