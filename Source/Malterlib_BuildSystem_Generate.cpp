@@ -204,14 +204,14 @@ namespace NMib::NBuildSystem
 									if (!CFile::fs_FileExists(FileName))
 									{
 										if (!bChanged.f_Exchange(true))
-											DConOut("Regenerating build system because file is missing: {}{\n}", FileName);
+											DConOut("Dependency check: Regenerating build system because file is missing: {}{\n}", FileName);
 										return true;
 									}
 								}
 								catch (...)
 								{
 									if (!bChanged.f_Exchange(true))
-										DConOut("Regenerating build system because file is missing: {}{\n}", FileName);
+										DConOut("Dependency check: Regenerating build system because file is missing: {}{\n}", FileName);
 									return true;
 								}
 							}
@@ -225,7 +225,7 @@ namespace NMib::NBuildSystem
 										if (CFile::fs_FileExists(FileName))
 										{
 											if (!bChanged.f_Exchange(true))
-												DConOut2("Regenerating build system because file now exists: {}{\n}", FileName);
+												DConOut2("Dependency check: Regenerating build system because file now exists: {}{\n}", FileName);
 											return true;
 										}
 									}
@@ -240,7 +240,7 @@ namespace NMib::NBuildSystem
 											{
 												DConOut
 													(
-														"Regenerating build system because file changed ({} != {}): {}{\n}"
+														"Dependency check: Regenerating build system because file changed ({} != {}): {}{\n}"
 														, NTime::fg_GetFullTimeStr(DiskTime) << NTime::fg_GetFullTimeStr(_File.m_WriteTime) << FileName
 													)
 												;
@@ -262,7 +262,7 @@ namespace NMib::NBuildSystem
 											{
 												DConOut
 													(
-														"Regenerating build system because file changed ({} != {}): {}{\n}"
+														"Dependency check: Regenerating build system because file changed ({} != {}): {}{\n}"
 														, NTime::fg_GetFullTimeStr(DiskTime) << NTime::fg_GetFullTimeStr(_File.m_WriteTime) << FileName
 													)
 												;
@@ -273,13 +273,13 @@ namespace NMib::NBuildSystem
 									catch (CException const &_Exception)
 									{
 										if (!bChanged.f_Exchange(true))
-											DConOut2("Regenerating build system because file date check failed: {}{\n}{}{\n}", FileName, _Exception);
+											DConOut2("Dependency check: Regenerating build system because file date check failed: {}{\n}{}{\n}", FileName, _Exception);
 										return true;
 									}
 									catch (...)
 									{
 										if (!bChanged.f_Exchange(true))
-											DConOut("Regenerating build system because file is missing: {}{\n}", FileName);
+											DConOut("Dependency check: Regenerating build system because file is missing: {}{\n}", FileName);
 										return true;
 									}
 								}
@@ -291,7 +291,7 @@ namespace NMib::NBuildSystem
 										if (CFile::fs_FileExists(FileName))
 										{
 											if (!bChanged.f_Exchange(true))
-												DConOut2("Regenerating build system because file now exists: {}{\n}", FileName);
+												DConOut2("Dependency check: Regenerating build system because file now exists: {}{\n}", FileName);
 											return true;
 										}
 									}
@@ -304,7 +304,7 @@ namespace NMib::NBuildSystem
 											{
 												DConOut
 													(
-														"Regenerating build system because file changed ({} != {}): {}{\n}"
+														"Dependency check: Regenerating build system because file changed ({} != {}): {}{\n}"
 														, NTime::fg_GetFullTimeStr(DiskTime) << NTime::fg_GetFullTimeStr(_File.m_WriteTime) << FileName
 													)
 												;
@@ -316,13 +316,13 @@ namespace NMib::NBuildSystem
 								catch (CException const &_Exception)
 								{
 									if (!bChanged.f_Exchange(true))
-										DConOut2("Regenerating build system because file date check failed: {}{\n}{}{\n}", FileName, _Exception);
+										DConOut2("Dependency check: Regenerating build system because file date check failed: {}{\n}{}{\n}", FileName, _Exception);
 									return true;
 								}
 								catch (...)
 								{
 									if (!bChanged.f_Exchange(true))
-										DConOut("Regenerating build system because file is missing: {}{\n}", FileName);
+										DConOut("Dependency check: Regenerating build system because file is missing: {}{\n}", FileName);
 									return true;
 								}
 #endif
@@ -411,7 +411,7 @@ namespace NMib::NBuildSystem
 								if (bChangedLocal)
 								{
 									if (!bChanged.f_Exchange(true))
-										DConOut("Regenerating build system because search changed: {}" DNewLine, FindOptions.m_Path);
+										DConOut("Dependency check: Regenerating build system because search changed: {}" DNewLine, FindOptions.m_Path);
 								}
 							}
 						;
@@ -448,7 +448,7 @@ namespace NMib::NBuildSystem
 
 							if (Value != *iEnv)
 							{
-								DConOut("Regenerating build system because env var '{}' changed: '{}' != '{}'" DNewLine, iEnv.f_GetKey() << Value << *iEnv);
+								DConOut("Dependency check: Regenerating build system because env var '{}' changed: '{}' != '{}'" DNewLine, iEnv.f_GetKey() << Value << *iEnv);
 								bChanged = true;
 								break;
 							}
@@ -460,23 +460,28 @@ namespace NMib::NBuildSystem
 
 					if ((mp_GenerateSettings.m_GenerationFlags & InterestingGenerationFlags) != (State.m_GenerationFlags & InterestingGenerationFlags))
 					{
-						DConOut("Regenerating build system because generation flags changed {} != {}" DNewLine, mp_GenerateSettings.m_GenerationFlags << State.m_GenerationFlags);
+						DConOut
+							(
+							 	"Dependency check: Regenerating build system because generation flags changed {} != {}" DNewLine
+							 	, mp_GenerateSettings.m_GenerationFlags << State.m_GenerationFlags
+							)
+						;
 						bChanged = true;
 					}
 
 					if (!bChanged)
 					{
 						fp64 Time1 = Clock.f_GetTime();
-						DConOut("Checked for changes {fe2} s{\n}", Time1);
+						DConOut("Dependency check: Checked for changes {fe2} s{\n}", Time1);
 
 						return false;
 					}
 				}
 				else
-					DConOut("Regenerating build system because there are no source files in state" DNewLine, 0);
+					DConOut("Dependency check: Regenerating build system because there are no source files in state" DNewLine, 0);
 			}
 			else
-				DConOut("Regenerating build system because there is no state file" DNewLine, 0);
+				DConOut("Dependency check: Regenerating build system because there is no state file" DNewLine, 0);
 
 		}
 
