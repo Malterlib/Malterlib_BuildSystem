@@ -882,6 +882,8 @@ namespace NMib::NBuildSystem
 			}
 		}
 
+		CThreadPool ThreadPool{fg_Clamp(NSys::fg_Thread_GetVirtualCores() * 2u, 16u, CGitLaunches::fs_MaxProcesses()/2)};
+
 		for (auto &Repos : ReposOrdered)
 		{
 			fg_ParallellForEach
@@ -909,9 +911,11 @@ namespace NMib::NBuildSystem
 											bBinariesChange.f_Exchange(true);
 									}
 								}
+							 	, ThreadPool
 							)
 						;
 					}
+				 	, ThreadPool
 				)
 			;
 

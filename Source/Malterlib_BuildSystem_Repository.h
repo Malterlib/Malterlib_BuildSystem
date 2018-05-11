@@ -7,6 +7,7 @@
 #include <Mib/Process/ProcessLaunch>
 #include <Mib/Process/ProcessLaunchActor>
 #include <Mib/Encoding/EJSON>
+#include <Mib/Concurrency/ActorSequencer>
 
 namespace NMib::NBuildSystem::NRepository
 {
@@ -131,6 +132,8 @@ namespace NMib::NBuildSystem::NRepository
 			EOutputType m_OutputType = EOutputType_Normal;
 		};
 
+		static uint32 fs_MaxProcesses();
+
 		struct CState
 		{
 			CState(CStr const &_BaseDir, CStr const &_ProgressDescription);
@@ -141,13 +144,16 @@ namespace NMib::NBuildSystem::NRepository
 			TCActor<> m_OutputActor = fg_ConcurrentActor();
 			TCVector<TCActor<CProcessLaunchActor>> m_Launches;
 			TCMap<CStr, CStr> m_RepoNames;
-			mint m_LongestRepo = 0;
-			mint m_nRepos = 0;
 			TCAtomic<mint> m_nDoneRepos = 0;
 			CStr m_ProgressDescription;
 
 			CMutual m_DeferredOutputLock;
 			TCMap<CStr, TCVector<CDeferredOutput>> m_DeferredOutput;
+
+			TCActorSequencer<CProcessLaunchActor::CSimpleLaunchResult> m_LaunchSequencer{fg_Clamp(NSys::fg_Thread_GetVirtualCores()*2u, 32u, fs_MaxProcesses())};
+
+			mint m_LongestRepo = 0;
+			mint m_nRepos = 0;
 		};
 
 		void f_Output(EOutputType _OutputType, CRepository const &_Repo, CStr const &_Output, CStr const &_Prefix = {}) const;

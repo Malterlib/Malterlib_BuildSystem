@@ -164,29 +164,46 @@ namespace NMib::NBuildSystem::NRepository
 	TCContinuation<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::f_Launch(CRepository const &_Repo, TCVector<CStr> const &_Params) const
 	{
 		auto &State = *m_pState;
-
-		TCActor<CProcessLaunchActor> LaunchActor;
-		{
-			DLock(State.m_Lock);
-			LaunchActor = State.m_Launches.f_Insert() = fg_Construct();
-		}
-
-		CProcessLaunchActor::CSimpleLaunch LaunchParams{"git", _Params, _Repo.m_Location};
-		return LaunchActor(&CProcessLaunchActor::f_LaunchSimple, fg_Move(LaunchParams));
+		return State.m_LaunchSequencer > [=, pState = m_pState]() -> TCContinuation<CProcessLaunchActor::CSimpleLaunchResult>
+			{
+				auto &State = *pState;
+				TCActor<CProcessLaunchActor> LaunchActor;
+				{
+					DLock(State.m_Lock);
+					LaunchActor = State.m_Launches.f_Insert() = fg_Construct();
+				}
+				CProcessLaunchActor::CSimpleLaunch LaunchParams{"git", _Params, _Repo.m_Location};
+				return LaunchActor(&CProcessLaunchActor::f_LaunchSimple, fg_Move(LaunchParams));
+			}
+		;
 	}
 
 	TCContinuation<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::f_OpenDocument(CStr const &_Application, CStr const &_Document) const
 	{
 		auto &State = *m_pState;
 
-		TCActor<CProcessLaunchActor> LaunchActor;
-		{
-			DLock(State.m_Lock);
-			LaunchActor = State.m_Launches.f_Insert() = fg_Construct();
-		}
+		return State.m_LaunchSequencer > [=, pState = m_pState]() -> TCContinuation<CProcessLaunchActor::CSimpleLaunchResult>
+			{
+				auto &State = *pState;
 
-		CProcessLaunchActor::CSimpleLaunch LaunchParams{"open", {"-a", _Application, _Document}};
-		return LaunchActor(&CProcessLaunchActor::f_LaunchSimple, fg_Move(LaunchParams));
+				TCActor<CProcessLaunchActor> LaunchActor;
+				{
+					DLock(State.m_Lock);
+					LaunchActor = State.m_Launches.f_Insert() = fg_Construct();
+				}
+				CProcessLaunchActor::CSimpleLaunch LaunchParams{"open", {"-a", _Application, _Document}};
+				return LaunchActor(&CProcessLaunchActor::f_LaunchSimple, fg_Move(LaunchParams));
+			}
+		;
+	}
+
+	uint32 CGitLaunches::fs_MaxProcesses()
+	{
+#ifdef DPlatformFamily_Windows
+		return fg_Min(fg_Max(32000u / (NSys::fg_Thread_GetVirtualCores()*3u), 32u), 512u);
+#else
+		return 512u;
+#endif
 	}
 
 	TCContinuation<void> CGitLaunches::f_Launch
@@ -199,14 +216,20 @@ namespace NMib::NBuildSystem::NRepository
 	{
 		auto &State = *m_pState;
 
-		TCActor<CProcessLaunchActor> LaunchActor;
-		{
-			DLock(State.m_Lock);
-			LaunchActor = State.m_Launches.f_Insert() = fg_Construct();
-		}
-		CProcessLaunchActor::CSimpleLaunch LaunchParams{"git", _Params, _Repo.m_Location};
 		TCContinuation<void> Result;
-		LaunchActor(&CProcessLaunchActor::f_LaunchSimple, fg_Move(LaunchParams))
+
+		State.m_LaunchSequencer > [=, pState = m_pState]() -> TCContinuation<CProcessLaunchActor::CSimpleLaunchResult>
+			{
+				auto &State = *pState;
+
+				TCActor<CProcessLaunchActor> LaunchActor;
+				{
+					DLock(State.m_Lock);
+					LaunchActor = State.m_Launches.f_Insert() = fg_Construct();
+				}
+				CProcessLaunchActor::CSimpleLaunch LaunchParams{"git", _Params, _Repo.m_Location};
+				return LaunchActor(&CProcessLaunchActor::f_LaunchSimple, fg_Move(LaunchParams));
+			}
 			> State.m_OutputActor / [Result, _Prefix, This = *this, _Repo, fHandleResult = fg_Move(_fHandleResult)]
 			(TCAsyncResult<CProcessLaunchActor::CSimpleLaunchResult> &&_Result) mutable
 			{
