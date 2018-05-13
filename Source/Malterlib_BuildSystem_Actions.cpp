@@ -133,19 +133,19 @@ namespace NMib::NBuildSystem
 			RepoFilter.m_bOnlyChanged = false;
 			fParseFilter();
 
-			ERepoStatusFlag Flags = ERepoStatusFlag_None;
+			ERepoStatusFlag Flags = ERepoStatusFlag_Quiet;
 
 			for (; !Params.f_IsEmpty(); Params.f_Remove(0))
 			{
 				auto &Param = Params.f_GetFirst();
-				if (Param == "-v" || Param == "--verbose")
+				if (Param == "-u" || Param == "--show-unchanged")
+					Flags &= ~ERepoStatusFlag_Quiet;
+				else if (Param == "-v" || Param == "--verbose")
 					Flags |= ERepoStatusFlag_Verbose;
 				else if (Param == "-r" || Param == "--update-remotes")
 					Flags |= ERepoStatusFlag_UpdateRemotes;
 				else if (Param == "-t" || Param == "--only-tracked")
 					Flags |= ERepoStatusFlag_ShowOnlyTracked;
-				else if (Param == "-q" || Param == "--quiet")
-					Flags |= ERepoStatusFlag_Quiet;
 				else if (Param == "-a" || Param == "--all-braches")
 					Flags |= ERepoStatusFlag_AllBranches;
 				else if (Param == "-b" || Param == "--use-default-upstream-branch")
@@ -158,13 +158,13 @@ namespace NMib::NBuildSystem
 				{
 					DMibConOut2
 						(
-							"-v --verbose\n"
+							"-e --open-editor\n"
 						 	"-r --update-remotes\n"
+							"-u --show-unchanged\n"
+							"-v --verbose\n"
 							"-t --only-tracked\n"
-							"-q --quiet\n"
 							"-a --all-braches\n"
 							"-b --use-default-upstream-branch\n"
-							"-s --open-source-tree\n"
 							"-p --need-action-on-push\n"
 							"-h --help\n"
 						)
