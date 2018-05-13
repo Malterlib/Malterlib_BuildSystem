@@ -22,6 +22,7 @@ namespace NMib::NBuildSystem::NRepository
 			auto &RootRepo = RootRepoByX.m_Repositories[CFile::fs_GetFile(_BuildSystem.f_GetBaseDir())];
 			RootRepo.m_Location = _BuildSystem.f_GetBaseDir();
 			RootRepo.m_Type = "Root";
+			RootRepo.m_DefaultBranch = "master";
 			RootRepo.m_Position.m_FileName = _BuildSystem.f_GetGenerateSettings().m_SourceFile;
 			RootRepo.m_Position.m_Line = 1;
 			FilteredRepos.m_ReposOrdered.f_InsertFirst(fg_Move(RootRepos));
