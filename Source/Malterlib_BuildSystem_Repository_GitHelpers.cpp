@@ -362,15 +362,18 @@ namespace NMib::NBuildSystem::NRepository
 						LogEntry.m_Author = fParseDate(Line.f_Extract(7), LogEntry.m_AuthorDate);
 					else if (Line.f_StartsWith("committer "))
 						LogEntry.m_Committer = fParseDate(Line.f_Extract(10), LogEntry.m_CommitterDate);
-					else if (LogEntry.m_FirstLine.f_IsEmpty())
+					else if (Line.f_StartsWith("    "))
 					{
-						if (Line.f_IsEmpty())
-							continue;
-						LogEntry.m_FirstLine = Line.f_Extract(4);
-						LogEntry.m_Message = LogEntry.m_FirstLine;
+						if (LogEntry.m_FirstLine.f_IsEmpty())
+						{
+							if (Line.f_IsEmpty())
+								continue;
+							LogEntry.m_FirstLine = Line.f_Extract(4);
+							LogEntry.m_Message = LogEntry.m_FirstLine;
+						}
+						else
+							fg_AddStrSep(LogEntry.m_Message, Line.f_Extract(4), "\n");
 					}
-					else
-						fg_AddStrSep(LogEntry.m_Message, Line.f_Extract(4), "\n");
 				}
 
 				Continuation.f_SetResult(fg_Move(LogEntries));

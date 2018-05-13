@@ -361,6 +361,8 @@ namespace NMib::NBuildSystem
 			 	, ERepoListCommitsFlag _Flags
 			 	, TCVector<CWildcardColumn> const &_ColumnWildcards
 			 	, CStr const &_Prefix
+			 	, uint32 _MaxCommitsMainRepo
+			 	, uint32 _MaxCommits
 			)
 		;
 		void fp_HandleAction(CStr const &_Action, TCVector<CStr> const &_Params);

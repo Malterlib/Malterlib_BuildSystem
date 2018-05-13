@@ -17,35 +17,37 @@ namespace NMib::NBuildSystem
 
 		auto fParseFilter = [&]
 			{
-				while (!Params.f_IsEmpty() && Params.f_GetFirst().f_Find("=") >= 0)
+				TCVector<CStr> NewParams;
+
+				for (auto &Param : Params)
 				{
-					CStr Value = Params.f_GetFirst();
+					CStr Value = Param;
 					CStr Key = fg_GetStrSep(Value, "=");
 
-					if (Key == "Name")
+					if (Param.f_StartsWith("Name="))
 					{
 						if (!bTypeSpecified)
 							RepoFilter.m_Type = "";
 						RepoFilter.m_NameWildcard = Value;
 					}
-					else if (Key == "Type")
+					else if (Param.f_StartsWith("Type="))
 					{
 						RepoFilter.m_Type = Value;
 						bTypeSpecified = true;
 					}
-					else if (Key == "Tags")
+					else if (Param.f_StartsWith("Tags="))
 					{
 						if (!bTypeSpecified)
 							RepoFilter.m_Type = "";
 						RepoFilter.m_Tags.f_AddContainer(Value.f_Split(";"));
 					}
-					else if (Key == "OnlyChanged")
+					else if (Param.f_StartsWith("OnlyChanged="))
 						RepoFilter.m_bOnlyChanged = Value == "true";
 					else
-						DMibError("Uknown option: {}"_f << Key);
-
-					Params.f_Remove(0);
+						NewParams.f_Insert(Param);
 				}
+
+				Params = fg_Move(NewParams);
 			}
 		;
 
@@ -198,11 +200,13 @@ namespace NMib::NBuildSystem
 			ERepoListCommitsFlag Flags = ERepoListCommitsFlag_UpdateRemotes | ERepoListCommitsFlag_Color;
 			TCVector<CWildcardColumn> WildcardColumns;
 			CStr Prefix;
+			uint32 MaxCommits = 50;
+			uint32 MaxCommitsMainRepo = 500;
 
 			for (; !Params.f_IsEmpty(); Params.f_Remove(0))
 			{
 				auto &Param = Params.f_GetFirst();
-				if (Param == "-l")
+				if (Param == "-l" || Param == "--local")
 					Flags &= ~ERepoListCommitsFlag_UpdateRemotes;
 				else if (Param == "--no-color")
 					Flags &= ~ERepoListCommitsFlag_Color;
@@ -219,6 +223,10 @@ namespace NMib::NBuildSystem
 				}
 				else if (Param.f_StartsWith("--prefix="))
 					Prefix = Param.f_Extract(9);
+				else if (Param.f_StartsWith("--max-commits="))
+					MaxCommits = Param.f_Extract(14).f_ToInt(uint32(50));
+				else if (Param.f_StartsWith("--max-commits-main="))
+					MaxCommitsMainRepo = Param.f_Extract(19).f_ToInt(uint32(500));
 				else if (FromRef.f_IsEmpty())
 					FromRef = Param;
 				else if (ToRef.f_IsEmpty())
@@ -228,12 +236,12 @@ namespace NMib::NBuildSystem
 			}
 
 			if (FromRef.f_IsEmpty())
-				DMibError("Missing FromRef");
+				FromRef = "origin/master";
 
 			if (ToRef.f_IsEmpty())
-				DMibError("Missing ToRef");
+				ToRef = "HEAD";
 
-			fp_Repository_ListCommits(RepoFilter, FromRef, ToRef, Flags, WildcardColumns, Prefix);
+			fp_Repository_ListCommits(RepoFilter, FromRef, ToRef, Flags, WildcardColumns, Prefix, MaxCommitsMainRepo, MaxCommits);
 		}
 		else
 			DMibError("Uknown action: {}"_f << _Action);
