@@ -40,6 +40,12 @@ namespace NMib::NBuildSystem::NRepository
 		, EOutputType_Error
 	};
 
+	struct CRemote
+	{
+		CStr m_URL;
+		bool m_bCanPush = true;
+	};
+
 	struct CRepository
 	{
 		CStr const &f_GetName() const
@@ -60,7 +66,7 @@ namespace NMib::NBuildSystem::NRepository
 		CStr m_SubmoduleName;
 		CStr m_Type;
 		TCSet<CStr> m_Tags;
-		TCMap<CStr, CStr> m_Remotes;
+		TCMap<CStr, CRemote> m_Remotes;
 		CFilePosition m_Position;
 	};
 
@@ -113,7 +119,7 @@ namespace NMib::NBuildSystem::NRepository
 	{
 		CGitLaunches(CStr const &_BaseDir, CStr const &_ProgressDescription);
 
-		void f_MeasureRepos(TCVector<TCVector<CRepository *>> const &_FilteredRepositories);
+		void f_MeasureRepos(TCVector<TCVector<CRepository *>> const &_FilteredRepositories, bool _bReport = true);
 
 		TCContinuation<CProcessLaunchActor::CSimpleLaunchResult> f_Launch(CRepository const &_Repo, TCVector<CStr> const &_Params) const;
 		TCContinuation<void> f_Launch
@@ -149,6 +155,7 @@ namespace NMib::NBuildSystem::NRepository
 
 			CMutual m_DeferredOutputLock;
 			TCMap<CStr, TCVector<CDeferredOutput>> m_DeferredOutput;
+			TCVector<TCSet<CStr>> m_OutputOrder;
 
 			TCActorSequencer<CProcessLaunchActor::CSimpleLaunchResult> m_LaunchSequencer{fg_Clamp(NSys::fg_Thread_GetVirtualCores()*2u, 32u, fs_MaxProcesses())};
 
@@ -156,9 +163,11 @@ namespace NMib::NBuildSystem::NRepository
 			mint m_nRepos = 0;
 		};
 
+		CStr f_GetRepoName(CRepository const &_Repo) const;
 		void f_Output(EOutputType _OutputType, CRepository const &_Repo, CStr const &_Output, CStr const &_Prefix = {}) const;
 		void f_Output(EOutputType _OutputType, CStr const &_Section, CStr const &_Output) const;
 		void f_RepoDone(mint _nDone = 1) const;
+		void f_SetOutputOrder(TCVector<TCSet<CStr>> const &_OutputOrder) const;
 
 		TCSharedPointer<CState> m_pState;
 	};
@@ -249,7 +258,7 @@ namespace NMib::NBuildSystem::NRepository
 	TCContinuation<TCVector<CLocalFileChange>> fg_GetLocalFileChanges(CGitLaunches const &_GitLaunches, CRepository const &_Repo, bool _bIncludeUntracked);
 	TCContinuation<CGitBranches> fg_GetBranches(CGitLaunches const &_GitLaunches, CRepository const &_Repo, bool _bRemote);
 	TCContinuation<TCVector<CStr>> fg_GetRemotes(CGitLaunches const &_GitLaunches, CRepository const &_Repo);
-	TCContinuation<TCVector<CLogEntry>> fg_GetLogEntries(CGitLaunches const &_GitLaunches, CRepository const &_Repo, CStr const &_From, CStr const &_To);
+	TCContinuation<TCVector<CLogEntry>> fg_GetLogEntries(CGitLaunches const &_GitLaunches, CRepository const &_Repo, CStr const &_From, CStr const &_To, bool _bReportBadRevision = true);
 	TCContinuation<TCVector<CLogEntryFull>> fg_GetLogEntriesFull(CGitLaunches const &_GitLaunches, CRepository const &_Repo, CStr const &_From, CStr const &_To);
 
 	bool fg_BranchExists(CRepository const &_Repo, CStr const &_Branch);

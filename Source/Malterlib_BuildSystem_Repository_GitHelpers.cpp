@@ -249,16 +249,24 @@ namespace NMib::NBuildSystem::NRepository
 		return Continuation;
 	}
 
-	TCContinuation<TCVector<CLogEntry>> fg_GetLogEntries(CGitLaunches const &_GitLaunches, CRepository const &_Repo, CStr const &_From, CStr const &_To)
+	TCContinuation<TCVector<CLogEntry>> fg_GetLogEntries(CGitLaunches const &_GitLaunches, CRepository const &_Repo, CStr const &_From, CStr const &_To, bool _bReportBadRevision)
 	{
 		TCContinuation<TCVector<CLogEntry>> Continuation;
 
-		_GitLaunches.f_Launch(_Repo, {"log", "{}..{}"_f << _From << _To, "--oneline"})
-			> Continuation / [Continuation](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
+		_GitLaunches.f_Launch(_Repo, {"log", "{}..{}"_f << _From << _To, "--oneline", "--"})
+			> Continuation / [Continuation, _bReportBadRevision](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
 			{
 				if (_Result.m_ExitCode)
 				{
-					CStr Output = _Result.f_GetCombinedOut();
+					CStr Output = _Result.f_GetCombinedOut().f_Trim();
+					if (!_bReportBadRevision && Output.f_StartsWith("fatal: bad revision "))
+					{
+						TCVector<CLogEntry> LogEntries;
+						auto &DummyEntry = LogEntries.f_Insert();
+						DummyEntry.m_Description = Output;
+						Continuation.f_SetResult(fg_Move(LogEntries));
+						return;
+					}
 					if (Output.f_IsEmpty())
 						Output = "Error status from git: {}"_f << _Result.m_ExitCode;
 					Continuation.f_SetException(DMibErrorInstance(Output));
@@ -288,12 +296,12 @@ namespace NMib::NBuildSystem::NRepository
 	{
 		TCContinuation<TCVector<CLogEntryFull>> Continuation;
 
-		_GitLaunches.f_Launch(_Repo, {"log", "{}..{}"_f << _From << _To, "--pretty=raw"})
+		_GitLaunches.f_Launch(_Repo, {"log", "{}..{}"_f << _From << _To, "--pretty=raw", "--"})
 			> Continuation / [Continuation](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
 			{
 				if (_Result.m_ExitCode)
 				{
-					Continuation.f_SetException(DMibErrorInstance(_Result.f_GetErrorOut()));
+					Continuation.f_SetException(DMibErrorInstance(_Result.f_GetErrorOut().f_Trim()));
 					return;
 				}
 

@@ -182,11 +182,31 @@ namespace NMib::NBuildSystem
 		}
 		else if (_Action == "push")
 		{
-			RepoFilter.m_Type = "Malterlib";
-			RepoFilter.m_bOnlyChanged = false;
 			fParseFilter();
 
-			fp_Repository_Push(RepoFilter, Params);
+			bool bPretend = false;
+			bool bTags = true;
+			bool bNonDefaultToAll = false;
+
+			{
+				TCVector<CStr> NewParams;
+
+				for (auto &Param : Params)
+				{
+					if (Param == "--pretend")
+					 	bPretend = true;
+					else if (Param == "--no-tags")
+					 	bTags = false;
+					else if (Param == "--non-default-to-all")
+					 	bNonDefaultToAll = true;
+					else
+						NewParams.f_Insert(Param);
+				}
+
+				Params = fg_Move(NewParams);
+			}
+
+			fp_Repository_Push(RepoFilter, Params, bPretend, bTags, bNonDefaultToAll);
 		}
 		else if (_Action == "list-commits")
 		{

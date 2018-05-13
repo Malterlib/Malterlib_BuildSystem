@@ -387,25 +387,25 @@ namespace NMib::NBuildSystem
 
 			auto CurrentRemotes = fg_GetGitRemotes(Location, _Repo.m_Position);
 			auto WantedRemotes = _Repo.m_Remotes;
-			WantedRemotes["origin"] = _Repo.m_URL;
+			WantedRemotes["origin"].m_URL = _Repo.m_URL;
 
 			if (!WantedRemotes.f_IsEmpty())
 			{
 				for (auto iRemote = WantedRemotes.f_GetIterator(); iRemote; ++iRemote)
 				{
 					auto &RemoteName = iRemote.f_GetKey();
-					auto &RemoteURL = *iRemote;
+					auto &Remote = *iRemote;
 					auto pCurrentRemote = CurrentRemotes.f_FindEqual(RemoteName);
 					if (pCurrentRemote)
 					{
-						if (*pCurrentRemote == RemoteURL)
+						if (*pCurrentRemote == Remote.m_URL)
 							continue;
-						fOutputInfo(EOutputType_Normal, "Changing remote URL '{}={}'"_f << RemoteName << RemoteURL);
-						fLaunchGit({"remote", "set-url", RemoteName, RemoteURL}, Location);
+						fOutputInfo(EOutputType_Normal, "Changing remote URL '{}={}'"_f << RemoteName << Remote.m_URL);
+						fLaunchGit({"remote", "set-url", RemoteName, Remote.m_URL}, Location);
 						continue;
 					}
-					fOutputInfo(EOutputType_Normal, "Adding remote '{}={}'"_f << RemoteName << RemoteURL);
-					fLaunchGit({"remote", "add", RemoteName, RemoteURL}, Location);
+					fOutputInfo(EOutputType_Normal, "Adding remote '{}={}'"_f << RemoteName << Remote.m_URL);
+					fLaunchGit({"remote", "add", RemoteName, Remote.m_URL}, Location);
 					fLaunchGit({"fetch", RemoteName}, Location);
 				}
 				if (bForceReset)
@@ -736,6 +736,15 @@ namespace NMib::NBuildSystem
 				Repo.m_Submodule = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "Submodule");
 				Repo.m_SubmoduleName = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "SubmoduleName");
 				Repo.m_Type = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "Type");
+
+				TCVector<CStr> NoPushRemotes;
+				for (auto &Wildcard : _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "NoPushRemotes").f_Split(";"))
+				{
+					if (Wildcard.f_IsEmpty())
+						continue;
+					NoPushRemotes.f_Insert(Wildcard);
+				}
+
 				CStr Remotes = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "Remotes");
 				while (!Remotes.f_IsEmpty())
 				{
@@ -745,7 +754,16 @@ namespace NMib::NBuildSystem
 					CStr Name = fg_GetStrSep(RemoteString, "=");
 					if (Repo.m_Remotes.f_FindEqual(Name))
 						_BuildSystem.fs_ThrowError(ChildEntity.m_Position, fg_Format("Same remote '{}' specified multiple times", Name));
-					Repo.m_Remotes[Name] = RemoteString;
+					auto &OutRemote = Repo.m_Remotes[Name];
+					OutRemote.m_URL = RemoteString;
+					for (auto &Wildcard : NoPushRemotes)
+					{
+						if (fg_StrMatchWildcard(Name.f_GetStr(), Wildcard.f_GetStr()) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
+						{
+							OutRemote.m_bCanPush = false;
+							break;
+						}
+					}
 				}
 				Repo.m_Position = ChildEntity.m_Position;
 

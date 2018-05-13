@@ -61,34 +61,60 @@ namespace NMib::NBuildSystem::NRepository
 
 		bool bDidOutputSection = false;
 
-		for (auto &RepoOutput : m_DeferredOutput)
-		{
-			auto &RepoName = m_DeferredOutput.fs_GetKey(RepoOutput);
+		TCSet<CStr> AlreadyOutput;
 
-			mint nLines = 0;
-			for (auto &Output : RepoOutput)
-				nLines += Output.m_Lines.f_GetLen();
-
-			if (nLines > 1)
+		auto fOutputSection = [&](CStr const &_Name, TCVector<CDeferredOutput> const &_Output)
 			{
-				if (!bDidOutputSection)
+				if (!AlreadyOutput(_Name).f_WasCreated())
+					return;
+				mint nLines = 0;
+				bool bIsSection = false;
+				for (auto &Output : _Output)
 				{
-					fg_OutputSectionLine();
-					bDidOutputSection = true;
+					if (Output.m_Lines.f_GetLen() == 1 && Output.m_Lines[0] == "ForceSection")
+						bIsSection = true;
+					nLines += Output.m_Lines.f_GetLen();
 				}
-			}
-			else
-				bDidOutputSection = false;
 
-			for (auto &Output : RepoOutput)
+				if (nLines > 1 || bIsSection)
+				{
+					if (!bDidOutputSection)
+					{
+						fg_OutputSectionLine();
+						bDidOutputSection = true;
+					}
+				}
+				else
+					bDidOutputSection = false;
+
+				for (auto &Output : _Output)
+				{
+					for (auto Line : Output.m_Lines)
+					{
+						if (Line == "ForceSection")
+							Line = "";
+						fg_OutputRepoLine(Output.m_OutputType, _Name, LongestRepo, Line);
+					}
+				}
+
+				if (bDidOutputSection)
+					fg_OutputSectionLine();
+			}
+		;
+
+		for (auto &Sections : m_OutputOrder)
+		{
+			for (auto &Section : Sections)
 			{
-				for (auto &Line : Output.m_Lines)
-					fg_OutputRepoLine(Output.m_OutputType, RepoName, LongestRepo, Line);
+				auto *pOutput = m_DeferredOutput.f_FindEqual(Section);
+				if (!pOutput)
+					continue;
+				fOutputSection(Section, *pOutput);
 			}
-
-			if (bDidOutputSection)
-				fg_OutputSectionLine();
 		}
+
+		for (auto &RepoOutput : m_DeferredOutput)
+			fOutputSection(m_DeferredOutput.fs_GetKey(RepoOutput), RepoOutput);
 	}
 
 	void CGitLaunches::f_RepoDone(mint _nDone) const
@@ -104,7 +130,7 @@ namespace NMib::NBuildSystem::NRepository
 		DMibConOut2("{}\x1B[{}D", ToOutput, ToOutput.f_GetLen());
 	}
 
-	void CGitLaunches::f_MeasureRepos(TCVector<TCVector<CRepository *>> const &_FilteredRepositories)
+	void CGitLaunches::f_MeasureRepos(TCVector<TCVector<CRepository *>> const &_FilteredRepositories, bool _bReport)
 	{
 		auto &State = *m_pState;
 
@@ -127,7 +153,17 @@ namespace NMib::NBuildSystem::NRepository
 			}
 		}
 
-		f_RepoDone(0);
+		if (_bReport)
+			f_RepoDone(0);
+	}
+
+	void CGitLaunches::f_SetOutputOrder(TCVector<TCSet<CStr>> const &_OutputOrder) const
+	{
+		auto &State = *m_pState;
+		{
+			DLock(State.m_DeferredOutputLock);
+			State.m_OutputOrder = _OutputOrder;
+		}
 	}
 
 	void CGitLaunches::f_Output(EOutputType _OutputType, CStr const &_Section, CStr const &_Output) const
@@ -143,6 +179,12 @@ namespace NMib::NBuildSystem::NRepository
 			State.m_DeferredOutput[_Section].f_Insert(fg_Move(Dererred));
 		}
 		return;
+	}
+
+	CStr CGitLaunches::f_GetRepoName(CRepository const &_Repo) const
+	{
+		auto &State = *m_pState;
+		return fg_Const(State.m_RepoNames)[_Repo.m_Location];
 	}
 
 	void CGitLaunches::f_Output(EOutputType _OutputType, CRepository const &_Repo, CStr const &_Output, CStr const &_Prefix) const

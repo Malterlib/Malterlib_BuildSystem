@@ -352,7 +352,7 @@ namespace NMib::NBuildSystem
 		void fp_Repository_Unbranch(CRepoFilter const &_Filter);
 		void fp_Repository_CleanupBranches(CRepoFilter const &_Filter, ERepoCleanupBranchesFlag _Flags);
 		void fp_Repository_Status(CRepoFilter const &_Filter, ERepoStatusFlag _Flags);
-		void fp_Repository_Push(CRepoFilter const &_Filter, TCVector<CStr> const &_Remotes);
+		void fp_Repository_Push(CRepoFilter const &_Filter, TCVector<CStr> const &_Remotes, bool _bPretend, bool _bTags, bool _bNonDefaultToAll);
 		void fp_Repository_ListCommits
 			(
 			 	CRepoFilter const &_Filter
