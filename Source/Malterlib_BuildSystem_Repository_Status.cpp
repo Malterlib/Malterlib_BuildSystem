@@ -30,12 +30,17 @@ namespace NMib::NBuildSystem
 	void CBuildSystem::fp_Repository_Status(CRepoFilter const &_Filter, ERepoStatusFlag _Flags)
 	{
 		CFilteredRepos FilteredRepositories = fg_GetFilteredRepos(_Filter, *this, mp_Data);
+		CRepoEditor RepoEditor = fg_GetRepoEditor(*this, mp_Data);
 
-		TCVector<CRepository> AllRepos;
-		for (auto &Repos : FilteredRepositories.m_FilteredRepositories)
+		TCVector<TCTuple<CRepository, mint>> AllRepos;
 		{
-			for (auto *pRepo : Repos)
-				AllRepos.f_Insert(*pRepo);
+			mint iSequence = 0;
+			for (auto &Repos : FilteredRepositories.m_FilteredRepositories)
+			{
+				for (auto *pRepo : Repos)
+					AllRepos.f_Insert({*pRepo, iSequence});
+				++iSequence;
+			}
 		}
 
 		if (_Flags & ERepoStatusFlag_UpdateRemotes)
@@ -47,7 +52,7 @@ namespace NMib::NBuildSystem
 
 			TCActorResultVector<void> Results;
 
-			for (auto Repo : AllRepos)
+			for (auto &[Repo, iSequence] : AllRepos)
 			{
 				TCContinuation<void> Continuation;
 				Launches.f_Launch(Repo, {"fetch", "--all", "-q"}, fg_LogAllFunctor()) > [=](TCAsyncResult<void> &&_Result)
@@ -68,20 +73,21 @@ namespace NMib::NBuildSystem
 		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
 
-		bool bOpenSourceTree = _Flags & ERepoStatusFlag_OpenSourceTree;
+		bool bOpenEditor = _Flags & ERepoStatusFlag_OpenEditor;
 		bool bUseDefaultUpstream = _Flags & ERepoStatusFlag_UseDefaultUpstreamBranch;
 
-		TCActorResultVector<bool> RepoResults;
+		TCActorResultVector<TCTuple<bool, mint, CRepository>> RepoResults;
 
-		for (auto Repo : AllRepos)
+		for (auto &[Repo, iSequence] : AllRepos)
 		{
-			TCContinuation<bool> Continuation;
+			TCContinuation<TCTuple<bool, mint, CRepository>> Continuation;
 
 			fg_GetLocalFileChanges(Launches, Repo, !(_Flags & ERepoStatusFlag_ShowOnlyTracked))
 				+ fg_GetRemotes(Launches, Repo)
 				+ fg_GetBranches(Launches, Repo, false)
 				+ fg_GetBranches(Launches, Repo, true)
-				> Continuation / [=](TCVector<CLocalFileChange> &&_LocalChanges, TCVector<CStr> &&_Remotes, CGitBranches &&_LocalBranches, CGitBranches &&_RemoteBranches)
+				> Continuation / [=, Repo = Repo, iSequence = iSequence]
+				(TCVector<CLocalFileChange> &&_LocalChanges, TCVector<CStr> &&_Remotes, CGitBranches &&_LocalBranches, CGitBranches &&_RemoteBranches)
 				{
 					TCSharedPointer<CRepoStatusState> pState = fg_Construct();
 
@@ -515,19 +521,15 @@ namespace NMib::NBuildSystem
 								return;
 							}
 
-							if (bActionNeeded && bOpenSourceTree)
+							if (bActionNeeded && bOpenEditor)
 							{
-								Launches.f_OpenDocument("SourceTree", Repo.m_Location) > Continuation / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
-									{
-										Launches.f_RepoDone();
-										Continuation.f_SetResult(bActionNeeded);
-									}
-								;
+								Launches.f_RepoDone();
+								Continuation.f_SetResult(TCTuple<bool, mint, CRepository>{bActionNeeded, iSequence, Repo});
 								return;
 							}
 
 							Launches.f_RepoDone();
-							Continuation.f_SetResult(bActionNeeded);
+							Continuation.f_SetResult(TCTuple<bool, mint, CRepository>{bActionNeeded, iSequence, {}});
 						}
 					;
 				}
@@ -536,9 +538,44 @@ namespace NMib::NBuildSystem
 			Continuation > RepoResults.f_AddResult();
 		}
 
+		TCMap<mint, TCVector<CRepository>> EditorsToLaunch;
 		bool bActionNeeded = false;
 		for (auto &Result : RepoResults.f_GetResults().f_CallSync())
-			bActionNeeded = *Result || bActionNeeded;
+		{
+			auto &[bActionNeeded, iSequence, Repo] = *Result;
+
+			if (!Repo.m_Location.f_IsEmpty())
+				EditorsToLaunch[iSequence].f_Insert(Repo);
+
+			bActionNeeded = bActionNeeded || bActionNeeded;
+		}
+
+		for (auto &EditorLaunches : EditorsToLaunch)
+		{
+			TCActorResultVector<void> EditorLaunchResults;
+			for (auto &Repo : EditorLaunches)
+			{
+				TCContinuation<void> Continuation;
+				Launches.f_OpenRepoEditor(RepoEditor, Repo.m_Location) > Continuation / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
+					{
+						if (_Result.m_ExitCode)
+						{
+							Launches.f_Output
+								(
+									EOutputType_Error
+									, Repo
+									, "Failed to launch repository editor: {}"_f
+									<< _Result.f_GetCombinedOut()
+								)
+							;
+						}
+						Continuation.f_SetResult();
+					}
+				;
+				Continuation > EditorLaunchResults.f_AddResult();
+			}
+			EditorLaunchResults.f_GetResults().f_CallSync();
+		}
 
 		if (bActionNeeded)
 			DConErrOut2("\a");

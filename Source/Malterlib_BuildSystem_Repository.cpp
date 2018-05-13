@@ -688,6 +688,19 @@ namespace NMib::NBuildSystem
 			return bChanged;
 		}
 
+		CRepoEditor fg_GetRepoEditor(CBuildSystem &_BuildSystem, CBuildSystemData &_Data)
+		{
+			CStr EditorString = _BuildSystem.f_EvaluateEntityProperty(_Data.m_RootEntity, EPropertyType_Property, "MalterlibRepositoryEditor");
+
+			CRepoEditor Editor;
+			Editor.m_Application = fg_GetStrSepEscaped(EditorString, " ");
+
+			while (!EditorString.f_IsEmpty())
+				Editor.m_Params.f_Insert(fg_GetStrSepEscaped(EditorString, " "));
+
+			return Editor;
+		}
+
 		TCVector<TCMap<CStr, CReposLocation>> fg_GetRepos(CBuildSystem &_BuildSystem, CBuildSystemData &_Data)
 		{
 			TCMap<CStr, CReposLocation> Repos;

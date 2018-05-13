@@ -40,6 +40,12 @@ namespace NMib::NBuildSystem::NRepository
 		, EOutputType_Error
 	};
 
+	struct CRepoEditor
+	{
+		CStr m_Application;
+		TCVector<CStr> m_Params;
+	};
+
 	struct CRemote
 	{
 		CStr m_URL;
@@ -130,7 +136,7 @@ namespace NMib::NBuildSystem::NRepository
 			 	, CStr const &_Prefix = {}
 			) const
 		;
-		TCContinuation<CProcessLaunchActor::CSimpleLaunchResult> f_OpenDocument(CStr const &_Application, CStr const &_Document) const;
+		TCContinuation<CProcessLaunchActor::CSimpleLaunchResult> f_OpenRepoEditor(CRepoEditor const &_Editor, CStr const &_Repo) const;
 
 		struct CDeferredOutput
 		{
@@ -251,6 +257,7 @@ namespace NMib::NBuildSystem::NRepository
 		)
 	;
 	TCVector<TCMap<CStr, CReposLocation>> fg_GetRepos(CBuildSystem &_BuildSystem, CBuildSystemData &_Data);
+	CRepoEditor fg_GetRepoEditor(CBuildSystem &_BuildSystem, CBuildSystemData &_Data);
 
 	TCFunctionMovable<CStr (CProcessLaunchActor::CSimpleLaunchResult const &_Result)> fg_LogAllFunctor();
 

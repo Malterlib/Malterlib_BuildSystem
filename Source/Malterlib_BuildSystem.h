@@ -172,7 +172,7 @@ namespace NMib::NBuildSystem
 			, ERepoStatusFlag_Quiet = DBit(3)
 			, ERepoStatusFlag_AllBranches = DBit(4)
 			, ERepoStatusFlag_UseDefaultUpstreamBranch = DBit(5)
-			, ERepoStatusFlag_OpenSourceTree = DBit(6)
+			, ERepoStatusFlag_OpenEditor = DBit(6)
 			, ERepoStatusFlag_NeedActionOnPush = DBit(7)
 		};
 

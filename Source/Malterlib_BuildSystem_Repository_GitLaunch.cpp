@@ -220,7 +220,7 @@ namespace NMib::NBuildSystem::NRepository
 		;
 	}
 
-	TCContinuation<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::f_OpenDocument(CStr const &_Application, CStr const &_Document) const
+	TCContinuation<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::f_OpenRepoEditor(CRepoEditor const &_Editor, CStr const &_Repo) const
 	{
 		auto &State = *m_pState;
 
@@ -233,7 +233,12 @@ namespace NMib::NBuildSystem::NRepository
 					DLock(State.m_Lock);
 					LaunchActor = State.m_Launches.f_Insert() = fg_Construct();
 				}
-				CProcessLaunchActor::CSimpleLaunch LaunchParams{"open", {"-a", _Application, _Document}};
+
+				auto Params = _Editor.m_Params;
+				for (auto &Param : Params)
+					Param.f_Replace("{}", _Repo);
+				CProcessLaunchActor::CSimpleLaunch LaunchParams{_Editor.m_Application, Params};
+				LaunchParams.m_Params.m_WorkingDirectory = _Repo;
 				return LaunchActor(&CProcessLaunchActor::f_LaunchSimple, fg_Move(LaunchParams));
 			}
 		;

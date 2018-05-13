@@ -150,8 +150,8 @@ namespace NMib::NBuildSystem
 					Flags |= ERepoStatusFlag_AllBranches;
 				else if (Param == "-b" || Param == "--use-default-upstream-branch")
 					Flags |= ERepoStatusFlag_UseDefaultUpstreamBranch;
-				else if (Param == "-s" || Param == "--open-source-tree")
-					Flags |= ERepoStatusFlag_OpenSourceTree;
+				else if (Param == "-e" || Param == "--open-editor")
+					Flags |= ERepoStatusFlag_OpenEditor;
 				else if (Param == "-p" || Param == "--need-action-on-push")
 					Flags |= ERepoStatusFlag_NeedActionOnPush;
 				else if (Param == "-h" || Param == "--help")
