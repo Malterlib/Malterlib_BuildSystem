@@ -536,8 +536,10 @@ namespace NMib::NBuildSystem
 
 		bool bDisableUserSettings = (_GenerateSettings.m_GenerationFlags & EGenerationFlag_DisableUserSettings) != EGenerationFlag_None;
 
-		CStr UserSettingsFileName = CStr::CFormat("{}/UserSettings.MSettings") << OutputDir;
-		mp_UserSettingsFile = UserSettingsFileName;
+		CStr UserSettingsFileNameLocal = OutputDir / "UserSettings.MSettings";
+		CStr UserSettingsFileNameGlobal = CFile::fs_GetUserHomeDirectory() / "UserSettingGlobal.MSettings";
+		mp_UserSettingsFileLocal = UserSettingsFileNameLocal;
+		mp_UserSettingsFileGlobal = UserSettingsFileNameGlobal;
 
 		auto GeneratorValues = pGenerator->f_GetValues(*this, OutputDir);
 
@@ -601,18 +603,37 @@ namespace NMib::NBuildSystem
 				mp_BaseDir = CFile::fs_GetPath(mp_FileLocation);
 				mp_FileLocationFile = CFile::fs_GetFile(mp_FileLocation);
 
-				if (!bDisableUserSettings && CFile::fs_FileExists(UserSettingsFileName))
+				if (!bDisableUserSettings)
 				{
-					CBuildSystemPreprocessor Preprocessor(mp_UserSettingsRegistry, mp_SourceFiles, mp_FindCache, mp_Environment);
-					Preprocessor.f_ReadFile(UserSettingsFileName);
-					mp_Registry = mp_UserSettingsRegistry;
+					if (CFile::fs_FileExists(UserSettingsFileNameGlobal))
+					{
+						CBuildSystemPreprocessor Preprocessor(mp_UserSettingsGlobal.m_Registry, mp_SourceFiles, mp_FindCache, mp_Environment);
+						Preprocessor.f_ReadFile(UserSettingsFileNameGlobal);
+						mp_Registry = mp_UserSettingsGlobal.m_Registry;
+					}
+					if (CFile::fs_FileExists(UserSettingsFileNameLocal))
+					{
+						// Once to get only local registry
+						{
+							CBuildSystemPreprocessor Preprocessor(mp_UserSettingsLocal.m_Registry, mp_SourceFiles, mp_FindCache, mp_Environment);
+							Preprocessor.f_ReadFile(UserSettingsFileNameLocal);
+						}
+						// Once to merge with global settings
+						{
+							CBuildSystemPreprocessor Preprocessor(mp_Registry, mp_SourceFiles, mp_FindCache, mp_Environment);
+							Preprocessor.f_ReadFile(UserSettingsFileNameLocal);
+						}
+					}
 				}
 				{
 					CBuildSystemPreprocessor Preprocessor(mp_Registry, mp_SourceFiles, mp_FindCache, mp_Environment);
 					Preprocessor.f_ReadFile(_GenerateSettings.m_SourceFile);
 				}
 				if (!bDisableUserSettings)
-					mp_SourceFiles[UserSettingsFileName];
+				{
+					mp_SourceFiles[UserSettingsFileNameLocal];
+					mp_SourceFiles[UserSettingsFileNameGlobal];
+				}
 
 				mp_SourceFiles[EnvironmentStateFile];
 				mp_SourceFiles[OverrideEnvironmentFile];
@@ -658,13 +679,19 @@ namespace NMib::NBuildSystem
 
 		if (!bDisableUserSettings)
 		{
-			auto StringData = mp_UserSettingsRegistry.f_GenerateStr();
+			auto fSaveFile = [&](auto &_Registry, auto &_FileName)
+				{
+					auto StringData = _Registry.f_GenerateStr();
 
-			TCVector<uint8> FileData;
-			CFile::fs_WriteStringToVector(FileData, StringData);
+					TCVector<uint8> FileData;
+					CFile::fs_WriteStringToVector(FileData, StringData);
 
-			CFile::fs_CreateDirectory(CFile::fs_GetPath(UserSettingsFileName));
-			CFile::fs_CopyFileDiff(FileData, UserSettingsFileName, CTime::fs_NowUTC());
+					CFile::fs_CreateDirectory(CFile::fs_GetPath(_FileName));
+					CFile::fs_CopyFileDiff(FileData, _FileName, CTime::fs_NowUTC());
+				}
+			;
+			fSaveFile(mp_UserSettingsLocal.m_Registry, UserSettingsFileNameLocal);
+			fSaveFile(mp_UserSettingsGlobal.m_Registry, UserSettingsFileNameGlobal);
 		}
 
 		if (!bUseCachedEnvironment)

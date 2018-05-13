@@ -225,6 +225,17 @@ namespace NMib::NBuildSystem
 			bool m_bKeepGeneratedFile = false;
 		};
 
+		struct CUserSettingsState
+		{
+			CRegistryPreserveAndOrder_CStr m_Registry;
+			TCSet<CPropertyKey> m_Defined;
+			TCMap<CPropertyKey, CRegistryPreserveAndOrder_CStr *> m_Sections;
+			TCMap<CPropertyKey, CRegistryPreserveAndOrder_CStr const *> m_Properties;
+
+			void f_Parse();
+			CRegistryPreserveAndOrder_CStr *f_GetSection(CPropertyKey const &_Section);
+		};
+
 		void fp_ParseConfigurationConditions(CRegistryPreserveAndOrder_CStr &_Registry, CBuildSystemConfiguration &_Configuration) const;
 		void fp_ParseConfigurationType(CStr const &_Name, CRegistryPreserveAndOrder_CStr &_Registry, TCMap<CStr, CConfigurationType> &o_Configurations) const;
 		void fp_ParsePropertyValue
@@ -380,8 +391,8 @@ namespace NMib::NBuildSystem
 
 		mutable TCPointer<CGeneratorInterface> mp_GeneratorInterface;
 
-		mutable CRegistryPreserveAndOrder_CStr mp_UserSettingsRegistry;
-		mutable TCMap<CPropertyKey, CRegistryPreserveAndOrder_CStr const *> mp_UserSettingsProperties;
+		mutable CUserSettingsState mp_UserSettingsLocal;
+		mutable CUserSettingsState mp_UserSettingsGlobal;
 
 		align_cacheline mutable CMutualManyRead mp_UsedExternalsLock;
 		mutable TCSet<CStr> mp_UsedExternals;
@@ -393,7 +404,8 @@ namespace NMib::NBuildSystem
 		CTime mp_Now;
 		CTime mp_NowUTC;
 		
-		CStr mp_UserSettingsFile;
+		CStr mp_UserSettingsFileLocal;
+		CStr mp_UserSettingsFileGlobal;
 		CStr mp_FileLocationFile;
 		CStr mp_GeneratorStateFileName;
 		TCMap<CStr, CStr> mp_SaveEnvironment;
