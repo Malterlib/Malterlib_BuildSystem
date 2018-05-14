@@ -255,7 +255,7 @@ namespace NMib::NBuildSystem
 				if (iWhiteStart >= 0)
 				{
 					CStr Section = "General";
-					CStr DefaultValue = "\"\"";
+					CStr DefaultValue;
 
 					CStr LineCandidate = WhiteSpace.f_GetStr() + iWhiteStart;
 					CStr Line = fg_GetStrLineSep(LineCandidate);
