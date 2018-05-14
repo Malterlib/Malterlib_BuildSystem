@@ -693,6 +693,7 @@ namespace NMib::NBuildSystem
 			CStr EditorString = _BuildSystem.f_EvaluateEntityProperty(_Data.m_RootEntity, EPropertyType_Property, "MalterlibRepositoryEditor");
 
 			CRepoEditor Editor;
+			Editor.m_bOpenSequential = _BuildSystem.f_EvaluateEntityProperty(_Data.m_RootEntity, EPropertyType_Property, "MalterlibRepositoryEditorSequential") == "true";
 			Editor.m_Application = fg_GetStrSepEscaped(EditorString, " ");
 
 			while (!EditorString.f_IsEmpty())

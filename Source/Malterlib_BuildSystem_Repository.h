@@ -44,6 +44,7 @@ namespace NMib::NBuildSystem::NRepository
 	{
 		CStr m_Application;
 		TCVector<CStr> m_Params;
+		bool m_bOpenSequential = false;
 	};
 
 	struct CRemote

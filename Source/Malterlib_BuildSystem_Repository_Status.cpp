@@ -550,31 +550,41 @@ namespace NMib::NBuildSystem
 			bActionNeeded = bActionNeeded || bActionNeeded;
 		}
 
-		for (auto &EditorLaunches : EditorsToLaunch)
 		{
-			TCActorResultVector<void> EditorLaunchResults;
-			for (auto &Repo : EditorLaunches)
+			TCActorSequencer<void> EditorLaunchSequencer(RepoEditor.m_bOpenSequential ? 1 : 16);
+
+			for (auto &EditorLaunches : EditorsToLaunch)
 			{
-				TCContinuation<void> Continuation;
-				Launches.f_OpenRepoEditor(RepoEditor, Repo.m_Location) > Continuation / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
-					{
-						if (_Result.m_ExitCode)
+				TCActorResultVector<void> EditorLaunchResults;
+				for (auto &Repo : EditorLaunches)
+				{
+					EditorLaunchSequencer > [=]
 						{
-							Launches.f_Output
-								(
-									EOutputType_Error
-									, Repo
-									, "Failed to launch repository editor: {}"_f
-									<< _Result.f_GetCombinedOut()
-								)
+							TCContinuation<void> Continuation;
+							Launches.f_OpenRepoEditor(RepoEditor, Repo.m_Location) > Continuation / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
+								{
+									if (_Result.m_ExitCode)
+									{
+										Launches.f_Output
+											(
+												EOutputType_Error
+												, Repo
+												, "Failed to launch repository editor: {}"_f
+												<< _Result.f_GetCombinedOut()
+											)
+										;
+									}
+									Continuation.f_SetResult();
+								}
 							;
+							return Continuation;
 						}
-						Continuation.f_SetResult();
-					}
-				;
-				Continuation > EditorLaunchResults.f_AddResult();
+						> EditorLaunchResults.f_AddResult();
+					;
+
+				}
+				EditorLaunchResults.f_GetResults().f_CallSync();
 			}
-			EditorLaunchResults.f_GetResults().f_CallSync();
 		}
 
 		if (bActionNeeded)

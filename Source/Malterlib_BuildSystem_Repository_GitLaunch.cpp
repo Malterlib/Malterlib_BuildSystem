@@ -236,7 +236,8 @@ namespace NMib::NBuildSystem::NRepository
 
 				auto Params = _Editor.m_Params;
 				for (auto &Param : Params)
-					Param.f_Replace("{}", _Repo);
+					Param = Param.f_Replace("{}", _Repo);
+
 				CProcessLaunchActor::CSimpleLaunch LaunchParams{_Editor.m_Application, Params};
 				LaunchParams.m_Params.m_WorkingDirectory = _Repo;
 				return LaunchActor(&CProcessLaunchActor::f_LaunchSimple, fg_Move(LaunchParams));
