@@ -174,6 +174,7 @@ namespace NMib::NBuildSystem
 			, ERepoStatusFlag_UseDefaultUpstreamBranch = DBit(5)
 			, ERepoStatusFlag_OpenEditor = DBit(6)
 			, ERepoStatusFlag_NeedActionOnPush = DBit(7)
+			, ERepoStatusFlag_NonDefaultToAll = DBit(8)
 		};
 
 		enum ERepoListCommitsFlag

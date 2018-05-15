@@ -154,6 +154,8 @@ namespace NMib::NBuildSystem
 					Flags |= ERepoStatusFlag_OpenEditor;
 				else if (Param == "-p" || Param == "--need-action-on-push")
 					Flags |= ERepoStatusFlag_NeedActionOnPush;
+				else if (Param == "-d" || Param == "--non-default-to-all")
+					Flags |= ERepoStatusFlag_NonDefaultToAll;
 				else if (Param == "-h" || Param == "--help")
 				{
 					DMibConOut2
@@ -166,6 +168,7 @@ namespace NMib::NBuildSystem
 							"-a --all-braches\n"
 							"-b --use-default-upstream-branch\n"
 							"-p --need-action-on-push\n"
+							"-d --non-default-to-all\n"
 							"-h --help\n"
 						)
 					;

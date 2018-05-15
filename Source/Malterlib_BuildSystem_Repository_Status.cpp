@@ -128,13 +128,18 @@ namespace NMib::NBuildSystem
 							if (Branch == Repo.m_DefaultBranch && !Repo.m_DefaultUpstreamBranch.f_IsEmpty() && !State.f_HasRemoteBranch(RemoteBranch))
 								MissingRemoteBranch = "{}/{}"_f << Remote << Repo.m_DefaultUpstreamBranch;
 
-							if (State.f_HasRemoteBranch(RemoteBranch))
-								fg_GetLogEntries(Launches, Repo, RemoteBranch, Branch) > ToPush.f_AddResult(Remote);
-							else if (!State.f_HasRemoteBranch(MissingRemoteBranch))
-								ToPushMissing[Remote];
+							if (!(_Flags & ERepoStatusFlag_NonDefaultToAll) && Remote != "origin" && Branch != Repo.m_DefaultBranch)
+								;
+							else
+							{
+								if (State.f_HasRemoteBranch(RemoteBranch))
+									fg_GetLogEntries(Launches, Repo, RemoteBranch, Branch) > ToPush.f_AddResult(Remote);
+								else if (!State.f_HasRemoteBranch(MissingRemoteBranch))
+									ToPushMissing[Remote];
 
-							if (State.f_HasRemoteBranch(PullRemoteBranch))
-								fg_GetLogEntries(Launches, Repo, Branch, PullRemoteBranch) > ToPull.f_AddResult(Remote);
+								if (State.f_HasRemoteBranch(PullRemoteBranch))
+									fg_GetLogEntries(Launches, Repo, Branch, PullRemoteBranch) > ToPull.f_AddResult(Remote);
+							}
 
 							if (Branch != Repo.m_DefaultBranch && !Repo.m_DefaultBranch.f_IsEmpty())
 							{
@@ -150,12 +155,25 @@ namespace NMib::NBuildSystem
 
 						ToPush.f_GetResults()
 							+ ToPull.f_GetResults()
-							> [=](TCAsyncResult<TCMap<CStr, TCAsyncResult<TCVector<CLogEntry>>>> &&_ToPush, TCAsyncResult<TCMap<CStr, TCAsyncResult<TCVector<CLogEntry>>>> &&_ToPull)
+							> [=](TCAsyncResult<TCMap<CStr, TCAsyncResult<TCVector<CLogEntry>>>> &&_ToPush, TCAsyncResult<TCMap<CStr, TCAsyncResult<TCVector<CLogEntry>>>> &&_ToPull) mutable
 							{
 								auto &State = *pState;
 
 								TCMap<CStr, TCVector<CLogEntry>> ToRemotePush;
 								TCMap<CStr, TCVector<CLogEntry>> ToLocalPull;
+
+								TCMap<TCVector<CStr>, TCTuple<TCVector<CStr>, TCVector<CLogEntry>>> ToRemotePushByHashes;
+								TCMap<TCVector<CStr>, TCTuple<TCVector<CStr>, TCVector<CLogEntry>>> ToLocalPullByHashes;
+
+								auto fGetHashes = [](TCVector<CLogEntry> const &_LogEntries)
+									{
+										TCVector<CStr> Hashes;
+										for (auto &Entry : _LogEntries)
+											Hashes.f_Insert(Entry.m_Hash);
+
+										return Hashes;
+									}
+								;
 
 								if
 									(
@@ -165,7 +183,9 @@ namespace NMib::NBuildSystem
 										 	, fg_Move(_ToPush)
 										 	, [&](CStr const &_Remote, TCVector<CLogEntry> &&_Log)
 										 	{
-												ToRemotePush[_Remote] = fg_Move(_Log);
+												auto &[Remotes, LogEntries] = ToRemotePushByHashes[fGetHashes(_Log)];
+												Remotes.f_Insert(_Remote);
+												LogEntries = fg_Move(_Log);
 											}
 										)
 									)
@@ -183,7 +203,9 @@ namespace NMib::NBuildSystem
 										 	, fg_Move(_ToPull)
 										 	, [&](CStr const &_Remote, TCVector<CLogEntry> &&_Log)
 										 	{
-												ToLocalPull[_Remote] = fg_Move(_Log);
+												auto &[Remotes, LogEntries] = ToLocalPullByHashes[fGetHashes(_Log)];
+												Remotes.f_Insert(_Remote);
+												LogEntries = fg_Move(_Log);
 											}
 										)
 									)
@@ -192,6 +214,74 @@ namespace NMib::NBuildSystem
 									Launches.f_Output(EOutputType_Error, Repo, "Error getting to pull for branch '{}': {}"_f << Branch << Error);
 									return;
 								}
+
+								auto fJoinNames = [](auto &&_Names) -> CStr
+									{
+										return "<{}>"_f << CStr::fs_Join(_Names, ", ");
+									}
+								;
+								auto fPriority = [](mint _Priority) -> CStr
+									{
+										return "{sj*}"_f << "" << _Priority;
+									}
+								;
+
+								auto fHandleRemotes = [&](auto &o_Entries, auto &_SourceEntries, bool _bOtherBranches)
+									{
+										for (auto &[Remotes, LogEntries] : _SourceEntries)
+										{
+											TCSet<CStr> RemotesForName;
+											TCSet<CStr> Branches;
+											for (auto &RemoteBranch : Remotes)
+											{
+												if (_bOtherBranches != RemoteBranch.f_FindChar('/') >= 0)
+													continue;
+
+												if (_bOtherBranches)
+												{
+													CStr Branch = RemoteBranch;
+													CStr Remote = fg_GetStrSep(Branch, "/");
+													RemotesForName[Remote];
+													Branches[Branch];
+												}
+												else
+													RemotesForName[RemoteBranch];
+											}
+
+											if (Branches.f_IsEmpty() && RemotesForName.f_IsEmpty())
+												continue;
+
+											CStr RemoteName;
+
+											if (RemotesForName.f_GetLen() == 1)
+												RemoteName = *RemotesForName.f_FindSmallest();
+											else
+												RemoteName = fJoinNames(RemotesForName);
+
+											if (!Branches.f_IsEmpty())
+											{
+												RemoteName += "/";
+												if (Branches.f_GetLen() == 1)
+													RemoteName += *Branches.f_FindSmallest();
+												else
+													RemoteName += fJoinNames(Branches);
+											}
+
+											if (!_bOtherBranches)
+												RemoteName = fPriority(12) + RemoteName;
+											else
+											 	RemoteName = fPriority(2) + RemoteName;
+
+											o_Entries[RemoteName] = LogEntries;
+										}
+									}
+								;
+
+								fHandleRemotes(ToRemotePush, ToRemotePushByHashes, false);
+								fHandleRemotes(ToRemotePush, ToRemotePushByHashes, true);
+								fHandleRemotes(ToLocalPull, ToLocalPullByHashes, false);
+								fHandleRemotes(ToLocalPull, ToLocalPullByHashes, true);
+
 
 								bool bHasRemotes = !ToRemotePush.f_IsEmpty() || !ToLocalPull.f_IsEmpty();
 								bool bIsChanged = !ToPushMissing.f_IsEmpty();
@@ -228,33 +318,64 @@ namespace NMib::NBuildSystem
 									;
 								}
 
+								if (!ToPushMissing.f_IsEmpty())
+								{
+									CStr NewMissing = fPriority(11) + fJoinNames(ToPushMissing);
+									ToPushMissing = {NewMissing};
+								}
+
 								TCSet<CStr> RemotesWithAction = ToPushMissing;
+
+								TCSet<CStr> NoPull;
+								TCSet<CStr> NoPush;
 
 								for (auto &ToPush : ToRemotePush)
 								{
-									if (ToPush.f_IsEmpty())
-										continue;
-									bIsChanged = true;
-									if (_Flags & ERepoStatusFlag_NeedActionOnPush)
-										bNeedAction = true;
-									RemotesWithAction[ToRemotePush.fs_GetKey(ToPush)];
+									if (!ToPush.f_IsEmpty())
+									{
+										bIsChanged = true;
+										if (_Flags & ERepoStatusFlag_NeedActionOnPush)
+											bNeedAction = true;
+										RemotesWithAction[ToRemotePush.fs_GetKey(ToPush)];
+									}
+									else
+										NoPush[ToRemotePush.fs_GetKey(ToPush)];
 								}
 
 								for (auto &ToPull : ToLocalPull)
 								{
-									if (ToPull.f_IsEmpty())
-										continue;
-									bIsChanged = true;
-									bNeedAction = true;
-									RemotesWithAction[ToLocalPull.fs_GetKey(ToPull)];
+									if (!ToPull.f_IsEmpty())
+									{
+										bIsChanged = true;
+										bNeedAction = true;
+										RemotesWithAction[ToLocalPull.fs_GetKey(ToPull)];
+									}
+									else
+										NoPull[ToRemotePush.fs_GetKey(ToPull)];
 								}
 
+								TCSet<CStr> NoPullNoPush;
+								for (auto &Remote : NoPull)
+								{
+									if (NoPush.f_FindEqual(Remote))
+									{
+										if (Remote.f_FindChar('/') >= 0)
+											NoPullNoPush[fPriority(3) + Remote];
+										else
+											NoPullNoPush[fPriority(13) + Remote];
+									}
+								}
+
+								RemotesWithAction += NoPullNoPush;
+
+								bool bWasOther = false;
 								for (auto &RemoteName : RemotesWithAction)
 								{
 									TCVector<CStr> RemoteMessages;
 									auto pToPush = ToRemotePush.f_FindEqual(RemoteName);
 									auto pToPull = ToLocalPull.f_FindEqual(RemoteName);
 									bool bMissing = ToPushMissing.f_FindEqual(RemoteName);
+									bool bNoPullNoPush = NoPullNoPush.f_FindEqual(RemoteName);
 
 									if (pToPush && !pToPush->f_IsEmpty())
 									{
@@ -307,16 +428,39 @@ namespace NMib::NBuildSystem
 										}
 									}
 
-									Messages.f_Insert
-										(
-											"{}{}{}[{}]"_f
-											<< CColors::mc_RepositoryName
-											<< RemoteName
-											<< CColors::mc_Default
-										 	<< CStr::fs_Join(RemoteMessages, " ")
-										)
-									;
+									if (RemoteName.f_FindChar('/') >= 0 && !bWasOther)
+									{
+										bWasOther = true;
+										Messages.f_Insert("   (");
+									}
+
+									if (bNoPullNoPush)
+									{
+										Messages.f_Insert
+											(
+												"{}{}{}"_f
+												<< DColor_Reset DColor_256(248)
+												<< RemoteName.f_Trim()
+												<< CColors::mc_Default
+											)
+										;
+									}
+									else
+									{
+										Messages.f_Insert
+											(
+												"{}{}{}[{}]"_f
+												<< CColors::mc_RepositoryName
+												<< RemoteName.f_Trim()
+												<< CColors::mc_Default
+												<< CStr::fs_Join(RemoteMessages, " ")
+											)
+										;
+									}
 								}
+
+								if (bWasOther)
+									Messages.f_Insert(")");
 
 								if (!bIsChanged && (_Flags & ERepoStatusFlag_Quiet))
 								{
@@ -392,7 +536,7 @@ namespace NMib::NBuildSystem
 											, Repo
 										 	, "   {}{} {}To Push{}"_f
 											<< CColors::mc_RepositoryName
-										 	<< RemoteName
+										 	<< RemoteName.f_Trim()
 											<< CColors::mc_ToPush
 											<< CColors::mc_Default
 										)
@@ -422,7 +566,7 @@ namespace NMib::NBuildSystem
 											, Repo
 										 	, "   {}{} {}To Push{}"_f
 											<< CColors::mc_RepositoryName
-										 	<< RemoteName
+										 	<< RemoteName.f_Trim()
 											<< CColors::mc_ToPush
 											<< CColors::mc_Default
 										)
@@ -453,7 +597,7 @@ namespace NMib::NBuildSystem
 												, Repo
 											 	, "   {}{} {}To Pull{} {}{}{}"_f
 												<< CColors::mc_RepositoryName
-												<< RemoteName
+												<< RemoteName.f_Trim()
 												<< CColors::mc_ToPull
 												<< CColors::mc_Default
 												<< DColor_256(242)
@@ -470,7 +614,7 @@ namespace NMib::NBuildSystem
 												, Repo
 												, "   {}{} {}To Pull{}"_f
 												<< CColors::mc_RepositoryName
-												<< RemoteName
+												<< RemoteName.f_Trim()
 												<< CColors::mc_ToPull
 												<< CColors::mc_Default
 											)
