@@ -15,7 +15,7 @@ namespace NMib::NBuildSystem
 			_Launches.f_Launch
 				(
 					_Repo
-					, {"fetch", "--all", "-q"}
+					, {"fetch", "--all", "--prune", "-q"}
 				)
 				> Continuation / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
 				{

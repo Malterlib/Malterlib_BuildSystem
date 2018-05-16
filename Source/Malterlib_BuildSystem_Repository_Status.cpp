@@ -55,7 +55,7 @@ namespace NMib::NBuildSystem
 			for (auto &[Repo, iSequence] : AllRepos)
 			{
 				TCContinuation<void> Continuation;
-				Launches.f_Launch(Repo, {"fetch", "--all", "-q"}, fg_LogAllFunctor()) > [=](TCAsyncResult<void> &&_Result)
+				Launches.f_Launch(Repo, {"fetch", "--all", "--prune", "-q"}, fg_LogAllFunctor()) > [=](TCAsyncResult<void> &&_Result)
 					{
 						Continuation.f_SetResult(_Result);
 						Launches.f_RepoDone();

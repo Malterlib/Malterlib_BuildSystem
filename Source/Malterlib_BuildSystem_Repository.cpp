@@ -439,7 +439,7 @@ namespace NMib::NBuildSystem
 				bool bPassException = false;
 				try
 				{
-					fLaunchGit({"fetch", "--all"}, Location);
+					fLaunchGit({"fetch", "--all", "--prune"}, Location);
 
 					if (bForceReset)
 					{
