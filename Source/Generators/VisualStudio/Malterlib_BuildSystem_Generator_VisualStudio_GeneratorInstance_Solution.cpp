@@ -136,35 +136,46 @@ namespace NMib::NBuildSystem::NVisualStudio
 			TCVector<CStr> Rows;
 			for (auto iProject = _Solution.m_Projects.f_GetIterator(); iProject; ++iProject)
 			{
-				for (auto iConfig = iProject->m_EnabledConfigs.f_GetIterator(); iConfig; ++iConfig)
+				for (auto iConfig = _Solution.m_EnabledConfigs.f_GetIterator(); iConfig; ++iConfig)
 				{
-					auto pSolutionConfig = _Solution.m_EnabledConfigs.f_FindEqual(iConfig.f_GetKey());
-					if (pSolutionConfig)
+					auto pProjectConfig = iProject->m_EnabledConfigs.f_FindEqual(iConfig.f_GetKey());
+					bool bEnabled = !!pProjectConfig;
+					
+					if (!pProjectConfig)
+						pProjectConfig = iProject->m_EnabledConfigs.f_FindSmallest();
+
+					if (!pProjectConfig)
+						continue;
+
+					auto &ProjectConfig = iProject->m_EnabledConfigs.fs_GetKey(*pProjectConfig);
+
+					Rows.f_Insert
+						(
+							CStr::CFormat("		{}.{1}|{2}.ActiveCfg = {3}|{4}\r\n") 
+							<< iProject->f_GetGUID()
+							<< iConfig->m_Config
+							<< iConfig->m_Platform
+							<< ProjectConfig.m_Configuration 
+							<< iProject->m_Platforms[ProjectConfig]
+						)
+					;
+
+					if (!bEnabled)
+						continue;
+
+					CStr Value = m_BuildSystem.f_EvaluateEntityProperty(**pProjectConfig, EPropertyType_Target, "Disabled");
+					if (Value != "true")
 					{
 						Rows.f_Insert
 							(
-								CStr::CFormat("		{}.{1}|{2}.ActiveCfg = {3}|{4}\r\n") 
+								CStr::CFormat("		{}.{1}|{2}.Build.0 = {3}|{4}\r\n") 
 								<< iProject->f_GetGUID()
-								<< pSolutionConfig->m_Config
-								<< pSolutionConfig->m_Platform
-								<< iConfig.f_GetKey().m_Configuration 
-								<< iProject->m_Platforms[iConfig.f_GetKey()]
+								<< iConfig->m_Config
+								<< iConfig->m_Platform
+								<< ProjectConfig.m_Configuration 
+								<< iProject->m_Platforms[ProjectConfig]
 							)
 						;
-						CStr Value = m_BuildSystem.f_EvaluateEntityProperty(**iConfig, EPropertyType_Target, "Disabled");
-						if (Value != "true")
-						{
-							Rows.f_Insert
-								(
-									CStr::CFormat("		{}.{1}|{2}.Build.0 = {3}|{4}\r\n") 
-									<< iProject->f_GetGUID()
-									<< pSolutionConfig->m_Config
-									<< pSolutionConfig->m_Platform
-									<< iConfig.f_GetKey().m_Configuration 
-									<< iProject->m_Platforms[iConfig.f_GetKey()]
-								)
-							;
-						}
 					}
 				}
 			}
