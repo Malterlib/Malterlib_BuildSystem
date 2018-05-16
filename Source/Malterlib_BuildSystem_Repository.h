@@ -43,7 +43,9 @@ namespace NMib::NBuildSystem::NRepository
 	struct CRepoEditor
 	{
 		CStr m_Application;
+		CStr m_WorkingDir;
 		TCVector<CStr> m_Params;
+		fp32 m_Sleep = 0.0;
 		bool m_bOpenSequential = false;
 	};
 

@@ -215,7 +215,7 @@ namespace NMib::NBuildSystem
 									return;
 								}
 
-								auto fJoinNames = [](auto &&_Names) -> CStr
+								auto fJoinNames = [](TCSet<CStr> const &_Names) -> CStr
 									{
 										return "<{}>"_f << CStr::fs_Join(_Names, ", ");
 									}

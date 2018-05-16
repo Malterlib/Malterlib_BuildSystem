@@ -694,6 +694,8 @@ namespace NMib::NBuildSystem
 
 			CRepoEditor Editor;
 			Editor.m_bOpenSequential = _BuildSystem.f_EvaluateEntityProperty(_Data.m_RootEntity, EPropertyType_Property, "MalterlibRepositoryEditorSequential") == "true";
+			Editor.m_Sleep = _BuildSystem.f_EvaluateEntityProperty(_Data.m_RootEntity, EPropertyType_Property, "MalterlibRepositoryEditorSleep").f_ToFloat(fp32(0.0f));
+			Editor.m_WorkingDir = _BuildSystem.f_EvaluateEntityProperty(_Data.m_RootEntity, EPropertyType_Property, "MalterlibRepositoryEditorWorkingDir");
 			Editor.m_Application = fg_GetStrSepEscaped(EditorString, " ");
 
 			while (!EditorString.f_IsEmpty())

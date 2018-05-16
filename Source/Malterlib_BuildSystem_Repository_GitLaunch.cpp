@@ -2,6 +2,10 @@
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Repository.h"
+#include <Mib/Concurrency/Actor/Timer>
+#ifdef DPlatformFamily_Windows
+#include <Mib/Core/PlatformSpecific/WindowsFilePath>
+#endif
 
 namespace NMib::NBuildSystem::NRepository
 {
@@ -235,12 +239,37 @@ namespace NMib::NBuildSystem::NRepository
 				}
 
 				auto Params = _Editor.m_Params;
+#ifdef DPlatformFamily_Windows
+				CStr RepoNative = NMib::NFile::NPlatform::fg_ConvertToWindowsPath(_Repo, false);
+#else
+				CStr RepoNative = _Repo;
+#endif
 				for (auto &Param : Params)
-					Param = Param.f_Replace("{}", _Repo);
+					Param = Param.f_Replace("{}", RepoNative);
 
 				CProcessLaunchActor::CSimpleLaunch LaunchParams{_Editor.m_Application, Params};
-				LaunchParams.m_Params.m_WorkingDirectory = _Repo;
-				return LaunchActor(&CProcessLaunchActor::f_LaunchSimple, fg_Move(LaunchParams));
+				LaunchParams.m_Params.m_WorkingDirectory = _Editor.m_WorkingDir ? _Editor.m_WorkingDir : _Repo;
+
+				TCContinuation<CProcessLaunchActor::CSimpleLaunchResult> Continuation;
+				
+				LaunchActor(&CProcessLaunchActor::f_LaunchSimple, fg_Move(LaunchParams)) 
+					> Continuation / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
+					{
+						if (!_Editor.m_Sleep)
+						{
+							Continuation.f_SetResult(fg_Move(_Result));
+							return;
+						}
+
+						fg_Timeout(_Editor.m_Sleep) > Continuation / [=]
+							{
+								Continuation.f_SetResult(_Result);
+							}
+						;
+					}
+				;
+
+				return Continuation;
 			}
 		;
 	}
