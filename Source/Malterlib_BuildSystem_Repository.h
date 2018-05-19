@@ -74,6 +74,8 @@ namespace NMib::NBuildSystem::NRepository
 		CStr m_Submodule;
 		CStr m_SubmoduleName;
 		CStr m_Type;
+		CStr m_UserName;
+		CStr m_UserEmail;
 		TCSet<CStr> m_Tags;
 		TCMap<CStr, CRemote> m_Remotes;
 		CFilePosition m_Position;
@@ -245,10 +247,17 @@ namespace NMib::NBuildSystem::NRepository
 		CStr m_Message;
 	};
 
+	struct CGitConfig
+	{
+		TCMap<CStr, CStr> m_Remotes;
+		CStr m_UserName;
+		CStr m_UserEmail;
+	};
+
 	CStr fg_GetGitRoot(CStr const &_Directory);
 	CStr fg_GetGitDataDir(CStr const &_GitRoot, CFilePosition const &_Position);
 	CStr fg_GetGitHeadHash(CStr const &_GitRoot, CFilePosition const &_Position);
-	TCMap<CStr, CStr> fg_GetGitRemotes(CStr const &_GitRoot, CFilePosition const &_Position);
+	CGitConfig fg_GetGitConfig(CStr const &_GitRoot, CFilePosition const &_Position);
 	bool fg_IsSubmodule(CStr const &_GitRoot);
 	bool fg_HandleRepository
 		(

@@ -17,18 +17,32 @@ namespace NMib::NBuildSystem
 	{
 		struct CLocalGeneratorInteface : public CGeneratorInterface
 		{
+			CLocalGeneratorInteface(CStr const &_OutputDir)
+				: m_OutputDir(_OutputDir)
+			{
+			}
+
 			bool f_GetBuiltin(CStr const &_Value, CStr &_Result) const override
 			{
+				if (_Value == "GeneratedBuildSystemDir")
+				{
+					_Result = m_OutputDir;
+					return true;
+				}
 				return false;
 			}
+
 			CStr f_GetExpandedPath(CStr const &_Path, CStr const& _Base) const override
 			{
 				return CFile::fs_GetExpandedPath(_Path, _Base);
 			}
+
 			CSystemEnvironment f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const override
 			{
 				return fg_GetSys()->f_Environment();
 			}
+
+			CStr m_OutputDir;
 		};
 	}
 
@@ -544,7 +558,7 @@ namespace NMib::NBuildSystem
 		auto GeneratorValues = pGenerator->f_GetValues(*this, OutputDir);
 
 		{
-			CLocalGeneratorInteface LocalInterface;
+			CLocalGeneratorInteface LocalInterface{OutputDir};
 			auto pOldInterface = fg_Move(mp_GeneratorInterface);
 			auto Cleanup = g_OnScopeExit > [&]
 				{

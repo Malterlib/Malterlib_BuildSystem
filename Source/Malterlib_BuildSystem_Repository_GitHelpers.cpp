@@ -74,16 +74,17 @@ namespace NMib::NBuildSystem::NRepository
 			return HeadRef;
 	}
 
-	TCMap<CStr, CStr> fg_GetGitRemotes(CStr const &_GitRoot, CFilePosition const &_Position)
+	CGitConfig fg_GetGitConfig(CStr const &_GitRoot, CFilePosition const &_Position)
 	{
 		CStr GitDirectory = fg_GetGitDataDir(_GitRoot, _Position);
 
 		CStr Config = CFile::fs_ReadStringFromFile(GitDirectory + "/config", true);
 
-		TCMap<CStr, CStr> Remotes;
+		CGitConfig GitConfig;
 
 		auto pParse = Config.f_GetStr();
 		CStr LastRemote;
+		bool bIsUserConfig = false;
 		while (*pParse)
 		{
 			fg_ParseWhiteSpace(pParse);
@@ -97,22 +98,43 @@ namespace NMib::NBuildSystem::NRepository
 				CStr RemoteName(pStart, pParse - pStart);
 				LastRemote = fg_RemoveEscape<'\"'>(RemoteName);
 			}
-			else if (fg_StrStartsWith(pParse, "url =") && !LastRemote.f_IsEmpty())
+			else if (fg_StrStartsWith(pParse, "[user]"))
+				bIsUserConfig = true;
+			else if (bIsUserConfig && fg_StrStartsWith(pParse, "name ="))
+			{
+				pParse += 6;
+				fg_ParseWhiteSpace(pParse);
+				auto pStart = pParse;
+				fg_ParseToEndOfLine(pParse);
+				GitConfig.m_UserName = CStr(pStart, pParse - pStart);
+			}
+			else if (bIsUserConfig && fg_StrStartsWith(pParse, "email ="))
+			{
+				pParse += 6;
+				fg_ParseWhiteSpace(pParse);
+				auto pStart = pParse;
+				fg_ParseToEndOfLine(pParse);
+				GitConfig.m_UserEmail = CStr(pStart, pParse - pStart);
+			}
+			else if (!LastRemote.f_IsEmpty() && fg_StrStartsWith(pParse, "url ="))
 			{
 				pParse += 5;
 				fg_ParseWhiteSpace(pParse);
 				auto pStart = pParse;
 				fg_ParseToEndOfLine(pParse);
 				CStr URL(pStart, pParse - pStart);
-				Remotes[LastRemote] = URL;
+				GitConfig.m_Remotes[LastRemote] = URL;
 			}
 			else if (*pParse == '[')
+			{
+				bIsUserConfig = false;
 				LastRemote.f_Clear();
+			}
 			fg_ParseToEndOfLine(pParse);
 			fg_ParseEndOfLine(pParse);
 		}
 
-		return Remotes;
+		return GitConfig;
 	}
 
 	bool fg_IsSubmodule(CStr const &_GitRoot)

@@ -213,6 +213,8 @@ namespace NMib::NBuildSystem
 			CStr Location = _ReposDirectory + "/" + _Repo.f_GetName();
 			CStr BaseDir = _BuildSystem.f_GetBaseDir();
 			CStr RepositoryIdentifier = _Repo.f_GetIdentifierName(BaseDir, BaseDir);
+
+			bool bIsRoot = _Repo.m_Type == "Root";
 			
 			CDisableExceptionTraceScope DisableTrace;
 			
@@ -286,7 +288,9 @@ namespace NMib::NBuildSystem
 				}
 			;
 
-			CStr ConfigHash = o_StateHandler.f_GetHash(_Repo.m_ConfigFile, Location, _Repo.m_Identity);
+			CStr ConfigHash;
+			if (!bIsRoot)
+				ConfigHash = o_StateHandler.f_GetHash(_Repo.m_ConfigFile, Location, _Repo.m_Identity);
 
 			auto fOutputInfo = [&](EOutputType _OutputType, CStr const &_Info)
 				{
@@ -322,16 +326,27 @@ namespace NMib::NBuildSystem
 			bool bCloneNew = false;
 			if (CFile::fs_FileExists(Location))
 			{
-				auto Files = CFile::fs_FindFiles(Location + "/*");
-				if (Files.f_IsEmpty())
+				if (!bIsRoot)
 				{
-					fOutputInfo(EOutputType_Warning, "Removing empty repo directory");
-					CFile::fs_DeleteDirectory(Location);
-					bCloneNew = true;
+					auto Files = CFile::fs_FindFiles(Location + "/*");
+					if (Files.f_IsEmpty())
+					{
+						fOutputInfo(EOutputType_Warning, "Removing empty repo directory");
+						CFile::fs_DeleteDirectory(Location);
+						bCloneNew = true;
+					}
 				}
 			}
 			else
-				bCloneNew = true;
+			{
+				if (bIsRoot)
+				{
+					fOutputInfo(EOutputType_Error, "Root repository does not exist at: {}"_f << Location);
+					DMibError("Aborting, root repository needs to exists");
+				}
+				else
+					bCloneNew = true;
+			}
 
 			if (bCloneNew)
 			{
@@ -376,7 +391,7 @@ namespace NMib::NBuildSystem
 					}
 				}
 			}
-			else
+			else if (!bIsRoot)
 			{
 				CStr GitRoot = fg_GetGitRoot(Location);
 				if (GitRoot.f_IsEmpty() || _Repo.m_Submodule != "true")
@@ -385,9 +400,16 @@ namespace NMib::NBuildSystem
 
 			bool bForceReset = _BuildSystem.f_GetEnvironmentVariable("MalterlibRepositoryHardReset", "") == "true";
 
-			auto CurrentRemotes = fg_GetGitRemotes(Location, _Repo.m_Position);
+			auto GitConfig = fg_GetGitConfig(Location, _Repo.m_Position);
+			auto &CurrentRemotes = GitConfig.m_Remotes;
 			auto WantedRemotes = _Repo.m_Remotes;
 			WantedRemotes["origin"].m_URL = _Repo.m_URL;
+
+			if (_Repo.m_UserName && GitConfig.m_UserName != _Repo.m_UserName)
+				fLaunchGit({"config", "--local", "user.name", _Repo.m_UserName}, Location);
+
+			if (_Repo.m_UserEmail && GitConfig.m_UserEmail != _Repo.m_UserEmail)
+				fLaunchGit({"config", "--local", "user.email", _Repo.m_UserEmail}, Location);
 
 			if (!WantedRemotes.f_IsEmpty())
 			{
@@ -420,6 +442,9 @@ namespace NMib::NBuildSystem
 					}
 				}
 			}
+
+			if (bIsRoot)
+				return false;
 
 			CStr CurrentHash = o_StateHandler.f_GetHash(_Repo.m_StateFile, Location, _Repo.m_Identity);
 			CStr HeadHash = fg_GetGitHeadHash(Location, _Repo.m_Position);
@@ -752,6 +777,8 @@ namespace NMib::NBuildSystem
 				Repo.m_Submodule = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "Submodule");
 				Repo.m_SubmoduleName = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "SubmoduleName");
 				Repo.m_Type = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "Type");
+				Repo.m_UserName = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "UserName");
+				Repo.m_UserEmail = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "UserEmail");
 
 				TCVector<CStr> NoPushRemotes;
 				for (auto &Wildcard : _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "NoPushRemotes").f_Split(";"))
@@ -785,11 +812,11 @@ namespace NMib::NBuildSystem
 
 				if (Repo.m_URL.f_IsEmpty())
 					_BuildSystem.fs_ThrowError(ChildEntity.m_Position, "You have to specify Repository.URL");
-				if (Repo.m_ConfigFile.f_IsEmpty())
+				if (Repo.m_ConfigFile.f_IsEmpty() && Repo.m_Type != "Root")
 					_BuildSystem.fs_ThrowError(ChildEntity.m_Position, "You have to specify Repository.ConfigFile");
-				if (Repo.m_StateFile.f_IsEmpty())
+				if (Repo.m_StateFile.f_IsEmpty() && Repo.m_Type != "Root")
 					_BuildSystem.fs_ThrowError(ChildEntity.m_Position, "You have to specify Repository.StateFile");
-				if (Repo.m_ConfigFile == Repo.m_StateFile)
+				if (Repo.m_ConfigFile == Repo.m_StateFile && Repo.m_Type != "Root")
 					_BuildSystem.fs_ThrowError(ChildEntity.m_Position, "You have to specify Repository.ConfigFile and Repository.StateFile must not be same file");
 				if (Repo.m_DefaultBranch.f_IsEmpty())
 					_BuildSystem.fs_ThrowError(ChildEntity.m_Position, "You have to specify Repository.DefaultBranch");
@@ -811,25 +838,23 @@ namespace NMib::NBuildSystem
 
 				TCMap<CStr, CReposLocation> *pTheseRepos = nullptr;
 
-				for (auto &RepoLocation : Repos)
-				{
-					for (auto &Repo : RepoLocation.m_Repositories)
+				auto fAddRepo = [&](CReposLocation const &_RepoLocation, CRepository const &_Repo)
 					{
-						if (AddedRepos.f_FindEqual(Repo.m_Location))
-							continue;
+						if (AddedRepos.f_FindEqual(_Repo.m_Location))
+							return;
 
 						bAllAdded = false;
 
-						auto *pDependency = RepoRoots.f_FindLargestLessThanEqual(Repo.m_ConfigFile);
+						auto *pDependency = RepoRoots.f_FindLargestLessThanEqual(_Repo.m_ConfigFile);
 						if (pDependency)
 						{
 							auto &DependencyRoot = RepoRoots.fs_GetKey(*pDependency);
-							if (Repo.m_ConfigFile.f_StartsWith(DependencyRoot))
+							if (_Repo.m_ConfigFile.f_StartsWith(DependencyRoot))
 							{
 								if (!AddedRepos.f_FindEqual(DependencyRoot))
 								{
-									LeftFilePos = Repo.m_Position;
-									continue;
+									LeftFilePos = _Repo.m_Position;
+									return;
 								}
 							}
 						}
@@ -837,9 +862,32 @@ namespace NMib::NBuildSystem
 						if (!pTheseRepos)
 							pTheseRepos = &ReposOrdered.f_Insert();
 
-						(*pTheseRepos)[RepoLocation.f_GetPath()].m_Repositories[Repo.f_GetName()] = Repo;
-						ToAddRepos[Repo.m_Location];
+						(*pTheseRepos)[_RepoLocation.f_GetPath()].m_Repositories[_Repo.f_GetName()] = _Repo;
+						ToAddRepos[_Repo.m_Location];
 						bDoneSomething = true;
+					}
+				;
+
+				for (auto &RepoLocation : Repos)
+				{
+					for (auto &Repo : RepoLocation.m_Repositories)
+					{
+						if (Repo.m_Type != "Root")
+							continue;
+						fAddRepo(RepoLocation, Repo);
+					}
+				}
+
+				if (!bDoneSomething)
+				{
+					for (auto &RepoLocation : Repos)
+					{
+						for (auto &Repo : RepoLocation.m_Repositories)
+						{
+							if (Repo.m_Type == "Root")
+								continue;
+							fAddRepo(RepoLocation, Repo);
+						}
 					}
 				}
 				AddedRepos += ToAddRepos;
