@@ -140,6 +140,7 @@ namespace NMib::NBuildSystem
 
 		bool bUpdateCache = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_UpdateCache") == "true";
 		bool bVerbose = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_Verbose") == "true";
+		bool bVerboseHash = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_VerboseHash") == "true";
 
 #ifdef DPlatformFamily_Windows
 		auto fReplace = [&](auto &&_String, auto &&_Find, auto &&_ReplaceWith)
@@ -178,14 +179,17 @@ namespace NMib::NBuildSystem
 		TCVector<CStr> CmakeExcludeFromHash = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_ExcludeFromHash").f_Split(";");
 
 		CStr HashContents = fg_Format("Config (Not checked): {}\n", f_EvaluateEntityProperty(_Entity, EPropertyType_Property, "FullConfiguration"));
-		auto fAddStringHash = [&](CHash_SHA512 &o_DependenciesHash, CStr const &_String, ch8 const *_pVariableName)
+		auto fAddStringHash = [&](CHash_SHA512 &o_DependenciesHash, CStr const &_String, ch8 const *_pVariableName, bool _bPerformExclude)
 			{
 				CStr FilteredString = _String;
-				for (auto &Exclude : CmakeExcludeFromHash)
+				if (_bPerformExclude)
 				{
-					if (Exclude.f_IsEmpty())
-						continue;
-					FilteredString = FilteredString.f_Replace(Exclude, "");
+					for (auto &Exclude : CmakeExcludeFromHash)
+					{
+						if (Exclude.f_IsEmpty())
+							continue;
+						FilteredString = FilteredString.f_Replace(Exclude, "");
+					}
 				}
 				HashContents += CStr::CFormat("{}: {}\n") << _pVariableName << FilteredString;
 				//DMibConOut2("{} : {}\n", CmakeCacheDirectory, FilteredString);
@@ -193,15 +197,15 @@ namespace NMib::NBuildSystem
 			}
 		;
 		
-		auto fInitHash = [&](CHash_SHA512 &o_DependenciesHash)
+		auto fInitHash = [&](CHash_SHA512 &o_DependenciesHash, bool _bPerformExclude)
 			{
-				fAddStringHash(o_DependenciesHash, GeneratorVersion, "GeneratorVersion");
-				fAddStringHash(o_DependenciesHash, FullRebuildVersion, "Import.CMake_FullRebuildVersion");
-				fAddStringHash(o_DependenciesHash, CacheExcludePatterns, "Import.CMake_CacheExcludePatterns");
-				fAddStringHash(o_DependenciesHash, CacheReplaceContents, "Import.CMake_CacheReplaceContents");
-				fAddStringHash(o_DependenciesHash, CmakeLanguages, "Import.CMake_Languages");
-				fAddStringHash(o_DependenciesHash, CmakeConfig, "Import.CMake_Config");
-				fAddStringHash(o_DependenciesHash, CmakeVariables, "Ipmort.CMake_Variables");
+				fAddStringHash(o_DependenciesHash, GeneratorVersion, "GeneratorVersion", _bPerformExclude);
+				fAddStringHash(o_DependenciesHash, FullRebuildVersion, "Import.CMake_FullRebuildVersion", _bPerformExclude);
+				fAddStringHash(o_DependenciesHash, CacheExcludePatterns, "Import.CMake_CacheExcludePatterns", _bPerformExclude);
+				fAddStringHash(o_DependenciesHash, CacheReplaceContents, "Import.CMake_CacheReplaceContents", _bPerformExclude);
+				fAddStringHash(o_DependenciesHash, CmakeLanguages, "Import.CMake_Languages", _bPerformExclude);
+				fAddStringHash(o_DependenciesHash, CmakeConfig, "Import.CMake_Config", _bPerformExclude);
+				fAddStringHash(o_DependenciesHash, CmakeVariables, "Ipmort.CMake_Variables", _bPerformExclude);
 			}
 		;
 		
@@ -222,26 +226,26 @@ namespace NMib::NBuildSystem
 		
 		auto fInitConfigHash = [&](CHash_SHA512 &o_DependenciesHash)
 			{
-				fInitHash(o_DependenciesHash);
-				fAddStringHash(o_DependenciesHash, FileName, "FileName");
-				fAddStringHash(o_DependenciesHash, SharedTempDirectory, "Import.SharedTempDirectory");
-				fAddStringHash(o_DependenciesHash, Platform, "Platform");
-				fAddStringHash(o_DependenciesHash, Architecture, "Architecture");
-				fAddStringHash(o_DependenciesHash, CmakePath, "Import.CMake_Path");
-				fAddStringHash(o_DependenciesHash, CmakeVariablesWithPaths, "Import.CMake_VariablesWithPaths");
-				fAddStringHash(o_DependenciesHash, CmakeSystemName, "Import.CMake_SystemName");
-				fAddStringHash(o_DependenciesHash, CmakeSystemProcessor, "Import.CMake_SystemProcessor");
-				fAddStringHash(o_DependenciesHash, CmakeCompiler, "Import.CMake_CCompiler");
-				fAddStringHash(o_DependenciesHash, CmakeCompilerTarget, "Import.CMake_CCompilerTarget");
-				fAddStringHash(o_DependenciesHash, CmakeCxxCompiler, "Import.CMake_CxxCompiler");
-				fAddStringHash(o_DependenciesHash, CmakeCxxCompilerTarget, "Import.CMake_CxxCompilerTarget");
+				fInitHash(o_DependenciesHash, false);
+				fAddStringHash(o_DependenciesHash, FileName, "FileName", false);
+				fAddStringHash(o_DependenciesHash, SharedTempDirectory, "Import.SharedTempDirectory", false);
+				fAddStringHash(o_DependenciesHash, Platform, "Platform", false);
+				fAddStringHash(o_DependenciesHash, Architecture, "Architecture", false);
+				fAddStringHash(o_DependenciesHash, CmakePath, "Import.CMake_Path", false);
+				fAddStringHash(o_DependenciesHash, CmakeVariablesWithPaths, "Import.CMake_VariablesWithPaths", false);
+				fAddStringHash(o_DependenciesHash, CmakeSystemName, "Import.CMake_SystemName", false);
+				fAddStringHash(o_DependenciesHash, CmakeSystemProcessor, "Import.CMake_SystemProcessor", false);
+				fAddStringHash(o_DependenciesHash, CmakeCompiler, "Import.CMake_CCompiler", false);
+				fAddStringHash(o_DependenciesHash, CmakeCompilerTarget, "Import.CMake_CCompilerTarget", false);
+				fAddStringHash(o_DependenciesHash, CmakeCxxCompiler, "Import.CMake_CxxCompiler", false);
+				fAddStringHash(o_DependenciesHash, CmakeCxxCompilerTarget, "Import.CMake_CxxCompilerTarget", false);
 			}
 		;
 		
 		CHash_SHA512 ConfigHash;
 		fInitConfigHash(ConfigHash);
 		CStr ConfigHashString = ConfigHash.f_GetDigest().f_GetString();
-		CStr ConfigHashContents = HashContents;
+		CStr ConfigHashContents = fg_Move(HashContents);
 		
 		auto fReturn = [&](CStr const &_Directory, CStr const &_Hash)
 			{
@@ -262,6 +266,7 @@ namespace NMib::NBuildSystem
 						)
 					;
 				}
+
 				return fp_ExpandImportCMake_FromGeneratedDirectory(_Entity, _ParentEntity, _BuildSystemData, _Directory);
 			}
 		;
@@ -316,7 +321,7 @@ namespace NMib::NBuildSystem
 			}
 
 			CHash_SHA512 DependenciesHash;
-			fInitHash(DependenciesHash);
+			fInitHash(DependenciesHash, true);
 
 			for (auto &File : DependencyFiles)
 			{
@@ -328,6 +333,10 @@ namespace NMib::NBuildSystem
 			
 			CStr LastDependenciesHash = CFile::fs_ReadStringFromFile(CmakeCacheDirectory + "/Dependencies.sha512", true);
 			CStr NewDependenciesHash = DependenciesHash.f_GetDigest().f_GetString();
+
+			if (bVerboseHash)
+				DMibConOut2("Import hash string for '{}': {}\n", LockDirectory, HashContents);
+
 			bool bCacheUpToDate = NewDependenciesHash == LastDependenciesHash;
 			if (bCacheUpToDate || !bUpdateCache)
 			{
@@ -742,7 +751,7 @@ namespace NMib::NBuildSystem
 			}
 			
 			CHash_SHA512 DependenciesHash;
-			fInitHash(DependenciesHash);
+			fInitHash(DependenciesHash, true);
 
 			for (auto &File : DependencyFiles)
 			{
