@@ -428,7 +428,7 @@ namespace NMib::NBuildSystem
 					}
 					fOutputInfo(EOutputType_Normal, "Adding remote '{}={}'"_f << RemoteName << Remote.m_URL);
 					fLaunchGit({"remote", "add", RemoteName, Remote.m_URL}, Location);
-					fLaunchGit({"fetch", RemoteName}, Location);
+					fLaunchGit({"fetch", "--tags", RemoteName}, Location);
 				}
 				if (bForceReset)
 				{
@@ -464,7 +464,11 @@ namespace NMib::NBuildSystem
 				bool bPassException = false;
 				try
 				{
-					fLaunchGit({"fetch", "--all", "--prune"}, Location);
+					TCVector<CStr> FetchParams = {"fetch", "--all", "--prune", "--tags"};
+					if (bForceReset)
+						FetchParams.f_Insert("--prune-tags");
+
+					fLaunchGit(FetchParams, Location);
 
 					if (bForceReset)
 					{
