@@ -288,6 +288,46 @@ namespace NMib::NBuildSystem
 				}
 			;
 
+
+			struct CGitVersion
+			{
+				bool operator < (CGitVersion const &_Right) const
+				{
+					return fg_TupleReferences(m_Major, m_Minor, m_Patch) < fg_TupleReferences(_Right.m_Major, _Right.m_Minor, _Right.m_Patch);
+				}
+
+				uint32 m_Major = 0;
+				uint32 m_Minor = 0;
+				uint32 m_Patch = 0;
+			};
+
+			auto fGetGitVersion = [&]() -> CGitVersion
+				{
+					static CGitVersion GitVersion;
+					static CMutualSpin Lock;
+
+					DMibLock(Lock);
+
+					if (GitVersion.m_Major)
+						return GitVersion;
+
+					CStr VersionStr = fLaunchGit({"--version"}, "").f_Trim();
+
+					CGitVersion Version;
+
+					aint nParsed = 0;
+					(CStr::CParse("git version {}.{}.{}") >> Version.m_Major >> Version.m_Minor >> Version.m_Patch).f_Parse(VersionStr, nParsed);
+					if (nParsed != 3)
+						DMibError("Failed to parse git version");
+
+					GitVersion = Version;
+
+					DMibConOut2("Parsed git version: {} {} {}\n", GitVersion.m_Major, GitVersion.m_Minor, GitVersion.m_Patch);
+
+					return GitVersion;
+				}
+			;
+
 			CStr ConfigHash;
 			if (!bIsRoot)
 				ConfigHash = o_StateHandler.f_GetHash(_Repo.m_ConfigFile, Location, _Repo.m_Identity);
@@ -465,7 +505,8 @@ namespace NMib::NBuildSystem
 				try
 				{
 					TCVector<CStr> FetchParams = {"fetch", "--all", "--prune", "--tags"};
-					if (bForceReset)
+					
+					if (bForceReset && fGetGitVersion() >= CGitVersion{2, 17})
 						FetchParams.f_Insert("--prune-tags");
 
 					fLaunchGit(FetchParams, Location);
