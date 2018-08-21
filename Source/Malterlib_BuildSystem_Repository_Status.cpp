@@ -217,6 +217,8 @@ namespace NMib::NBuildSystem
 
 								auto fJoinNames = [](TCSet<CStr> const &_Names) -> CStr
 									{
+										if (_Names.f_GetLen() == 1)
+											return *_Names.f_FindSmallest();
 										return "<{}>"_f << CStr::fs_Join(_Names, ", ");
 									}
 								;
@@ -251,20 +253,12 @@ namespace NMib::NBuildSystem
 											if (Branches.f_IsEmpty() && RemotesForName.f_IsEmpty())
 												continue;
 
-											CStr RemoteName;
-
-											if (RemotesForName.f_GetLen() == 1)
-												RemoteName = *RemotesForName.f_FindSmallest();
-											else
-												RemoteName = fJoinNames(RemotesForName);
+											CStr RemoteName = fJoinNames(RemotesForName);
 
 											if (!Branches.f_IsEmpty())
 											{
 												RemoteName += "/";
-												if (Branches.f_GetLen() == 1)
-													RemoteName += *Branches.f_FindSmallest();
-												else
-													RemoteName += fJoinNames(Branches);
+												RemoteName += fJoinNames(Branches);
 											}
 
 											if (!_bOtherBranches)
