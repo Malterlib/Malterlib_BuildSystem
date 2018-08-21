@@ -110,7 +110,7 @@ namespace NMib::NBuildSystem::NRepository
 			}
 			else if (bIsUserConfig && fg_StrStartsWith(pParse, "email ="))
 			{
-				pParse += 6;
+				pParse += 7;
 				fg_ParseWhiteSpace(pParse);
 				auto pStart = pParse;
 				fg_ParseToEndOfLine(pParse);

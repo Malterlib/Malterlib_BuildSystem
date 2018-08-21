@@ -446,10 +446,16 @@ namespace NMib::NBuildSystem
 			WantedRemotes["origin"].m_URL = _Repo.m_URL;
 
 			if (_Repo.m_UserName && GitConfig.m_UserName != _Repo.m_UserName)
+			{
+				fOutputInfo(EOutputType_Normal, "Changing user name '{}' -> '{}'"_f << GitConfig.m_UserName << _Repo.m_UserName);
 				fLaunchGit({"config", "--local", "user.name", _Repo.m_UserName}, Location);
+			}
 
 			if (_Repo.m_UserEmail && GitConfig.m_UserEmail != _Repo.m_UserEmail)
+			{
+				fOutputInfo(EOutputType_Normal, "Changing user email '{}' -> '{}'"_f << GitConfig.m_UserEmail << _Repo.m_UserEmail);
 				fLaunchGit({"config", "--local", "user.email", _Repo.m_UserEmail}, Location);
+			}
 
 			if (!WantedRemotes.f_IsEmpty())
 			{
