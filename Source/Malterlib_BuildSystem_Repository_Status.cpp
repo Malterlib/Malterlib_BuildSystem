@@ -134,7 +134,7 @@ namespace NMib::NBuildSystem
 							{
 								if (State.f_HasRemoteBranch(RemoteBranch))
 									fg_GetLogEntries(Launches, Repo, RemoteBranch, Branch) > ToPush.f_AddResult(Remote);
-								else if (!State.f_HasRemoteBranch(MissingRemoteBranch))
+								else if ((Remote == "origin" && Branch == Repo.m_DefaultBranch) || !State.f_HasRemoteBranch(MissingRemoteBranch))
 									ToPushMissing[Remote];
 
 								if (State.f_HasRemoteBranch(PullRemoteBranch))
