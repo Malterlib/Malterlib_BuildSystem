@@ -107,7 +107,7 @@ namespace NMib::NBuildSystem::NRepository
 
 	struct CStateHandler
 	{
-		CStateHandler(CStr const &_BasePath);
+		CStateHandler(CStr const &_BasePath, CStr const &_OutputDir);
 
 		void f_SetHash(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Hash, CStr const &_Identifier);
 		CStr f_GetHash(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Identifier);
@@ -115,15 +115,20 @@ namespace NMib::NBuildSystem::NRepository
 		TCMap<CStr, CConfigFile> f_GetMergedFiles();
 		void f_AddGitIgnore(CStr const &_FileName, CBuildSystem const &_BuildSystem);
 		static CConfigFile fs_ParseConfigFile(CStr const &_Contents, CStr const &_FileName);
+		CMutual &f_ConsoleOutputLock();
+		TCSet<CStr> f_GetLastSeenRepositories();
 
 	private:
 		CConfigFile const &fp_GetConfigFile(CStr const &_FileName);
 
 		CStr const mp_BasePath;
+		CStr const mp_OutputDir;
 		CMutual mp_Lock;
 		TCMap<CStr, CConfigFile> mp_ConfigFiles;
 		TCMap<CStr, CConfigFile> mp_NewConfigFiles;
 		TCSet<CStr> mp_GitIgnores;
+		TCMap<CStr, CStr> mp_LastSeenRepositories;
+		CMutual mp_ConsoleOutputLock;
 	};
 
 	struct CGitLaunches

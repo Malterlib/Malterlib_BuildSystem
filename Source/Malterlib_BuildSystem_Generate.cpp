@@ -599,6 +599,12 @@ namespace NMib::NBuildSystem
 								Action = EHandleRepositoryAction_Reset;
 							else if (ActionStr == "rebase")
 								Action = EHandleRepositoryAction_Rebase;
+							else if (ActionStr == "reset_delete")
+								Action = EHandleRepositoryAction_ResetDelete;
+							else if (ActionStr == "leave_removed")
+								Action = EHandleRepositoryAction_LeaveRemoved;
+							else if (ActionStr == "delete_removed")
+								Action = EHandleRepositoryAction_DeleteRemoved;
 							else
 								DError("Invalid format for --reconcile. Expected action to be one of: [auto, reset, rebase]");
 							RepositoryActions[WildCard] = Action;

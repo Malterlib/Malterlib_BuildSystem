@@ -12,18 +12,40 @@ Changes in sub-repositories needs to be reconciled.
 
 Choose how you want to reconcile changes:
 
-Accept recommended actions : {0}./mib update_repos --reconcile=*:auto{1}
-Reset all                  : {0}./mib update_repos --reconcile=*:reset{1}
-Rebase all                 : {0}./mib update_repos --reconcile=*:rebase{1}
+Accept recommended actions   : {0}./mib update_repos --reconcile=*:auto{1}
+Rebase all                   : {0}./mib update_repos --reconcile=*:rebase{1}
+Reset all                    : {0}./mib update_repos --reconcile=*:reset{1}
+Reset all and delete removed : {0}./mib update_repos --reconcile=*:reset_delete{1}
 
 To choose separate action for different repositories you can specify wildcards. The last matching wildcard wins:
-{0}./mib update_repos --reconcile=*:recommended,External/*:reset{1}
+{0}./mib update_repos --reconcile=*:auto,External/*:reset{1}
 
 To show current status without reconciling use:
-{0}./mib status --skip-update -q{1}
+{0}./mib status --skip-update{1}
 )---"_f /**/
 	<< NMib::NBuildSystem::NRepository::CColors::mc_RepositoryName
 	<< NMib::NBuildSystem::NRepository::CColors::mc_Default
+;
+
+static CStr g_ReconcileRemovedHelp = R"---(
+Removed sub-repositories needs to be reconciled.
+
+Choose how you want to reconcile changes:
+
+Leave removed repositories on disk    : {0}./mib update_repos --reconcile=*:leave_removed{1}
+Delete removed repositories from disk : {0}./mib update_repos --reconcile=*:delete_removed{1}
+
+{2}Warning:{1} Specifying {0}reset_delete{1} or {0}delete_removed{1} for reconcile will delete the repository and any unpushed work permanently.
+
+To choose separate action for different repositories you can specify wildcards. The last matching wildcard wins:
+{0}./mib update_repos --reconcile=*:leave_removed,External/*:delete_removed{1}
+
+To show current status without reconciling use:
+{0}./mib status --skip-update{1}
+)---"_f /**/
+	<< NMib::NBuildSystem::NRepository::CColors::mc_RepositoryName
+	<< NMib::NBuildSystem::NRepository::CColors::mc_Default
+	<< NMib::NBuildSystem::NRepository::CColors::mc_StatusError
 ;
 
 #if 0
@@ -68,9 +90,15 @@ namespace NMib::NBuildSystem
 			return m_Configs.f_FindEqual(Identifier);
 		}
 
-		CStateHandler::CStateHandler(CStr const &_BasePath)
+		CStateHandler::CStateHandler(CStr const &_BasePath, CStr const &_OutputDir)
 			: mp_BasePath(_BasePath)
+			, mp_OutputDir(_OutputDir)
 		{
+		}
+
+		CMutual &CStateHandler::f_ConsoleOutputLock()
+		{
+			return mp_ConsoleOutputLock;
 		}
 
 		void CStateHandler::f_SetHash(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Hash, CStr const &_Identifier)
@@ -199,6 +227,55 @@ namespace NMib::NBuildSystem
 			return ConfigFile;
 		}
 
+		TCSet<CStr> CStateHandler::f_GetLastSeenRepositories()
+		{
+			CStr RepositoryStateFile = mp_OutputDir / "RepositoryState.json";
+
+			if (!CFile::fs_FileExists(RepositoryStateFile))
+				return {};
+
+			CEJSON StateFile = CEJSON::fs_FromString(CFile::fs_ReadStringFromFile(RepositoryStateFile, true), RepositoryStateFile);
+
+			TCSet<CStr> SeenRepositories;
+
+			if (auto *pSeenReposJSON = StateFile.f_GetMember("SeenRepositories", EEJSONType_Object))
+			{
+				for (auto &SeenJSON : pSeenReposJSON->f_Object())
+				{
+					SeenRepositories[SeenJSON.f_Name()];
+				}
+			}
+
+			return SeenRepositories;
+		}
+
+		void fg_OutputRepositoryInfo(EOutputType _OutputType, CStr const &_Info, CStateHandler &o_StateHandler, CStr const &_RepoName, mint _MaxRepoWidth)
+		{
+			ch8 const *pRepoColor = CColors::mc_StatusNormal;
+			switch (_OutputType)
+			{
+			case EOutputType_Normal: pRepoColor = CColors::mc_StatusNormal; break;
+			case EOutputType_Warning: pRepoColor = CColors::mc_StatusWarning; break;
+			case EOutputType_Error: pRepoColor = CColors::mc_StatusError; break;
+			}
+
+			CStr RepoName = "{sj*,a-}"_f << _RepoName << _MaxRepoWidth;
+
+			CStr ReplacedRepo = RepoName.f_Replace("/", "{}{}/{}"_f << CColors::mc_Default << DColor_256(250) << pRepoColor ^ 1);
+			{
+				DMibLock(o_StateHandler.f_ConsoleOutputLock());
+				DMibConOut2
+					(
+						"{}{}{}   {}\n"
+						, pRepoColor
+						, ReplacedRepo
+						, CColors::mc_Default
+						, _Info
+					)
+				;
+			}
+		}
+
 		bool fg_HandleRepository
 			(
 			 	CStr const &_ReposDirectory
@@ -322,8 +399,6 @@ namespace NMib::NBuildSystem
 
 					GitVersion = Version;
 
-					DMibConOut2("Parsed git version: {} {} {}\n", GitVersion.m_Major, GitVersion.m_Minor, GitVersion.m_Patch);
-
 					return GitVersion;
 				}
 			;
@@ -334,32 +409,12 @@ namespace NMib::NBuildSystem
 
 			auto fOutputInfo = [&](EOutputType _OutputType, CStr const &_Info)
 				{
-					ch8 const *pRepoColor = CColors::mc_StatusNormal;
-					switch (_OutputType)
-					{
-					case EOutputType_Normal: pRepoColor = CColors::mc_StatusNormal; break;
-					case EOutputType_Warning: pRepoColor = CColors::mc_StatusWarning; break;
-					case EOutputType_Error: pRepoColor = CColors::mc_StatusError; break;
-					}
-
 					CStr RepoName;
 					if (_Repo.m_Location.f_StartsWith(BaseDir))
 						RepoName = CFile::fs_MakePathRelative(_Repo.m_Location, BaseDir);
 					else
 						RepoName = _Repo.m_Location;
-
-					RepoName = "{sj*,a-}"_f << fg_TempCopy(RepoName) << _MaxRepoWidth;
-
-					CStr ReplacedRepo = RepoName.f_Replace("/", "{}{}/{}"_f << CColors::mc_Default << DColor_256(250) << pRepoColor ^ 1);
-					DMibConOut2
-						(
-							"{}{}{}   {}\n"
-							, pRepoColor
-							, ReplacedRepo
-							, CColors::mc_Default
-							, _Info
-						)
-					;
+					fg_OutputRepositoryInfo(_OutputType, _Info, o_StateHandler, RepoName, _MaxRepoWidth);
 				}
 			;
 
@@ -615,7 +670,7 @@ namespace NMib::NBuildSystem
 						else if (_ReconcileAction != EHandleRepositoryAction_None)
 							Action = _ReconcileAction;
 
-						if (Action == EHandleRepositoryAction_Reset)
+						if (Action == EHandleRepositoryAction_Reset || Action == EHandleRepositoryAction_ResetDelete)
 						{
 							if (fLaunchGit({"rev-parse", "--abbrev-ref", "HEAD"}, Location).f_Trim() == "HEAD")
 							{
@@ -706,6 +761,12 @@ namespace NMib::NBuildSystem
 							bPassException = true;
 							DMibError("Manual reconcile needed");
 						}
+						else if (Action == EHandleRepositoryAction_LeaveRemoved || Action == EHandleRepositoryAction_DeleteRemoved)
+						{
+							fOutputInfo(EOutputType_Error, "Cannot specify leave or delete removed for existing repository");
+							bPassException = true;
+							DMibError("Invalid reconcile option");
+						}
 						else if (_ReconcileAction != EHandleRepositoryAction_Auto)
 						{
 							CStr ActionStr;
@@ -727,6 +788,7 @@ namespace NMib::NBuildSystem
 								ActionStr = "rebase";
 								break;
 							case EHandleRepositoryAction_Auto:
+							case EHandleRepositoryAction_ResetDelete:
 							default:
 								ActionStr = "internal error";
 								break;
@@ -981,15 +1043,15 @@ namespace NMib::NBuildSystem
 		TCAtomic<bool> bChanged;
 		TCAtomic<bool> bBinariesChange;
 
-		CStateHandler StateHandler{mp_BaseDir};
+		CStateHandler StateHandler{mp_BaseDir, mp_OutputDir};
 
-		auto fGetReconcileAction = [&](CRepository const &_Repo)
+		auto fGetReconcileActionByName = [&](CStr const &_RepoName)
 			{
 				EHandleRepositoryAction Action = EHandleRepositoryAction_None;
 				for (auto &WildcardAction : _Actions)
 				{
 					auto &Wildcard = _Actions.fs_GetKey(WildcardAction);
-					if (fg_StrMatchWildcard(_Repo.f_GetIdentifierName(mp_BaseDir, mp_BaseDir).f_GetStr(), Wildcard.f_GetStr()) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
+					if (fg_StrMatchWildcard(_RepoName.f_GetStr(), Wildcard.f_GetStr()) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
 						Action = WildcardAction;
 				}
 
@@ -997,7 +1059,20 @@ namespace NMib::NBuildSystem
 			}
 		;
 
+		auto fGetReconcileAction = [&](CRepository const &_Repo)
+			{
+				return fGetReconcileActionByName(_Repo.f_GetIdentifierName(mp_BaseDir, mp_BaseDir));
+			}
+		;
+
 		mint MaxRepoWidth = 0;
+
+		auto LastSeenRepositories = StateHandler.f_GetLastSeenRepositories();
+		for (auto &RepoName : LastSeenRepositories)
+			MaxRepoWidth = fg_Max(MaxRepoWidth, (mint)RepoName.f_GetLen());
+
+		TCSet<CStr> SeenRepositories;
+
 		for (auto &Repos : ReposOrdered)
 		{
 			for (auto &Repos : Repos)
@@ -1006,7 +1081,10 @@ namespace NMib::NBuildSystem
 				{
 					CStr RepoName;
 					if (Repo.m_Location.f_StartsWith(mp_BaseDir))
+					{
 						RepoName = CFile::fs_MakePathRelative(Repo.m_Location, mp_BaseDir);
+						SeenRepositories[RepoName];
+					}
 					else
 						RepoName = Repo.m_Location;
 
@@ -1055,7 +1133,7 @@ namespace NMib::NBuildSystem
 			if (bChanged.f_Load())
 				break;
 		}
-		
+
 		auto MergedFiles = StateHandler.f_GetMergedFiles();
 		for (auto iFile = MergedFiles.f_GetIterator(); iFile; ++iFile)
 		{
@@ -1084,6 +1162,55 @@ namespace NMib::NBuildSystem
 				TCVector<uint8> FileData;
 				CFile::fs_WriteStringToVector(FileData, CStr(FileContents), false);
 				f_WriteFile(FileData, FileName);
+			}
+		}
+
+		bool bForceReset = f_GetEnvironmentVariable("MalterlibRepositoryHardReset", "") == "true";
+		bool bLastSeenActionNeeded = false;
+
+		for (auto &LastSeen : LastSeenRepositories)
+		{
+			CStr FullRepoPath = mp_BaseDir / LastSeen;
+			if (!SeenRepositories.f_FindEqual(LastSeen) && CFile::fs_FileExists(FullRepoPath, EFileAttrib_Directory))
+			{
+				EHandleRepositoryAction Action = fGetReconcileActionByName(LastSeen);
+
+				if (bForceReset || Action == EHandleRepositoryAction_ResetDelete || Action == EHandleRepositoryAction_DeleteRemoved)
+				{
+					fg_OutputRepositoryInfo(EOutputType_Warning, "Deleting repository permanently from disk: {}"_f << FullRepoPath, StateHandler, LastSeen, MaxRepoWidth);
+					CFile::fs_DeleteDirectoryRecursive(FullRepoPath);
+				}
+				else if (Action != EHandleRepositoryAction_LeaveRemoved)
+				{
+					fg_OutputRepositoryInfo(EOutputType_Warning, "Repository has been {}removed{}"_f<< CColors::mc_ToPush << CColors::mc_Default, StateHandler, LastSeen, MaxRepoWidth);
+					bLastSeenActionNeeded = true;
+				}
+			}
+		}
+
+		if (bLastSeenActionNeeded)
+			DMibError(g_ReconcileRemovedHelp);
+		else
+		{
+			CStr RepositoryStateFile = mp_OutputDir / "RepositoryState.json";
+
+			CEJSON StateFile;
+
+			auto &SeenRepositoriesJSON = StateFile["SeenRepositories"];
+			for (auto &LastSeen : SeenRepositories)
+				SeenRepositoriesJSON[LastSeen] = 1;
+
+			CStr FileContents = StateFile.f_ToString();
+
+			bool bWasCreated = false;
+			if (!f_AddGeneratedFile(RepositoryStateFile, FileContents, "", bWasCreated, false))
+				fs_ThrowError(CFilePosition{}, CStr::CFormat("File '{}' already generated with other contents") << RepositoryStateFile);
+
+			if (bWasCreated)
+			{
+				TCVector<uint8> FileData;
+				CFile::fs_WriteStringToVector(FileData, CStr(FileContents), false);
+				f_WriteFile(FileData, RepositoryStateFile);
 			}
 		}
 

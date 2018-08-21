@@ -35,6 +35,9 @@ namespace NMib::NBuildSystem
 		, EHandleRepositoryAction_ManualResolve
 		, EHandleRepositoryAction_Reset
 		, EHandleRepositoryAction_Rebase
+		, EHandleRepositoryAction_ResetDelete
+		, EHandleRepositoryAction_LeaveRemoved
+		, EHandleRepositoryAction_DeleteRemoved
 	};
 
 	class CBuildSystem
