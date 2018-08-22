@@ -231,7 +231,7 @@ fi
 		{
 			CStr GeneratedFile = CFile::fs_AppendPath(ThreadLocal.m_ProjectOutputDir,  CStr("generatedContainer"));
 			bool bWasCreated;
-			if (!m_BuildSystem.f_AddGeneratedFile(GeneratedFile, CStr(), _Project.m_pSolution->f_GetName(), bWasCreated, false))
+			if (!m_BuildSystem.f_AddGeneratedFile(GeneratedFile, CStr(), _Project.m_pSolution->f_GetName(), bWasCreated))
 				DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << GeneratedFile));
 
 			if (bWasCreated)
@@ -245,7 +245,7 @@ fi
 			CStr OutputFile = CFile::fs_AppendPath(ThreadLocal.m_ProjectOutputDir,  CStr("project.pbxproj"));
 
 			bool bWasCreated;
-			if (!m_BuildSystem.f_AddGeneratedFile(OutputFile, FileData, _Project.m_pSolution->f_GetName(), bWasCreated, false))
+			if (!m_BuildSystem.f_AddGeneratedFile(OutputFile, FileData, _Project.m_pSolution->f_GetName(), bWasCreated))
 				DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << OutputFile));
 
 			if (bWasCreated)
@@ -2106,7 +2106,7 @@ fi
 			{
 				CStr XMLData = XMLFile.f_GetAsString(EXMLOutputDialect_Xcode);
 				bool bWasCreated;
-				if (!m_BuildSystem.f_AddGeneratedFile(FileName, XMLData, _Project.m_pSolution->f_GetName(), bWasCreated, true))
+				if (!m_BuildSystem.f_AddGeneratedFile(FileName, XMLData, _Project.m_pSolution->f_GetName(), bWasCreated, EGeneratedFileFlag_NoDateCheck))
 					DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << FileName));
 
 				if (bWasCreated)
@@ -2120,7 +2120,7 @@ fi
 				// Save the raw generated file to be able to diff against
 				
 				FileName += ".gen";
-				if (!m_BuildSystem.f_AddGeneratedFile(FileName, RawXMLData, _Project.m_pSolution->f_GetName(), bWasCreated, true))
+				if (!m_BuildSystem.f_AddGeneratedFile(FileName, RawXMLData, _Project.m_pSolution->f_GetName(), bWasCreated, EGeneratedFileFlag_NoDateCheck))
 					DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << FileName));
 
 				if (bWasCreated)
@@ -2253,7 +2253,7 @@ fi
 				OutputFile = CFile::fs_AppendPath(OutputFile, "ExternalBuildToolRun_{}.sh"_f << Configuration.f_GetFullSafeName());
 
 				bool bWasCreated;
-				if (!m_BuildSystem.f_AddGeneratedFile(OutputFile, ScriptData, _Project.m_pSolution->f_GetName(), bWasCreated, false))
+				if (!m_BuildSystem.f_AddGeneratedFile(OutputFile, ScriptData, _Project.m_pSolution->f_GetName(), bWasCreated))
 					DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << OutputFile));
 
 				if (bWasCreated)

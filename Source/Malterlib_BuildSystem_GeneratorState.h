@@ -12,7 +12,7 @@ namespace NMib::NBuildSystem
 	{
 		enum 
 		{
-			EFileVersion = 0x118
+			EFileVersion = 0x119
 		};
 
 		struct CProcessedFile
@@ -27,8 +27,7 @@ namespace NMib::NBuildSystem
 
 			TCSet<CStr> m_Workspaces;
 			NTime::CTime m_WriteTime;
-			uint8 m_bNoDateCheck = false;
-			uint8 m_bKeepGeneratedFile = false;
+			EGeneratedFileFlag m_Flags = EGeneratedFileFlag_None;
 		};
 		
 		CGeneratorState();

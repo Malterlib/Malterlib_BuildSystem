@@ -740,7 +740,7 @@ namespace NMib::NBuildSystem
 
 			{
 				bool bWasCreated;
-				if (!m_BuildSystem.f_AddGeneratedFile(_OutputFile, FileData, _Project.m_pSolution->f_GetName(), bWasCreated, false))
+				if (!m_BuildSystem.f_AddGeneratedFile(_OutputFile, FileData, _Project.m_pSolution->f_GetName(), bWasCreated))
 					DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << _OutputFile));
 
 				if (bWasCreated)
@@ -1054,7 +1054,7 @@ namespace NMib::NBuildSystem
 
 			{
 				bool bWasCreated;
-				if (!m_BuildSystem.f_AddGeneratedFile(_OutputFile, FileData, _Project.m_pSolution->f_GetName(), bWasCreated, false))
+				if (!m_BuildSystem.f_AddGeneratedFile(_OutputFile, FileData, _Project.m_pSolution->f_GetName(), bWasCreated))
 					DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << _OutputFile));
 
 				if (bWasCreated)

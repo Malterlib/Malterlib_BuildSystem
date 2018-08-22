@@ -115,7 +115,7 @@ namespace NMib::NBuildSystem::NXcode
 		CStr GeneratedFile = CFile::fs_AppendPath(OutputDir,  CStr("generatedContainer"));
 		{
 			bool bWasCreated;
-			if (!m_BuildSystem.f_AddGeneratedFile(GeneratedFile, CStr(), _Solution.f_GetName(), bWasCreated, false))
+			if (!m_BuildSystem.f_AddGeneratedFile(GeneratedFile, CStr(), _Solution.f_GetName(), bWasCreated))
 				DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << GeneratedFile));
 
 			if (bWasCreated)
@@ -130,7 +130,7 @@ namespace NMib::NBuildSystem::NXcode
 		{
 			CStr XMLData = XMLFile.f_GetAsString(EXMLOutputDialect_Xcode);
 			bool bWasCreated;
-			if (!m_BuildSystem.f_AddGeneratedFile(FileName, XMLData, _Solution.f_GetName(), bWasCreated, false))
+			if (!m_BuildSystem.f_AddGeneratedFile(FileName, XMLData, _Solution.f_GetName(), bWasCreated))
 				DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << FileName));
 
 			if (bWasCreated)
@@ -176,7 +176,7 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 			CStr FileName = CFile::fs_AppendPath(_OutputDir, CStr("xcshareddata/WorkspaceSettings.xcsettings"));
 			
 			bool bWasCreated;
-			if (!m_BuildSystem.f_AddGeneratedFile(FileName, DocumentData, _Solution.f_GetName(), bWasCreated, true))
+			if (!m_BuildSystem.f_AddGeneratedFile(FileName, DocumentData, _Solution.f_GetName(), bWasCreated, EGeneratedFileFlag_NoDateCheck))
 				DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << FileName));
 			
 			if (bWasCreated)
@@ -362,7 +362,7 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 			{
 				CStr XMLData = XMLFile.f_GetAsString(EXMLOutputDialect_Xcode);
 				bool bWasCreated;
-				if (!m_BuildSystem.f_AddGeneratedFile(FileName, XMLData, _Solution.f_GetName(), bWasCreated, true))
+				if (!m_BuildSystem.f_AddGeneratedFile(FileName, XMLData, _Solution.f_GetName(), bWasCreated, EGeneratedFileFlag_NoDateCheck))
 					DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << FileName));
 				
 				if (bWasCreated)
@@ -375,7 +375,7 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 				// Save the raw generated file to be able to diff against
 				
 				FileName += ".gen";
-				if (!m_BuildSystem.f_AddGeneratedFile(FileName, RawXMLData, _Solution.f_GetName(), bWasCreated, true))
+				if (!m_BuildSystem.f_AddGeneratedFile(FileName, RawXMLData, _Solution.f_GetName(), bWasCreated, EGeneratedFileFlag_NoDateCheck))
 					DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << FileName));
 
 				if (bWasCreated)

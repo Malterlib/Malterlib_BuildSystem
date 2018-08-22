@@ -213,7 +213,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		FileData += "EndGlobal\r\n";
 
 		bool bWasCreated;
-		if (!m_BuildSystem.f_AddGeneratedFile(OutputFile, FileData, _Solution.f_GetName(), bWasCreated, false))
+		if (!m_BuildSystem.f_AddGeneratedFile(OutputFile, FileData, _Solution.f_GetName(), bWasCreated))
 			DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << OutputFile));
 
 		if (bWasCreated)

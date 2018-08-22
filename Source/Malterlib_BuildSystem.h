@@ -40,6 +40,14 @@ namespace NMib::NBuildSystem
 		, EHandleRepositoryAction_DeleteRemoved
 	};
 
+	enum EGeneratedFileFlag
+	{
+		EGeneratedFileFlag_None = 0
+		, EGeneratedFileFlag_NoDateCheck = DBit(1)
+		, EGeneratedFileFlag_KeepGeneratedFile = DBit(2)
+		, EGeneratedFileFlag_Symlink = DBit(3)
+	};
+
 	class CBuildSystem
 	{
 	public:
@@ -64,7 +72,7 @@ namespace NMib::NBuildSystem
 		;
 		inline_always CGenerateSettings const &f_GetGenerateSettings() const;
 		CStr f_GetBaseDir() const;
-		bool f_AddGeneratedFile(CStr const &_File, CStr const &_Data, CStr const &_Workspace, bool &_bWasCreated, bool _bNoDateCheck, bool _bKeepGeneratedFile = false) const;
+		bool f_AddGeneratedFile(CStr const &_File, CStr const &_Data, CStr const &_Workspace, bool &_bWasCreated, EGeneratedFileFlag _Flags = EGeneratedFileFlag_None) const;
 		void f_GenerateGlobalFiles(CBuildSystemData &_BuildSystemData) const;
 		void f_GenerateWorkspaceFiles(CBuildSystemData &_BuildSystemData, CEntity & _Target) const;
 		void f_GenerateTargetFiles(CBuildSystemData &_BuildSystemData, CEntity & _Target) const;
@@ -225,8 +233,7 @@ namespace NMib::NBuildSystem
 			TCSet<CStr> m_Workspaces;
 			bool m_bGeneral = false;
 			bool m_bAdded = false;
-			bool m_bNoDateCheck = false;
-			bool m_bKeepGeneratedFile = false;
+			EGeneratedFileFlag m_Flags = EGeneratedFileFlag_None;
 		};
 
 		struct CUserSettingsState

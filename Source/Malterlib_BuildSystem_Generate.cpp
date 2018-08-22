@@ -211,7 +211,7 @@ namespace NMib::NBuildSystem
 						{
 							CStr FileName = CFile::fs_GetExpandedPath(_File.f_GetFileName(), OutputDir);
 
-							if (_File.m_bNoDateCheck)
+							if (_File.m_Flags & EGeneratedFileFlag_NoDateCheck)
 							{
 								try
 								{
@@ -750,7 +750,7 @@ namespace NMib::NBuildSystem
 				for (auto iFile = SourceFiles.f_GetIterator(); iFile; ++iFile)
 				{
 					++nReferencedFiles;
-					fl_UpdateFileInfo(State.m_ReferencedFiles, *iFile).m_bNoDateCheck = true;
+					fl_UpdateFileInfo(State.m_ReferencedFiles, *iFile).m_Flags |= EGeneratedFileFlag_NoDateCheck;
 				}
 			}
 
@@ -801,8 +801,7 @@ namespace NMib::NBuildSystem
 				CStr FileName = CFile::fs_MakePathRelative(iFile.f_GetKey(), OutputDir);
 				auto &File = State.m_GeneratedFiles[FileName];
 				File.m_WriteTime = GeneratedWriteTimes[iFile.f_GetKey()];
-				File.m_bNoDateCheck = iFile->m_bNoDateCheck;
-				File.m_bKeepGeneratedFile = iFile->m_bKeepGeneratedFile;
+				File.m_Flags = iFile->m_Flags;
 			}
 
 			for (auto iFile = mp_GeneratedFiles.f_GetIterator(); iFile; ++iFile)
@@ -811,10 +810,8 @@ namespace NMib::NBuildSystem
 				auto &File = GlobalState.m_GeneratedFiles[FileName];
 				File.m_WriteTime = GeneratedWriteTimes[iFile.f_GetKey()];
 				File.m_Workspaces += iFile->m_Workspaces;
-				File.m_bNoDateCheck = iFile->m_bNoDateCheck;
-				File.m_bKeepGeneratedFile = iFile->m_bKeepGeneratedFile;
+				File.m_Flags = iFile->m_Flags;
 			}
-			
 
 			State.m_SourceSearches = mp_FindCache.f_GetAllTagged();
 
@@ -859,7 +856,7 @@ namespace NMib::NBuildSystem
 
 		for (auto iFile = BeforeGlobalState.m_GeneratedFiles.f_GetIterator(); iFile; ++iFile)
 		{
-			if (iFile->m_bKeepGeneratedFile)
+			if (iFile->m_Flags & EGeneratedFileFlag_KeepGeneratedFile)
 				continue;
 
 			if (!GlobalState.m_GeneratedFiles.f_FindEqual(iFile.f_GetKey()))
@@ -868,7 +865,11 @@ namespace NMib::NBuildSystem
 
 				try
 				{
-					if (CFile::fs_FileExists(FileName))
+					EFileAttrib ExistsMask = EFileAttrib_File;
+					if (iFile->m_Flags & EGeneratedFileFlag_Symlink)
+						ExistsMask = EFileAttrib_Link;
+
+					if (CFile::fs_FileExists(FileName, ExistsMask))
 					{
 						CFile::fs_DeleteFile(FileName);
 						DeletedFiles.f_Insert(FileName);

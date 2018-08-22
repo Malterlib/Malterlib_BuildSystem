@@ -101,6 +101,9 @@ namespace NMib::NBuildSystem
 						{
 							fsp_ThrowError(iChild->m_Position, "No path specified for generated file");
 						}
+
+						EGeneratedFileFlag GeneratedFileFlags = EGeneratedFileFlag_None;
+
 						CStr Contents = f_EvaluateEntityProperty(TempEntity, EPropertyType_Property, "Contents");
 						bool bUnicodeBOM = f_EvaluateEntityProperty(TempEntity, EPropertyType_Property, "UnicodeBOM") != "false";
 						bool bUTF16 = f_EvaluateEntityProperty(TempEntity, EPropertyType_Property, "UTF16") == "true";
@@ -108,15 +111,19 @@ namespace NMib::NBuildSystem
 						bool bUnixLineEnds = f_EvaluateEntityProperty(TempEntity, EPropertyType_Property, "UnixLineEnds") == "true";
 						bool bSymlink = f_EvaluateEntityProperty(TempEntity, EPropertyType_Property, "Symlink") == "true";
 						bool bSymlinkDirectory = f_EvaluateEntityProperty(TempEntity, EPropertyType_Property, "SymlinkDirectory") == "true";
-						bool bNoDateCheck = f_EvaluateEntityProperty(TempEntity, EPropertyType_Property, "NoDateCheck") == "true" || bSymlink;
-						bool bKeepGeneratedFile = f_EvaluateEntityProperty(TempEntity, EPropertyType_Property, "KeepGeneratedFile") == "true";
+						if (f_EvaluateEntityProperty(TempEntity, EPropertyType_Property, "NoDateCheck") == "true" || bSymlink)
+							GeneratedFileFlags |= EGeneratedFileFlag_NoDateCheck;
+						if (f_EvaluateEntityProperty(TempEntity, EPropertyType_Property, "KeepGeneratedFile") == "true")
+							GeneratedFileFlags |= EGeneratedFileFlag_KeepGeneratedFile;
+						if (bSymlink)
+							GeneratedFileFlags |= EGeneratedFileFlag_Symlink;
 
 						Contents = Contents.f_Replace("\r\n", "\n");
 						if (!bUnixLineEnds)
 							Contents = Contents.f_Replace("\n", "\r\n");
 
 						bool bWasCreated;
-						if (!f_AddGeneratedFile(Path, Contents, Workspace, bWasCreated, bNoDateCheck, bKeepGeneratedFile))
+						if (!f_AddGeneratedFile(Path, Contents, Workspace, bWasCreated, GeneratedFileFlags))
 						{
 							fsp_ThrowError(iChild->m_Position, fg_Format("Same file generated with different data: {}", Path));
 						}
@@ -126,8 +133,67 @@ namespace NMib::NBuildSystem
 							CFile::fs_CreateDirectory(CFile::fs_GetPath(Path));
 							if (bSymlink)
 							{
+								CStr SymlinkBasePath = f_EvaluateEntityProperty(TempEntity, EPropertyType_Property, "SymlinkBasePath");
+								if (SymlinkBasePath.f_IsEmpty())
+									fsp_ThrowError(iChild->m_Position, "If you specify SymLink you also need to specify the SymlinkBasePath. This is the path under which there can be no symlinks in the parent path of the symlink being created. If a symlink is found here it will be deleted before the new symlink is created.");
+
+								if (!Path.f_StartsWith(SymlinkBasePath + "/") || Path == SymlinkBasePath)
+									fsp_ThrowError(iChild->m_Position, "The name of the generated file '{}' must be prefixed by the SymlinkBasePath '{}'"_f << Path << SymlinkBasePath);
+
+								CFile::fs_CreateDirectory(SymlinkBasePath);
+
 								do
 								{
+									auto fCheckParentPaths = [&]() -> bool
+										{
+											TCVector<CStr> ParentPaths;
+											CStr ParentPath = CFile::fs_GetPath(Path);
+											ParentPaths.f_Insert(ParentPath);
+											while (ParentPath != SymlinkBasePath)
+											{
+												ParentPath = CFile::fs_GetPath(ParentPath);
+												ParentPaths.f_Insert(ParentPath);
+											}
+											for (auto &ParentPath : ParentPaths.f_Reverse())
+											{
+												if (CFile::fs_FileExists(ParentPath, EFileAttrib_Link))
+												{
+													DConErrOut2("Deleting symlink in parent path '{}'\n", ParentPath);
+													CFile::fs_DeleteFile(ParentPath);
+													return true;
+												}
+											}
+											return false;
+										}
+									;
+									auto fIsValidAlready = [&]
+										{
+											if (CFile::fs_FileExists(Path))
+											{
+												try
+												{
+													auto Resolved = CFile::fs_ResolveSymbolicLink(Path);
+		#ifdef DPlatformFamily_Windows
+													if (Resolved.f_CmpNoCase(Contents) == 0)
+														return true;
+		#else
+													if (Resolved == Contents)
+														return true;
+		#endif
+												}
+												catch (CExceptionFile const &_Exception)
+												{
+												}
+											}
+											return false;
+										}
+									;
+									if (fIsValidAlready())
+										break;
+
+									CLockFile LockFile(SymlinkBasePath / ".lock");
+									LockFile.f_Lock();
+
 									if (CFile::fs_FileExists(Path))
 									{
 										try
@@ -142,13 +208,18 @@ namespace NMib::NBuildSystem
 #endif
 											DConErrOut2("Deleting invalid symlink '{}': {} != {}\n", Path, Resolved, Contents);
 										}
-										catch (CExceptionFile const &)
+										catch (CExceptionFile const &_Exception)
 										{
-											DConErrOut2("Deleting invalid symlink '{}'\n", Path);
+											DConErrOut2("Deleting path invalid symlink '{}'\n", Path);
 										}
-										CFile::fs_DeleteFile(Path);
-									}
 
+										if (!fCheckParentPaths())
+											CFile::fs_DeleteDirectoryRecursive(Path);
+									}
+									else
+										fCheckParentPaths();
+
+									CFile::fs_CreateDirectory(CFile::fs_GetPath(Path));
 									CFile::fs_CreateSymbolicLink(Contents, Path, bSymlinkDirectory ? EFileAttrib_Directory : EFileAttrib_None, ESymbolicLinkFlag_Relative);
 								}
 								while (false)

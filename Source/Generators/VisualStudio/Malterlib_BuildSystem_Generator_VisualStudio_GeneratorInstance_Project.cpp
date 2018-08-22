@@ -832,7 +832,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 							FileContents += CStr::CFormat("#include \"{}\"\r\n") << RelativePath;
 
 							bool bWasCreated = false;
-							if (!m_BuildSystem.f_AddGeneratedFile(FileName, FileContents, _Project.m_pSolution->f_GetName(), bWasCreated, false))
+							if (!m_BuildSystem.f_AddGeneratedFile(FileName, FileContents, _Project.m_pSolution->f_GetName(), bWasCreated))
 								m_BuildSystem.fs_ThrowError(FilePos, CStr::CFormat("File '{}' already generated with other contents") << FileName);
 
 							if (bWasCreated)
@@ -1247,7 +1247,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		{
 			CStr XMLData = XMLFile.f_GetAsString(EXMLOutputDialect_VisualStudio);
 			bool bWasCreated;
-			if (!m_BuildSystem.f_AddGeneratedFile(FileName, XMLData, _Project.m_pSolution->f_GetName(), bWasCreated, false))
+			if (!m_BuildSystem.f_AddGeneratedFile(FileName, XMLData, _Project.m_pSolution->f_GetName(), bWasCreated))
 				DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << FileName));
 
 			if (bWasCreated)
@@ -1262,7 +1262,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		{
 			CStr XMLData = PropsXMLFile.f_GetAsString(EXMLOutputDialect_VisualStudio);
 			bool bWasCreated;
-			if (!m_BuildSystem.f_AddGeneratedFile(PropsFileName, XMLData, _Project.m_pSolution->f_GetName(), bWasCreated, false))
+			if (!m_BuildSystem.f_AddGeneratedFile(PropsFileName, XMLData, _Project.m_pSolution->f_GetName(), bWasCreated))
 				DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << FileName));
 
 			if (bWasCreated)
@@ -1309,7 +1309,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			CStr XMLData = FilterXML.f_GetAsString(EXMLOutputDialect_VisualStudio);
 			CStr FiltersFileName = FileName+".filters";
 			bool bWasCreated = false;
-			if (!m_BuildSystem.f_AddGeneratedFile(FiltersFileName, XMLData, _Project.m_pSolution->f_GetName(), bWasCreated, false))
+			if (!m_BuildSystem.f_AddGeneratedFile(FiltersFileName, XMLData, _Project.m_pSolution->f_GetName(), bWasCreated))
 				DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << FiltersFileName));
 
 			if (bWasCreated)

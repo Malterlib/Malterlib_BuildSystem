@@ -33,7 +33,7 @@ namespace NMib::NBuildSystem
 		mp_SourceFiles[_File];
 	}
 
-	bool CBuildSystem::f_AddGeneratedFile(CStr const &_File, CStr const &_Data, CStr const &_Workspace, bool &_bWasCreated, bool _bNoDateCheck, bool _bKeepGeneratedFile) const
+	bool CBuildSystem::f_AddGeneratedFile(CStr const &_File, CStr const &_Data, CStr const &_Workspace, bool &_bWasCreated, EGeneratedFileFlag _Flags) const
 	{
 		DMibLock(mp_GeneratedFilesLock);
 		auto &File = mp_GeneratedFiles[_File];
@@ -44,7 +44,7 @@ namespace NMib::NBuildSystem
 			File.m_bAdded = true;
 			_bWasCreated = true;
 		}
-		else if (File.m_Contents != _Data)
+		else if (File.m_Contents != _Data || (File.m_Flags & EGeneratedFileFlag_Symlink) != (_Flags & EGeneratedFileFlag_Symlink))
 		{
 			DMibConOut("Original contents:" DNewLine DNewLine "{}" DNewLine DNewLine, File.m_Contents);
 			DMibConOut("Incompatible contents:" DNewLine DNewLine "{}" DNewLine DNewLine, _Data);
@@ -54,10 +54,7 @@ namespace NMib::NBuildSystem
 			_bWasCreated = false;
 
 		File.m_Workspaces[_Workspace];
-		if (_bNoDateCheck)
-			File.m_bNoDateCheck = true;
-		if (_bKeepGeneratedFile)
-			File.m_bKeepGeneratedFile = true;
+		File.m_Flags |= _Flags;
 
 		return true;
 	}
