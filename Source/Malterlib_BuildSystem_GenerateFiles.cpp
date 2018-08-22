@@ -181,7 +181,7 @@ namespace NMib::NBuildSystem
 														return true;
 		#endif
 												}
-												catch (CExceptionFile const &_Exception)
+												catch (CExceptionFile const &)
 												{
 												}
 											}
@@ -208,7 +208,7 @@ namespace NMib::NBuildSystem
 #endif
 											DConErrOut2("Deleting invalid symlink '{}': {} != {}\n", Path, Resolved, Contents);
 										}
-										catch (CExceptionFile const &_Exception)
+										catch (CExceptionFile const &)
 										{
 											DConErrOut2("Deleting path invalid symlink '{}'\n", Path);
 										}
