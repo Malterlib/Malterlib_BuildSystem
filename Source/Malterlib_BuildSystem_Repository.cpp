@@ -553,10 +553,9 @@ namespace NMib::NBuildSystem
 			if
 				(
 					!ConfigHash.f_IsEmpty()
-				 	&& HeadHash != ConfigHash
 				 	&&
 				 	(
-					 	CurrentHash != ConfigHash
+						(HeadHash != ConfigHash && CurrentHash != ConfigHash)
 					 	|| bForceReset
 					)
 				 	&& !fg_IsSubmodule(Location)
@@ -565,18 +564,25 @@ namespace NMib::NBuildSystem
 				bool bPassException = false;
 				try
 				{
-					TCVector<CStr> FetchParams = {"fetch", "--all", "--prune", "--tags"};
-					
-					if (bForceReset && fGetGitVersion() >= CGitVersion{2, 17})
-						FetchParams.f_Insert("--prune-tags");
+					if (HeadHash != ConfigHash)
+					{
+						TCVector<CStr> FetchParams = {"fetch", "--all", "--prune", "--tags"};
 
-					fLaunchGit(FetchParams, Location);
+						if (bForceReset && fGetGitVersion() >= CGitVersion{2, 17})
+							FetchParams.f_Insert("--prune-tags");
+
+						fLaunchGit(FetchParams, Location);
+					}
 
 					if (bForceReset)
 					{
-						fOutputInfo(EOutputType_Warning, "Force Resetting to '{}'"_f << ConfigHash);
-						fLaunchGit({"checkout", "-f", "-B", _Repo.m_DefaultBranch, ConfigHash}, Location);
-						fLaunchGit({"clean", "-fd"}, Location);
+						if (HeadHash != ConfigHash || fLaunchGitNonEmpty({"status", "--porcelain"}, Location))
+						{
+							fOutputInfo(EOutputType_Warning, "Force Resetting to '{}'"_f << ConfigHash);
+							fLaunchGit({"checkout", "-f", "-B", _Repo.m_DefaultBranch, ConfigHash}, Location);
+							fLaunchGit({"clean", "-fd"}, Location);
+							bChanged = true;
+						}
 					}
 					else
 					{
@@ -806,6 +812,7 @@ namespace NMib::NBuildSystem
 							bPassException = true;
 							DMibError(g_ReconcileHelp);
 						}
+						bChanged = true;
 					}
 				}
 				catch (CException const &_Exception)
@@ -815,7 +822,6 @@ namespace NMib::NBuildSystem
 					fOutputInfo(EOutputType_Error, "Reconcile error: "_f << _Exception.f_GetErrorStr().f_Trim());
 					CBuildSystem::fs_ThrowError(_Repo.m_Position, "Failed to reconcile hash '{}': {}"_f << ConfigHash << _Exception.f_GetErrorStr().f_Trim());
 				}
-				bChanged = true;
 			}
 			
 			CStr GitHeadHash = fg_GetGitHeadHash(Location, _Repo.m_Position);
