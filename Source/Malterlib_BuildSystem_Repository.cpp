@@ -493,7 +493,7 @@ namespace NMib::NBuildSystem
 					o_StateHandler.f_AddGitIgnore(Location, _BuildSystem);
 			}
 
-			bool bForceReset = _BuildSystem.f_GetEnvironmentVariable("MalterlibRepositoryHardReset", "") == "true";
+			bool bForceReset = fg_GetSys()->f_GetEnvironmentVariable("MalterlibRepositoryHardReset", "") == "true";
 
 			auto GitConfig = fg_GetGitConfig(Location, _Repo.m_Position);
 			auto &CurrentRemotes = GitConfig.m_Remotes;
@@ -1165,7 +1165,7 @@ namespace NMib::NBuildSystem
 			}
 		}
 
-		bool bForceReset = f_GetEnvironmentVariable("MalterlibRepositoryHardReset", "") == "true";
+		bool bForceReset = fg_GetSys()->f_GetEnvironmentVariable("MalterlibRepositoryHardReset", "") == "true";
 		bool bLastSeenActionNeeded = false;
 
 		for (auto &LastSeen : LastSeenRepositories)
