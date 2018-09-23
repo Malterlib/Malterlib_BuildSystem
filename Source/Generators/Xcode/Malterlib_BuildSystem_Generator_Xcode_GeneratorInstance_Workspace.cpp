@@ -160,12 +160,14 @@ namespace NMib::NBuildSystem::NXcode
 		auto & ThreadLocal = *m_ThreadLocal;
 		
 		{
-			
+
 ch8 const *pDocumentData = 
 R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>BuildSystemType</key>
+	<string>Original</string>
 	<key>IDEWorkspaceSharedSettings_AutocreateContextsIfNeeded</key>
 	<false/>
 </dict>
