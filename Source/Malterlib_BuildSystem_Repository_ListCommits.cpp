@@ -613,9 +613,9 @@ namespace NMib::NBuildSystem
 				}
 			;
 
-			ch8 const *pBorderColor = DColor_256(240);
-			ch8 const *pHeadingColor = DColor_Bold;
-			ch8 const *pCommitterColor = DColor_256(244);
+			ch8 const *pBorderColor = DAnsiColor_256(240);
+			ch8 const *pHeadingColor = DAnsiColor_Bold;
+			ch8 const *pCommitterColor = DAnsiColor_256(244);
 
 			CUStr ToOutput;
 			auto fRealOutput = [&](CStr const &_Column, CUStr const &_String, ch8 const *_pColor = "")
@@ -637,14 +637,14 @@ namespace NMib::NBuildSystem
 							PaddedString = str_utf32("{2}{}{3}{4}{}"_f)
 								<< PaddedString.f_Left(SectionLen)
 								<< PaddedString.f_Extract(SectionLen)
-								<< fColor(DColor_256(39))
-								<< fColor(CColors::mc_Default)
+								<< fColor(DAnsiColor_256(39))
+								<< fColor(CColors::ms_Default)
 								<< fColor(_pColor)
 							;
 						}
 					}
 
-					ToOutput += CUStr::CFormat(str_utf32("{1}|{2} {3}{}{2} ")) << PaddedString << fColor(pBorderColor) << fColor(CColors::mc_Default) << fColor(_pColor);
+					ToOutput += CUStr::CFormat(str_utf32("{1}|{2} {3}{}{2} ")) << PaddedString << fColor(pBorderColor) << fColor(CColors::ms_Default) << fColor(_pColor);
 				}
 			;
 
@@ -714,7 +714,7 @@ namespace NMib::NBuildSystem
 						}
 					}
 
-					ToOutput += fColor(CColors::mc_Default);
+					ToOutput += fColor(CColors::ms_Default);
 				}
 			;
 
@@ -755,12 +755,12 @@ namespace NMib::NBuildSystem
 							}
 						;
 
-						ch8 const *pCommitColor = DColor_256(11);
-						ch8 const *pCommitColorWarning = DColor_256(11) DColor_Bold;
+						ch8 const *pCommitColor = DAnsiColor_256(11);
+						ch8 const *pCommitColorWarning = DAnsiColor_256(11) DAnsiColor_Bold;
 						if (LogEntry.m_bReverse)
 						{
-							pCommitColor = DColor_256(9);
-							pCommitColorWarning = DColor_256(9) DColor_Bold;
+							pCommitColor = DAnsiColor_256(9);
+							pCommitColorWarning = DAnsiColor_256(9) DAnsiColor_Bold;
 						}
 
 						if (LogEntry.m_AuthorDate.f_IsValid())
@@ -773,7 +773,7 @@ namespace NMib::NBuildSystem
 						else
 						{
 							if (LogEntry.m_Message == "Error")
-								fAddColumnOutput("Commit", LogEntry.m_Commit, CColors::mc_StatusError);
+								fAddColumnOutput("Commit", LogEntry.m_Commit, CColors::ms_StatusError);
 							else
 								fAddColumnOutput("Commit", LogEntry.m_Commit, pCommitColorWarning);
 						}
@@ -822,7 +822,7 @@ namespace NMib::NBuildSystem
 								_fOutput(Column, Output[i].m_String, Output[i].m_pColor);
 							}
 							if (_bReal)
-								ToOutput += str_utf32("{}|{}\n"_f) << fColor(pBorderColor) << fColor(CColors::mc_Default);
+								ToOutput += str_utf32("{}|{}\n"_f) << fColor(pBorderColor) << fColor(CColors::ms_Default);
 						}
 						if (_bReal && (&LogEntry != &LogEntries.f_GetLast()))
 							fOutputDivider(EDivider_Middle);
@@ -840,11 +840,11 @@ namespace NMib::NBuildSystem
 					<< Column
 					<< MaxLengths[Column]
 					<< fColor(pBorderColor)
-					<< fColor(CColors::mc_Default)
+					<< fColor(CColors::ms_Default)
 					<< fColor(pHeadingColor)
 				;
 			}
-			ToOutput += str_utf32("{}|{}\n"_f) << fColor(pBorderColor) << fColor(CColors::mc_Default);
+			ToOutput += str_utf32("{}|{}\n"_f) << fColor(pBorderColor) << fColor(CColors::ms_Default);
 
 			fOutputDivider(EDivider_Middle);
 
@@ -882,8 +882,8 @@ namespace NMib::NBuildSystem
 					(
 						{
 							"From {a-,sj*,sf }  {}"_f << _From << MaxLen << FromHash
-							, "From {3}{a-,sj*,sf }  {4}{}"_f << _From << MaxLen << FromHash << fColor(CColors::mc_ToPush) << fColor(DColor_256(246))
-							, CColors::mc_Default
+							, "From {3}{a-,sj*,sf }  {4}{}"_f << _From << MaxLen << FromHash << fColor(CColors::ms_ToPush) << fColor(DAnsiColor_256(246))
+							, CColors::ms_Default
 						}
 					)
 				;
@@ -891,8 +891,8 @@ namespace NMib::NBuildSystem
 					(
 						{
 							"To   {a-,sj*,sf }  {}"_f << _To << MaxLen << ToHash
-							, "To   {3}{a-,sj*,sf }  {4}{}"_f << _To << MaxLen << ToHash << fColor(CColors::mc_ToPush) << fColor(DColor_256(246))
-							, CColors::mc_Default
+							, "To   {3}{a-,sj*,sf }  {4}{}"_f << _To << MaxLen << ToHash << fColor(CColors::ms_ToPush) << fColor(DAnsiColor_256(246))
+							, CColors::ms_Default
 						}
 					)
 				;
@@ -905,7 +905,7 @@ namespace NMib::NBuildSystem
 
 			mint ColumnWidth = MaxLengths["**HEADING**"];
 
-			DConOutRaw(CStr{(str_utf32("{}{}/¯{sz*,sf¯}¯\\{}\n"_f) << _Prefix << fColor(pBorderColor) << "" << ColumnWidth << fColor(CColors::mc_Default)).f_GetStr()});
+			DConOutRaw(CStr{(str_utf32("{}{}/¯{sz*,sf¯}¯\\{}\n"_f) << _Prefix << fColor(pBorderColor) << "" << ColumnWidth << fColor(CColors::ms_Default)).f_GetStr()});
 			for (auto & [Line, ColoredLine, pColor] : HeadingLines)
 			{
 				mint NeededLen = ColumnWidth + (ColoredLine.f_GetLen() - fg_VisibleStrLen(Line));
@@ -917,12 +917,12 @@ namespace NMib::NBuildSystem
 					 	, _Prefix
 					 	, PaddedString
 					 	, fColor(pBorderColor)
-					 	, fColor(CColors::mc_Default)
+					 	, fColor(CColors::ms_Default)
 					 	, fColor(pColor ? pColor : pHeadingColor)
 					)
 				;
 			}
-			DConOutRaw(CStr{(str_utf32("{}{3}|{4} {sz*,sf } {3}|{4}\n"_f) << _Prefix << "" << ColumnWidth << fColor(pBorderColor) << fColor(CColors::mc_Default)).f_GetStr()});
+			DConOutRaw(CStr{(str_utf32("{}{3}|{4} {sz*,sf } {3}|{4}\n"_f) << _Prefix << "" << ColumnWidth << fColor(pBorderColor) << fColor(CColors::ms_Default)).f_GetStr()});
 			DConOutRaw(ToOutput);
 		}
 	}

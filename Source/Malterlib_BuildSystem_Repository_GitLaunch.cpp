@@ -28,28 +28,28 @@ namespace NMib::NBuildSystem::NRepository
 
 			switch (_OutputType)
 			{
-			case EOutputType_Normal: pRepoColor = CColors::mc_StatusNormal; break;
-			case EOutputType_Warning: pRepoColor = CColors::mc_StatusWarning; break;
-			case EOutputType_Error: pRepoColor = CColors::mc_StatusError; break;
+			case EOutputType_Normal: pRepoColor = CColors::ms_StatusNormal; break;
+			case EOutputType_Warning: pRepoColor = CColors::ms_StatusWarning; break;
+			case EOutputType_Error: pRepoColor = CColors::ms_StatusError; break;
 			}
 
-			CStr ReplacedRepo = _RepoName.f_Replace("/", "{}{}/{}"_f << CColors::mc_Default << DColor_256(250) << pRepoColor ^ 1);
+			CStr ReplacedRepo = _RepoName.f_Replace("/", "{}{}/{}"_f << CColors::ms_Default << DAnsiColor_256(250) << pRepoColor ^ 1);
 			DMibConOut2
 				(
 					"{}{sl*,sf ,a-}{} {}|{}  {}\n"
 					, pRepoColor
 					, ReplacedRepo
 					, _LongestRepoName + ReplacedRepo.f_GetLen() - _RepoName.f_GetLen()
-					, CColors::mc_Default
-					, DColor_256(242)
-					, CColors::mc_Default
+					, CColors::ms_Default
+					, DAnsiColor_256(242)
+					, CColors::ms_Default
 					, _Line
 				)
 			;
 		}
 		void fg_OutputSectionLine()
 		{
-			DMibConOut2("{}--------------------------------------------------------------------------------{}\n", DColor_256(242), CColors::mc_Default);
+			DMibConOut2("{}--------------------------------------------------------------------------------{}\n", DAnsiColor_256(242), CColors::ms_Default);
 		}
 	}
 

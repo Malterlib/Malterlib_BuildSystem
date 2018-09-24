@@ -8,29 +8,18 @@
 #include <Mib/Process/ProcessLaunchActor>
 #include <Mib/Encoding/EJSON>
 #include <Mib/Concurrency/ActorSequencer>
+#include <Mib/CommandLine/AnsiEncoding>
 
 namespace NMib::NBuildSystem::NRepository
 {
-	#define DColor_Reset "\x1B[0m"
-	#define DColor_Bold "\x1B[1m"
-	#define DColor_Reverse "\x1B[7m"
-
-	#define DColor_256(d_Color) "\x1B[38;5;" #d_Color "m"
-
-	struct CColors
+	struct CColors : public CAnsiEncoding
 	{
-		static constexpr ch8 const mc_Default[] = DColor_Reset;
+		static ch8 const ms_RepositoryName[];
+		static ch8 const ms_BranchName[];
 
-		static constexpr ch8 const mc_StatusNormal[] = DColor_Reset DColor_256(118);
-		static constexpr ch8 const mc_StatusWarning[] = DColor_Reset DColor_256(207);
-		static constexpr ch8 const mc_StatusError[] = DColor_Reset DColor_Bold DColor_256(198);
-
-		static constexpr ch8 const mc_RepositoryName[] = DColor_Reset DColor_256(221);
-		static constexpr ch8 const mc_BranchName[] = DColor_Reset;
-
-		static constexpr ch8 const mc_ToCommit[] = DColor_Reset DColor_256(46);
-		static constexpr ch8 const mc_ToPush[] = DColor_Reset DColor_256(32);
-		static constexpr ch8 const mc_ToPull[] = DColor_Reset DColor_256(9);
+		static ch8 const ms_ToCommit[];
+		static ch8 const ms_ToPush[];
+		static ch8 const ms_ToPull[];
 	};
 
 	enum EOutputType

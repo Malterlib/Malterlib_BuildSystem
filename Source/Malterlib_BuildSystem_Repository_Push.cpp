@@ -76,8 +76,8 @@ namespace NMib::NBuildSystem
 													, "Cannot fast forward to {2}{}/{}{3}\n"_f
 													<< _Remote
 													<< _Branches.m_Current
-													<< CColors::mc_RepositoryName
-													<< CColors::mc_Default
+													<< CColors::ms_RepositoryName
+													<< CColors::ms_Default
 												)
 											;
 											bAllFastForward = false;
@@ -97,8 +97,8 @@ namespace NMib::NBuildSystem
 														<< _Remote
 														<< _Branches.m_Current
 														<< Output
-														<< CColors::mc_RepositoryName
-														<< CColors::mc_Default
+														<< CColors::ms_RepositoryName
+														<< CColors::ms_Default
 													)
 												;
 												bAllFastForward = false;
@@ -252,8 +252,8 @@ namespace NMib::NBuildSystem
 																	, "New branch {2}{}{3} on {2}{}{3}\n"_f
 																	<< _Branches.m_Current
 																	<< Remote
-																	<< CColors::mc_RepositoryName
-																	<< CColors::mc_Default
+																	<< CColors::ms_RepositoryName
+																	<< CColors::ms_Default
 																)
 															;
 														}
@@ -266,8 +266,8 @@ namespace NMib::NBuildSystem
 																	, "Update {2}{}{3} on {2}{}{3}\n"_f
 																	<< _Branches.m_Current
 																	<< Remote
-																	<< CColors::mc_RepositoryName
-																	<< CColors::mc_Default
+																	<< CColors::ms_RepositoryName
+																	<< CColors::ms_Default
 																)
 															;
 														}

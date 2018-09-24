@@ -23,8 +23,8 @@ To choose separate action for different repositories you can specify wildcards. 
 To show current status without reconciling use:
 {0}./mib status --skip-update{1}
 )---"_f /**/
-	<< NMib::NBuildSystem::NRepository::CColors::mc_RepositoryName
-	<< NMib::NBuildSystem::NRepository::CColors::mc_Default
+	<< NMib::NBuildSystem::NRepository::CColors::ms_RepositoryName
+	<< NMib::NBuildSystem::NRepository::CColors::ms_Default
 ;
 
 static CStr g_ReconcileRemovedHelp = R"---(
@@ -43,25 +43,10 @@ To choose separate action for different repositories you can specify wildcards. 
 To show current status without reconciling use:
 {0}./mib status --skip-update{1}
 )---"_f /**/
-	<< NMib::NBuildSystem::NRepository::CColors::mc_RepositoryName
-	<< NMib::NBuildSystem::NRepository::CColors::mc_Default
-	<< NMib::NBuildSystem::NRepository::CColors::mc_StatusError
+	<< NMib::NBuildSystem::NRepository::CColors::ms_RepositoryName
+	<< NMib::NBuildSystem::NRepository::CColors::ms_Default
+	<< NMib::NBuildSystem::NRepository::CColors::ms_StatusError
 ;
-
-#if 0
-static constexpr ch8 const mc_Default[] = DColor_Reset;
-
-		static constexpr ch8 const mc_StatusNormal[] = DColor_Reset DColor_256(118);
-		static constexpr ch8 const mc_StatusWarning[] = DColor_Reset DColor_256(207);
-		static constexpr ch8 const mc_StatusError[] = DColor_Reset DColor_Bold DColor_256(198);
-
-		static constexpr ch8 const mc_RepositoryName[] = DColor_Reset DColor_256(221);
-		static constexpr ch8 const mc_BranchName[] = DColor_Reset;
-
-		static constexpr ch8 const mc_ToCommit[] = DColor_Reset DColor_256(46);
-		static constexpr ch8 const mc_ToPush[] = DColor_Reset DColor_256(32);
-		static constexpr ch8 const mc_ToPull[] = DColor_Reset DColor_256(9);
-#endif
 
 namespace NMib::NBuildSystem
 {
@@ -72,6 +57,13 @@ namespace NMib::NBuildSystem
 
 	namespace NRepository
 	{
+		ch8 const CColors::ms_RepositoryName[] = DAnsiColor_Reset DAnsiColor_256(221);
+		ch8 const CColors::ms_BranchName[] = DAnsiColor_Reset;
+
+		ch8 const CColors::ms_ToCommit[] = DAnsiColor_Reset DAnsiColor_256(46);
+		ch8 const CColors::ms_ToPush[] = DAnsiColor_Reset DAnsiColor_256(32);
+		ch8 const CColors::ms_ToPull[] = DAnsiColor_Reset DAnsiColor_256(9);
+
 		CStr CRepository::f_GetIdentifierName(CStr const &_BasePath, CStr const &_Root) const
 		{
 			if (!m_Location.f_StartsWith(_Root))
@@ -251,17 +243,17 @@ namespace NMib::NBuildSystem
 
 		void fg_OutputRepositoryInfo(EOutputType _OutputType, CStr const &_Info, CStateHandler &o_StateHandler, CStr const &_RepoName, mint _MaxRepoWidth)
 		{
-			ch8 const *pRepoColor = CColors::mc_StatusNormal;
+			ch8 const *pRepoColor = CColors::ms_StatusNormal;
 			switch (_OutputType)
 			{
-			case EOutputType_Normal: pRepoColor = CColors::mc_StatusNormal; break;
-			case EOutputType_Warning: pRepoColor = CColors::mc_StatusWarning; break;
-			case EOutputType_Error: pRepoColor = CColors::mc_StatusError; break;
+			case EOutputType_Normal: pRepoColor = CColors::ms_StatusNormal; break;
+			case EOutputType_Warning: pRepoColor = CColors::ms_StatusWarning; break;
+			case EOutputType_Error: pRepoColor = CColors::ms_StatusError; break;
 			}
 
 			CStr RepoName = "{sj*,a-}"_f << _RepoName << _MaxRepoWidth;
 
-			CStr ReplacedRepo = RepoName.f_Replace("/", "{}{}/{}"_f << CColors::mc_Default << DColor_256(250) << pRepoColor ^ 1);
+			CStr ReplacedRepo = RepoName.f_Replace("/", "{}{}/{}"_f << CColors::ms_Default << DAnsiColor_256(250) << pRepoColor ^ 1);
 			{
 				DMibLock(o_StateHandler.f_ConsoleOutputLock());
 				DMibConOut2
@@ -269,7 +261,7 @@ namespace NMib::NBuildSystem
 						"{}{}{}   {}\n"
 						, pRepoColor
 						, ReplacedRepo
-						, CColors::mc_Default
+						, CColors::ms_Default
 						, _Info
 					)
 				;
@@ -804,9 +796,9 @@ namespace NMib::NBuildSystem
 								(
 								 	OutputType
 								 	, "{}{}{} recommended for {}{}{} -> {}{}{}"_f
-								 	<< CColors::mc_RepositoryName << ActionStr << CColors::mc_Default
-								 	<< CColors::mc_ToPush << HeadHash << CColors::mc_Default
-								 	<< CColors::mc_ToPush << ConfigHash << CColors::mc_Default
+								 	<< CColors::ms_RepositoryName << ActionStr << CColors::ms_Default
+								 	<< CColors::ms_ToPush << HeadHash << CColors::ms_Default
+								 	<< CColors::ms_ToPush << ConfigHash << CColors::ms_Default
 								)
 							;
 							bPassException = true;
@@ -1188,7 +1180,7 @@ namespace NMib::NBuildSystem
 				}
 				else if (Action != EHandleRepositoryAction_LeaveRemoved)
 				{
-					fg_OutputRepositoryInfo(EOutputType_Warning, "Repository has been {}removed{}"_f<< CColors::mc_ToPush << CColors::mc_Default, StateHandler, LastSeen, MaxRepoWidth);
+					fg_OutputRepositoryInfo(EOutputType_Warning, "Repository has been {}removed{}"_f<< CColors::ms_ToPush << CColors::ms_Default, StateHandler, LastSeen, MaxRepoWidth);
 					bLastSeenActionNeeded = true;
 				}
 			}
