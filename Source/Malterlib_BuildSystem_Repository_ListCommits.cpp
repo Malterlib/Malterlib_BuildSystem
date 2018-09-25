@@ -9,41 +9,6 @@ namespace NMib::NBuildSystem
 
 	namespace
 	{
-		mint fg_VisibleStrLen(CUStr const &_String)
-		{
-			// Combining Diacritical Marks (0300–036F), since version 1.0, with modifications in subsequent versions down to 4.1
-			// Combining Diacritical Marks Extended (1AB0–1AFF), version 7.0
-			// Combining Diacritical Marks Supplement (1DC0–1DFF), versions 4.1 to 5.2
-			// Combining Diacritical Marks for Symbols (20D0–20FF), since version 1.0, with modifications in subsequent versions down to 5.1
-			// Combining Half Marks (FE20–FE2F), versions 1.0, with modifications in subsequent versions down to 8.0
-
-			ch32 const *pParse = _String;
-
-			mint Len = 0;
-
-			while (*pParse)
-			{
-				ch32 Char = *pParse;
-				if
-					(
-					 	!
-					 	(
-						  	(Char >= 0x0300 && Char <= 0x036F)
-						 	|| (Char >= 0x1AB0 && Char <= 0x1AFF)
-						 	|| (Char >= 0x1DC0 && Char <= 0x1DFF)
-						 	|| (Char >= 0x20D0 && Char <= 0x20FF)
-						 	|| (Char >= 0xFE20 && Char <= 0xFE2F)
-						)
-					)
-				{
-					++Len;
-				}
-				++pParse;
-			}
-
-			return Len;
-		}
-
 		TCVector<CUStr> fg_MergeLines(TCVector<CUStr> const &_Lines)
 		{
 			TCVector<CUStr> Lines;
@@ -602,14 +567,14 @@ namespace NMib::NBuildSystem
 			for (auto &Column : Columns)
 			{
 				if (bCompact)
-					MaxLengths[Column] = fg_VisibleStrLen(Column);
+					MaxLengths[Column] = CAnsiEncoding::fs_RenderedStrLen(Column);
 				else
 					MaxLengths[Column] = MaxColumnWidth[Column];
 			}
 
-			auto fMeasureOutput = [&](CStr const &_Column, CUStr const &_String, ch8 const *_pColor = "")
+			auto fMeasureOutput = [&](CStr const &_Column, CStr const &_String, ch8 const *_pColor = "")
 				{
-					MaxLengths[_Column] = fg_Max(MaxLengths[_Column], fg_VisibleStrLen(_String));
+					MaxLengths[_Column] = fg_Max(MaxLengths[_Column], CAnsiEncoding::fs_RenderedStrLen(_String));
 				}
 			;
 
@@ -618,9 +583,9 @@ namespace NMib::NBuildSystem
 			ch8 const *pCommitterColor = DAnsiColor_256(244);
 
 			CUStr ToOutput;
-			auto fRealOutput = [&](CStr const &_Column, CUStr const &_String, ch8 const *_pColor = "")
+			auto fRealOutput = [&](CStr const &_Column, CStr const &_String, ch8 const *_pColor = "")
 				{
-					mint NeededLen = MaxLengths[_Column] + (_String.f_GetLen() - fg_VisibleStrLen(_String));
+					mint NeededLen = MaxLengths[_Column] + (_String.f_GetLen() - CAnsiEncoding::fs_RenderedStrLen(_String));
 
 					CUStr PaddedString = CUStr::CFormat(str_utf32("{sz*,sf ,a-}")) << _String << NeededLen;
 
@@ -908,7 +873,7 @@ namespace NMib::NBuildSystem
 			DConOutRaw(CStr{(str_utf32("{}{}/¯{sz*,sf¯}¯\\{}\n"_f) << _Prefix << fColor(pBorderColor) << "" << ColumnWidth << fColor(CColors::ms_Default)).f_GetStr()});
 			for (auto & [Line, ColoredLine, pColor] : HeadingLines)
 			{
-				mint NeededLen = ColumnWidth + (ColoredLine.f_GetLen() - fg_VisibleStrLen(Line));
+				mint NeededLen = ColumnWidth + (ColoredLine.f_GetLen() - CAnsiEncoding::fs_RenderedStrLen(Line));
 				CUStr PaddedString = CUStr::CFormat(str_utf32("{sz*,sf ,a-}")) << ColoredLine << NeededLen;
 
 				DConOut2
