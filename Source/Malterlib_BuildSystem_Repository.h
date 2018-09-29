@@ -68,6 +68,7 @@ namespace NMib::NBuildSystem::NRepository
 		TCSet<CStr> m_Tags;
 		TCMap<CStr, CRemote> m_Remotes;
 		CFilePosition m_Position;
+		bool m_bUpdateSubmodules = false;
 	};
 
 	struct CReposLocation

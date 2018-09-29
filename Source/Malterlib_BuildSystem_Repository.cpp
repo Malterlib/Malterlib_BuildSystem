@@ -573,6 +573,8 @@ namespace NMib::NBuildSystem
 							fOutputInfo(EOutputType_Warning, "Force Resetting to '{}'"_f << ConfigHash);
 							fLaunchGit({"checkout", "-f", "-B", _Repo.m_DefaultBranch, ConfigHash}, Location);
 							fLaunchGit({"clean", "-fd"}, Location);
+							if (_Repo.m_bUpdateSubmodules)
+								fLaunchGit({"submodule", "update", "--init"}, Location);
 							bChanged = true;
 						}
 					}
@@ -680,6 +682,8 @@ namespace NMib::NBuildSystem
 								fOutputInfo(EOutputType_Warning, "Resetting to {}"_f << ConfigHash);
 								fLaunchGit({"reset", "--hard", ConfigHash}, Location);
 							}
+							if (_Repo.m_bUpdateSubmodules)
+								fLaunchGit({"submodule", "update", "--init"}, Location);
 						}
 						else if (Action == EHandleRepositoryAction_Rebase)
 						{
@@ -751,6 +755,8 @@ namespace NMib::NBuildSystem
 								CStr ConflictingFiles = fLaunchGit({"diff", "--name-only", "--diff-filter=U"}, Location);
 								if (!ConflictingFiles.f_IsEmpty())
 									fResolveConflicts(ConflictingFiles);
+								if (_Repo.m_bUpdateSubmodules)
+									fLaunchGit({"submodule", "update", "--init"}, Location);
 							}
 						}
 						else if (Action == EHandleRepositoryAction_ManualResolve)
@@ -890,6 +896,7 @@ namespace NMib::NBuildSystem
 				Repo.m_Type = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "Type");
 				Repo.m_UserName = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "UserName");
 				Repo.m_UserEmail = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "UserEmail");
+				Repo.m_bUpdateSubmodules = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "UpdateSubmodules") == "true";
 
 				TCVector<CStr> NoPushRemotes;
 				for (auto &Wildcard : _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "NoPushRemotes").f_Split(";"))
