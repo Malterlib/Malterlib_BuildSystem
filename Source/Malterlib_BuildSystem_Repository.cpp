@@ -1183,7 +1183,7 @@ namespace NMib::NBuildSystem
 				if (bForceReset || Action == EHandleRepositoryAction_ResetDelete || Action == EHandleRepositoryAction_DeleteRemoved)
 				{
 					fg_OutputRepositoryInfo(EOutputType_Warning, "Deleting repository permanently from disk: {}"_f << FullRepoPath, StateHandler, LastSeen, MaxRepoWidth);
-					CFile::fs_DeleteDirectoryRecursive(FullRepoPath);
+					CFile::fs_DeleteDirectoryRecursive(FullRepoPath, true);
 				}
 				else if (Action != EHandleRepositoryAction_LeaveRemoved)
 				{
