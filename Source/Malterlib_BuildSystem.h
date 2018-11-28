@@ -25,29 +25,10 @@ namespace NMib::NBuildSystem
 #include "Malterlib_BuildSystem_ConfigurationData.h"
 #include "Malterlib_BuildSystem_Error.h"
 #include "Malterlib_BuildSystem_GenerateSettings.h"
+#include "Malterlib_BuildSystem_GeneratorState.h"
 
 namespace NMib::NBuildSystem
 {
-	enum EHandleRepositoryAction
-	{
-		EHandleRepositoryAction_None
-		, EHandleRepositoryAction_Auto
-		, EHandleRepositoryAction_ManualResolve
-		, EHandleRepositoryAction_Reset
-		, EHandleRepositoryAction_Rebase
-		, EHandleRepositoryAction_ResetDelete
-		, EHandleRepositoryAction_LeaveRemoved
-		, EHandleRepositoryAction_DeleteRemoved
-	};
-
-	enum EGeneratedFileFlag
-	{
-		EGeneratedFileFlag_None = 0
-		, EGeneratedFileFlag_NoDateCheck = DBit(1)
-		, EGeneratedFileFlag_KeepGeneratedFile = DBit(2)
-		, EGeneratedFileFlag_Symlink = DBit(3)
-	};
-
 	class CBuildSystem
 	{
 	public:
@@ -57,11 +38,65 @@ namespace NMib::NBuildSystem
 		{
 			ERetry_None
 			, ERetry_Again
+			, ERetry_Again_NoReconcileOptions
 			, ERetry_Relaunch
+			, ERetry_Relaunch_NoReconcileOptions
 		};
 		
-		void f_SetGeneratorInterface(CGeneratorInterface *_pInterface) const; 
-		bool f_Generate(CGenerateSettings const &_GenerateSettings, ERetry &o_Retry);
+		struct CRepoFilter
+		{
+			static CRepoFilter fs_ParseParams(NEncoding::CEJSON const &_Params);
+
+			CStr m_NameWildcard;
+			CStr m_Type;
+			TCSet<CStr> m_Tags;
+			bool m_bOnlyChanged = false;
+		};
+
+		enum ERepoCleanupBranchesFlag
+		{
+			ERepoCleanupBranchesFlag_None = 0
+			, ERepoCleanupBranchesFlag_Pretend = DBit(0)
+			, ERepoCleanupBranchesFlag_Remote = DBit(1)
+		};
+
+		enum ERepoStatusFlag
+		{
+			ERepoStatusFlag_None = 0
+			, ERepoStatusFlag_Verbose = DBit(0)
+			, ERepoStatusFlag_UpdateRemotes = DBit(1)
+			, ERepoStatusFlag_OnlyTracked = DBit(2)
+			, ERepoStatusFlag_ShowUnchanged = DBit(3)
+			, ERepoStatusFlag_AllBranches = DBit(4)
+			, ERepoStatusFlag_UseDefaultUpstreamBranch = DBit(5)
+			, ERepoStatusFlag_OpenEditor = DBit(6)
+			, ERepoStatusFlag_NeedActionOnPush = DBit(7)
+			, ERepoStatusFlag_NonDefaultToAll = DBit(8)
+		};
+
+		enum ERepoListCommitsFlag
+		{
+			ERepoListCommitsFlag_None = 0
+			, ERepoListCommitsFlag_UpdateRemotes = DBit(0)
+			, ERepoListCommitsFlag_Color = DBit(1)
+			, ERepoListCommitsFlag_Compact = DBit(2)
+		};
+
+		enum ERepoPushFlag
+		{
+			ERepoPushFlag_None = 0
+			, ERepoPushFlag_Pretend = DBit(0)
+			, ERepoPushFlag_FollowTags = DBit(1)
+			, ERepoPushFlag_NonDefaultToAll = DBit(2)
+		};
+
+		struct CWildcardColumn
+		{
+			CStr m_Name;
+			CStr m_Wildcard;
+		};
+
+		void f_SetGeneratorInterface(CGeneratorInterface *_pInterface) const;
 		void f_GenerateBuildSystem
 			(
 				TCMap<CConfiguration, TCUniquePointer<CConfiguraitonData>> &o_Configurations
@@ -71,12 +106,14 @@ namespace NMib::NBuildSystem
 			) const
 		;
 		inline_always CGenerateSettings const &f_GetGenerateSettings() const;
+		inline_always CGenerateOptions const &f_GetGenerateOptions() const;
 		CStr f_GetBaseDir() const;
 		bool f_AddGeneratedFile(CStr const &_File, CStr const &_Data, CStr const &_Workspace, bool &_bWasCreated, EGeneratedFileFlag _Flags = EGeneratedFileFlag_None) const;
 		void f_GenerateGlobalFiles(CBuildSystemData &_BuildSystemData) const;
 		void f_GenerateWorkspaceFiles(CBuildSystemData &_BuildSystemData, CEntity & _Target) const;
 		void f_GenerateTargetFiles(CBuildSystemData &_BuildSystemData, CEntity & _Target) const;
 		void f_ExpandRepositoryEntities(CBuildSystemData &_BuildSystemData) const;
+		void f_ExpandCreateTemplateEntities(CBuildSystemData &_BuildSystemData) const;
 		void f_ExpandGlobalEntities(CBuildSystemData &_BuildSystemData) const;
 		void f_ExpandDynamicImports(CBuildSystemData &_BuildSystemData) const;
 		void f_ExpandGlobalTargetsAndWorkspaces(CBuildSystemData &_BuildSystemData) const;
@@ -159,48 +196,32 @@ namespace NMib::NBuildSystem
 
 		NStr::CStr f_GetEnvironmentVariable(NStr::CStr const &_Name, NStr::CStr const &_Default = {}, bool *o_pExists = nullptr) const;
 
-		struct CRepoFilter
-		{
-			CStr m_NameWildcard;
-			CStr m_Type;
-			TCSet<CStr> m_Tags;
-			bool m_bOnlyChanged = false;
-		};
+		void f_NoReconcileOptions();
 
-		enum ERepoCleanupBranchesFlag
-		{
-			ERepoCleanupBranchesFlag_None = 0
-			, ERepoCleanupBranchesFlag_Pretend = DBit(0)
-			, ERepoCleanupBranchesFlag_Remote = DBit(1)
-		};
+		bool f_Action_Generate(CGenerateOptions const &_GenerateOptions, ERetry &o_Retry);
+		ERetry f_Action_Create(CGenerateOptions const &_GenerateOptions);
 
-		enum ERepoStatusFlag
-		{
-			ERepoStatusFlag_None = 0
-			, ERepoStatusFlag_Verbose = DBit(0)
-			, ERepoStatusFlag_UpdateRemotes = DBit(1)
-			, ERepoStatusFlag_ShowOnlyTracked = DBit(2)
-			, ERepoStatusFlag_Quiet = DBit(3)
-			, ERepoStatusFlag_AllBranches = DBit(4)
-			, ERepoStatusFlag_UseDefaultUpstreamBranch = DBit(5)
-			, ERepoStatusFlag_OpenEditor = DBit(6)
-			, ERepoStatusFlag_NeedActionOnPush = DBit(7)
-			, ERepoStatusFlag_NonDefaultToAll = DBit(8)
-		};
+		ERetry f_Action_Repository_Update(CGenerateOptions const &_GenerateOptions);
+		ERetry f_Action_Repository_Status(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoStatusFlag _Flags);
+		ERetry f_Action_Repository_ForEachRepo(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, bool _bParallell, TCVector<CStr> const &_Params);
+		ERetry f_Action_Repository_Branch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, CStr const &_Branch);
 
-		enum ERepoListCommitsFlag
-		{
-			ERepoListCommitsFlag_None = 0
-			, ERepoListCommitsFlag_UpdateRemotes = DBit(0)
-			, ERepoListCommitsFlag_Color = DBit(1)
-			, ERepoListCommitsFlag_Compact = DBit(2)
-		};
-
-		struct CWildcardColumn
-		{
-			CStr m_Name;
-			CStr m_Wildcard;
-		};
+		ERetry f_Action_Repository_Unbranch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter);
+		ERetry f_Action_Repository_CleanupBranches(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoCleanupBranchesFlag _Flags);
+		ERetry f_Action_Repository_Push(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, TCVector<CStr> const &_Remotes, ERepoPushFlag _PushFlags);
+		ERetry f_Action_Repository_ListCommits
+			(
+			 	CGenerateOptions const &_GenerateOptions
+			 	, CRepoFilter const &_Filter
+			 	, CStr const &_From
+			 	, CStr const &_To
+			 	, ERepoListCommitsFlag _Flags
+			 	, TCVector<CWildcardColumn> const &_ColumnWildcards
+			 	, CStr const &_Prefix
+			 	, uint32 _MaxCommitsMainRepo
+			 	, uint32 _MaxCommits
+			)
+		;
 
 	private:
 		struct CExplodeStackEntry
@@ -246,6 +267,27 @@ namespace NMib::NBuildSystem
 			void f_Parse();
 			CRegistryPreserveAndOrder_CStr *f_GetSection(CPropertyKey const &_Section);
 		};
+
+		struct CGenerateEphemeralState
+		{
+			CClock m_Clock{true};
+			TCUniquePointer<CBuildSystemGenerator> m_pGenerator;
+			CStr m_FileLocation;
+			CStr m_OutputDir;
+			CStr m_RelativeFileLocation;
+			CStr m_GlobalGeneratorStateFileName;
+			CStr m_WorkspaceGeneratorStateFileName;
+			CStr m_EnvironmentStateFile;
+			CGeneratorArchiveState m_GlobalState;
+			CGeneratorArchiveState m_BeforeGlobalState;
+			TCMap<CPropertyKey, CStr> m_GeneratorValues;
+			bool m_bUseCachedEnvironment = false;
+			bool m_bDisableUserSettings = false;
+
+			align_cacheline TCAtomic<bool> m_bDependenciesChanged;
+		};
+
+		ERetry fp_GeneratePrepare(CGenerateOptions const &_GenerateOptions, CGenerateEphemeralState &_GenerateState, TCFunction<bool ()> &&_fPreParse);
 
 		void fp_ParseConfigurationConditions(CRegistryPreserveAndOrder_CStr &_Registry, CBuildSystemConfiguration &_Configuration) const;
 		void fp_ParseConfigurationType(CStr const &_Name, CRegistryPreserveAndOrder_CStr &_Registry, TCMap<CStr, CConfigurationType> &o_Configurations) const;
@@ -367,30 +409,12 @@ namespace NMib::NBuildSystem
 		CBuildSystemData::CImportData *fp_ExpandImportCMake_FromGeneratedDirectory(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData, CStr const &_Directory) const;
 		void fp_TracePropertyEval(bool _bSuccess, CEntity const &_Entity, CProperty const &_Property, CStr const &_Value) const;
 
-		ERetry fp_HandleRepositories(TCMap<CPropertyKey, CStr> const &_Values, bool _bSkipRepoUpdate, TCMap<CStr, EHandleRepositoryAction> const &_Actions);
+		ERetry fp_HandleRepositories(TCMap<CPropertyKey, CStr> const &_Values, bool _bSkipRepoUpdate);
 
-		void fp_Repository_ForEachRepo(CRepoFilter const &_Filter, bool _bParallell, TCVector<CStr> const &_Params);
-		void fp_Repository_Branch(CRepoFilter const &_Filter, CStr const &_Branch);
-		void fp_Repository_Unbranch(CRepoFilter const &_Filter);
-		void fp_Repository_CleanupBranches(CRepoFilter const &_Filter, ERepoCleanupBranchesFlag _Flags);
-		void fp_Repository_Status(CRepoFilter const &_Filter, ERepoStatusFlag _Flags);
-		void fp_Repository_Push(CRepoFilter const &_Filter, TCVector<CStr> const &_Remotes, bool _bPretend, bool _bTags, bool _bNonDefaultToAll);
-		void fp_Repository_ListCommits
-			(
-			 	CRepoFilter const &_Filter
-			 	, CStr const &_From
-			 	, CStr const &_To
-			 	, ERepoListCommitsFlag _Flags
-			 	, TCVector<CWildcardColumn> const &_ColumnWildcards
-			 	, CStr const &_Prefix
-			 	, uint32 _MaxCommitsMainRepo
-			 	, uint32 _MaxCommits
-			)
-		;
-		void fp_HandleAction(CStr const &_Action, TCVector<CStr> const &_Params);
 		void fp_SaveEnvironment();
 
-		CGenerateSettings mp_GenerateSettings;
+		CGenerateOptions mp_GenerateOptions;
+		bool mp_bNoReconcileOptions = false;
 
 		align_cacheline mutable CMutualManyRead mp_SourceFilesLock;
 		mutable TCSet<CStr> mp_SourceFiles;

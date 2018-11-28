@@ -987,6 +987,10 @@ namespace NMib::NBuildSystem
 			{
 				Ret = CFile::fs_GetProgramPath();
 			}
+			else if (Property == "MalterlibExe")
+			{
+				Ret = CFile::fs_GetProgramDirectory() / "mib";
+			}
 			else if (!mp_GeneratorInterface->f_GetBuiltin(Property, Ret))
 				fsp_ThrowError(_Position, CStr::CFormat("Unrecognized builtin '{}'") << Property);
 		}
@@ -1180,7 +1184,7 @@ namespace NMib::NBuildSystem
 				WholePath = CFile::fs_AppendPath(WholePath, FunctionParams[0]);
 				CFindOptions FindOptions(WholePath, EFileAttrib_File);
 				
-				auto Files = mp_FindCache.f_FindFiles(FindOptions);
+				auto Files = mp_FindCache.f_FindFiles(FindOptions, true);
 				Ret = CStr();
 				
 				for (auto &File : Files)
@@ -1195,7 +1199,7 @@ namespace NMib::NBuildSystem
 				CStr WholePath = mp_GeneratorInterface->f_GetExpandedPath(Ret, CFile::fs_GetPath(_Position.m_FileName));
 				WholePath = CFile::fs_AppendPath(WholePath, FunctionParams[0]);
 				CFindOptions FindOptions(WholePath, EFileAttrib_Directory);
-				auto Files = mp_FindCache.f_FindFiles(FindOptions);
+				auto Files = mp_FindCache.f_FindFiles(FindOptions, true);
 				Ret = CStr();
 				
 				for (auto &File : Files)
@@ -1210,7 +1214,7 @@ namespace NMib::NBuildSystem
 				CStr WholePath = mp_GeneratorInterface->f_GetExpandedPath(Ret, CFile::fs_GetPath(_Position.m_FileName));
 				WholePath = CFile::fs_AppendPath(WholePath, FunctionParams[0]);
 				CFindOptions FindOptions(WholePath, EFileAttrib_File, true);
-				auto Files = mp_FindCache.f_FindFiles(FindOptions);
+				auto Files = mp_FindCache.f_FindFiles(FindOptions, true);
 				Ret = CStr();
 				
 				for (auto &File : Files)
@@ -1225,7 +1229,7 @@ namespace NMib::NBuildSystem
 				CStr WholePath = mp_GeneratorInterface->f_GetExpandedPath(Ret, CFile::fs_GetPath(_Position.m_FileName));
 				WholePath = CFile::fs_AppendPath(WholePath, FunctionParams[0]);
 				CFindOptions FindOptions(WholePath, EFileAttrib_Directory, true);
-				auto Files = mp_FindCache.f_FindFiles(FindOptions);
+				auto Files = mp_FindCache.f_FindFiles(FindOptions, true);
 				Ret = CStr();
 				
 				for (auto &File : Files)

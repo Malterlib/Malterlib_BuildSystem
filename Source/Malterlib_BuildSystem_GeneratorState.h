@@ -8,7 +8,15 @@
 
 namespace NMib::NBuildSystem
 {
-	struct CGeneratorState
+	enum EGeneratedFileFlag
+	{
+		EGeneratedFileFlag_None = 0
+		, EGeneratedFileFlag_NoDateCheck = DBit(1)
+		, EGeneratedFileFlag_KeepGeneratedFile = DBit(2)
+		, EGeneratedFileFlag_Symlink = DBit(3)
+	};
+
+	struct CGeneratorArchiveState
 	{
 		enum 
 		{
@@ -25,12 +33,14 @@ namespace NMib::NBuildSystem
 			template <typename tf_CStream>
 			void f_Consume(tf_CStream &_Stream);
 
+			bool f_FileChanged(TCAtomic<bool> &o_bChanged, CStr const &_OutputDirectory);
+
 			TCSet<CStr> m_Workspaces;
 			NTime::CTime m_WriteTime;
 			EGeneratedFileFlag m_Flags = EGeneratedFileFlag_None;
 		};
 		
-		CGeneratorState();
+		CGeneratorArchiveState();
 
 		template <typename tf_CStream>
 		void f_Feed(tf_CStream &_Stream) const;

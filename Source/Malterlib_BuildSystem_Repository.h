@@ -260,7 +260,6 @@ namespace NMib::NBuildSystem::NRepository
 		 	, CRepository const &_Repo
 		 	, CStateHandler &o_StateHandler
 		 	, CBuildSystem const &_BuildSystem
-		 	, TCMap<CStr, EHandleRepositoryAction> const &_Actions
 		)
 	;
 	TCVector<TCMap<CStr, CReposLocation>> fg_GetRepos(CBuildSystem &_BuildSystem, CBuildSystemData &_Data);

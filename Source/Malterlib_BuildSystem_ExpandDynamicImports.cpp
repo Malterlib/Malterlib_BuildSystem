@@ -405,16 +405,15 @@ namespace NMib::NBuildSystem
 		TCVector<CStr> Params;
 		
 #		ifdef DMalterlibBuildSystem_EmbedCMake
-			CmakeExecutable = CFile::fs_GetProgramPath(); 
-			Params.f_Insert("CMake");
+			CmakeExecutable = CFile::fs_GetProgramDirectory() / "MToolCMake";
 #		else
 			CmakeExecutable = CFile::fs_GetProgramDirectory() + "/cmake";
-#			ifdef DPlatformFamily_Windows
-				CmakeExecutable += ".exe";
-#			endif
 			f_AddSourceFile(CmakeExecutable);
 #		endif
-		
+#		ifdef DPlatformFamily_Windows
+			CmakeExecutable += ".exe";
+#		endif
+
 		Params.f_Insert
 			(
 				{

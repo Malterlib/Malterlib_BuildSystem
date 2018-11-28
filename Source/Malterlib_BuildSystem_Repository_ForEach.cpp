@@ -7,8 +7,12 @@ namespace NMib::NBuildSystem
 {
 	using namespace NRepository;
 
-	void CBuildSystem::fp_Repository_ForEachRepo(CRepoFilter const &_Filter, bool _bParallell, TCVector<CStr> const &_Params)
+	CBuildSystem::ERetry CBuildSystem::f_Action_Repository_ForEachRepo(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, bool _bParallel, TCVector<CStr> const &_Params)
 	{
+		CGenerateEphemeralState GenerateState;
+		if (ERetry Retry = fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
+			return Retry;
+
 		CFilteredRepos FilteredRepositories = fg_GetFilteredRepos(_Filter, *this, mp_Data);
 
 		CGitLaunches Launches{mp_BaseDir, "Running for each repo"};
@@ -34,7 +38,7 @@ namespace NMib::NBuildSystem
 					}
 				;
 
-				if (_bParallell)
+				if (_bParallel)
 					Result.f_Dispatch() > Results.f_AddResult();
 				else
 					Result.f_Dispatch().f_CallSync();
@@ -45,5 +49,7 @@ namespace NMib::NBuildSystem
 
 		for (auto &Result : LaunchResults)
 			Result.f_Access();
+
+		return ERetry_None;
 	}
 }

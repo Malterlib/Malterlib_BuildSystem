@@ -168,11 +168,21 @@ namespace NMib::NBuildSystem
 		}
 	}
 	
-	void CBuildSystem::fp_Repository_Push(CRepoFilter const &_Filter, TCVector<CStr> const &_Remotes, bool _bPretend, bool _bTags, bool _bNonDefaultToAll)
+	CBuildSystem::ERetry CBuildSystem::f_Action_Repository_Push
+		(
+		 	CGenerateOptions const &_GenerateOptions
+		 	, CRepoFilter const &_Filter
+		 	, TCVector<CStr> const &_Remotes
+		 	, ERepoPushFlag _PushFlags
+		)
 	{
+		CGenerateEphemeralState GenerateState;
+		if (ERetry Retry = fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
+			return Retry;
+
 		CFilteredRepos FilteredRepositories = fg_GetFilteredRepos(_Filter, *this, mp_Data);
 
-		CGitLaunches Launches{mp_BaseDir, _bPretend ? "Pretending to push repos" : "Pushing repos"};
+		CGitLaunches Launches{mp_BaseDir, (_PushFlags & ERepoPushFlag_Pretend) ? "Pretending to push repos" : "Pushing repos"};
 
 		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
@@ -209,7 +219,7 @@ namespace NMib::NBuildSystem
 								if (auto pRemote = Repo.m_Remotes.f_FindEqual(Remote); pRemote && !pRemote->m_bCanPush)
 									continue;
 
-								if (!_bNonDefaultToAll && _Branches.m_Current != Repo.m_DefaultBranch && Remote != "origin")
+								if (!(_PushFlags & ERepoPushFlag_NonDefaultToAll) && _Branches.m_Current != Repo.m_DefaultBranch && Remote != "origin")
 									continue;
 
 								NewRemotes.f_Insert(Remote);
@@ -241,7 +251,7 @@ namespace NMib::NBuildSystem
 
 												for (auto &Remote : _Remotes)
 												{
-													if (_bPretend)
+													if (_PushFlags & ERepoPushFlag_Pretend)
 													{
 														if (_NewPush.f_FindEqual(Remote))
 														{
@@ -276,7 +286,7 @@ namespace NMib::NBuildSystem
 													{
 														TCVector<CStr> Params;
 
-														if (_bTags)
+														if (_PushFlags & ERepoPushFlag_FollowTags)
 															Params = {"push", "--follow-tags", Remote, _Branches.m_Current};
 														else
 															Params = {"push", Remote, _Branches.m_Current};
@@ -322,5 +332,7 @@ namespace NMib::NBuildSystem
 			}
 		}
 		Launches.f_SetOutputOrder(OutputOrder);
+
+		return ERetry_None;
 	}
 }

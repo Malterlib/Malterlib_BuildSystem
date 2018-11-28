@@ -5,13 +5,13 @@
 
 namespace NMib::NBuildSystem
 {
-	CStr const &CGeneratorState::CProcessedFile::f_GetFileName() const
+	CStr const &CGeneratorArchiveState::CProcessedFile::f_GetFileName() const
 	{
 		return TCMap<CStr, CProcessedFile>::fs_GetKey(this);
 	}
 
 	template <typename tf_CStream>
-	void CGeneratorState::CProcessedFile::f_Feed(tf_CStream &_Stream) const
+	void CGeneratorArchiveState::CProcessedFile::f_Feed(tf_CStream &_Stream) const
 	{
 		_Stream << m_WriteTime;
 		_Stream << m_Workspaces;
@@ -19,7 +19,7 @@ namespace NMib::NBuildSystem
 	}
 
 	template <typename tf_CStream>
-	void CGeneratorState::CProcessedFile::f_Consume(tf_CStream &_Stream)
+	void CGeneratorArchiveState::CProcessedFile::f_Consume(tf_CStream &_Stream)
 	{
 		_Stream >> m_WriteTime;
 		_Stream >> m_Workspaces;
@@ -27,7 +27,7 @@ namespace NMib::NBuildSystem
 	}
 	
 	template <typename tf_CStream>
-	void CGeneratorState::f_Feed(tf_CStream &_Stream) const
+	void CGeneratorArchiveState::f_Feed(tf_CStream &_Stream) const
 	{
 		_Stream << EFileVersion;
 		_Stream << m_ExeFile;
@@ -40,7 +40,7 @@ namespace NMib::NBuildSystem
 	}
 
 	template <typename tf_CStream>
-	void CGeneratorState::f_Consume(tf_CStream &_Stream)
+	void CGeneratorArchiveState::f_Consume(tf_CStream &_Stream)
 	{
 		uint32 Version;
 		_Stream >> Version;

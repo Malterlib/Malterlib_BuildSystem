@@ -99,10 +99,10 @@ namespace NMib::NBuildSystem
 			DConOut("Evaluated configurations {fe2} s{\n}", Time2 - Time1);
 			
 			TCSet<CStr> ReservedGroups;
-			ReservedGroups[g_ReservedConfigurationsGroup];
-			ReservedGroups[g_ReservedProductRefGroup];
-			ReservedGroups[g_ReservedProjectDependenciesGroup];
-			
+			ReservedGroups[g_ReservedGeneratorGroup / g_ReservedConfigurationsGroup];
+			ReservedGroups[g_ReservedGeneratorGroup / g_ReservedProductRefGroup];
+			ReservedGroups[g_ReservedGeneratorGroup / g_ReservedProjectDependenciesGroup];
+
 			_BuildSystem.f_GenerateBuildSystem(Configurations, Values, ReservedGroups, "XcodeGeneratorDependencyFiles");
 			fp64 Time3 = Clock.f_GetTime();
 			DConOut("Extracted workspaces, projects and files {fe2} s{\n}", Time3 - Time2);
@@ -239,6 +239,15 @@ namespace NMib::NBuildSystem
 	using CBuildSystemGenerator_Xcode9 = CBuildSystemGenerator_Xcode;
 	using CBuildSystemGenerator_Xcode10 = CBuildSystemGenerator_Xcode;
 	using CBuildSystemGenerator_Xcode11 = CBuildSystemGenerator_Xcode;
+	using CBuildSystemGenerator_Xcode12 = CBuildSystemGenerator_Xcode;
+	using CBuildSystemGenerator_Xcode13 = CBuildSystemGenerator_Xcode;
+	using CBuildSystemGenerator_Xcode14 = CBuildSystemGenerator_Xcode;
+	using CBuildSystemGenerator_Xcode15 = CBuildSystemGenerator_Xcode;
+	using CBuildSystemGenerator_Xcode16 = CBuildSystemGenerator_Xcode;
+	using CBuildSystemGenerator_Xcode17 = CBuildSystemGenerator_Xcode;
+	using CBuildSystemGenerator_Xcode18 = CBuildSystemGenerator_Xcode;
+	using CBuildSystemGenerator_Xcode19 = CBuildSystemGenerator_Xcode;
+	using CBuildSystemGenerator_Xcode20 = CBuildSystemGenerator_Xcode;
 
 	DMibRuntimeClass(CBuildSystemGenerator, CBuildSystemGenerator_Xcode);
 	DMibRuntimeClass(CBuildSystemGenerator, CBuildSystemGenerator_Xcode4);
@@ -249,7 +258,16 @@ namespace NMib::NBuildSystem
 	DMibRuntimeClass(CBuildSystemGenerator, CBuildSystemGenerator_Xcode9);
 	DMibRuntimeClass(CBuildSystemGenerator, CBuildSystemGenerator_Xcode10);
 	DMibRuntimeClass(CBuildSystemGenerator, CBuildSystemGenerator_Xcode11);
-	
+	DMibRuntimeClass(CBuildSystemGenerator, CBuildSystemGenerator_Xcode12);
+	DMibRuntimeClass(CBuildSystemGenerator, CBuildSystemGenerator_Xcode13);
+	DMibRuntimeClass(CBuildSystemGenerator, CBuildSystemGenerator_Xcode14);
+	DMibRuntimeClass(CBuildSystemGenerator, CBuildSystemGenerator_Xcode15);
+	DMibRuntimeClass(CBuildSystemGenerator, CBuildSystemGenerator_Xcode16);
+	DMibRuntimeClass(CBuildSystemGenerator, CBuildSystemGenerator_Xcode17);
+	DMibRuntimeClass(CBuildSystemGenerator, CBuildSystemGenerator_Xcode18);
+	DMibRuntimeClass(CBuildSystemGenerator, CBuildSystemGenerator_Xcode19);
+	DMibRuntimeClass(CBuildSystemGenerator, CBuildSystemGenerator_Xcode20);
+
 	void fg_Malterlib_BuildSystem_MakeActive_Xcode()
 	{
 		DMibRuntimeClassMakeActive(CBuildSystemGenerator_Xcode);
@@ -261,5 +279,14 @@ namespace NMib::NBuildSystem
 		DMibRuntimeClassMakeActive(CBuildSystemGenerator_Xcode9);
 		DMibRuntimeClassMakeActive(CBuildSystemGenerator_Xcode10);
 		DMibRuntimeClassMakeActive(CBuildSystemGenerator_Xcode11);
+		DMibRuntimeClassMakeActive(CBuildSystemGenerator_Xcode12);
+		DMibRuntimeClassMakeActive(CBuildSystemGenerator_Xcode13);
+		DMibRuntimeClassMakeActive(CBuildSystemGenerator_Xcode14);
+		DMibRuntimeClassMakeActive(CBuildSystemGenerator_Xcode15);
+		DMibRuntimeClassMakeActive(CBuildSystemGenerator_Xcode16);
+		DMibRuntimeClassMakeActive(CBuildSystemGenerator_Xcode17);
+		DMibRuntimeClassMakeActive(CBuildSystemGenerator_Xcode18);
+		DMibRuntimeClassMakeActive(CBuildSystemGenerator_Xcode19);
+		DMibRuntimeClassMakeActive(CBuildSystemGenerator_Xcode20);
 	}
 }

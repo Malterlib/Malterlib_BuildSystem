@@ -70,7 +70,37 @@ namespace NMib::NBuildSystem
 		;
 		fExpandEntities(_BuildSystemData.m_RootEntity, false);
 	}
-	
+
+	void CBuildSystem::f_ExpandCreateTemplateEntities(CBuildSystemData &_BuildSystemData) const
+	{
+		TCFunction<void (CEntity &_Entity, bool _bInWorkspace)> fExpandEntities
+			= [&](CEntity &_Entity, bool _bInWorkspace)
+			{
+				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
+				{
+					auto &Child = *iChild;
+					++iChild;
+					auto &Key = Child.f_GetMapKey();
+					if (Key.m_Type != EEntityType_CreateTemplate)
+						continue;
+
+					auto pLastInserted = fp_ExpandEntity(Child, _Entity, nullptr);
+					if (!pLastInserted)
+						continue;
+
+					_Entity.m_ChildEntitiesMap.f_Remove(Key);
+
+					if (pLastInserted != &Child)
+					{
+						iChild = pLastInserted;
+						++iChild;
+					}
+				}
+			}
+		;
+		fExpandEntities(_BuildSystemData.m_RootEntity, false);
+	}
+
 	void CBuildSystem::f_ExpandGlobalEntities(CBuildSystemData &_BuildSystemData) const
 	{
 		TCFunction<void (CEntity &_Entity, bool _bInWorkspace)> fExpandEntities
@@ -568,11 +598,13 @@ namespace NMib::NBuildSystem
 							while (!ExcludedFiles.f_IsEmpty())
 							{
 								CStr Value = fg_GetStrSep(ExcludedFiles, ";");
-								if (!Value.f_IsEmpty())
+								if (Value == ">")
+									FindOptions.m_bFollowLinks = false;
+								else if (!Value.f_IsEmpty())
 									FindOptions.m_Exclude[Value];
 							}
 							
-							auto FullFiles = mp_FindCache.f_FindFiles(FindOptions);
+							auto FullFiles = mp_FindCache.f_FindFiles(FindOptions, true);
 							for (auto iFile = FullFiles.f_GetIterator(); iFile; ++iFile)
 								Files.f_Insert(iFile->m_Path);
 						}

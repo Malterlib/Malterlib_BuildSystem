@@ -37,7 +37,7 @@ namespace NMib::NBuildSystem
 		~CFindCache();
 		
 		TCMap<CFindOptions, TCVector<CFile::CFoundFile>> f_GetAllTagged() const;
-		TCVector<CFile::CFoundFile> const &f_FindFiles(CFindOptions const &_Options, bool _bTag = true) const;
+		TCVector<CFile::CFoundFile> const &f_FindFiles(CFindOptions const &_Options, bool _bTag) const;
 		void f_AddSourceFile(CStr const &_FileName) const;		
 		TCSet<CStr> f_GetSourceFiles() const;
 		

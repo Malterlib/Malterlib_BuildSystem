@@ -14,25 +14,43 @@ namespace NMib::NBuildSystem
 		, EGenerationFlag_DisableUserSettings	= DMibBit(3)
 	};
 
+	enum EHandleRepositoryAction
+	{
+		EHandleRepositoryAction_None
+		, EHandleRepositoryAction_Auto
+		, EHandleRepositoryAction_ManualResolve
+		, EHandleRepositoryAction_Reset
+		, EHandleRepositoryAction_Rebase
+	};
+
+	enum EHandleRepositoryRemovedAction
+	{
+		EHandleRepositoryRemovedAction_None
+		, EHandleRepositoryRemovedAction_Leave
+		, EHandleRepositoryRemovedAction_Delete
+	};
+
 	struct CGenerateSettings
 	{
-		CGenerateSettings();
-
-		template <typename tf_CStream>
-		void f_Feed(tf_CStream &_Stream) const;
-		template <typename tf_CStream>
-		void f_Consume(tf_CStream &_Stream);
-
 		bool operator == (CGenerateSettings const &_Right) const;
 
 		CStr m_SourceFile;
 		CStr m_OutputDir;
 		CStr m_Generator;
 		CStr m_Workspace;
-		CStr m_Action;
-		TCVector<CStr> m_ActionParams;
-		EGenerationFlag m_GenerationFlags;
+		CStr m_Action = "Build";
+		EGenerationFlag m_GenerationFlags = EGenerationFlag_None;
+	};
+
+	struct CGenerateOptions
+	{
+		void f_ParseReconcileActions(NEncoding::CEJSON const &_Params);
+
+		CGenerateSettings m_Settings;
+		TCMap<CStr, EHandleRepositoryAction> m_ReconcileActions;
+		TCMap<CStr, EHandleRepositoryRemovedAction> m_ReconcileRemovedActions;
+		bool m_bReconcileForce = false;
+		bool m_bReconcileNoOptions = false;
+		bool m_bSkipUpdate = false;
 	};
 }
-
-#include "Malterlib_BuildSystem_GenerateSettings.hpp"

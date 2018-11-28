@@ -78,9 +78,13 @@ namespace NMib::NBuildSystem::NRepository
 namespace NMib::NBuildSystem
 {
 	using namespace NRepository;
-	
-	void CBuildSystem::fp_Repository_Branch(CRepoFilter const &_Filter, CStr const &_Branch)
+
+	CBuildSystem::ERetry CBuildSystem::f_Action_Repository_Branch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, CStr const &_Branch)
 	{
+		CGenerateEphemeralState GenerateState;
+		if (ERetry Retry = fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
+			return Retry;
+
 		CBranchSettings BranchSettings{mp_OutputDir};
 
 		BranchSettings.f_ReadSettings();
@@ -143,10 +147,16 @@ namespace NMib::NBuildSystem
 
 		for (auto &Result : LaunchResults)
 			Result.f_Access();
+
+		return ERetry_None;
 	}
 
-	void CBuildSystem::fp_Repository_Unbranch(CRepoFilter const &_Filter)
+	CBuildSystem::ERetry CBuildSystem::f_Action_Repository_Unbranch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter)
 	{
+		CGenerateEphemeralState GenerateState;
+		if (ERetry Retry = fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
+			return Retry;
+
 		CBranchSettings BranchSettings{mp_OutputDir};
 
 		BranchSettings.f_ReadSettings();
@@ -200,10 +210,16 @@ namespace NMib::NBuildSystem
 
 		for (auto &Result : LaunchResults)
 			Result.f_Access();
+
+		return ERetry_None;
 	}
 
-	void CBuildSystem::fp_Repository_CleanupBranches(CRepoFilter const &_Filter, ERepoCleanupBranchesFlag _Flags)
+	CBuildSystem::ERetry CBuildSystem::f_Action_Repository_CleanupBranches(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoCleanupBranchesFlag _Flags)
 	{
+		CGenerateEphemeralState GenerateState;
+		if (ERetry Retry = fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
+			return Retry;
+
 		CFilteredRepos FilteredRepositories = fg_GetFilteredRepos(_Filter, *this, mp_Data);
 
 		CGitLaunches Launches{mp_BaseDir, "Cleaning up branches"};
@@ -301,5 +317,7 @@ namespace NMib::NBuildSystem
 
 		for (auto &Result : LaunchResults)
 			Result.f_Access();
+
+		return ERetry_None;
 	}
 }

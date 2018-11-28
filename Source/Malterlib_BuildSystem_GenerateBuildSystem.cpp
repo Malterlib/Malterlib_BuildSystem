@@ -788,13 +788,14 @@ namespace NMib::NBuildSystem
 																	CStr Name = ChildEntity.m_Key.m_Name;
 																	if (Name.f_IsEmpty())
 																		fs_ThrowError(ChildEntity.m_Position, "No name specified for file group");
-																	else if (_ReservedGroups.f_FindEqual(Name))
-																		fs_ThrowError(ChildEntity.m_Position, "Group name conflicts with reserved group names");
 																	CStr Fullpath;
 																	if (_pParentGroup)
 																		Fullpath = CFile::fs_AppendPath(_pParentGroup->f_GetPath(), Name);
 																	else
 																		Fullpath = Name;
+
+																	if (_ReservedGroups.f_FindEqual(Fullpath))
+																		fs_ThrowError(ChildEntity.m_Position, "Group name '{}' conflicts with reserved group names"_f << Name);
 
 																	auto &Group = _Target.m_Groups[Fullpath];
 																	Group.m_Name = Name;

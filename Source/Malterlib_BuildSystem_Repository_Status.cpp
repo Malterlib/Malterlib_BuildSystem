@@ -27,8 +27,12 @@ namespace NMib::NBuildSystem
 		};
 	}
 
-	void CBuildSystem::fp_Repository_Status(CRepoFilter const &_Filter, ERepoStatusFlag _Flags)
+	CBuildSystem::ERetry CBuildSystem::f_Action_Repository_Status(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoStatusFlag _Flags)
 	{
+		CGenerateEphemeralState GenerateState;
+		if (ERetry Retry = fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
+			return Retry;
+
 		CFilteredRepos FilteredRepositories = fg_GetFilteredRepos(_Filter, *this, mp_Data);
 		CRepoEditor RepoEditor = fg_GetRepoEditor(*this, mp_Data);
 
@@ -82,7 +86,7 @@ namespace NMib::NBuildSystem
 		{
 			TCContinuation<TCTuple<bool, mint, CRepository>> Continuation;
 
-			fg_GetLocalFileChanges(Launches, Repo, !(_Flags & ERepoStatusFlag_ShowOnlyTracked))
+			fg_GetLocalFileChanges(Launches, Repo, !(_Flags & ERepoStatusFlag_OnlyTracked))
 				+ fg_GetRemotes(Launches, Repo)
 				+ fg_GetBranches(Launches, Repo, false)
 				+ fg_GetBranches(Launches, Repo, true)
@@ -456,7 +460,7 @@ namespace NMib::NBuildSystem
 								if (bWasOther)
 									Messages.f_Insert(")");
 
-								if (!bIsChanged && (_Flags & ERepoStatusFlag_Quiet))
+								if (!bIsChanged && !(_Flags & ERepoStatusFlag_ShowUnchanged))
 								{
 									BranchContinuation.f_SetResult(bIsChanged);
 									return;
@@ -727,5 +731,7 @@ namespace NMib::NBuildSystem
 
 		if (bActionNeeded)
 			DConErrOut2("\a");
+
+		return ERetry_None;
 	}
 }

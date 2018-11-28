@@ -38,32 +38,36 @@ namespace NMib::NBuildSystem::NXcode
 			auto &Configuration = _Project.m_NativeTargets.fs_GetKey(NativeTargets);
 			auto &NativeTarget = _Project.f_GetDefaultNativeTarget(Configuration);
 			NativeTarget.m_Name = "{} {}"_f << _Project.f_GetName() << Configuration.f_GetFullName();
-			auto UsedCTypes = ThreadLocal.mp_UsedCTypes[Configuration];
-			if (UsedCTypes.f_GetLen() > 1)
-			{
-				CStr DefaultType;
-				if (UsedCTypes.f_FindEqual("C++"))
-					DefaultType = "C++";
-				else if (UsedCTypes.f_FindEqual("ObjC++"))
-					DefaultType = "ObjC++";
-				else
-					DefaultType = *UsedCTypes.f_FindSmallest();
-				NativeTarget.m_CType = DefaultType;
-				UsedCTypes.f_Remove(DefaultType);
-				for (auto &UsedType : UsedCTypes)
-				{
-					auto &NewNativeTarget = NativeTargets.f_Insert(NativeTarget);
-					NewNativeTarget.m_IncludedTypes[UsedType];
-					NewNativeTarget.m_Name = "{}{} {}"_f << _Project.f_GetName() << UsedType << Configuration.f_GetFullName();
-					NewNativeTarget.m_CType = UsedType;
-					NewNativeTarget.m_BuildScripts.f_Clear();
-					NativeTarget.m_CTargets.f_Insert(&NewNativeTarget);
-				}
 
-				NativeTarget.m_ExcludedTypes = UsedCTypes;
+			if (NativeTarget.m_Type != "Makefile")
+			{
+				auto UsedCTypes = ThreadLocal.mp_UsedCTypes[Configuration];
+				if (UsedCTypes.f_GetLen() > 1)
+				{
+					CStr DefaultType;
+					if (UsedCTypes.f_FindEqual("C++"))
+						DefaultType = "C++";
+					else if (UsedCTypes.f_FindEqual("ObjC++"))
+						DefaultType = "ObjC++";
+					else
+						DefaultType = *UsedCTypes.f_FindSmallest();
+					NativeTarget.m_CType = DefaultType;
+					UsedCTypes.f_Remove(DefaultType);
+					for (auto &UsedType : UsedCTypes)
+					{
+						auto &NewNativeTarget = NativeTargets.f_Insert(NativeTarget);
+						NewNativeTarget.m_IncludedTypes[UsedType];
+						NewNativeTarget.m_Name = "{}{} {}"_f << _Project.f_GetName() << UsedType << Configuration.f_GetFullName();
+						NewNativeTarget.m_CType = UsedType;
+						NewNativeTarget.m_BuildScripts.f_Clear();
+						NativeTarget.m_CTargets.f_Insert(&NewNativeTarget);
+					}
+
+					NativeTarget.m_ExcludedTypes = UsedCTypes;
+				}
+				else if (!UsedCTypes.f_IsEmpty())
+					NativeTarget.m_CType = *UsedCTypes.f_FindSmallest();
 			}
-			else if (!UsedCTypes.f_IsEmpty())
-				NativeTarget.m_CType = *UsedCTypes.f_FindSmallest();
 
 			NativeTarget.m_bDefaultTarget = true;
 		}
@@ -1041,22 +1045,7 @@ fi
 			_Output += CStr::CFormat("\t\t\tname = {};\n") << fg_EscapeXcodeProjectVar(_Name);
 			_Output += "\t\t\tsourceTree = \"<group>\";\n\t\t};\n";
 		};
-		
-		
 
-		for (auto IterFile = _Project.m_Files.f_GetIterator(); IterFile; ++IterFile)
-		{
-			if (IterFile->m_pGroup)
-			{
-				auto & Children = GroupChildren[IterFile->m_pGroup->f_GetGUID()];
-				
-				CGroupChild& Child = Children.f_Insert();
-				Child.m_GUID = IterFile->f_GetFileRefGUID();
-				Child.m_Name = CFile::fs_GetFile(IterFile->f_GetName());
-			}
-		}
-		
-		
 		TCSortedPerform<CStr const &> ToPerform;
 		
 		TCSet<CStr> AddedGroups;
@@ -1083,6 +1072,18 @@ fi
 					}
 				)
 			;
+		}
+
+		for (auto IterFile = _Project.m_Files.f_GetIterator(); IterFile; ++IterFile)
+		{
+			if (IterFile->m_pGroup)
+			{
+				auto & Children = GroupChildren[IterFile->m_pGroup->f_GetGUID()];
+
+				CGroupChild& Child = Children.f_Insert();
+				Child.m_GUID = IterFile->f_GetFileRefGUID();
+				Child.m_Name = CFile::fs_GetFile(IterFile->f_GetName());
+			}
 		}
 
 		// Product reference group

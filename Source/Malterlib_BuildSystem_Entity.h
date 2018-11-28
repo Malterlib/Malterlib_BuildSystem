@@ -20,6 +20,7 @@ namespace NMib::NBuildSystem
 		, EEntityType_GenerateFile
 		, EEntityType_Import
 		, EEntityType_Repository
+		, EEntityType_CreateTemplate
 	};
 	
 	struct CEntityKey

@@ -35,7 +35,8 @@ namespace NMib::NBuildSystem
 		TCMap<CFindOptions, TCVector<CFile::CFoundFile>> Ret;
 		for (auto iFile = mp_SourceSearches.f_GetIterator(); iFile; ++iFile)
 		{
-			Ret[iFile.f_GetKey()] = iFile->m_FoundFiles;
+			if (iFile->m_bTagged.f_Load())
+				Ret[iFile.f_GetKey()] = iFile->m_FoundFiles;
 		}
 		return Ret;
 	}
@@ -56,18 +57,10 @@ namespace NMib::NBuildSystem
 				CFile::CFindFilesOptions Options(_Options.m_Path, _Options.m_bRecursive);
 				Options.m_AttribMask = _Options.m_Attribs;
 				Options.m_bFollowLinks = _Options.m_bFollowLinks;
+				Options.m_ExcludePatterns.f_Insert("*/.DS_Store");
 				for (auto &Exclude : _Options.m_Exclude)
 					Options.m_ExcludePatterns.f_Insert(Exclude);
 				pEntry->m_FoundFiles = CFile::fs_FindFiles(Options);
-				mint i = 0;
-				for (auto iFile = pEntry->m_FoundFiles.f_GetIterator(); iFile; ++iFile, ++i)
-				{
-					if (iFile->m_Path.f_Find("/.DS_Store") >= 0 && CFile::fs_GetFile(iFile->m_Path) == ".DS_Store")
-					{
-						pEntry->m_FoundFiles.f_Remove(i);
-						break;
-					}
-				}
 				pEntry->m_bFinished = true;
 			}
 		}

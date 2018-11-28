@@ -59,8 +59,8 @@ namespace NMib::NBuildSystem
 			while (*pParse)
 			{
 				ch32 Char = *pParse;
-				++Len;
 				++pParse;
+				++Len;
 				while
 					(
 						(Char >= 0x0300 && Char <= 0x036F)
@@ -70,8 +70,10 @@ namespace NMib::NBuildSystem
 						|| (Char >= 0xFE20 && Char <= 0xFE2F)
 					)
 				{
-					++pParse;
 					Char = *pParse;
+					if (!Char)
+						break;
+					++pParse;
 				}
 				if (Len == MaxLen)
 				{
@@ -103,9 +105,10 @@ namespace NMib::NBuildSystem
 		}
 	}
 	
-	void CBuildSystem::fp_Repository_ListCommits
+	CBuildSystem::ERetry CBuildSystem::f_Action_Repository_ListCommits
 		(
-		 	CRepoFilter const &_Filter
+		 	CGenerateOptions const &_GenerateOptions
+		 	, CRepoFilter const &_Filter
 		 	, CStr const &_From
 		 	, CStr const &_To
 		 	, ERepoListCommitsFlag _Flags
@@ -115,6 +118,10 @@ namespace NMib::NBuildSystem
 		 	, uint32 _MaxCommits
 		)
 	{
+		CGenerateEphemeralState GenerateState;
+		if (ERetry Retry = fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
+			return Retry;
+		
 		TCSharedPointer<CFilteredRepos> pFilteredRepositories = fg_Construct(fg_GetFilteredRepos(_Filter, *this, mp_Data));
 		auto &FilteredRepositories = *pFilteredRepositories;
 
@@ -236,7 +243,7 @@ namespace NMib::NBuildSystem
 
 						auto &RepositoryPath = RepositoryByLocation.fs_GetKey(pOwner);
 
-						if (!RepositoryPath.f_StartsWith(ConfigDirectory))
+						if (!ConfigDirectory.f_StartsWith(RepositoryPath))
 						{
 							State.m_EndCommits[Repo.m_Location];
 							State.m_StartCommits[Repo.m_Location];
@@ -585,9 +592,12 @@ namespace NMib::NBuildSystem
 			CUStr ToOutput;
 			auto fRealOutput = [&](CStr const &_Column, CStr const &_String, ch8 const *_pColor = "")
 				{
-					mint NeededLen = MaxLengths[_Column] + (_String.f_GetLen() - CAnsiEncoding::fs_RenderedStrLen(_String));
+					CUStr UnicodeString = _String;
+					mint StringLen = UnicodeString.f_GetLen();
+					mint RenderedLen = CAnsiEncoding::fs_RenderedStrLen(_String);
+					mint NeededLen = MaxLengths[_Column] + (StringLen - RenderedLen);
 
-					CUStr PaddedString = CUStr::CFormat(str_utf32("{sz*,sf ,a-}")) << _String << NeededLen;
+					CUStr PaddedString = CUStr::CFormat(str_utf32("{sz*,sf ,a-}")) << UnicodeString << NeededLen;
 
 					ch32 const *pParse = PaddedString;
 
@@ -613,7 +623,7 @@ namespace NMib::NBuildSystem
 				}
 			;
 
-			auto fStripEmail = [](CStr const &_String)
+			auto fStripEmail = [](CStr const &_String) -> CStr
 				{
 					aint iChar = _String.f_FindCharReverse('<');
 
@@ -889,6 +899,9 @@ namespace NMib::NBuildSystem
 			}
 			DConOutRaw(CStr{(str_utf32("{}{3}|{4} {sz*,sf } {3}|{4}\n"_f) << _Prefix << "" << ColumnWidth << fColor(pBorderColor) << fColor(CColors::ms_Default)).f_GetStr()});
 			DConOutRaw(ToOutput);
+
 		}
+		
+		return ERetry_None;
 	}
 }

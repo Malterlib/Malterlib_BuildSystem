@@ -5,11 +5,16 @@
 
 namespace NMib::NBuildSystem
 {
-	CGenerateSettings const& CBuildSystem::f_GetGenerateSettings() const 
+	CGenerateSettings const &CBuildSystem::f_GetGenerateSettings() const
 	{
-			return mp_GenerateSettings; 
+		return mp_GenerateOptions.m_Settings;
 	}
-	
+
+	CGenerateOptions const &CBuildSystem::f_GetGenerateOptions() const
+	{
+		return mp_GenerateOptions;
+	}
+
 	CBuildSystem::CEvaluationContext::CEvaluationContext(TCMap<CPropertyKey, CEvaluatedProperty> *_pEvaluatedProperties)
 		: m_pEvaluatedProperties(_pEvaluatedProperties)
 	{

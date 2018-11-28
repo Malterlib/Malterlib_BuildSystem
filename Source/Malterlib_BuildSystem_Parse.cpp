@@ -391,6 +391,12 @@ namespace NMib::NBuildSystem
 			if (_Parent.m_Key.m_Type != EEntityType_Root)
 				fsp_ThrowError(_Registry, "Repositories can only be specified at root");
 		}
+		else if (Type == EEntityType_CreateTemplate)
+		{
+			bAllowChildren = true;
+			if (_Parent.m_Key.m_Type != EEntityType_CreateTemplate)
+				fsp_ThrowError(_Registry, "Create templates can only be specified at root");
+		}
 		else if (Type == EEntityType_GenerateFile)
 		{
 			bAllowChildren = false;
@@ -429,6 +435,7 @@ namespace NMib::NBuildSystem
 		case EEntityType_Workspace:
 		case EEntityType_Import:
 		case EEntityType_Repository:
+		case EEntityType_CreateTemplate:
 			{
 				auto pOldEntity = _Parent.m_ChildEntitiesMap.f_FindEqual(Key);
 

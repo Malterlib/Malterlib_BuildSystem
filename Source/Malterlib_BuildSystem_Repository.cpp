@@ -15,10 +15,12 @@ Choose how you want to reconcile changes:
 Accept recommended actions   : {0}./mib update_repos --reconcile=*:auto{1}
 Rebase all                   : {0}./mib update_repos --reconcile=*:rebase{1}
 Reset all                    : {0}./mib update_repos --reconcile=*:reset{1}
-Reset all and delete removed : {0}./mib update_repos --reconcile=*:reset_delete{1}
 
 To choose separate action for different repositories you can specify wildcards. The last matching wildcard wins:
 {0}./mib update_repos --reconcile=*:auto,External/*:reset{1}
+
+To force the action even for repositories that you have not yet seen
+{0}./mib update_repos --reconcile=*:auto --reconcile-force
 
 To show current status without reconciling use:
 {0}./mib status --skip-update{1}
@@ -32,13 +34,16 @@ Removed sub-repositories needs to be reconciled.
 
 Choose how you want to reconcile changes:
 
-Leave removed repositories on disk    : {0}./mib update_repos --reconcile=*:leave_removed{1}
-Delete removed repositories from disk : {0}./mib update_repos --reconcile=*:delete_removed{1}
+Leave removed repositories on disk    : {0}./mib update_repos --reconcile-removed=*:leave{1}
+Delete removed repositories from disk : {0}./mib update_repos --reconcile-removed=*:delete{1}
 
-{2}Warning:{1} Specifying {0}reset_delete{1} or {0}delete_removed{1} for reconcile will delete the repository and any unpushed work permanently.
+{2}Warning:{1} Specifying {0}delete{1} for reconcile removed will delete the repository and any unpushed work permanently.
 
 To choose separate action for different repositories you can specify wildcards. The last matching wildcard wins:
-{0}./mib update_repos --reconcile=*:leave_removed,External/*:delete_removed{1}
+{0}./mib update_repos --reconcile-removed=*:leave,External/*:delete{1}
+
+To force the action even for repositories that you have not yet seen the recommended action for
+{0}./mib update_repos --reconcile-remove=*:delete --reconcile-force
 
 To show current status without reconciling use:
 {0}./mib status --skip-update{1}
@@ -670,7 +675,7 @@ namespace NMib::NBuildSystem
 						else if (_ReconcileAction != EHandleRepositoryAction_None)
 							Action = _ReconcileAction;
 
-						if (Action == EHandleRepositoryAction_Reset || Action == EHandleRepositoryAction_ResetDelete)
+						if (Action == EHandleRepositoryAction_Reset)
 						{
 							if (fLaunchGit({"rev-parse", "--abbrev-ref", "HEAD"}, Location).f_Trim() == "HEAD")
 							{
@@ -765,12 +770,6 @@ namespace NMib::NBuildSystem
 							bPassException = true;
 							DMibError("Manual reconcile needed");
 						}
-						else if (Action == EHandleRepositoryAction_LeaveRemoved || Action == EHandleRepositoryAction_DeleteRemoved)
-						{
-							fOutputInfo(EOutputType_Error, "Cannot specify leave or delete removed for existing repository");
-							bPassException = true;
-							DMibError("Invalid reconcile option");
-						}
 						else if (_ReconcileAction != EHandleRepositoryAction_Auto)
 						{
 							CStr ActionStr;
@@ -792,7 +791,6 @@ namespace NMib::NBuildSystem
 								ActionStr = "rebase";
 								break;
 							case EHandleRepositoryAction_Auto:
-							case EHandleRepositoryAction_ResetDelete:
 							default:
 								ActionStr = "internal error";
 								break;
@@ -1024,7 +1022,7 @@ namespace NMib::NBuildSystem
 
 	using namespace NRepository;
 
-	CBuildSystem::ERetry CBuildSystem::fp_HandleRepositories(TCMap<CPropertyKey, CStr> const &_Values, bool _bSkipRepoUpdate, TCMap<CStr, EHandleRepositoryAction> const &_Actions)
+	CBuildSystem::ERetry CBuildSystem::fp_HandleRepositories(TCMap<CPropertyKey, CStr> const &_Values, bool _bSkipRepoUpdate)
 	{
 		f_InitEntityForEvaluation(mp_Data.m_RootEntity, _Values);
 		f_ExpandRepositoryEntities(mp_Data);
@@ -1052,10 +1050,28 @@ namespace NMib::NBuildSystem
 
 		auto fGetReconcileActionByName = [&](CStr const &_RepoName)
 			{
+				if (mp_bNoReconcileOptions)
+					return EHandleRepositoryAction_None;
 				EHandleRepositoryAction Action = EHandleRepositoryAction_None;
-				for (auto &WildcardAction : _Actions)
+				for (auto &WildcardAction : mp_GenerateOptions.m_ReconcileActions)
 				{
-					auto &Wildcard = _Actions.fs_GetKey(WildcardAction);
+					auto &Wildcard = mp_GenerateOptions.m_ReconcileActions.fs_GetKey(WildcardAction);
+					if (fg_StrMatchWildcard(_RepoName.f_GetStr(), Wildcard.f_GetStr()) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
+						Action = WildcardAction;
+				}
+
+				return Action;
+			}
+		;
+
+		auto fGetReconcileRemovedActionByName = [&](CStr const &_RepoName)
+			{
+				if (mp_bNoReconcileOptions)
+					return EHandleRepositoryRemovedAction_None;
+				EHandleRepositoryRemovedAction Action = EHandleRepositoryRemovedAction_None;
+				for (auto &WildcardAction : mp_GenerateOptions.m_ReconcileRemovedActions)
+				{
+					auto &Wildcard = mp_GenerateOptions.m_ReconcileRemovedActions.fs_GetKey(WildcardAction);
 					if (fg_StrMatchWildcard(_RepoName.f_GetStr(), Wildcard.f_GetStr()) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
 						Action = WildcardAction;
 				}
@@ -1123,7 +1139,7 @@ namespace NMib::NBuildSystem
 									{
 										bChanged.f_Exchange(true);
 										CStr RelativePath = CFile::fs_MakePathRelative(_Repo.m_Location, f_GetBaseDir());
-										if (RelativePath.f_StartsWith("Binaries/"))
+										if (RelativePath.f_StartsWith("Binaries/Malterlib/"))
 											bBinariesChange.f_Exchange(true);
 									}
 								}
@@ -1178,14 +1194,14 @@ namespace NMib::NBuildSystem
 			CStr FullRepoPath = mp_BaseDir / LastSeen;
 			if (!SeenRepositories.f_FindEqual(LastSeen) && CFile::fs_FileExists(FullRepoPath, EFileAttrib_Directory))
 			{
-				EHandleRepositoryAction Action = fGetReconcileActionByName(LastSeen);
+				EHandleRepositoryRemovedAction Action = fGetReconcileRemovedActionByName(LastSeen);
 
-				if (bForceReset || Action == EHandleRepositoryAction_ResetDelete || Action == EHandleRepositoryAction_DeleteRemoved)
+				if (bForceReset || Action == EHandleRepositoryRemovedAction_Delete)
 				{
 					fg_OutputRepositoryInfo(EOutputType_Warning, "Deleting repository permanently from disk: {}"_f << FullRepoPath, StateHandler, LastSeen, MaxRepoWidth);
 					CFile::fs_DeleteDirectoryRecursive(FullRepoPath, true);
 				}
-				else if (Action != EHandleRepositoryAction_LeaveRemoved)
+				else if (Action != EHandleRepositoryRemovedAction_Leave)
 				{
 					fg_OutputRepositoryInfo(EOutputType_Warning, "Repository has been {}removed{}"_f<< CColors::ms_ToPush << CColors::ms_Default, StateHandler, LastSeen, MaxRepoWidth);
 					bLastSeenActionNeeded = true;
@@ -1202,6 +1218,7 @@ namespace NMib::NBuildSystem
 			CEJSON StateFile;
 
 			auto &SeenRepositoriesJSON = StateFile["SeenRepositories"];
+			SeenRepositoriesJSON = EJSONType_Object;
 			for (auto &LastSeen : SeenRepositories)
 				SeenRepositoriesJSON[LastSeen] = 1;
 
@@ -1221,10 +1238,20 @@ namespace NMib::NBuildSystem
 
 		if (bChanged.f_Load())
 		{
-			if (bBinariesChange.f_Load())
-				return ERetry_Relaunch;
+			if (mp_GenerateOptions.m_bReconcileForce)
+			{
+				if (bBinariesChange.f_Load())
+					return ERetry_Relaunch;
+				else
+					return ERetry_Again;
+			}
 			else
-				return ERetry_Again;
+			{
+				if (bBinariesChange.f_Load())
+					return ERetry_Relaunch_NoReconcileOptions;
+				else
+					return ERetry_Again_NoReconcileOptions;
+			}
 		}
 
 		return ERetry_None;

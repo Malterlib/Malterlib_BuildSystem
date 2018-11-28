@@ -44,7 +44,7 @@ namespace NMib::NBuildSystem
 				{
 					// We are looking for files
 					CFindOptions FindOptions(FullPath, EFileAttrib_File);
-					auto Files = mp_FindCache.f_FindFiles(FindOptions);
+					auto Files = mp_FindCache.f_FindFiles(FindOptions, true);
 					for (auto &File : Files)
 						o_Files.f_Insert(File.m_Path);
 				}
@@ -52,7 +52,7 @@ namespace NMib::NBuildSystem
 				{
 					// We are looking for directories
 					CFindOptions FindOptions(FullPath, EFileAttrib_Directory);
-					auto Files = mp_FindCache.f_FindFiles(FindOptions);
+					auto Files = mp_FindCache.f_FindFiles(FindOptions, true);
 					for (auto &File : Files)
 						fpr_FindFilesRecursive(_Registry, o_Files, File.m_Path, ToFind);
 				}
