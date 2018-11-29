@@ -479,7 +479,7 @@ namespace NMib::NBuildSystem
 							if (!GenerateState.m_bDependenciesChanged)
 							{
 								fp64 Time1 = GenerateState.m_Clock.f_GetTime();
-								DConOut("Dependency check: Checked for changes {fe2} s{\n}", Time1);
+								DConOut("No changes found {fe2} s{\n}", Time1);
 
 								return true;
 							}
@@ -492,6 +492,7 @@ namespace NMib::NBuildSystem
 
 					fp64 Time1 = GenerateState.m_Clock.f_GetTime();
 
+					GenerateState.m_bDependenciesChanged = true;
 					DConOut("Checked for changes {fe2} s{\n}", Time1);
 					return false;
 				}
@@ -499,6 +500,9 @@ namespace NMib::NBuildSystem
 		;
 
 		if (o_Retry != ERetry_None)
+			return false;
+
+		if (!GenerateState.m_bDependenciesChanged)
 			return false;
 
 		fp64 Time1 = GenerateState.m_Clock.f_GetTime();

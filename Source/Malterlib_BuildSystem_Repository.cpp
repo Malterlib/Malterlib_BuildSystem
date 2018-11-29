@@ -20,7 +20,7 @@ To choose separate action for different repositories you can specify wildcards. 
 {0}./mib update_repos --reconcile=*:auto,External/*:reset{1}
 
 To force the action even for repositories that you have not yet seen
-{0}./mib update_repos --reconcile=*:auto --reconcile-force
+{0}./mib update_repos --reconcile=*:auto --reconcile-force{1}
 
 To show current status without reconciling use:
 {0}./mib status --skip-update{1}
@@ -43,7 +43,7 @@ To choose separate action for different repositories you can specify wildcards. 
 {0}./mib update_repos --reconcile-removed=*:leave,External/*:delete{1}
 
 To force the action even for repositories that you have not yet seen the recommended action for
-{0}./mib update_repos --reconcile-remove=*:delete --reconcile-force
+{0}./mib update_repos --reconcile-remove=*:delete --reconcile-force{1}
 
 To show current status without reconciling use:
 {0}./mib status --skip-update{1}
