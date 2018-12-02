@@ -363,9 +363,6 @@ namespace NMib::NBuildSystem
 		fg_AddStrSep(HidePrefixes, CFile::fs_GetPath(FileName), ";");
 		LaunchParams.m_Environment["CMAKE_MALTERLIB_HIDEPREFIXES"] = HidePrefixes;
 		LaunchParams.m_Environment["CMAKE_MALTERLIB_REPLACEPREFIXES"] = CmakeReplacePrefixes;
-#ifdef DPlatformFamily_OSX
-		LaunchParams.m_Environment["PATH"] = "/opt/local/bin:" + LaunchParams.m_Environment["PATH"];
-#endif
 		{
 			CStr Path;
 			while (!CmakePath.f_IsEmpty())

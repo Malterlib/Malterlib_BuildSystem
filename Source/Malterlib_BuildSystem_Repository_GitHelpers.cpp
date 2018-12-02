@@ -650,9 +650,6 @@ namespace NMib::NBuildSystem::NRepository
 		auto fLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir)
 			{
 				CProcessLaunchParams Params{_WorkingDir};
-#ifdef DPlatformFamily_OSX
-				Params.m_Environment["PATH"] = "/opt/local/bin:" + CStr(fg_GetSys()->f_GetEnvironmentVariable("PATH"));
-#endif
 				Params.m_bShowLaunched = false;
 				return CProcessLaunch::fs_LaunchTool("git", _Params, Params);
 			}

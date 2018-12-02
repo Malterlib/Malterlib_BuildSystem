@@ -297,9 +297,6 @@ namespace NMib::NBuildSystem
 			auto fLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir, TCMap<CStr, CStr> const &_Environment = {})
 				{
 					CProcessLaunchParams Params{_WorkingDir};
-#ifdef DPlatformFamily_OSX
-					Params.m_Environment["PATH"] = "/opt/local/bin:" + CStr(fg_GetSys()->f_GetEnvironmentVariable("PATH"));
-#endif
 					Params.m_Environment += _Environment;
 					Params.m_bShowLaunched = false;
 					return CProcessLaunch::fs_LaunchTool("git", _Params, Params);
@@ -308,9 +305,6 @@ namespace NMib::NBuildSystem
 			auto fLaunchGitQuestion = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir, bool _bErrorOnStdErr)
 				{
 					CProcessLaunchParams Params{_WorkingDir};
-#ifdef DPlatformFamily_OSX
-					Params.m_Environment["PATH"] = "/opt/local/bin:" + CStr(fg_GetSys()->f_GetEnvironmentVariable("PATH"));
-#endif
 					Params.m_bShowLaunched = false;
 					uint32 ExitCode = 1;
 					CStr StdErr;
@@ -324,9 +318,6 @@ namespace NMib::NBuildSystem
 			auto fLaunchGitNonEmpty = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir)
 				{
 					CProcessLaunchParams Params{_WorkingDir};
-#ifdef DPlatformFamily_OSX
-					Params.m_Environment["PATH"] = "/opt/local/bin:" + CStr(fg_GetSys()->f_GetEnvironmentVariable("PATH"));
-#endif
 					Params.m_bShowLaunched = false;
 					uint32 ExitCode = 1;
 					CStr StdErr;
@@ -341,9 +332,6 @@ namespace NMib::NBuildSystem
 			auto fTryLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir) -> CStr
 				{
 					CProcessLaunchParams Params{_WorkingDir};
-#ifdef DPlatformFamily_OSX
-					Params.m_Environment["PATH"] = "/opt/local/bin:" + CStr(fg_GetSys()->f_GetEnvironmentVariable("PATH"));
-#endif
 					Params.m_bShowLaunched = false;
 					uint32 ExitCode = 1;
 					CStr StdOut;
