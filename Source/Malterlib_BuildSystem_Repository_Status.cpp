@@ -33,45 +33,31 @@ namespace NMib::NBuildSystem
 		if (ERetry Retry = fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
 			return Retry;
 
-		CFilteredRepos FilteredRepositories = fg_GetFilteredRepos(_Filter, *this, mp_Data);
+		CRepoFilter Filter = _Filter;
+
+		EFilterRepoFlag FilterFlags = EFilterRepoFlag_None;
+
+		constexpr auto c_IncompatibleOptions = CBuildSystem::ERepoStatusFlag_ShowUnchanged
+			| CBuildSystem::ERepoStatusFlag_UpdateRemotes
+			| CBuildSystem::ERepoStatusFlag_AllBranches
+			| CBuildSystem::ERepoStatusFlag_UseDefaultUpstreamBranch
+			| CBuildSystem::ERepoStatusFlag_NonDefaultToAll
+		;
+
+		if (!Filter.m_bOnlyChanged && !(_Flags & c_IncompatibleOptions))
+		{
+			Filter.m_bOnlyChanged = true;
+			FilterFlags |= EFilterRepoFlag_IncludePull;
+		}
+
+		if (_Flags & CBuildSystem::ERepoStatusFlag_OnlyTracked)
+			FilterFlags |= EFilterRepoFlag_OnlyTracked;
+
+		CFilteredRepos FilteredRepositories = fg_GetFilteredRepos(Filter, *this, mp_Data, FilterFlags);
 		CRepoEditor RepoEditor = fg_GetRepoEditor(*this, mp_Data);
 
-		TCVector<TCTuple<CRepository, mint>> AllRepos;
-		{
-			mint iSequence = 0;
-			for (auto &Repos : FilteredRepositories.m_FilteredRepositories)
-			{
-				for (auto *pRepo : Repos)
-					AllRepos.f_Insert({*pRepo, iSequence});
-				++iSequence;
-			}
-		}
-
 		if (_Flags & ERepoStatusFlag_UpdateRemotes)
-		{
-			CGitLaunches Launches{mp_BaseDir, "Fetching remotes"};
-			Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
-
-			CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
-
-			TCActorResultVector<void> Results;
-
-			for (auto &[Repo, iSequence] : AllRepos)
-			{
-				TCContinuation<void> Continuation;
-				Launches.f_Launch(Repo, {"fetch", "--all", "--prune", "-q"}, fg_LogAllFunctor()) > [=](TCAsyncResult<void> &&_Result)
-					{
-						Continuation.f_SetResult(_Result);
-						Launches.f_RepoDone();
-					}
-				;
-
-				Continuation.f_Dispatch() > Results.f_AddResult();
-			}
-
-			for (auto &Result : Results.f_GetResults().f_CallSync())
-				Result.f_Access();
-		}
+			fg_UpdateRemotes(*this, FilteredRepositories);
 
 		CGitLaunches Launches{mp_BaseDir, "Getting repo status"};
 		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
@@ -81,6 +67,8 @@ namespace NMib::NBuildSystem
 		bool bUseDefaultUpstream = _Flags & ERepoStatusFlag_UseDefaultUpstreamBranch;
 
 		TCActorResultVector<TCTuple<bool, mint, CRepository>> RepoResults;
+
+		auto AllRepos = FilteredRepositories.f_GetAllRepos();
 
 		for (auto &[Repo, iSequence] : AllRepos)
 		{
@@ -671,7 +659,7 @@ namespace NMib::NBuildSystem
 							}
 
 							Launches.f_RepoDone();
-							Continuation.f_SetResult(TCTuple<bool, mint, CRepository>{bActionNeeded, iSequence, {}});
+							Continuation.f_SetResult(TCTuple<bool, mint, CRepository>{bActionNeeded, iSequence, {""}});
 						}
 					;
 				}

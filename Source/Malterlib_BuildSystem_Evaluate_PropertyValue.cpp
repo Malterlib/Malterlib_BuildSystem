@@ -985,11 +985,17 @@ namespace NMib::NBuildSystem
 			}
 			else if (Property == "MToolExe")
 			{
-				Ret = CFile::fs_GetProgramPath();
+				Ret = CFile::fs_GetProgramDirectory() / "MTool";
+				#ifdef DPlatformFamily_Windows
+					Ret += ".exe";
+				#endif
 			}
 			else if (Property == "MalterlibExe")
 			{
 				Ret = CFile::fs_GetProgramDirectory() / "mib";
+				#ifdef DPlatformFamily_Windows
+					Ret += ".exe";
+				#endif
 			}
 			else if (!mp_GeneratorInterface->f_GetBuiltin(Property, Ret))
 				fsp_ThrowError(_Position, CStr::CFormat("Unrecognized builtin '{}'") << Property);

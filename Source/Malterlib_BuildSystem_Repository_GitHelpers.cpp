@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Repository.h"
@@ -143,7 +143,7 @@ namespace NMib::NBuildSystem::NRepository
 		return CFile::fs_FileExists(GitDirectory, EFileAttrib_File);
 	}
 
-	TCContinuation<bool> fg_RepoIsChanged(CGitLaunches const &_GitLaunches, CRepository const &_Repo)
+	TCContinuation<bool> fg_RepoIsChanged(CGitLaunches const &_GitLaunches, CRepository const &_Repo, EFilterRepoFlag _Flags)
 	{
 		CStr GitDirectory = fg_GetGitDataDir(_Repo.m_Location, _Repo.m_Position);
 
@@ -158,9 +158,38 @@ namespace NMib::NBuildSystem::NRepository
 
 		TCContinuation<bool> Continuation;
 
-		_GitLaunches.f_Launch(_Repo, {"status", "-s"}) > Continuation / [Continuation](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
+		CStr RepoName = _Repo.f_GetName();
+
+		TCVector<CStr> Params = {"status", "-sb", "--porcelain"};
+
+		if (_Flags & EFilterRepoFlag_OnlyTracked)
+			Params.f_Insert("-uno");
+
+		_GitLaunches.f_Launch(_Repo, Params) > Continuation / [Continuation, RepoName, _Flags](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
 			{
-				Continuation.f_SetResult(!_Result.m_Output.f_IsEmpty());
+				auto StdOut = _Result.f_GetStdOut().f_Trim();
+				CStr OriginalStdOut = StdOut;
+				CStr BranchLine = fg_GetStrLineSep(StdOut);
+
+				if (BranchLine.f_StartsWith("## HEAD "))
+					return Continuation.f_SetResult(true); // Detached head
+				else if (BranchLine.f_StartsWith("## "))
+				{
+					if (BranchLine.f_Find("...") < 0)
+						return Continuation.f_SetResult(true); // Non-pushed branch
+
+					CStr LocalRef;
+					CStr RemoteRef;
+					CStr Changes;
+					(CStr::CParse("## {}...{} [{}]") >> LocalRef >> RemoteRef >> Changes).f_Parse(BranchLine);
+
+					if ((_Flags & EFilterRepoFlag_IncludePull) && !Changes.f_IsEmpty())
+						return Continuation.f_SetResult(true); // Non-pushed or pulled changes
+					else if (Changes.f_Find("ahead") >= 0)
+						return Continuation.f_SetResult(true); // Non-pushed changes
+				}
+
+				Continuation.f_SetResult(!StdOut.f_IsEmpty()); // Local changes
 			}
 		;
 
@@ -447,7 +476,7 @@ namespace NMib::NBuildSystem::NRepository
 		return false;
 	}
 
-	NStr::CStr fg_GetBranch(CRepository const &_Repo)
+	CStr fg_GetBranch(CRepository const &_Repo)
 	{
 		CStr GitDirectory = fg_GetGitDataDir(_Repo.m_Location, _Repo.m_Position);
 
@@ -460,6 +489,196 @@ namespace NMib::NBuildSystem::NRepository
 		return Branch;
 	}
 
+	CStr fg_GetRemoteHead(CRepository const &_Repo, CStr const &_Remote)
+	{
+		CStr GitDirectory = fg_GetGitDataDir(_Repo.m_Location, _Repo.m_Position);
+
+		CStr File = "{}/refs/remotes/{}/HEAD"_f << GitDirectory << _Remote;
+
+		if (!CFile::fs_FileExists(File))
+			return {};
+
+		CStr HeadRef = CFile::fs_ReadStringFromFile(File, true).f_TrimRight("\n");
+		if (!HeadRef.f_StartsWith("ref: "))
+			return {};
+
+		CStr Branch;
+		(CStr::CParse(("ref: refs/remotes/{}/{{}"_f << _Remote).f_GetStr()) >> Branch).f_Parse(HeadRef);
+		return Branch;
+	}
+
+	TCVector<TCTuple<CRepository, mint>> CFilteredRepos::f_GetAllRepos() const
+	{
+		TCVector<TCTuple<CRepository, mint>> AllRepos;
+
+		mint iSequence = 0;
+		for (auto &Repos : m_FilteredRepositories)
+		{
+			for (auto *pRepo : Repos)
+				AllRepos.f_Insert({*pRepo, iSequence});
+			++iSequence;
+		}
+
+		return AllRepos;
+	}
+
+	TCMap<CStr, CStr> fg_FetchEnvironment(CBuildSystem const &_BuildSystem)
+	{
+		auto &Options = _BuildSystem.f_GetGenerateOptions();
+		return {{"GIT_HTTP_CONNECT_TIMEOUT", CStr::fs_ToStr(Options.m_GitFetchTimeout)}};
+	}
+
+	void fg_UpdateRemotes(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage)
+	{
+		CGitLaunches Launches{_BuildSystem.f_GetBaseDir(), "Fetching remotes" + _ExtraMessage};
+		Launches.f_MeasureRepos(_FilteredRepositories.m_FilteredRepositories);
+
+		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
+
+		TCActorResultVector<void> Results;
+
+		auto AllRepos = _FilteredRepositories.f_GetAllRepos();
+
+		TCMap<CStr, CStr> FetchEnvironment = fg_FetchEnvironment(_BuildSystem);
+
+		for (auto &[RepoBound, iSequence] : AllRepos)
+		{
+			auto &Repo = RepoBound;
+			TCContinuation<void> Continuation;
+
+			TCVector<CStr> FetchParams = {"fetch", "--all", "--prune", "--tags", "-q"};
+
+			struct CBranchState
+			{
+				CStr const &f_GetName() const
+				{
+					return TCMap<CStr, CBranchState>::fs_GetKey(*this);
+				}
+
+				CStr m_LocalBranch;
+				CStr m_RemoteBranch;
+			};
+
+			TCActorResultMap<CStr, void> RemoteQueryResults;
+			TCSharedPointer<TCMap<CStr, CBranchState>> pRemoteHeadBranches = fg_Construct();
+
+			auto RepoDoneScope = Launches.f_RepoDoneScope();
+
+			auto Remotes = Repo.m_Remotes;
+			Remotes["origin"].m_URL = Repo.m_URL;
+
+			for (auto &Remote : Remotes)
+			{
+				auto &RemoteName = Remote.f_Name();
+				(*pRemoteHeadBranches)[RemoteName].m_LocalBranch = fg_GetRemoteHead(Repo, RemoteName);
+
+				Launches.f_Launch
+					(
+					 	Repo
+					 	, {"ls-remote", "--symref", RemoteName, "HEAD"}
+					 	, [=](CProcessLaunchActor::CSimpleLaunchResult const &_Result) -> CStr
+					 	{
+							CStr StdOut = _Result.f_GetStdOut();
+							for (auto &Line : StdOut.f_SplitLine())
+							{
+								if (Line.f_StartsWith("ref: refs/heads/") && Line.f_EndsWith("	HEAD"))
+								{
+									CStr RemoteBranch;
+									(CStr::CParse("ref: refs/heads/{}	HEAD") >> RemoteBranch).f_Parse(Line);
+									(*pRemoteHeadBranches)[RemoteName].m_RemoteBranch = RemoteBranch;
+									break;
+								}
+							}
+							return {};
+						}
+					 	, {}
+					 	, FetchEnvironment
+					)
+					> RemoteQueryResults.f_AddResult(Remote.f_Name())
+				;
+			}
+
+			Launches.f_Launch(Repo, FetchParams, fg_LogAllFunctor(), {}, FetchEnvironment)
+				+ RemoteQueryResults.f_GetResults()
+				> [=](TCAsyncResult<void> &&_FetchResult, TCAsyncResult<TCMap<CStr, TCAsyncResult<void>>> &&_RemoteHeadResults)
+				{
+					fg_CombineResults(Continuation, fg_Move(_RemoteHeadResults));
+
+					if (!_FetchResult && !Continuation.f_IsSet())
+						Continuation.f_SetException(_FetchResult);
+
+					TCActorResultVector<void> SetHeadResults;
+
+					for (auto &Remote : *pRemoteHeadBranches)
+					{
+						auto &RemoteName = Remote.f_GetName();
+						if (Remote.m_LocalBranch != Remote.m_RemoteBranch && Remote.m_RemoteBranch)
+						{
+							Launches.f_Output(EOutputType_Normal, Repo, "Updating remote HEAD to {} on {}"_f << Remote.m_RemoteBranch << RemoteName);
+							Launches.f_Launch(Repo, {"remote", "set-head", RemoteName, Remote.m_RemoteBranch}, fg_LogAllFunctor()) > SetHeadResults.f_AddResult();
+						}
+					}
+
+					SetHeadResults.f_GetResults() > Continuation / [=](TCVector<TCAsyncResult<void>> &&_SetHeadResults)
+						{
+							TCContinuation<void> ResultContinuation;
+							if (!fg_CombineResults(ResultContinuation, fg_Move(_SetHeadResults)))
+							{
+								if (!Continuation.f_IsSet())
+									ResultContinuation > Continuation;
+								return;
+							}
+
+							(void)RepoDoneScope;
+
+							if (!Continuation.f_IsSet())
+								Continuation.f_SetResult();
+						}
+					;
+				}
+			;
+
+			Continuation.f_Dispatch() > Results.f_AddResult();
+		}
+
+		for (auto &Result : Results.f_GetResults().f_CallSync())
+			Result.f_Access();
+	}
+
+	CGitVersion fg_GetGitVersion()
+	{
+		auto fLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir)
+			{
+				CProcessLaunchParams Params{_WorkingDir};
+#ifdef DPlatformFamily_OSX
+				Params.m_Environment["PATH"] = "/opt/local/bin:" + CStr(fg_GetSys()->f_GetEnvironmentVariable("PATH"));
+#endif
+				Params.m_bShowLaunched = false;
+				return CProcessLaunch::fs_LaunchTool("git", _Params, Params);
+			}
+		;
+
+		static CGitVersion GitVersion;
+		static CMutualSpin Lock;
+
+		DMibLock(Lock);
+
+		if (GitVersion.m_Major)
+			return GitVersion;
+
+		CStr VersionStr = fLaunchGit({"--version"}, "").f_Trim();
+
+		CGitVersion Version;
+
+		aint nParsed = 0;
+		(CStr::CParse("git version {}.{}.{}") >> Version.m_Major >> Version.m_Minor >> Version.m_Patch).f_Parse(VersionStr, nParsed);
+		if (nParsed != 3)
+			DMibError("Failed to parse git version");
+
+		GitVersion = Version;
+
+		return GitVersion;
+	}
 
 	TCFunctionMovable<CStr (CProcessLaunchActor::CSimpleLaunchResult const &_Result)> fg_LogAllFunctor()
 	{

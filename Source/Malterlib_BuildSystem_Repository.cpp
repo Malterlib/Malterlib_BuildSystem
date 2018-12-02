@@ -294,12 +294,13 @@ namespace NMib::NBuildSystem
 			
 			bool bChanged = false;
 
-			auto fLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir)
+			auto fLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir, TCMap<CStr, CStr> const &_Environment = {})
 				{
 					CProcessLaunchParams Params{_WorkingDir};
 #ifdef DPlatformFamily_OSX
 					Params.m_Environment["PATH"] = "/opt/local/bin:" + CStr(fg_GetSys()->f_GetEnvironmentVariable("PATH"));
 #endif
+					Params.m_Environment += _Environment;
 					Params.m_bShowLaunched = false;
 					return CProcessLaunch::fs_LaunchTool("git", _Params, Params);
 				}
@@ -359,44 +360,6 @@ namespace NMib::NBuildSystem
 						return StdOut;
 
 					return "Unknown error";
-				}
-			;
-
-
-			struct CGitVersion
-			{
-				bool operator < (CGitVersion const &_Right) const
-				{
-					return fg_TupleReferences(m_Major, m_Minor, m_Patch) < fg_TupleReferences(_Right.m_Major, _Right.m_Minor, _Right.m_Patch);
-				}
-
-				uint32 m_Major = 0;
-				uint32 m_Minor = 0;
-				uint32 m_Patch = 0;
-			};
-
-			auto fGetGitVersion = [&]() -> CGitVersion
-				{
-					static CGitVersion GitVersion;
-					static CMutualSpin Lock;
-
-					DMibLock(Lock);
-
-					if (GitVersion.m_Major)
-						return GitVersion;
-
-					CStr VersionStr = fLaunchGit({"--version"}, "").f_Trim();
-
-					CGitVersion Version;
-
-					aint nParsed = 0;
-					(CStr::CParse("git version {}.{}.{}") >> Version.m_Major >> Version.m_Minor >> Version.m_Patch).f_Parse(VersionStr, nParsed);
-					if (nParsed != 3)
-						DMibError("Failed to parse git version");
-
-					GitVersion = Version;
-
-					return GitVersion;
 				}
 			;
 
@@ -460,7 +423,10 @@ namespace NMib::NBuildSystem
 							Params.f_Insert(ConfigHash);
 
 						fLaunchGit(Params, Location);
+
 						bChanged = true;
+
+						fLaunchGit({"branch", "-u", "origin/{}"_f << _Repo.m_DefaultBranch}, Location);
 					}
 					catch (CException const &_Exception)
 					{
@@ -563,12 +529,24 @@ namespace NMib::NBuildSystem
 				{
 					if (HeadHash != ConfigHash)
 					{
-						TCVector<CStr> FetchParams = {"fetch", "--all", "--prune", "--tags"};
+						if (!fLaunchGitQuestion({"git", "cat-file", "-e", "{}^{{commit}"_f << ConfigHash}, Location))
+						{
+							TCVector<CStr> FetchParams = {"fetch", "--all", "--prune", "--tags"};
 
-						if (bForceReset && fGetGitVersion() >= CGitVersion{2, 17})
-							FetchParams.f_Insert("--prune-tags");
+							if (bForceReset && fg_GetGitVersion() >= CGitVersion{2, 17})
+								FetchParams.f_Insert("--prune-tags");
 
-						fLaunchGit(FetchParams, Location);
+							try
+							{
+								fLaunchGit(FetchParams, Location, fg_FetchEnvironment(_BuildSystem));
+							}
+							catch (CException const &_Exception)
+							{
+								if (!fLaunchGitQuestion({"git", "cat-file", "-e", "{}^{{commit}"_f << ConfigHash}, Location))
+									throw;
+								fOutputInfo(EOutputType_Error, "Not all remotes were fetched: {}"_f << _Exception);
+							}
+						}
 					}
 
 					if (bForceReset)
@@ -577,9 +555,12 @@ namespace NMib::NBuildSystem
 						{
 							fOutputInfo(EOutputType_Warning, "Force Resetting to '{}'"_f << ConfigHash);
 							fLaunchGit({"checkout", "-f", "-B", _Repo.m_DefaultBranch, ConfigHash}, Location);
+							fLaunchGit({"branch", "-u", "origin/{}"_f << _Repo.m_DefaultBranch}, Location);
 							fLaunchGit({"clean", "-fd"}, Location);
 							if (_Repo.m_bUpdateSubmodules)
 								fLaunchGit({"submodule", "update", "--init"}, Location);
+
+							// git remote set-head origin master
 							bChanged = true;
 						}
 					}
@@ -866,7 +847,9 @@ namespace NMib::NBuildSystem
 
 				auto &ReposLocation = Repos[ReposDirectory];
 
-				auto RepoMap = ReposLocation.m_Repositories(CFile::fs_GetFile(Location));
+				CStr RepoName = CFile::fs_GetFile(Location);
+
+				auto RepoMap = ReposLocation.m_Repositories(RepoName, RepoName);
 
 				if (!RepoMap.f_WasCreated())
 					_BuildSystem.fs_ThrowError(ChildEntity.m_Position, fg_Format("Duplicate repository location: {}", Location));
@@ -889,11 +872,16 @@ namespace NMib::NBuildSystem
 				Repo.m_DefaultBranch = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "DefaultBranch");
 				Repo.m_DefaultUpstreamBranch = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "DefaultUpstreamBranch");
 				Repo.m_Tags.f_AddContainer(_BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "Tags").f_Split(";"));
+				Repo.m_Tags.f_Remove("");
 				Repo.m_Submodule = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "Submodule");
 				Repo.m_SubmoduleName = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "SubmoduleName");
 				Repo.m_Type = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "Type");
 				Repo.m_UserName = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "UserName");
 				Repo.m_UserEmail = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "UserEmail");
+				Repo.m_ProtectedBranches.f_AddContainer(_BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "ProtectedBranches").f_Split(";"));
+				Repo.m_ProtectedBranches.f_Remove("");
+				Repo.m_ProtectedTags.f_AddContainer(_BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "ProtectedTags").f_Split(";"));
+				Repo.m_ProtectedTags.f_Remove("");
 				Repo.m_bUpdateSubmodules = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "UpdateSubmodules") == "true";
 
 				TCVector<CStr> NoPushRemotes;
@@ -913,8 +901,19 @@ namespace NMib::NBuildSystem
 					CStr Name = fg_GetStrSep(RemoteString, "=");
 					if (Repo.m_Remotes.f_FindEqual(Name))
 						_BuildSystem.fs_ThrowError(ChildEntity.m_Position, fg_Format("Same remote '{}' specified multiple times", Name));
+
+					CStr URL = fg_GetStrSep(RemoteString, ">");
+
 					auto &OutRemote = Repo.m_Remotes[Name];
-					OutRemote.m_URL = RemoteString;
+					OutRemote.m_URL = URL;
+
+					for (auto ValueString : RemoteString.f_Split(","))
+					{
+						CStr Key = fg_GetStrSep(ValueString, "=");
+						if (Key == "Write")
+							OutRemote.m_bCanPush = ValueString == "true";
+					}
+
 					for (auto &Wildcard : NoPushRemotes)
 					{
 						if (fg_StrMatchWildcard(Name.f_GetStr(), Wildcard.f_GetStr()) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
@@ -978,7 +977,7 @@ namespace NMib::NBuildSystem
 						if (!pTheseRepos)
 							pTheseRepos = &ReposOrdered.f_Insert();
 
-						(*pTheseRepos)[_RepoLocation.f_GetPath()].m_Repositories[_Repo.f_GetName()] = _Repo;
+						*((*pTheseRepos)[_RepoLocation.f_GetPath()].m_Repositories(_Repo.f_GetName(), _Repo.f_GetName())) = _Repo;
 						ToAddRepos[_Repo.m_Location];
 						bDoneSomething = true;
 					}
@@ -1022,12 +1021,12 @@ namespace NMib::NBuildSystem
 
 	using namespace NRepository;
 
-	CBuildSystem::ERetry CBuildSystem::fp_HandleRepositories(TCMap<CPropertyKey, CStr> const &_Values, bool _bSkipRepoUpdate)
+	CBuildSystem::ERetry CBuildSystem::fp_HandleRepositories(TCMap<CPropertyKey, CStr> const &_Values)
 	{
 		f_InitEntityForEvaluation(mp_Data.m_RootEntity, _Values);
 		f_ExpandRepositoryEntities(mp_Data);
 
-		if (_bSkipRepoUpdate)
+		if (mp_GenerateOptions.m_bSkipUpdate)
 			return ERetry_None;
 
 		TCVector<TCMap<CStr, CReposLocation>> ReposOrdered = fg_GetRepos(*this, mp_Data);

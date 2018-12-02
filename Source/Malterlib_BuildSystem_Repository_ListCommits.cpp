@@ -141,31 +141,7 @@ namespace NMib::NBuildSystem
 		}
 
 		if (_Flags & ERepoListCommitsFlag_UpdateRemotes)
-		{
-			CGitLaunches Launches{mp_BaseDir, "Fetching remotes (Disable with --local) "};
-			Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
-
-			CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
-
-			TCActorResultVector<void> Results;
-
-			for (auto Repo : AllRepos)
-			{
-				TCContinuation<void> Continuation;
-				Launches.f_Launch(Repo, {"fetch", "--all", "--prune", "-q"}, fg_LogAllFunctor()) > [=](TCAsyncResult<void> &&_Result)
-					{
-						Continuation.f_SetResult(_Result);
-						Launches.f_RepoDone();
-					}
-				;
-
-				Continuation.f_Dispatch() > Results.f_AddResult();
-			}
-
-			auto SyncResults = Results.f_GetResults().f_CallSync();
-			for (auto &Result : SyncResults)
-				Result.f_Access();
-		}
+			fg_UpdateRemotes(*this, FilteredRepositories, " (Disable with --local) ");
 
 		CGitLaunches Launches{mp_BaseDir, "Listing Commits"};
 

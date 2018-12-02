@@ -121,17 +121,43 @@ namespace NMib::NBuildSystem::NRepository
 			fOutputSection(m_DeferredOutput.fs_GetKey(RepoOutput), RepoOutput);
 	}
 
+	void CGitLaunches::CState::f_OutputState() const
+	{
+		CUStr ToOutput = CStr{"  {}: {}/{} repos done"_f << m_ProgressDescription << m_nDoneRepos.f_Load() << m_nRepos.f_Load()};
+		if (m_nDoneRepos == m_nRepos.f_Load())
+			ToOutput = CStr{"{sj*}"_f << "" << ToOutput.f_GetLen()}; // Clear previous output
+
+		DMibConOut2("{}\x1B[{}D", ToOutput, ToOutput.f_GetLen());
+	}
+
+	COnScopeExitShared CGitLaunches::f_RepoDoneScope() const
+	{
+		return g_OnScopeExitActor > [pState = m_pState]
+			{
+				auto &State = *pState;
+
+				++State.m_nDoneRepos;
+				State.f_OutputState();
+			}
+		;
+	}
+
 	void CGitLaunches::f_RepoDone(mint _nDone) const
 	{
 		auto &State = *m_pState;
 
 		State.m_nDoneRepos += _nDone;
+		State.f_OutputState();
+	}
 
-		CUStr ToOutput = CStr{"  {}: {}/{} repos done"_f << State.m_ProgressDescription << State.m_nDoneRepos.f_Load() << State.m_nRepos};
-		if (State.m_nDoneRepos == State.m_nRepos)
-			ToOutput = CStr{"{sj*}"_f << "" << ToOutput.f_GetLen()}; // Clear previous output
+	void CGitLaunches::f_SetNumRepos(mint _nRepos, bool _bReport)
+	{
+		auto &State = *m_pState;
 
-		DMibConOut2("{}\x1B[{}D", ToOutput, ToOutput.f_GetLen());
+		State.m_nRepos = _nRepos;
+
+		if (_bReport)
+			f_RepoDone(0);
 	}
 
 	void CGitLaunches::f_MeasureRepos(TCVector<TCVector<CRepository *>> const &_FilteredRepositories, bool _bReport)
@@ -207,71 +233,91 @@ namespace NMib::NBuildSystem::NRepository
 		}
 	}
 
-	TCContinuation<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::f_Launch(CRepository const &_Repo, TCVector<CStr> const &_Params) const
+	TCContinuation<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::fp_Launch(CProcessLaunchActor::CSimpleLaunch &&_Launch) const
 	{
 		auto &State = *m_pState;
-		return State.m_LaunchSequencer > [=, pState = m_pState]() -> TCContinuation<CProcessLaunchActor::CSimpleLaunchResult>
+		return State.m_LaunchSequencer > [=, pState = m_pState, Launch = fg_Move(_Launch)]() mutable -> TCContinuation<CProcessLaunchActor::CSimpleLaunchResult>
 			{
 				auto &State = *pState;
-				TCActor<CProcessLaunchActor> LaunchActor;
+				TCActor<CProcessLaunchActor> LaunchActor = fg_Construct();
+				mint LaunchID;
 				{
 					DLock(State.m_Lock);
-					LaunchActor = State.m_Launches.f_Insert() = fg_Construct();
+					LaunchID = State.m_LaunchID++;
+					State.m_Launches[LaunchID] = LaunchActor;
 				}
-				CProcessLaunchActor::CSimpleLaunch LaunchParams{"git", _Params, _Repo.m_Location};
-				return LaunchActor(&CProcessLaunchActor::f_LaunchSimple, fg_Move(LaunchParams));
-			}
-		;
-	}
-
-	TCContinuation<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::f_OpenRepoEditor(CRepoEditor const &_Editor, CStr const &_Repo) const
-	{
-		auto &State = *m_pState;
-
-		return State.m_LaunchSequencer > [=, pState = m_pState]() -> TCContinuation<CProcessLaunchActor::CSimpleLaunchResult>
-			{
-				auto &State = *pState;
-
-				TCActor<CProcessLaunchActor> LaunchActor;
-				{
-					DLock(State.m_Lock);
-					LaunchActor = State.m_Launches.f_Insert() = fg_Construct();
-				}
-
-				auto Params = _Editor.m_Params;
-#ifdef DPlatformFamily_Windows
-				CStr RepoNative = NMib::NFile::NPlatform::fg_ConvertToWindowsPath(_Repo, false);
-#else
-				CStr RepoNative = _Repo;
-#endif
-				for (auto &Param : Params)
-					Param = Param.f_Replace("{}", RepoNative);
-
-				CProcessLaunchActor::CSimpleLaunch LaunchParams{_Editor.m_Application, Params};
-				LaunchParams.m_Params.m_WorkingDirectory = _Editor.m_WorkingDir ? _Editor.m_WorkingDir : _Repo;
-
 				TCContinuation<CProcessLaunchActor::CSimpleLaunchResult> Continuation;
-				
-				LaunchActor(&CProcessLaunchActor::f_LaunchSimple, fg_Move(LaunchParams)) 
-					> Continuation / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
+				LaunchActor(&CProcessLaunchActor::f_LaunchSimple, fg_Move(Launch)) > [=](TCAsyncResult<CProcessLaunchActor::CSimpleLaunchResult> &&_Result)
 					{
-						if (!_Editor.m_Sleep)
+						auto &State = *pState;
+						TCActor<CProcessLaunchActor> LaunchActor;
+						{
+							DLock(State.m_Lock);
+							auto pLaunchActor = State.m_Launches.f_FindEqual(LaunchID);
+							if (pLaunchActor)
+							{
+								LaunchActor = *pLaunchActor;
+								State.m_Launches.f_Remove(LaunchID);
+							}
+						}
+						if (!LaunchActor)
 						{
 							Continuation.f_SetResult(fg_Move(_Result));
 							return;
 						}
 
-						fg_Timeout(_Editor.m_Sleep) > Continuation / [=]
+						LaunchActor->f_Destroy() > [=, Result = fg_Move(_Result)](auto &&) mutable
 							{
-								Continuation.f_SetResult(_Result);
+								Continuation.f_SetResult(fg_Move(Result));
+								return;
 							}
 						;
 					}
 				;
-
 				return Continuation;
 			}
 		;
+	}
+
+	TCContinuation<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::f_Launch(CRepository const &_Repo, TCVector<CStr> const &_Params, TCMap<CStr, CStr> const &_Environment) const
+	{
+		CProcessLaunchActor::CSimpleLaunch LaunchParams{"git", _Params, _Repo.m_Location};
+		LaunchParams.m_Params.m_Environment += _Environment;
+		return fp_Launch(fg_Move(LaunchParams));
+	}
+
+	TCContinuation<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::f_OpenRepoEditor(CRepoEditor const &_Editor, CStr const &_Repo) const
+	{
+		auto Params = _Editor.m_Params;
+#ifdef DPlatformFamily_Windows
+		CStr RepoNative = NMib::NFile::NPlatform::fg_ConvertToWindowsPath(_Repo, false);
+#else
+		CStr RepoNative = _Repo;
+#endif
+		for (auto &Param : Params)
+			Param = Param.f_Replace("{}", RepoNative);
+
+		CProcessLaunchActor::CSimpleLaunch LaunchParams{_Editor.m_Application, Params};
+		LaunchParams.m_Params.m_WorkingDirectory = _Editor.m_WorkingDir ? _Editor.m_WorkingDir : _Repo;
+
+		TCContinuation<CProcessLaunchActor::CSimpleLaunchResult> Continuation;
+		fp_Launch(fg_Move(LaunchParams)) > [=](TCAsyncResult<CProcessLaunchActor::CSimpleLaunchResult> &&_Result)
+			{
+				if (!_Editor.m_Sleep)
+				{
+					Continuation.f_SetResult(fg_Move(_Result));
+					return;
+				}
+
+				fg_Timeout(_Editor.m_Sleep) > Continuation / [=]
+					{
+						Continuation.f_SetResult(_Result);
+					}
+				;
+			}
+		;
+
+		return Continuation;
 	}
 
 	uint32 CGitLaunches::fs_MaxProcesses()
@@ -289,25 +335,14 @@ namespace NMib::NBuildSystem::NRepository
 		 	, TCVector<CStr> const &_Params
 		 	, TCFunctionMovable<CStr (CProcessLaunchActor::CSimpleLaunchResult const &_Result)> &&_fHandleResult
 		 	, CStr const &_Prefix
+		 	, TCMap<CStr, CStr> const &_Environment
 		) const
 	{
 		auto &State = *m_pState;
-
+		CProcessLaunchActor::CSimpleLaunch LaunchParams{"git", _Params, _Repo.m_Location};
+		LaunchParams.m_Params.m_Environment += _Environment;
 		TCContinuation<void> Result;
-
-		State.m_LaunchSequencer > [=, pState = m_pState]() -> TCContinuation<CProcessLaunchActor::CSimpleLaunchResult>
-			{
-				auto &State = *pState;
-
-				TCActor<CProcessLaunchActor> LaunchActor;
-				{
-					DLock(State.m_Lock);
-					LaunchActor = State.m_Launches.f_Insert() = fg_Construct();
-				}
-				CProcessLaunchActor::CSimpleLaunch LaunchParams{"git", _Params, _Repo.m_Location};
-				return LaunchActor(&CProcessLaunchActor::f_LaunchSimple, fg_Move(LaunchParams));
-			}
-			> State.m_OutputActor / [Result, _Prefix, This = *this, _Repo, fHandleResult = fg_Move(_fHandleResult)]
+		fp_Launch(fg_Move(LaunchParams)) > State.m_OutputActor / [Result, _Prefix, This = *this, _Repo, fHandleResult = fg_Move(_fHandleResult)]
 			(TCAsyncResult<CProcessLaunchActor::CSimpleLaunchResult> &&_Result) mutable
 			{
 				bool bIsError = !_Result || _Result->m_ExitCode;

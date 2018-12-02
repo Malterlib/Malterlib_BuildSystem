@@ -11,11 +11,13 @@ namespace NMib::NBuildSystem
 	{
 		TCContinuation<void> fg_Fetch(CGitLaunches const &_Launches, CRepository const &_Repo)
 		{
+			TCVector<CStr> FetchParams = {"fetch", "--all", "--prune", "--tags", "-q"};
+
 			TCContinuation<void> Continuation;
 			_Launches.f_Launch
 				(
 					_Repo
-					, {"fetch", "--all", "--prune", "-q"}
+					, FetchParams
 				)
 				> Continuation / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
 				{
@@ -286,10 +288,13 @@ namespace NMib::NBuildSystem
 													{
 														TCVector<CStr> Params;
 
+														Params = {"push", Remote, _Branches.m_Current};
+
 														if (_PushFlags & ERepoPushFlag_FollowTags)
-															Params = {"push", "--follow-tags", Remote, _Branches.m_Current};
-														else
-															Params = {"push", Remote, _Branches.m_Current};
+															Params.f_InsertAfter(0, "--follow-tags");
+
+														if (Remote == "origin")
+															Params.f_InsertAfter(0, "-u");
 
 														Launches.f_Launch(Repo, Params, fg_LogAllFunctor()) > PushResults.f_AddResult();
 													}

@@ -5,9 +5,9 @@
 
 namespace NMib::NBuildSystem::NRepository
 {
-	CFilteredRepos fg_GetFilteredRepos(CBuildSystem::CRepoFilter const &_Filter, CBuildSystem &_BuildSystem, CBuildSystemData &_Data)
+	CFilteredRepos fg_GetFilteredRepos(CBuildSystem::CRepoFilter const &_Filter, CBuildSystem &_BuildSystem, CBuildSystemData &_Data, EFilterRepoFlag _Flags)
 	{
-		CGitLaunches Launches{_BuildSystem.f_GetBaseDir(), "Getting filtered repos"};
+		CGitLaunches Launches{_BuildSystem.f_GetBaseDir(), "Filtering repos"};
 
 		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
@@ -15,11 +15,11 @@ namespace NMib::NBuildSystem::NRepository
 		FilteredRepos.m_ReposOrdered = fg_GetRepos(_BuildSystem, _Data);
 		TCMap<mint, TCVector<CRepository *>> FilteredPerStage;
 
-
 		TCActorResultMap<mint, TCMap<CRepository *, TCAsyncResult<bool>>> DeferredResultsOrdered;
 
 		CStr BaseDir = _BuildSystem.f_GetBaseDir();
 
+		mint nLaunchRepos = 0;
 		mint iStage = 0;
 		for (auto &Repos : FilteredRepos.m_ReposOrdered)
 		{
@@ -28,10 +28,7 @@ namespace NMib::NBuildSystem::NRepository
 			{
 				for (auto &Repo : RepoLocation.m_Repositories)
 				{
-					if
-						(
-							!_Filter.m_NameWildcard.f_IsEmpty()
-						)
+					if (!_Filter.m_NameWildcard.f_IsEmpty())
 					{
 						auto RelativePath = CFile::fs_MakePathRelative(Repo.m_Location, BaseDir);
 						CStr Name;
@@ -50,9 +47,26 @@ namespace NMib::NBuildSystem::NRepository
 					if (!_Filter.m_Tags.f_IsEmpty() && Repo.m_Tags.f_And(_Filter.m_Tags) != _Filter.m_Tags)
 						continue;
 
+					if (!_Filter.m_Branch.f_IsEmpty() && fg_GetBranch(Repo) != _Filter.m_Branch)
+						continue;
+
 					if (_Filter.m_bOnlyChanged)
 					{
-						fg_RepoIsChanged(Launches, Repo) > DeferredResults.f_AddResult(&Repo);
+						++nLaunchRepos;
+						g_Dispatch(Launches.m_pState->m_OutputActor) > [=]() mutable
+							{
+								Launches.f_SetNumRepos(nLaunchRepos);
+							}
+							> fg_DiscardResult()
+						;
+						TCContinuation<bool> ChangedDoneContinuation;
+						ChangedDoneContinuation > DeferredResults.f_AddResult(&Repo);
+						fg_RepoIsChanged(Launches, Repo, _Flags) > [Launches, ChangedDoneContinuation](TCAsyncResult<bool> &&_bChanged)
+							{
+								Launches.f_RepoDone();
+								ChangedDoneContinuation.f_SetResult(_bChanged);
+							}
+						;
 						continue;
 					}
 

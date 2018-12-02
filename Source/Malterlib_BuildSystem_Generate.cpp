@@ -289,13 +289,13 @@ namespace NMib::NBuildSystem
 			{
 				if (!bTryParsed)
 					fp_ParseData(mp_Data.m_RootEntity, mp_Registry, &mp_Data.m_ConfigurationTypes);
-				if (auto Retry = fp_HandleRepositories(_GenerateState.m_GeneratorValues, _GenerateOptions.m_bSkipUpdate))
+				if (auto Retry = fp_HandleRepositories(_GenerateState.m_GeneratorValues))
 					return Retry;
 				else
 					throw;
 			}
 
-			if (auto Retry = fp_HandleRepositories(_GenerateState.m_GeneratorValues, _GenerateOptions.m_bSkipUpdate))
+			if (auto Retry = fp_HandleRepositories(_GenerateState.m_GeneratorValues))
 				return Retry;
 		}
 		return ERetry_None;

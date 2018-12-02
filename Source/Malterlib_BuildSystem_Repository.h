@@ -40,19 +40,35 @@ namespace NMib::NBuildSystem::NRepository
 
 	struct CRemote
 	{
+		CStr const &f_Name() const
+		{
+			return TCMap<CStr, CRemote>::fs_GetKey(*this);
+		}
+
 		CStr m_URL;
 		bool m_bCanPush = true;
 	};
 
 	struct CRepository
 	{
+		CRepository(CStr const &_Name)
+			: m_Name(_Name)
+		{
+		}
+
+		CRepository(CRepository const &) = default;
+		CRepository(CRepository &&) = default;
+		CRepository &operator = (CRepository const &) = default;
+		CRepository &operator = (CRepository &&) = default;
+
 		CStr const &f_GetName() const
 		{
-			return TCMap<CStr, CRepository>::fs_GetKey(*this);
+			return m_Name;
 		}
 
 		CStr f_GetIdentifierName(CStr const &_BasePath, CStr const &_Root) const;
 
+		CStr m_Name;
 		CStr m_Identity;
 		CStr m_Location;
 		CStr m_ConfigFile;
@@ -67,6 +83,8 @@ namespace NMib::NBuildSystem::NRepository
 		CStr m_UserEmail;
 		TCSet<CStr> m_Tags;
 		TCMap<CStr, CRemote> m_Remotes;
+		TCSet<CStr> m_ProtectedBranches;
+		TCSet<CStr> m_ProtectedTags;
 		CFilePosition m_Position;
 		bool m_bUpdateSubmodules = false;
 	};
@@ -125,15 +143,17 @@ namespace NMib::NBuildSystem::NRepository
 	{
 		CGitLaunches(CStr const &_BaseDir, CStr const &_ProgressDescription);
 
+		void f_SetNumRepos(mint _nRepos, bool _bReport = true);
 		void f_MeasureRepos(TCVector<TCVector<CRepository *>> const &_FilteredRepositories, bool _bReport = true);
 
-		TCContinuation<CProcessLaunchActor::CSimpleLaunchResult> f_Launch(CRepository const &_Repo, TCVector<CStr> const &_Params) const;
+		TCContinuation<CProcessLaunchActor::CSimpleLaunchResult> f_Launch(CRepository const &_Repo, TCVector<CStr> const &_Params, TCMap<CStr, CStr> const &_Environment = {}) const;
 		TCContinuation<void> f_Launch
 			(
 			 	CRepository const &_Repo
 			 	, TCVector<CStr> const &_Params
 			 	, TCFunctionMovable<CStr (CProcessLaunchActor::CSimpleLaunchResult const &_Result)> &&_fHandleResult
 			 	, CStr const &_Prefix = {}
+			 	, TCMap<CStr, CStr> const &_Environment = {}
 			) const
 		;
 		TCContinuation<CProcessLaunchActor::CSimpleLaunchResult> f_OpenRepoEditor(CRepoEditor const &_Editor, CStr const &_Repo) const;
@@ -151,10 +171,12 @@ namespace NMib::NBuildSystem::NRepository
 			CState(CStr const &_BaseDir, CStr const &_ProgressDescription);
 			~CState();
 
+			void f_OutputState() const;
+
 			CMutual m_Lock;
 			CStr m_BaseDir;
 			TCActor<> m_OutputActor = fg_ConcurrentActor();
-			TCVector<TCActor<CProcessLaunchActor>> m_Launches;
+			TCMap<mint, TCActor<CProcessLaunchActor>> m_Launches;
 			TCMap<CStr, CStr> m_RepoNames;
 			TCAtomic<mint> m_nDoneRepos = 0;
 			CStr m_ProgressDescription;
@@ -165,21 +187,28 @@ namespace NMib::NBuildSystem::NRepository
 
 			TCActorSequencer<CProcessLaunchActor::CSimpleLaunchResult> m_LaunchSequencer{fg_Clamp(NSys::fg_Thread_GetVirtualCores()*2u, 32u, fs_MaxProcesses())};
 
+			mint m_LaunchID = 0;
 			mint m_LongestRepo = 0;
-			mint m_nRepos = 0;
+			TCAtomic<mint> m_nRepos = 0;
 		};
 
 		CStr f_GetRepoName(CRepository const &_Repo) const;
 		void f_Output(EOutputType _OutputType, CRepository const &_Repo, CStr const &_Output, CStr const &_Prefix = {}) const;
 		void f_Output(EOutputType _OutputType, CStr const &_Section, CStr const &_Output) const;
 		void f_RepoDone(mint _nDone = 1) const;
+		COnScopeExitShared f_RepoDoneScope() const;
 		void f_SetOutputOrder(TCVector<TCSet<CStr>> const &_OutputOrder) const;
 
 		TCSharedPointer<CState> m_pState;
+
+	private:
+		TCContinuation<CProcessLaunchActor::CSimpleLaunchResult> fp_Launch(CProcessLaunchActor::CSimpleLaunch &&_Launch) const;
 	};
 
 	struct CFilteredRepos
 	{
+		TCVector<TCTuple<CRepository, mint>> f_GetAllRepos() const;
+
 		TCVector<TCMap<CStr, CReposLocation>> m_ReposOrdered;
 		TCVector<TCVector<CRepository *>> m_FilteredRepositories;
 	};
@@ -249,6 +278,26 @@ namespace NMib::NBuildSystem::NRepository
 		CStr m_UserEmail;
 	};
 
+	enum EFilterRepoFlag
+	{
+		EFilterRepoFlag_None = 0
+		, EFilterRepoFlag_OnlyTracked = DBit(0)
+		, EFilterRepoFlag_IncludePull = DBit(1)
+	};
+
+	struct CGitVersion
+	{
+		bool operator < (CGitVersion const &_Right) const
+		{
+			return fg_TupleReferences(m_Major, m_Minor, m_Patch) < fg_TupleReferences(_Right.m_Major, _Right.m_Minor, _Right.m_Patch);
+		}
+
+		uint32 m_Major = 0;
+		uint32 m_Minor = 0;
+		uint32 m_Patch = 0;
+	};
+
+	CGitVersion fg_GetGitVersion();
 	CStr fg_GetGitRoot(CStr const &_Directory);
 	CStr fg_GetGitDataDir(CStr const &_GitRoot, CFilePosition const &_Position);
 	CStr fg_GetGitHeadHash(CStr const &_GitRoot, CFilePosition const &_Position);
@@ -267,7 +316,7 @@ namespace NMib::NBuildSystem::NRepository
 
 	TCFunctionMovable<CStr (CProcessLaunchActor::CSimpleLaunchResult const &_Result)> fg_LogAllFunctor();
 
-	TCContinuation<bool> fg_RepoIsChanged(CGitLaunches const &_GitLaunches, CRepository const &_Repo);
+	TCContinuation<bool> fg_RepoIsChanged(CGitLaunches const &_GitLaunches, CRepository const &_Repo, EFilterRepoFlag _Flags);
 	TCContinuation<TCVector<CLocalFileChange>> fg_GetLocalFileChanges(CGitLaunches const &_GitLaunches, CRepository const &_Repo, bool _bIncludeUntracked);
 	TCContinuation<CGitBranches> fg_GetBranches(CGitLaunches const &_GitLaunches, CRepository const &_Repo, bool _bRemote);
 	TCContinuation<TCVector<CStr>> fg_GetRemotes(CGitLaunches const &_GitLaunches, CRepository const &_Repo);
@@ -275,6 +324,11 @@ namespace NMib::NBuildSystem::NRepository
 	TCContinuation<TCVector<CLogEntryFull>> fg_GetLogEntriesFull(CGitLaunches const &_GitLaunches, CRepository const &_Repo, CStr const &_From, CStr const &_To);
 
 	bool fg_BranchExists(CRepository const &_Repo, CStr const &_Branch);
-	NStr::CStr fg_GetBranch(CRepository const &_Repo);
-	CFilteredRepos fg_GetFilteredRepos(CBuildSystem::CRepoFilter const &_Filter, CBuildSystem &_BuildSystem, CBuildSystemData &_Data);
+	CStr fg_GetBranch(CRepository const &_Repo);
+	CStr fg_GetRemoteHead(CRepository const &_Repo, CStr const &_Remote);
+
+	void fg_UpdateRemotes(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage = {});
+	TCMap<CStr, CStr> fg_FetchEnvironment(CBuildSystem const &_BuildSystem);
+
+	CFilteredRepos fg_GetFilteredRepos(CBuildSystem::CRepoFilter const &_Filter, CBuildSystem &_BuildSystem, CBuildSystemData &_Data, EFilterRepoFlag _Flags = EFilterRepoFlag_None);
 }

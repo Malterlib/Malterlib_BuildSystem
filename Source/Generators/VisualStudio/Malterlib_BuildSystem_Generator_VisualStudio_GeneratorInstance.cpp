@@ -212,28 +212,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 	bool CGeneratorInstance::f_GetBuiltin(CStr const &_Value, CStr &_Result) const
 	{
-		if (_Value == "MToolCom")
-		{
-			CStr FileName = CFile::fs_GetFileNoExt(CFile::fs_GetProgramPath());
-			CStr ProgramName;
-			CStr BitNess;
-			(CStr::CParse("{}_x{}") >> ProgramName >> BitNess).f_Parse(FileName);
-
-			CStr NewProgramPath = CStr(CStr::CFormat("{}.com") << ProgramName);
-			CStr Return = CFile::fs_AppendPath(CFile::fs_GetPath(CFile::fs_GetProgramPath()), NewProgramPath);
-			if (!NFile::CFile::fs_FileExists(Return, EFileAttrib_File))
-			{
-				_Result = CFile::fs_GetProgramPath();
-				return true;
-			}
-	#if DMibPPtrBits == 32
-			Return += " -x86";
-	#endif
-			_Result = Return;
-
-			return true;					
-		}
-		else if (_Value == "BasePathRelativeProject")
+		if (_Value == "BasePathRelativeProject")
 		{
 			_Result = m_RelativeBasePath;
 			return true;

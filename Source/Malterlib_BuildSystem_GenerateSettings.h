@@ -49,6 +49,7 @@ namespace NMib::NBuildSystem
 		CGenerateSettings m_Settings;
 		TCMap<CStr, EHandleRepositoryAction> m_ReconcileActions;
 		TCMap<CStr, EHandleRepositoryRemovedAction> m_ReconcileRemovedActions;
+		uint32 m_GitFetchTimeout = 5;
 		bool m_bReconcileForce = false;
 		bool m_bReconcileNoOptions = false;
 		bool m_bSkipUpdate = false;

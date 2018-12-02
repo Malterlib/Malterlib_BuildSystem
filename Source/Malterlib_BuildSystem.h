@@ -33,6 +33,8 @@ namespace NMib::NBuildSystem
 	{
 	public:
 		CBuildSystem();
+		CBuildSystem(CBuildSystem const &) = delete;
+		CBuildSystem(CBuildSystem &&) = delete;
 
 		enum ERetry
 		{
@@ -49,6 +51,7 @@ namespace NMib::NBuildSystem
 
 			CStr m_NameWildcard;
 			CStr m_Type;
+			CStr m_Branch;
 			TCSet<CStr> m_Tags;
 			bool m_bOnlyChanged = false;
 		};
@@ -57,7 +60,20 @@ namespace NMib::NBuildSystem
 		{
 			ERepoCleanupBranchesFlag_None = 0
 			, ERepoCleanupBranchesFlag_Pretend = DBit(0)
-			, ERepoCleanupBranchesFlag_Remote = DBit(1)
+			, ERepoCleanupBranchesFlag_AllRemotes = DBit(1)
+			, ERepoCleanupBranchesFlag_UpdateRemotes = DBit(2)
+			, ERepoCleanupBranchesFlag_Verbose = DBit(3)
+			, ERepoCleanupBranchesFlag_Force = DBit(4)
+		};
+
+		enum ERepoCleanupTagsFlag
+		{
+			ERepoCleanupTagsFlag_None = 0
+			, ERepoCleanupTagsFlag_Pretend = DBit(0)
+			, ERepoCleanupTagsFlag_AllRemotes = DBit(1)
+			, ERepoCleanupTagsFlag_UpdateRemotes = DBit(2)
+			, ERepoCleanupTagsFlag_Verbose = DBit(3)
+			, ERepoCleanupTagsFlag_Force = DBit(4)
 		};
 
 		enum ERepoStatusFlag
@@ -88,6 +104,12 @@ namespace NMib::NBuildSystem
 			, ERepoPushFlag_Pretend = DBit(0)
 			, ERepoPushFlag_FollowTags = DBit(1)
 			, ERepoPushFlag_NonDefaultToAll = DBit(2)
+		};
+
+		enum ERepoBranchFlag
+		{
+			ERepoBranchFlag_None = 0
+			, ERepoBranchFlag_Pretend = DBit(0)
 		};
 
 		struct CWildcardColumn
@@ -204,10 +226,12 @@ namespace NMib::NBuildSystem
 		ERetry f_Action_Repository_Update(CGenerateOptions const &_GenerateOptions);
 		ERetry f_Action_Repository_Status(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoStatusFlag _Flags);
 		ERetry f_Action_Repository_ForEachRepo(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, bool _bParallell, TCVector<CStr> const &_Params);
-		ERetry f_Action_Repository_Branch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, CStr const &_Branch);
 
-		ERetry f_Action_Repository_Unbranch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter);
-		ERetry f_Action_Repository_CleanupBranches(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoCleanupBranchesFlag _Flags);
+		ERetry f_Action_Repository_Branch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, CStr const &_Branch, ERepoBranchFlag _Flags);
+		ERetry f_Action_Repository_Unbranch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoBranchFlag _Flags);
+
+		ERetry f_Action_Repository_CleanupBranches(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoCleanupBranchesFlag _Flags, TCVector<CStr> const &_Branches);
+		ERetry f_Action_Repository_CleanupTags(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoCleanupTagsFlag _Flags, TCVector<CStr> const &_Tags);
 		ERetry f_Action_Repository_Push(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, TCVector<CStr> const &_Remotes, ERepoPushFlag _PushFlags);
 		ERetry f_Action_Repository_ListCommits
 			(
@@ -409,7 +433,7 @@ namespace NMib::NBuildSystem
 		CBuildSystemData::CImportData *fp_ExpandImportCMake_FromGeneratedDirectory(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData, CStr const &_Directory) const;
 		void fp_TracePropertyEval(bool _bSuccess, CEntity const &_Entity, CProperty const &_Property, CStr const &_Value) const;
 
-		ERetry fp_HandleRepositories(TCMap<CPropertyKey, CStr> const &_Values, bool _bSkipRepoUpdate);
+		ERetry fp_HandleRepositories(TCMap<CPropertyKey, CStr> const &_Values);
 
 		void fp_SaveEnvironment();
 
