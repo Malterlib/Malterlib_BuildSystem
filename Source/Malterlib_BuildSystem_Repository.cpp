@@ -305,7 +305,7 @@ namespace NMib::NBuildSystem
 					return CProcessLaunch::fs_LaunchTool("git", _Params, Params);
 				}
 			;
-			auto fLaunchGitQuestion = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir)
+			auto fLaunchGitQuestion = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir, bool _bErrorOnStdErr)
 				{
 					CProcessLaunchParams Params{_WorkingDir};
 #ifdef DPlatformFamily_OSX
@@ -316,7 +316,7 @@ namespace NMib::NBuildSystem
 					CStr StdErr;
 					CStr StdOut;
 					CProcessLaunch::fs_LaunchBlock("git", _Params, StdOut, StdErr, ExitCode, Params);
-					if (!StdErr.f_IsEmpty())
+					if (_bErrorOnStdErr && !StdErr.f_IsEmpty())
 						DMibError("Failed to ask git question {vs}: {}{}"_f << _Params << StdErr << StdOut);
 					return ExitCode == 0;
 				}
@@ -529,7 +529,7 @@ namespace NMib::NBuildSystem
 				{
 					if (HeadHash != ConfigHash)
 					{
-						if (!fLaunchGitQuestion({"cat-file", "-e", "{}^{{commit}"_f << ConfigHash}, Location))
+						if (!fLaunchGitQuestion({"cat-file", "-e", "{}^{{commit}"_f << ConfigHash}, Location, false))
 						{
 							TCVector<CStr> FetchParams = {"fetch", "--all", "--prune", "--tags"};
 
@@ -542,7 +542,7 @@ namespace NMib::NBuildSystem
 							}
 							catch (CException const &_Exception)
 							{
-								if (!fLaunchGitQuestion({"cat-file", "-e", "{}^{{commit}"_f << ConfigHash}, Location))
+								if (!fLaunchGitQuestion({"cat-file", "-e", "{}^{{commit}"_f << ConfigHash}, Location, false))
 									throw;
 								fOutputInfo(EOutputType_Error, "Not all remotes were fetched: {}"_f << _Exception);
 							}
@@ -570,7 +570,7 @@ namespace NMib::NBuildSystem
 
 						do
 						{
-							if (fLaunchGitQuestion({"merge-base", "--is-ancestor", HeadHash, ConfigHash}, Location))
+							if (fLaunchGitQuestion({"merge-base", "--is-ancestor", HeadHash, ConfigHash}, Location, true))
 							{
 								if (!fLaunchGit({"status", "--porcelain"}, Location).f_IsEmpty())
 									RecommendedAction = EHandleRepositoryAction_Rebase;
@@ -579,7 +579,7 @@ namespace NMib::NBuildSystem
 								break;
 							}
 
-							if (fLaunchGitQuestion({"merge-base", "--is-ancestor", ConfigHash, HeadHash}, Location))
+							if (fLaunchGitQuestion({"merge-base", "--is-ancestor", ConfigHash, HeadHash}, Location, true))
 							{
 								RecommendedAction = EHandleRepositoryAction_None;
 								break;

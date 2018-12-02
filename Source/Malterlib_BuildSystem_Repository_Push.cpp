@@ -9,7 +9,7 @@ namespace NMib::NBuildSystem
 
 	namespace
 	{
-		TCContinuation<void> fg_Fetch(CGitLaunches const &_Launches, CRepository const &_Repo)
+		TCContinuation<void> fg_Fetch(CBuildSystem const &_BuildSystem, CGitLaunches const &_Launches, CRepository const &_Repo)
 		{
 			TCVector<CStr> FetchParams = {"fetch", "--all", "--prune", "--tags", "-q"};
 
@@ -18,6 +18,7 @@ namespace NMib::NBuildSystem
 				(
 					_Repo
 					, FetchParams
+				 	, fg_FetchEnvironment(_BuildSystem)
 				)
 				> Continuation / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
 				{
@@ -245,7 +246,7 @@ namespace NMib::NBuildSystem
 									return;
 								}
 
-								fg_Fetch(Launches, Repo) > LaunchResult / [=]
+								fg_Fetch(*this, Launches, Repo) > LaunchResult / [=]
 									{
 										fg_CanPush(Launches, Repo, _Remotes, _Branches) > LaunchResult / [=](TCSet<CStr> &&_NewPush)
 											{
