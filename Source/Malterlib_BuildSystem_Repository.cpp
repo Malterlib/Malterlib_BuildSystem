@@ -529,7 +529,7 @@ namespace NMib::NBuildSystem
 				{
 					if (HeadHash != ConfigHash)
 					{
-						if (!fLaunchGitQuestion({"git", "cat-file", "-e", "{}^{{commit}"_f << ConfigHash}, Location))
+						if (!fLaunchGitQuestion({"cat-file", "-e", "{}^{{commit}"_f << ConfigHash}, Location))
 						{
 							TCVector<CStr> FetchParams = {"fetch", "--all", "--prune", "--tags"};
 
@@ -542,7 +542,7 @@ namespace NMib::NBuildSystem
 							}
 							catch (CException const &_Exception)
 							{
-								if (!fLaunchGitQuestion({"git", "cat-file", "-e", "{}^{{commit}"_f << ConfigHash}, Location))
+								if (!fLaunchGitQuestion({"cat-file", "-e", "{}^{{commit}"_f << ConfigHash}, Location))
 									throw;
 								fOutputInfo(EOutputType_Error, "Not all remotes were fetched: {}"_f << _Exception);
 							}
