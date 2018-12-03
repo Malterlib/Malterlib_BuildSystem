@@ -1387,11 +1387,59 @@ namespace NMib::NBuildSystem
 			else if (Function == "FormatString")
 			{
 				if (FunctionParams.f_GetLen() != 1)
-					fsp_ThrowError(_Position, "FormatString takes one parameters: <Value> <Format>");
+					fsp_ThrowError(_Position, "FormatString takes one parameters: <Format>");
 
 				CStr Value = Ret;
 
 				Ret = CStr::CFormat(FunctionParams[0]) << Value;
+			}
+			else if (Function == "CompareInt")
+			{
+				if (FunctionParams.f_GetLen() != 2)
+					fsp_ThrowError(_Position, "CompareInt takes two parameters: <Operator> <RightValue>");
+
+				CStr Value = Ret;
+				int64 Left = Ret.f_ToIntExact(TCLimitsInt<int64>::mc_Max);
+				int64 Right = FunctionParams[1].f_ToIntExact(TCLimitsInt<int64>::mc_Max);
+				CStr Operator = FunctionParams[0];
+				if (Operator == "==")
+					Ret = Left == Right ? "true" : "false";
+				if (Operator == "!=")
+					Ret = Left != Right ? "true" : "false";
+				else if (Operator == "<")
+					Ret = Left < Right ? "true" : "false";
+				else if (Operator == ">")
+					Ret = Left > Right ? "true" : "false";
+				else if (Operator == "<=")
+					Ret = Left <= Right ? "true" : "false";
+				else if (Operator == ">=")
+					Ret = Left >= Right ? "true" : "false";
+				else
+					fsp_ThrowError(_Position, "Unknown operator '{}'"_f << Operator);
+			}
+			else if (Function == "CompareFloat")
+			{
+				if (FunctionParams.f_GetLen() != 2)
+					fsp_ThrowError(_Position, "CompareFloat takes two parameters: <Operator> <RightValue>");
+
+				CStr Value = Ret;
+				fp64 Left = Ret.f_ToFloatExact(fp64::fs_Inf());
+				fp64 Right = FunctionParams[1].f_ToFloatExact(fp64::fs_Inf());
+				CStr Operator = FunctionParams[0];
+				if (Operator == "==")
+					Ret = Left == Right ? "true" : "false";
+				if (Operator == "!=")
+					Ret = Left != Right ? "true" : "false";
+				else if (Operator == "<")
+					Ret = Left < Right ? "true" : "false";
+				else if (Operator == ">")
+					Ret = Left > Right ? "true" : "false";
+				else if (Operator == "<=")
+					Ret = Left <= Right ? "true" : "false";
+				else if (Operator == ">=")
+					Ret = Left >= Right ? "true" : "false";
+				else
+					fsp_ThrowError(_Position, "Unknown operator '{}'"_f << Operator);
 			}
 			else if (Function == "ParseFormatString")
 			{

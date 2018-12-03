@@ -32,6 +32,8 @@ namespace NMib::NBuildSystem
 		TCMap<CPropertyKey, CStr> f_GetValues(CBuildSystem const &_BuildSystem, CStr const &_OutputDir) override
 		{
 			TCMap<CPropertyKey, CStr> Values;
+
+			Values[CPropertyKey("MToolVersion")] = CStr::fs_ToStr(CBuildSystem::mc_MToolVersion);
 			Values[CPropertyKey("Generator")] = _BuildSystem.f_GetGenerateSettings().m_Generator;
 			Values[CPropertyKey("GeneratorFamily")] = "VisualStudio";
 			Values[CPropertyKey("BuildSystemBasePath")] = _BuildSystem.f_GetBaseDir();

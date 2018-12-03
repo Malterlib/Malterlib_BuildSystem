@@ -247,6 +247,8 @@ namespace NMib::NBuildSystem
 			)
 		;
 
+		constexpr static uint32 mc_MToolVersion = 2;
+
 	private:
 		struct CExplodeStackEntry
 		{
