@@ -231,14 +231,14 @@ namespace NMib::NBuildSystem
 		_GenerateState.m_GeneratorValues = _GenerateState.m_pGenerator->f_GetValues(*this, _GenerateState.m_OutputDir);
 
 		{
-			CLocalGeneratorInteface LocalInterface{_GenerateState.m_OutputDir};
-			auto pOldInterface = fg_Move(mp_GeneratorInterface);
-			auto Cleanup = g_OnScopeExit > [&]
+			_GenerateState.m_pLocalGeneratorInterface = fg_Construct<CLocalGeneratorInteface>(_GenerateState.m_OutputDir);
+
+			_GenerateState.m_LocalGeneratorInterfaceCleanup = g_OnScopeExitShared > [this, pOldInterface = fg_Move(mp_GeneratorInterface)]() mutable
 				{
 					mp_GeneratorInterface = fg_Move(pOldInterface);
 				}
 			;
-			mp_GeneratorInterface = &LocalInterface;
+			mp_GeneratorInterface = _GenerateState.m_pLocalGeneratorInterface.f_Get();
 
 			bool bTryParsed = false;
 			try
@@ -504,6 +504,8 @@ namespace NMib::NBuildSystem
 
 		if (!GenerateState.m_bDependenciesChanged)
 			return false;
+
+		GenerateState.m_LocalGeneratorInterfaceCleanup.f_Clear();
 
 		fp64 Time1 = GenerateState.m_Clock.f_GetTime();
 

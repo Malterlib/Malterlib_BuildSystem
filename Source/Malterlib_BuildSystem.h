@@ -307,6 +307,8 @@ namespace NMib::NBuildSystem
 			CGeneratorArchiveState m_GlobalState;
 			CGeneratorArchiveState m_BeforeGlobalState;
 			TCMap<CPropertyKey, CStr> m_GeneratorValues;
+			TCUniquePointer<CGeneratorInterface> m_pLocalGeneratorInterface;
+			COnScopeExitShared m_LocalGeneratorInterfaceCleanup;
 			bool m_bUseCachedEnvironment = false;
 			bool m_bDisableUserSettings = false;
 

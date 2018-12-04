@@ -15,6 +15,7 @@ namespace NMib::NBuildSystem
 	
 	struct CGeneratorInterface
 	{
+		virtual ~CGeneratorInterface() = default;
 		virtual bool f_GetBuiltin(CStr const &_Value, CStr &_Result) const = 0;
 		virtual CStr f_GetExpandedPath(CStr const &_Path, CStr const& _Base) const = 0;
 		virtual CSystemEnvironment f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const = 0;
