@@ -35,20 +35,7 @@ namespace NMib::NBuildSystem
 
 		CRepoFilter Filter = _Filter;
 
-		EFilterRepoFlag FilterFlags = EFilterRepoFlag_None;
-
-		constexpr auto c_IncompatibleOptions = CBuildSystem::ERepoStatusFlag_ShowUnchanged
-			| CBuildSystem::ERepoStatusFlag_UpdateRemotes
-			| CBuildSystem::ERepoStatusFlag_AllBranches
-			| CBuildSystem::ERepoStatusFlag_UseDefaultUpstreamBranch
-			| CBuildSystem::ERepoStatusFlag_NonDefaultToAll
-		;
-
-		if (!Filter.m_bOnlyChanged && !(_Flags & c_IncompatibleOptions))
-		{
-			Filter.m_bOnlyChanged = true;
-			FilterFlags |= EFilterRepoFlag_IncludePull;
-		}
+		EFilterRepoFlag FilterFlags = EFilterRepoFlag_IncludePull;
 
 		if (_Flags & CBuildSystem::ERepoStatusFlag_OnlyTracked)
 			FilterFlags |= EFilterRepoFlag_OnlyTracked;
