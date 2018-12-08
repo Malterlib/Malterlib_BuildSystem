@@ -745,7 +745,7 @@ namespace NMib::NBuildSystem
 
 				if (bWasCreated)
 				{
-					TCVector<uint8> FileDataVector;
+					CByteVector FileDataVector;
 					CFile::fs_WriteStringToVector(FileDataVector, CStr(FileData), false);
 					m_BuildSystem.f_WriteFile(FileDataVector, _OutputFile, EFileAttrib_Executable);
 				}
@@ -1059,7 +1059,7 @@ namespace NMib::NBuildSystem
 
 				if (bWasCreated)
 				{
-					TCVector<uint8> FileDataVector;
+					CByteVector FileDataVector;
 					CFile::fs_WriteStringToVector(FileDataVector, CStr(FileData), false);
 					m_BuildSystem.f_WriteFile(FileDataVector, _OutputFile);
 				}

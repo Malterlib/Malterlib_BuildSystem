@@ -54,7 +54,7 @@ namespace NMib::NBuildSystem
 			for (auto &EnvVar : mp_SaveEnvironment)
 				JSON[mp_SaveEnvironment.fs_GetKey(EnvVar)] = EnvVar;
 
-			TCVector<uint8> FileData;
+			CByteVector FileData;
 			CFile::fs_WriteStringToVector(FileData, JSON.f_ToString());
 
 			CStr EnvironmentStateFile = CFile::fs_AppendPath(mp_OutputDir, "Environment.json");
@@ -183,7 +183,7 @@ namespace NMib::NBuildSystem
 		{
 			try
 			{
-				TCVector<uint8> FileData = CFile::fs_ReadFileTry(_GenerateState.m_GlobalGeneratorStateFileName);
+				CByteVector FileData = CFile::fs_ReadFileTry(_GenerateState.m_GlobalGeneratorStateFileName);
 				CBinaryStreamMemory<> Stream;
 				Stream.f_Open(FileData);
 				Stream >> _GenerateState.m_GlobalState;
@@ -319,7 +319,7 @@ namespace NMib::NBuildSystem
 						CGeneratorArchiveState State;
 						try
 						{
-							TCVector<uint8> FileData = CFile::fs_ReadFileTry(GenerateState.m_WorkspaceGeneratorStateFileName);
+							CByteVector FileData = CFile::fs_ReadFileTry(GenerateState.m_WorkspaceGeneratorStateFileName);
 							CBinaryStreamMemory<> Stream;
 							Stream.f_Open(FileData);
 							Stream >> State;
@@ -525,7 +525,7 @@ namespace NMib::NBuildSystem
 				{
 					auto StringData = _Registry.f_GenerateStr();
 
-					TCVector<uint8> FileData;
+					CByteVector FileData;
 					CFile::fs_WriteStringToVector(FileData, StringData);
 
 					CFile::fs_CreateDirectory(CFile::fs_GetPath(_FileName));

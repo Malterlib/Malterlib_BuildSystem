@@ -837,7 +837,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 							if (bWasCreated)
 							{
-								TCVector<uint8> FileData;
+								CByteVector FileData;
 								CFile::fs_WriteStringToVector(FileData, CStr(FileContents));
 								m_BuildSystem.f_WriteFile(FileData, FileName);
 							}
@@ -1252,7 +1252,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 			if (bWasCreated)
 			{
-				TCVector<uint8> FileData;
+				CByteVector FileData;
 				CFile::fs_WriteStringToVector(FileData, CStr(XMLData));
 				m_BuildSystem.f_WriteFile(FileData, FileName);
 			}
@@ -1267,7 +1267,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 			if (bWasCreated)
 			{
-				TCVector<uint8> FileData;
+				CByteVector FileData;
 				CFile::fs_WriteStringToVector(FileData, CStr(XMLData));
 				m_BuildSystem.f_WriteFile(FileData, PropsFileName);
 			}
@@ -1314,7 +1314,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 			if (bWasCreated)
 			{
-				TCVector<uint8> FileData;
+				CByteVector FileData;
 				CFile::fs_WriteStringToVector(FileData, CStr(XMLData));
 				m_BuildSystem.f_WriteFile(FileData, FiltersFileName);
 			}

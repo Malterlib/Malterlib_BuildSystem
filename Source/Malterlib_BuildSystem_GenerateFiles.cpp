@@ -227,7 +227,7 @@ namespace NMib::NBuildSystem
 							}
 							else
 							{
-								TCVector<uint8> FileDataVector;
+								CByteVector FileDataVector;
 								if (bUTF16)
 								{
 									NStr::CWStr UTF16 = fg_ForceStrUTF16(Contents);

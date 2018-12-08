@@ -144,7 +144,7 @@ namespace NMib::NBuildSystem
 		void f_ExpandTargetFiles(CBuildSystemData &_BuildSystemData, CEntity const &_Target) const;
 		void f_ExpandWorkspaceTargets(CBuildSystemData &_BuildSystemData, CEntity const &_Target) const;
 		void f_ExpandWorkspaceEntities(CBuildSystemData &_BuildSystemData, CEntity const &_Target) const;
-		bool f_WriteFile(TCVector<uint8> const& _FileData, CStr const& _File, EFileAttrib _AddAttribs = EFileAttrib_None) const;
+		bool f_WriteFile(CByteVector const& _FileData, CStr const& _File, EFileAttrib _AddAttribs = EFileAttrib_None) const;
 		void f_SetFileChanged(CStr const& _File) const;
 		TCSet<CStr> f_GetSourceFiles() const;
 		void f_ReEvaluateData(CEntity &_Entity) const;

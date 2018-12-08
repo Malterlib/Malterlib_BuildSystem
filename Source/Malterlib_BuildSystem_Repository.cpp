@@ -175,7 +175,7 @@ namespace NMib::NBuildSystem
 			if (IgnoreContents.f_Find(IgnoreLine) < 0)
 			{
 				IgnoreContents += IgnoreLine;
-				TCVector<uint8> FileData;
+				CByteVector FileData;
 				CFile::fs_WriteStringToVector(FileData, CStr(IgnoreContents), false);
 				_BuildSystem.f_WriteFile(FileData, GitIgnoreFile);
 			}
@@ -1167,7 +1167,7 @@ namespace NMib::NBuildSystem
 
 			if (bWasCreated)
 			{
-				TCVector<uint8> FileData;
+				CByteVector FileData;
 				CFile::fs_WriteStringToVector(FileData, CStr(FileContents), false);
 				f_WriteFile(FileData, FileName);
 			}
@@ -1217,7 +1217,7 @@ namespace NMib::NBuildSystem
 
 			if (bWasCreated)
 			{
-				TCVector<uint8> FileData;
+				CByteVector FileData;
 				CFile::fs_WriteStringToVector(FileData, CStr(FileContents), false);
 				f_WriteFile(FileData, RepositoryStateFile);
 			}

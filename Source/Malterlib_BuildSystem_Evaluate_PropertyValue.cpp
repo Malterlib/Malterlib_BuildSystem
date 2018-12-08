@@ -1363,7 +1363,7 @@ namespace NMib::NBuildSystem
 
 				mint HashLen = FunctionParams[0].f_ToInt(mint(64));
 
-				NDataProcessing::CHash_SHA256 Hash;
+				NCryptography::CHash_SHA256 Hash;
 				Hash.f_AddData(Ret.f_GetStr(), Ret.f_GetLen());
 
 				Ret = Hash.f_GetDigest().f_GetString().f_Left(HashLen);

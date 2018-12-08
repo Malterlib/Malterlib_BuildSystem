@@ -69,7 +69,7 @@ namespace NMib::NBuildSystem
 		mp_GeneratorInterface = _pInterface;
 	}
 
-	bool CBuildSystem::f_WriteFile(TCVector<uint8> const& _FileData, CStr const& _File, EFileAttrib _AddAttribs) const
+	bool CBuildSystem::f_WriteFile(CByteVector const& _FileData, CStr const& _File, EFileAttrib _AddAttribs) const
 	{
 #			if 0
 			CStr FileExtension = CFile::fs_GetExtension(_File);
@@ -77,9 +77,9 @@ namespace NMib::NBuildSystem
 		
 			if (FileName != "VersionInfo.cpp" && FileExtension != "plist" && CFile::fs_FileExists(_File))
 			{
-				TCVector<uint8> OldFileContents = CFile::fs_ReadFile(_File);
+				CByteVector OldFileContents = CFile::fs_ReadFile(_File);
 
-				CStr Hash = NMib::NDataProcessing::fg_GetHashedUuidString(_File, NMib::NDataProcessing::CUniversallyUniqueIdentifier("{72048B5E-1F9C-4385-AF16-997FDC21F215}"));
+				CStr Hash = NMib::NCryptography::fg_GetHashedUuidString(_File, NMib::NCryptography::CUniversallyUniqueIdentifier("{72048B5E-1F9C-4385-AF16-997FDC21F215}"));
 				CStr UniqueName = fg_Format("{}-{}", CFile::fs_GetFile(_File), Hash);
 				if (OldFileContents != _FileData)
 					NSys::fg_Debug_DiffStrings(CFile::fs_ReadStringFromVector(OldFileContents), CFile::fs_ReadStringFromVector(_FileData), UniqueName, UniqueName);

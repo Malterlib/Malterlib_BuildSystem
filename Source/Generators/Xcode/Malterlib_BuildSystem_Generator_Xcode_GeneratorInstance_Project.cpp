@@ -240,7 +240,7 @@ fi
 
 			if (bWasCreated)
 			{
-				TCVector<uint8> FileData;
+				CByteVector FileData;
 				CFile::fs_WriteStringToVector(FileData, CStr());
 				m_BuildSystem.f_WriteFile(FileData, GeneratedFile);
 			}
@@ -254,7 +254,7 @@ fi
 
 			if (bWasCreated)
 			{
-				TCVector<uint8> FileDataVector;
+				CByteVector FileDataVector;
 				CFile::fs_WriteStringToVector(FileDataVector, CStr(FileData), false);
 				;
 				
@@ -2087,7 +2087,7 @@ fi
 			// Now merge in any set by a user
 			if (NFile::CFile::fs_FileExists(FileName, EFileAttrib_File) && NFile::CFile::fs_FileExists(FileName + ".gen", EFileAttrib_File))
 			{
-				TCVector<uint8> FileData;
+				CByteVector FileData;
 				CFile::fs_WriteStringToVector(FileData, CStr(RawXMLData), false);
 				
 				if (CFile::fs_ReadFile(FileName + ".gen") == FileData)
@@ -2112,7 +2112,7 @@ fi
 
 				if (bWasCreated)
 				{
-					TCVector<uint8> FileData;
+					CByteVector FileData;
 					CFile::fs_WriteStringToVector(FileData, CStr(XMLData), false);
 					if (m_BuildSystem.f_WriteFile(FileData, FileName))
 						bSchemesChanged = true;
@@ -2126,7 +2126,7 @@ fi
 
 				if (bWasCreated)
 				{
-					TCVector<uint8> FileData;
+					CByteVector FileData;
 					CFile::fs_WriteStringToVector(FileData, CStr(RawXMLData), false);
 					m_BuildSystem.f_WriteFile(FileData, FileName);
 				}
@@ -2259,7 +2259,7 @@ fi
 
 				if (bWasCreated)
 				{
-					TCVector<uint8> FileDataVector;
+					CByteVector FileDataVector;
 					CFile::fs_WriteStringToVector(FileDataVector, CStr(ScriptData), false);
 					m_BuildSystem.f_WriteFile(FileDataVector, OutputFile);
 				}

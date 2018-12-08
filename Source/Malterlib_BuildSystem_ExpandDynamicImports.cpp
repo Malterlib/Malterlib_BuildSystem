@@ -738,7 +738,7 @@ namespace NMib::NBuildSystem
 				
 				{
 					CFile::fs_CreateDirectory(CFile::fs_GetPath(DestPath));
-					TCVector<uint8> BinaryFileContents;
+					CByteVector BinaryFileContents;
 					CFile::fs_WriteStringToVector(BinaryFileContents, FileContents, false);
 					f_WriteFile(BinaryFileContents, DestPath, File.m_Attribs | EFileAttrib_UnixAttributesValid);
 				}
@@ -756,7 +756,7 @@ namespace NMib::NBuildSystem
 			}
 
 			{
-				TCVector<uint8> BinaryFileContents;
+				CByteVector BinaryFileContents;
 				CFile::fs_WriteStringToVector(BinaryFileContents, DependenciesHash.f_GetDigest().f_GetString(), false);
 				f_WriteFile(BinaryFileContents, CmakeCacheDirectory + "/Dependencies.sha512");
 				WrittenFiles[CmakeCacheDirectory + "/Dependencies.sha512"];

@@ -26,7 +26,7 @@ namespace NMib::NBuildSystem::NRepository
 			OutBranch["OnlyChanged"] = Branch.m_bOnlyChanged;
 		}
 
-		TCVector<uint8> FileData;
+		CByteVector FileData;
 		CFile::fs_WriteStringToVector(FileData, SettingsJson.f_ToString());
 
 		CFile::fs_CreateDirectory(CFile::fs_GetPath(BranchSettingsFile));

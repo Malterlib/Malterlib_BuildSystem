@@ -297,7 +297,7 @@ namespace NMib::NBuildSystem::NXcode
 
 		TCMap<CConfiguration, CEntityPointer> m_EnabledConfigs;
 
-		DMibIntrusiveLink(CSolution, TCAVLLink<>, m_Link);
+		TCAVLLink<> m_Link;
 	};
 
 	struct CGeneratorState

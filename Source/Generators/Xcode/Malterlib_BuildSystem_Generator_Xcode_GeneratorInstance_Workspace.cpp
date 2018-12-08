@@ -120,7 +120,7 @@ namespace NMib::NBuildSystem::NXcode
 
 			if (bWasCreated)
 			{
-				TCVector<uint8> FileData;
+				CByteVector FileData;
 				CFile::fs_WriteStringToVector(FileData, CStr());
 				m_BuildSystem.f_WriteFile(FileData, GeneratedFile);
 			}
@@ -135,7 +135,7 @@ namespace NMib::NBuildSystem::NXcode
 
 			if (bWasCreated)
 			{
-				TCVector<uint8> FileData;
+				CByteVector FileData;
 				CFile::fs_WriteStringToVector(FileData, CStr(XMLData));
 				bool bFileWritten = m_BuildSystem.f_WriteFile(FileData, FileName);
 				if (!bFileWritten && bSchemeChanged)
@@ -183,7 +183,7 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 			
 			if (bWasCreated)
 			{
-				TCVector<uint8> FileData;
+				CByteVector FileData;
 				CFile::fs_WriteStringToVector(FileData, CStr(DocumentData), false);
 				ThreadLocal.f_CreateDirectory(CFile::fs_GetPath(FileName));
 				if (m_BuildSystem.f_WriteFile(FileData, FileName))
@@ -345,7 +345,7 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 			// Now merge in any set by a user
 			if (NFile::CFile::fs_FileExists(FileName, EFileAttrib_File) && NFile::CFile::fs_FileExists(FileName + ".gen", EFileAttrib_File))
 			{
-				TCVector<uint8> FileData;
+				CByteVector FileData;
 				CFile::fs_WriteStringToVector(FileData, CStr(RawXMLData), false);
 				
 				if (CFile::fs_ReadFile(FileName + ".gen") == FileData)
@@ -369,7 +369,7 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 				
 				if (bWasCreated)
 				{
-					TCVector<uint8> FileData;
+					CByteVector FileData;
 					CFile::fs_WriteStringToVector(FileData, CStr(XMLData), false);
 					if (m_BuildSystem.f_WriteFile(FileData, FileName))
 						bSchemesChanged = true;
@@ -382,7 +382,7 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 
 				if (bWasCreated)
 				{
-					TCVector<uint8> FileData;
+					CByteVector FileData;
 					CFile::fs_WriteStringToVector(FileData, CStr(RawXMLData), false);
 					m_BuildSystem.f_WriteFile(FileData, FileName);
 				}

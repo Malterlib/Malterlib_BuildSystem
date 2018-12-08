@@ -45,7 +45,7 @@ namespace NMib::NBuildSystem
 		//o_Registry.f_GetChildren().
 		auto pChild = m_Registry.f_CreateChild(Name, true);
 		pChild->f_SetThisValue("");
-		pChild->f_SetWhiteSpace(EWhiteSpaceLocation_After, " // {}{\n}"_f << _Section.m_Name);
+		pChild->f_SetWhiteSpace(ERegistryWhiteSpaceLocation_After, " // {}{\n}"_f << _Section.m_Name);
 
 		pNewSection = pChild;
 		return pChild;
@@ -65,18 +65,18 @@ namespace NMib::NBuildSystem
 		;
 		auto fCheckWhitespace = [&](CPropertyKey const &_Section, CRegistryPreserveAndOrder_CStr const &_Registry)
 			{
-				CStr WhiteSpace = _Registry.f_GetWhiteSpace(EWhiteSpaceLocation_BeforeKey).f_Trim();
-				fg_AddStrSep(WhiteSpace, _Registry.f_GetWhiteSpace(EWhiteSpaceLocation_Between).f_Trim(), "\n");
+				CStr WhiteSpace = _Registry.f_GetWhiteSpace(ERegistryWhiteSpaceLocation_BeforeKey).f_Trim();
+				fg_AddStrSep(WhiteSpace, _Registry.f_GetWhiteSpace(ERegistryWhiteSpaceLocation_Between).f_Trim(), "\n");
 
-				auto After = _Registry.f_GetWhiteSpace(EWhiteSpaceLocation_After).f_Trim().f_SplitLine();
+				auto After = _Registry.f_GetWhiteSpace(ERegistryWhiteSpaceLocation_After).f_Trim().f_SplitLine();
 				if (!After.f_IsEmpty())
 					After.f_Remove(0);
 
 				fg_AddStrSep(WhiteSpace, CStr::fs_Join(After, "\n"), "\n");
-				fg_AddStrSep(WhiteSpace, _Registry.f_GetWhiteSpace(EWhiteSpaceLocation_BeforeChildScopeStart).f_Trim(), "\n");
-				fg_AddStrSep(WhiteSpace, _Registry.f_GetWhiteSpace(EWhiteSpaceLocation_AfterChildScopeStart).f_Trim(), "\n");
-				fg_AddStrSep(WhiteSpace, _Registry.f_GetWhiteSpace(EWhiteSpaceLocation_BeforeChildScopeEnd).f_Trim(), "\n");
-				fg_AddStrSep(WhiteSpace, _Registry.f_GetWhiteSpace(EWhiteSpaceLocation_AfterChildScopeEnd).f_Trim(), "\n");
+				fg_AddStrSep(WhiteSpace, _Registry.f_GetWhiteSpace(ERegistryWhiteSpaceLocation_BeforeChildScopeStart).f_Trim(), "\n");
+				fg_AddStrSep(WhiteSpace, _Registry.f_GetWhiteSpace(ERegistryWhiteSpaceLocation_AfterChildScopeStart).f_Trim(), "\n");
+				fg_AddStrSep(WhiteSpace, _Registry.f_GetWhiteSpace(ERegistryWhiteSpaceLocation_BeforeChildScopeEnd).f_Trim(), "\n");
+				fg_AddStrSep(WhiteSpace, _Registry.f_GetWhiteSpace(ERegistryWhiteSpaceLocation_AfterChildScopeEnd).f_Trim(), "\n");
 
 				for (auto &Line : WhiteSpace.f_SplitLine())
 				{
@@ -123,7 +123,7 @@ namespace NMib::NBuildSystem
 				if (pGetFrom->f_GetName().f_Find(".") >= 0)
 					return CPropertyKey{"General"};
 
-				auto WhiteSpace = pGetFrom->f_GetWhiteSpace(EWhiteSpaceLocation_After).f_Trim();
+				auto WhiteSpace = pGetFrom->f_GetWhiteSpace(ERegistryWhiteSpaceLocation_After).f_Trim();
 				if (!WhiteSpace.f_StartsWith("// "))
 					return CPropertyKey{"General"};
 
@@ -220,7 +220,7 @@ namespace NMib::NBuildSystem
 
 		for (auto iProp = TempData.m_RootEntity.m_PropertiesEvalOrder.f_GetIterator(); iProp; ++iProp)
 		{
-			CStr WhiteSpace = iProp->m_pRegistry->f_GetWhiteSpace(EWhiteSpaceLocation_After);
+			CStr WhiteSpace = iProp->m_pRegistry->f_GetWhiteSpace(ERegistryWhiteSpaceLocation_After);
 
 			auto fAddSettings = [&](CUserSettingsState &o_State, CStr const &_Description, CPropertyKey const &_Section, CStr const &_DefaultValue)
 				{
@@ -230,14 +230,14 @@ namespace NMib::NBuildSystem
 					{
 						auto pSection = o_State.f_GetSection(_Section);
 						auto pCommentReg = pSection;
-						auto CommentType = EWhiteSpaceLocation_AfterChildScopeStart;
+						auto CommentType = ERegistryWhiteSpaceLocation_AfterChildScopeStart;
 						if (pCommentReg->f_HasChildren())
 						{
 							pCommentReg = pCommentReg->f_GetChildren().f_FindLargest();
 							if (pCommentReg->f_HasScope())
-								CommentType = EWhiteSpaceLocation_AfterChildScopeEnd;
+								CommentType = ERegistryWhiteSpaceLocation_AfterChildScopeEnd;
 							else
-								CommentType = EWhiteSpaceLocation_After;
+								CommentType = ERegistryWhiteSpaceLocation_After;
 						}
 
 						CStr Comments = pCommentReg->f_GetWhiteSpace(CommentType).f_TrimRight("\r\n");
