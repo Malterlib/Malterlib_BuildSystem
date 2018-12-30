@@ -830,6 +830,8 @@ namespace NMib::NBuildSystem
 					{
 						CStr Value = fl_EscVar(_Value);
 						CStr ValuePlusPlus = fl_EscVar(_Value + "++");
+						if (CFile::fs_GetFileNoExt(Value) == "MTool")
+							ValuePlusPlus = Value;
 
 						FileData += "MALTERLIB_GENERATOR_CLANG = {}\n"_f << Value;
 						FileData += "CC = {}\n"_f << Value;
