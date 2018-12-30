@@ -303,7 +303,7 @@ namespace NMib::NBuildSystem::NXcode
 	struct CGeneratorState
 	{
 		TCMap<CStr, CSolution> m_Solutions;
-		TCAVLTree<CSolution::CLinkTraits_m_Link, CSolution::CCompare> m_SolutionsByEntity;
+		TCAVLTree<&CSolution::m_Link, CSolution::CCompare> m_SolutionsByEntity;
 	};
 
 	struct CGeneratorInstance : public CGeneratorInterface
