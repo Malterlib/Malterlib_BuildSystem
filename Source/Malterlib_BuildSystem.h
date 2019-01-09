@@ -488,6 +488,7 @@ namespace NMib::NBuildSystem
 		
 		EFileAttrib mp_SupportedAttributes = CFile::fs_GetSupportedAttributes();
 		EFileAttrib mp_ValidAttributes = CFile::fs_GetValidAttributes();
+		bool mp_bDebugFileLocks = fg_GetSys()->f_GetEnvironmentVariable("MalterlibBuildSystemDebugFileLocks", "false") == "true";
 	};
 }
 

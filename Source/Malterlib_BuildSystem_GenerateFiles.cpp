@@ -191,8 +191,23 @@ namespace NMib::NBuildSystem
 									if (fIsValidAlready())
 										break;
 
-									CLockFile LockFile(SymlinkBasePath / ".lock");
+									CStr FileLockName = SymlinkBasePath / ".lock";
+									CLockFile LockFile(FileLockName);
+
+									if (mp_bDebugFileLocks)
+										DMibConErrOut2("{} File lock: {}\n", &LockFile, FileLockName);
+
 									LockFile.f_Lock();
+
+									if (mp_bDebugFileLocks)
+										DMibConErrOut2("{} File locked: {}\n", &LockFile, FileLockName);
+
+									auto CleanupLock = g_OnScopeExit > [&]
+										{
+											if (mp_bDebugFileLocks)
+												DMibConErrOut2("{} File lock released: {}\n", &LockFile, FileLockName);
+										}
+									;
 
 									if (CFile::fs_FileExists(Path))
 									{

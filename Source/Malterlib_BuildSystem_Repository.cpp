@@ -1115,8 +1115,24 @@ namespace NMib::NBuildSystem
 
 						StateHandler.f_AddGitIgnore(ReposDirectory + "/RepoLock.MRepoState", *this);
 
-						CLockFile LockFile{ReposDirectory + "/RepoLock.MRepoState"};
+						CStr LockFileName = ReposDirectory + "/RepoLock.MRepoState";
+						CLockFile LockFile{LockFileName};
+
+						if (mp_bDebugFileLocks)
+							DMibConErrOut2("{} File lock: {}\n", &LockFile, LockFileName);
+
 						LockFile.f_LockWithException(5.0*60.0);
+
+						if (mp_bDebugFileLocks)
+							DMibConErrOut2("{} File locked: {}\n", &LockFile, LockFileName);
+
+						auto CleanupLock = g_OnScopeExit > [&]
+							{
+								if (mp_bDebugFileLocks)
+									DMibConErrOut2("{} File lock released: {}\n", &LockFile, LockFileName);
+							}
+						;
+
 						fg_ParallellForEach
 							(
 								_Repos.m_Repositories
