@@ -179,12 +179,12 @@ namespace NMib::NBuildSystem
 		pState->m_StartCommits[mp_BaseDir] = _From;
 		pState->m_EndCommits[mp_BaseDir] = _To;
 
-		TCContinuation<> ResolveContinuation;
+		TCPromise<> ResolvePromise;
 
-		auto fReportError = [ResolveContinuation](CStr const &_Error)
+		auto fReportError = [ResolvePromise](CStr const &_Error)
 			{
-				if (!ResolveContinuation.f_IsSet())
-					ResolveContinuation.f_SetException(DErrorInstance(_Error));
+				if (!ResolvePromise.f_IsSet())
+					ResolvePromise.f_SetException(DErrorInstance(_Error));
 			}
 		;
 
@@ -293,15 +293,15 @@ namespace NMib::NBuildSystem
 
 								if (!_StartResult)
 								{
-									if (!ResolveContinuation.f_IsSet())
-										ResolveContinuation.f_SetException(_StartResult);
+									if (!ResolvePromise.f_IsSet())
+										ResolvePromise.f_SetException(_StartResult);
 									return;
 								}
 
 								if (!_EndResult)
 								{
-									if (!ResolveContinuation.f_IsSet())
-										ResolveContinuation.f_SetException(_EndResult);
+									if (!ResolvePromise.f_IsSet())
+										ResolvePromise.f_SetException(_EndResult);
 									return;
 								}
 
@@ -326,8 +326,8 @@ namespace NMib::NBuildSystem
 
 				if (bAllFinished)
 				{
-					if (!ResolveContinuation.f_IsSet())
-						ResolveContinuation.f_SetResult();
+					if (!ResolvePromise.f_IsSet())
+						ResolvePromise.f_SetResult();
 				}
 				else if (!bDoneSomething && State.m_PendingGitShow.f_IsEmpty())
 				{
@@ -337,13 +337,13 @@ namespace NMib::NBuildSystem
 		;
 
 		(
-		 	g_Dispatch(Launches.m_pState->m_OutputActor) > [=]
+		 	g_Dispatch(Launches.m_pState->m_OutputActor) / [=]
 			{
 				fResolveCommits(fResolveCommits);
 			}
 		).f_CallSync();
 
-		ResolveContinuation.f_Dispatch().f_CallSync();
+		ResolvePromise.f_Dispatch().f_CallSync();
 
 		auto &State = *pState;
 
@@ -372,13 +372,13 @@ namespace NMib::NBuildSystem
 					NoEndCommits[Location];
 
 				{
-					TCContinuation<TCVector<CLogEntryFull>> Result;
+					TCPromise<TCVector<CLogEntryFull>> Result;
 					Result.f_SetResult(fg_Default());
 					Result > CommitsResults.f_AddResult(Location);
 				}
 
 				{
-					TCContinuation<TCVector<CLogEntryFull>> Result;
+					TCPromise<TCVector<CLogEntryFull>> Result;
 					Result.f_SetResult(fg_Default());
 					Result > ReverseCommitsResults.f_AddResult(Location);
 				}

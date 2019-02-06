@@ -135,7 +135,7 @@ namespace NMib::NBuildSystem
 					Launches.f_Output(EOutputType_Normal, Repo, "git {}"_f << CProcessLaunchParams::fs_GetParams(ParamsCheckout));
 				else
 				{
-					TCContinuation<void> LaunchResult;
+					TCPromise<void> LaunchResult;
 					Launches.f_Launch(Repo, ParamsCheckout, fg_LogAllFunctor()) > [=](TCAsyncResult<void> &&_Result)
 						{
 							Launches.f_RepoDone();
@@ -200,7 +200,7 @@ namespace NMib::NBuildSystem
 					Launches.f_Output(EOutputType_Normal, Repo, "git checkout {}"_f << Repo.m_DefaultBranch);
 				else
 				{
-					TCContinuation<void> LaunchResult;
+					TCPromise<void> LaunchResult;
 					Launches.f_Launch(Repo, {"checkout", Repo.m_DefaultBranch}, fg_LogAllFunctor()) > [Launches, LaunchResult](TCAsyncResult<void> &&_Result)
 						{
 							Launches.f_RepoDone();
@@ -256,26 +256,26 @@ namespace NMib::NBuildSystem
 
 			auto CurrentBranch = fg_GetBranch(Repo);
 
-			TCContinuation<void> Continuation;
+			TCPromise<void> Promise;
 
 			TCVector<CStr> Params = {"branch", "--format", "%(refname:short)"};
 
-			TCContinuation<TCVector<CStr>> RemotesContinuation;
+			TCFuture<TCVector<CStr>> RemotesFuture;
 
 			if (_Flags & ERepoCleanupBranchesFlag_AllRemotes)
 			{
 				Params.f_Insert("-a");
-				RemotesContinuation = fg_GetRemotes(Launches, Repo);
+				RemotesFuture = fg_GetRemotes(Launches, Repo);
 			}
 			else
-				RemotesContinuation.f_SetResult(TCVector<CStr>{});
+				RemotesFuture = fg_Explicit();
 
 			auto pDeleteLaunchSequencer = (DeleteLaunchSequencers[pRepo] = fg_Construct());
 
 			auto RepoDoneScope = Launches.f_RepoDoneScope();
 
-			Launches.f_Launch(Repo, Params) + RemotesContinuation
-				> Continuation / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result, TCVector<CStr> &&_Remotes) mutable
+			Launches.f_Launch(Repo, Params) + RemotesFuture
+				> Promise / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result, TCVector<CStr> &&_Remotes) mutable
 				{
 					TCActorResultVector<void> Results;
 
@@ -389,11 +389,11 @@ namespace NMib::NBuildSystem
 							continue;
 						}
 
-						TCContinuation<void> Continuation;
+						TCPromise<void> Promise;
 
 						Launches.f_Launch(Repo, {"merge-base", "--is-ancestor", FullBranch, "{}/{}"_f << CompareRemote << Repo.m_DefaultBranch})
 							+ Launches.f_Launch(Repo, {"log", "--oneline", "--cherry", "{}/{}...{}"_f << CompareRemote << Repo.m_DefaultBranch << FullBranch})
-							> Continuation / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result, CProcessLaunchActor::CSimpleLaunchResult &&_ResultRebase) mutable
+							> Promise / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result, CProcessLaunchActor::CSimpleLaunchResult &&_ResultRebase) mutable
 							{
 								bool bIsInDefault = _Result.m_ExitCode == 0;
 								CStr DeleteReason = "[ancestor]";
@@ -414,7 +414,7 @@ namespace NMib::NBuildSystem
 								if (!bIsInDefault && !(_Flags & ERepoCleanupBranchesFlag_Force))
 								{
 									Launches.f_Output(EOutputType_Error, Repo, "{} - not fully merged"_f << FullBranch);
-									Continuation.f_SetResult();
+									Promise.f_SetResult();
 									return;
 								}
 
@@ -424,44 +424,44 @@ namespace NMib::NBuildSystem
 								if (_Flags & ERepoCleanupBranchesFlag_Pretend)
 								{
 									Launches.f_Output(EOutputType_Warning, Repo, "{} - would have deleted {}"_f << FullBranch << DeleteReason);
-									Continuation.f_SetResult();
+									Promise.f_SetResult();
 									return;
 								}
 
-								*pDeleteLaunchSequencer > [=]() -> TCContinuation<void>
+								*pDeleteLaunchSequencer / [=]() -> TCFuture<void>
 									{
 										Launches.f_Output(EOutputType_Warning, Repo, "{} - deleting {}"_f << FullBranch << DeleteReason);
 
-										TCContinuation<void> Continuation;
+										TCFuture<void> LaunchFuture;
 
 										if (Remote)
-											Continuation = Launches.f_Launch(Repo, {"push", Remote, "--delete", "refs/heads/{}"_f << Branch}, fg_LogAllFunctor());
+											LaunchFuture = Launches.f_Launch(Repo, {"push", Remote, "--delete", "refs/heads/{}"_f << Branch}, fg_LogAllFunctor());
 										else
-											Continuation = Launches.f_Launch(Repo, {"branch", "-D", FullBranch}, fg_LogAllFunctor());
+											LaunchFuture = Launches.f_Launch(Repo, {"branch", "-D", FullBranch}, fg_LogAllFunctor());
 
-										return Continuation;
+										return LaunchFuture;
 									}
-									> Continuation;
+									> Promise;
 								;
 							}
 						;
 
-						Continuation > Results.f_AddResult();
+						Promise > Results.f_AddResult();
 					}
 
-					Results.f_GetResults() > Continuation / [=](TCVector<TCAsyncResult<void>> &&_Results)
+					Results.f_GetResults() > Promise / [=](TCVector<TCAsyncResult<void>> &&_Results)
 						{
-							if (!fg_CombineResults(Continuation, fg_Move(_Results)))
+							if (!fg_CombineResults(Promise, fg_Move(_Results)))
 								return;
 
 							(void)RepoDoneScope;
-							Continuation.f_SetResult();
+							Promise.f_SetResult();
 						}
 					;
 				}
 			;
 
-			Continuation.f_Dispatch() > LaunchResults.f_AddResult();
+			Promise.f_Dispatch() > LaunchResults.f_AddResult();
 		}
 
 		for (auto &Result : LaunchResults.f_GetResults().f_CallSync())
@@ -502,21 +502,21 @@ namespace NMib::NBuildSystem
 			auto &Repo = RepoBound;
 			auto *pRepo = &Repo;
 
-			TCContinuation<void> Continuation;
+			TCPromise<void> Promise;
 
-			TCContinuation<TCVector<CStr>> RemotesContinuation;
+			TCFuture<TCVector<CStr>> RemotesFuture;
 
 			if (_Flags & ERepoCleanupTagsFlag_AllRemotes)
-				RemotesContinuation = fg_GetRemotes(Launches, Repo);
+				RemotesFuture = fg_GetRemotes(Launches, Repo);
 			else
-				RemotesContinuation.f_SetResult(TCVector<CStr>{});
+				RemotesFuture = fg_Explicit();
 
 			auto pDeleteLaunchSequencer = (DeleteLaunchSequencers[pRepo] = fg_Construct());
 
 			auto RepoDoneScope = Launches.f_RepoDoneScope();
 
-			Launches.f_Launch(Repo, {"tag"}) + RemotesContinuation
-				> Continuation / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result, TCVector<CStr> &&_Remotes) mutable
+			Launches.f_Launch(Repo, {"tag"}) + RemotesFuture
+				> Promise / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result, TCVector<CStr> &&_Remotes) mutable
 				{
 					TCSet<CStr> Remotes;
 					Remotes.f_AddContainer(_Remotes);
@@ -527,7 +527,7 @@ namespace NMib::NBuildSystem
 					for (auto &Remote : Remotes)
 						Launches.f_Launch(Repo, {"ls-remote", "--tags", Remote}) > RemoteTagsResults.f_AddResult(Remote);
 
-					RemoteTagsResults.f_GetResults() > Continuation / [=](TCMap<CStr, TCAsyncResult<CProcessLaunchActor::CSimpleLaunchResult>> &&_RemoteTags)
+					RemoteTagsResults.f_GetResults() > Promise / [=](TCMap<CStr, TCAsyncResult<CProcessLaunchActor::CSimpleLaunchResult>> &&_RemoteTags)
 						{
 							TCActorResultVector<void> Results;
 
@@ -659,11 +659,11 @@ namespace NMib::NBuildSystem
 									continue;
 								}
 
-								TCContinuation<void> Continuation;
+								TCPromise<void> Promise;
 
 								Launches.f_Launch(Repo, {"merge-base", "--is-ancestor", Tag.f_GetRef(), "{}/{}"_f << CompareRemote << Repo.m_DefaultBranch})
 									+ Launches.f_Launch(Repo, {"log", "--oneline", "--cherry", "{}/{}...{}"_f << CompareRemote << Repo.m_DefaultBranch << Tag.f_GetRef()})
-									> Continuation / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result, CProcessLaunchActor::CSimpleLaunchResult &&_ResultRebase) mutable
+									> Promise / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result, CProcessLaunchActor::CSimpleLaunchResult &&_ResultRebase) mutable
 									{
 										bool bIsInDefault = _Result.m_ExitCode == 0;
 										CStr DeleteReason = "[ancestor]";
@@ -684,7 +684,7 @@ namespace NMib::NBuildSystem
 										if (!bIsInDefault && !(_Flags & ERepoCleanupBranchesFlag_Force))
 										{
 											Launches.f_Output(EOutputType_Error, Repo, "{} - not fully merged"_f << Tag.f_GetName());
-											Continuation.f_SetResult();
+											Promise.f_SetResult();
 											return;
 										}
 
@@ -694,38 +694,38 @@ namespace NMib::NBuildSystem
 										if (_Flags & ERepoCleanupTagsFlag_Pretend)
 										{
 											Launches.f_Output(EOutputType_Warning, Repo, "{} - would have deleted {}"_f << Tag.f_GetName() << DeleteReason);
-											Continuation.f_SetResult();
+											Promise.f_SetResult();
 											return;
 										}
 
-										*pDeleteLaunchSequencer > [=]() -> TCContinuation<void>
+										*pDeleteLaunchSequencer / [=]() -> TCFuture<void>
 											{
 												Launches.f_Output(EOutputType_Warning, Repo, "{} - deleting {}"_f << Tag.f_GetName() << DeleteReason);
 
-												TCContinuation<void> Continuation;
+												TCFuture<void> LaunchFuture;
 
 												if (Tag.m_Remote)
-													Continuation = Launches.f_Launch(Repo, {"push", Tag.m_Remote, "--delete", "refs/tags/{}"_f << Tag.m_Tag}, fg_LogAllFunctor());
+													LaunchFuture = Launches.f_Launch(Repo, {"push", Tag.m_Remote, "--delete", "refs/tags/{}"_f << Tag.m_Tag}, fg_LogAllFunctor());
 												else
-													Continuation = Launches.f_Launch(Repo, {"tag", "-d", Tag.m_Tag}, fg_LogAllFunctor());
+													LaunchFuture = Launches.f_Launch(Repo, {"tag", "-d", Tag.m_Tag}, fg_LogAllFunctor());
 
-												return Continuation;
+												return LaunchFuture;
 											}
-											> Continuation;
+											> Promise;
 										;
 									}
 								;
 
-								Continuation > Results.f_AddResult();
+								Promise > Results.f_AddResult();
 							}
 
-							Results.f_GetResults() > Continuation / [=](TCVector<TCAsyncResult<void>> &&_Results)
+							Results.f_GetResults() > Promise / [=](TCVector<TCAsyncResult<void>> &&_Results)
 								{
-									if (!fg_CombineResults(Continuation, fg_Move(_Results)))
+									if (!fg_CombineResults(Promise, fg_Move(_Results)))
 										return;
 
 									(void)RepoDoneScope;
-									Continuation.f_SetResult();
+									Promise.f_SetResult();
 								}
 							;
 						}
@@ -733,7 +733,7 @@ namespace NMib::NBuildSystem
 				}
 			;
 
-			Continuation.f_Dispatch() > LaunchResults.f_AddResult();
+			Promise.f_Dispatch() > LaunchResults.f_AddResult();
 		}
 
 		for (auto &Result : LaunchResults.f_GetResults().f_CallSync())

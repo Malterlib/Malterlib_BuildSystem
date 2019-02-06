@@ -9,18 +9,18 @@ namespace NMib::NBuildSystem
 
 	namespace
 	{
-		TCContinuation<void> fg_Fetch(CBuildSystem const &_BuildSystem, CGitLaunches const &_Launches, CRepository const &_Repo)
+		TCFuture<void> fg_Fetch(CBuildSystem const &_BuildSystem, CGitLaunches const &_Launches, CRepository const &_Repo)
 		{
 			TCVector<CStr> FetchParams = {"fetch", "--all", "--prune", "--tags", "-q"};
 
-			TCContinuation<void> Continuation;
+			TCPromise<void> Promise;
 			_Launches.f_Launch
 				(
 					_Repo
 					, FetchParams
 				 	, fg_FetchEnvironment(_BuildSystem)
 				)
-				> Continuation / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
+				> Promise / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
 				{
 					if (_Result.m_ExitCode)
 					{
@@ -32,18 +32,18 @@ namespace NMib::NBuildSystem
 								<< _Result.f_GetCombinedOut().f_Trim()
 							)
 						;
-						Continuation.f_SetException(DMibErrorInstance("Could not fetch remote"));
+						Promise.f_SetException(DMibErrorInstance("Could not fetch remote"));
 						return;
 					}
-					Continuation.f_SetResult();
+					Promise.f_SetResult();
 				}
 			;
-			return Continuation;
+			return Promise.f_MoveFuture();
 		}
 
-		TCContinuation<TCSet<CStr>> fg_CanPush(CGitLaunches const &_Launches, CRepository const &_Repo, TCVector<CStr> const &_Remotes, CGitBranches const &_Branches)
+		TCFuture<TCSet<CStr>> fg_CanPush(CGitLaunches const &_Launches, CRepository const &_Repo, TCVector<CStr> const &_Remotes, CGitBranches const &_Branches)
 		{
-			TCContinuation<TCSet<CStr>> Continuation;
+			TCPromise<TCSet<CStr>> Promise;
 			{
 				TCActorResultMap<CStr, CProcessLaunchActor::CSimpleLaunchResult> CanPushResults;
 
@@ -58,7 +58,7 @@ namespace NMib::NBuildSystem
 					;
 				}
 
-				CanPushResults.f_GetResults() > Continuation / [=](TCMap<CStr, TCAsyncResult<CProcessLaunchActor::CSimpleLaunchResult>> &&_CanPushResults)
+				CanPushResults.f_GetResults() > Promise / [=](TCMap<CStr, TCAsyncResult<CProcessLaunchActor::CSimpleLaunchResult>> &&_CanPushResults)
 					{
 						TCSet<CStr> NewPush;
 						bool bAllFastForward = true;
@@ -66,7 +66,7 @@ namespace NMib::NBuildSystem
 							(
 								!fg_CombineResults
 								(
-									Continuation
+									Promise
 									, fg_Move(_CanPushResults)
 									, [&](CStr const &_Remote, CProcessLaunchActor::CSimpleLaunchResult &&_Result)
 									{
@@ -116,27 +116,27 @@ namespace NMib::NBuildSystem
 
 						if (!bAllFastForward)
 						{
-							Continuation.f_SetException(DMibErrorInstance("Could not fast-forward against all remotes, please resolve."));
+							Promise.f_SetException(DMibErrorInstance("Could not fast-forward against all remotes, please resolve."));
 							return;
 						}
 
-						Continuation.f_SetResult(fg_Move(NewPush));
+						Promise.f_SetResult(fg_Move(NewPush));
 					}
 				;
 			}
-			return Continuation;
+			return Promise.f_MoveFuture();
 		}
 
-		TCContinuation<TCSet<CStr>> fg_NeedPush(CGitLaunches const &_Launches, CRepository const &_Repo, TCVector<CStr> const &_Remotes, CGitBranches const &_Branches)
+		TCFuture<TCSet<CStr>> fg_NeedPush(CGitLaunches const &_Launches, CRepository const &_Repo, TCVector<CStr> const &_Remotes, CGitBranches const &_Branches)
 		{
-			TCContinuation<TCSet<CStr>> Continuation;
+			TCPromise<TCSet<CStr>> Promise;
 			{
 				TCActorResultMap<CStr, TCVector<CLogEntry>> NeedPushResults;
 
 				for (auto &Remote : _Remotes)
 					fg_GetLogEntries(_Launches, _Repo, "{}/{}"_f << Remote << _Branches.m_Current, _Branches.m_Current, false) > NeedPushResults.f_AddResult(Remote);
 
-				NeedPushResults.f_GetResults() > Continuation / [=](TCMap<CStr, TCAsyncResult<TCVector<CLogEntry>>> &&_NeedPushResults)
+				NeedPushResults.f_GetResults() > Promise / [=](TCMap<CStr, TCAsyncResult<TCVector<CLogEntry>>> &&_NeedPushResults)
 					{
 						TCSet<CStr> NeedPush;
 						bool bAllFastForward = true;
@@ -144,7 +144,7 @@ namespace NMib::NBuildSystem
 							(
 								!fg_CombineResults
 								(
-									Continuation
+									Promise
 									, fg_Move(_NeedPushResults)
 									, [&](CStr const &_Remote, TCVector<CLogEntry> &&_Commits)
 									{
@@ -159,15 +159,15 @@ namespace NMib::NBuildSystem
 
 						if (!bAllFastForward)
 						{
-							Continuation.f_SetException(DMibErrorInstance("Could not fast-forward against all remotes, please resolve."));
+							Promise.f_SetException(DMibErrorInstance("Could not fast-forward against all remotes, please resolve."));
 							return;
 						}
 
-						Continuation.f_SetResult(fg_Move(NeedPush));
+						Promise.f_SetResult(fg_Move(NeedPush));
 					}
 				;
 			}
-			return Continuation;
+			return Promise.f_MoveFuture();
 		}
 	}
 	
@@ -203,15 +203,15 @@ namespace NMib::NBuildSystem
 				auto &Repo = *pRepo;
 				OutputOrderSet[Launches.f_GetRepoName(Repo)];
 
-				TCContinuation<TCVector<CStr>> Remotes;
+				TCFuture<TCVector<CStr>> RemotesFuture;
 
 				if (_Remotes.f_IsEmpty())
-					Remotes = fg_GetRemotes(Launches, Repo);
+					RemotesFuture = fg_GetRemotes(Launches, Repo);
 				else
-					Remotes.f_SetResult(_Remotes);
+					RemotesFuture = fg_Explicit(_Remotes);
 
-				TCContinuation<bool> LaunchResult;
-				Remotes + fg_GetBranches(Launches, Repo, false)
+				TCPromise<bool> LaunchResult;
+				RemotesFuture + fg_GetBranches(Launches, Repo, false)
 					> LaunchResult / [=](TCVector<CStr> &&_Remotes, CGitBranches &&_Branches)
 					{
 						{

@@ -30,7 +30,7 @@ namespace NMib::NBuildSystem
 			{
 				auto &Repo = *pRepo;
 
-				TCContinuation<void> Result;
+				TCPromise<void> Result;
 				Launches.f_Launch(Repo, _Params, fg_LogAllFunctor()) > [=](TCAsyncResult<void> &&_Result)
 					{
 						Result.f_SetResult(_Result);

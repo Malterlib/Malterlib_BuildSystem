@@ -59,13 +59,13 @@ namespace NMib::NBuildSystem
 
 		for (auto &[Repo, iSequence] : AllRepos)
 		{
-			TCContinuation<TCTuple<bool, mint, CRepository>> Continuation;
+			TCPromise<TCTuple<bool, mint, CRepository>> Promise;
 
 			fg_GetLocalFileChanges(Launches, Repo, !(_Flags & ERepoStatusFlag_OnlyTracked))
 				+ fg_GetRemotes(Launches, Repo)
 				+ fg_GetBranches(Launches, Repo, false)
 				+ fg_GetBranches(Launches, Repo, true)
-				> Continuation / [=, Repo = Repo, iSequence = iSequence]
+				> Promise / [=, Repo = Repo, iSequence = iSequence]
 				(TCVector<CLocalFileChange> &&_LocalChanges, TCVector<CStr> &&_Remotes, CGitBranches &&_LocalBranches, CGitBranches &&_RemoteBranches)
 				{
 					TCSharedPointer<CRepoStatusState> pState = fg_Construct();
@@ -87,7 +87,7 @@ namespace NMib::NBuildSystem
 					TCActorResultVector<bool> BranchResults;
 					for (auto &Branch : Branches)
 					{
-						TCContinuation<bool> BranchContinuation;
+						TCPromise<bool> BranchPromise;
 
 						TCActorResultMap<CStr, TCVector<CLogEntry>> ToPush;
 						TCActorResultMap<CStr, TCVector<CLogEntry>> ToPull;
@@ -158,7 +158,7 @@ namespace NMib::NBuildSystem
 									(
 									 	!fg_CombineResults
 									 	(
-										 	BranchContinuation
+										 	BranchPromise
 										 	, fg_Move(_ToPush)
 										 	, [&](CStr const &_Remote, TCVector<CLogEntry> &&_Log)
 										 	{
@@ -169,7 +169,7 @@ namespace NMib::NBuildSystem
 										)
 									)
 								{
-									CStr Error = BranchContinuation.m_pData->m_Result.f_GetExceptionStr();
+									CStr Error = BranchPromise.m_pData->m_Result.f_GetExceptionStr();
 									Launches.f_Output(EOutputType_Error, Repo, "Error getting to push for branch '{}': {}"_f << Branch << Error);
 									return;
 								}
@@ -178,7 +178,7 @@ namespace NMib::NBuildSystem
 									(
 									 	!fg_CombineResults
 									 	(
-										 	BranchContinuation
+										 	BranchPromise
 										 	, fg_Move(_ToPull)
 										 	, [&](CStr const &_Remote, TCVector<CLogEntry> &&_Log)
 										 	{
@@ -189,7 +189,7 @@ namespace NMib::NBuildSystem
 										)
 									)
 								{
-									CStr Error = BranchContinuation.m_pData->m_Result.f_GetExceptionStr();
+									CStr Error = BranchPromise.m_pData->m_Result.f_GetExceptionStr();
 									Launches.f_Output(EOutputType_Error, Repo, "Error getting to pull for branch '{}': {}"_f << Branch << Error);
 									return;
 								}
@@ -437,7 +437,7 @@ namespace NMib::NBuildSystem
 
 								if (!bIsChanged && !(_Flags & ERepoStatusFlag_ShowUnchanged))
 								{
-									BranchContinuation.f_SetResult(bIsChanged);
+									BranchPromise.f_SetResult(bIsChanged);
 									return;
 								}
 
@@ -463,7 +463,7 @@ namespace NMib::NBuildSystem
 
 								if (!(_Flags & ERepoStatusFlag_Verbose))
 								{
-									BranchContinuation.f_SetResult(bNeedAction);
+									BranchPromise.f_SetResult(bNeedAction);
 									return;
 								}
 
@@ -611,14 +611,14 @@ namespace NMib::NBuildSystem
 									}
 								}
 
-								BranchContinuation.f_SetResult(bNeedAction);
+								BranchPromise.f_SetResult(bNeedAction);
 							}
 						;
 
-						BranchContinuation > BranchResults.f_AddResult();
+						BranchPromise > BranchResults.f_AddResult();
 					}
 
-					BranchResults.f_GetResults() > Continuation / [=](TCVector<TCAsyncResult<bool>> &&_Results)
+					BranchResults.f_GetResults() > Promise / [=](TCVector<TCAsyncResult<bool>> &&_Results)
 						{
 							bool bActionNeeded = false;
 
@@ -626,7 +626,7 @@ namespace NMib::NBuildSystem
 								(
 								 	!fg_CombineResults
 								 	(
-									 	Continuation
+									 	Promise
 									 	, fg_Move(_Results)
 									 	, [&](bool _bActionNeeded)
 									 	{
@@ -641,18 +641,18 @@ namespace NMib::NBuildSystem
 							if (bActionNeeded && bOpenEditor)
 							{
 								Launches.f_RepoDone();
-								Continuation.f_SetResult(TCTuple<bool, mint, CRepository>{bActionNeeded, iSequence, Repo});
+								Promise.f_SetResult(TCTuple<bool, mint, CRepository>{bActionNeeded, iSequence, Repo});
 								return;
 							}
 
 							Launches.f_RepoDone();
-							Continuation.f_SetResult(TCTuple<bool, mint, CRepository>{bActionNeeded, iSequence, {""}});
+							Promise.f_SetResult(TCTuple<bool, mint, CRepository>{bActionNeeded, iSequence, {""}});
 						}
 					;
 				}
 			;
 
-			Continuation > RepoResults.f_AddResult();
+			Promise > RepoResults.f_AddResult();
 		}
 
 		TCMap<mint, TCVector<CRepository>> EditorsToLaunch;
@@ -675,10 +675,10 @@ namespace NMib::NBuildSystem
 				TCActorResultVector<void> EditorLaunchResults;
 				for (auto &Repo : EditorLaunches)
 				{
-					EditorLaunchSequencer > [=]
+					EditorLaunchSequencer / [=]
 						{
-							TCContinuation<void> Continuation;
-							Launches.f_OpenRepoEditor(RepoEditor, Repo.m_Location) > Continuation / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
+							TCPromise<void> Promise;
+							Launches.f_OpenRepoEditor(RepoEditor, Repo.m_Location) > Promise / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
 								{
 									if (_Result.m_ExitCode)
 									{
@@ -691,10 +691,10 @@ namespace NMib::NBuildSystem
 											)
 										;
 									}
-									Continuation.f_SetResult();
+									Promise.f_SetResult();
 								}
 							;
-							return Continuation;
+							return Promise.f_MoveFuture();
 						}
 						> EditorLaunchResults.f_AddResult();
 					;

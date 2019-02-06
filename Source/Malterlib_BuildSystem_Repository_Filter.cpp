@@ -53,18 +53,18 @@ namespace NMib::NBuildSystem::NRepository
 					if (_Filter.m_bOnlyChanged)
 					{
 						++nLaunchRepos;
-						g_Dispatch(Launches.m_pState->m_OutputActor) > [=]() mutable
+						g_Dispatch(Launches.m_pState->m_OutputActor) / [=]() mutable
 							{
 								Launches.f_SetNumRepos(nLaunchRepos);
 							}
 							> fg_DiscardResult()
 						;
-						TCContinuation<bool> ChangedDoneContinuation;
-						ChangedDoneContinuation > DeferredResults.f_AddResult(&Repo);
-						fg_RepoIsChanged(Launches, Repo, _Flags) > [Launches, ChangedDoneContinuation](TCAsyncResult<bool> &&_bChanged)
+						TCPromise<bool> ChangedDonePromise;
+						ChangedDonePromise > DeferredResults.f_AddResult(&Repo);
+						fg_RepoIsChanged(Launches, Repo, _Flags) > [Launches, ChangedDonePromise](TCAsyncResult<bool> &&_bChanged)
 							{
 								Launches.f_RepoDone();
-								ChangedDoneContinuation.f_SetResult(_bChanged);
+								ChangedDonePromise.f_SetResult(_bChanged);
 							}
 						;
 						continue;

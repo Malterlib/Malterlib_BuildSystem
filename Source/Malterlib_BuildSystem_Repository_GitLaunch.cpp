@@ -233,10 +233,10 @@ namespace NMib::NBuildSystem::NRepository
 		}
 	}
 
-	TCContinuation<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::fp_Launch(CProcessLaunchActor::CSimpleLaunch &&_Launch) const
+	TCFuture<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::fp_Launch(CProcessLaunchActor::CSimpleLaunch &&_Launch) const
 	{
 		auto &State = *m_pState;
-		return State.m_LaunchSequencer > [=, pState = m_pState, Launch = fg_Move(_Launch)]() mutable -> TCContinuation<CProcessLaunchActor::CSimpleLaunchResult>
+		return State.m_LaunchSequencer / [=, pState = m_pState, Launch = fg_Move(_Launch)]() mutable -> TCFuture<CProcessLaunchActor::CSimpleLaunchResult>
 			{
 				auto &State = *pState;
 				TCActor<CProcessLaunchActor> LaunchActor = fg_Construct();
@@ -246,7 +246,7 @@ namespace NMib::NBuildSystem::NRepository
 					LaunchID = State.m_LaunchID++;
 					State.m_Launches[LaunchID] = LaunchActor;
 				}
-				TCContinuation<CProcessLaunchActor::CSimpleLaunchResult> Continuation;
+				TCPromise<CProcessLaunchActor::CSimpleLaunchResult> Promise;
 				LaunchActor(&CProcessLaunchActor::f_LaunchSimple, fg_Move(Launch)) > [=](TCAsyncResult<CProcessLaunchActor::CSimpleLaunchResult> &&_Result)
 					{
 						auto &State = *pState;
@@ -262,31 +262,31 @@ namespace NMib::NBuildSystem::NRepository
 						}
 						if (!LaunchActor)
 						{
-							Continuation.f_SetResult(fg_Move(_Result));
+							Promise.f_SetResult(fg_Move(_Result));
 							return;
 						}
 
 						LaunchActor->f_Destroy() > [=, Result = fg_Move(_Result)](auto &&) mutable
 							{
-								Continuation.f_SetResult(fg_Move(Result));
+								Promise.f_SetResult(fg_Move(Result));
 								return;
 							}
 						;
 					}
 				;
-				return Continuation;
+				return Promise.f_MoveFuture();
 			}
 		;
 	}
 
-	TCContinuation<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::f_Launch(CRepository const &_Repo, TCVector<CStr> const &_Params, TCMap<CStr, CStr> const &_Environment) const
+	TCFuture<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::f_Launch(CRepository const &_Repo, TCVector<CStr> const &_Params, TCMap<CStr, CStr> const &_Environment) const
 	{
 		CProcessLaunchActor::CSimpleLaunch LaunchParams{"git", _Params, _Repo.m_Location};
 		LaunchParams.m_Params.m_Environment += _Environment;
 		return fp_Launch(fg_Move(LaunchParams));
 	}
 
-	TCContinuation<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::f_OpenRepoEditor(CRepoEditor const &_Editor, CStr const &_Repo) const
+	TCFuture<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::f_OpenRepoEditor(CRepoEditor const &_Editor, CStr const &_Repo) const
 	{
 		auto Params = _Editor.m_Params;
 #ifdef DPlatformFamily_Windows
@@ -300,24 +300,24 @@ namespace NMib::NBuildSystem::NRepository
 		CProcessLaunchActor::CSimpleLaunch LaunchParams{_Editor.m_Application, Params};
 		LaunchParams.m_Params.m_WorkingDirectory = _Editor.m_WorkingDir ? _Editor.m_WorkingDir : _Repo;
 
-		TCContinuation<CProcessLaunchActor::CSimpleLaunchResult> Continuation;
+		TCPromise<CProcessLaunchActor::CSimpleLaunchResult> Promise;
 		fp_Launch(fg_Move(LaunchParams)) > [=](TCAsyncResult<CProcessLaunchActor::CSimpleLaunchResult> &&_Result)
 			{
 				if (!_Editor.m_Sleep)
 				{
-					Continuation.f_SetResult(fg_Move(_Result));
+					Promise.f_SetResult(fg_Move(_Result));
 					return;
 				}
 
-				fg_Timeout(_Editor.m_Sleep) > Continuation / [=]
+				fg_Timeout(_Editor.m_Sleep) > Promise / [=]
 					{
-						Continuation.f_SetResult(_Result);
+						Promise.f_SetResult(_Result);
 					}
 				;
 			}
 		;
 
-		return Continuation;
+		return Promise.f_MoveFuture();
 	}
 
 	uint32 CGitLaunches::fs_MaxProcesses()
@@ -329,7 +329,7 @@ namespace NMib::NBuildSystem::NRepository
 #endif
 	}
 
-	TCContinuation<void> CGitLaunches::f_Launch
+	TCFuture<void> CGitLaunches::f_Launch
 		(
 		 	CRepository const &_Repo
 		 	, TCVector<CStr> const &_Params
@@ -341,7 +341,7 @@ namespace NMib::NBuildSystem::NRepository
 		auto &State = *m_pState;
 		CProcessLaunchActor::CSimpleLaunch LaunchParams{"git", _Params, _Repo.m_Location};
 		LaunchParams.m_Params.m_Environment += _Environment;
-		TCContinuation<void> Result;
+		TCPromise<void> Result;
 		fp_Launch(fg_Move(LaunchParams)) > State.m_OutputActor / [Result, _Prefix, This = *this, _Repo, fHandleResult = fg_Move(_fHandleResult)]
 			(TCAsyncResult<CProcessLaunchActor::CSimpleLaunchResult> &&_Result) mutable
 			{
@@ -377,6 +377,6 @@ namespace NMib::NBuildSystem::NRepository
 			}
 		;
 
-		return Result;
+		return Result.f_MoveFuture();
 	}
 }
