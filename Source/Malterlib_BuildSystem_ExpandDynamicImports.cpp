@@ -490,7 +490,7 @@ namespace NMib::NBuildSystem
 		if (CFile::fs_FileExists(FullRebuildVersionFile))
 			LastFullRebuildVersion = CFile::fs_ReadStringFromFile(FullRebuildVersionFile, true);
 		
-		if (FullRebuildVersion != LastFullRebuildVersion)
+		if (FullRebuildVersion != LastFullRebuildVersion || CFile::fs_FileExists(TempDirectory / "failed"))
 		{
 			CFile::fs_DeleteDirectoryRecursive(TempDirectory);
 			CFile::fs_CreateDirectory(TempDirectory);
@@ -503,10 +503,17 @@ namespace NMib::NBuildSystem
 		CClock Clock{true};
 		uint32 ExitCode = 0;
 		if (!CProcessLaunch::fs_LaunchBlock(CmakeExecutable, Params, StdOut, StdErr, ExitCode, LaunchParams))
+		{
+			CFile::fs_Touch(TempDirectory / "failed");
 			DMibError(fg_Format("Failed to launch cmake: {}", StdOut + StdErr));
+		}
 
-		//DMibConOut("Output: {}\n", StdOut + StdErr);
-		
+		if (ExitCode)
+		{
+			CFile::fs_Touch(TempDirectory / "failed");
+			DMibError(fg_Format("cmake failed: {}", StdOut + StdErr));
+		}
+
 		if (!CmakeCacheDirectory.f_IsEmpty())
 		{
 			CFile::fs_CreateDirectory(CmakeCacheDirectory);
@@ -795,15 +802,12 @@ namespace NMib::NBuildSystem
 			}
 		}
 		
-		CFile::fs_WriteStringToFile(FullRebuildVersionFile, FullRebuildVersion, false);
-		
 		//DMibConOut2("{} = {}\n", TempDirectory, Clock.f_GetTime());
 		
-		if (ExitCode)
-			DMibError(fg_Format("cmake failed: {}", StdOut + StdErr));
-
 		if (bVerbose)
 			DMibConErrOut2("{}\n{}\n", StdOut, StdErr);
+
+		CFile::fs_WriteStringToFile(FullRebuildVersionFile, FullRebuildVersion, false);
 
 		{
 			DLock(mp_CMakeGenerateLock);
