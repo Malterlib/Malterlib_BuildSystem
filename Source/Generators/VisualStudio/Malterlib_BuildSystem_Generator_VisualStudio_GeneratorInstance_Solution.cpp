@@ -54,6 +54,13 @@ namespace NMib::NBuildSystem::NVisualStudio
 			FileData += "VisualStudioVersion = 15.0.26206.0\r\n";
 			FileData += "MinimumVisualStudioVersion = 10.0.40219.1\r\n";
 		}
+		else if (m_Version == 2019)
+		{
+			FileData += "Microsoft Visual Studio Solution File, Format Version 12.00\r\n";
+			FileData += "# Visual Studio Version 16\r\n";
+			FileData += "VisualStudioVersion = 16.0.28714.193\r\n";
+			FileData += "MinimumVisualStudioVersion = 10.0.40219.1\r\n";
+		}
 		else
 			DError("Implement this");
 

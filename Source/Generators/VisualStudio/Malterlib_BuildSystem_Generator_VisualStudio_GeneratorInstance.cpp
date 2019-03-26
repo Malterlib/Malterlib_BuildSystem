@@ -4,6 +4,7 @@
 #include "Malterlib_BuildSystem_Generator_VisualStudio.h"
 #include <Mib/XML/XML>
 #include <Mib/Process/ProcessLaunch>
+#include <Mib/Encoding/JSON>
 #ifdef DPlatformFamily_Windows
 #include <Mib/Core/PlatformSpecific/WindowsRegistry>
 #endif
@@ -25,11 +26,17 @@ namespace NMib::NBuildSystem::NVisualStudio
 			return "14.0";
 		else if (m_Version == 2017)
 			return "15.0";
+		else if (m_Version == 2019)
+			return "16.0";
 		DError("Implement this");
 	}
 
 	CStr CGeneratorInstance::f_GetVisualStudioRoot() const
 	{
+		static CStr s_Path;
+		if (!s_Path.f_IsEmpty())
+			return s_Path;
+
 		uint32 VSVersion = 0;
 		switch (m_Version)
 		{
@@ -42,12 +49,61 @@ namespace NMib::NBuildSystem::NVisualStudio
 				NMib::NPlatform::CWin32_Registry Registry;
 				
 				CStr Path = Registry.f_Read_Str("SOFTWARE\\WOW6432Node\\Microsoft\\VisualStudio\\SxS\\VS7", "15.0");
-				return Path;
+				return s_Path = Path;
+#endif
+			}
+		case 2019: 
+			{
+#ifdef DPlatformFamily_Windows
+				CStr ProgramData = m_BuildSystem.f_GetEnvironmentVariable("ProgramData");
+				CStr InstancesPath = ProgramData / "Microsoft/VisualStudio/Packages/_Instances";
+
+				CStr Errors;
+
+				auto fParseVersion = [&](CStr const &_String) -> TCVector<uint32>
+					{
+						TCVector<uint32> VersionVector;
+						for (auto &String : _String.f_Split("."))
+							VersionVector.f_Insert(String.f_ToInt(uint32(0)));
+						VersionVector.f_SetLen(4);
+						return VersionVector;
+					}
+				;
+
+				TCVector<zuint32> BestVersion;
+				BestVersion.f_SetLen(4);
+				CStr BestPath;
+
+				for (auto &InstanceDir : CFile::fs_FindFiles(InstancesPath / "*", EFileAttrib_Directory))
+				{
+					CStr StateFile = InstanceDir / "state.json";
+					try
+					{
+						CStr JsonContents = CFile::fs_ReadStringFromFile(StateFile);
+
+						CJSON const Json = CJSON::fs_FromString(JsonContents, StateFile);
+						auto Version = fParseVersion(Json["installationVersion"].f_String());
+						if (Version[0] == 16 && Version > BestVersion)
+						{
+							BestVersion = Version;
+							BestPath = Json["installationPath"].f_String().f_ReplaceChar('\\', '/');
+						}
+					}
+					catch (CException const &_Exception)
+					{
+						fg_AddStrSep(Errors, _Exception.f_GetErrorStr(), "\n");
+					}
+				}
+
+				if (BestPath.f_IsEmpty())
+					DError("Failed to find Visual Studio 2019 path. {}\n"_f << Errors);
+				
+				return s_Path = BestPath;
 #endif
 			}
 		default: DError("Implement this");
 		}
-		return CFile::fs_GetExpandedPath(m_BuildSystem.f_GetEnvironmentVariable(fg_Format("VS{}COMNTOOLS", VSVersion)) + "../..");
+		return s_Path = CFile::fs_GetExpandedPath(m_BuildSystem.f_GetEnvironmentVariable(fg_Format("VS{}COMNTOOLS", VSVersion)) + "../..");
 	}
 
 	CGeneratorInstance::CGeneratorInstance
