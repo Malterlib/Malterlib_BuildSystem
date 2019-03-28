@@ -405,7 +405,6 @@ namespace NMib::NBuildSystem
 			CmakeExecutable = CFile::fs_GetProgramDirectory() / "MToolCMake";
 #		else
 			CmakeExecutable = CFile::fs_GetProgramDirectory() + "/cmake";
-			f_AddSourceFile(CmakeExecutable);
 #		endif
 #		ifdef DPlatformFamily_Windows
 			CmakeExecutable += ".exe";
@@ -475,13 +474,6 @@ namespace NMib::NBuildSystem
 		
 		CStr StdOut;
 		CStr StdErr;
-		
-		CStr CmakeRealExecutable = CmakeExecutable;
-		if (CFile::fs_GetAttributes(CmakeExecutable) & EFileAttrib_Link)
-		{
-			CmakeRealExecutable = CFile::fs_ResolveSymbolicLink(CmakeExecutable);
-			f_AddSourceFile(CmakeRealExecutable);
-		}
 		
 		CFile::fs_CreateDirectory(TempDirectory);
 		
