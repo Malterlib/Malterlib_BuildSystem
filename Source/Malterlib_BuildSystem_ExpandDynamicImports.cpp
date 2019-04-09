@@ -168,7 +168,7 @@ namespace NMib::NBuildSystem
 
 		// Dependent variables
 		CStr GeneratorVersion = "12";
-		CStr GeneratorFullRebuildVersion = "2";
+		CStr GeneratorFullRebuildVersion = "3";
 		CStr FullRebuildVersion = "{}-{}"_f << f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_FullRebuildVersion") << GeneratorFullRebuildVersion;
 		CStr CacheExcludePatterns = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_CacheExcludePatterns");
 		CStr CacheReplaceContents = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_CacheReplaceContents");
@@ -481,8 +481,10 @@ namespace NMib::NBuildSystem
 		CStr LastFullRebuildVersion;
 		if (CFile::fs_FileExists(FullRebuildVersionFile))
 			LastFullRebuildVersion = CFile::fs_ReadStringFromFile(FullRebuildVersionFile, true);
-		
-		if (FullRebuildVersion != LastFullRebuildVersion || CFile::fs_FileExists(TempDirectory / "failed"))
+
+		CStr CmakeAlwaysFullRebuild = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_AlwaysFullRebuild");
+
+		if (CmakeAlwaysFullRebuild == "true" || FullRebuildVersion != LastFullRebuildVersion || CFile::fs_FileExists(TempDirectory / "failed"))
 		{
 			CFile::fs_DeleteDirectoryRecursive(TempDirectory);
 			CFile::fs_CreateDirectory(TempDirectory);

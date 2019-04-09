@@ -19,6 +19,8 @@ namespace NMib::NBuildSystem
 		, EPropertyType_Repository
 		, EPropertyType_CreateTemplate
 		, EPropertyType_Group
+
+		, EPropertyType_Max
 	};
 	
 	struct CPropertyKey

@@ -19,6 +19,9 @@ namespace NMib::NBuildSystem
 		mp_Now = mp_NowUTC.f_ToLocal();
 		fg_Malterlib_BuildSystem_MakeActive_VisualStudio();
 		fg_Malterlib_BuildSystem_MakeActive_Xcode();
+
+		for (mint i = 0; i < EPropertyType_Max; ++i)
+			mp_ExternalProperty[i].m_Key.m_Type = (EPropertyType)i;
 	}
 	
 	TCSet<CStr> CBuildSystem::f_GetSourceFiles() const
@@ -176,7 +179,7 @@ namespace NMib::NBuildSystem
 		auto &Evaluated = _Entity.m_EvaluatedProperties[_Key];
 		Evaluated.m_Value = _Value;
 		Evaluated.m_Type = EEvaluatedPropertyType_External;
-		Evaluated.m_pProperty = &mp_ExternalProperty;
+		Evaluated.m_pProperty = &mp_ExternalProperty[_Key.m_Type];
 	}
 
 	void CBuildSystem::f_InitEntityForEvaluationNoEnv(CEntity &_Entity, TCMap<CPropertyKey, CStr> const &_InitialValues) const
@@ -187,7 +190,7 @@ namespace NMib::NBuildSystem
 			auto &Evaluated = _Entity.m_EvaluatedProperties[iValue.f_GetKey()];
 			Evaluated.m_Value = *iValue;
 			Evaluated.m_Type = EEvaluatedPropertyType_External;
-			Evaluated.m_pProperty = &mp_ExternalProperty;
+			Evaluated.m_pProperty = &mp_ExternalProperty[iValue.f_GetKey().m_Type];
 		}
 	}
 

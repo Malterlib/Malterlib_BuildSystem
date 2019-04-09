@@ -648,7 +648,7 @@ namespace NMib::NBuildSystem
 
 						Expand.m_Value = fg_GetStrSep(Source, Separator);
 						Expand.m_Type = EEvaluatedPropertyType_External;
-						Expand.m_pProperty = &mp_ExternalProperty;
+						Expand.m_pProperty = &mp_ExternalProperty[Key.m_Type];
 
 						++iExpand;
 					}
@@ -706,7 +706,7 @@ namespace NMib::NBuildSystem
 
 							Property.m_Value = Value;
 							Property.m_Type = EEvaluatedPropertyType_External;
-							Property.m_pProperty = &mp_ExternalProperty;
+							Property.m_pProperty = &mp_ExternalProperty[Key.m_Type];
 						}
 
 						{
@@ -719,7 +719,7 @@ namespace NMib::NBuildSystem
 
 									Property.m_Value = iEntry->m_Value;
 									Property.m_Type = EEvaluatedPropertyType_External;
-									Property.m_pProperty = &mp_ExternalProperty;
+									Property.m_pProperty = &mp_ExternalProperty[Key.m_Type];
 								}
 							}
 						}
@@ -779,7 +779,7 @@ namespace NMib::NBuildSystem
 
 							Property.m_Value = Value;
 							Property.m_Type = EEvaluatedPropertyType_External;
-							Property.m_pProperty = &mp_ExternalProperty;
+							Property.m_pProperty = &mp_ExternalProperty[Key.m_Type];
 						}
 						{
 							Key.m_Name = "ExplodedValue";
@@ -787,7 +787,7 @@ namespace NMib::NBuildSystem
 
 							Property.m_Value = Ret;
 							Property.m_Type = EEvaluatedPropertyType_External;
-							Property.m_pProperty = &mp_ExternalProperty;
+							Property.m_pProperty = &mp_ExternalProperty[Key.m_Type];
 						}
 
 						{
@@ -800,7 +800,7 @@ namespace NMib::NBuildSystem
 
 									Property.m_Value = iEntry->m_Value;
 									Property.m_Type = EEvaluatedPropertyType_External;
-									Property.m_pProperty = &mp_ExternalProperty;
+									Property.m_pProperty = &mp_ExternalProperty[Key.m_Type];
 								}
 								{
 									Key.m_Name = fg_Format("ExplodedValue{}", i);
@@ -808,7 +808,7 @@ namespace NMib::NBuildSystem
 
 									Property.m_Value = iEntry->m_ExplodedValue;
 									Property.m_Type = EEvaluatedPropertyType_External;
-									Property.m_pProperty = &mp_ExternalProperty;
+									Property.m_pProperty = &mp_ExternalProperty[Key.m_Type];
 								}
 							}
 						}

@@ -450,7 +450,7 @@ namespace NMib::NBuildSystem
 		CRegistryPreserveAndOrder_CStr mp_Registry;
 
 		CBuildSystemData mp_Data;
-		CProperty mp_ExternalProperty;
+		CProperty mp_ExternalProperty[EPropertyType_Max];
 
 		mutable TCPointer<CGeneratorInterface> mp_GeneratorInterface;
 

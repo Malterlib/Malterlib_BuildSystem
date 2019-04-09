@@ -556,7 +556,7 @@ namespace NMib::NBuildSystem
 					auto &Property = TempEntity.m_EvaluatedProperties[Key];
 					Property.m_Value = Var;
 					Property.m_Type = EEvaluatedPropertyType_External;
-					Property.m_pProperty = &mp_ExternalProperty;
+					Property.m_pProperty = &mp_ExternalProperty[Key.m_Type];
 				}
 			}
 			

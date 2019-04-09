@@ -92,7 +92,7 @@ namespace NMib::NBuildSystem
 							auto &Property = TempEntity.m_EvaluatedProperties[Key];
 							Property.m_Value = Var;
 							Property.m_Type = EEvaluatedPropertyType_External;
-							Property.m_pProperty = &mp_ExternalProperty;
+							Property.m_pProperty = &mp_ExternalProperty[Key.m_Type];
 						}
 						
 						CStr Path = mp_GeneratorInterface->f_GetExpandedPath(f_EvaluateEntityProperty(TempEntity, EPropertyType_Property, "Name"), f_GetBaseDir());

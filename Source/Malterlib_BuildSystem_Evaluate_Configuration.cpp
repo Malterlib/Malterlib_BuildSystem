@@ -336,7 +336,7 @@ namespace NMib::NBuildSystem
 				auto &Evaluated = TupleEntity.m_EvaluatedProperties[Key];
 				Evaluated.m_Value = (*iKey)->f_GetName();
 				Evaluated.m_Type = EEvaluatedPropertyType_External;
-				Evaluated.m_pProperty = &mp_ExternalProperty;
+				Evaluated.m_pProperty = &mp_ExternalProperty[Key.m_Type];
 			}				
 
 			bool bFailed = false;

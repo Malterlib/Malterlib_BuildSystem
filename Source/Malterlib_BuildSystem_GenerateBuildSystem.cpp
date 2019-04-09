@@ -262,13 +262,32 @@ namespace NMib::NBuildSystem
 																	CStr Property = fg_GetStrSep(Properties, "*");
 																	
 																	CPropertyKey Key;
-																	Key.m_Name = fg_GetStrSep(Property, "=");
-																	Key.m_Type = EPropertyType_Property;
+
+																	EPropertyType Type = EPropertyType_Property;
+																	CStr Name = fg_GetStrSep(Property, "=");
+																	if (Name.f_FindChar('.') >= 0)
+																	{
+																		CStr PropertyType = fg_GetStrSep(Name, ".");
+
+																		Type = fg_PropertyTypeFromStr(PropertyType);
+																		if (PropertyType.f_IsEmpty() || Type == EPropertyType_Invalid)
+																		{
+																			fs_ThrowError
+																				(
+																					_Position
+																					, CStr::CFormat("Unrecognized property '{}'") << PropertyType
+																				)
+																			;
+																		}
+																	}
+
+																	Key.m_Name = Name;
+																	Key.m_Type = Type;
 
 																	auto &EvalProperty = EvaluatedProperties[Key];
 																	EvalProperty.m_Value = Property;
 																	EvalProperty.m_Type = EEvaluatedPropertyType_External;
-																	EvalProperty.m_pProperty = &mp_ExternalProperty;
+																	EvalProperty.m_pProperty = &mp_ExternalProperty[Key.m_Type];
 																}
 																
 																
