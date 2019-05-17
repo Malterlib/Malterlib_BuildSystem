@@ -96,6 +96,7 @@ namespace NMib::NBuildSystem
 			, ERepoListCommitsFlag_UpdateRemotes = DBit(0)
 			, ERepoListCommitsFlag_Color = DBit(1)
 			, ERepoListCommitsFlag_Compact = DBit(2)
+			, ERepoListCommitsFlag_Changelog = DBit(3)
 		};
 
 		enum ERepoPushFlag
@@ -244,6 +245,7 @@ namespace NMib::NBuildSystem
 			 	, CStr const &_Prefix
 			 	, uint32 _MaxCommitsMainRepo
 			 	, uint32 _MaxCommits
+			 	, uint32 _MaxMessageWidth
 			)
 		;
 

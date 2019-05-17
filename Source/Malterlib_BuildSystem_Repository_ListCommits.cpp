@@ -116,13 +116,21 @@ namespace NMib::NBuildSystem
 		 	, CStr const &_Prefix
 		 	, uint32 _MaxCommitsMainRepo
 		 	, uint32 _MaxCommits
+		 	, uint32 _MaxMessageWidth
 		)
 	{
 		CGenerateEphemeralState GenerateState;
 		if (ERetry Retry = fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
 			return Retry;
-		
-		TCSharedPointer<CFilteredRepos> pFilteredRepositories = fg_Construct(fg_GetFilteredRepos(_Filter, *this, mp_Data));
+
+		TCSet<CStr> ShowRepos;
+		{
+			auto Repos = fg_GetFilteredRepos(_Filter, *this, mp_Data).f_GetAllRepos();
+			for (auto Repo : Repos)
+				ShowRepos[fg_Get<0>(Repo).m_Location];
+		}
+
+		TCSharedPointer<CFilteredRepos> pFilteredRepositories = fg_Construct(fg_GetFilteredRepos(CRepoFilter(), *this, mp_Data));
 		auto &FilteredRepositories = *pFilteredRepositories;
 
 		TCLinkedList<CRepository> AllRepos;
@@ -442,7 +450,7 @@ namespace NMib::NBuildSystem
 		MaxColumnWidth["Author/Commit time"] = 20;
 		for (auto &Wildcard : WildcardColumns)
 			MaxColumnWidth[Wildcard.m_Name] = Wildcard.m_MaxWidth;
-		MaxColumnWidth["Message"] = 60;
+		MaxColumnWidth["Message"] = _MaxMessageWidth;
 
 		auto fColor = [&](ch8 const *pColor)
 			{
@@ -510,9 +518,20 @@ namespace NMib::NBuildSystem
 				LogEntriesPerRepoSorted.f_Insert({Repo, fGetLogEntries(*LogEntriesResult, *ReverseLogEntriesPerRepo[Repo], RelativePath)});
 		}
 
+		struct COutputEntry
+		{
+			CStr m_String;
+			ch8 const *m_pColor = nullptr;
+		};
+
+		TCMap<NTime::CTime, TCVector<COutputEntry>> ChangelogEntries;
+
 		for (auto & [Repo, LogEntriesSource] : LogEntriesPerRepoSorted)
 		{
 			auto LogEntries = LogEntriesSource;
+
+			if (!ShowRepos.f_FindEqual(Repo))
+				continue;
 
 			if (NoCommits.f_FindEqual(Repo))
 			{
@@ -669,13 +688,7 @@ namespace NMib::NBuildSystem
 				}
 			;
 
-			struct COutputEntry
-			{
-				CStr m_String;
-				ch8 const *m_pColor = nullptr;
-			};
-
-			auto fOutputAll = [&](auto &&_fOutput, bool _bReal) -> void
+			auto fOutputAll = [&, Repo = Repo](auto &&_fOutput, bool _bReal) -> void
 				{
 					for (auto &LogEntry : LogEntries)
 					{
@@ -703,6 +716,9 @@ namespace NMib::NBuildSystem
 									}
 								}
 								TallestColumn = fg_Max(TallestColumn, Output.f_GetLen());
+
+								if (_bReal && _Column == "Message")
+									ChangelogEntries[LogEntry.m_AuthorDate].f_Insert(Output);
 							}
 						;
 
@@ -723,6 +739,9 @@ namespace NMib::NBuildSystem
 						}
 						else
 						{
+							if (_bReal)
+								ChangelogEntries[LogEntry.m_AuthorDate].f_Insert(COutputEntry{"{}:\n{}\n"_f << Repo << LogEntry.m_Commit});
+
 							if (LogEntry.m_Message == "Error")
 								fAddColumnOutput("Commit", LogEntry.m_Commit, CColors::ms_StatusError);
 							else
@@ -856,28 +875,55 @@ namespace NMib::NBuildSystem
 
 			mint ColumnWidth = MaxLengths["**HEADING**"];
 
-			DConOutRaw(CStr{(str_utf32("{}{}/¯{sz*,sf¯}¯\\{}\n"_f) << _Prefix << fColor(pBorderColor) << "" << ColumnWidth << fColor(CColors::ms_Default)).f_GetStr()});
-			for (auto & [Line, ColoredLine, pColor] : HeadingLines)
+			if (!(_Flags & ERepoListCommitsFlag_Changelog))
 			{
-				mint NeededLen = ColumnWidth + (ColoredLine.f_GetLen() - CAnsiEncoding::fs_RenderedStrLen(Line));
-				CUStr PaddedString = CUStr::CFormat(str_utf32("{sz*,sf ,a-}")) << ColoredLine << NeededLen;
+				DConOutRaw(CStr{(str_utf32("{}{}/¯{sz*,sf¯}¯\\{}\n"_f) << _Prefix << fColor(pBorderColor) << "" << ColumnWidth << fColor(CColors::ms_Default)).f_GetStr()});
+				for (auto & [Line, ColoredLine, pColor] : HeadingLines)
+				{
+					mint NeededLen = ColumnWidth + (ColoredLine.f_GetLen() - CAnsiEncoding::fs_RenderedStrLen(Line));
+					CUStr PaddedString = CUStr::CFormat(str_utf32("{sz*,sf ,a-}")) << ColoredLine << NeededLen;
 
-				DConOut2
-					(
-					 	"{}{2}|{3} {4}{a-,sf }{3} {2}|{3}\n"
-					 	, _Prefix
-					 	, PaddedString
-					 	, fColor(pBorderColor)
-					 	, fColor(CColors::ms_Default)
-					 	, fColor(pColor ? pColor : pHeadingColor)
-					)
-				;
+					DConOut2
+						(
+							"{}{2}|{3} {4}{a-,sf }{3} {2}|{3}\n"
+							, _Prefix
+							, PaddedString
+							, fColor(pBorderColor)
+							, fColor(CColors::ms_Default)
+							, fColor(pColor ? pColor : pHeadingColor)
+						)
+					;
+				}
+				DConOutRaw(CStr{(str_utf32("{}{3}|{4} {sz*,sf } {3}|{4}\n"_f) << _Prefix << "" << ColumnWidth << fColor(pBorderColor) << fColor(CColors::ms_Default)).f_GetStr()});
+				DConOutRaw(ToOutput);
 			}
-			DConOutRaw(CStr{(str_utf32("{}{3}|{4} {sz*,sf } {3}|{4}\n"_f) << _Prefix << "" << ColumnWidth << fColor(pBorderColor) << fColor(CColors::ms_Default)).f_GetStr()});
-			DConOutRaw(ToOutput);
-
 		}
-		
+
+		if (_Flags & ERepoListCommitsFlag_Changelog)
+		{
+			for (auto &Lines : ChangelogEntries)
+			{
+				auto &Date = ChangelogEntries.fs_GetKey(Lines);
+				CStr DateStr = "{tc6}"_f << Date;
+				mint nLines = Lines.f_GetLen();
+				CStr ToOutput = "{} "_f << DateStr;
+				for (mint i = 0; i < nLines; ++i)
+				{
+					if (Lines[i].m_String == "Copied from Perforce")
+						break;
+
+					if (i != 0)
+						ToOutput += "{sj*}"_f << "" << (DateStr.f_GetLen() + 1);
+
+					ToOutput += "{}\n"_f << Lines[i].m_String;
+
+					if (i != 0 && i == nLines - 1)
+						ToOutput += "\n";
+				}
+				DConOutRaw(ToOutput);
+			}
+		}
+
 		return ERetry_None;
 	}
 }
