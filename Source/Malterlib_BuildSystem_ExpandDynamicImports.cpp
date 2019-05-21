@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem.h"
@@ -36,7 +36,7 @@ namespace NMib::NBuildSystem
 						continue;
 
 					_Entity.m_ChildEntitiesMap.f_Remove(Key);
-					
+
 					if (pLastInserted != &Child)
 					{
 						iChild = pLastInserted;
@@ -68,14 +68,14 @@ namespace NMib::NBuildSystem
 				}
 			}
 		;
-		
+
 		fExpandImports(_BuildSystemData.m_RootEntity);
 		{
 			DMibLock(mp_SourceFilesLock);
 			mp_SourceFiles += _BuildSystemData.m_SourceFiles;
 		}
 	}
-	
+
 	CBuildSystemData::CImportData *CBuildSystem::fp_ExpandImportCMake_FromGeneratedDirectory
 		(
 			CEntity &_Entity
@@ -95,20 +95,20 @@ namespace NMib::NBuildSystem
 		}
 
 		auto &Import = _BuildSystemData.m_Imports.f_Insert();
-		
+
 		{
 			CBuildSystemPreprocessor Preprocessor(Import.m_Registry, _BuildSystemData.m_SourceFiles, mp_FindCache, mp_Environment);
 			while (!Projects.f_IsEmpty())
 			{
 				CStr Project = fg_GetStrSep(Projects, ";");
-				
+
 				CStr ProjectFileName = fg_Format("{}/{}.MHeader", _Directory, Project);
-				
+
 				Preprocessor.f_ReadFile(ProjectFileName);
 				_BuildSystemData.m_SourceFiles[ProjectFileName];
-				
+
 				CStr Dependencies = CFile::fs_ReadStringFromFile(fg_Format("{}/{}.MHeader.dependencies", _Directory, Project), true);
-				
+
 				TCSet<CStr> SourceFileToAdd;
 				ch8 const *pParse = Dependencies.f_GetStr();
 				while (*pParse)
@@ -117,8 +117,8 @@ namespace NMib::NBuildSystem
 					fg_ParseToEndOfLine(pParse);
 					SourceFileToAdd[CFile::fs_GetExpandedPath(CStr(pStart, pParse - pStart), _Directory)];
 					fg_ParseEndOfLine(pParse);
-				}				
-				
+				}
+
 				{
 					DMibLock(mp_SourceFilesLock);
 					mp_SourceFiles += SourceFileToAdd;
@@ -127,14 +127,14 @@ namespace NMib::NBuildSystem
 		}
 		return &Import;
 	}
-	
+
 	CBuildSystemData::CImportData *CBuildSystem::fp_ExpandImportCMake(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData) const
 	{
 		CStr CmakeCacheDirectory = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_CacheDirectory");
 
 		CStr LockDirectory = CmakeCacheDirectory;
 		CStr TempDirectory = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "TempDirectory");
-		
+
 		if (LockDirectory.f_IsEmpty())
 			LockDirectory = TempDirectory;
 
@@ -196,7 +196,7 @@ namespace NMib::NBuildSystem
 				o_DependenciesHash.f_AddData(FilteredString.f_GetStr(), FilteredString.f_GetLen());
 			}
 		;
-		
+
 		auto fInitHash = [&](CHash_SHA512 &o_DependenciesHash, bool _bPerformExclude)
 			{
 				fAddStringHash(o_DependenciesHash, GeneratorVersion, "GeneratorVersion", _bPerformExclude);
@@ -208,9 +208,9 @@ namespace NMib::NBuildSystem
 				fAddStringHash(o_DependenciesHash, CmakeVariables, "Ipmort.CMake_Variables", _bPerformExclude);
 			}
 		;
-		
+
 		CStr FileName = CFile::fs_GetExpandedPath(_Entity.m_Key.m_Name, CFile::fs_GetPath(_Entity.m_Position.m_FileName));
-		
+
 		CStr SharedTempDirectory = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "SharedTempDirectory");
 		CStr Platform = f_EvaluateEntityProperty(_Entity, EPropertyType_Property, "Platform");
 		CStr Architecture = f_EvaluateEntityProperty(_Entity, EPropertyType_Property, "Architecture");
@@ -223,7 +223,7 @@ namespace NMib::NBuildSystem
 		CStr CmakeCxxCompiler = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_CxxCompiler");
 		CStr CmakeCxxCompilerTarget = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_CxxCompilerTarget");
 		CStr CmakeReplacePrefixes = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_ReplacePrefixes");
-		
+
 		auto fInitConfigHash = [&](CHash_SHA512 &o_DependenciesHash)
 			{
 				fInitHash(o_DependenciesHash, false);
@@ -241,12 +241,12 @@ namespace NMib::NBuildSystem
 				fAddStringHash(o_DependenciesHash, CmakeCxxCompilerTarget, "Import.CMake_CxxCompilerTarget", false);
 			}
 		;
-		
+
 		CHash_SHA512 ConfigHash;
 		fInitConfigHash(ConfigHash);
 		CStr ConfigHashString = ConfigHash.f_GetDigest().f_GetString();
 		CStr ConfigHashContents = fg_Move(HashContents);
-		
+
 		auto fReturn = [&](CStr const &_Directory, CStr const &_Hash)
 			{
 				if (_Hash.f_IsEmpty())
@@ -270,7 +270,7 @@ namespace NMib::NBuildSystem
 				return fp_ExpandImportCMake_FromGeneratedDirectory(_Entity, _ParentEntity, _BuildSystemData, _Directory);
 			}
 		;
-		
+
 		CMutual *pCMakeGenerateLock;
 		{
 			DLock(mp_CMakeGenerateLock);
@@ -286,7 +286,7 @@ namespace NMib::NBuildSystem
 			if (pHash)
 				return fReturn(LockDirectory, *pHash);
 		}
-		
+
 		auto SetInvalidGenerated = g_OnScopeExit > [&]
 			{
 				DLock(mp_CMakeGenerateLock);
@@ -299,10 +299,10 @@ namespace NMib::NBuildSystem
 			CFile::CFindFilesOptions FindOptions{CmakeCacheDirectory + "/*.dependencies", true};
 			FindOptions.m_AttribMask = EFileAttrib_File;
 
-			auto FoundFiles = CFile::fs_FindFiles(FindOptions); 
+			auto FoundFiles = CFile::fs_FindFiles(FindOptions);
 
 			TCSet<CStr> DependencyFiles;
-			
+
 			for (auto &File : FoundFiles)
 			{
 				if (CFile::fs_GetExtension(File.m_Path) == "dependencies")
@@ -330,7 +330,7 @@ namespace NMib::NBuildSystem
 				CStr FileContents = CFile::fs_ReadStringFromFile(File, true).f_Replace("\r\n", "\n");
 				DependenciesHash.f_AddData(FileContents.f_GetStr(), FileContents.f_GetLen());
 			}
-			
+
 			CStr LastDependenciesHash = CFile::fs_ReadStringFromFile(CmakeCacheDirectory + "/Dependencies.sha512", true);
 			CStr NewDependenciesHash = DependenciesHash.f_GetDigest().f_GetString();
 
@@ -351,7 +351,7 @@ namespace NMib::NBuildSystem
 			}
 			DMibConOut2("Import cache out of date (CMake): {}\n", CmakeCacheDirectory);
 		}
-		
+
 		CProcessLaunchParams LaunchParams;
 		LaunchParams.m_bAllowExecutableLocate = true;
 		LaunchParams.m_WorkingDirectory = TempDirectory;
@@ -386,7 +386,7 @@ namespace NMib::NBuildSystem
 		LaunchParams.m_Environment.f_Remove("SDKROOT");
 		LaunchParams.m_Environment["CMAKE_MALTERLIB_BASEDIR"] = f_GetBaseDir();
 		{
-			auto Temp = CmakeLanguages; 
+			auto Temp = CmakeLanguages;
 			while (!Temp.f_IsEmpty())
 			{
 				CStr Mapping = fg_GetStrSep(Temp, ";");
@@ -394,13 +394,13 @@ namespace NMib::NBuildSystem
 					continue;
 				CStr Language = fg_GetStrSep(Mapping, "=");
 				CStr MalterlibType = Mapping;
-				LaunchParams.m_Environment[fg_Format("CMAKE_MALTERLIB_LANGUAGE_{}", Language)] = MalterlibType;		
+				LaunchParams.m_Environment[fg_Format("CMAKE_MALTERLIB_LANGUAGE_{}", Language)] = MalterlibType;
 			}
 		}
-		
-		CStr CmakeExecutable; 
+
+		CStr CmakeExecutable;
 		TCVector<CStr> Params;
-		
+
 #		ifdef DMalterlibBuildSystem_EmbedCMake
 			CmakeExecutable = CFile::fs_GetProgramDirectory() / "MToolCMake";
 #		else
@@ -418,10 +418,10 @@ namespace NMib::NBuildSystem
 					, CFile::fs_GetPath(FileName)
 				}
 			)
-		;			
-		
+		;
+
 		Params.f_Insert("-DCMAKE_BUILD_TYPE=" + CmakeConfig);
-		
+
 		{
 			for (mint i = 0; i < 2; ++i)
 			{
@@ -438,7 +438,7 @@ namespace NMib::NBuildSystem
 					Params.f_Insert("-D" + Variable);
 				}
 			}
-			
+
 			if (!CmakeSystemName.f_IsEmpty())
 				Params.f_Insert("-DCMAKE_SYSTEM_NAME=" + CmakeSystemName);
 			if (!CmakeSystemProcessor.f_IsEmpty())
@@ -451,9 +451,9 @@ namespace NMib::NBuildSystem
 				Params.f_Insert("-DCMAKE_CXX_COMPILER=" + CmakeCxxCompiler);
 			if (!CmakeCxxCompilerTarget.f_IsEmpty())
 				Params.f_Insert("-DCMAKE_CXX_COMPILER_TARGET=" + CmakeCxxCompilerTarget);
-			
+
 			Params.f_Insert("-DCMAKE_TOOLCHAIN_NO_PREFIX=1");
-			
+
 			if (Platform != DMibStringize(DPlatform))
 			{
 				CStr SysRoot = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_SysRoot");
@@ -471,12 +471,12 @@ namespace NMib::NBuildSystem
 					Params.f_Insert("-DCMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN=" + CxxCompilerExternalToolchain);
 			}
 		}
-		
+
 		CStr StdOut;
 		CStr StdErr;
-		
+
 		CFile::fs_CreateDirectory(TempDirectory);
-		
+
 		CStr FullRebuildVersionFile = TempDirectory + "/MalterlibFullRebuildVersion";
 		CStr LastFullRebuildVersion;
 		if (CFile::fs_FileExists(FullRebuildVersionFile))
@@ -489,9 +489,9 @@ namespace NMib::NBuildSystem
 			CFile::fs_DeleteDirectoryRecursive(TempDirectory);
 			CFile::fs_CreateDirectory(TempDirectory);
 		}
-		
+
 		LaunchParams.m_bShowLaunched = false;
-		
+
 		//DMibConOut("ENV: {}\n", LaunchParams.m_Environment);
 		//DMibConOut2("Params ({}): {}\n", CmakeExecutable, Params);
 		CClock Clock{true};
@@ -511,7 +511,7 @@ namespace NMib::NBuildSystem
 		if (!CmakeCacheDirectory.f_IsEmpty())
 		{
 			CFile::fs_CreateDirectory(CmakeCacheDirectory);
-			
+
 			CFile::CFindFilesOptions FindOptions{TempDirectory + "/*", true};
 			FindOptions.m_AttribMask = EFileAttrib_File;
 			{
@@ -531,18 +531,18 @@ namespace NMib::NBuildSystem
 				}
 			}
 
-			auto FoundFiles = CFile::fs_FindFiles(FindOptions); 
+			auto FoundFiles = CFile::fs_FindFiles(FindOptions);
 			mint PathPrefixLen = TempDirectory.f_GetLen() + 1;
-			
+
 			CStr SourceBase = CFile::fs_GetPath(FileName);
-			CStr SourceBaseFind = SourceBase + "/";  
+			CStr SourceBaseFind = SourceBase + "/";
 			CStr BaseDir = f_GetBaseDir();
-			CStr BaseDirFind = BaseDir + "/";  
-			CStr TempDirectoryFind = TempDirectory + "/";  
+			CStr BaseDirFind = BaseDir + "/";
+			CStr TempDirectoryFind = TempDirectory + "/";
 			TCSet<CStr> WrittenFiles;
-			
+
 			TCSet<CStr> DependencyFiles;
-			
+
 			for (auto &File : FoundFiles)
 			{
 				CStr RelativePath = File.m_Path.f_Extract(PathPrefixLen);
@@ -555,23 +555,23 @@ namespace NMib::NBuildSystem
 				CStr RelativeSourceBare = RelativeSource;
 				CStr RelativeDestBare = RelativeDest;
 				CStr RelativeBaseBare = RelativeBase;
-				
+
 				if (RelativeSourceBare.f_IsEmpty())
 					RelativeSourceBare = ".";
 				if (RelativeDestBare.f_IsEmpty())
 					RelativeDestBare = ".";
 				if (RelativeBaseBare.f_IsEmpty())
 					RelativeBaseBare = ".";
-				
+
 				if (!RelativeSource.f_IsEmpty())
 					RelativeSource += "/";
 				if (!RelativeDest.f_IsEmpty())
 					RelativeDest += "/";
 				if (!RelativeBase.f_IsEmpty())
 					RelativeBase += "/";
-				
+
 				CStr FileContents = CFile::fs_ReadStringFromFile(File.m_Path, true);
-				
+
 				if (CFile::fs_GetExtension(File.m_Path) == "dependencies")
 				{
 					CStr NewFileContents;
@@ -598,23 +598,23 @@ namespace NMib::NBuildSystem
 						}
 						else if (Line.f_Find("/CMakeRoot/") >= 0)
 							continue;
-						
+
 						NewFileContents += Line;
 						NewFileContents += "\n";
 					}
 					FileContents = fg_Move(NewFileContents);
 				}
-				
+
 				FileContents = fReplace(FileContents, TempDirectoryFind, RelativeDest);
 				FileContents = fReplace(FileContents, TempDirectory, RelativeDestBare);
 				FileContents = fReplace(FileContents, SourceBaseFind, RelativeSource);
 				FileContents = fReplace(FileContents, SourceBase, RelativeSourceBare);
 				FileContents = fReplace(FileContents, BaseDirFind, RelativeBase);
 				FileContents = fReplace(FileContents, BaseDir, RelativeBaseBare);
-				
+
 				for (auto &Replace : ReplaceContents)
 					FileContents = fReplace(FileContents, fg_Get<0>(Replace), fg_Get<1>(Replace));
-				
+
 				if (CFile::fs_GetExtension(File.m_Path) == "MHeader")
 				{
 					auto fGetStripped = [&](CStr const &_String, bool _bExpand = true)
@@ -625,7 +625,7 @@ namespace NMib::NBuildSystem
 							return CFile::fs_GetExpandedPath(Stripped, DestPathDirectory);
 						}
 					;
-					CRegistryPreserveAndOrder_CStr Registry;
+					CRegistryPreserveAll Registry;
 					Registry.f_ParseStr(FileContents, File.m_Path);
 #ifdef DPlatformFamily_Windows
 					TCMap<CStr, CStr, CCompare_TStrNoCase> RemappedOutputs;
@@ -634,18 +634,18 @@ namespace NMib::NBuildSystem
 #endif
 					Registry.f_TransformFunc
 						(
-							[&](CRegistryPreserveAndOrder_CStr &o_This)
+							[&](CRegistryPreserveAll &o_This)
 							{
 								auto pWorkingDirectory = o_This.f_GetChild("Custom_WorkingDirectory");
 								if (!pWorkingDirectory)
 									return;
 								CStr RelativeWorkingDir = fGetStripped(pWorkingDirectory->f_GetThisValue(), false);
 								CStr WorkingDirectory = CFile::fs_GetExpandedPath(RelativeWorkingDir, DestPathDirectory);
-								
+
 								if (WorkingDirectory == RelativeWorkingDir)
 									return;
-								
-								CStr OutputsString = o_This.f_GetValue("Custom_Outputs", ""); 
+
+								CStr OutputsString = o_This.f_GetValue("Custom_Outputs", "");
 								TCVector<CStr> Outputs;
 								TCVector<CStr> OriginalOutputs;
 								while (!OutputsString.f_IsEmpty())
@@ -653,15 +653,15 @@ namespace NMib::NBuildSystem
 									auto &Original = OriginalOutputs.f_Insert(fg_GetStrSep(OutputsString, ";"));
 									Outputs.f_Insert(fGetStripped(Original));
 								}
-								
-								
+
+
 								CStr CommandLine = o_This.f_GetValue("Custom_CommandLine", "");
 
 								TCVector<CStr> CommandLineParams;
 								while (!CommandLine.f_IsEmpty())
 								{
 									CStr Param = fg_GetStrSepEscaped(CommandLine, " ");
-									
+
 									CStr WorkingDirParam = CFile::fs_GetExpandedPath(Param, WorkingDirectory);
 									CStr StrippedParam = fGetStripped(Param);
 									CStr *pWorkingDirOutput = nullptr;
@@ -683,35 +683,35 @@ namespace NMib::NBuildSystem
 									}
 									if (pStrippedOutput)
 									{
-										RemappedOutputs[StrippedParam] 
-											= Param 
-											= OriginalOutputs[iOutput] 
+										RemappedOutputs[StrippedParam]
+											= Param
+											= OriginalOutputs[iOutput]
 											= fg_Format("@(Target:Target.IntermediateDirectory->MakeAbsolute())/{}", fGetStripped(Param, false))
 										;
 									}
 									else if (pWorkingDirOutput)
 									{
-										RemappedOutputs[WorkingDirParam] 
-											= Param 
-											= OriginalOutputs[iOutput] 
+										RemappedOutputs[WorkingDirParam]
+											= Param
+											= OriginalOutputs[iOutput]
 											= fg_Format("@(Target:Target.IntermediateDirectory->MakeAbsolute())/{}/{}", RelativeWorkingDir, Param)
 										;
 									}
-									
+
 									CommandLineParams.f_Insert(Param);
 								}
-								
+
 								for (auto &Output : OriginalOutputs)
 									fg_AddStrSep(OutputsString, Output, ";");
 
-								o_This.f_SetValue("Custom_Outputs", OutputsString); 
+								o_This.f_SetValue("Custom_Outputs", OutputsString);
 								o_This.f_SetValue("Custom_CommandLine", CProcessLaunchParams::fs_GetParams(CommandLineParams));
 							}
 						)
 					;
 					Registry.f_TransformFunc
 						(
-							[&](CRegistryPreserveAndOrder_CStr &o_This)
+							[&](CRegistryPreserveAll &o_This)
 							{
 								CStr ExpandedPath = fGetStripped(o_This.f_GetThisValue());
 								auto *pRempped = RemappedOutputs.f_FindEqual(ExpandedPath);
@@ -720,8 +720,8 @@ namespace NMib::NBuildSystem
 							}
 						)
 					;
-					
-					FileContents = Registry.f_GenerateStr(); 
+
+					FileContents = Registry.f_GenerateStr();
 				}
 				else if (CFile::fs_GetExtension(File.m_Path) == "dependencies")
 				{
@@ -736,17 +736,17 @@ namespace NMib::NBuildSystem
 						DependencyFiles[CFile::fs_GetExpandedPath(Line, CFile::fs_GetPath(DestPath))];
 					}
 				}
-				
+
 				{
 					CFile::fs_CreateDirectory(CFile::fs_GetPath(DestPath));
 					CByteVector BinaryFileContents;
 					CFile::fs_WriteStringToVector(BinaryFileContents, FileContents, false);
 					f_WriteFile(BinaryFileContents, DestPath, File.m_Attribs | EFileAttrib_UnixAttributesValid);
 				}
-				
+
 				WrittenFiles[DestPath];
 			}
-			
+
 			CHash_SHA512 DependenciesHash;
 			fInitHash(DependenciesHash, true);
 
@@ -762,7 +762,7 @@ namespace NMib::NBuildSystem
 				f_WriteFile(BinaryFileContents, CmakeCacheDirectory + "/Dependencies.sha512");
 				WrittenFiles[CmakeCacheDirectory + "/Dependencies.sha512"];
 			}
-			
+
 			EFileAttrib SupportedAttributes = CFile::fs_GetSupportedAttributes();
 			EFileAttrib ValidAttributes = CFile::fs_GetValidAttributes();
 
@@ -795,9 +795,9 @@ namespace NMib::NBuildSystem
 				}
 			}
 		}
-		
+
 		//DMibConOut2("{} = {}\n", TempDirectory, Clock.f_GetTime());
-		
+
 		if (bVerbose)
 			DMibConErrOut2("{}\n{}\n", StdOut, StdErr);
 
@@ -815,9 +815,9 @@ namespace NMib::NBuildSystem
 	void CBuildSystem::fp_ExpandImport(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData) const
 	{
 		CStr FileName = _Entity.m_Key.m_Name;
-		
+
 		CBuildSystemData::CImportData *pImport;
-		
+
 		if (CFile::fs_GetFile(FileName) == "CMakeLists.txt")
 			pImport = fp_ExpandImportCMake(_Entity, _ParentEntity, _BuildSystemData);
 		else
@@ -828,42 +828,42 @@ namespace NMib::NBuildSystem
 			_BuildSystemData.m_SourceFiles[FileName];
 			pImport = &Import;
 		}
-		
+
 		if (!pImport->m_Registry.f_GetChildren().f_IsEmpty())
 		{
 			fp_ParseData(pImport->m_RootEntity, pImport->m_Registry, nullptr);
-			
+
 			auto const *pUltimateSource = &_Entity;
 			while (pUltimateSource->m_pCopiedFrom)
-				pUltimateSource = pUltimateSource->m_pCopiedFrom.f_Get(); 
+				pUltimateSource = pUltimateSource->m_pCopiedFrom.f_Get();
 			while (pUltimateSource->m_pCopiedFromEvaluated)
-				pUltimateSource = pUltimateSource->m_pCopiedFromEvaluated.f_Get(); 
+				pUltimateSource = pUltimateSource->m_pCopiedFromEvaluated.f_Get();
 			while (pUltimateSource->m_pCopiedFrom)
 				pUltimateSource = pUltimateSource->m_pCopiedFrom.f_Get();
-			
+
 			if (!pUltimateSource->m_ChildEntitiesOrdered.f_IsEmpty())
 				pImport->m_RootEntity.f_MergeEntities(*pUltimateSource);
-			
+
 			for (auto &Child : pImport->m_RootEntity.m_ChildEntitiesOrdered)
 				Child.f_CopyProperties(_Entity);
-			
+
 			_ParentEntity.f_CopyPropertiesAndEval(pImport->m_RootEntity);
-			
+
 			auto *pInsertAfter = &_Entity;
 			for (auto iEntity = pImport->m_RootEntity.m_ChildEntitiesOrdered.f_GetIterator(); iEntity;)
 			{
 				auto &Entity = *iEntity;
 				++iEntity;
-				
+
 				if (_ParentEntity.m_ChildEntitiesMap.f_FindEqual(Entity.m_Key))
 					fsp_ThrowError(Entity.m_Position, "Imported entity already exists");
 				//pInsertAfter = fp_AddEntity(Entity, _ParentEntity, Key, pInsertAfter, nullptr);
 				_ParentEntity.m_ChildEntitiesMap.f_ExtractAndInsert(Entity.m_pParent->m_ChildEntitiesMap, &Entity);
 				Entity.m_pParent = &_ParentEntity;
-				
+
 				_ParentEntity.m_ChildEntitiesOrdered.f_InsertAfter(Entity, pInsertAfter);
 				pInsertAfter = &Entity;
-				
+
 				if (Entity.m_Key.m_Type != EEntityType_Target && Entity.m_Key.m_Type != EEntityType_Workspace)
 					fpr_EvaluateData(Entity);
 			}

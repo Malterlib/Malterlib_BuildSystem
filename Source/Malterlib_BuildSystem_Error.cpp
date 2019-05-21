@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem.h"
@@ -15,7 +15,7 @@ namespace NMib::NBuildSystem
 		fsp_ThrowError(_Position, _Error, _Errors);
 	}
 
-	void CBuildSystem::fs_ThrowError(CRegistryPreserveAndOrder_CStr const &_Registry, CStr const &_Error)
+	void CBuildSystem::fs_ThrowError(CRegistryPreserveAll const &_Registry, CStr const &_Error)
 	{
 		fsp_ThrowError(_Registry, _Error);
 	}
@@ -35,13 +35,13 @@ namespace NMib::NBuildSystem
 			Error += NMib::NStr::CStr::CFormat(DNewLine DMibPFileLineFormatIndent DMibPFileLineFormat " {}") << iError->m_Position.m_FileName << iError->m_Position.m_Line << iError->m_Error;
 		DMibError(Error);
 	}
-	
+
 	void CBuildSystem::fsp_ThrowError(CFilePosition const &_Position, CStr const &_Error)
 	{
 		DMibError((NMib::NStr::CStr::CFormat(DMibPFileLineFormat " {}") << _Position.m_FileName << _Position.m_Line << _Error).f_GetStr());
 	}
 
-	void CBuildSystem::fsp_ThrowError(CRegistryPreserveAndOrder_CStr const &_Registry, CStr const &_Error)
+	void CBuildSystem::fsp_ThrowError(CRegistryPreserveAll const &_Registry, CStr const &_Error)
 	{
 		DMibError((NMib::NStr::CStr::CFormat(DMibPFileLineFormat " {}") << _Registry.f_GetFile() << _Registry.f_GetLine() << _Error).f_GetStr());
 	}

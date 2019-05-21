@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem.h"
@@ -6,7 +6,7 @@
 namespace NMib::NBuildSystem
 {
 	namespace
-	{ 
+	{
 		struct CConfigKey
 		{
 			CStr m_ConfigType;
@@ -34,7 +34,7 @@ namespace NMib::NBuildSystem
 
 	}
 
-	CRegistryPreserveAndOrder_CStr *CBuildSystem::CUserSettingsState::f_GetSection(CPropertyKey const &_Section)
+	CRegistryPreserveAll *CBuildSystem::CUserSettingsState::f_GetSection(CPropertyKey const &_Section)
 	{
 		if (auto pSection = m_Sections.f_FindEqual(_Section))
 			return *pSection;
@@ -58,12 +58,12 @@ namespace NMib::NBuildSystem
 		for (auto &Property : m_Properties)
 			m_Defined[m_Properties.fs_GetKey(Property)];
 
-		auto fIsRoot = [&](CRegistryPreserveAndOrder_CStr const &_Registry)
+		auto fIsRoot = [&](CRegistryPreserveAll const &_Registry)
 			{
 				return &_Registry == &m_Registry;
 			}
 		;
-		auto fCheckWhitespace = [&](CPropertyKey const &_Section, CRegistryPreserveAndOrder_CStr const &_Registry)
+		auto fCheckWhitespace = [&](CPropertyKey const &_Section, CRegistryPreserveAll const &_Registry)
 			{
 				CStr WhiteSpace = _Registry.f_GetWhiteSpace(ERegistryWhiteSpaceLocation_BeforeKey).f_Trim();
 				fg_AddStrSep(WhiteSpace, _Registry.f_GetWhiteSpace(ERegistryWhiteSpaceLocation_Between).f_Trim(), "\n");
@@ -110,7 +110,7 @@ namespace NMib::NBuildSystem
 				}
 			}
 		;
-		auto fGetSection = [&](CRegistryPreserveAndOrder_CStr &_Registry) -> CPropertyKey
+		auto fGetSection = [&](CRegistryPreserveAll &_Registry) -> CPropertyKey
 			{
 				if (_Registry.f_GetName().f_Find(".") >= 0)
 					return CPropertyKey{"General"};
@@ -139,7 +139,7 @@ namespace NMib::NBuildSystem
 
 		m_Registry.f_ForEachInTree
 			(
-			 	[&](CRegistryPreserveAndOrder_CStr const &_Registry)
+			 	[&](CRegistryPreserveAll const &_Registry)
 			 	{
 					if (fIsRoot(_Registry))
 					{
@@ -241,7 +241,7 @@ namespace NMib::NBuildSystem
 						}
 
 						CStr Comments = pCommentReg->f_GetWhiteSpace(CommentType).f_TrimRight("\r\n");
-						CRegistry_CStr TempReg;
+						CRegistry TempReg;
 						TempReg.f_SetValue(iProp->m_Key.m_Name, _DefaultValue);
 						Comments += "{\n}\t//{} // {}{\n}"_f << TempReg.f_GenerateStr().f_Trim() << _Description;
 
@@ -337,7 +337,7 @@ namespace NMib::NBuildSystem
 				Evaluated.m_Value = (*iKey)->f_GetName();
 				Evaluated.m_Type = EEvaluatedPropertyType_External;
 				Evaluated.m_pProperty = &mp_ExternalProperty[Key.m_Type];
-			}				
+			}
 
 			bool bFailed = false;
 			for (auto iKey = iTuple->m_Keys.f_GetIterator(); iKey; ++iKey)
@@ -346,7 +346,7 @@ namespace NMib::NBuildSystem
 				{
 					bFailed = true;
 					break;
-				}					
+				}
 			}
 
 			if (!bFailed)

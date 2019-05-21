@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Preprocessor.h"
@@ -8,7 +8,7 @@ namespace NMib::NBuildSystem
 {
 	CBuildSystemPreprocessor::CBuildSystemPreprocessor
 		(
-			CRegistryPreserveAndOrder_CStr &_ResultRegistry
+			CRegistryPreserveAll &_ResultRegistry
 			, TCSet<CStr> &_SourceFiles
 			, CFindCache const &_FindCache
 			, TCMap<CStr, CStr> const &_Environment
@@ -20,13 +20,13 @@ namespace NMib::NBuildSystem
 	{
 	}
 
-	void CBuildSystemPreprocessor::fsp_ThrowError(CRegistryPreserveAndOrder_CStr const &_Registry, CStr const &_Error)
+	void CBuildSystemPreprocessor::fsp_ThrowError(CRegistryPreserveAll const &_Registry, CStr const &_Error)
 	{
 		CStr Format = DMibPFileLineFormat " " + _Error;
 		DMibError((NMib::NStr::CStr::CFormat(Format) << _Registry.f_GetFile() << _Registry.f_GetLine()).f_GetStr());
 	}
-	
-	void CBuildSystemPreprocessor::fpr_FindFilesRecursive(CRegistryPreserveAndOrder_CStr &_Registry, TCVector<CStr> &o_Files, CStr const &_Path, CStr const &_ToFind)
+
+	void CBuildSystemPreprocessor::fpr_FindFilesRecursive(CRegistryPreserveAll &_Registry, TCVector<CStr> &o_Files, CStr const &_Path, CStr const &_ToFind)
 	{
 		CStr PrePath = _Path;
 		CStr ToFind = _ToFind;
@@ -70,11 +70,11 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	void CBuildSystemPreprocessor::fpr_HandleIncludes(CRegistryPreserveAndOrder_CStr &_RootRegistry, CStr const &_Path, TCVector<CError> &o_Errors)
+	void CBuildSystemPreprocessor::fpr_HandleIncludes(CRegistryPreserveAll &_RootRegistry, CStr const &_Path, TCVector<CError> &o_Errors)
 	{
 		_RootRegistry.f_TransformFunc
 			(
-				[&](CRegistryPreserveAndOrder_CStr &_Registry)
+				[&](CRegistryPreserveAll &_Registry)
 				{
 					bool bInclude = _Registry.f_GetName() == "Include";
 					bool bImport = _Registry.f_GetName() == "Import" && !_Registry.f_GetThisValue().f_IsEmpty();
@@ -140,7 +140,7 @@ namespace NMib::NBuildSystem
 
 									CStr FileData = CFile::fs_ReadStringFromFile(CStr(_File), true);
 									CStr Path = CFile::fs_GetPath(_File);
-									CRegistryPreserveAndOrder_CStr IncludedRegistry;
+									CRegistryPreserveAll IncludedRegistry;
 									IncludedRegistry.f_ParseStr(FileData, _File);
 
 									fpr_HandleIncludes(IncludedRegistry, Path, o_Errors);
@@ -176,10 +176,10 @@ namespace NMib::NBuildSystem
 		CStr FileData = CFile::fs_ReadStringFromFile(CStr(mp_FileLocation), true);
 		CStr Path = CFile::fs_GetPath(mp_FileLocation);
 
-		CRegistryPreserveAndOrder_CStr TempRegistry;
+		CRegistryPreserveAll TempRegistry;
 		TempRegistry.f_ParseStr(FileData, mp_FileLocation);
 
-		CRegistryPreserveAndOrder_CStr *pPrevious = nullptr;
+		CRegistryPreserveAll *pPrevious = nullptr;
 		for (auto iChild = mp_ResultRegistry.f_GetChildIterator(); iChild; ++iChild)
 		{
 			pPrevious = iChild;

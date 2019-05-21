@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem.h"
@@ -6,17 +6,17 @@
 
 namespace NMib::NBuildSystem
 {
-	void CBuildSystem::fp_ParseData(CEntity &_RootEntity, CRegistryPreserveAndOrder_CStr &_Registry, TCMap<CStr, CConfigurationType> *_pConfigurations) const
+	void CBuildSystem::fp_ParseData(CEntity &_RootEntity, CRegistryPreserveAll &_Registry, TCMap<CStr, CConfigurationType> *_pConfigurations) const
 	{
 		bool bFilterWorkspace = !mp_GenerateWorkspace.f_IsEmpty();
 		bFilterWorkspace = false; // This does not work because the name of the workspace can be different from the name of the entity
 		if (bFilterWorkspace)
 		{
-			TCLinkedList<CRegistryPreserveAndOrder_CStr *> ToRemove;
+			TCLinkedList<CRegistryPreserveAll *> ToRemove;
 
 			for (auto iReg = _Registry.f_GetChildIterator(); iReg; ++iReg)
 			{
-				CRegistryPreserveAndOrder_CStr &Registry = *iReg;
+				CRegistryPreserveAll &Registry = *iReg;
 				CStr Name = Registry.f_GetName();
 				CStr Value = Registry.f_GetThisValue();
 				ch8 Character = Name[0];
@@ -80,7 +80,7 @@ namespace NMib::NBuildSystem
 								fl_FindTargets(*pWorkspace);
 */
 							}
-						}							
+						}
 					}
 					break;
 				default:
@@ -96,7 +96,7 @@ namespace NMib::NBuildSystem
 		}
 		for (auto iReg = _Registry.f_GetChildIterator(); iReg; ++iReg)
 		{
-			CRegistryPreserveAndOrder_CStr &Registry = *iReg;
+			CRegistryPreserveAll &Registry = *iReg;
 			CStr Name = Registry.f_GetName();
 			CStr Value = Registry.f_GetThisValue();
 			ch8 Character = Name[0];
@@ -143,11 +143,11 @@ namespace NMib::NBuildSystem
 		//_RootEntity.f_CheckParents();
 	}
 
-	void CBuildSystem::fp_ParseConfigurationConditions(CRegistryPreserveAndOrder_CStr &_Registry, CBuildSystemConfiguration &_Configuration) const
+	void CBuildSystem::fp_ParseConfigurationConditions(CRegistryPreserveAll &_Registry, CBuildSystemConfiguration &_Configuration) const
 	{
 		for (auto iReg = _Registry.f_GetChildIterator(); iReg; ++iReg)
 		{
-			CRegistryPreserveAndOrder_CStr &Registry = *iReg;
+			CRegistryPreserveAll &Registry = *iReg;
 			CStr Name = Registry.f_GetName();
 			CStr Value = Registry.f_GetThisValue();
 			ch8 Character = Name[0];
@@ -165,13 +165,13 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	void CBuildSystem::fp_ParseConfigurationType(CStr const &_Name, CRegistryPreserveAndOrder_CStr &_Registry, TCMap<CStr, CConfigurationType> &o_Configurations) const
+	void CBuildSystem::fp_ParseConfigurationType(CStr const &_Name, CRegistryPreserveAll &_Registry, TCMap<CStr, CConfigurationType> &o_Configurations) const
 	{
 		auto &Type = o_Configurations[_Name];
 
 		for (auto iReg = _Registry.f_GetChildIterator(); iReg; ++iReg)
 		{
-			CRegistryPreserveAndOrder_CStr &Registry = *iReg;
+			CRegistryPreserveAll &Registry = *iReg;
 			CStr Name = Registry.f_GetName();
 			CStr Value = Registry.f_GetThisValue();
 			if (Value.f_IsEmpty())
@@ -189,7 +189,7 @@ namespace NMib::NBuildSystem
 			EPropertyType _Type
 			, CStr const &_PropertyName
 			, TCLinkedList<CEntity *> &_Entities
-			, CRegistryPreserveAndOrder_CStr &_Registry
+			, CRegistryPreserveAll &_Registry
 			, CCondition const &_Conditions
 		) const
 	{
@@ -214,7 +214,7 @@ namespace NMib::NBuildSystem
 
 		for (auto iReg = _Registry.f_GetChildIterator(); iReg; ++iReg)
 		{
-			CRegistryPreserveAndOrder_CStr &Registry = *iReg;
+			CRegistryPreserveAll &Registry = *iReg;
 			CStr Name = Registry.f_GetName();
 			CStr Value = Registry.f_GetThisValue();
 			ch8 Character = Name[0];
@@ -246,7 +246,7 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	void CBuildSystem::fp_ParseProperty(TCLinkedList<CEntity *> &_Entities, CRegistryPreserveAndOrder_CStr &_Registry) const
+	void CBuildSystem::fp_ParseProperty(TCLinkedList<CEntity *> &_Entities, CRegistryPreserveAll &_Registry) const
 	{
 		CStr PropertyType = _Registry.f_GetName();
 		if (PropertyType.f_FindChar('.') >= 0)
@@ -273,7 +273,7 @@ namespace NMib::NBuildSystem
 
 		for (auto iReg = _Registry.f_GetChildIterator(); iReg; ++iReg)
 		{
-			CRegistryPreserveAndOrder_CStr &Registry = *iReg;
+			CRegistryPreserveAll &Registry = *iReg;
 			CStr Name = Registry.f_GetName();
 			ch8 Character = Name[0];
 			if (fg_CharIsAlphabetical(Character) || fg_CharIsNumber(Character) || Character == 0 || Character == '_')
@@ -300,7 +300,7 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	CEntity *CBuildSystem::fp_ParseEntity(CEntity &_Parent, CRegistryPreserveAndOrder_CStr &_Registry) const
+	CEntity *CBuildSystem::fp_ParseEntity(CEntity &_Parent, CRegistryPreserveAll &_Registry) const
 	{
 		CStr EntityType = _Registry.f_GetName().f_Extract(1);
 		CStr EntityName = _Registry.f_GetThisValue();
@@ -319,10 +319,10 @@ namespace NMib::NBuildSystem
 			if (_Parent.m_Key.m_Type == EEntityType_Group)
 			{
 				auto *pParent = &_Parent;
-				while 
+				while
 					(
-						pParent->m_pParent 
-						&& pParent->m_pParent->m_Key.m_Type != EEntityType_Root 
+						pParent->m_pParent
+						&& pParent->m_pParent->m_Key.m_Type != EEntityType_Root
 					)
 				{
 					pParent = pParent->m_pParent;
@@ -339,13 +339,13 @@ namespace NMib::NBuildSystem
 		else if (Type == EEntityType_Group)
 		{
 			bAllowChildren = true;
-			if 
+			if
 				(
-					_Parent.m_Key.m_Type != EEntityType_Target 
+					_Parent.m_Key.m_Type != EEntityType_Target
 					&& _Parent.m_Key.m_Type != EEntityType_Root
 					&& _Parent.m_Key.m_Type != EEntityType_Workspace
-					&& _Parent.m_Key.m_Type != EEntityType_Group 
-					&& _Parent.m_Key.m_Type != EEntityType_Import 
+					&& _Parent.m_Key.m_Type != EEntityType_Group
+					&& _Parent.m_Key.m_Type != EEntityType_Import
 				)
 			{
 				fsp_ThrowError(_Registry, "A group can only be specified in target, workspace, root, group or import scope");
@@ -484,7 +484,7 @@ namespace NMib::NBuildSystem
 
 		for (auto iReg = _Registry.f_GetChildIterator(); iReg; ++iReg)
 		{
-			CRegistryPreserveAndOrder_CStr &Registry = *iReg;
+			CRegistryPreserveAll &Registry = *iReg;
 			CStr Name = Registry.f_GetName();
 			CStr Value = Registry.f_GetThisValue();
 			ch8 Character = Name[0];
@@ -520,14 +520,14 @@ namespace NMib::NBuildSystem
 				break;
 			}
 		}
-		
+
 		if (bMergeEntity)
 		{
 			pRetEntity->f_CopyProperties(TempEntity);
 			pRetEntity->f_MergeEntities(TempEntity);
 			pRetEntity->m_Position = TempEntity.m_Position;
 		}
-		
+
 		return pRetEntity;
 	}
 }

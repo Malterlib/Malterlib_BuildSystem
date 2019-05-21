@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Condition.h"
@@ -20,7 +20,7 @@ namespace NMib::NBuildSystem
 		return false;
 	}
 
-	void CCondition::fs_ParseCondition(CRegistryPreserveAndOrder_CStr &_Registry, CCondition &_ParentCondition, bool _bRoot)
+	void CCondition::fs_ParseCondition(CRegistryPreserveAll &_Registry, CCondition &_ParentCondition, bool _bRoot)
 	{
 		CStr Name = _Registry.f_GetName();
 		CStr Value = _Registry.f_GetThisValue();

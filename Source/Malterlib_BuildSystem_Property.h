@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #pragma once
@@ -22,7 +22,7 @@ namespace NMib::NBuildSystem
 
 		, EPropertyType_Max
 	};
-	
+
 	struct CPropertyKey
 	{
 		inline_always CPropertyKey();
@@ -33,43 +33,43 @@ namespace NMib::NBuildSystem
 		EPropertyType m_Type;
 		CStr m_Name;
 	};
-	
+
 	struct CProperty
 	{
 		CProperty();
 		~CProperty();
-		
+
 		inline_always EPropertyType f_GetType() const;
 		inline_always CStr const &f_GetName() const;
 
 		CProperty(CProperty const &_Other);
 		CProperty &operator = (CProperty const &_Other);
-		
+
 		CPropertyKey m_Key;
 		CCondition m_Condition;
 		CStr m_Value;
 		DMibListLinkDS_Link(CProperty, m_LinkEvalOrder);
 		CFilePosition m_Position;
-		CRegistryPreserveAndOrder_CStr const *m_pRegistry;
+		CRegistryPreserveAll const *m_pRegistry;
 		CStr m_Debug;
 	};
-	
+
 	enum EEvaluatedPropertyType
 	{
 		EEvaluatedPropertyType_Implicit
 		, EEvaluatedPropertyType_Explicit
 		, EEvaluatedPropertyType_External
 	};
-	
+
 	struct CEvaluatedProperty
 	{
 		inline_always CEvaluatedProperty();
-		
+
 		CStr m_Value;
 		EEvaluatedPropertyType m_Type;
 		TCPointer<CProperty const> m_pProperty;
 	};
-	
+
 	EPropertyType fg_PropertyTypeFromStr(CStr const &_String);
 	CStr fg_PropertyTypeToStr(EPropertyType _Type);
 }

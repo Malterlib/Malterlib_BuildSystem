@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #pragma once
@@ -23,7 +23,7 @@ namespace NMib::NBuildSystem
 	{
 		CBuildSystemData();
 		~CBuildSystemData();
-		
+
 		TCMap<CStr, CConfigurationType> m_ConfigurationTypes;
 		CEntity m_RootEntity = nullptr;
 
@@ -31,7 +31,7 @@ namespace NMib::NBuildSystem
 		struct CImportData
 		{
 			CEntity m_RootEntity = nullptr;
-			CRegistryPreserveAndOrder_CStr m_Registry;
+			CRegistryPreserveAll m_Registry;
 		};
 		TCLinkedList<CImportData> m_Imports;
 	};

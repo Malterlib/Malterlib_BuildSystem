@@ -1,18 +1,19 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #pragma once
 
 #include <Mib/Core/Core>
+#include <Mib/Container/Registry>
 
 namespace NMib::NBuildSystem
 {
 	struct CFilePosition
 	{
-		inline CFilePosition(CRegistryPreserveAndOrder_CStr const &_Position);
+		inline CFilePosition(CRegistryPreserveAll const &_Position);
 		inline CFilePosition();
-		inline CFilePosition &operator = (CRegistryPreserveAndOrder_CStr const &_Position);
-		
+		inline CFilePosition &operator = (CRegistryPreserveAll const &_Position);
+
 		CStr m_FileName;
 		int32 m_Line;
 	};

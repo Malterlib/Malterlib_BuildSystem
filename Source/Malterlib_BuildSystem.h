@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #pragma once
@@ -44,7 +44,7 @@ namespace NMib::NBuildSystem
 			, ERetry_Relaunch
 			, ERetry_Relaunch_NoReconcileOptions
 		};
-		
+
 		struct CRepoFilter
 		{
 			static CRepoFilter fs_ParseParams(NEncoding::CEJSON const &_Params);
@@ -214,7 +214,7 @@ namespace NMib::NBuildSystem
 		bool f_EvalCondition(CEntity const &_Context, CCondition const &_Condition) const;
 		static void fs_ThrowError(CFilePosition const &_Position, CStr const &_Error);
 		static void fs_ThrowError(CFilePosition const &_Position, CStr const &_Error, TCVector<CBuildSystemError> const &_Errors);
-		static void fs_ThrowError(CRegistryPreserveAndOrder_CStr const &_Registry, CStr const &_Error);
+		static void fs_ThrowError(CRegistryPreserveAll const &_Registry, CStr const &_Error);
 		void f_AddSourceFile(CStr const &_File) const;
 
 		NStr::CStr f_GetEnvironmentVariable(NStr::CStr const &_Name, NStr::CStr const &_Default = {}, bool *o_pExists = nullptr) const;
@@ -261,7 +261,7 @@ namespace NMib::NBuildSystem
 		struct CEvaluationContext
 		{
 			inline_always CEvaluationContext(TCMap<CPropertyKey, CEvaluatedProperty> *_pEvaluatedProperties);
-			
+
 			TCMap<CPropertyKey, TCSet<CEntity const *>> m_EvalStack;
 			TCMap<CPropertyKey, CEvaluatedProperty> *m_pEvaluatedProperties;
 			TCLinkedList<CExplodeStackEntry> m_ExplodeListStack;
@@ -271,7 +271,7 @@ namespace NMib::NBuildSystem
 		{
 			inline_always CChangePropertiesScope(CEvaluationContext &_Context, TCMap<CPropertyKey, CEvaluatedProperty> *_pNewProperties);
 			inline_always ~CChangePropertiesScope();
-			
+
 			TCMap<CPropertyKey, CEvaluatedProperty> *m_pOldProperties;
 			CEvaluationContext &m_Context;
 		};
@@ -287,13 +287,13 @@ namespace NMib::NBuildSystem
 
 		struct CUserSettingsState
 		{
-			CRegistryPreserveAndOrder_CStr m_Registry;
+			CRegistryPreserveAll m_Registry;
 			TCSet<CPropertyKey> m_Defined;
-			TCMap<CPropertyKey, CRegistryPreserveAndOrder_CStr *> m_Sections;
-			TCMap<CPropertyKey, CRegistryPreserveAndOrder_CStr const *> m_Properties;
+			TCMap<CPropertyKey, CRegistryPreserveAll *> m_Sections;
+			TCMap<CPropertyKey, CRegistryPreserveAll const *> m_Properties;
 
 			void f_Parse();
-			CRegistryPreserveAndOrder_CStr *f_GetSection(CPropertyKey const &_Section);
+			CRegistryPreserveAll *f_GetSection(CPropertyKey const &_Section);
 		};
 
 		struct CGenerateEphemeralState
@@ -319,24 +319,24 @@ namespace NMib::NBuildSystem
 
 		ERetry fp_GeneratePrepare(CGenerateOptions const &_GenerateOptions, CGenerateEphemeralState &_GenerateState, TCFunction<bool ()> &&_fPreParse);
 
-		void fp_ParseConfigurationConditions(CRegistryPreserveAndOrder_CStr &_Registry, CBuildSystemConfiguration &_Configuration) const;
-		void fp_ParseConfigurationType(CStr const &_Name, CRegistryPreserveAndOrder_CStr &_Registry, TCMap<CStr, CConfigurationType> &o_Configurations) const;
+		void fp_ParseConfigurationConditions(CRegistryPreserveAll &_Registry, CBuildSystemConfiguration &_Configuration) const;
+		void fp_ParseConfigurationType(CStr const &_Name, CRegistryPreserveAll &_Registry, TCMap<CStr, CConfigurationType> &o_Configurations) const;
 		void fp_ParsePropertyValue
 			(
 				EPropertyType _Type
 				, CStr const &_PropertyName
 				, TCLinkedList<CEntity *> &_Entities
-				, CRegistryPreserveAndOrder_CStr &_Registry
+				, CRegistryPreserveAll &_Registry
 				, CCondition const &_Conditions
 			) const
 		;
-		void fp_ParseProperty(TCLinkedList<CEntity *> &_Entities, CRegistryPreserveAndOrder_CStr &_Registry) const;
-		CEntity *fp_ParseEntity(CEntity &_Parent, CRegistryPreserveAndOrder_CStr &_Registry) const;
+		void fp_ParseProperty(TCLinkedList<CEntity *> &_Entities, CRegistryPreserveAll &_Registry) const;
+		CEntity *fp_ParseEntity(CEntity &_Parent, CRegistryPreserveAll &_Registry) const;
 		static void fsp_ThrowError(CFilePosition const &_Position, CStr const &_Error);
 		static void fsp_ThrowError(CFilePosition const &_Position, CStr const &_Error, TCVector<CBuildSystemError> const &_Errors);
 		static void fsp_ThrowError(CEntity const &_Entity, CFilePosition const &_Position, CStr const &_Error);
-		static void fsp_ThrowError(CRegistryPreserveAndOrder_CStr const &_Registry, CStr const &_Error);
-		void fp_ParseData(CEntity &_RootEntity, CRegistryPreserveAndOrder_CStr &_Registry, TCMap<CStr, CConfigurationType> *_pConfigurations) const;
+		static void fsp_ThrowError(CRegistryPreserveAll const &_Registry, CStr const &_Error);
+		void fp_ParseData(CEntity &_RootEntity, CRegistryPreserveAll &_Registry, TCMap<CStr, CConfigurationType> *_pConfigurations) const;
 		bool fpr_EvalCondition
 			(
 				CEntity const &_Context
@@ -449,7 +449,7 @@ namespace NMib::NBuildSystem
 		align_cacheline mutable CMutualManyRead mp_SourceFilesLock;
 		mutable TCSet<CStr> mp_SourceFiles;
 		CFindCache mp_FindCache;
-		CRegistryPreserveAndOrder_CStr mp_Registry;
+		CRegistryPreserveAll mp_Registry;
 
 		CBuildSystemData mp_Data;
 		CProperty mp_ExternalProperty[EPropertyType_Max];
@@ -468,7 +468,7 @@ namespace NMib::NBuildSystem
 
 		CTime mp_Now;
 		CTime mp_NowUTC;
-		
+
 		CStr mp_UserSettingsFileLocal;
 		CStr mp_UserSettingsFileGlobal;
 		CStr mp_FileLocationFile;
@@ -479,15 +479,15 @@ namespace NMib::NBuildSystem
 		zbool mp_ValidTargetsValid;
 		mutable TCAtomic<bool> mp_FileChanged;
 		TCSet<CStr> mp_ValidTargets;
-		
+
 		align_cacheline mutable CMutual mp_GeneratedFilesLock;
 		mutable TCMap<CStr, CGeneratedFile> mp_GeneratedFiles;
-		
+
 		align_cacheline mutable CMutual mp_CMakeGenerateLock;
 		mutable TCMap<CStr, CMutual> mp_CMakeGenerateLocks;
 		mutable TCMap<CStr, CStr> mp_CMakeGenerated;
 		mutable TCMap<CStr, CStr> mp_CMakeGeneratedContents;
-		
+
 		EFileAttrib mp_SupportedAttributes = CFile::fs_GetSupportedAttributes();
 		EFileAttrib mp_ValidAttributes = CFile::fs_GetValidAttributes();
 		bool mp_bDebugFileLocks = fg_GetSys()->f_GetEnvironmentVariable("MalterlibBuildSystemDebugFileLocks", "false") == "true";

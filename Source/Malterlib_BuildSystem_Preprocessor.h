@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include <Mib/Core/Core>
@@ -10,7 +10,7 @@ namespace NMib::NBuildSystem
 	class CBuildSystemPreprocessor
 	{
 	public:
-		CBuildSystemPreprocessor(CRegistryPreserveAndOrder_CStr &_ResultRegistry, TCSet<CStr> &_SourceFiles, CFindCache const &_FindCache, TCMap<CStr, CStr> const &_Environment);
+		CBuildSystemPreprocessor(CRegistryPreserveAll &_ResultRegistry, TCSet<CStr> &_SourceFiles, CFindCache const &_FindCache, TCMap<CStr, CStr> const &_Environment);
 
 		void f_ReadFile(CStr const &_Path);
 		CStr const &f_GetFileLocation();
@@ -18,15 +18,15 @@ namespace NMib::NBuildSystem
 	private:
 		struct CError
 		{
-			CRegistryPreserveAndOrder_CStr *m_pRootRegistry;
+			CRegistryPreserveAll *m_pRootRegistry;
 			CStr m_Error;
 		};
 
-		static void fsp_ThrowError(CRegistryPreserveAndOrder_CStr const &_Registry, CStr const &_Error);
-		void fpr_HandleIncludes(CRegistryPreserveAndOrder_CStr &_Registry, CStr const &_Path, TCVector<CError> &o_Errors);
-		void fpr_FindFilesRecursive(CRegistryPreserveAndOrder_CStr &_Registry, TCVector<CStr> &o_Files, CStr const &_Path, CStr const &_ToFind);
+		static void fsp_ThrowError(CRegistryPreserveAll const &_Registry, CStr const &_Error);
+		void fpr_HandleIncludes(CRegistryPreserveAll &_Registry, CStr const &_Path, TCVector<CError> &o_Errors);
+		void fpr_FindFilesRecursive(CRegistryPreserveAll &_Registry, TCVector<CStr> &o_Files, CStr const &_Path, CStr const &_ToFind);
 
-		CRegistryPreserveAndOrder_CStr &mp_ResultRegistry;
+		CRegistryPreserveAll &mp_ResultRegistry;
 		TCSet<CStr> &mp_SourceFiles;
 		CFindCache const &mp_FindCache;
 		TCMap<CStr, CStr> const &mp_Environment;

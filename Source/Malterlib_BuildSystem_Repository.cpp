@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem.h"
@@ -185,7 +185,7 @@ namespace NMib::NBuildSystem
 		{
 			CConfigFile ConfigFile;
 
-			CRegistry_CStr Registry;
+			CRegistry Registry;
 			{
 				ch8 const *pParse = _Contents;
 				fg_ParseToEndOfLine(pParse);
@@ -289,9 +289,9 @@ namespace NMib::NBuildSystem
 			CStr RepositoryIdentifier = _Repo.f_GetIdentifierName(BaseDir, BaseDir);
 
 			bool bIsRoot = _Repo.m_Type == "Root";
-			
+
 			CDisableExceptionTraceScope DisableTrace;
-			
+
 			bool bChanged = false;
 
 			auto fLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir, TCMap<CStr, CStr> const &_Environment = {})
@@ -421,7 +421,7 @@ namespace NMib::NBuildSystem
 						CBuildSystem::fs_ThrowError(_Repo.m_Position, fg_Format("Failed to clone repository: {}", _Exception));
 					}
 				}
-				else 
+				else
 				{
 					CStr RelativeLocation = CFile::fs_MakePathRelative(Location, GitRoot);
 					try
@@ -788,7 +788,7 @@ namespace NMib::NBuildSystem
 					CBuildSystem::fs_ThrowError(_Repo.m_Position, "Failed to reconcile hash '{}': {}"_f << ConfigHash << _Exception.f_GetErrorStr().f_Trim());
 				}
 			}
-			
+
 			CStr GitHeadHash = fg_GetGitHeadHash(Location, _Repo.m_Position);
 			o_StateHandler.f_SetHash(_Repo.m_StateFile, Location, GitHeadHash, _Repo.m_Identity);
 			o_StateHandler.f_SetHash(_Repo.m_ConfigFile, Location, GitHeadHash, _Repo.m_Identity);
@@ -1161,10 +1161,10 @@ namespace NMib::NBuildSystem
 		auto MergedFiles = StateHandler.f_GetMergedFiles();
 		for (auto iFile = MergedFiles.f_GetIterator(); iFile; ++iFile)
 		{
-			CRegistry_CStr Registry;
-			
+			CRegistry Registry;
+
 			CStr BasePath = CFile::fs_GetPath(iFile.f_GetKey());
-			
+
 			for (auto iConfig = iFile->m_Configs.f_GetIterator(); iConfig; ++iConfig)
 			{
 				auto &Config = *iConfig;
@@ -1173,7 +1173,7 @@ namespace NMib::NBuildSystem
 				else
 					Registry.f_SetValueNoPath(CFile::fs_MakePathRelative(iConfig.f_GetKey(), BasePath), Config.m_Hash);
 			}
-			
+
 			CStr FileName = iFile.f_GetKey();
 			CStr FileContents = Registry.f_GenerateStr().f_Replace(DMibNewLine, iFile->m_LineEndings);
 
