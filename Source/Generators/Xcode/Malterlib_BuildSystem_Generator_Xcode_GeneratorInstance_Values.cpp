@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Generator_Xcode.h"
@@ -47,19 +47,19 @@ namespace NMib::NBuildSystem::NXcode
 						bFullFileSettings = Value == "true";
 						break;
 					}
-					
+
 					pConfig = pConfig->m_pParent;
 				}
 			}
-			
+
 			while (pConfig)
 			{
 				if (_bFile && !bBelowFileLevel)
 				{
-					if 
+					if
 						(
-							pConfig->m_Key.m_Type != EEntityType_Group 
-							&& pConfig->m_Key.m_Type != EEntityType_GenerateFile 
+							pConfig->m_Key.m_Type != EEntityType_Group
+							&& pConfig->m_Key.m_Type != EEntityType_GenerateFile
 							&& pConfig->m_Key.m_Type != EEntityType_File
 						)
 					{
@@ -94,7 +94,7 @@ namespace NMib::NBuildSystem::NXcode
 
 					CProperty const *pFromProperty = nullptr;
 					m_BuildSystem.f_EvaluateEntityProperty(*pTopConfig, _PropertyType, iProperty.f_GetKey().m_Name, pFromProperty);
-					
+
 					if (pFromProperty == nullptr)
 						continue; // This means that the property is not valid at the top level
 
@@ -184,15 +184,15 @@ namespace NMib::NBuildSystem::NXcode
 		) const
 	{
 		bool bFirst = true;
-		
+
 		CGeneratorInstance::CSingleValue Ret;
 		CConfiguration const *pFromConfig = nullptr;
-		
+
 		for (auto iConfig = _Configs.f_GetIterator(); iConfig; ++iConfig)
 		{
 			CProperty const *pFromProperty = nullptr;
 			CStr Value = m_BuildSystem.f_EvaluateEntityProperty(**iConfig, _PropType, _Property, pFromProperty);
-			
+
 			if (bFirst)
 			{
 				bFirst = false;
@@ -220,10 +220,10 @@ namespace NMib::NBuildSystem::NXcode
 				}
 			}
 		}
-		
+
 		return Ret;
 	}
-	
+
 	void CGeneratorInstance::fp_GetConfigValue
 		(
 			TCMap<CConfiguration, CEntityPointer> const &_Configs
@@ -231,7 +231,7 @@ namespace NMib::NBuildSystem::NXcode
 			, CFilePosition const &_Position
 			, EPropertyType _PropType
 			, CStr const &_SourceType
-			, bint _bFile
+			, bool _bFile
 			, bool _bExcludeFromBuildCondition
 			, TCVector<CStr> const *_pSearchList
 			, TCMap<CConfiguration, TCVector<CStr>> const *_pSearchListPerConfig
@@ -258,7 +258,7 @@ namespace NMib::NBuildSystem::NXcode
 					DMibCheck(pSearchList);
 				}
 				CEntity const *pSettings;
-				zbool bDisabled;
+				bool bDisabled = false;
 				{
 					for (auto iSearch = pSearchList->f_GetIterator(); iSearch; ++iSearch)
 					{
@@ -332,12 +332,12 @@ namespace NMib::NBuildSystem::NXcode
 				PropertyKey.m_Name = "ConvertSeperator";
 				if (pSettings->m_EvaluatedProperties.f_FindEqual(PropertyKey))
 					Ret.m_bConvertSeperator = true;
-				
+
 				PropertyKey.m_Type = EPropertyType_Property;
 				PropertyKey.m_Name = "IgnoreEmpty";
 				if (pSettings->m_EvaluatedProperties.f_FindEqual(PropertyKey))
 					Ret.m_bIgnoreEmtpy = true;
-				
+
 				PropertyKey.m_Type = EPropertyType_Property;
 				PropertyKey.m_Name = "RemoveLastSlash";
 				if (pSettings->m_EvaluatedProperties.f_FindEqual(PropertyKey))
@@ -443,7 +443,7 @@ namespace NMib::NBuildSystem::NXcode
 					if (!ConfigValue.m_Value.f_IsEmpty() && ConfigValue.m_Value[ConfigValue.m_Value.f_GetLen() - 1] == '/')
 						ConfigValue.m_Value = ConfigValue.m_Value.f_Left(ConfigValue.m_Value.f_GetLen() - 1);
 				}
-				
+
 				if (_SourceType == "FileExtension")
 					ConfigValue.m_Value = ConfigValue.m_Value.f_Replace(".", "");
 				else if (_SourceType == "ToolPath")
@@ -582,7 +582,7 @@ namespace NMib::NBuildSystem::NXcode
 								}
 							}
 						}
-					}								
+					}
 				}
 
 				if (ConfigValues.f_IsEmpty())
@@ -624,7 +624,7 @@ namespace NMib::NBuildSystem::NXcode
 					Element.f_SetValue(_Value.m_Value);
 				Element.m_bXcodeProperty = _Value.m_bXcodeProperty;
 				Element.m_Position = Position;
-				
+
 				return Element;
 			}
 		;

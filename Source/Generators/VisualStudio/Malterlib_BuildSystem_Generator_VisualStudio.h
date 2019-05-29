@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #pragma once
@@ -14,7 +14,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 	extern CUniversallyUniqueIdentifier g_GeneratorPrefixHeaderUUIDNamespace;
 
 	enum ELanguageType
-	{ 
+	{
 		ELanguageType_Native
 		, ELanguageType_CSharp
 	};
@@ -31,10 +31,10 @@ namespace NMib::NBuildSystem::NVisualStudio
 		CStr const &f_GetPath() const;
 		CStr f_GetGroupPath() const;
 		CStr const &f_GetGUID();
-		
+
 		CStr m_Name;
 		TCPointer<CGroup> m_pParent;
-		
+
 	private:
 		CStr mp_GUID;
 
@@ -50,13 +50,13 @@ namespace NMib::NBuildSystem::NVisualStudio
 		CFilePosition m_Position;
 		CStr m_VSType;
 		CStr m_VSFile;
-		zbool m_bWasGenerated;
+		bool m_bWasGenerated = false;
 	};
 
 	struct CProjectDependency
 	{
 		CStr const &f_GetName() const;
-		
+
 		TCMap<CConfiguration, CEntityPointer> m_EnabledConfigs;
 		CFilePosition m_Position;
 		CStr m_VSFile;
@@ -110,10 +110,10 @@ namespace NMib::NBuildSystem::NVisualStudio
 		{
 			CStr m_Platform;
 			CStr m_Config;
-			
+
 			CEntityPointer m_pEntity;
 		};
-		
+
 		class CCompare
 		{
 		public:
@@ -122,7 +122,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 		CStr const &f_GetName() const;
 		void f_FindRecursiveDependencies(CBuildSystem const &_BuildSystem);
-		
+
 		TCMap<CStr, CGroup> m_Groups;
 		TCMap<CStr, CProject> m_Projects;
 		TCMap<CStr, CSolutionFile> m_SolutionFiles;
@@ -150,22 +150,22 @@ namespace NMib::NBuildSystem::NVisualStudio
 			, EPropertyValidity_File
 			, EPropertyValidity_NotFile
 		};
-		
+
 		struct CValueProperties
 		{
 			inline CValueProperties();
-			
+
 			TCPointer<CEvaluatedProperty const> m_pVSParentName;
 			TCPointer<CEvaluatedProperty const> m_pVSEntityName;
 			TCPointer<CEvaluatedProperty const> m_pVSPropertyName;
 			CEntityPointer m_pTranslators;
 			CEntityPointer m_pValueSet;
 			CEntityPointer m_pProperties;
-			zbool m_bDisabled;
-			zbool m_bConvertPath;
-			zbool m_bEscapeSeparated;
+			bool m_bDisabled = false;
+			bool m_bConvertPath = false;
+			bool m_bEscapeSeparated = false;
 			EPropertyValidity m_Validity;
-			
+
 			CStr m_Substitute;
 		};
 
@@ -176,7 +176,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			CStr m_Property;
 			CStr m_Value;
 
-			zbool m_bMainValue;
+			bool m_bMainValue = false;
 
 			inline bool operator < (CConfigValue const &_Right) const;
 		};
@@ -185,7 +185,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		{
 			TCSet<CConfiguration> m_Configurations;
 			TCMap<CStr, TCSet<CXMLElement *>> m_Elements;
-			zbool m_bUsed;
+			bool m_bUsed = false;
 			CFilePosition m_Position;
 		};
 
@@ -206,7 +206,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		{
 			bool f_FileExists(CStr const &_Path);
 			void f_CreateDirectory(CStr const &_Path);
-			
+
 			CStr m_CurrentOutputDir;
 			TCMap<TCMap<CStr, CStr>, TCMap<CStr, CPrefixHeader>> m_PrefixHeaders;
 			ELanguageType m_LanguageType;
@@ -283,22 +283,22 @@ namespace NMib::NBuildSystem::NVisualStudio
 		CStr m_OutputDir;
 		CStr m_RelativeBasePath;
 		CStr m_RelativeBasePathAbsolute;
-		
+
 		CEntityPointer m_pGeneratorSettings;
 		CEntityPointer m_pTargetSettings;
-		
-		mutable TCThreadLocal<CThreadLocal> m_ThreadLocal;
-		
-		CStr m_Win32Platfrom;				
 
-		zbool m_bEnableSourceControl;
+		mutable TCThreadLocal<CThreadLocal> m_ThreadLocal;
+
+		CStr m_Win32Platfrom;
+
+		bool m_bEnableSourceControl = false;
 
 		uint32 m_Version; // 2012, 2013 etc
 
 		mutable CMutual m_GetEnvironmentLock;
 		mutable TCMap<CStr, CMutual> m_GetEnvironmentLocks;
 		mutable TCMap<CStr, TCMap<CStr, CStr>> m_CachedBuildEnvironment;
-		
+
 	private:
 		template <typename tf_CSet0, typename tf_CSet1>
 		bool fp_IsSameConfig(tf_CSet0 const &_Configs, tf_CSet1 const &_AllConfigs) const;

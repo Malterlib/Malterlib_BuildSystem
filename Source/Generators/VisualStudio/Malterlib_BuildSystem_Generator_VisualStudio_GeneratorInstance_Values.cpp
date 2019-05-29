@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Generator_VisualStudio.h"
@@ -49,7 +49,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 						bFullFileSettings = Value == "true";
 						break;
 					}
-					
+
 					pConfig = fg_Explicit(pConfig->m_pParent);
 				}
 			}
@@ -57,10 +57,10 @@ namespace NMib::NBuildSystem::NVisualStudio
 			{
 				if (_bFile && !bBelowFileLevel)
 				{
-					if 
+					if
 						(
-							pConfig->m_Key.m_Type != EEntityType_Group 
-							&& pConfig->m_Key.m_Type != EEntityType_GenerateFile 
+							pConfig->m_Key.m_Type != EEntityType_Group
+							&& pConfig->m_Key.m_Type != EEntityType_GenerateFile
 							&& pConfig->m_Key.m_Type != EEntityType_File
 						)
 					{
@@ -162,7 +162,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		auto Position = _Position;
 		if (Position.m_FileName.f_IsEmpty())
 			Position = m_pGeneratorSettings->m_Position;
-		
+
 		auto & ThreadLocal = *m_ThreadLocal;
 
 		bool bFile = !_AddAsAttribute.f_IsEmpty();
@@ -181,7 +181,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 					DMibCheck(pSearchList);
 				}
 				CEntity const *pSettings;
-				zbool bDisabled;
+				bool bDisabled = false;
 				{
 					for (auto iSearch = pSearchList->f_GetIterator(); iSearch; ++iSearch)
 					{
@@ -228,7 +228,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 					}
 				}
 
-				//CStr 
+				//CStr
 
 				CValueProperties Ret;
 
@@ -253,12 +253,12 @@ namespace NMib::NBuildSystem::NVisualStudio
 				PropertyKey.m_Type = EPropertyType_Property;
 				PropertyKey.m_Name = "ConvertPath";
 				if (pSettings->m_EvaluatedProperties.f_FindEqual(PropertyKey))
-					Ret.m_bConvertPath = true;							
+					Ret.m_bConvertPath = true;
 
 				PropertyKey.m_Type = EPropertyType_Property;
 				PropertyKey.m_Name = "EscapeSeparated";
 				if (pSettings->m_EvaluatedProperties.f_FindEqual(PropertyKey))
-					Ret.m_bEscapeSeparated = true;							
+					Ret.m_bEscapeSeparated = true;
 
 				PropertyKey.m_Type = EPropertyType_Property;
 				PropertyKey.m_Name = "Validity";
@@ -275,7 +275,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 				auto pSubstitute = pSettings->m_EvaluatedProperties.f_FindEqual(PropertyKey);
 				if (pSubstitute)
 					Ret.m_Substitute = pSubstitute->m_Value;
-					
+
 
 				Key.m_Name = "Value";
 				auto pTranslators = pSettings->m_ChildEntitiesMap.f_FindEqual(Key);
@@ -485,7 +485,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 								}
 							}
 						}
-					}								
+					}
 				}
 
 				if (ConfigValues.f_IsEmpty())
@@ -494,7 +494,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 					ConfigValues[ConfigValue];
 				}
 				auto &ValueConfigs = ConfigOptions[ConfigValues];
-										
+
 				ValueConfigs.m_ByPlatform[_Project.m_Platforms[_Config]].f_Insert(_Config);
 				auto &pConfig = ValueConfigs.m_Configurations[_Config];
 				ValueConfigs.m_OriginalValues[Value];
@@ -515,9 +515,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 								// Try relative to output
 								FullPrefixHeader = f_GetExpandedPath(PrefixHeader, ThreadLocal.m_CurrentOutputDir);
 							}
-							
+
 							DCheck(!ThreadLocal.m_CurrentCompileTypes.f_IsEmpty());
-							
+
 							auto &PrefixHeaderMap = ThreadLocal.m_PrefixHeaders[ThreadLocal.m_CurrentCompileTypes][FullPrefixHeader];
 							PrefixHeaderMap.m_Configurations[_Config];
 							if (pFromProperty)
@@ -661,7 +661,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 												++pParse;
 											}
 										}
-										else 
+										else
 											++pParse;
 									}
 								}
@@ -699,7 +699,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 							if (iValue->m_Value.f_Find(InheritedValue) < 0)
 							{
 								CXMLDocument::f_AddElementAndText(pParentElement, CStr::CFormat("DefinedProperty_{}") << iValue->m_Property, "true");
-							}									
+							}
 						}
 					}
 				}
@@ -728,7 +728,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 					if (!Value.m_Entity.f_IsEmpty())
 						m_BuildSystem.fs_ThrowError(Position, CStr::CFormat("Entity cannot be specified at file level"));
-						
+
 					auto pMainValue = CXMLDocument::f_CreateElement(pAddToElement, Value.m_Value);
 					CStr FileName = (*_Configs.f_GetIterator())->m_Key.m_Name;
 
@@ -744,7 +744,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 						else
 							FileName = RelativeName.f_ReplaceChar('/', '\\');
 					}
-						
+
 					CXMLDocument::f_SetAttribute(pMainValue, _AddAsAttribute, FileName);
 					pAddToElement = pMainValue;
 					if (_bExcludeFromBuildCondition)
@@ -782,7 +782,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 							if (iValue->m_Value.f_Find(InheritedValue) < 0)
 							{
 								CXMLDocument::f_AddElementAndText(pParentElement, CStr::CFormat("DefinedProperty_{}") << iValue->m_Property, "true");
-							}									
+							}
 						}
 					}
 

@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #pragma once
@@ -22,19 +22,19 @@ namespace NMib::NBuildSystem
 		, EEntityType_Repository
 		, EEntityType_CreateTemplate
 	};
-	
+
 	struct CEntityKey
 	{
 		inline_always CEntityKey();
-		
+
 		inline_always bool operator < (CEntityKey const &_Right) const;
 		inline_always bool operator == (CEntityKey const &_Right) const;
 
 		EEntityType m_Type;
 		CStr m_Name;
 	};
-	
-	struct CEntity 
+
+	struct CEntity
 #ifdef DMibBuildSystem_DebugReferences
 		: public TCSharedPointerIntrusiveBase<>
 #endif
@@ -47,7 +47,7 @@ namespace NMib::NBuildSystem
 		~CEntity();
 #endif
 		CEntity &operator = (CEntity &&_Other);
-		
+
 #ifdef DMibBuildSystem_DebugReferences
 		aint f_RefCountIncrease() const;
 #endif
@@ -75,7 +75,7 @@ namespace NMib::NBuildSystem
 	private:
 		void fpr_GetPathKey(TCVector<CEntityKey> &_Dest) const;
 		void fpr_CheckParents() const;
-		
+
 	public:
 		DLinkDS_Link(CEntity, m_Link);
 		TCMap<CEntityKey, CEntity> m_ChildEntitiesMap;
@@ -83,7 +83,7 @@ namespace NMib::NBuildSystem
 		CEntity *m_pParent;
 		CEntityKey m_Key;
 		CCondition m_Condition;
-		
+
 		mutable CMutualManyReadSpin m_Lock;
 		mutable TCMap<CPropertyKey, CEvaluatedProperty> m_EvaluatedProperties;
 		mutable TCMap<CPropertyKey, TCVector<CProperty *>> m_PotentialExplicitProperties;
@@ -93,14 +93,14 @@ namespace NMib::NBuildSystem
 		CFilePosition m_Position;
 		CEntityPointer m_pCopiedFrom;
 		CEntityPointer m_pCopiedFromEvaluated;
-		
-		zbool m_bEvaluated;
+
+		bool m_bEvaluated = false;
 #if defined(DMibBuildSystem_DebugReferences) && defined(DMibBuildSystem_DebugReferencesAdvanced)
 		static CMutual mp_DebugSetLock;
 		static TCMap<CEntity const *, TCLinkedList<CCallstack>> mp_DebugSet;
 #endif
 	};
-	
+
 	EEntityType fg_EntityTypeFromStr(CStr const &_String);
 	CStr fg_EntityTypeToStr(EEntityType _Type);
 }

@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #pragma once
@@ -40,8 +40,8 @@ namespace NMib::NBuildSystem::NXcode
 		CStr m_ConfigName;
 		CStr m_ConfigFileName;
 		CStr m_Path;
-		bint m_bProject;
-		
+		bool m_bProject;
+
 	private:
 		mutable CStr mp_GUID;
 		mutable CStr mp_FileRefGUID;
@@ -51,7 +51,7 @@ namespace NMib::NBuildSystem::NXcode
 	{
 		CStr const &f_GetGUID(CConfiguration const &_Configuration) const;
 		CStr const &f_GetScriptSetting() const;
-		
+
 		CStr m_Name;
 		CStr m_Script;
 		CStr m_ScriptName;
@@ -60,7 +60,7 @@ namespace NMib::NBuildSystem::NXcode
 
 		bool m_bPostBuild = false;
 		bool m_bPreBuild = false;
-		
+
 	private:
 		mutable CStr mp_BuildSetting;
 		mutable CStr mp_GUID;
@@ -76,7 +76,7 @@ namespace NMib::NBuildSystem::NXcode
 #if 0
 		CStr const& f_GetHeadersBuildPhaseGUID();
 #endif
-		
+
 		CStr m_Name;
 		CStr m_XcodeProductName;
 		CStr m_ProductName;
@@ -115,11 +115,11 @@ namespace NMib::NBuildSystem::NXcode
 		CStr const &f_GetPath() const;
 		CStr f_GetGroupPath() const;
 		CStr const &f_GetGUID();
-		
+
 		CStr m_Name;
 		TCPointer<CGroup> m_pParent;
 		bool m_OutputToWorkspace = false;
-		
+
 	private:
 		CStr mp_GUID;
 	};
@@ -184,7 +184,7 @@ namespace NMib::NBuildSystem::NXcode
 		DLinkDS_Link(CProjectDependency, m_Link);
 		TCMap<CConfiguration, CEntityPointer> m_EnabledConfigs;
 		CFilePosition m_Position;
-		
+
 		CStr m_Type;
 		TCMap<CConfiguration, CPerConfig> m_PerConfig;
 		bool m_bInternal = false;
@@ -216,7 +216,7 @@ namespace NMib::NBuildSystem::NXcode
 		CStr m_CompileFlagsGUID;
 		CStr m_Type;
 		CStr m_FileRefGUID;
-		bint m_bHasCompilerFlags;
+		bool m_bHasCompilerFlags;
 	};
 
 	struct align_cacheline CProject
@@ -275,7 +275,7 @@ namespace NMib::NBuildSystem::NXcode
 		TCPointer<CGroup> m_pGroup;
 		CFilePosition m_Position;
 	};
-	
+
 	struct align_cacheline CSolution
 	{
 		class CCompare
@@ -290,7 +290,7 @@ namespace NMib::NBuildSystem::NXcode
 		TCMap<CStr, CGroup> m_Groups;
 		TCMap<CStr, CProject> m_Projects;
 		TCMap<CStr, CSolutionFile> m_SolutionFiles;
-		
+
 		CFilePosition m_Position;
 
 		CStr m_EntityName;
@@ -317,26 +317,26 @@ namespace NMib::NBuildSystem::NXcode
 			)
 		;
 		~CGeneratorInstance();
-		
+
 		virtual bool f_GetBuiltin(CStr const &_Value, CStr &_Result) const override;
 		virtual CStr f_GetExpandedPath(CStr const &_Path, CStr const& _Base) const override;
 		virtual CSystemEnvironment f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const override;
 
 		void f_GenerateProjectFile(CProject &_Project, CStr const &_OutputDir, TCMap<CConfiguration, TCSet<CStr>> &_Runnables, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable) const;
 		void f_GenerateWorkspaceFile(CSolution &_Solution, CStr const &_OutputDir, mint _MaxWorkspaceNameLen) const;
-		
+
 		// Members
 		CBuildSystem const &m_BuildSystem;
 		CBuildSystemData const &m_BuildSystemData;
 
 		CBuildSystemData m_GeneratorSettingsData;
-		
+
 		CGeneratorState m_State;
 		CStr m_OutputDir;
 		CStr m_RelativeBasePathAbsolute;
 		CStr m_RelativeBasePath;
 		uint32 m_XcodeVersion;
-		
+
 		CEntityPointer m_pGeneratorSettings;
 		CEntityPointer m_pTargetSettings;
 
@@ -366,7 +366,7 @@ namespace NMib::NBuildSystem::NXcode
 			CStr m_Property;
 			CStr m_Value;
 			TCVector<CStr> m_Values;
-			
+
 			bool m_bXcodeProperty = false;
 			bool m_bMainValue = false;
 			bool m_bUseValues = false;
@@ -379,7 +379,7 @@ namespace NMib::NBuildSystem::NXcode
 			inline CStr const &f_GetValue() const;
 			inline void f_SetValue(CStr const &_Value);
 			inline bool f_IsSameValue(CElement const &_Other) const;
-			
+
 			CStr m_Property;
 			TCSet<CStr> m_ValueSet;
 			CStr m_Value;
@@ -405,7 +405,7 @@ namespace NMib::NBuildSystem::NXcode
 			CFilePosition m_Position;
 			CStr m_Value;
 		};
-		
+
 		struct CThreadLocal
 		{
 			CThreadLocal();
@@ -429,10 +429,10 @@ namespace NMib::NBuildSystem::NXcode
 			TCMap<CConfiguration, TCMap<CStr, CStr>> mp_BuildRules;
 			CStr mp_MocOutputPatternCPP;
 			CStr m_ProjectOutputDir;
-			
+
 			TCSet<CStr> m_CreateDirectoryCache;
 		};
-		
+
 		bool fp_GenerateBuildAllSchemes(CSolution &_Solution, CStr const &_OutputDir, TCMap<CConfiguration, TCSet<CStr>> &_Runnables, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable) const;
 
 		void fp_CalculateDependencyProductPath(CProject &_Project, CProjectDependency &_Dependency, TCMap<CConfiguration, CEntityPointer> const &_EnabledConfigurations) const;
@@ -465,7 +465,7 @@ namespace NMib::NBuildSystem::NXcode
 
 		static void fspr_MergeScheme(CXMLNode const* _pExistingNode, CXMLNode const* _pPrevNode, CXMLNode* _pNewNode);
 		bool fp_GenerateSchemes(CProject& _Project, TCMap<CConfiguration, TCSet<CStr>> &_Runnables, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable) const;
-		
+
 		// Values
 
 		void fp_EvaluateFiles(CProject& _Project) const;
@@ -495,7 +495,7 @@ namespace NMib::NBuildSystem::NXcode
 				, CFilePosition const &_Position
 				, EPropertyType _PropType
 				, CStr const &_SourceType
-				, bint _bFile
+				, bool _bFile
 				, bool _bExcludeFromBuildCondition
 				, TCVector<CStr> const *_pSearchList
 				, TCMap<CConfiguration, TCVector<CStr>> const *_pSearchListPerConfig

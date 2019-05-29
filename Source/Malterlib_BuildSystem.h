@@ -476,7 +476,7 @@ namespace NMib::NBuildSystem
 		TCMap<CStr, CStr> mp_SaveEnvironment;
 		TCMap<CStr, CStr> mp_Environment;
 		CStr mp_GenerateWorkspace;
-		zbool mp_ValidTargetsValid;
+		bool mp_ValidTargetsValid = false;
 		mutable TCAtomic<bool> mp_FileChanged;
 		TCSet<CStr> mp_ValidTargets;
 
