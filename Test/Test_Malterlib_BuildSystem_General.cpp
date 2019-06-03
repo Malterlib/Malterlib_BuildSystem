@@ -14,4 +14,4 @@ namespace
 	};
 }
 
-DMibTestRegister(CGeneral_Tests, Malterlib::Perforce);
+DMibTestRegister(CGeneral_Tests, Malterlib::BuildSystem);

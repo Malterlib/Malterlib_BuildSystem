@@ -98,10 +98,8 @@ Property
 Property
 {
 	!!MalterlibEnableInternalTests true
-	/*
 	MalterlibTests "Malterlib_BuildSystem;@(MalterlibTests)"
 	MalterlibTestFiles_Malterlib_BuildSystem "@('Test/*'->MakeAbsolute())"
 	MalterlibTestDependencies_Malterlib_BuildSystem "Lib_Malterlib_BuildSystem"
 	MalterlibTestExtraGroups_Malterlib_BuildSystem "{Test}/{Malterlib_BuildSystem}"
-	*/
 }
