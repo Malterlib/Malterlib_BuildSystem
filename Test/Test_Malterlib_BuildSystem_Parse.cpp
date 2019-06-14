@@ -118,7 +118,6 @@ namespace
 	}
 }
 )---";
-				NFile::CFile::fs_WriteStringToFile("/Temp/Test.reg", RegistryStr);
 				DMibExpect(fParseGenerate(RegistryStr), ==, RegistryStr);
 			};
 		}
