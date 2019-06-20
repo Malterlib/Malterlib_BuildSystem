@@ -13,8 +13,9 @@ namespace NMib::NBuildSystem
 	void fg_Malterlib_BuildSystem_MakeActive_VisualStudio();
 	void fg_Malterlib_BuildSystem_MakeActive_Xcode();
 	
-	CBuildSystem::CBuildSystem()
+	CBuildSystem::CBuildSystem(EAnsiEncodingFlag _AnsiFlags)
 		: mp_NowUTC(NTime::CTime::fs_NowUTC())
+		, mp_AnsiFlags(_AnsiFlags)
 	{
 		mp_Now = mp_NowUTC.f_ToLocal();
 		fg_Malterlib_BuildSystem_MakeActive_VisualStudio();
@@ -23,7 +24,12 @@ namespace NMib::NBuildSystem
 		for (mint i = 0; i < EPropertyType_Max; ++i)
 			mp_ExternalProperty[i].m_Key.m_Type = (EPropertyType)i;
 	}
-	
+
+	EAnsiEncodingFlag CBuildSystem::f_AnsiFlags() const
+	{
+		return mp_AnsiFlags;
+	}
+
 	TCSet<CStr> CBuildSystem::f_GetSourceFiles() const
 	{
 		DMibLockRead(mp_SourceFilesLock);

@@ -106,7 +106,7 @@ namespace NMib::NBuildSystem
 
 		CFilteredRepos FilteredRepositories = fg_GetFilteredRepos(_Filter, *this, mp_Data);
 
-		CGitLaunches Launches{mp_BaseDir, "Branching repos"};
+		CGitLaunches Launches{mp_BaseDir, "Branching repos", mp_AnsiFlags};
 
 		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
@@ -177,7 +177,7 @@ namespace NMib::NBuildSystem
 
 		CFilteredRepos FilteredRepositories = fg_GetFilteredRepos(_Filter, *this, mp_Data);
 
-		CGitLaunches Launches{mp_BaseDir, "Unbranching repos"};
+		CGitLaunches Launches{mp_BaseDir, "Unbranching repos", mp_AnsiFlags};
 
 		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
@@ -239,7 +239,9 @@ namespace NMib::NBuildSystem
 		if (_Flags & ERepoCleanupBranchesFlag_UpdateRemotes)
 			fg_UpdateRemotes(*this, FilteredRepositories);
 
-		CGitLaunches Launches{mp_BaseDir, "Cleaning up branches"};
+		CGitLaunches Launches{mp_BaseDir, "Cleaning up branches", mp_AnsiFlags};
+
+		CColors Colors(mp_AnsiFlags);
 
 		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
@@ -419,7 +421,7 @@ namespace NMib::NBuildSystem
 								}
 
 								if (!bIsInDefault)
-									DeleteReason = "({}WARNING{} - forced)"_f << CColors::ms_StatusError << CColors::ms_Default;
+									DeleteReason = "({}WARNING{} - forced)"_f << Colors.f_StatusError() << Colors.f_Default();
 
 								if (_Flags & ERepoCleanupBranchesFlag_Pretend)
 								{
@@ -487,7 +489,9 @@ namespace NMib::NBuildSystem
 		if (_Flags & ERepoCleanupTagsFlag_UpdateRemotes)
 			fg_UpdateRemotes(*this, FilteredRepositories);
 
-		CGitLaunches Launches{mp_BaseDir, "Cleaning up tags"};
+		CGitLaunches Launches{mp_BaseDir, "Cleaning up tags", mp_AnsiFlags};
+
+		CColors Colors(mp_AnsiFlags);
 
 		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
@@ -689,7 +693,7 @@ namespace NMib::NBuildSystem
 										}
 
 										if (!bIsInDefault)
-											DeleteReason = "({}WARNING{} - forced)"_f << CColors::ms_StatusError << CColors::ms_Default;
+											DeleteReason = "({}WARNING{} - forced)"_f << Colors.f_StatusError() << Colors.f_Default();
 
 										if (_Flags & ERepoCleanupTagsFlag_Pretend)
 										{

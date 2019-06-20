@@ -530,7 +530,7 @@ namespace NMib::NBuildSystem::NRepository
 
 	void fg_UpdateRemotes(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage)
 	{
-		CGitLaunches Launches{_BuildSystem.f_GetBaseDir(), "Fetching remotes" + _ExtraMessage};
+		CGitLaunches Launches{_BuildSystem.f_GetBaseDir(), "Fetching remotes" + _ExtraMessage, _BuildSystem.f_AnsiFlags()};
 		Launches.f_MeasureRepos(_FilteredRepositories.m_FilteredRepositories);
 
 		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};

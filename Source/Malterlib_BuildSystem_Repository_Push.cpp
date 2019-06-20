@@ -43,6 +43,8 @@ namespace NMib::NBuildSystem
 
 		TCFuture<TCSet<CStr>> fg_CanPush(CGitLaunches const &_Launches, CRepository const &_Repo, TCVector<CStr> const &_Remotes, CGitBranches const &_Branches)
 		{
+			CColors Colors(_Launches.m_pState->m_AnsiFlags);
+
 			TCPromise<TCSet<CStr>> Promise;
 			{
 				TCActorResultMap<CStr, CProcessLaunchActor::CSimpleLaunchResult> CanPushResults;
@@ -79,8 +81,8 @@ namespace NMib::NBuildSystem
 													, "Cannot fast forward to {2}{}/{}{3}\n"_f
 													<< _Remote
 													<< _Branches.m_Current
-													<< CColors::ms_RepositoryName
-													<< CColors::ms_Default
+													<< Colors.f_RepositoryName()
+													<< Colors.f_Default()
 												)
 											;
 											bAllFastForward = false;
@@ -100,8 +102,8 @@ namespace NMib::NBuildSystem
 														<< _Remote
 														<< _Branches.m_Current
 														<< Output
-														<< CColors::ms_RepositoryName
-														<< CColors::ms_Default
+														<< Colors.f_RepositoryName()
+														<< Colors.f_Default()
 													)
 												;
 												bAllFastForward = false;
@@ -185,7 +187,9 @@ namespace NMib::NBuildSystem
 
 		CFilteredRepos FilteredRepositories = fg_GetFilteredRepos(_Filter, *this, mp_Data);
 
-		CGitLaunches Launches{mp_BaseDir, (_PushFlags & ERepoPushFlag_Pretend) ? "Pretending to push repos" : "Pushing repos"};
+		CGitLaunches Launches{mp_BaseDir, (_PushFlags & ERepoPushFlag_Pretend) ? "Pretending to push repos" : "Pushing repos", mp_AnsiFlags};
+
+		CColors Colors(mp_AnsiFlags);
 
 		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
@@ -265,8 +269,8 @@ namespace NMib::NBuildSystem
 																	, "New branch {2}{}{3} on {2}{}{3}\n"_f
 																	<< _Branches.m_Current
 																	<< Remote
-																	<< CColors::ms_RepositoryName
-																	<< CColors::ms_Default
+																	<< Colors.f_RepositoryName()
+																	<< Colors.f_Default()
 																)
 															;
 														}
@@ -279,8 +283,8 @@ namespace NMib::NBuildSystem
 																	, "Update {2}{}{3} on {2}{}{3}\n"_f
 																	<< _Branches.m_Current
 																	<< Remote
-																	<< CColors::ms_RepositoryName
-																	<< CColors::ms_Default
+																	<< Colors.f_RepositoryName()
+																	<< Colors.f_Default()
 																)
 															;
 														}

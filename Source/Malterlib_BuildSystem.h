@@ -10,6 +10,7 @@
 #include <Mib/Concurrency/ThreadSafeQueue>
 #include <Mib/Concurrency/AsyncResult>
 #include <Mib/Concurrency/ParallellForEach>
+#include <Mib/CommandLine/AnsiEncoding>
 
 namespace NMib::NBuildSystem
 {
@@ -32,7 +33,7 @@ namespace NMib::NBuildSystem
 	class CBuildSystem
 	{
 	public:
-		CBuildSystem();
+		CBuildSystem(EAnsiEncodingFlag _AnsiFlags);
 		CBuildSystem(CBuildSystem const &) = delete;
 		CBuildSystem(CBuildSystem &&) = delete;
 
@@ -94,9 +95,8 @@ namespace NMib::NBuildSystem
 		{
 			ERepoListCommitsFlag_None = 0
 			, ERepoListCommitsFlag_UpdateRemotes = DBit(0)
-			, ERepoListCommitsFlag_Color = DBit(1)
-			, ERepoListCommitsFlag_Compact = DBit(2)
-			, ERepoListCommitsFlag_Changelog = DBit(3)
+			, ERepoListCommitsFlag_Compact = DBit(1)
+			, ERepoListCommitsFlag_Changelog = DBit(2)
 		};
 
 		enum ERepoPushFlag
@@ -248,6 +248,8 @@ namespace NMib::NBuildSystem
 			 	, uint32 _MaxMessageWidth
 			)
 		;
+
+		EAnsiEncodingFlag f_AnsiFlags() const;
 
 		constexpr static uint32 mc_MToolVersion = 2;
 
@@ -491,9 +493,14 @@ namespace NMib::NBuildSystem
 		EFileAttrib mp_SupportedAttributes = CFile::fs_GetSupportedAttributes();
 		EFileAttrib mp_ValidAttributes = CFile::fs_GetValidAttributes();
 		bool mp_bDebugFileLocks = fg_GetSys()->f_GetEnvironmentVariable("MalterlibBuildSystemDebugFileLocks", "false") == "true";
+		EAnsiEncodingFlag mp_AnsiFlags = EAnsiEncodingFlag_None;
 	};
 }
 
 #include "Malterlib_BuildSystem.hpp"
+
+#ifndef DMibPNoShortCuts
+	using namespace NMib::NBuildSystem;
+#endif
 
 #endif

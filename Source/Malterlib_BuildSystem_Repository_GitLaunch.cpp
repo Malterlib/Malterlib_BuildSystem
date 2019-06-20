@@ -9,47 +9,53 @@
 
 namespace NMib::NBuildSystem::NRepository
 {
-	CGitLaunches::CState::CState(CStr const &_BaseDir, CStr const &_ProgressDescription)
+	CGitLaunches::CState::CState(CStr const &_BaseDir, CStr const &_ProgressDescription, EAnsiEncodingFlag _AnsiFlags)
 		: m_BaseDir(_BaseDir)
 		, m_ProgressDescription(_ProgressDescription)
+		, m_AnsiFlags(_AnsiFlags)
 	{
 	}
 
-	CGitLaunches::CGitLaunches(CStr const &_BaseDir, CStr const &_ProgressDescription)
-		: m_pState(fg_Construct(_BaseDir, _ProgressDescription))
+	CGitLaunches::CGitLaunches(CStr const &_BaseDir, CStr const &_ProgressDescription, EAnsiEncodingFlag _AnsiFlags)
+		: m_pState(fg_Construct(_BaseDir, _ProgressDescription, _AnsiFlags))
 	{
 	}
 
 	namespace
 	{
-		void fg_OutputRepoLine(EOutputType _OutputType, CStr const &_RepoName, mint _LongestRepoName, CStr const &_Line)
+		void fg_OutputRepoLine(EOutputType _OutputType, CStr const &_RepoName, mint _LongestRepoName, CStr const &_Line, EAnsiEncodingFlag _AnsiFlags)
 		{
-			ch8 const *pRepoColor = "ERROR";
+			CStr RepoColor;
+
+			CColors Colors(_AnsiFlags);
 
 			switch (_OutputType)
 			{
-			case EOutputType_Normal: pRepoColor = CColors::ms_StatusNormal; break;
-			case EOutputType_Warning: pRepoColor = CColors::ms_StatusWarning; break;
-			case EOutputType_Error: pRepoColor = CColors::ms_StatusError; break;
+			case EOutputType_Normal: RepoColor = Colors.f_StatusNormal(); break;
+			case EOutputType_Warning: RepoColor = Colors.f_StatusWarning(); break;
+			case EOutputType_Error: RepoColor = Colors.f_StatusError(); break;
+			default: RepoColor = "ERROR"; break;
 			}
 
-			CStr ReplacedRepo = _RepoName.f_Replace("/", "{}{}/{}"_f << CColors::ms_Default << DAnsiColor_256(250) << pRepoColor ^ 1);
+			CStr ReplacedRepo = _RepoName.f_Replace("/", "{}{}/{}"_f << Colors.f_Default() << Colors.f_Foreground256(250) << RepoColor ^ 1);
 			DMibConOut2
 				(
 					"{}{sl*,sf ,a-}{} {}|{}  {}\n"
-					, pRepoColor
+					, RepoColor
 					, ReplacedRepo
 					, _LongestRepoName + ReplacedRepo.f_GetLen() - _RepoName.f_GetLen()
-					, CColors::ms_Default
-					, DAnsiColor_256(242)
-					, CColors::ms_Default
+					, Colors.f_Default()
+					, Colors.f_Foreground256(242)
+					, Colors.f_Default()
 					, _Line
 				)
 			;
 		}
-		void fg_OutputSectionLine()
+		void fg_OutputSectionLine(EAnsiEncodingFlag _AnsiFlags)
 		{
-			DMibConOut2("{}--------------------------------------------------------------------------------{}\n", DAnsiColor_256(242), CColors::ms_Default);
+			CColors Colors(_AnsiFlags);
+
+			DMibConOut2("{}--------------------------------------------------------------------------------{}\n", Colors.f_Foreground256(242), Colors.f_Default());
 		}
 	}
 
@@ -84,7 +90,7 @@ namespace NMib::NBuildSystem::NRepository
 				{
 					if (!bDidOutputSection)
 					{
-						fg_OutputSectionLine();
+						fg_OutputSectionLine(m_AnsiFlags);
 						bDidOutputSection = true;
 					}
 				}
@@ -97,12 +103,12 @@ namespace NMib::NBuildSystem::NRepository
 					{
 						if (Line == "ForceSection")
 							Line = "";
-						fg_OutputRepoLine(Output.m_OutputType, _Name, LongestRepo, Line);
+						fg_OutputRepoLine(Output.m_OutputType, _Name, LongestRepo, Line, m_AnsiFlags);
 					}
 				}
 
 				if (bDidOutputSection)
-					fg_OutputSectionLine();
+					fg_OutputSectionLine(m_AnsiFlags);
 			}
 		;
 

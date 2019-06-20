@@ -1,7 +1,9 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Repository.h"
+
+#include <Mib/CommandLine/AnsiEncodingParse>
 
 namespace NMib::NBuildSystem
 {
@@ -104,7 +106,7 @@ namespace NMib::NBuildSystem
 			return Output;
 		}
 	}
-	
+
 	CBuildSystem::ERetry CBuildSystem::f_Action_Repository_ListCommits
 		(
 		 	CGenerateOptions const &_GenerateOptions
@@ -151,13 +153,14 @@ namespace NMib::NBuildSystem
 		if (_Flags & ERepoListCommitsFlag_UpdateRemotes)
 			fg_UpdateRemotes(*this, FilteredRepositories, " (Disable with --local) ");
 
-		CGitLaunches Launches{mp_BaseDir, "Listing Commits"};
+		CGitLaunches Launches{mp_BaseDir, "Listing Commits", mp_AnsiFlags};
 
 		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
-		CStateHandler StateHandler{mp_BaseDir, mp_OutputDir};
+		CStateHandler StateHandler{mp_BaseDir, mp_OutputDir, mp_AnsiFlags};
 
-		bool bColor = _Flags & ERepoListCommitsFlag_Color;
+		CColors Colors(mp_AnsiFlags);
+
 		bool bCompact = _Flags & ERepoListCommitsFlag_Compact;
 
 		TCVector<TCAsyncResult<void>> LaunchResults;
@@ -452,14 +455,6 @@ namespace NMib::NBuildSystem
 			MaxColumnWidth[Wildcard.m_Name] = Wildcard.m_MaxWidth;
 		MaxColumnWidth["Message"] = _MaxMessageWidth;
 
-		auto fColor = [&](ch8 const *pColor)
-			{
-				if (!bColor)
-					return "";
-				return pColor;
-			}
-		;
-
 		struct CLogEntry : public CLogEntryFull
 		{
 			bool m_bReverse = false;
@@ -521,7 +516,7 @@ namespace NMib::NBuildSystem
 		struct COutputEntry
 		{
 			CStr m_String;
-			ch8 const *m_pColor = nullptr;
+			CStr m_Color;
 		};
 
 		TCMap<NTime::CTime, TCVector<COutputEntry>> ChangelogEntries;
@@ -569,27 +564,27 @@ namespace NMib::NBuildSystem
 			for (auto &Column : Columns)
 			{
 				if (bCompact)
-					MaxLengths[Column] = CAnsiEncoding::fs_RenderedStrLen(Column);
+					MaxLengths[Column] = CAnsiEncodingParse::fs_RenderedStrLen(Column);
 				else
 					MaxLengths[Column] = MaxColumnWidth[Column];
 			}
 
 			auto fMeasureOutput = [&](CStr const &_Column, CStr const &_String, ch8 const *_pColor = "")
 				{
-					MaxLengths[_Column] = fg_Max(MaxLengths[_Column], CAnsiEncoding::fs_RenderedStrLen(_String));
+					MaxLengths[_Column] = fg_Max(MaxLengths[_Column], CAnsiEncodingParse::fs_RenderedStrLen(_String));
 				}
 			;
 
-			ch8 const *pBorderColor = DAnsiColor_256(240);
-			ch8 const *pHeadingColor = DAnsiColor_Bold;
-			ch8 const *pCommitterColor = DAnsiColor_256(244);
+			CStr BorderColor = Colors.f_Foreground256(240);
+			CStr HeadingColor = Colors.f_Bold();
+			CStr CommitterColor = Colors.f_Foreground256(244);
 
 			CUStr ToOutput;
 			auto fRealOutput = [&](CStr const &_Column, CStr const &_String, ch8 const *_pColor = "")
 				{
 					CUStr UnicodeString = _String;
 					mint StringLen = UnicodeString.f_GetLen();
-					mint RenderedLen = CAnsiEncoding::fs_RenderedStrLen(_String);
+					mint RenderedLen = CAnsiEncodingParse::fs_RenderedStrLen(_String);
 					mint NeededLen = MaxLengths[_Column] + (StringLen - RenderedLen);
 
 					CUStr PaddedString = CUStr::CFormat(str_utf32("{sz*,sf ,a-}")) << UnicodeString << NeededLen;
@@ -607,14 +602,14 @@ namespace NMib::NBuildSystem
 							PaddedString = str_utf32("{2}{}{3}{4}{}"_f)
 								<< PaddedString.f_Left(SectionLen)
 								<< PaddedString.f_Extract(SectionLen)
-								<< fColor(DAnsiColor_256(39))
-								<< fColor(CColors::ms_Default)
-								<< fColor(_pColor)
+								<< Colors.f_Foreground256(39)
+								<< Colors.f_Default()
+								<< _pColor
 							;
 						}
 					}
 
-					ToOutput += CUStr::CFormat(str_utf32("{1}|{2} {3}{}{2} ")) << PaddedString << fColor(pBorderColor) << fColor(CColors::ms_Default) << fColor(_pColor);
+					ToOutput += CUStr::CFormat(str_utf32("{1}|{2} {3}{}{2} ")) << PaddedString << BorderColor << Colors.f_Default() << _pColor;
 				}
 			;
 
@@ -639,7 +634,7 @@ namespace NMib::NBuildSystem
 			auto fOutputDivider = [&](EDivider _Type)
 				{
 					ToOutput += _Prefix;
-					ToOutput += fColor(pBorderColor);
+					ToOutput += BorderColor;
 
 					switch (_Type)
 					{
@@ -684,7 +679,7 @@ namespace NMib::NBuildSystem
 						}
 					}
 
-					ToOutput += fColor(CColors::ms_Default);
+					ToOutput += Colors.f_Default();
 				}
 			;
 
@@ -695,7 +690,7 @@ namespace NMib::NBuildSystem
 						TCMap<CStr, TCVector<COutputEntry>> ColumnOutput;
 						mint TallestColumn = 0;
 
-						auto fAddColumnOutput = [&](CStr const &_Column, CStr const &_Value, ch8 const *_pColor = "")
+						auto fAddColumnOutput = [&](CStr const &_Column, CStr const &_Value, CStr _Color = {})
 							{
 								auto &Output = ColumnOutput[_Column];
 								bool bWasMultiple = false;
@@ -703,7 +698,7 @@ namespace NMib::NBuildSystem
 								for (auto &LongLine : Lines)
 								{
 									if (bWasMultiple && !LongLine.f_Trim().f_IsEmpty())
-										Output.f_Insert().m_pColor = _pColor;
+										Output.f_Insert().m_Color = _Color;
 
 									auto NewLines = fg_LineBreak(LongLine, MaxColumnWidth[_Column]);
 									bWasMultiple = NewLines.f_GetLen() > 1;
@@ -712,7 +707,7 @@ namespace NMib::NBuildSystem
 									{
 										auto &Entry = Output.f_Insert();
 										Entry.m_String = Line;
-										Entry.m_pColor = _pColor;
+										Entry.m_Color = _Color;
 									}
 								}
 								TallestColumn = fg_Max(TallestColumn, Output.f_GetLen());
@@ -722,20 +717,20 @@ namespace NMib::NBuildSystem
 							}
 						;
 
-						ch8 const *pCommitColor = DAnsiColor_256(11);
-						ch8 const *pCommitColorWarning = DAnsiColor_256(11) DAnsiColor_Bold;
+						CStr CommitColor = Colors.f_Foreground256(11);
+						CStr CommitColorWarning = Colors.f_Foreground256(11) + Colors.f_Bold();
 						if (LogEntry.m_bReverse)
 						{
-							pCommitColor = DAnsiColor_256(9);
-							pCommitColorWarning = DAnsiColor_256(9) DAnsiColor_Bold;
+							CommitColor = Colors.f_Foreground256(9);
+							CommitColorWarning = Colors.f_Foreground256(9) + Colors.f_Bold();
 						}
 
 						if (LogEntry.m_AuthorDate.f_IsValid())
 						{
-							if (LogEntry.m_bReverse && !bColor)
-								fAddColumnOutput("Commit", "-{}"_f << LogEntry.m_Commit, pCommitColor);
+							if (LogEntry.m_bReverse && !Colors.f_Color())
+								fAddColumnOutput("Commit", "-{}"_f << LogEntry.m_Commit, CommitColor);
 							else
-								fAddColumnOutput("Commit", LogEntry.m_Commit, pCommitColor);
+								fAddColumnOutput("Commit", LogEntry.m_Commit, CommitColor);
 						}
 						else
 						{
@@ -743,15 +738,15 @@ namespace NMib::NBuildSystem
 								ChangelogEntries[LogEntry.m_AuthorDate].f_Insert(COutputEntry{"{}:\n{}\n"_f << Repo << LogEntry.m_Commit});
 
 							if (LogEntry.m_Message == "Error")
-								fAddColumnOutput("Commit", LogEntry.m_Commit, CColors::ms_StatusError);
+								fAddColumnOutput("Commit", LogEntry.m_Commit, Colors.f_StatusError());
 							else
-								fAddColumnOutput("Commit", LogEntry.m_Commit, pCommitColorWarning);
+								fAddColumnOutput("Commit", LogEntry.m_Commit, CommitColorWarning);
 						}
 
 						fAddColumnOutput("Author/Committer", fStripEmail(LogEntry.m_Author));
-						fAddColumnOutput("Author/Committer", fStripEmail(LogEntry.m_Committer), pCommitterColor);
+						fAddColumnOutput("Author/Committer", fStripEmail(LogEntry.m_Committer), CommitterColor);
 						fAddColumnOutput("Author/Commit time", "{tc6}"_f << LogEntry.m_AuthorDate);
-						fAddColumnOutput("Author/Commit time", "{tc6}"_f << LogEntry.m_CommitterDate, pCommitterColor);
+						fAddColumnOutput("Author/Commit time", "{tc6}"_f << LogEntry.m_CommitterDate, CommitterColor);
 						CStr Message = LogEntry.m_Message;
 
 						for (auto &Wildcard : WildcardColumns)
@@ -789,10 +784,10 @@ namespace NMib::NBuildSystem
 									continue;
 								}
 
-								_fOutput(Column, Output[i].m_String, Output[i].m_pColor);
+								_fOutput(Column, Output[i].m_String, Output[i].m_Color);
 							}
 							if (_bReal)
-								ToOutput += str_utf32("{}|{}\n"_f) << fColor(pBorderColor) << fColor(CColors::ms_Default);
+								ToOutput += str_utf32("{}|{}\n"_f) << BorderColor << Colors.f_Default();
 						}
 						if (_bReal && (&LogEntry != &LogEntries.f_GetLast()))
 							fOutputDivider(EDivider_Middle);
@@ -809,12 +804,12 @@ namespace NMib::NBuildSystem
 				ToOutput += str_utf32("{2}|{3} {4}{sz*,sf ,a-}{3} "_f)
 					<< Column
 					<< MaxLengths[Column]
-					<< fColor(pBorderColor)
-					<< fColor(CColors::ms_Default)
-					<< fColor(pHeadingColor)
+					<< BorderColor
+					<< Colors.f_Default()
+					<< HeadingColor
 				;
 			}
-			ToOutput += str_utf32("{}|{}\n"_f) << fColor(pBorderColor) << fColor(CColors::ms_Default);
+			ToOutput += str_utf32("{}|{}\n"_f) << BorderColor << Colors.f_Default();
 
 			fOutputDivider(EDivider_Middle);
 
@@ -823,7 +818,7 @@ namespace NMib::NBuildSystem
 			fOutputDivider(EDivider_Bottom);
 			ToOutput += str_utf32("{0}\n{0}\n"_f) << _Prefix;
 
-			TCVector<TCTuple<CStr, CStr, ch8 const *>> HeadingLines;
+			TCVector<TCTuple<CStr, CStr, CStr>> HeadingLines;
 
 			if (RelativePath == ".")
 			{
@@ -852,8 +847,8 @@ namespace NMib::NBuildSystem
 					(
 						{
 							"From {a-,sj*,sf }  {}"_f << _From << MaxLen << FromHash
-							, "From {3}{a-,sj*,sf }  {4}{}"_f << _From << MaxLen << FromHash << fColor(CColors::ms_ToPush) << fColor(DAnsiColor_256(246))
-							, CColors::ms_Default
+							, "From {3}{a-,sj*,sf }  {4}{}"_f << _From << MaxLen << FromHash << Colors.f_ToPush() << Colors.f_Foreground256(246)
+							, Colors.f_Default()
 						}
 					)
 				;
@@ -861,14 +856,14 @@ namespace NMib::NBuildSystem
 					(
 						{
 							"To   {a-,sj*,sf }  {}"_f << _To << MaxLen << ToHash
-							, "To   {3}{a-,sj*,sf }  {4}{}"_f << _To << MaxLen << ToHash << fColor(CColors::ms_ToPush) << fColor(DAnsiColor_256(246))
-							, CColors::ms_Default
+							, "To   {3}{a-,sj*,sf }  {4}{}"_f << _To << MaxLen << ToHash << Colors.f_ToPush() << Colors.f_Foreground256(246)
+							, Colors.f_Default()
 						}
 					)
 				;
 			}
 			else
-				HeadingLines.f_Insert({RelativePath, RelativePath, nullptr});
+				HeadingLines.f_Insert({RelativePath, RelativePath, ""});
 
 			for (auto & [Line, ColoredLine, pColor] : HeadingLines)
 				fMeasureOutput("**HEADING**", Line);
@@ -877,10 +872,10 @@ namespace NMib::NBuildSystem
 
 			if (!(_Flags & ERepoListCommitsFlag_Changelog))
 			{
-				DConOutRaw(CStr{(str_utf32("{}{}/¯{sz*,sf¯}¯\\{}\n"_f) << _Prefix << fColor(pBorderColor) << "" << ColumnWidth << fColor(CColors::ms_Default)).f_GetStr()});
-				for (auto & [Line, ColoredLine, pColor] : HeadingLines)
+				DConOutRaw(CStr{(str_utf32("{}{}/¯{sz*,sf¯}¯\\{}\n"_f) << _Prefix << BorderColor << "" << ColumnWidth << Colors.f_Default()).f_GetStr()});
+				for (auto & [Line, ColoredLine, Color] : HeadingLines)
 				{
-					mint NeededLen = ColumnWidth + (ColoredLine.f_GetLen() - CAnsiEncoding::fs_RenderedStrLen(Line));
+					mint NeededLen = ColumnWidth + (ColoredLine.f_GetLen() - CAnsiEncodingParse::fs_RenderedStrLen(Line));
 					CUStr PaddedString = CUStr::CFormat(str_utf32("{sz*,sf ,a-}")) << ColoredLine << NeededLen;
 
 					DConOut2
@@ -888,13 +883,13 @@ namespace NMib::NBuildSystem
 							"{}{2}|{3} {4}{a-,sf }{3} {2}|{3}\n"
 							, _Prefix
 							, PaddedString
-							, fColor(pBorderColor)
-							, fColor(CColors::ms_Default)
-							, fColor(pColor ? pColor : pHeadingColor)
+							, BorderColor
+							, Colors.f_Default()
+							, Color ? Color : HeadingColor
 						)
 					;
 				}
-				DConOutRaw(CStr{(str_utf32("{}{3}|{4} {sz*,sf } {3}|{4}\n"_f) << _Prefix << "" << ColumnWidth << fColor(pBorderColor) << fColor(CColors::ms_Default)).f_GetStr()});
+				DConOutRaw(CStr{(str_utf32("{}{3}|{4} {sz*,sf } {3}|{4}\n"_f) << _Prefix << "" << ColumnWidth << BorderColor << Colors.f_Default()).f_GetStr()});
 				DConOutRaw(ToOutput);
 			}
 		}

@@ -46,7 +46,10 @@ namespace NMib::NBuildSystem
 		if (_Flags & ERepoStatusFlag_UpdateRemotes)
 			fg_UpdateRemotes(*this, FilteredRepositories);
 
-		CGitLaunches Launches{mp_BaseDir, "Getting repo status"};
+		CGitLaunches Launches{mp_BaseDir, "Getting repo status", mp_AnsiFlags};
+
+		CColors Colors(mp_AnsiFlags);
+
 		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
 
@@ -282,10 +285,10 @@ namespace NMib::NBuildSystem
 									Messages.f_Insert
 										(
 											"{}Local{}[{}Commit {}{}]"_f
-											<< CColors::ms_RepositoryName
-											<< CColors::ms_Default
-											<< CColors::ms_ToCommit
-											<< CColors::ms_Default
+											<< Colors.f_RepositoryName()
+											<< Colors.f_Default()
+											<< Colors.f_ToCommit()
+											<< Colors.f_Default()
 											<< State.m_LocalChanges.f_GetLen()
 										)
 									;
@@ -355,8 +358,8 @@ namespace NMib::NBuildSystem
 										RemoteMessages.f_Insert
 											(
 												"{}Push {}{}"_f
-												<< CColors::ms_ToPush
-												<< CColors::ms_Default
+												<< Colors.f_ToPush()
+												<< Colors.f_Default()
 												<< pToPush->f_GetLen()
 											)
 										;
@@ -367,8 +370,8 @@ namespace NMib::NBuildSystem
 										RemoteMessages.f_Insert
 											(
 												"{}Push {}?"_f
-												<< CColors::ms_ToPush
-												<< CColors::ms_Default
+												<< Colors.f_ToPush()
+												<< Colors.f_Default()
 											)
 										;
 									}
@@ -380,10 +383,10 @@ namespace NMib::NBuildSystem
 											RemoteMessages.f_Insert
 												(
 													"{}Pull {}{}{} {}"_f
-													<< CColors::ms_ToPull
-												 	<< DAnsiColor_256(242)
+													<< Colors.f_ToPull()
+												 	<< Colors.f_Foreground256(242)
 												 	<< Repo.m_DefaultUpstreamBranch
-													<< CColors::ms_Default
+													<< Colors.f_Default()
 													<< pToPull->f_GetLen()
 												)
 											;
@@ -393,8 +396,8 @@ namespace NMib::NBuildSystem
 											RemoteMessages.f_Insert
 												(
 													"{}Pull {}{}"_f
-													<< CColors::ms_ToPull
-													<< CColors::ms_Default
+													<< Colors.f_ToPull()
+													<< Colors.f_Default()
 													<< pToPull->f_GetLen()
 												)
 											;
@@ -411,10 +414,11 @@ namespace NMib::NBuildSystem
 									{
 										Messages.f_Insert
 											(
-												"{}{}{}"_f
-												<< DAnsiColor_Reset DAnsiColor_256(248)
+												"{}{}{}{}"_f
+												<< Colors.f_Default()
+											 	<< Colors.f_Foreground256(248)
 												<< RemoteName.f_Trim()
-												<< CColors::ms_Default
+												<< Colors.f_Default()
 											)
 										;
 									}
@@ -423,9 +427,9 @@ namespace NMib::NBuildSystem
 										Messages.f_Insert
 											(
 												"{}{}{}[{}]"_f
-												<< CColors::ms_RepositoryName
+												<< Colors.f_RepositoryName()
 												<< RemoteName.f_Trim()
-												<< CColors::ms_Default
+												<< Colors.f_Default()
 												<< CStr::fs_Join(RemoteMessages, " ")
 											)
 										;
@@ -453,10 +457,10 @@ namespace NMib::NBuildSystem
 									 	OutputType
 									 	, Repo
 									 	, "{}{}{}{} {}"_f
-									 	<< CColors::ms_BranchName
+									 	<< Colors.f_BranchName()
 									 	<< (bIsCurrentBranch ? "*" : " ")
 									 	<< Branch
-									 	<< CColors::ms_Default
+									 	<< Colors.f_Default()
 									 	<< CStr::fs_Join(Messages, " ")
 									)
 								;
@@ -474,9 +478,9 @@ namespace NMib::NBuildSystem
 											OutputType
 											, Repo
 										 	, "   {}Local {}To Commit{}"_f
-											<< CColors::ms_RepositoryName
-											<< CColors::ms_ToCommit
-											<< CColors::ms_Default
+											<< Colors.f_RepositoryName()
+											<< Colors.f_ToCommit()
+											<< Colors.f_Default()
 										)
 									;
 
@@ -487,9 +491,9 @@ namespace NMib::NBuildSystem
 												OutputType
 												, Repo
 												, "      {}{} {}{}"_f
-												<< CColors::ms_ToCommit
+												<< Colors.f_ToCommit()
 											 	<< Change.m_ChangeType
-												<< CColors::ms_Default
+												<< Colors.f_Default()
 											 	<< Change.m_File
 											)
 										;
@@ -508,10 +512,10 @@ namespace NMib::NBuildSystem
 											OutputType
 											, Repo
 										 	, "   {}{} {}To Push{}"_f
-											<< CColors::ms_RepositoryName
+											<< Colors.f_RepositoryName()
 										 	<< RemoteName.f_Trim()
-											<< CColors::ms_ToPush
-											<< CColors::ms_Default
+											<< Colors.f_ToPush()
+											<< Colors.f_Default()
 										)
 									;
 
@@ -522,9 +526,9 @@ namespace NMib::NBuildSystem
 												OutputType
 												, Repo
 											 	, "      {}{} {}{}"_f
-												<< CColors::ms_ToPush
+												<< Colors.f_ToPush()
 											 	<< Commit.m_Hash
-												<< CColors::ms_Default
+												<< Colors.f_Default()
 											 	<< Commit.m_Description
 											)
 										;
@@ -538,10 +542,10 @@ namespace NMib::NBuildSystem
 											OutputType
 											, Repo
 										 	, "   {}{} {}To Push{}"_f
-											<< CColors::ms_RepositoryName
+											<< Colors.f_RepositoryName()
 										 	<< RemoteName.f_Trim()
-											<< CColors::ms_ToPush
-											<< CColors::ms_Default
+											<< Colors.f_ToPush()
+											<< Colors.f_Default()
 										)
 									;
 									Launches.f_Output
@@ -549,8 +553,8 @@ namespace NMib::NBuildSystem
 											OutputType
 											, Repo
 											, "      {}??????? {}Branch missing on remote"_f
-											<< CColors::ms_ToPush
-											<< CColors::ms_Default
+											<< Colors.f_ToPush()
+											<< Colors.f_Default()
 										)
 									;
 								}
@@ -569,13 +573,13 @@ namespace NMib::NBuildSystem
 												OutputType
 												, Repo
 											 	, "   {}{} {}To Pull{} {}{}{}"_f
-												<< CColors::ms_RepositoryName
+												<< Colors.f_RepositoryName()
 												<< RemoteName.f_Trim()
-												<< CColors::ms_ToPull
-												<< CColors::ms_Default
-												<< DAnsiColor_256(242)
+												<< Colors.f_ToPull()
+												<< Colors.f_Default()
+												<< Colors.f_Foreground256(242)
 												<< Repo.m_DefaultUpstreamBranch
-												<< CColors::ms_Default
+												<< Colors.f_Default()
 											)
 										;
 									}
@@ -586,10 +590,10 @@ namespace NMib::NBuildSystem
 												OutputType
 												, Repo
 												, "   {}{} {}To Pull{}"_f
-												<< CColors::ms_RepositoryName
+												<< Colors.f_RepositoryName()
 												<< RemoteName.f_Trim()
-												<< CColors::ms_ToPull
-												<< CColors::ms_Default
+												<< Colors.f_ToPull()
+												<< Colors.f_Default()
 											)
 										;
 									}
@@ -602,9 +606,9 @@ namespace NMib::NBuildSystem
 												OutputType
 												, Repo
 											 	, "      {}{} {}{}"_f
-												<< CColors::ms_ToPull
+												<< Colors.f_ToPull()
 											 	<< Commit.m_Hash
-												<< CColors::ms_Default
+												<< Colors.f_Default()
 											 	<< Commit.m_Description
 											)
 										;
