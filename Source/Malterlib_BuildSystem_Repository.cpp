@@ -1280,6 +1280,7 @@ namespace NMib::NBuildSystem
 			{
 				CByteVector FileData;
 				CFile::fs_WriteStringToVector(FileData, CStr(FileContents), false);
+				CFile::fs_CreateDirectory(CFile::fs_GetPath(RepositoryStateFile));
 				f_WriteFile(FileData, RepositoryStateFile);
 			}
 		}
