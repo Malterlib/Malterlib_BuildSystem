@@ -600,7 +600,13 @@ namespace NMib::NBuildSystem::NRepository
 
 			Launches.f_Launch(Repo, FetchParams, fg_LogAllFunctor(), {}, FetchEnvironment)
 				+ RemoteQueryResults.f_GetResults()
-				> [=](TCAsyncResult<void> &&_FetchResult, TCAsyncResult<TCMap<CStr, TCAsyncResult<void>>> &&_RemoteHeadResults)
+				+ Launches.f_Launch(Repo, {"for-each-ref", "--format=%(upstream:short)", "refs/heads/{}"_f << Repo.m_DefaultBranch})
+				> [=]
+				(
+				 	TCAsyncResult<void> &&_FetchResult
+				 	, TCAsyncResult<TCMap<CStr, TCAsyncResult<void>>> &&_RemoteHeadResults
+				 	, TCAsyncResult<CProcessLaunchActor::CSimpleLaunchResult> &&_TrackingResult
+				)
 				{
 					fg_CombineResults(Promise, fg_Move(_RemoteHeadResults));
 
@@ -608,6 +614,14 @@ namespace NMib::NBuildSystem::NRepository
 						Promise.f_SetException(_FetchResult);
 
 					TCActorResultVector<void> SetHeadResults;
+
+					CStr ExpectedTracking = "origin/{}"_f << Repo.m_DefaultBranch;
+					CStr CurrentTracking = _TrackingResult ? _TrackingResult->f_GetStdOut().f_Trim() : CStr();
+					if (CurrentTracking != ExpectedTracking)
+					{
+						Launches.f_Output(EOutputType_Normal, Repo, "Updating default branch remote tracking branch from {} to {}"_f << CurrentTracking << ExpectedTracking);
+						Launches.f_Launch(Repo, {"branch", "-u", ExpectedTracking, Repo.m_DefaultBranch}, fg_LogAllFunctor()) > SetHeadResults.f_AddResult();
+					}
 
 					for (auto &Remote : *pRemoteHeadBranches)
 					{
