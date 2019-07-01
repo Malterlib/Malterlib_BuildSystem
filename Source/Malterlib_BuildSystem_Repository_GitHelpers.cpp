@@ -533,7 +533,7 @@ namespace NMib::NBuildSystem::NRepository
 		CGitLaunches Launches{_BuildSystem.f_GetBaseDir(), "Fetching remotes" + _ExtraMessage, _BuildSystem.f_AnsiFlags()};
 		Launches.f_MeasureRepos(_FilteredRepositories.m_FilteredRepositories);
 
-		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
+		CCurrentlyProcessingActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
 		TCActorResultVector<void> Results;
 
@@ -625,7 +625,7 @@ namespace NMib::NBuildSystem::NRepository
 							if (!fg_CombineResults(ResultPromise, fg_Move(_SetHeadResults)))
 							{
 								if (!Promise.f_IsSet())
-									ResultPromise > Promise;
+									ResultPromise.f_MoveFuture() > Promise;
 								return;
 							}
 
@@ -638,7 +638,7 @@ namespace NMib::NBuildSystem::NRepository
 				}
 			;
 
-			Promise.f_Dispatch() > Results.f_AddResult();
+			Promise.f_MoveFuture() > Results.f_AddResult();
 		}
 
 		for (auto &Result : Results.f_GetResults().f_CallSync())

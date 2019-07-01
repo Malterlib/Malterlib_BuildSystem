@@ -50,7 +50,7 @@ namespace NMib::NBuildSystem
 
 		CColors Colors(mp_AnsiFlags);
 
-		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
+		CCurrentlyProcessingActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
 
 		bool bOpenEditor = _Flags & ERepoStatusFlag_OpenEditor;
@@ -619,7 +619,7 @@ namespace NMib::NBuildSystem
 							}
 						;
 
-						BranchPromise > BranchResults.f_AddResult();
+						BranchPromise.f_MoveFuture() > BranchResults.f_AddResult();
 					}
 
 					BranchResults.f_GetResults() > Promise / [=](TCVector<TCAsyncResult<bool>> &&_Results)
@@ -656,7 +656,7 @@ namespace NMib::NBuildSystem
 				}
 			;
 
-			Promise > RepoResults.f_AddResult();
+			Promise.f_MoveFuture() > RepoResults.f_AddResult();
 		}
 
 		TCMap<mint, TCVector<CRepository>> EditorsToLaunch;

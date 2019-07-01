@@ -155,7 +155,7 @@ namespace NMib::NBuildSystem
 
 		CGitLaunches Launches{mp_BaseDir, "Listing Commits", mp_AnsiFlags};
 
-		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
+		CCurrentlyProcessingActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
 		CStateHandler StateHandler{mp_BaseDir, mp_OutputDir, mp_AnsiFlags};
 
@@ -354,7 +354,7 @@ namespace NMib::NBuildSystem
 			}
 		).f_CallSync();
 
-		ResolvePromise.f_Dispatch().f_CallSync();
+		ResolvePromise.f_MoveFuture().f_CallSync();
 
 		auto &State = *pState;
 
@@ -385,13 +385,13 @@ namespace NMib::NBuildSystem
 				{
 					TCPromise<TCVector<CLogEntryFull>> Result;
 					Result.f_SetResult(fg_Default());
-					Result > CommitsResults.f_AddResult(Location);
+					Result.f_MoveFuture() > CommitsResults.f_AddResult(Location);
 				}
 
 				{
 					TCPromise<TCVector<CLogEntryFull>> Result;
 					Result.f_SetResult(fg_Default());
-					Result > ReverseCommitsResults.f_AddResult(Location);
+					Result.f_MoveFuture() > ReverseCommitsResults.f_AddResult(Location);
 				}
 				continue;
 			}

@@ -17,7 +17,7 @@ namespace NMib::NBuildSystem
 
 		CGitLaunches Launches{mp_BaseDir, "Running for each repo", mp_AnsiFlags};
 		
-		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
+		CCurrentlyProcessingActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
 
@@ -39,9 +39,9 @@ namespace NMib::NBuildSystem
 				;
 
 				if (_bParallel)
-					Result.f_Dispatch() > Results.f_AddResult();
+					Result.f_MoveFuture() > Results.f_AddResult();
 				else
-					Result.f_Dispatch().f_CallSync();
+					Result.f_MoveFuture().f_CallSync();
 			}
 
 			LaunchResults.f_Insert(Results.f_GetResults().f_CallSync());

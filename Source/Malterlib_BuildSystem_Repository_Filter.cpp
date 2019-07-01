@@ -9,7 +9,7 @@ namespace NMib::NBuildSystem::NRepository
 	{
 		CGitLaunches Launches{_BuildSystem.f_GetBaseDir(), "Filtering repos", _BuildSystem.f_AnsiFlags()};
 
-		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
+		CCurrentlyProcessingActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
 		CFilteredRepos FilteredRepos;
 		FilteredRepos.m_ReposOrdered = fg_GetRepos(_BuildSystem, _Data);
@@ -60,7 +60,7 @@ namespace NMib::NBuildSystem::NRepository
 							> fg_DiscardResult()
 						;
 						TCPromise<bool> ChangedDonePromise;
-						ChangedDonePromise > DeferredResults.f_AddResult(&Repo);
+						ChangedDonePromise.f_Future() > DeferredResults.f_AddResult(&Repo);
 						fg_RepoIsChanged(Launches, Repo, _Flags) > [Launches, ChangedDonePromise](TCAsyncResult<bool> &&_bChanged)
 							{
 								Launches.f_RepoDone();

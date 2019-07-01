@@ -191,7 +191,7 @@ namespace NMib::NBuildSystem
 
 		CColors Colors(mp_AnsiFlags);
 
-		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
+		CCurrentlyProcessingActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
 
@@ -215,7 +215,7 @@ namespace NMib::NBuildSystem
 					RemotesFuture = fg_Explicit(_Remotes);
 
 				TCPromise<bool> LaunchResult;
-				RemotesFuture + fg_GetBranches(Launches, Repo, false)
+				fg_Move(RemotesFuture) + fg_GetBranches(Launches, Repo, false)
 					> LaunchResult / [=](TCVector<CStr> &&_Remotes, CGitBranches &&_Branches)
 					{
 						{
@@ -324,7 +324,7 @@ namespace NMib::NBuildSystem
 					}
 				;
 
-				LaunchResult > Results.f_AddResult();
+				LaunchResult.f_MoveFuture() > Results.f_AddResult();
 			}
 
 			bool bDidPush = false;

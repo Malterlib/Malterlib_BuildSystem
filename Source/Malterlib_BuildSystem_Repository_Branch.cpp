@@ -108,7 +108,7 @@ namespace NMib::NBuildSystem
 
 		CGitLaunches Launches{mp_BaseDir, "Branching repos", mp_AnsiFlags};
 
-		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
+		CCurrentlyProcessingActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
 
@@ -142,7 +142,7 @@ namespace NMib::NBuildSystem
 							LaunchResult.f_SetResult(_Result);
 						}
 					;
-					LaunchResult > Results.f_AddResult();
+					LaunchResult.f_MoveFuture() > Results.f_AddResult();
 				}
 			}
 
@@ -179,7 +179,7 @@ namespace NMib::NBuildSystem
 
 		CGitLaunches Launches{mp_BaseDir, "Unbranching repos", mp_AnsiFlags};
 
-		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
+		CCurrentlyProcessingActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
 
@@ -207,7 +207,7 @@ namespace NMib::NBuildSystem
 							LaunchResult.f_SetResult(_Result);
 						}
 					;
-					LaunchResult > Results.f_AddResult();
+					LaunchResult.f_MoveFuture() > Results.f_AddResult();
 				}
 
 			}
@@ -243,7 +243,7 @@ namespace NMib::NBuildSystem
 
 		CColors Colors(mp_AnsiFlags);
 
-		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
+		CCurrentlyProcessingActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
 
@@ -276,7 +276,7 @@ namespace NMib::NBuildSystem
 
 			auto RepoDoneScope = Launches.f_RepoDoneScope();
 
-			Launches.f_Launch(Repo, Params) + RemotesFuture
+			Launches.f_Launch(Repo, Params) + fg_Move(RemotesFuture)
 				> Promise / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result, TCVector<CStr> &&_Remotes) mutable
 				{
 					TCActorResultVector<void> Results;
@@ -448,7 +448,7 @@ namespace NMib::NBuildSystem
 							}
 						;
 
-						Promise > Results.f_AddResult();
+						Promise.f_MoveFuture() > Results.f_AddResult();
 					}
 
 					Results.f_GetResults() > Promise / [=](TCVector<TCAsyncResult<void>> &&_Results)
@@ -463,7 +463,7 @@ namespace NMib::NBuildSystem
 				}
 			;
 
-			Promise.f_Dispatch() > LaunchResults.f_AddResult();
+			Promise.f_MoveFuture() > LaunchResults.f_AddResult();
 		}
 
 		for (auto &Result : LaunchResults.f_GetResults().f_CallSync())
@@ -493,7 +493,7 @@ namespace NMib::NBuildSystem
 
 		CColors Colors(mp_AnsiFlags);
 
-		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
+		CCurrentlyProcessingActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
 
@@ -519,7 +519,7 @@ namespace NMib::NBuildSystem
 
 			auto RepoDoneScope = Launches.f_RepoDoneScope();
 
-			Launches.f_Launch(Repo, {"tag"}) + RemotesFuture
+			Launches.f_Launch(Repo, {"tag"}) + fg_Move(RemotesFuture)
 				> Promise / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result, TCVector<CStr> &&_Remotes) mutable
 				{
 					TCSet<CStr> Remotes;
@@ -720,7 +720,7 @@ namespace NMib::NBuildSystem
 									}
 								;
 
-								Promise > Results.f_AddResult();
+								Promise.f_MoveFuture() > Results.f_AddResult();
 							}
 
 							Results.f_GetResults() > Promise / [=](TCVector<TCAsyncResult<void>> &&_Results)
@@ -737,7 +737,7 @@ namespace NMib::NBuildSystem
 				}
 			;
 
-			Promise.f_Dispatch() > LaunchResults.f_AddResult();
+			Promise.f_MoveFuture() > LaunchResults.f_AddResult();
 		}
 
 		for (auto &Result : LaunchResults.f_GetResults().f_CallSync())
