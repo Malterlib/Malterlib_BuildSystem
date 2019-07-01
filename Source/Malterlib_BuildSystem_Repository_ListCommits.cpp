@@ -521,6 +521,31 @@ namespace NMib::NBuildSystem
 
 		TCMap<NTime::CTime, TCVector<COutputEntry>> ChangelogEntries;
 
+		auto fColorSection = [&](CUStr const &_String, ch8 const *_pColor = "") -> CUStr
+			{
+				ch32 const *pParse = _String;
+
+				if (*pParse == '[')
+				{
+					while (*pParse && *pParse != ']')
+						++pParse;
+					if (*pParse == ']')
+					{
+						++pParse;
+						mint SectionLen = pParse - _String.f_GetStr();
+						return str_utf32("{2}{}{3}{4}{}"_f)
+							<< _String.f_Left(SectionLen)
+							<< _String.f_Extract(SectionLen)
+							<< Colors.f_Foreground256(39)
+							<< Colors.f_Default()
+							<< _pColor
+						;
+					}
+				}
+				return _String;
+			}
+		;
+
 		for (auto & [Repo, LogEntriesSource] : LogEntriesPerRepoSorted)
 		{
 			auto LogEntries = LogEntriesSource;
@@ -587,27 +612,7 @@ namespace NMib::NBuildSystem
 					mint RenderedLen = CAnsiEncodingParse::fs_RenderedStrLen(_String);
 					mint NeededLen = MaxLengths[_Column] + (StringLen - RenderedLen);
 
-					CUStr PaddedString = CUStr::CFormat(str_utf32("{sz*,sf ,a-}")) << UnicodeString << NeededLen;
-
-					ch32 const *pParse = PaddedString;
-
-					if (*pParse == '[')
-					{
-						while (*pParse && *pParse != ']')
-							++pParse;
-						if (*pParse == ']')
-						{
-							++pParse;
-							mint SectionLen = pParse - PaddedString.f_GetStr();
-							PaddedString = str_utf32("{2}{}{3}{4}{}"_f)
-								<< PaddedString.f_Left(SectionLen)
-								<< PaddedString.f_Extract(SectionLen)
-								<< Colors.f_Foreground256(39)
-								<< Colors.f_Default()
-								<< _pColor
-							;
-						}
-					}
+					CUStr PaddedString = fColorSection(CUStr::CFormat(str_utf32("{sz*,sf ,a-}")) << UnicodeString << NeededLen, _pColor);
 
 					ToOutput += CUStr::CFormat(str_utf32("{1}|{2} {3}{}{2} ")) << PaddedString << BorderColor << Colors.f_Default() << _pColor;
 				}
@@ -908,9 +913,12 @@ namespace NMib::NBuildSystem
 						break;
 
 					if (i != 0)
+					{
 						ToOutput += "{sj*}"_f << "" << (DateStr.f_GetLen() + 1);
-
-					ToOutput += "{}\n"_f << Lines[i].m_String;
+						ToOutput += "{}\n"_f << Lines[i].m_String;
+					}
+					else
+						ToOutput += "{}\n"_f << fColorSection(Lines[i].m_String);
 
 					if (i != 0 && i == nLines - 1)
 						ToOutput += "\n";
