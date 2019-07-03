@@ -172,7 +172,7 @@ namespace NMib::NBuildSystem
 										)
 									)
 								{
-									CStr Error = BranchPromise.m_pData->m_Result.f_GetExceptionStr();
+									CStr Error = BranchPromise.f_MoveResult().f_GetExceptionStr();
 									Launches.f_Output(EOutputType_Error, Repo, "Error getting to push for branch '{}': {}"_f << Branch << Error);
 									return;
 								}
@@ -192,7 +192,7 @@ namespace NMib::NBuildSystem
 										)
 									)
 								{
-									CStr Error = BranchPromise.m_pData->m_Result.f_GetExceptionStr();
+									CStr Error = BranchPromise.f_MoveResult().f_GetExceptionStr();
 									Launches.f_Output(EOutputType_Error, Repo, "Error getting to pull for branch '{}': {}"_f << Branch << Error);
 									return;
 								}
