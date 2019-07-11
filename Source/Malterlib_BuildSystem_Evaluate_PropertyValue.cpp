@@ -1184,12 +1184,18 @@ namespace NMib::NBuildSystem
 			}
 			else if (Function == "FindFilesIn")
 			{
-				if (FunctionParams.f_GetLen() != 1)
+				if (FunctionParams.f_GetLen() < 1)
 					fsp_ThrowError(_Position, "FindIn takes a parameter for the pattern to look for");
 				CStr WholePath = mp_GeneratorInterface->f_GetExpandedPath(Ret, CFile::fs_GetPath(_Position.m_FileName));
 				WholePath = CFile::fs_AppendPath(WholePath, FunctionParams[0]);
 				CFindOptions FindOptions(WholePath, EFileAttrib_File);
-				
+				if (FunctionParams.f_GetLen() > 1)
+				{
+					FunctionParams.f_Remove(0);
+					for (auto &Param : FunctionParams)
+						FindOptions.m_Exclude[Param];
+				}
+
 				auto Files = mp_FindCache.f_FindFiles(FindOptions, true);
 				Ret = CStr();
 				
@@ -1200,11 +1206,17 @@ namespace NMib::NBuildSystem
 			}
 			else if (Function == "FindDirectoriesIn")
 			{
-				if (FunctionParams.f_GetLen() != 1)
+				if (FunctionParams.f_GetLen() < 1)
 					fsp_ThrowError(_Position, "FindIn takes a parameter for the pattern to look for");
 				CStr WholePath = mp_GeneratorInterface->f_GetExpandedPath(Ret, CFile::fs_GetPath(_Position.m_FileName));
 				WholePath = CFile::fs_AppendPath(WholePath, FunctionParams[0]);
 				CFindOptions FindOptions(WholePath, EFileAttrib_Directory);
+				if (FunctionParams.f_GetLen() > 1)
+				{
+					FunctionParams.f_Remove(0);
+					for (auto &Param : FunctionParams)
+						FindOptions.m_Exclude[Param];
+				}
 				auto Files = mp_FindCache.f_FindFiles(FindOptions, true);
 				Ret = CStr();
 				
@@ -1215,11 +1227,17 @@ namespace NMib::NBuildSystem
 			}
 			else if (Function == "FindFilesRecursiveIn")
 			{
-				if (FunctionParams.f_GetLen() != 1)
+				if (FunctionParams.f_GetLen() < 1)
 					fsp_ThrowError(_Position, "FindIn takes a parameter for the pattern to look for");
 				CStr WholePath = mp_GeneratorInterface->f_GetExpandedPath(Ret, CFile::fs_GetPath(_Position.m_FileName));
 				WholePath = CFile::fs_AppendPath(WholePath, FunctionParams[0]);
 				CFindOptions FindOptions(WholePath, EFileAttrib_File, true);
+				if (FunctionParams.f_GetLen() > 1)
+				{
+					FunctionParams.f_Remove(0);
+					for (auto &Param : FunctionParams)
+						FindOptions.m_Exclude[Param];
+				}
 				auto Files = mp_FindCache.f_FindFiles(FindOptions, true);
 				Ret = CStr();
 				
@@ -1230,11 +1248,17 @@ namespace NMib::NBuildSystem
 			}
 			else if (Function == "FindDirectoriesRecursiveIn")
 			{
-				if (FunctionParams.f_GetLen() != 1)
+				if (FunctionParams.f_GetLen() < 1)
 					fsp_ThrowError(_Position, "FindIn takes a parameter for the pattern to look for");
 				CStr WholePath = mp_GeneratorInterface->f_GetExpandedPath(Ret, CFile::fs_GetPath(_Position.m_FileName));
 				WholePath = CFile::fs_AppendPath(WholePath, FunctionParams[0]);
 				CFindOptions FindOptions(WholePath, EFileAttrib_Directory, true);
+				if (FunctionParams.f_GetLen() > 1)
+				{
+					FunctionParams.f_Remove(0);
+					for (auto &Param : FunctionParams)
+						FindOptions.m_Exclude[Param];
+				}
 				auto Files = mp_FindCache.f_FindFiles(FindOptions, true);
 				Ret = CStr();
 				
