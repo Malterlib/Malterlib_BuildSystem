@@ -10,6 +10,7 @@ namespace NMib::NBuildSystem
 	class CMalterlibDependencyTracker
 	{
 	public:
+		CMalterlibDependencyTracker(bool _bUseHash = false);
 
 		void f_AddInputFile(CStr const &_File);
 		void f_AddOutputFile(CStr const &_File);
@@ -31,6 +32,7 @@ namespace NMib::NBuildSystem
 		{
 			CStr m_Path;
 			CTime m_Time;
+			CHashDigest_MD5 m_Digest;
 		};
 		struct CFind : public CDependencyFile
 		{
@@ -45,6 +47,7 @@ namespace NMib::NBuildSystem
 		TCVector<CStr> mp_Outputs;
 		TCVector<CDependencyFile> mp_Inputs;
 		TCVector<CFind> mp_Finds;
+		bool mp_bUseHash = false;
 	};
 }
 

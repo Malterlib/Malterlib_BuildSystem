@@ -25,12 +25,18 @@ namespace NMib::NBuildSystem
 		return Time;
 	}
 
+	CMalterlibDependencyTracker::CMalterlibDependencyTracker(bool _bUseHash)
+		: mp_bUseHash(_bUseHash)
+	{
+	}
 
 	void CMalterlibDependencyTracker::f_AddInputFile(CStr const &_File)
 	{
 		auto & Input = mp_Inputs.f_Insert();
 		Input.m_Path = _File;
 		Input.m_Time = fg_GetTime(_File);
+		if (mp_bUseHash)
+			Input.m_Digest = NFile::CFile::fs_GetFileChecksum(_File);
 	}
 
 	void CMalterlibDependencyTracker::f_AddOutputFile(CStr const &_File)
@@ -64,18 +70,20 @@ namespace NMib::NBuildSystem
 	void CMalterlibDependencyTracker::f_WriteDependencyFile(CStr const &_File)
 	{
 		CStr Contents;
-		for (auto & Output : mp_Outputs)
+		for (auto &Output : mp_Outputs)
 			Contents += CStr::CFormat("Output {}\n") << Output;
 
-		for (auto & File : mp_Inputs)
+		for (auto &File : mp_Inputs)
 		{
-			Contents += CStr::CFormat("File {nfh,sj16,sf0} {nfh,sj16,sf0}") << File.m_Time.f_GetSeconds() << File.m_Time.f_GetFractionInt();
+			if (mp_bUseHash)
+				Contents += CStr::CFormat("FileDigest {nfh,sj16,sf0} {nfh,sj16,sf0} {}") << File.m_Time.f_GetSeconds() << File.m_Time.f_GetFractionInt() << File.m_Digest.f_GetString();
+			else
+				Contents += CStr::CFormat("File {nfh,sj16,sf0} {nfh,sj16,sf0}") << File.m_Time.f_GetSeconds() << File.m_Time.f_GetFractionInt();
 			fg_AddStrSepEscaped(Contents, File.m_Path, ' ', " \"\\");
 			Contents+= "\n";
-
 		}
 
-		for (auto & Find : mp_Finds)
+		for (auto &Find : mp_Finds)
 		{
 			Contents += CStr::CFormat("Directory {} {nfh,sj8,sf0} {} {nfh,sj16,sf0} {nfh,sj16,sf0}") << Find.m_bRecurse << Find.m_Attributes << Find.m_bFollowLinks << Find.m_Time.f_GetSeconds() << Find.m_Time.f_GetFractionInt();
 			fg_AddStrSepEscaped(Contents, Find.m_Path, ' ', " \"\\");
