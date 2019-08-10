@@ -272,7 +272,7 @@ namespace NMib::NBuildSystem::NRepository
 							return;
 						}
 
-						LaunchActor->f_Destroy() > [=, Result = fg_Move(_Result)](auto &&) mutable
+						LaunchActor.f_Destroy() > [=, Result = fg_Move(_Result)](auto &&) mutable
 							{
 								Promise.f_SetResult(fg_Move(Result));
 								return;

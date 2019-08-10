@@ -270,7 +270,7 @@ namespace NMib::NBuildSystem
 				RemotesFuture = fg_GetRemotes(Launches, Repo);
 			}
 			else
-				RemotesFuture = fg_Explicit();
+				RemotesFuture = TCPromise<TCVector<CStr>>() <<= g_Void;
 
 			auto pDeleteLaunchSequencer = (DeleteLaunchSequencers[pRepo] = fg_Construct());
 
@@ -513,7 +513,7 @@ namespace NMib::NBuildSystem
 			if (_Flags & ERepoCleanupTagsFlag_AllRemotes)
 				RemotesFuture = fg_GetRemotes(Launches, Repo);
 			else
-				RemotesFuture = fg_Explicit();
+				RemotesFuture = TCPromise<TCVector<CStr>>() <<= g_Void;
 
 			auto pDeleteLaunchSequencer = (DeleteLaunchSequencers[pRepo] = fg_Construct());
 

@@ -145,18 +145,18 @@ namespace NMib::NBuildSystem::NRepository
 
 	TCFuture<bool> fg_RepoIsChanged(CGitLaunches const &_GitLaunches, CRepository const &_Repo, EFilterRepoFlag _Flags)
 	{
+		TCPromise<bool> Promise;
+
 		CStr GitDirectory = fg_GetGitDataDir(_Repo.m_Location, _Repo.m_Position);
 
 		CStr HeadRef = CFile::fs_ReadStringFromFile(GitDirectory + "/HEAD", true).f_TrimRight("\n");
 		if (HeadRef.f_StartsWith("ref: "))
 		{
 			if (HeadRef != ("ref: refs/heads/{}"_f << _Repo.m_DefaultBranch).f_GetStr())
-				return fg_Explicit(true);
+				return Promise <<= true;
 		}
 		else
-			return fg_Explicit(true);
-
-		TCPromise<bool> Promise;
+			return Promise <<= true;
 
 		CStr RepoName = _Repo.f_GetName();
 

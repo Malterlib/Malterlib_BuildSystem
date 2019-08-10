@@ -384,13 +384,13 @@ namespace NMib::NBuildSystem
 
 				{
 					TCPromise<TCVector<CLogEntryFull>> Result;
-					Result.f_SetResult(fg_Default());
+					Result.f_SetResult(TCVector<CLogEntryFull>());
 					Result.f_MoveFuture() > CommitsResults.f_AddResult(Location);
 				}
 
 				{
 					TCPromise<TCVector<CLogEntryFull>> Result;
-					Result.f_SetResult(fg_Default());
+					Result.f_SetResult(TCVector<CLogEntryFull>());
 					Result.f_MoveFuture() > ReverseCommitsResults.f_AddResult(Location);
 				}
 				continue;

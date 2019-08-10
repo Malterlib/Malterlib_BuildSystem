@@ -212,7 +212,7 @@ namespace NMib::NBuildSystem
 				if (_Remotes.f_IsEmpty())
 					RemotesFuture = fg_GetRemotes(Launches, Repo);
 				else
-					RemotesFuture = fg_Explicit(_Remotes);
+					RemotesFuture = TCPromise<TCVector<CStr>>() <<= _Remotes;
 
 				TCPromise<bool> LaunchResult;
 				fg_Move(RemotesFuture) + fg_GetBranches(Launches, Repo, false)
