@@ -83,6 +83,14 @@ namespace NMib::NBuildSystem
 		if (!f_EvalCondition(_Entity, _Entity.m_Condition))
 		{
 			o_Deleted[&_Entity];
+			_Entity.f_ForEachChild
+				(
+				 	[&](CEntity *_pChild)
+				 	{
+						o_Deleted[_pChild];
+					}
+				)
+			;
 			_Entity.m_pParent->m_ChildEntitiesMap.f_Remove(&_Entity);
 			return;
 		}

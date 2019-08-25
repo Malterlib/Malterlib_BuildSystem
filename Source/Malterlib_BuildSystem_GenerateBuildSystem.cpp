@@ -459,7 +459,7 @@ namespace NMib::NBuildSystem
 																	EntityName = DependencyName;
 																else
 																	fg_Swap(DependencyName, EntityName);
-																
+
 																auto pEntity = &ChildEntity;
 																if (_bRecursive)
 																{

@@ -351,6 +351,15 @@ namespace NMib::NBuildSystem
 		;
 	}
 
+	void CEntity::f_ForEachChild(TCFunction<void (CEntity *_pChild)> const &_fChild)
+	{
+		for (auto &Child : m_ChildEntitiesMap)
+		{
+			_fChild(&Child);
+			Child.f_ForEachChild(_fChild);
+		}
+	}
+
 	void CEntity::f_CopyFrom(CEntity const &_Other, bool _bCopyChildren, CEntityKey const* _pKey, bool _bDirectCopy)
 	{
 		if (_pKey)

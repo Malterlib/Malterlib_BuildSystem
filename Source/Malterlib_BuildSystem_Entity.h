@@ -71,6 +71,7 @@ namespace NMib::NBuildSystem
 		void f_CopyExternal(CEntity const &_Other);
 		void f_CopyFromWithCopyFrom(CEntity const &_Other, bool _bCopyChildren);
 		CProperty &f_AddProperty(CPropertyKey const &_Key, CStr const &_Value, CFilePosition const &_Position);
+		void f_ForEachChild(TCFunction<void (CEntity *_pChild)> const &_fChild);
 
 	private:
 		void fpr_GetPathKey(TCVector<CEntityKey> &_Dest) const;
