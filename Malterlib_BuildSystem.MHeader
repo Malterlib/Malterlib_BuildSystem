@@ -1,4 +1,4 @@
-// Copyright © 2016 Hansoft AB 
+// Copyright © 2016 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 Import "../Core/Lib_Malterlib.MTarget"
@@ -9,7 +9,7 @@ Import "../Core/Lib_Malterlib.MTarget"
 	{
 		MalterlibNoShortcuts false
 	}
-	
+
 	Compile
 	{
 		!!CompileDialect C
@@ -19,7 +19,7 @@ Import "../Core/Lib_Malterlib.MTarget"
 			!!MalterlibBuildSystemEmbedCMake true
 		}
 	}
-	
+
 	%Group BuildSystem
 	{
 		%Group Include
@@ -39,7 +39,7 @@ Import "../Core/Lib_Malterlib.MTarget"
 	%Dependency Lib_Malterlib_Concurrency
 	{
 		Dependency.Indirect true
-	}	
+	}
 	%Dependency Lib_Malterlib_XML
 	{
 		Dependency.Indirect true
@@ -52,7 +52,7 @@ Import "../Core/Lib_Malterlib.MTarget"
 			!DocumentationEnabled true
 		}
 		Dependency.Indirect true
-		
+
 		%Dependency Lib_CMakeLib
 		%Dependency Lib_CMakeServerLib
 		%Dependency Lib_cmlibuv
@@ -61,7 +61,7 @@ Import "../Core/Lib_Malterlib.MTarget"
 		%Dependency Lib_cmliblzma
 		%Dependency Lib_cmbzip2
 		%Dependency Lib_cmexpat
-		%Dependency Lib_cmcompress
+		%Dependency Lib_cmzstd
 		%Dependency Lib_cmcurl
 		%Dependency Lib_cmzlib
 		%Dependency Lib_cmlibrhash
