@@ -54,7 +54,7 @@ namespace NMib::NBuildSystem::NRepository
 					PackedRefs = CFile::fs_ReadStringFromFile(PackedRefFile, true).f_TrimRight("\n");
 			}
 
-			for (auto &Line : PackedRefs.f_SplitLine())
+			for (auto &Line : PackedRefs.f_SplitLine<true>())
 			{
 				if (Line.f_StartsWith("#"))
 					continue;
@@ -215,7 +215,7 @@ namespace NMib::NBuildSystem::NRepository
 
 				TCVector<CLocalFileChange> Changes;
 
-				for (auto &Line : _Result.f_GetStdOut().f_SplitLine())
+				for (auto &Line : _Result.f_GetStdOut().f_SplitLine<true>())
 				{
 					auto &Change = Changes.f_Insert();
 					Change.m_ChangeType = Line.f_Left(2).f_Trim();
@@ -249,7 +249,7 @@ namespace NMib::NBuildSystem::NRepository
 
 				CGitBranches GitBranches;
 
-				for (auto &Line : _Result.f_GetStdOut().f_SplitLine())
+				for (auto &Line : _Result.f_GetStdOut().f_SplitLine<true>())
 				{
 					CStr Branch = Line.f_Extract(2);
 					if (Branch.f_IsEmpty())
@@ -285,13 +285,8 @@ namespace NMib::NBuildSystem::NRepository
 
 				TCVector<CStr> Remotes;
 
-				for (auto &Line : _Result.f_GetStdOut().f_SplitLine())
-				{
-					if (Line.f_IsEmpty())
-						continue;
-
+				for (auto &Line : _Result.f_GetStdOut().f_SplitLine<true>())
 					Remotes.f_Insert(Line);
-				}
 
 				Promise.f_SetResult(fg_Move(Remotes));
 			}
@@ -326,11 +321,8 @@ namespace NMib::NBuildSystem::NRepository
 
 				TCVector<CLogEntry> LogEntries;
 
-				for (auto &Line : _Result.f_GetStdOut().f_SplitLine())
+				for (auto &Line : _Result.f_GetStdOut().f_SplitLine<true>())
 				{
-					if (Line.f_IsEmpty())
-						continue;
-
 					auto &LogEntry = LogEntries.f_Insert();
 					LogEntry.m_Description = Line;
 					LogEntry.m_Hash = fg_GetStrSep(LogEntry.m_Description, " ");
@@ -399,7 +391,7 @@ namespace NMib::NBuildSystem::NRepository
 					}
 				;
 
-				for (auto &Line : _Result.f_GetStdOut().f_SplitLine())
+				for (auto &Line : _Result.f_GetStdOut().f_SplitLine<true>())
 				{
 					if (Line.f_StartsWith("commit "))
 					{
@@ -459,7 +451,7 @@ namespace NMib::NBuildSystem::NRepository
 
 		CStr BranchRef = "refs/heads/{}"_f << _Branch;
 
-		for (auto &Line : PackedRefs.f_SplitLine())
+		for (auto &Line : PackedRefs.f_SplitLine<true>())
 		{
 			if (Line.f_StartsWith("#"))
 				continue;
@@ -579,7 +571,7 @@ namespace NMib::NBuildSystem::NRepository
 					 	, [=](CProcessLaunchActor::CSimpleLaunchResult const &_Result) -> CStr
 					 	{
 							CStr StdOut = _Result.f_GetStdOut();
-							for (auto &Line : StdOut.f_SplitLine())
+							for (auto &Line : StdOut.f_SplitLine<true>())
 							{
 								if (Line.f_StartsWith("ref: refs/heads/") && Line.f_EndsWith("	HEAD"))
 								{

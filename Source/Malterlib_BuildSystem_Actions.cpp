@@ -17,7 +17,7 @@ namespace NMib::NBuildSystem
 		if (auto pValue = _Params.f_GetMember("RepoBranch"))
 			Filter.m_Branch = pValue->f_String();
 		if (auto pValue = _Params.f_GetMember("RepoTags"))
-			Filter.m_Tags.f_AddContainer(pValue->f_String().f_Split(";"));
+			Filter.m_Tags.f_AddContainer(pValue->f_String().f_Split<true>(";"));
 		if (auto pValue = _Params.f_GetMember("RepoOnlyChanged"))
 			Filter.m_bOnlyChanged = pValue->f_Boolean();
 

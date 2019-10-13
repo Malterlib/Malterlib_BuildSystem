@@ -713,7 +713,7 @@ namespace NMib::NBuildSystem
 							auto fResolveConflicts = [&](CStr const &_ConflictingFiles) -> bool
 								{
 									bool bAllResolved = true;
-									for (auto &File : _ConflictingFiles.f_SplitLine())
+									for (auto &File : _ConflictingFiles.f_SplitLine<true>())
 									{
 										CStr FullPath = CFile::fs_AppendPath(_Repo.m_Location, File);
 
@@ -902,26 +902,22 @@ namespace NMib::NBuildSystem
 				Repo.m_URL = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "URL");
 				Repo.m_DefaultBranch = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "DefaultBranch");
 				Repo.m_DefaultUpstreamBranch = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "DefaultUpstreamBranch");
-				Repo.m_Tags.f_AddContainer(_BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "Tags").f_Split(";"));
+				Repo.m_Tags.f_AddContainer(_BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "Tags").f_Split<true>(";"));
 				Repo.m_Tags.f_Remove("");
 				Repo.m_Submodule = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "Submodule");
 				Repo.m_SubmoduleName = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "SubmoduleName");
 				Repo.m_Type = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "Type");
 				Repo.m_UserName = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "UserName");
 				Repo.m_UserEmail = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "UserEmail");
-				Repo.m_ProtectedBranches.f_AddContainer(_BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "ProtectedBranches").f_Split(";"));
+				Repo.m_ProtectedBranches.f_AddContainer(_BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "ProtectedBranches").f_Split<true>(";"));
 				Repo.m_ProtectedBranches.f_Remove("");
-				Repo.m_ProtectedTags.f_AddContainer(_BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "ProtectedTags").f_Split(";"));
+				Repo.m_ProtectedTags.f_AddContainer(_BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "ProtectedTags").f_Split<true>(";"));
 				Repo.m_ProtectedTags.f_Remove("");
 				Repo.m_bUpdateSubmodules = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "UpdateSubmodules") == "true";
 
 				TCVector<CStr> NoPushRemotes;
-				for (auto &Wildcard : _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "NoPushRemotes").f_Split(";"))
-				{
-					if (Wildcard.f_IsEmpty())
-						continue;
+				for (auto &Wildcard : _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "NoPushRemotes").f_Split<true>(";"))
 					NoPushRemotes.f_Insert(Wildcard);
-				}
 
 				CStr Remotes = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "Remotes");
 				while (!Remotes.f_IsEmpty())
@@ -938,7 +934,7 @@ namespace NMib::NBuildSystem
 					auto &OutRemote = Repo.m_Remotes[Name];
 					OutRemote.m_URL = URL;
 
-					for (auto ValueString : RemoteString.f_Split(","))
+					for (auto ValueString : RemoteString.f_Split<true>(","))
 					{
 						CStr Key = fg_GetStrSep(ValueString, "=");
 						if (Key == "Write")

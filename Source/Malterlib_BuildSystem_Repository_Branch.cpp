@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Repository.h"
@@ -284,16 +284,16 @@ namespace NMib::NBuildSystem
 					TCSet<CStr> Remotes;
 					Remotes.f_AddContainer(_Remotes);
 
-					auto FullBranches = _Result.f_GetStdOut().f_SplitLine();
+					auto FullBranches = _Result.f_GetStdOut().f_SplitLine<true>();
 
 					TCSet<CStr> LoggedRemote;
 
-					for (auto &FullBranch : _Result.f_GetStdOut().f_SplitLine())
+					for (auto &FullBranch : _Result.f_GetStdOut().f_SplitLine<true>())
 					{
 						if (FullBranch.f_IsEmpty())
 							continue;
 
-						auto Components = FullBranch.f_Split("/");
+						auto Components = FullBranch.f_Split<true>("/");
 
 						CStr Remote;
 						CStr Branch;
@@ -402,7 +402,7 @@ namespace NMib::NBuildSystem
 								if (!bIsInDefault)
 								{
 									bool bAllEquals = true;
-									for (auto &Line : _ResultRebase.f_GetStdOut().f_Trim().f_SplitLine())
+									for (auto &Line : _ResultRebase.f_GetStdOut().f_Trim().f_SplitLine<true>())
 									{
 										if (!Line.f_StartsWith("= "))
 											bAllEquals = false;
@@ -525,7 +525,7 @@ namespace NMib::NBuildSystem
 					TCSet<CStr> Remotes;
 					Remotes.f_AddContainer(_Remotes);
 
-					auto FullTags = _Result.f_GetStdOut().f_SplitLine();
+					auto FullTags = _Result.f_GetStdOut().f_SplitLine<true>();
 
 					TCActorResultMap<CStr, CProcessLaunchActor::CSimpleLaunchResult> RemoteTagsResults;
 					for (auto &Remote : Remotes)
@@ -594,7 +594,7 @@ namespace NMib::NBuildSystem
 									}
 								}
 
-								for (auto &Line : (*LaunchResult).f_GetStdOut().f_SplitLine())
+								for (auto &Line : (*LaunchResult).f_GetStdOut().f_SplitLine<true>())
 								{
 									CStr Hash;
 									CStr Tag;
@@ -613,10 +613,8 @@ namespace NMib::NBuildSystem
 								}
 							}
 
-							for (auto &Tag : _Result.f_GetStdOut().f_SplitLine())
+							for (auto &Tag : _Result.f_GetStdOut().f_SplitLine<true>())
 							{
-								if (Tag.f_IsEmpty())
-									continue;
 								if (ReferencedTags.f_FindEqual(Tag))
 								{
 									if (_Flags & ERepoCleanupTagsFlag_Verbose)
@@ -674,7 +672,7 @@ namespace NMib::NBuildSystem
 										if (!bIsInDefault)
 										{
 											bool bAllEquals = true;
-											for (auto &Line : _ResultRebase.f_GetStdOut().f_Trim().f_SplitLine())
+											for (auto &Line : _ResultRebase.f_GetStdOut().f_Trim().f_SplitLine<true>())
 											{
 												if (!Line.f_StartsWith("= "))
 													bAllEquals = false;

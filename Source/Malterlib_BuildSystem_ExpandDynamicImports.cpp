@@ -176,7 +176,7 @@ namespace NMib::NBuildSystem
 		CStr CmakeConfig = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_Config");
 		CStr CmakeVariables = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_Variables");
 
-		TCVector<CStr> CmakeExcludeFromHash = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_ExcludeFromHash").f_Split(";");
+		TCVector<CStr> CmakeExcludeFromHash = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_ExcludeFromHash").f_Split<true>(";");
 
 		CStr HashContents = fg_Format("Config (Not checked): {}\n", f_EvaluateEntityProperty(_Entity, EPropertyType_Property, "FullConfiguration"));
 		auto fAddStringHash = [&](CHash_SHA512 &o_DependenciesHash, CStr const &_String, ch8 const *_pVariableName, bool _bPerformExclude)

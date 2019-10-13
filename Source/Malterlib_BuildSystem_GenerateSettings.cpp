@@ -28,7 +28,7 @@ namespace NMib::NBuildSystem
 		m_bReconcileForce = _Params["ReconcileForce"].f_Boolean();
 		m_bReconcileNoOptions = _Params["ReconcileNoOptions"].f_Boolean();
 
-		for (auto &RepoOptions : _Params["Reconcile"].f_String().f_Split(","))
+		for (auto &RepoOptions : _Params["Reconcile"].f_String().f_Split<true>(","))
 		{
 			CStr WildCard;
 			CStr ActionStr;
@@ -49,7 +49,7 @@ namespace NMib::NBuildSystem
 			m_ReconcileActions[WildCard] = Action;
 		}
 
-		for (auto &RepoOptions : _Params["ReconcileRemoved"].f_String().f_Split(","))
+		for (auto &RepoOptions : _Params["ReconcileRemoved"].f_String().f_Split<true>(","))
 		{
 			CStr WildCard;
 			CStr ActionStr;
