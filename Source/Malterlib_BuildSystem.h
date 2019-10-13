@@ -10,6 +10,7 @@
 #include <Mib/Concurrency/ThreadSafeQueue>
 #include <Mib/Concurrency/AsyncResult>
 #include <Mib/Concurrency/ParallellForEach>
+#include <Mib/Concurrency/DistributedApp>
 #include <Mib/CommandLine/AnsiEncoding>
 
 namespace NMib::NBuildSystem
@@ -246,6 +247,7 @@ namespace NMib::NBuildSystem
 			 	, uint32 _MaxCommitsMainRepo
 			 	, uint32 _MaxCommits
 			 	, uint32 _MaxMessageWidth
+				, CDistributedAppCommandLineClient const &_CommandLineClient
 			)
 		;
 

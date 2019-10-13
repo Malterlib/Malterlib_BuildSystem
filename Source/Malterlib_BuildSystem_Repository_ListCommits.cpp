@@ -4,6 +4,7 @@
 #include "Malterlib_BuildSystem_Repository.h"
 
 #include <Mib/CommandLine/AnsiEncodingParse>
+#include <Mib/CommandLine/TableRenderer>
 
 namespace NMib::NBuildSystem
 {
@@ -31,80 +32,6 @@ namespace NMib::NBuildSystem
 
 			return Lines;
 		}
-
-		TCVector<CUStr> fg_LineBreak(CUStr const &_String, mint _Length)
-		{
-			if (_String.f_Trim().f_IsEmpty())
-				return {""};
-
-			// Combining Diacritical Marks (0300–036F), since version 1.0, with modifications in subsequent versions down to 4.1
-			// Combining Diacritical Marks Extended (1AB0–1AFF), version 7.0
-			// Combining Diacritical Marks Supplement (1DC0–1DFF), versions 4.1 to 5.2
-			// Combining Diacritical Marks for Symbols (20D0–20FF), since version 1.0, with modifications in subsequent versions down to 5.1
-			// Combining Half Marks (FE20–FE2F), versions 1.0, with modifications in subsequent versions down to 8.0
-
-			ch32 const *pParse = _String;
-			ch32 const *pParseStart = pParse;
-			ch32 const *pLastWord = nullptr;
-
-			mint Len = 0;
-			mint MaxLen = _Length;
-
-			TCVector<CUStr> Output;
-
-			auto fOutputLine = [&](ch32 const *_pStart, mint _Len)
-				{
-					Output.f_Insert(CUStr{_pStart, _Len});
-				}
-			;
-
-			while (*pParse)
-			{
-				ch32 Char = *pParse;
-				++pParse;
-				++Len;
-				while
-					(
-						(Char >= 0x0300 && Char <= 0x036F)
-						|| (Char >= 0x1AB0 && Char <= 0x1AFF)
-						|| (Char >= 0x1DC0 && Char <= 0x1DFF)
-						|| (Char >= 0x20D0 && Char <= 0x20FF)
-						|| (Char >= 0xFE20 && Char <= 0xFE2F)
-					)
-				{
-					Char = *pParse;
-					if (!Char)
-						break;
-					++pParse;
-				}
-				if (Len == MaxLen)
-				{
-					if (pLastWord)
-					{
-						fOutputLine(pParseStart, pLastWord - pParseStart);
-						pParseStart = pLastWord;
-						while (fg_CharIsWhiteSpace(*pParseStart))
-							++pParseStart;
-						pParse = pParseStart;
-					}
-					else
-					{
-						fOutputLine(pParseStart, pParse - pParseStart);
-						pParseStart = pParse;
-					}
-
-					pLastWord = nullptr;
-					Len = 0;
-				}
-				if (fg_CharIsWhiteSpace(Char))
-					pLastWord = pParse;
-			}
-
-			if (pParseStart != pParse)
-				fOutputLine(pParseStart, pParse - pParseStart);
-
-			return Output;
-		}
 	}
 
 	CBuildSystem::ERetry CBuildSystem::f_Action_Repository_ListCommits
@@ -119,6 +46,7 @@ namespace NMib::NBuildSystem
 		 	, uint32 _MaxCommitsMainRepo
 		 	, uint32 _MaxCommits
 		 	, uint32 _MaxMessageWidth
+			, CDistributedAppCommandLineClient const &_CommandLineClient
 		)
 	{
 		CGenerateEphemeralState GenerateState;
@@ -160,8 +88,6 @@ namespace NMib::NBuildSystem
 		CStateHandler StateHandler{mp_BaseDir, mp_OutputDir, mp_AnsiFlags};
 
 		CColors Colors(mp_AnsiFlags);
-
-		bool bCompact = _Flags & ERepoListCommitsFlag_Compact;
 
 		TCVector<TCAsyncResult<void>> LaunchResults;
 
@@ -453,7 +379,8 @@ namespace NMib::NBuildSystem
 		MaxColumnWidth["Author/Commit time"] = 20;
 		for (auto &Wildcard : WildcardColumns)
 			MaxColumnWidth[Wildcard.m_Name] = Wildcard.m_MaxWidth;
-		MaxColumnWidth["Message"] = _MaxMessageWidth;
+		if (_MaxMessageWidth > 0)
+			MaxColumnWidth["Message"] = _MaxMessageWidth;
 
 		struct CLogEntry : public CLogEntryFull
 		{
@@ -513,13 +440,7 @@ namespace NMib::NBuildSystem
 				LogEntriesPerRepoSorted.f_Insert({Repo, fGetLogEntries(*LogEntriesResult, *ReverseLogEntriesPerRepo[Repo], RelativePath)});
 		}
 
-		struct COutputEntry
-		{
-			CStr m_String;
-			CStr m_Color;
-		};
-
-		TCMap<NTime::CTime, TCVector<COutputEntry>> ChangelogEntries;
+		TCMap<NTime::CTime, CStr> ChangelogEntries;
 
 		auto fColorSection = [&](CUStr const &_String, ch8 const *_pColor = "") -> CUStr
 			{
@@ -545,6 +466,8 @@ namespace NMib::NBuildSystem
 				return _String;
 			}
 		;
+
+		TCVector<CTableRenderHelper> TableRenderers;
 
 		for (auto & [Repo, LogEntriesSource] : LogEntriesPerRepoSorted)
 		{
@@ -584,39 +507,25 @@ namespace NMib::NBuildSystem
 					RelativePath = "~" + (*pRepository)->m_Identity;
 			}
 
-			TCMap<CStr, zuint32> MaxLengths;
-
-			for (auto &Column : Columns)
+			CTableRenderHelper &TableRenderer = TableRenderers.f_Insert(_CommandLineClient.f_TableRenderer());
 			{
-				if (bCompact)
-					MaxLengths[Column] = CAnsiEncodingParse::fs_RenderedStrLen(Column);
-				else
-					MaxLengths[Column] = MaxColumnWidth[Column];
+				TCVector<CStr> Headings;
+				TCVector<TCTuple<int32, uint32>> MaxColumnWidths;
+				for (auto &Column : Columns)
+				{
+					mint iColumn = Headings.f_GetLen();
+					Headings.f_Insert(Column);
+					if (auto *pMaxWidth = MaxColumnWidth.f_FindEqual(Column))
+						MaxColumnWidths.f_Insert({iColumn, *pMaxWidth});
+				}
+
+				TableRenderer.f_AddHeadingsVector(Headings);
+
+				for (auto &Column : MaxColumnWidths)
+					TableRenderer.f_SetMaxColumnWidth(fg_Get<0>(Column), fg_Get<1>(Column));
 			}
 
-			auto fMeasureOutput = [&](CStr const &_Column, CStr const &_String, ch8 const *_pColor = "")
-				{
-					MaxLengths[_Column] = fg_Max(MaxLengths[_Column], CAnsiEncodingParse::fs_RenderedStrLen(_String));
-				}
-			;
-
-			CStr BorderColor = Colors.f_Foreground256(240);
-			CStr HeadingColor = Colors.f_Bold();
 			CStr CommitterColor = Colors.f_Foreground256(244);
-
-			CUStr ToOutput;
-			auto fRealOutput = [&](CStr const &_Column, CStr const &_String, ch8 const *_pColor = "")
-				{
-					CUStr UnicodeString = _String;
-					mint StringLen = UnicodeString.f_GetLen();
-					mint RenderedLen = CAnsiEncodingParse::fs_RenderedStrLen(_String);
-					mint NeededLen = MaxLengths[_Column] + (StringLen - RenderedLen);
-
-					CUStr PaddedString = fColorSection(CUStr::CFormat(str_utf32("{sz*,sf ,a-}")) << UnicodeString << NeededLen, _pColor);
-
-					ToOutput += CUStr::CFormat(str_utf32("{1}|{2} {3}{}{2} ")) << PaddedString << BorderColor << Colors.f_Default() << _pColor;
-				}
-			;
 
 			auto fStripEmail = [](CStr const &_String) -> CStr
 				{
@@ -629,201 +538,93 @@ namespace NMib::NBuildSystem
 				}
 			;
 
-			enum EDivider
+			for (auto &LogEntry : LogEntries)
 			{
-				EDivider_Top
-				, EDivider_Middle
-				, EDivider_Bottom
-			};
-
-			auto fOutputDivider = [&](EDivider _Type)
+				CStr CommitColor = Colors.f_Foreground256(11);
+				CStr CommitColorWarning = Colors.f_Foreground256(11) + Colors.f_Bold();
+				if (LogEntry.m_bReverse)
 				{
-					ToOutput += _Prefix;
-					ToOutput += BorderColor;
-
-					switch (_Type)
-					{
-					case EDivider_Top:
-						{
-							bool bFirst = true;
-							for (auto &Column : Columns)
-							{
-								ToOutput += str_utf32("|¯{sz*,sf¯}¯"_f) << "" << MaxLengths[Column];
-
-								bFirst = false;
-							}
-							ToOutput += "\\\n";
-							break;
-						}
-					case EDivider_Middle:
-						{
-							bool bFirst = true;
-							for (auto &Column : Columns)
-							{
-								ToOutput += str_utf32("|-{sz*,sf-}-"_f) << "" << MaxLengths[Column];
-
-								bFirst = false;
-							}
-							ToOutput += "|\n";
-							break;
-						}
-					case EDivider_Bottom:
-						{
-							bool bFirst = true;
-							for (auto &Column : Columns)
-							{
-								if (bFirst)
-									ToOutput += str_utf32("\\_{sz*,sf_}_"_f) << "" << MaxLengths[Column];
-								else
-									ToOutput += str_utf32("|_{sz*,sf_}_"_f) << "" << MaxLengths[Column];
-
-								bFirst = false;
-							}
-							ToOutput += "/\n";
-							break;
-						}
-					}
-
-					ToOutput += Colors.f_Default();
+					CommitColor = Colors.f_Foreground256(9);
+					CommitColorWarning = Colors.f_Foreground256(9) + Colors.f_Bold();
 				}
-			;
 
-			auto fOutputAll = [&, Repo = Repo](auto &&_fOutput, bool _bReal) -> void
+				TCVector<CStr> RowValues;
+
+				if (LogEntry.m_AuthorDate.f_IsValid())
 				{
-					for (auto &LogEntry : LogEntries)
-					{
-						TCMap<CStr, TCVector<COutputEntry>> ColumnOutput;
-						mint TallestColumn = 0;
-
-						auto fAddColumnOutput = [&](CStr const &_Column, CStr const &_Value, CStr _Color = {})
-							{
-								auto &Output = ColumnOutput[_Column];
-								bool bWasMultiple = false;
-								auto Lines = fg_MergeLines(_Value.f_SplitLine());
-								for (auto &LongLine : Lines)
-								{
-									if (bWasMultiple && !LongLine.f_Trim().f_IsEmpty())
-										Output.f_Insert().m_Color = _Color;
-
-									auto NewLines = fg_LineBreak(LongLine, MaxColumnWidth[_Column]);
-									bWasMultiple = NewLines.f_GetLen() > 1;
-
-									for (auto &Line : NewLines)
-									{
-										auto &Entry = Output.f_Insert();
-										Entry.m_String = Line;
-										Entry.m_Color = _Color;
-									}
-								}
-								TallestColumn = fg_Max(TallestColumn, Output.f_GetLen());
-
-								if (_bReal && _Column == "Message")
-									ChangelogEntries[LogEntry.m_AuthorDate].f_Insert(Output);
-							}
-						;
-
-						CStr CommitColor = Colors.f_Foreground256(11);
-						CStr CommitColorWarning = Colors.f_Foreground256(11) + Colors.f_Bold();
-						if (LogEntry.m_bReverse)
-						{
-							CommitColor = Colors.f_Foreground256(9);
-							CommitColorWarning = Colors.f_Foreground256(9) + Colors.f_Bold();
-						}
-
-						if (LogEntry.m_AuthorDate.f_IsValid())
-						{
-							if (LogEntry.m_bReverse && !Colors.f_Color())
-								fAddColumnOutput("Commit", "-{}"_f << LogEntry.m_Commit, CommitColor);
-							else
-								fAddColumnOutput("Commit", LogEntry.m_Commit, CommitColor);
-						}
-						else
-						{
-							if (_bReal)
-								ChangelogEntries[LogEntry.m_AuthorDate].f_Insert(COutputEntry{"{}:\n{}\n"_f << Repo << LogEntry.m_Commit});
-
-							if (LogEntry.m_Message == "Error")
-								fAddColumnOutput("Commit", LogEntry.m_Commit, Colors.f_StatusError());
-							else
-								fAddColumnOutput("Commit", LogEntry.m_Commit, CommitColorWarning);
-						}
-
-						fAddColumnOutput("Author/Committer", fStripEmail(LogEntry.m_Author));
-						fAddColumnOutput("Author/Committer", fStripEmail(LogEntry.m_Committer), CommitterColor);
-						fAddColumnOutput("Author/Commit time", "{tc6}"_f << LogEntry.m_AuthorDate);
-						fAddColumnOutput("Author/Commit time", "{tc6}"_f << LogEntry.m_CommitterDate, CommitterColor);
-						CStr Message = LogEntry.m_Message;
-
-						for (auto &Wildcard : WildcardColumns)
-						{
-							auto &Column = Wildcard.m_Name;
-							CStr NewMessage;
-							for (auto &Line : Message.f_SplitLine())
-							{
-								ch8 const *pLine = Line.f_GetStr();
-								if (NStr::fg_StrMatchWildcardParse(pLine, Wildcard.m_Wildcard.f_GetStr()) & NStr::EMatchWildcardResult_PatternExhausted)
-								{
-									if (Wildcard.m_bIncludeMatch)
-										fAddColumnOutput(Column, Line);
-									else
-										fAddColumnOutput(Column, pLine);
-									continue;
-								}
-								fg_AddStrSep(NewMessage, Line, "\n");
-							}
-							Message = NewMessage.f_Trim();
-						}
-
-						fAddColumnOutput("Message", Message);
-
-						for (mint i = 0; i < TallestColumn; ++i)
-						{
-							if (_bReal)
-								ToOutput += _Prefix;
-							for (auto &Column : Columns)
-							{
-								auto &Output = ColumnOutput[Column];
-								if (!Output.f_IsPosValid(i))
-								{
-									_fOutput(Column, "");
-									continue;
-								}
-
-								_fOutput(Column, Output[i].m_String, Output[i].m_Color);
-							}
-							if (_bReal)
-								ToOutput += str_utf32("{}|{}\n"_f) << BorderColor << Colors.f_Default();
-						}
-						if (_bReal && (&LogEntry != &LogEntries.f_GetLast()))
-							fOutputDivider(EDivider_Middle);
-					}
+					if (LogEntry.m_bReverse && !Colors.f_Color())
+						RowValues.f_Insert("{1}-{}{2}"_f << LogEntry.m_Commit << CommitColor << Colors.f_Default());
+					else
+						RowValues.f_Insert("{1}{}{2}"_f << LogEntry.m_Commit << CommitColor << Colors.f_Default());
 				}
-			;
-			fOutputAll(fMeasureOutput, false);
+				else
+				{
+					ChangelogEntries[LogEntry.m_AuthorDate] += "{}:\n{}\n"_f << Repo << LogEntry.m_Commit;
 
-			fOutputDivider(EDivider_Top);
+					if (LogEntry.m_Message == "Error")
+						RowValues.f_Insert("{1}{}{2}"_f << LogEntry.m_Commit << Colors.f_StatusError() << Colors.f_Default());
+					else
+						RowValues.f_Insert("{1}{}{2}"_f << LogEntry.m_Commit << CommitColorWarning << Colors.f_Default());
+				}
 
-			ToOutput += _Prefix;
-			for (auto &Column : Columns)
-			{
-				ToOutput += str_utf32("{2}|{3} {4}{sz*,sf ,a-}{3} "_f)
-					<< Column
-					<< MaxLengths[Column]
-					<< BorderColor
-					<< Colors.f_Default()
-					<< HeadingColor
+				RowValues.f_Insert
+					(
+						"{}\n{2}{}{3}"_f
+						<< fStripEmail(LogEntry.m_Author)
+						<< fStripEmail(LogEntry.m_Committer)
+						<< CommitterColor
+						<< Colors.f_Default()
+					)
 				;
+				RowValues.f_Insert
+					(
+						"{tc6}\n{2}{tc6}{3}"_f
+						<< LogEntry.m_AuthorDate
+						<< LogEntry.m_CommitterDate
+						<< CommitterColor
+						<< Colors.f_Default()
+					)
+				;
+
+				auto fCleanupLines = [](CStr const &_Value)
+					{
+						return fg_MergeLines(_Value.f_SplitLine());
+					}
+				;
+
+				CStr Message = LogEntry.m_Message;
+
+				for (auto &Wildcard : WildcardColumns)
+				{
+					CStr NewMessage;
+					TCVector<CStr> ColumnValue;
+					for (auto &Line : Message.f_SplitLine())
+					{
+						ch8 const *pLine = Line.f_GetStr();
+						if (NStr::fg_StrMatchWildcardParse(pLine, Wildcard.m_Wildcard.f_GetStr()) & NStr::EMatchWildcardResult_PatternExhausted)
+						{
+							if (Wildcard.m_bIncludeMatch)
+								ColumnValue.f_Insert(fCleanupLines(Line));
+							else
+								ColumnValue.f_Insert(fCleanupLines(pLine));
+							continue;
+						}
+						fg_AddStrSep(NewMessage, Line, "\n");
+					}
+
+					Message = NewMessage.f_Trim();
+
+					RowValues.f_Insert(fColorSection(CStr::fs_Join(ColumnValue, "\n")));
+				}
+
+				Message = CStr::fs_Join(fCleanupLines(Message), "\n");
+
+				ChangelogEntries[LogEntry.m_AuthorDate] += Message;
+
+				RowValues.f_Insert(fColorSection(Message));
+
+				TableRenderer.f_AddRowVector(RowValues);
 			}
-			ToOutput += str_utf32("{}|{}\n"_f) << BorderColor << Colors.f_Default();
-
-			fOutputDivider(EDivider_Middle);
-
-			fOutputAll(fRealOutput, true);
-
-			fOutputDivider(EDivider_Bottom);
-			ToOutput += str_utf32("{0}\n{0}\n"_f) << _Prefix;
-
-			TCVector<TCTuple<CStr, CStr, CStr>> HeadingLines;
 
 			if (RelativePath == ".")
 			{
@@ -848,83 +649,58 @@ namespace NMib::NBuildSystem
 
 				mint MaxLen = fg_Max(_From.f_GetLen(), _To.f_GetLen());
 
-				HeadingLines.f_Insert
-					(
-						{
-							"From {a-,sj*,sf }  {}"_f << _From << MaxLen << FromHash
-							, "From {3}{a-,sj*,sf }  {4}{}"_f << _From << MaxLen << FromHash << Colors.f_ToPush() << Colors.f_Foreground256(246)
-							, Colors.f_Default()
-						}
-					)
-				;
-				HeadingLines.f_Insert
-					(
-						{
-							"To   {a-,sj*,sf }  {}"_f << _To << MaxLen << ToHash
-							, "To   {3}{a-,sj*,sf }  {4}{}"_f << _To << MaxLen << ToHash << Colors.f_ToPush() << Colors.f_Foreground256(246)
-							, Colors.f_Default()
-						}
-					)
-				;
+				CStr Description;
+				Description += "{5}From {3}{a-,sj*,sf }  {4}{}\n"_f << _From << MaxLen << FromHash << Colors.f_ToPush() << Colors.f_Foreground256(246) << Colors.f_Default();
+				Description += "{5}To   {3}{a-,sj*,sf }  {4}{}"_f << _To << MaxLen << ToHash << Colors.f_ToPush() << Colors.f_Foreground256(246) << Colors.f_Default();
+
+				TableRenderer.f_AddDescription(Description);
 			}
 			else
-				HeadingLines.f_Insert({RelativePath, RelativePath, ""});
-
-			for (auto & [Line, ColoredLine, pColor] : HeadingLines)
-				fMeasureOutput("**HEADING**", Line);
-
-			mint ColumnWidth = MaxLengths["**HEADING**"];
-
-			if (!(_Flags & ERepoListCommitsFlag_Changelog))
-			{
-				DConOutRaw(CStr{(str_utf32("{}{}/¯{sz*,sf¯}¯\\{}\n"_f) << _Prefix << BorderColor << "" << ColumnWidth << Colors.f_Default()).f_GetStr()});
-				for (auto & [Line, ColoredLine, Color] : HeadingLines)
-				{
-					mint NeededLen = ColumnWidth + (ColoredLine.f_GetLen() - CAnsiEncodingParse::fs_RenderedStrLen(Line));
-					CUStr PaddedString = CUStr::CFormat(str_utf32("{sz*,sf ,a-}")) << ColoredLine << NeededLen;
-
-					DConOut2
-						(
-							"{}{2}|{3} {4}{a-,sf }{3} {2}|{3}\n"
-							, _Prefix
-							, PaddedString
-							, BorderColor
-							, Colors.f_Default()
-							, Color ? Color : HeadingColor
-						)
-					;
-				}
-				DConOutRaw(CStr{(str_utf32("{}{3}|{4} {sz*,sf } {3}|{4}\n"_f) << _Prefix << "" << ColumnWidth << BorderColor << Colors.f_Default()).f_GetStr()});
-				DConOutRaw(ToOutput);
-			}
+				TableRenderer.f_AddDescription("{1}{2}{}{1}"_f << RelativePath << Colors.f_Default() << Colors.f_Bold());
 		}
 
 		if (_Flags & ERepoListCommitsFlag_Changelog)
 		{
-			for (auto &Lines : ChangelogEntries)
+			for (auto &Entry : ChangelogEntries)
 			{
-				auto &Date = ChangelogEntries.fs_GetKey(Lines);
+				auto &Date = ChangelogEntries.fs_GetKey(Entry);
+				auto Lines = Entry.f_SplitLine();
 				CStr DateStr = "{tc6}"_f << Date;
 				mint nLines = Lines.f_GetLen();
 				CStr ToOutput = "{} "_f << DateStr;
 				for (mint i = 0; i < nLines; ++i)
 				{
-					if (Lines[i].m_String == "Copied from Perforce")
+					if (Lines[i] == "Copied from Perforce")
 						break;
 
 					if (i != 0)
 					{
 						ToOutput += "{sj*}"_f << "" << (DateStr.f_GetLen() + 1);
-						ToOutput += "{}\n"_f << Lines[i].m_String;
+						ToOutput += "{}\n"_f << Lines[i];
 					}
 					else
-						ToOutput += "{}\n"_f << fColorSection(Lines[i].m_String);
+						ToOutput += "{}\n"_f << fColorSection(Lines[i]);
 
 					if (i != 0 && i == nLines - 1)
 						ToOutput += "\n";
 				}
 				DConOutRaw(ToOutput);
 			}
+		}
+		else
+		{
+			if (!(_Flags & ERepoListCommitsFlag_Compact))
+			{
+				CTableRenderHelper TempRenderer(nullptr, CTableRenderHelper::EOption_None, EAnsiEncodingFlag_None, 0);
+				for (auto &TableRenderer : TableRenderers)
+					TempRenderer.f_MergeColumnWidths(TableRenderer);
+
+				for (auto &TableRenderer : TableRenderers)
+					TableRenderer.f_MergeColumnWidths(TempRenderer);
+			}
+
+			for (auto &TableRenderer : TableRenderers)
+				TableRenderer.f_Output();
 		}
 
 		return ERetry_None;
