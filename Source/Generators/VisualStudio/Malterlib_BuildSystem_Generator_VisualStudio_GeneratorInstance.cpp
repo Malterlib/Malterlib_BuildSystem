@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Generator_VisualStudio.h"
@@ -43,16 +43,16 @@ namespace NMib::NBuildSystem::NVisualStudio
 		case 2012: VSVersion = 110; break;
 		case 2013: VSVersion = 120; break;
 		case 2015: VSVersion = 140; break;
-		case 2017: 
+		case 2017:
 			{
 #ifdef DPlatformFamily_Windows
 				NMib::NPlatform::CWin32_Registry Registry;
-				
+
 				CStr Path = Registry.f_Read_Str("SOFTWARE\\WOW6432Node\\Microsoft\\VisualStudio\\SxS\\VS7", "15.0");
 				return s_Path = Path;
 #endif
 			}
-		case 2019: 
+		case 2019:
 			{
 #ifdef DPlatformFamily_Windows
 				CStr ProgramData = m_BuildSystem.f_GetEnvironmentVariable("ProgramData");
@@ -97,7 +97,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 				if (BestPath.f_IsEmpty())
 					DError("Failed to find Visual Studio 2019 path. {}\n"_f << Errors);
-				
+
 				return s_Path = BestPath;
 #endif
 			}
@@ -130,7 +130,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		auto pEntity = _BuildSystemData.m_RootEntity.m_ChildEntitiesMap.f_FindEqual(Key);
 		if (!pEntity)
 			m_BuildSystem.fs_ThrowError(CFilePosition(), "No VisualStudio2012 generator settings found");
-		
+
 		_BuildSystem.f_EvaluateData(m_GeneratorSettingsData, _InitialValues, pEntity, nullptr, nullptr, true, true);
 
 		auto pSettings = m_GeneratorSettingsData.m_RootEntity.m_ChildEntitiesMap.f_FindEqual(Key);
@@ -153,7 +153,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 				}
 				Path = CFile::fs_GetPath(Path);
 			}
-		}		
+		}
 		else if (EnableSourceControl == "true")
 			m_bEnableSourceControl = true;
 
@@ -166,7 +166,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 	CSystemEnvironment CGeneratorInstance::f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const
 	{
-#ifndef DPlatformFamily_Windows
+#if !defined(DPlatformFamily_Windows)
 		return fg_GetSys()->f_Environment();
 #else
 		if (_Platform != "Windows")
@@ -223,24 +223,22 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 		CStr NewPaths;
 		CStr CurrentPaths = Environment["PATH"];
+		TCVector<CStr> ExtraPaths;
 		while (!CurrentPaths.f_IsEmpty())
 		{
 			CStr Path = fg_GetStrSep(CurrentPaths, ";");
 
-			if (Path.f_FindNoCase("\\Git\\") >= 0)
+			if (Path.f_FindNoCase("\\Git\\") >= 0 || Path.f_FindNoCase("\\Strawberry\\c\\") >= 0 || Path.f_FindNoCase("\\Gnu32\\") >= 0 || Path.f_FindNoCase("\\GnuWin32\\") >= 0)
+			{
+				ExtraPaths.f_Insert(Path);
 				continue;
-			if (Path.f_FindNoCase("\\Strawberry\\c\\") >= 0)
-				continue;
-			if (Path.f_FindNoCase("\\Gnu32\\") >= 0)
-				continue;
-			if (Path.f_FindNoCase("\\GnuWin32\\") >= 0)
-				continue;
+			}
 			fg_AddStrSep(NewPaths, Path, ";");
 		}
 		Environment["PATH"] = NewPaths;
 		Params.m_Environment = Environment;
 		Params.m_bMergeEnvironment = false;
-		
+
 		CStr Output = CProcessLaunch::fs_LaunchTool("cmd.exe", {"/c", fg_Format("vcvarsall.bat {} & set", VSArchitecture)}, Params);
 
 		Environment.f_Clear();
@@ -257,6 +255,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 				continue;
 			Environment[Key] = Line;
 		}
+
+		Environment["PATH"] = CStr::fs_Join(ExtraPaths, ";") + ";" + Environment["PATH"];
 
 		{
 			DLock(m_GetEnvironmentLock);
