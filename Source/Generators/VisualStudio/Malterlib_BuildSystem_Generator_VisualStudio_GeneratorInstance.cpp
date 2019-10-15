@@ -256,7 +256,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			Environment[Key] = Line;
 		}
 
-		Environment["PATH"] = CStr::fs_Join(ExtraPaths, ";") + ";" + Environment["PATH"];
+		Environment["PATH"] = Environment["PATH"] + ";" + CStr::fs_Join(ExtraPaths, ";");
 
 		{
 			DLock(m_GetEnvironmentLock);
