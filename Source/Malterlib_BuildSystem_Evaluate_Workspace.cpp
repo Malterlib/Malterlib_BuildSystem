@@ -164,6 +164,8 @@ namespace NMib::NBuildSystem
 								*Mapped = &ChildEntity;
 							}
 							break;
+						default:
+							break;
 						}
 					}
 				}
@@ -261,6 +263,8 @@ namespace NMib::NBuildSystem
 						{
 							fp_EvaluateTarget(_Destination, _Targets, ToEval, ChildEntity);
 						}
+						break;
+					default:
 						break;
 					}
 				}

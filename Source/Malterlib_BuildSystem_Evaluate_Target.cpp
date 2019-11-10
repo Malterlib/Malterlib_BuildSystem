@@ -44,6 +44,8 @@ namespace NMib::NBuildSystem
 						return &ChildEntity;
 				}
 				break;
+			default:
+				break;
 			}
 		}
 		return nullptr;

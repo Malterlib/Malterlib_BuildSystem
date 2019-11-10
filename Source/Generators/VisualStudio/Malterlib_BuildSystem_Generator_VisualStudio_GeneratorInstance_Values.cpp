@@ -349,6 +349,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 				switch (PropertiesValue.m_Validity)
 				{
+				case EPropertyValidity_Any:
+					break;
 				case EPropertyValidity_File:
 					{
 						if (!_bFile)

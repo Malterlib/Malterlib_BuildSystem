@@ -104,40 +104,36 @@ namespace NMib::NBuildSystem
 				, _AddAttribs
 				, [&](CFile::EDiffCopyChange _Change, CStr const &_Source, CStr const &_Destination, CStr const &_Link)
 				{
-					switch (_Change)
+					if (_Change == CFile::EDiffCopyChange_FileChanged)
 					{
-					case CFile::EDiffCopyChange_FileChanged:
+						EFileAttrib Attributes = CFile::fs_GetAttributes(_Destination);
+
+						if ((Attributes & EFileAttrib_ReadOnly) || (!(Attributes & EFileAttrib_UserWrite) && (mp_SupportedAttributes & EFileAttrib_UserWrite)))
 						{
-							EFileAttrib Attributes = CFile::fs_GetAttributes(_Destination);
-
-							if ((Attributes & EFileAttrib_ReadOnly) || (!(Attributes & EFileAttrib_UserWrite) && (mp_SupportedAttributes & EFileAttrib_UserWrite)))
+							bool bSuccess = false;
+							// Perforce checkout
+							try
 							{
-								bool bSuccess = false;
-								// Perforce checkout
-								try
+								CPerforceClientThrow Client;
+								if (CPerforceClientThrow::fs_GetFromP4Config(_Destination, Client))
 								{
-									CPerforceClientThrow Client;
-									if (CPerforceClientThrow::fs_GetFromP4Config(_Destination, Client))
-									{
-										Client.f_OpenForEdit(_Destination);
-										DConOut("Opened file for edit in Perforce: {}{\n}", _Destination);
-										bSuccess = true;
-									}
-								}
-								catch (NException::CException const &_Error)
-								{
-									CStr Error = _Error.f_GetErrorStr();
-									DConErrOut("Failed to checkout via Perforce:{\n}{}{\n}", Error);
-								}
-
-								if (!bSuccess)
-								{
-									DConOut2("Removed file write protection: {}{\n}", _Destination);
-									CFile::fs_SetAttributes(_Destination, (Attributes & ~EFileAttrib_ReadOnly)  | (mp_SupportedAttributes & EFileAttrib_UserWrite) | mp_ValidAttributes);
+									Client.f_OpenForEdit(_Destination);
+									DConOut("Opened file for edit in Perforce: {}{\n}", _Destination);
+									bSuccess = true;
 								}
 							}
+							catch (NException::CException const &_Error)
+							{
+								CStr Error = _Error.f_GetErrorStr();
+								DConErrOut("Failed to checkout via Perforce:{\n}{}{\n}", Error);
+							}
+
+							if (!bSuccess)
+							{
+								DConOut2("Removed file write protection: {}{\n}", _Destination);
+								CFile::fs_SetAttributes(_Destination, (Attributes & ~EFileAttrib_ReadOnly)  | (mp_SupportedAttributes & EFileAttrib_UserWrite) | mp_ValidAttributes);
+							}
 						}
-						break;
 					}
 					return CFile::EDiffCopyChangeAction_Perform;
 				}

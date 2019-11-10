@@ -40,37 +40,34 @@ namespace NMib::NBuildSystem
 					for (auto iEntity = ConfigData.m_Evaluated.m_RootEntity.m_ChildEntitiesOrdered.f_GetIterator(); iEntity; ++iEntity)
 					{
 						auto &Entity = *iEntity;
-						switch (Entity.m_Key.m_Type)
+						if (Entity.m_Key.m_Type != EEntityType_Workspace)
+							continue;
+
+						CStr Enabled = f_EvaluateEntityProperty(Entity, EPropertyType_Workspace, "Enabled");
+						if (Enabled == "false")
+							continue;
+
+						CStr Name = f_EvaluateEntityProperty(Entity, EPropertyType_Workspace, "Name");
+
+						if (Name.f_IsEmpty())
+							fs_ThrowError(Entity.m_Position, "No name specified for workspace");
+
+						auto &Workspace = ConfigData.m_Workspaces[Name];
+						Workspace.m_pEntity = fg_Explicit(&Entity);
+						CStr EntityName = Entity.m_Key.m_Name;
+
+						if (Workspace.m_EntityName.f_IsEmpty())
+							Workspace.m_EntityName = EntityName;
+						else if (Workspace.m_EntityName != EntityName)
 						{
-						case EEntityType_Workspace:
-							{
-								CStr Enabled = f_EvaluateEntityProperty(Entity, EPropertyType_Workspace, "Enabled");
-								if (Enabled == "false")
-									continue;
-								
-								CStr Name = f_EvaluateEntityProperty(Entity, EPropertyType_Workspace, "Name");
-
-								if (Name.f_IsEmpty())
-									fs_ThrowError(Entity.m_Position, "No name specified for workspace");
-
-								auto &Workspace = ConfigData.m_Workspaces[Name];
-								Workspace.m_pEntity = fg_Explicit(&Entity);
-								CStr EntityName = Entity.m_Key.m_Name;
-								
-								if (Workspace.m_EntityName.f_IsEmpty())
-									Workspace.m_EntityName = EntityName;
-								else if (Workspace.m_EntityName != EntityName)
-								{
-									fs_ThrowError
-										(
-											Entity.m_Position
-											, CStr::CFormat("A entity with this name already exists ({} != {})") 
-											<< EntityName
-											<< Workspace.m_EntityName
-										)
-									;
-								}
-							}
+							fs_ThrowError
+								(
+									Entity.m_Position
+									, CStr::CFormat("A entity with this name already exists ({} != {})")
+									<< EntityName
+									<< Workspace.m_EntityName
+								)
+							;
 						}
 					}
 					
@@ -194,6 +191,8 @@ namespace NMib::NBuildSystem
 												{
 													fl_AddTarget(ChildEntity, _pParentGroup);
 												}
+												break;
+											default:
 												break;
 											}
 										}
@@ -441,6 +440,8 @@ namespace NMib::NBuildSystem
 																	{
 																		Dependencies.f_InsertLast(fg_Tuple(&ChildEntity, false));
 																	}
+																	break;
+																default:
 																	break;
 																}
 															}
@@ -854,6 +855,8 @@ namespace NMib::NBuildSystem
 																	_Target.m_RootGroup.m_Children.f_Insert(File);
 																
 															}
+															break;
+														default:
 															break;
 														}
 													}
