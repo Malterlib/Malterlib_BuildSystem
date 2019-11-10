@@ -68,7 +68,7 @@ namespace NMib::NBuildSystem
 {
 	namespace
 	{
-		TCAggregate<CMutual> g_SubmoduleAddLock = {DAggregateInit};
+		constinit TCAggregate<CMutual> g_SubmoduleAddLock = {DAggregateInit};
 	}
 
 	namespace NRepository
