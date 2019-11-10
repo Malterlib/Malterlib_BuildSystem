@@ -480,6 +480,10 @@ namespace NMib::NBuildSystem
 				Entities.f_Insert(&NewEntity);
 			}
 			break;
+		case EEntityType_Invalid:
+		case EEntityType_Root:
+			DMibNeverGetHere;
+			break;
 		}
 
 		for (auto iReg = _Registry.f_GetChildIterator(); iReg; ++iReg)

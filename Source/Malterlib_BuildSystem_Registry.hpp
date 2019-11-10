@@ -22,17 +22,17 @@ namespace NMib::NContainer
 
 			NEncoding::CJSON f_ParseEvalStringToken(uch8 const *&o_pParse) const;
 			NEncoding::CJSON f_ParseIdentifierToken(uch8 const *&o_pParse) const;
-			NEncoding::CJSON f_ParseFunctionToken(uch8 const *&o_pParse, NEncoding::CJSON *_pFirstParam, NStr::CStr const &_FunctionName) const;
-			NEncoding::CJSON f_ParseEvalString(uch8 const *&o_pParse) const;
-			NEncoding::CJSON f_ParseExpression(uch8 const *&o_pParse, NStr::CStr const &_TokenType) const;
+			NEncoding::CJSON f_ParseFunctionToken(uch8 const *&o_pParse, NEncoding::CJSON *_pFirstParam, NStr::CStr const &_FunctionName);
+			NEncoding::CJSON f_ParseEvalString(uch8 const *&o_pParse);
+			NEncoding::CJSON f_ParseExpression(uch8 const *&o_pParse, NStr::CStr const &_TokenType);
 			NStr::CStr f_ParseIdentifier(uch8 const *&o_pParse) const;
 
 			static void fs_GenerateExpression(NStr::CStr &o_String, NEncoding::CJSON const &_Token, bool _bQuoteStrings, mint _Depth);
 
 			template <typename tf_CParseContext>
-			void f_ParseKey(NStr::CStr &o_Key, uch8 const *&o_pParse) const;
+			void f_ParseKey(NStr::CStr &o_Key, uch8 const *&o_pParse);
 
-			bool f_ParseValue(NEncoding::CJSON &o_Value, uch8 const *&o_pParse) const;
+			bool f_ParseValue(NEncoding::CJSON &o_Value, uch8 const *&o_pParse);
 
 			template <typename tf_CParseContext, typename tf_CStr>
 			static bool fs_GenerateValue(tf_CStr &o_String, NEncoding::CJSON const &_Value, mint _Depth, ch8 const *_pPrettySeparator);

@@ -8,8 +8,8 @@
 namespace NMib::NBuildSystem
 {
 	CFilePosition::CFilePosition(CRegistryPreserveAll const &_Position)
-		: m_FileName(_Position.f_GetFile())
-		, m_Line(_Position.f_GetLine())
+		: m_FileName(_Position.f_GetLocation().m_File)
+		, m_Line(_Position.f_GetLocation().m_Line)
 	{
 	}
 
@@ -20,8 +20,8 @@ namespace NMib::NBuildSystem
 
 	CFilePosition &CFilePosition::operator = (CRegistryPreserveAll const &_Position)
 	{
-		m_FileName = _Position.f_GetFile();
-		m_Line = _Position.f_GetLine();
+		m_FileName = _Position.f_GetLocation().m_File;
+		m_Line = _Position.f_GetLocation().m_Line;
 		return *this;
 	}
 }

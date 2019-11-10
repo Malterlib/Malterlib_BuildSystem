@@ -17,7 +17,7 @@ namespace NMib::NContainer
 		(
 		 	CStr &o_Key
 		 	, uch8 const *&o_pParse
-		) const
+		)
 	{
 		auto pParse = o_pParse;
 		if (*pParse == '`')
@@ -36,7 +36,7 @@ namespace NMib::NContainer
 			if (*pParse == ':')
 			{
 				o_Key = "<<";
-				o_Key.f_SetUserData(ERegistryStringType_NoQuote);
+				o_Key.f_SetUserData(EJSONStringType_NoQuote);
 				o_pParse = pParse;
 				return;
 			}
@@ -52,7 +52,7 @@ namespace NMib::NContainer
 		 	, CStr const &_Key
 		)
 	{
-		if (_Key.f_GetUserData() == ERegistryStringType_NoQuote && _Key == "<<")
+		if (_Key.f_GetUserData() == EJSONStringType_NoQuote && _Key == "<<")
 		{
 			o_String += "<<";
 			return;
@@ -67,7 +67,7 @@ namespace NMib::NContainer
 		 	, CStr const &_Value
 		)
 	{
-		if (_Value.f_GetUserData() == ERegistryStringType_Custom)
+		if (_Value.f_GetUserData() == EJSONStringType_Custom)
 		{
 			fg_GenerateJSONString<'`', CJSONParseContext>(o_String, _Value);
 			return;

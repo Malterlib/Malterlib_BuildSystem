@@ -12,7 +12,7 @@ namespace NMib::NContainer
 	using namespace NBuildSystem;
 	using namespace NStr;
 
-	bool TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParseValue(CJSON &o_Value, uch8 const *&o_pParse) const
+	bool TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParseValue(CJSON &o_Value, uch8 const *&o_pParse)
 	{
 		auto pParse = o_pParse;
 		if (*pParse == '`')

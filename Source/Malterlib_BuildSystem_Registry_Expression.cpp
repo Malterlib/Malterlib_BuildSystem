@@ -12,7 +12,7 @@ namespace NMib::NContainer
 	using namespace NBuildSystem;
 	using namespace NStr;
 
-	CJSON TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParseEvalString(uch8 const *&o_pParse) const
+	CJSON TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParseEvalString(uch8 const *&o_pParse)
 	{
 		CJSON Value;
 
@@ -200,7 +200,7 @@ namespace NMib::NContainer
 		return Return.f_ToJSON();
 	}
 
-	CJSON TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParseFunctionToken(uch8 const *&o_pParse, CJSON *_pFirstParam, NStr::CStr const &_FunctionName) const
+	CJSON TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParseFunctionToken(uch8 const *&o_pParse, CJSON *_pFirstParam, NStr::CStr const &_FunctionName)
 	{
 		auto *pParse = o_pParse;
 		if (*pParse != '(')
@@ -261,7 +261,7 @@ namespace NMib::NContainer
 		return Return.f_ToJSON();
 	}
 
-	CJSON TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParseExpression(uch8 const *&o_pParse, NStr::CStr const &_TokenType) const
+	CJSON TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParseExpression(uch8 const *&o_pParse, NStr::CStr const &_TokenType)
 	{
 		auto *pParse = o_pParse;
 		if (*pParse != '(')

@@ -43,6 +43,6 @@ namespace NMib::NBuildSystem
 
 	void CBuildSystem::fsp_ThrowError(CRegistryPreserveAll const &_Registry, CStr const &_Error)
 	{
-		DMibError((NMib::NStr::CStr::CFormat(DMibPFileLineFormat " {}") << _Registry.f_GetFile() << _Registry.f_GetLine() << _Error).f_GetStr());
+		DMibError((NMib::NStr::CStr::CFormat(DMibPFileLineFormat " {}") << _Registry.f_GetLocation().m_File << _Registry.f_GetLocation().m_Line << _Error).f_GetStr());
 	}
 }

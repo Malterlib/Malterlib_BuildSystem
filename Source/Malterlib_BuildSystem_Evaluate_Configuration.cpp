@@ -202,12 +202,12 @@ namespace NMib::NBuildSystem
 
 		for (auto iProp = TempData.m_RootEntity.m_PropertiesEvalOrder.f_GetIterator(); iProp; ++iProp)
 		{
-			if (iProp->m_pRegistry->f_GetFile() == mp_UserSettingsFileLocal)
+			if (iProp->m_pRegistry->f_GetLocation().m_File == mp_UserSettingsFileLocal)
 			{
 				auto Mapped = mp_UserSettingsLocal.m_Properties(iProp->m_Key);
 				*Mapped = iProp->m_pRegistry;
 			}
-			if (iProp->m_pRegistry->f_GetFile() == mp_UserSettingsFileGlobal)
+			if (iProp->m_pRegistry->f_GetLocation().m_File == mp_UserSettingsFileGlobal)
 			{
 				auto Mapped = mp_UserSettingsGlobal.m_Properties(iProp->m_Key);
 				*Mapped = iProp->m_pRegistry;

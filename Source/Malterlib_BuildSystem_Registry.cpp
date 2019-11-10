@@ -153,7 +153,7 @@ namespace NMib::NContainer
 		Context.m_pStartParse = (uch8 const *)o_ParseContext.f_GetStartParse();
 		if (!Context.m_pStartParse)
 			Context.m_pStartParse = pParse;
-		Context.m_FileName = o_ParseContext.f_GetFile();
+		Context.m_FileName = o_ParseContext.m_File;
 		Context.m_bConvertNullToSpace = false;
 		Context.m_bAllowUndefined = true;
 

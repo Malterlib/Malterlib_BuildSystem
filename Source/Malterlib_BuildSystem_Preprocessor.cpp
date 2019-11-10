@@ -23,7 +23,7 @@ namespace NMib::NBuildSystem
 	void CBuildSystemPreprocessor::fsp_ThrowError(CRegistryPreserveAll const &_Registry, CStr const &_Error)
 	{
 		CStr Format = DMibPFileLineFormat " " + _Error;
-		DMibError((NMib::NStr::CStr::CFormat(Format) << _Registry.f_GetFile() << _Registry.f_GetLine()).f_GetStr());
+		DMibError((NMib::NStr::CStr::CFormat(Format) << _Registry.f_GetLocation().m_File << _Registry.f_GetLocation().m_Line).f_GetStr());
 	}
 
 	void CBuildSystemPreprocessor::fpr_FindFilesRecursive(CRegistryPreserveAll &_Registry, TCVector<CStr> &o_Files, CStr const &_Path, CStr const &_ToFind)
