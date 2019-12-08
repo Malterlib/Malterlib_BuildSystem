@@ -12,7 +12,7 @@ Import "../Core/Lib_Malterlib.MTarget"
 
 	Compile
 	{
-		!!CompileDialect C
+		!!CompileDialect "C"
 		PrefixHeader "@('Source/Malterlib_BuildSystem.h'->MakeAbsolute())"
 		PreprocessorDefines "DMalterlibBuildSystem_EmbedCMake;@(Compile.PreprocessorDefines)"
 		{
@@ -20,9 +20,9 @@ Import "../Core/Lib_Malterlib.MTarget"
 		}
 	}
 
-	%Group BuildSystem
+	%Group "BuildSystem"
 	{
-		%Group Include
+		%Group "Include"
 		{
 			Compile.Type "C++"
 			{
@@ -31,20 +31,20 @@ Import "../Core/Lib_Malterlib.MTarget"
 			%File "Include/Mib/BuildSystem/^*"
 		}
 		%File "Source/^*"
-		%Group Documentation
+		%Group "Documentation"
 		{
 			%File "Documentation/*"
 		}
 	}
-	%Dependency Lib_Malterlib_Concurrency
+	%Dependency "Lib_Malterlib_Concurrency"
 	{
 		Dependency.Indirect true
 	}
-	%Dependency Lib_Malterlib_XML
+	%Dependency "Lib_Malterlib_XML"
 	{
 		Dependency.Indirect true
 	}
-	%Group EmbedCMake
+	%Group "EmbedCMake"
 	{
 		&
 		{
@@ -53,19 +53,19 @@ Import "../Core/Lib_Malterlib.MTarget"
 		}
 		Dependency.Indirect true
 
-		%Dependency Lib_CMakeLib
-		%Dependency Lib_CMakeServerLib
-		%Dependency Lib_cmlibuv
-		%Dependency Lib_cmjsoncpp
-		%Dependency Lib_cmlibarchive
-		%Dependency Lib_cmliblzma
-		%Dependency Lib_cmbzip2
-		%Dependency Lib_cmexpat
-		%Dependency Lib_cmzstd
-		%Dependency Lib_cmcurl
-		%Dependency Lib_cmzlib
-		%Dependency Lib_cmlibrhash
-		%Dependency Lib_cmsys
+		%Dependency "Lib_CMakeLib"
+		%Dependency "Lib_CMakeServerLib"
+		%Dependency "Lib_cmlibuv"
+		%Dependency "Lib_cmjsoncpp"
+		%Dependency "Lib_cmlibarchive"
+		%Dependency "Lib_cmliblzma"
+		%Dependency "Lib_cmbzip2"
+		%Dependency "Lib_cmexpat"
+		%Dependency "Lib_cmzstd"
+		%Dependency "Lib_cmcurl"
+		%Dependency "Lib_cmzlib"
+		%Dependency "Lib_cmlibrhash"
+		%Dependency "Lib_cmsys"
 	}
 }
 
