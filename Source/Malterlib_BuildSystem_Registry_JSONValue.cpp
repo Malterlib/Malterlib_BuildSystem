@@ -50,6 +50,11 @@ namespace NMib::NContainer
 		return false;
 	}
 
+	bool TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParseAfterValue(CJSON &o_Value, uch8 const *&o_pParse)
+	{
+		return false;
+	}
+
 	template <>
 	void TCRegistry_CustomValue<CBuildSystemRegistryValue>::fs_Generate<CStr>
 		(

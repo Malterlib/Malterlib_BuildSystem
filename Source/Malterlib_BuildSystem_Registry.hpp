@@ -33,6 +33,7 @@ namespace NMib::NContainer
 			void f_ParseKey(NStr::CStr &o_Key, uch8 const *&o_pParse);
 
 			bool f_ParseValue(NEncoding::CJSON &o_Value, uch8 const *&o_pParse);
+			bool f_ParseAfterValue(NEncoding::CJSON &o_Value, uch8 const *&o_pParse);
 
 			template <typename tf_CParseContext, typename tf_CStr>
 			static bool fs_GenerateValue(tf_CStr &o_String, NEncoding::CJSON const &_Value, mint _Depth, ch8 const *_pPrettySeparator);
