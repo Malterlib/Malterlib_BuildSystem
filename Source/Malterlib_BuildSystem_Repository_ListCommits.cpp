@@ -508,6 +508,7 @@ namespace NMib::NBuildSystem
 			}
 
 			CTableRenderHelper &TableRenderer = TableRenderers.f_Insert(_CommandLineClient.f_TableRenderer());
+			TableRenderer.f_SetPrefix(_Prefix);
 			{
 				TCVector<CStr> Headings;
 				TCVector<TCTuple<int32, uint32>> MaxColumnWidths;
