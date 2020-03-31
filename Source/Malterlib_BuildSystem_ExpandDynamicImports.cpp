@@ -167,7 +167,7 @@ namespace NMib::NBuildSystem
 #endif
 
 		// Dependent variables
-		CStr GeneratorVersion = "12";
+		CStr GeneratorVersion = "13";
 		CStr GeneratorFullRebuildVersion = "3";
 		CStr FullRebuildVersion = "{}-{}"_f << f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_FullRebuildVersion") << GeneratorFullRebuildVersion;
 		CStr CacheExcludePatterns = f_EvaluateEntityProperty(_Entity, EPropertyType_Import, "CMake_CacheExcludePatterns");
