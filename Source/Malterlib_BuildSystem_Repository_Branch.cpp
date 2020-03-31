@@ -683,7 +683,7 @@ namespace NMib::NBuildSystem
 												bIsInDefault = true;
 											}
 										}
-										if (!bIsInDefault && !(_Flags & ERepoCleanupBranchesFlag_Force))
+										if (!bIsInDefault && !(_Flags & ERepoCleanupTagsFlag_Force))
 										{
 											Launches.f_Output(EOutputType_Error, Repo, "{} - not fully merged"_f << Tag.f_GetName());
 											Promise.f_SetResult();
