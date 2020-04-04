@@ -539,6 +539,8 @@ namespace NMib::NBuildSystem::NRepository
 			TCPromise<void> Promise;
 
 			TCVector<CStr> FetchParams = {"fetch", "--all", "--prune", "--tags", "-q"};
+			if (_BuildSystem.f_GetGenerateOptions().m_bForceUpdateRemotes)
+				FetchParams.f_Insert("--force");
 
 			struct CBranchState
 			{

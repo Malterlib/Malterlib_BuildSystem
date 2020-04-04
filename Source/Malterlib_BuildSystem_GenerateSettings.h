@@ -53,5 +53,6 @@ namespace NMib::NBuildSystem
 		bool m_bReconcileForce = false;
 		bool m_bReconcileNoOptions = false;
 		bool m_bSkipUpdate = false;
+		bool m_bForceUpdateRemotes = true;
 	};
 }

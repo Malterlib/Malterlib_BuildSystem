@@ -523,7 +523,11 @@ namespace NMib::NBuildSystem
 					}
 					fOutputInfo(EOutputType_Normal, "Adding remote '{}={}'"_f << RemoteName << Remote.m_URL);
 					fLaunchGit({"remote", "add", RemoteName, Remote.m_URL}, Location);
-					fLaunchGit({"fetch", "--tags", RemoteName}, Location);
+
+					if (_BuildSystem.f_GetGenerateOptions().m_bForceUpdateRemotes)
+						fLaunchGit({"fetch", "--tags", "--force", RemoteName}, Location);
+					else
+						fLaunchGit({"fetch", "--tags", RemoteName}, Location);
 				}
 				if (bForceReset)
 				{
@@ -563,6 +567,8 @@ namespace NMib::NBuildSystem
 						if (!fLaunchGitQuestion({"cat-file", "-e", "{}^{{commit}"_f << ConfigHash}, Location, false))
 						{
 							TCVector<CStr> FetchParams = {"fetch", "--all", "--prune", "--tags"};
+							if (_BuildSystem.f_GetGenerateOptions().m_bForceUpdateRemotes)
+								FetchParams.f_Insert("--force");
 
 							if (bForceReset && fg_GetGitVersion() >= CGitVersion{2, 17})
 								FetchParams.f_Insert("--prune-tags");
