@@ -3,78 +3,6 @@
 
 #include "Malterlib_BuildSystem_Repository.h"
 
-namespace NMib::NBuildSystem::NRepository
-{
-	CBranchSettings::CBranchSettings(CStr const &_OutputDir)
-		: m_OutputDir(_OutputDir)
-	{
-	}
-
-	void CBranchSettings::f_WriteSettings()
-	{
-		if (!m_bDirty)
-			return;
-
-		CStr BranchSettingsFile = "{}/BranchSettings.json"_f << m_OutputDir;
-
-		CEJSON SettingsJson = EJSONType_Object;
-
-		for (auto &Branch : m_Branches)
-		{
-			auto &OutBranch = SettingsJson[Branch.f_GetType()];
-			OutBranch["BranchName"] = Branch.m_Name;
-			OutBranch["OnlyChanged"] = Branch.m_bOnlyChanged;
-		}
-
-		CByteVector FileData;
-		CFile::fs_WriteStringToVector(FileData, SettingsJson.f_ToString());
-
-		CFile::fs_CreateDirectory(CFile::fs_GetPath(BranchSettingsFile));
-		CFile::fs_CopyFileDiff(FileData, BranchSettingsFile, CTime::fs_NowUTC());
-	}
-
-	void CBranchSettings::f_ReadSettings()
-	{
-		CStr BranchSettingsFile = "{}/BranchSettings.json"_f << m_OutputDir;
-
-		if (!CFile::fs_FileExists(BranchSettingsFile))
-			return;
-
-		CEJSON SettingsJson = CEJSON::fs_FromString(CFile::fs_ReadStringFromFile(BranchSettingsFile), BranchSettingsFile);
-		for (auto &Branch : fg_Const(SettingsJson).f_Object())
-		{
-			auto &OutBranch = m_Branches[Branch.f_Name()];
-			OutBranch.m_Name = Branch.f_Value()["BranchName"].f_String();
-			OutBranch.m_bOnlyChanged = Branch.f_Value()["OnlyChanged"].f_Boolean();
-		}
-	}
-
-	void CBranchSettings::f_RemoveBranch(CStr const &_Type)
-	{
-		if (m_Branches.f_Remove(_Type))
-			m_bDirty = true;
-	}
-
-	void CBranchSettings::f_SetBranch(CStr const &_Type, CStr const &_Branch, bool _bOnlyChanged)
-	{
-		if (m_Branches(_Type).f_WasCreated())
-			m_bDirty = true;
-
-		auto &Branch = m_Branches[_Type];
-		if (Branch.m_Name != _Branch)
-		{
-			Branch.m_Name = _Branch;
-			m_bDirty = true;
-		}
-
-		if (Branch.m_bOnlyChanged != _bOnlyChanged)
-		{
-			Branch.m_bOnlyChanged = _bOnlyChanged;
-			m_bDirty = true;
-		}
-	}
-}
-
 namespace NMib::NBuildSystem
 {
 	using namespace NRepository;
@@ -84,25 +12,6 @@ namespace NMib::NBuildSystem
 		CGenerateEphemeralState GenerateState;
 		if (ERetry Retry = fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
 			return Retry;
-
-		CBranchSettings BranchSettings{mp_OutputDir};
-
-		BranchSettings.f_ReadSettings();
-
-		bool bHasEmpty = BranchSettings.m_Branches.f_FindEqual("");
-		if (_Branch.f_IsEmpty())
-		{
-			if (bHasEmpty && !BranchSettings.m_Branches.f_IsEmpty())
-				DMibError("You cannot mix branch settings for empty repo type with non-empty type");
-		}
-		else
-		{
-			if (bHasEmpty)
-				DMibError("You cannot mix branch settings for empty repo type with non-empty type");
-		}
-
-		BranchSettings.f_SetBranch(_Filter.m_Type, _Branch, _Filter.m_bOnlyChanged);
-		BranchSettings.f_WriteSettings();
 
 		CFilteredRepos FilteredRepositories = fg_GetFilteredRepos(_Filter, *this, mp_Data);
 
@@ -160,20 +69,6 @@ namespace NMib::NBuildSystem
 		CGenerateEphemeralState GenerateState;
 		if (ERetry Retry = fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
 			return Retry;
-
-		CBranchSettings BranchSettings{mp_OutputDir};
-
-		BranchSettings.f_ReadSettings();
-
-		auto *pOldBranch = BranchSettings.m_Branches.f_FindEqual(_Filter.m_Type);
-
-		if (!pOldBranch)
-			DMibError("Repo type '{}' has not been branched"_f << _Filter.m_Type);
-
-		CStr OldBranch = pOldBranch->m_Name;
-
-		BranchSettings.f_RemoveBranch(_Filter.m_Type);
-		BranchSettings.f_WriteSettings();
 
 		CFilteredRepos FilteredRepositories = fg_GetFilteredRepos(_Filter, *this, mp_Data);
 
