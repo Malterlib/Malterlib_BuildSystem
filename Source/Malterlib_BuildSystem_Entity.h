@@ -48,9 +48,6 @@ namespace NMib::NBuildSystem
 #endif
 		CEntity &operator = (CEntity &&_Other);
 
-#ifdef DMibBuildSystem_DebugReferences
-		aint f_RefCountIncrease() const;
-#endif
 		void f_CheckChildren() const;
 		inline_always CEntityKey const &f_GetMapKey() const;
 		TCVector<CEntityKey> f_GetPathKey() const;
@@ -96,9 +93,14 @@ namespace NMib::NBuildSystem
 		CEntityPointer m_pCopiedFromEvaluated;
 
 		bool m_bEvaluated = false;
+
+#if defined(DMibBuildSystem_DebugReferences)
+		DMibRefcountDebuggingOnly(NStorage::CRefCountDebugReference m_DebugSelfRef);
+#endif
+
 #if defined(DMibBuildSystem_DebugReferences) && defined(DMibBuildSystem_DebugReferencesAdvanced)
 		static CMutual mp_DebugSetLock;
-		static TCMap<CEntity const *, TCLinkedList<CCallstack>> mp_DebugSet;
+		static TCSet<CEntity const *> mp_DebugSet;
 #endif
 	};
 

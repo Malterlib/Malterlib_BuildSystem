@@ -26,7 +26,7 @@ namespace NMib::NBuildSystem
 			mp_DebugSet[this];
 		}
 #endif
-		this->f_RefCountIncrease();
+		this->f_RefCountIncrease(DMibRefcountDebuggingOnly(m_DebugSelfRef));
 #endif
 		for (auto iChild = m_ChildEntitiesOrdered.f_GetIterator(); iChild; ++iChild)
 		{
@@ -46,7 +46,7 @@ namespace NMib::NBuildSystem
 			mp_DebugSet[this];
 		}
 #endif
-		this->f_RefCountIncrease();
+		this->f_RefCountIncrease(DMibRefcountDebuggingOnly(m_DebugSelfRef));
 #endif
 		f_SetProperties(_Other);
 		f_SetEntities(_Other);
@@ -76,7 +76,7 @@ namespace NMib::NBuildSystem
 			}
 		}
 		m_ChildEntitiesMap.f_Clear();
-		mint RefCount = this->f_RefCountDecrease();
+		mint RefCount = this->f_RefCountDecrease(DMibRefcountDebuggingOnly(m_DebugSelfRef));
 #ifdef DMibBuildSystem_DebugReferencesAdvanced
 		if (RefCount > 1)
 		{
@@ -86,7 +86,6 @@ namespace NMib::NBuildSystem
 			for (auto iEntity = mp_DebugSet.f_GetIterator(); iEntity; ++iEntity)
 			{
 				auto pEntity = iEntity.f_GetKey();
-				auto pCallStack = *iEntity;
 				if (pEntity->m_pCopiedFromEvaluated == this || pEntity->m_pCopiedFrom == this)
 				{
 					CStr Path = pEntity->f_GetPath();
@@ -458,7 +457,7 @@ namespace NMib::NBuildSystem
 			mp_DebugSet[this];
 		}
 #endif
-		this->f_RefCountIncrease();
+		this->f_RefCountIncrease(DMibRefcountDebuggingOnly(m_DebugSelfRef));
 #endif
 	}
 
@@ -481,22 +480,10 @@ namespace NMib::NBuildSystem
 #ifdef DMibBuildSystem_DebugReferences
 #ifdef DMibBuildSystem_DebugReferencesAdvanced
 	CMutual CEntity::mp_DebugSetLock;
-	TCMap<CEntity const *, TCLinkedList<CCallstack>> CEntity::mp_DebugSet;
+	TCSet<CEntity const *> CEntity::mp_DebugSet;
+#endif
 #endif
 
-	aint CEntity::f_RefCountIncrease() const
-	{
-#ifdef DMibBuildSystem_DebugReferencesAdvanced
-		{
-			DLock(mp_DebugSetLock);
-			auto &DebugSet = mp_DebugSet[this].f_Insert();
-			DebugSet.m_CallstackLen = NSys::fg_System_GetStackTrace(DebugSet.m_Callstack, 128);
-		}
-#endif
-		return TCSharedPointerIntrusiveBase<>::f_RefCountIncrease();
-	}
-#endif
-	
 	void CEntity::f_CheckChildren() const
 	{
 		{
