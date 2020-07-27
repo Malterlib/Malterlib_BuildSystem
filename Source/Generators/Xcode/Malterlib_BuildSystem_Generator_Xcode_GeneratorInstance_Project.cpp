@@ -660,33 +660,40 @@ fi
 								auto pEntity = IterFile->m_EnabledConfigs.f_FindEqual(Configuration);
 								auto pParent = (*pEntity)->m_pParent;
 
-								auto *pNewEntity = &pParent->m_ChildEntitiesMap(EntityKey, pParent).f_GetResult();
-								pParent->m_ChildEntitiesOrdered.f_Insert(*pNewEntity);
+								auto Mapping = pParent->m_ChildEntitiesMap(EntityKey, pParent);
 
-								TCMap<CConfiguration, CEntityPointer> EnabledConfigs;
-								EnabledConfigs[Configuration] = pNewEntity;
+								auto *pNewEntity = &Mapping.f_GetResult();
+								
+								if (Mapping.f_WasCreated())
+									pParent->m_ChildEntitiesOrdered.f_Insert(*pNewEntity);
 
-								CStr OutputType = fp_GetConfigValue(EnabledConfigs, Configuration, EPropertyType_Compile, "Type").m_Value;
-								if (BuildRefRule.m_OutputType.f_IsEmpty())
-									BuildRefRule.m_OutputType = OutputType;
-								else if (OutputType != BuildRefRule.m_OutputType)
 								{
-									m_BuildSystem.fs_ThrowError
-										(
-										 	CustomCommandLine.m_Position, "Output type for custom compile cannot be varied per configuration. '{}' != '{}'"_f
-										 	<< OutputType
-										 	<< BuildRefRule.m_OutputType
-										)
-									;
+									TCMap<CConfiguration, CEntityPointer> EnabledConfigs;
+									EnabledConfigs[Configuration] = fg_Explicit(pNewEntity);
+
+									CStr OutputType = fp_GetConfigValue(EnabledConfigs, Configuration, EPropertyType_Compile, "Type").m_Value;
+									if (BuildRefRule.m_OutputType.f_IsEmpty())
+										BuildRefRule.m_OutputType = OutputType;
+									else if (OutputType != BuildRefRule.m_OutputType)
+									{
+										m_BuildSystem.fs_ThrowError
+											(
+												CustomCommandLine.m_Position, "Output type for custom compile cannot be varied per configuration. '{}' != '{}'"_f
+												<< OutputType
+												<< BuildRefRule.m_OutputType
+											)
+										;
+									}
+
+									if (FileType == EBuildFileType_CCompile || FileType == EBuildFileType_CCompileInitEarly)
+									{
+										ThreadLocal.mp_UsedCTypes[Configuration][OutputType];
+										ThreadLocal.mp_EvaluatedTypesInUse[OutputType];
+									}
 								}
 
-								if (FileType == EBuildFileType_CCompile || FileType == EBuildFileType_CCompileInitEarly)
-								{
-									ThreadLocal.mp_UsedCTypes[Configuration][OutputType];
-									ThreadLocal.mp_EvaluatedTypesInUse[OutputType];
-								}
-
-								pParent->m_ChildEntitiesMap.f_Remove(EntityKey);
+								if (Mapping.f_WasCreated())
+									pParent->m_ChildEntitiesMap.f_Remove(EntityKey);
 							}
 						}
 
