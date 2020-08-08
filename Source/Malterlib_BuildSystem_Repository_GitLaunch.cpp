@@ -287,7 +287,11 @@ namespace NMib::NBuildSystem::NRepository
 
 	TCFuture<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::f_Launch(CRepository const &_Repo, TCVector<CStr> const &_Params, TCMap<CStr, CStr> const &_Environment) const
 	{
-		CProcessLaunchActor::CSimpleLaunch LaunchParams{"git", _Params, _Repo.m_Location};
+		TCVector<CStr> CommandLineParams{"-C", _Repo.m_Location};
+		CommandLineParams.f_Insert(_Params);
+
+		CProcessLaunchActor::CSimpleLaunch LaunchParams{"git", CommandLineParams};
+
 		LaunchParams.m_Params.m_Environment += _Environment;
 		return fp_Launch(fg_Move(LaunchParams));
 	}
@@ -345,7 +349,11 @@ namespace NMib::NBuildSystem::NRepository
 		) const
 	{
 		auto &State = *m_pState;
-		CProcessLaunchActor::CSimpleLaunch LaunchParams{"git", _Params, _Repo.m_Location};
+
+		TCVector<CStr> CommandLineParams{"-C", _Repo.m_Location};
+		CommandLineParams.f_Insert(_Params);
+
+		CProcessLaunchActor::CSimpleLaunch LaunchParams{"git", CommandLineParams};
 		LaunchParams.m_Params.m_Environment += _Environment;
 		TCPromise<void> Result;
 		fp_Launch(fg_Move(LaunchParams)) > State.m_OutputActor / [Result, _Prefix, This = *this, _Repo, fHandleResult = fg_Move(_fHandleResult)]

@@ -657,9 +657,13 @@ namespace NMib::NBuildSystem::NRepository
 	{
 		auto fLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir)
 			{
-				CProcessLaunchParams Params{_WorkingDir};
+				CProcessLaunchParams Params;
+
+				TCVector<CStr> CommandLineParams{"-C", _WorkingDir};
+				CommandLineParams.f_Insert(_Params);
+
 				Params.m_bShowLaunched = false;
-				return CProcessLaunch::fs_LaunchTool("git", _Params, Params);
+				return CProcessLaunch::fs_LaunchTool("git", CommandLineParams, Params);
 			}
 		;
 

@@ -339,20 +339,26 @@ namespace NMib::NBuildSystem
 
 			auto fLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir, TCMap<CStr, CStr> const &_Environment = {})
 				{
-					CProcessLaunchParams Params{_WorkingDir};
+					CProcessLaunchParams Params;
+					TCVector<CStr> CommandLineParams{"-C", _WorkingDir};
+					CommandLineParams.f_Insert(_Params);
+
 					Params.m_Environment += _Environment;
 					Params.m_bShowLaunched = false;
-					return CProcessLaunch::fs_LaunchTool("git", _Params, Params);
+					return CProcessLaunch::fs_LaunchTool("git", CommandLineParams, Params);
 				}
 			;
 			auto fLaunchGitQuestion = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir, bool _bErrorOnStdErr)
 				{
-					CProcessLaunchParams Params{_WorkingDir};
+					CProcessLaunchParams Params;
+					TCVector<CStr> CommandLineParams{"-C", _WorkingDir};
+					CommandLineParams.f_Insert(_Params);
+
 					Params.m_bShowLaunched = false;
 					uint32 ExitCode = 1;
 					CStr StdErr;
 					CStr StdOut;
-					CProcessLaunch::fs_LaunchBlock("git", _Params, StdOut, StdErr, ExitCode, Params);
+					CProcessLaunch::fs_LaunchBlock("git", CommandLineParams, StdOut, StdErr, ExitCode, Params);
 					if (_bErrorOnStdErr && !StdErr.f_IsEmpty())
 						DMibError("Failed to ask git question {vs}: {}{}"_f << _Params << StdErr << StdOut);
 					return ExitCode == 0;
@@ -360,12 +366,16 @@ namespace NMib::NBuildSystem
 			;
 			auto fLaunchGitNonEmpty = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir)
 				{
-					CProcessLaunchParams Params{_WorkingDir};
+					CProcessLaunchParams Params;
+
+					TCVector<CStr> CommandLineParams{"-C", _WorkingDir};
+					CommandLineParams.f_Insert(_Params);
+
 					Params.m_bShowLaunched = false;
 					uint32 ExitCode = 1;
 					CStr StdErr;
 					CStr StdOut;
-					CProcessLaunch::fs_LaunchBlock("git", _Params, StdOut, StdErr, ExitCode, Params);
+					CProcessLaunch::fs_LaunchBlock("git", CommandLineParams, StdOut, StdErr, ExitCode, Params);
 					if (ExitCode)
 						return false;
 
@@ -374,12 +384,15 @@ namespace NMib::NBuildSystem
 			;
 			auto fTryLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir) -> CStr
 				{
-					CProcessLaunchParams Params{_WorkingDir};
+					CProcessLaunchParams Params;
+					TCVector<CStr> CommandLineParams{"-C", _WorkingDir};
+					CommandLineParams.f_Insert(_Params);
+
 					Params.m_bShowLaunched = false;
 					uint32 ExitCode = 1;
 					CStr StdOut;
 					CStr StdErr;
-					CProcessLaunch::fs_LaunchBlock("git", _Params, StdOut, StdErr, ExitCode, Params);
+					CProcessLaunch::fs_LaunchBlock("git", CommandLineParams, StdOut, StdErr, ExitCode, Params);
 
 					if (ExitCode == 0)
 						return {};
@@ -833,7 +846,7 @@ namespace NMib::NBuildSystem
 				{
 					if (bPassException)
 						throw;
-					fOutputInfo(EOutputType_Error, "Reconcile error: "_f << _Exception.f_GetErrorStr().f_Trim());
+					fOutputInfo(EOutputType_Error, "Reconcile error: {}"_f << _Exception.f_GetErrorStr().f_Trim());
 					CBuildSystem::fs_ThrowError(_Repo.m_Position, "Failed to reconcile hash '{}': {}"_f << ConfigHash << _Exception.f_GetErrorStr().f_Trim());
 				}
 			}
