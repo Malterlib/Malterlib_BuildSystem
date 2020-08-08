@@ -168,7 +168,11 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 <dict>
 	<key>BuildSystemType</key>
 	<string>Original</string>
+	<key>DisableBuildSystemDeprecationWarning</key>
+	<true/>
 	<key>IDEWorkspaceSharedSettings_AutocreateContextsIfNeeded</key>
+	<false/>
+	<key>PreviewsEnabled</key>
 	<false/>
 </dict>
 </plist>
