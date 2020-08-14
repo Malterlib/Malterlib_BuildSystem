@@ -160,13 +160,13 @@ namespace NMib::NBuildSystem::NXcode
 		bool bSchemesChanged = false;
 		auto & ThreadLocal = *m_ThreadLocal;
 
-		auto fWriteSchemeFile = [&](CStr const &_FileName, CStr const &_Data) -> bool
+		auto fWriteSchemeFile = [&](CStr const &_FileName, CStr const &_Data, bool _bDoWrite = true) -> bool
 			{
 				bool bWasCreated;
-				if (!m_BuildSystem.f_AddGeneratedFile(_FileName, _Data, _Solution.f_GetName(), bWasCreated, EGeneratedFileFlag_NoDateCheck))
+				if (!m_BuildSystem.f_AddGeneratedFile(_FileName, _Data, _Solution.f_GetName(), bWasCreated, EGeneratedFileFlag_NoDateCheck | EGeneratedFileFlag_KeepGeneratedFile))
 					DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << _FileName));
 
-				if (bWasCreated)
+				if (bWasCreated && (_bDoWrite || !CFile::fs_FileExists(_FileName)))
 				{
 					CByteVector FileData;
 					CFile::fs_WriteStringToVector(FileData, _Data, false);
@@ -246,8 +246,8 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 )xxx";
 			CStr FileName = _OutputDir / ("xcuserdata/{}.xcuserdatad/WorkspaceSettings.xcsettings"_f << NProcess::NPlatform::fg_Process_GetUserName());
 
-			if (fWriteSchemeFile(FileName + ".generated", pDocumentData))
-				fWriteSchemeFile(FileName, pDocumentData); // Only write first time or when above contents are changed
+			bool bUpdated = fWriteSchemeFile(FileName + ".generated", pDocumentData);
+			fWriteSchemeFile(FileName, pDocumentData, bUpdated); // Only write first time or when above contents are changed
 		}
 
 		CStr OutputDir = CFile::fs_AppendPath(_OutputDir, CStr("xcshareddata/xcschemes"));
