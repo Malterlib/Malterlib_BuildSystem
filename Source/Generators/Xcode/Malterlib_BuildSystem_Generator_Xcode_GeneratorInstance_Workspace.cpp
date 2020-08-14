@@ -1,8 +1,9 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Generator_Xcode.h"
 #include <Mib/XML/XML>
+#include <Mib/Process/Platform>
 
 namespace NMib::NBuildSystem::NXcode
 {
@@ -20,12 +21,12 @@ namespace NMib::NBuildSystem::NXcode
 				}
 			)
 		;
-		
+
 		CTimer Timer;
 		Timer.f_Start();
 		CStr OutputDir = CFile::fs_AppendPath(CFile::fs_AppendPath(_OutputDir, "Files"), CStr(CFile::fs_MakeNiceFilename(_Solution.f_GetName())));
 		ThreadLocal.f_CreateDirectory(OutputDir);
-		
+
 		CMutual SchemesWithRunnablesLock;
 		TCMap<CConfiguration, TCSet<CStr>> SchemesWithRunnables;
 		TCMap<CConfiguration, TCMap<CStr, CStr>> SchemesWithBuildables;
@@ -52,26 +53,26 @@ namespace NMib::NBuildSystem::NXcode
 				}
 			)
 		;
-		
+
 		// Workspace root
 		auto pWorkspace = XMLFile.f_CreateDefaultDocument("Workspace");
 		XMLFile.f_SetAttribute(pWorkspace, "version", "1.0");
-		
+
 		TCMap<TCPointer<CGroup>, TCVector<CGroup*>> MapGroupToGroups;
 		TCMap<TCPointer<CGroup>, TCVector<CProject*>> MapProjectsToGroups;
-		
+
 		for (auto iGroup = _Solution.m_Groups.f_GetIterator(); iGroup; ++iGroup)
 		{
 			if (iGroup->m_pParent)
 				MapGroupToGroups[iGroup->m_pParent].f_Insert(iGroup);
 		}
-		
+
 		for (auto iProject = _Solution.m_Projects.f_GetIterator(); iProject; ++iProject)
 		{
 			if (iProject->m_pGroup)
 				MapProjectsToGroups[iProject->m_pGroup].f_Insert(iProject);
 		}
-		
+
 		TCFunction<void (CXMLElement* _pParent, CGroup* pGroup)> fl_OutputGroup = [&] (CXMLElement* _pParent, CGroup* pGroup)
 		{
 			if (!pGroup->m_OutputToWorkspace)
@@ -80,13 +81,13 @@ namespace NMib::NBuildSystem::NXcode
 				XMLFile.f_SetAttribute(pGroupRef, "location", "container:");
 				XMLFile.f_SetAttribute(pGroupRef, "name", pGroup->m_Name);
 				pGroup->m_OutputToWorkspace = true;
-				
+
 				TCVector<CGroup*>& lChildGroups = MapGroupToGroups[pGroup];
 				for (auto iChildGroup = lChildGroups.f_GetIterator(); iChildGroup; ++iChildGroup)
 				{
 					fl_OutputGroup(pGroupRef, *iChildGroup);
 				}
-				
+
 				TCVector<CProject*>& lChildProjects = MapProjectsToGroups[pGroup];
 				for (auto iProject = lChildProjects.f_GetIterator(); iProject; ++iProject)
 				{
@@ -95,12 +96,12 @@ namespace NMib::NBuildSystem::NXcode
 				}
 			}
 		};
-		
+
 		for (auto iGroup = _Solution.m_Groups.f_GetIterator(); iGroup; ++iGroup)
 		{
 			fl_OutputGroup(pWorkspace, &(*iGroup));
 		}
-		
+
 		for (auto iProject = _Solution.m_Projects.f_GetIterator(); iProject; ++iProject)
 		{
 			if (!iProject->m_pGroup)
@@ -144,24 +145,64 @@ namespace NMib::NBuildSystem::NXcode
 					NTime::CTime Now = NTime::CTime::fs_NowUTC();
 					NFile::CFile Temp;
 					Temp.f_Open(FileName, EFileOpen_WriteAttribs | EFileOpen_ShareAll | EFileOpen_DontTruncate);
-					Temp.f_SetWriteTime(Now);		
+					Temp.f_SetWriteTime(Now);
 					m_BuildSystem.f_SetFileChanged(FileName);
 				}
 			}
 		}
-		
+
 		Timer.f_Stop();
 		DConOut("Generated workspace: {sl*,a-} {fe2} s{\n}", _Solution.f_GetName() << _MaxWorkspaceNameLen << Timer.f_GetTime());
 	}
-	
+
 	bool CGeneratorInstance::fp_GenerateBuildAllSchemes(CSolution &_Solution, CStr const &_OutputDir, TCMap<CConfiguration, TCSet<CStr>> &_Runnables, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable) const
 	{
 		bool bSchemesChanged = false;
 		auto & ThreadLocal = *m_ThreadLocal;
-		
-		{
 
-ch8 const *pDocumentData = 
+		auto fWriteSchemeFile = [&](CStr const &_FileName, CStr const &_Data) -> bool
+			{
+				bool bWasCreated;
+				if (!m_BuildSystem.f_AddGeneratedFile(_FileName, _Data, _Solution.f_GetName(), bWasCreated, EGeneratedFileFlag_NoDateCheck))
+					DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << _FileName));
+
+				if (bWasCreated)
+				{
+					CByteVector FileData;
+					CFile::fs_WriteStringToVector(FileData, _Data, false);
+					ThreadLocal.f_CreateDirectory(CFile::fs_GetPath(_FileName));
+					if (m_BuildSystem.f_WriteFile(FileData, _FileName))
+					{
+						bSchemesChanged = true;
+						return true;
+					}
+				}
+				return false;
+			}
+		;
+
+		{
+			ch8 const *pDocumentData;
+			if (fp_GetSingleConfigValue(_Solution.m_EnabledConfigs, EPropertyType_Workspace, "XcodeNewBuildSystem").m_Value == "true")
+			{
+				pDocumentData =
+R"xxx(<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>DisableBuildSystemDeprecationWarning</key>
+	<true/>
+	<key>IDEWorkspaceSharedSettings_AutocreateContextsIfNeeded</key>
+	<false/>
+	<key>PreviewsEnabled</key>
+	<false/>
+</dict>
+</plist>
+)xxx";
+			}
+			else
+			{
+				pDocumentData =
 R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -177,27 +218,41 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 </dict>
 </plist>
 )xxx";
-			CStr DocumentData = pDocumentData;
-
-			CStr FileName = CFile::fs_AppendPath(_OutputDir, CStr("xcshareddata/WorkspaceSettings.xcsettings"));
-			
-			bool bWasCreated;
-			if (!m_BuildSystem.f_AddGeneratedFile(FileName, DocumentData, _Solution.f_GetName(), bWasCreated, EGeneratedFileFlag_NoDateCheck))
-				DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << FileName));
-			
-			if (bWasCreated)
-			{
-				CByteVector FileData;
-				CFile::fs_WriteStringToVector(FileData, CStr(DocumentData), false);
-				ThreadLocal.f_CreateDirectory(CFile::fs_GetPath(FileName));
-				if (m_BuildSystem.f_WriteFile(FileData, FileName))
-					bSchemesChanged = true;
 			}
+
+			fWriteSchemeFile(_OutputDir / "xcshareddata/WorkspaceSettings.xcsettings", pDocumentData);
 		}
-		
+
+		{
+			ch8 const *pDocumentData =
+R"xxx(<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>BuildLocationStyle</key>
+	<string>UseTargetSettings</string>
+	<key>CustomBuildLocationType</key>
+	<string>RelativeToDerivedData</string>
+	<key>DerivedDataLocationStyle</key>
+	<string>Default</string>
+	<key>IssueFilterStyle</key>
+	<string>ShowActiveSchemeOnly</string>
+	<key>LiveSourceIssuesEnabled</key>
+	<true/>
+	<key>ShowSharedSchemesAutomaticallyEnabled</key>
+	<true/>
+</dict>
+</plist>
+)xxx";
+			CStr FileName = _OutputDir / ("xcuserdata/{}.xcuserdatad/WorkspaceSettings.xcsettings"_f << NProcess::NPlatform::fg_Process_GetUserName());
+
+			if (fWriteSchemeFile(FileName + ".generated", pDocumentData))
+				fWriteSchemeFile(FileName, pDocumentData); // Only write first time or when above contents are changed
+		}
+
 		CStr OutputDir = CFile::fs_AppendPath(_OutputDir, CStr("xcshareddata/xcschemes"));
 		ThreadLocal.f_CreateDirectory(OutputDir);
-		
+
 		for (auto Iter = _Solution.m_EnabledConfigs.f_GetIterator(); Iter; ++Iter)
 		{
 			CXMLDocument XMLFile(false);
@@ -211,10 +266,10 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 					}
 				)
 			;
-			
+
 			CConfiguration const& Configuration = Iter.f_GetKey();
 			CStr Name = (CStr::CFormat("{} {}") << Configuration.m_Platform << Configuration.m_Configuration).f_GetStr();
-			
+
 			auto pScheme = XMLFile.f_CreateDefaultDocument("Scheme");
 			if (m_XcodeVersion >= 7)
 				XMLFile.f_SetAttribute(pScheme, "LastUpgradeVersion", fg_Format("{sj2,sf0}90", m_XcodeVersion));
@@ -225,7 +280,7 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 			else
 				XMLFile.f_SetAttribute(pScheme, "LastUpgradeVersion", "0450");
 			XMLFile.f_SetAttribute(pScheme, "version", "1.3");
-			
+
 			auto fl_GenerateBuildReference = [&] (CXMLElement* _pParent, CProject& _Project)
 			{
 				auto &NativeTarget = _Project.f_GetDefaultNativeTarget(Configuration);
@@ -233,7 +288,7 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 				auto pBuildReference = XMLFile.f_CreateElement(_pParent, "BuildableReference");
 				XMLFile.f_SetAttribute(pBuildReference, "BuildableIdentifier", "primary");
 				XMLFile.f_SetAttribute(pBuildReference, "BlueprintIdentifier", NativeTarget.f_GetGUID());
-				
+
 				CStr BuildableName;
 				auto pBuildable = _Buildable.f_FindEqual(Configuration);
 				if (pBuildable)
@@ -242,20 +297,20 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 					if (pName)
 						BuildableName = *pName;
 				}
-				
+
 				XMLFile.f_SetAttribute(pBuildReference, "BuildableName", BuildableName);
 				XMLFile.f_SetAttribute(pBuildReference, "BlueprintName", _Project.f_GetName());
 				XMLFile.f_SetAttribute(pBuildReference, "ReferencedContainer", (CStr::CFormat("container:Files/{}/{}.xcodeproj") << _Solution.f_GetName() << _Project.f_GetName()).f_GetStr());
 			};
-							   
+
 			// BuildAction
 			{
 				auto pBuildAction = XMLFile.f_CreateElement(pScheme, "BuildAction");
 				XMLFile.f_SetAttribute(pBuildAction, "parallelizeBuildables", "YES");
 				XMLFile.f_SetAttribute(pBuildAction, "buildImplicitDependencies", "YES");
-				
+
 				auto pBuildActionEntries = XMLFile.f_CreateElement(pBuildAction, "BuildActionEntries");
-				
+
 				for (auto &Project : _Solution.m_Projects)
 				{
 					if (!Project.m_EnabledProjectConfigs.f_Exists(Configuration))
@@ -279,7 +334,7 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 					}
 				}
 			}
-			
+
 			// TestAction
 			{
 				auto pTestAction = XMLFile.f_CreateElement(pScheme, "TestAction");
@@ -289,7 +344,7 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 				XMLFile.f_SetAttribute(pTestAction, "shouldUseLaunchSchemeArgsEnv", "YES");
 				XMLFile.f_CreateElement(pTestAction, "Testables");
 			}
-			
+
 			// LaunchAction
 			{
 				auto pLaunchAction = XMLFile.f_CreateElement(pScheme, "LaunchAction");
@@ -299,7 +354,7 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 				XMLFile.f_SetAttribute(pLaunchAction, "launchStyle", "0");
 				XMLFile.f_SetAttribute(pLaunchAction, "useCustomWorkingDirectory", "NO");
 				XMLFile.f_SetAttribute(pLaunchAction, "customWorkingDirectory", "[MulitLaunchSchemes]");
-				
+
 				auto &Runnables = _Runnables[Configuration];
 				if (!Runnables.f_IsEmpty())
 				{
@@ -311,14 +366,14 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 						XMLFile.f_SetAttribute(pCommandLineArgument, "isEnabled", "YES");
 					}
 				}
-				
+
 				XMLFile.f_SetAttribute(pLaunchAction, "ignoresPersistentStateOnLaunch", "NO");
 				XMLFile.f_SetAttribute(pLaunchAction, "debugDocumentVersioning", "YES");
 				XMLFile.f_SetAttribute(pLaunchAction, "debugServiceExtension", "internal");
-				XMLFile.f_SetAttribute(pLaunchAction, "allowLocationSimulation", "YES");                       
+				XMLFile.f_SetAttribute(pLaunchAction, "allowLocationSimulation", "YES");
 				XMLFile.f_CreateElement(pLaunchAction, "AdditionalOptions");
 			}
-			
+
 			// ProfileAction
 			{
 				auto pProfileAction = XMLFile.f_CreateElement(pScheme, "ProfileAction");
@@ -328,22 +383,22 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 				XMLFile.f_SetAttribute(pProfileAction, "useCustomWorkingDirectory", "NO");
 				XMLFile.f_SetAttribute(pProfileAction, "debugDocumentVersioning", "YES");
 			}
-			
+
 			// AnalyzeAction
 			{
 				auto pArchiveAction = XMLFile.f_CreateElement(pScheme, "AnalyzeAction");
 				XMLFile.f_SetAttribute(pArchiveAction, "buildConfiguration", Name);
 			}
-			
+
 			// ArchiveAction
 			{
 				auto pArchiveAction = XMLFile.f_CreateElement(pScheme, "ArchiveAction");
 				XMLFile.f_SetAttribute(pArchiveAction, "buildConfiguration", Name);
 				XMLFile.f_SetAttribute(pArchiveAction, "revealArchiveInOrganizer", "YES");
 			}
-			
+
 			CStr FileName = CFile::fs_AppendPath(OutputDir,  (CStr::CFormat("{}.xcscheme") << CFile::fs_MakeNiceFilename((CStr::CFormat("{} {}") << CStr("Build All") << Name).f_GetStr())).f_GetStr());
-			
+
 			CStr RawXMLData = XMLFile.f_GetAsString(EXMLOutputDialect_Xcode);
 
 			// Now merge in any set by a user
@@ -351,7 +406,7 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 			{
 				CByteVector FileData;
 				CFile::fs_WriteStringToVector(FileData, CStr(RawXMLData), false);
-				
+
 				if (CFile::fs_ReadFile(FileName + ".gen") == FileData)
 					XMLFile.f_ParseFile(FileName);
 				else
@@ -364,33 +419,11 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 					fspr_MergeScheme(ExistingScheme.f_GetRootNode(), PrevScheme.f_GetRootNode(), XMLFile.f_GetRootNode());
 				}
 			}
-			
-			{
-				CStr XMLData = XMLFile.f_GetAsString(EXMLOutputDialect_Xcode);
-				bool bWasCreated;
-				if (!m_BuildSystem.f_AddGeneratedFile(FileName, XMLData, _Solution.f_GetName(), bWasCreated, EGeneratedFileFlag_NoDateCheck))
-					DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << FileName));
-				
-				if (bWasCreated)
-				{
-					CByteVector FileData;
-					CFile::fs_WriteStringToVector(FileData, CStr(XMLData), false);
-					if (m_BuildSystem.f_WriteFile(FileData, FileName))
-						bSchemesChanged = true;
-				}
-				// Save the raw generated file to be able to diff against
-				
-				FileName += ".gen";
-				if (!m_BuildSystem.f_AddGeneratedFile(FileName, RawXMLData, _Solution.f_GetName(), bWasCreated, EGeneratedFileFlag_NoDateCheck))
-					DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << FileName));
 
-				if (bWasCreated)
-				{
-					CByteVector FileData;
-					CFile::fs_WriteStringToVector(FileData, CStr(RawXMLData), false);
-					m_BuildSystem.f_WriteFile(FileData, FileName);
-				}
-			}
+			fWriteSchemeFile(FileName, XMLFile.f_GetAsString(EXMLOutputDialect_Xcode));
+
+			// Save the raw generated file to be able to diff against
+			fWriteSchemeFile(FileName + ".gen", RawXMLData);
 		}
 		return bSchemesChanged;
 	}
