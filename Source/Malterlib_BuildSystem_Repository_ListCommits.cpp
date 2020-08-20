@@ -116,171 +116,146 @@ namespace NMib::NBuildSystem
 		pState->m_StartCommits[mp_BaseDir] = _From;
 		pState->m_EndCommits[mp_BaseDir] = _To;
 
-		TCPromise<> ResolvePromise;
-
-		auto fReportError = [ResolvePromise](CStr const &_Error)
+		(
+		 	g_Dispatch(Launches.m_pState->m_OutputActor) / [=, pFilteredRepositories = pFilteredRepositories]() -> TCFuture<void>
 			{
-				if (!ResolvePromise.f_IsSet())
-					ResolvePromise.f_SetException(DErrorInstance(_Error));
-			}
-		;
-
-		auto fResolveCommits = [=, pFilteredRepositories = pFilteredRepositories](auto &&_fResolveCommits) -> void
-			{
-				auto &State = *pState;
-				bool bDoneSomething = false;
-				bool bAllFinished = true;
-				bool bResolved = true;
-				static int iResolve = 0;
-				++iResolve;
-				while (bResolved)
+				while (true)
 				{
-					bResolved = false;
-					bAllFinished = true;
-					for (auto &pRepository : RepositoryByLocation)
+					auto &State = *pState;
+					bool bDoneSomething = false;
+					bool bAllFinished = true;
+					bool bResolved = true;
+					static int iResolve = 0;
+					++iResolve;
+					while (bResolved)
 					{
-						auto &Repo = *pRepository;
-
-						if (State.m_StartCommits.f_FindEqual(Repo.m_Location))
+						bResolved = false;
+						bAllFinished = true;
+						for (auto &pRepository : RepositoryByLocation)
 						{
-							DCheck(State.m_EndCommits.f_FindEqual(Repo.m_Location));
-							continue;
-						}
-						else
-							bAllFinished = false;
+							auto &Repo = *pRepository;
 
-						CStr ConfigDirectory = CFile::fs_GetPath(Repo.m_ConfigFile);
-						auto *pOwner = RepositoryByLocation.f_FindLargestLessThanEqual(ConfigDirectory);
-						if (!pOwner)
-							continue;
+							if (State.m_StartCommits.f_FindEqual(Repo.m_Location))
+							{
+								DCheck(State.m_EndCommits.f_FindEqual(Repo.m_Location));
+								continue;
+							}
+							else
+								bAllFinished = false;
 
-						auto &RepositoryPath = RepositoryByLocation.fs_GetKey(pOwner);
-
-						if (!ConfigDirectory.f_StartsWith(RepositoryPath))
-						{
-							State.m_EndCommits[Repo.m_Location];
-							State.m_StartCommits[Repo.m_Location];
-							bResolved = true;
-							bDoneSomething = true;
-							continue;
-						}
-
-						auto &Owner = **pOwner;
-
-						auto *pStartCommit = State.m_StartCommits.f_FindEqual(Owner.m_Location);
-						if (!pStartCommit)
-							continue;
-
-						auto *pEndCommit = State.m_EndCommits.f_FindEqual(Owner.m_Location);
-						if (!pEndCommit)
-							continue;
-
-						auto ConfigFile = Repo.m_ConfigFile;
-
-						if (!State.m_StartedGitShow(ConfigFile).f_WasCreated())
-						{
-							if (State.m_PendingGitShow.f_FindEqual(ConfigFile))
+							CStr ConfigDirectory = CFile::fs_GetPath(Repo.m_ConfigFile);
+							auto *pOwner = RepositoryByLocation.f_FindLargestLessThanEqual(ConfigDirectory);
+							if (!pOwner)
 								continue;
 
-							auto pStartConfigFile = State.m_StartConfigFiles.f_FindEqual(ConfigFile);
+							auto &RepositoryPath = RepositoryByLocation.fs_GetKey(pOwner);
+
+							if (!ConfigDirectory.f_StartsWith(RepositoryPath))
+							{
+								State.m_EndCommits[Repo.m_Location];
+								State.m_StartCommits[Repo.m_Location];
+								bResolved = true;
+								bDoneSomething = true;
+								continue;
+							}
+
+							auto &Owner = **pOwner;
+
+							auto *pStartCommit = State.m_StartCommits.f_FindEqual(Owner.m_Location);
+							if (!pStartCommit)
+								continue;
+
+							auto *pEndCommit = State.m_EndCommits.f_FindEqual(Owner.m_Location);
+							if (!pEndCommit)
+								continue;
+
+							auto ConfigFile = Repo.m_ConfigFile;
+
+							if (!State.m_StartedGitShow(ConfigFile).f_WasCreated())
+							{
+								if (State.m_PendingGitShow.f_FindEqual(ConfigFile))
+									continue;
+
+								auto pStartConfigFile = State.m_StartConfigFiles.f_FindEqual(ConfigFile);
+
+								CStr RelativePath = CFile::fs_MakePathRelative(ConfigFile, Owner.m_Location);
+
+								if (pStartConfigFile)
+								{
+									auto pStartHash = pStartConfigFile->f_GetConfig(Repo, mp_BaseDir);
+									if (pStartHash)
+										State.m_StartCommits[Repo.m_Location] = pStartHash->m_Hash;
+									else
+										State.m_StartCommits[Repo.m_Location];
+								}
+								else
+									State.m_StartCommits[Repo.m_Location];
+
+								auto pEndConfigFile = State.m_EndConfigFiles.f_FindEqual(ConfigFile);
+								if (pEndConfigFile)
+								{
+									auto pEndHash = pEndConfigFile->f_GetConfig(Repo, mp_BaseDir);
+									if (pEndHash)
+										State.m_EndCommits[Repo.m_Location] = pEndHash->m_Hash;
+									else
+										State.m_EndCommits[Repo.m_Location];
+								}
+								else
+									State.m_EndCommits[Repo.m_Location];
+
+								bResolved = true;
+
+								continue;
+							}
 
 							CStr RelativePath = CFile::fs_MakePathRelative(ConfigFile, Owner.m_Location);
 
-							if (pStartConfigFile)
+							bDoneSomething = true;
+
+							State.m_PendingGitShow[ConfigFile];
+
+							auto [StartResult, EndResult] = co_await 
+								(
+									Launches.f_Launch(Owner, {"show", "{}:{}"_f << *pStartCommit << RelativePath})
+									+ Launches.f_Launch(Owner, {"show", "{}:{}"_f << *pEndCommit << RelativePath})
+								)
+								.f_Wrap()
+							;
+							auto &State = *pState;
+
+							State.m_PendingGitShow.f_Remove(ConfigFile);
+
+							if (!StartResult)
+								co_return StartResult.f_GetException();
+
+							if (!EndResult)
+								co_return EndResult.f_GetException();
+
+							try
 							{
-								auto pStartHash = pStartConfigFile->f_GetConfig(Repo, mp_BaseDir);
-								if (pStartHash)
-									State.m_StartCommits[Repo.m_Location] = pStartHash->m_Hash;
-								else
-									State.m_StartCommits[Repo.m_Location];
+								if (StartResult->m_ExitCode == 0)
+									State.m_StartConfigFiles[ConfigFile] = CStateHandler::fs_ParseConfigFile(StartResult->f_GetStdOut(), ConfigFile);
+								if (EndResult->m_ExitCode == 0)
+									State.m_EndConfigFiles[ConfigFile] = CStateHandler::fs_ParseConfigFile(EndResult->f_GetStdOut(), ConfigFile);
 							}
-							else
-								State.m_StartCommits[Repo.m_Location];
-
-							auto pEndConfigFile = State.m_EndConfigFiles.f_FindEqual(ConfigFile);
-							if (pEndConfigFile)
+							catch (NException::CException const &_Exception)
 							{
-								auto pEndHash = pEndConfigFile->f_GetConfig(Repo, mp_BaseDir);
-								if (pEndHash)
-									State.m_EndCommits[Repo.m_Location] = pEndHash->m_Hash;
-								else
-									State.m_EndCommits[Repo.m_Location];
+								co_return DMibErrorInstance("Excption parsing config files: {}"_f << _Exception);
 							}
-							else
-								State.m_EndCommits[Repo.m_Location];
-
-							bResolved = true;
-
-							continue;
 						}
+					}
 
-						CStr RelativePath = CFile::fs_MakePathRelative(ConfigFile, Owner.m_Location);
-
-						bDoneSomething = true;
-
-						State.m_PendingGitShow[ConfigFile];
-
-						Launches.f_Launch(Owner, {"show", "{}:{}"_f << *pStartCommit << RelativePath})
-							+ Launches.f_Launch(Owner, {"show", "{}:{}"_f << *pEndCommit << RelativePath})
-							> [=](TCAsyncResult<CProcessLaunchActor::CSimpleLaunchResult> &&_StartResult, TCAsyncResult<CProcessLaunchActor::CSimpleLaunchResult> &&_EndResult)
-							{
-								auto &State = *pState;
-
-								State.m_PendingGitShow.f_Remove(ConfigFile);
-
-								if (!_StartResult)
-								{
-									if (!ResolvePromise.f_IsSet())
-										ResolvePromise.f_SetException(_StartResult);
-									return;
-								}
-
-								if (!_EndResult)
-								{
-									if (!ResolvePromise.f_IsSet())
-										ResolvePromise.f_SetException(_EndResult);
-									return;
-								}
-
-								try
-								{
-									if (_StartResult->m_ExitCode == 0)
-										State.m_StartConfigFiles[ConfigFile] = CStateHandler::fs_ParseConfigFile(_StartResult->f_GetStdOut(), ConfigFile);
-									if (_EndResult->m_ExitCode == 0)
-										State.m_EndConfigFiles[ConfigFile] = CStateHandler::fs_ParseConfigFile(_EndResult->f_GetStdOut(), ConfigFile);
-								}
-								catch (NException::CException const &_Exception)
-								{
-									fReportError("Excption parsing config files: {}"_f << _Exception);
-									return;
-								}
-
-								_fResolveCommits(_fResolveCommits);
-							}
-						;
+					if (bAllFinished)
+						break;
+					else if (!bDoneSomething && State.m_PendingGitShow.f_IsEmpty())
+					{
+						co_return DMibErrorInstance("Failed to resolve dependency graph");
 					}
 				}
 
-				if (bAllFinished)
-				{
-					if (!ResolvePromise.f_IsSet())
-						ResolvePromise.f_SetResult();
-				}
-				else if (!bDoneSomething && State.m_PendingGitShow.f_IsEmpty())
-				{
-					fReportError("Failed to resolve dependency graph");
-				}
-			}
-		;
-
-		(
-		 	g_Dispatch(Launches.m_pState->m_OutputActor) / [=]
-			{
-				fResolveCommits(fResolveCommits);
+				co_return {};
 			}
 		).f_CallSync();
-
-		ResolvePromise.f_MoveFuture().f_CallSync();
 
 		auto &State = *pState;
 
