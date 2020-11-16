@@ -220,7 +220,7 @@ namespace NMib::NBuildSystem
 						if (Branch == "HEAD")
 							continue;
 
-						CStr CompareRemote = Remote ? Remote : "origin";
+						CStr CompareRemote = Remote ? Remote : CStr("origin");
 
 						if (Remote && (_Flags & ERepoCleanupBranchesFlag_AllRemotes))
 						{
@@ -521,7 +521,7 @@ namespace NMib::NBuildSystem
 
 							for (auto &Tag : AllTags)
 							{
-								CStr CompareRemote = Tag.m_Remote ? Tag.m_Remote : "origin";
+								CStr CompareRemote = Tag.m_Remote ? Tag.m_Remote : CStr("origin");
 
 								if (!_Tags.f_IsEmpty())
 								{

@@ -1580,7 +1580,7 @@ fi
 
 			_Output += (CStr::CFormat("\t\t{} /* {} */ = ") << NativeTarget.f_GetGUID() << NativeTarget.m_Name);
 			_Output += "{\n\t\t\tisa = PBXLegacyTarget;\n";
-			_Output += (CStr::CFormat("\t\t\tbuildArgumentsString = \"{}\";\n") << (NativeTarget.m_bGeneratedBuildScript ? RunScript : "-c 'exit 0'"));
+			_Output += (CStr::CFormat("\t\t\tbuildArgumentsString = \"{}\";\n") << (NativeTarget.m_bGeneratedBuildScript ? RunScript.f_GetStr() : "-c 'exit 0'"));
 			_Output += (CStr::CFormat("\t\t\tbuildConfigurationList = {} /* Build configuration list for PBXLegacyTarget \"{}\" */;\n") << NativeTarget.f_GetBuildConfigurationListGUID() << NativeTarget.m_Name);
 			_Output += (CStr::CFormat("\t\t\tbuildPhases = ();\n\t\t\tbuildToolPath = \"{}\";\n") << CStr("/bin/bash"));
 			_Output += "\t\t\tbuildWorkingDirectory = \"${PROJECT_DIR}/";
