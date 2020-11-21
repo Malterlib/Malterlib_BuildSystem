@@ -17,7 +17,7 @@ namespace NMib::NBuildSystem
 
 		CGitLaunches Launches{mp_BaseDir, "Branching repos", mp_AnsiFlags};
 
-		CCurrentlyProcessingActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
+		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
 
@@ -74,7 +74,7 @@ namespace NMib::NBuildSystem
 
 		CGitLaunches Launches{mp_BaseDir, "Unbranching repos", mp_AnsiFlags};
 
-		CCurrentlyProcessingActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
+		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
 
@@ -138,7 +138,7 @@ namespace NMib::NBuildSystem
 
 		CColors Colors(mp_AnsiFlags);
 
-		CCurrentlyProcessingActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
+		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
 
@@ -388,7 +388,7 @@ namespace NMib::NBuildSystem
 
 		CColors Colors(mp_AnsiFlags);
 
-		CCurrentlyProcessingActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
+		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
 

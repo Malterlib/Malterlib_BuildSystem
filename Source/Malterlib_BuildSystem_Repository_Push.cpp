@@ -194,7 +194,7 @@ namespace NMib::NBuildSystem
 
 		CColors Colors(mp_AnsiFlags);
 
-		CCurrentlyProcessingActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
+		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
 

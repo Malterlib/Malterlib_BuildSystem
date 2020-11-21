@@ -83,7 +83,7 @@ namespace NMib::NBuildSystem
 
 		CGitLaunches Launches{mp_BaseDir, "Listing Commits", mp_AnsiFlags};
 
-		CCurrentlyProcessingActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
+		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
 		CStateHandler StateHandler{mp_BaseDir, mp_OutputDir, mp_AnsiFlags};
 

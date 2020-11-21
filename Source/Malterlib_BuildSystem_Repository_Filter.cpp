@@ -9,7 +9,7 @@ namespace NMib::NBuildSystem::NRepository
 	{
 		CGitLaunches Launches{_BuildSystem.f_GetBaseDir(), "Filtering repos", _BuildSystem.f_AnsiFlags()};
 
-		CCurrentlyProcessingActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
+		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
 		CFilteredRepos FilteredRepos;
 		FilteredRepos.m_ReposOrdered = fg_GetRepos(_BuildSystem, _Data);
