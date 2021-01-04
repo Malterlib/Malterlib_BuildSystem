@@ -30,7 +30,7 @@ namespace NMib::NBuildSystem
 		inline_always bool operator < (CEntityKey const &_Right) const;
 		inline_always bool operator == (CEntityKey const &_Right) const;
 
-		EEntityType m_Type;
+		EEntityType m_Type = EEntityType_Invalid;
 		CStr m_Name;
 	};
 

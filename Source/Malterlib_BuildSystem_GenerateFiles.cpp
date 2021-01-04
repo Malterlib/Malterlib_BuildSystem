@@ -25,7 +25,7 @@ namespace NMib::NBuildSystem
 		CStr Workspace;
 		
 		auto * pParent = &_Entity;
-		while (pParent)
+		while (pParent && pParent->m_pParent)
 		{
 			if (pParent->f_GetMapKey().m_Type == EEntityType_Workspace)
 			{

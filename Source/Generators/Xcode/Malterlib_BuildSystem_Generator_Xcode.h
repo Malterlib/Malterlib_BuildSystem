@@ -27,6 +27,10 @@ namespace NMib::NBuildSystem::NXcode
 		EBuildFileType_CCompileInitEarly,
 		EBuildFileType_CCompile,
 		EBuildFileType_CInclude,
+		EBuildFileType_GenericCompile,
+		EBuildFileType_GenericCompileWithFlags,
+		EBuildFileType_GenericNonCompile,
+		EBuildFileType_GenericCustom,
 		EBuildFileType_None,
 	};
 

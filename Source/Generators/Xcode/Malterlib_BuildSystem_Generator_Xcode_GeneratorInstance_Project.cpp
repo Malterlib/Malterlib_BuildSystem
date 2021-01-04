@@ -474,6 +474,7 @@ fi
 			auto CustomCommandLines = fp_GetConfigValues(IterFile->m_EnabledConfigs, EPropertyType_Compile, "Custom_CommandLine");
 
 			CStr Type = Value.m_Value;
+			CStr CompileType = fp_GetSingleConfigValue(IterFile->m_EnabledConfigs, EPropertyType_Compile, "GenericCompileType").m_Value;
 
 			{
 				bool bWasCustom = false;
@@ -486,7 +487,8 @@ fi
 							m_BuildSystem.fs_ThrowError(CustomCommandLine.m_Position, "Inconsistent usage of Custom_CommandLine");
 
 						bWasCustom = true;
-						Type = "Custom";
+						if (!CompileType)
+							Type = "Custom";
 					}
 					else if (bWasCustom)
 						m_BuildSystem.fs_ThrowError(CustomCommandLine.m_Position, "Inconsistent usage of Custom_CommandLine");
@@ -556,7 +558,15 @@ fi
 			{
 				EBuildFileType FileType = EBuildFileType_None;
 
-				if (IterFile->m_Type == "Custom")
+				if (CompileType == "GenericCompile")
+					FileType = EBuildFileType_GenericCompile;
+				else if (CompileType == "GenericCompileWithFlags")
+					FileType = EBuildFileType_GenericCompileWithFlags;
+				else if (CompileType == "GenericNonCompile")
+					FileType = EBuildFileType_GenericNonCompile;
+				else if (CompileType == "GenericCustom")
+					FileType = EBuildFileType_GenericCustom;
+				else if (IterFile->m_Type == "Custom")
 					FileType = EBuildFileType_Custom;
 				else if
 					(
@@ -606,7 +616,15 @@ fi
 
 				BuildRef.m_CompileFlagsGUID = IterFile->f_GetCompileFlagsGUID();
 				BuildRef.m_Type = IterFile->m_Type;
-				BuildRef.m_bHasCompilerFlags = (FileType == EBuildFileType_CCompile || FileType == EBuildFileType_CCompileInitEarly || FileType == EBuildFileType_QTMoc || FileType == EBuildFileType_MalterlibFS);
+				BuildRef.m_bHasCompilerFlags =
+					(
+						FileType == EBuildFileType_CCompile
+						|| FileType == EBuildFileType_CCompileInitEarly
+						|| FileType == EBuildFileType_QTMoc
+						|| FileType == EBuildFileType_MalterlibFS
+						|| FileType == EBuildFileType_GenericCompileWithFlags
+					)
+				;
 
 				{
 					auto DisabledConfigs = fp_GetConfigValues(IterFile->m_EnabledConfigs, EPropertyType_Compile, "Disabled");
@@ -628,7 +646,7 @@ fi
 					}
 				}
 
-				if (FileType == EBuildFileType_Custom)
+				if (FileType == EBuildFileType_Custom || FileType == EBuildFileType_GenericCustom)
 				{
 					for (auto &CustomCommandLine : CustomCommandLines)
 					{
@@ -641,7 +659,12 @@ fi
 
 						BuildRefRule.m_GUID = IterFile->f_GetBuildRuleGUID(Configuration);
 
-						BuildRefRule.m_MalterlibCustomBuildCommandLine = CustomCommandLine.m_Value.f_EscapeStrNoQuotes("\\'\r\n\t", "\\'rnt");
+						BuildRefRule.m_MalterlibCustomBuildCommandLine = CustomCommandLine.m_Value
+							.f_Replace("$(InputFileBase)", "${INPUT_FILE_BASE}")
+							.f_Replace("$(InputFile)", "${INPUT_FILE_NAME}")
+							.f_Replace("$(InputFilePath)", "${INPUT_FILE_PATH}")
+							.f_EscapeStrNoQuotes("\\'\r\n\t", "\\'rnt")
+						;
 
 						CStr WorkingDirectory = fp_GetConfigValue(IterFile->m_EnabledConfigs, Configuration, EPropertyType_Compile, "Custom_WorkingDirectory").m_Value;
 						BuildRefRule.m_WorkingDirectory = WorkingDirectory.f_EscapeStrNoQuotes("\\'\r\n\t", "\\'rnt");
@@ -762,70 +785,79 @@ fi
 
 	void CGeneratorInstance::fp_GeneratePBXBuildRule(CProject &_Project, CStr &o_Output) const
 	{
+		auto &ThreadLocal = *m_ThreadLocal;
 		TCSortedPerform<CStr> ToPerform;
 
-		auto &ThreadLocal = *m_ThreadLocal;
-		if (!_Project.mp_OrderedBuildTypes.f_FindEqual(EBuildFileType_Custom))
-			return;
-
-		auto &CustomBuildType = _Project.mp_OrderedBuildTypes[EBuildFileType_Custom];
-
-		for (auto &File : CustomBuildType)
+		for (auto FileType : {EBuildFileType_Custom, EBuildFileType_GenericCustom})
 		{
-			auto &FileName = File.m_FileName;
-			for (auto &BuildRule : File.m_BuildRules)
+			if (!_Project.mp_OrderedBuildTypes.f_FindEqual(FileType))
+				continue;
+
+			auto &CustomBuildType = _Project.mp_OrderedBuildTypes[FileType];
+
+			for (auto &File : CustomBuildType)
 			{
-				auto &Configuration = File.m_BuildRules.fs_GetKey(BuildRule);
+				auto &FileName = File.m_FileName;
 
-				ToPerform.f_Add
-					(
-						BuildRule.m_GUID
-						,[FileName, BuildRule, &o_Output]
-						{
-							CStr OutputFiles;
-							for (auto &Output : BuildRule.m_Outputs)
-								fg_AddStrSep(OutputFiles, "\t\t\t\t\"{}\""_f << Output, "\n");
+				for (auto &BuildRule : File.m_BuildRules)
+				{
+					auto &Configuration = File.m_BuildRules.fs_GetKey(BuildRule);
+					ToPerform.f_Add
+						(
+							BuildRule.m_GUID
+							,[FileName, BuildRule, &o_Output]
+							{
+								CStr OutputFiles;
+								TCSet<CStr> OutputDirs;
+								CStr CreateOutputDirs;
 
-							TCSet<CStr> OutputDirs;
-							for (auto &Output : BuildRule.m_Outputs)
-								OutputDirs[CFile::fs_GetPath(Output)];
+								for (auto &Output : BuildRule.m_Outputs)
+								{
+									CStr OutputReplaced = Output
+										.f_Replace("$(InputFileBase)", "${INPUT_FILE_BASE}")
+										.f_Replace("$(InputFile)", "${INPUT_FILE_NAME}")
+										.f_Replace("$(InputFilePath)", "${INPUT_FILE_PATH}")
+									;
 
-							CStr CreateOutputDirs;
-							for (auto &OutputDir : OutputDirs)
-								fg_AddStrSep(CreateOutputDirs, "mkdir -p \\\"{}\\\""_f << OutputDir.f_EscapeStrNoQuotes(), "\\n");
+									fg_AddStrSep(OutputFiles, "\t\t\t\t\t\t\"{}\""_f << OutputReplaced, ",\n");
+									OutputDirs[CFile::fs_GetPath(OutputReplaced)];
+								}
 
-							o_Output
-								+= CStr::CFormat
-								(
-	R"-----(		{} /* PBXBuildRule */ = {{
-				isa = PBXBuildRule;
-				compilerSpec = com.apple.compilers.proxy.script;
-				filePatterns = {};
-				fileType = pattern.proxy;
-				isEditable = 1;
-				setIsAlternate = 1;
-				outputFiles = (
-	{}
-				);
-								 script = "#!/bin/bash\nexport PATH=\"$MalterlibBuildSystemExecutablePath:$PATH\"\neval $OTHER_INPUT_FILE_FLAGS\n{}\ncd \"{}\"\n{}\n";
-			};
-	)-----"
-								)
-								<< BuildRule.m_GUID
-								<< FileName.f_EscapeStr()
-								<< OutputFiles
-								<< CreateOutputDirs
-								<< BuildRule.m_WorkingDirectory.f_EscapeStrNoQuotes()
-								<< BuildRule.m_MalterlibCustomBuildCommandLine.f_EscapeStrNoQuotes()
-							;
+								for (auto &OutputDir : OutputDirs)
+									fg_AddStrSep(CreateOutputDirs, "mkdir -p \\\"{}\\\""_f << OutputDir.f_EscapeStrNoQuotes(), "\\n");
 
-						}
-					)
-				;
-				ThreadLocal.mp_BuildRules[Configuration][BuildRule.m_GUID] = BuildRule.m_OutputType;
+								o_Output
+									+= CStr::CFormat
+									(
+		R"-----(		{} /* PBXBuildRule */ = {{
+					isa = PBXBuildRule;
+					compilerSpec = com.apple.compilers.proxy.script;
+					filePatterns = {};
+					fileType = pattern.proxy;
+					isEditable = 1;
+					setIsAlternate = 1;
+					outputFiles = (
+{}
+					);
+									 script = "#!/bin/bash\nexport PATH=\"$MalterlibBuildSystemExecutablePath:$PATH\"\neval $OTHER_INPUT_FILE_FLAGS\n{}\ncd \"{}\"\n{}\n";
+				};
+		)-----"
+									)
+									<< BuildRule.m_GUID
+									<< FileName.f_EscapeStr()
+									<< OutputFiles
+									<< CreateOutputDirs
+									<< BuildRule.m_WorkingDirectory.f_EscapeStrNoQuotes()
+									<< BuildRule.m_MalterlibCustomBuildCommandLine.f_EscapeStrNoQuotes()
+								;
+
+							}
+						)
+					;
+					ThreadLocal.mp_BuildRules[Configuration][BuildRule.m_GUID] = BuildRule.m_OutputType;
+				}
 			}
-}
-
+		}
 
 		ToPerform.f_Perform();
 	}
@@ -837,7 +869,7 @@ fi
 		auto & ThreadLocal = *m_ThreadLocal;
 		for (auto Iter = _Project.mp_OrderedBuildTypes.f_GetIterator(); Iter; ++Iter)
 		{
-			if (Iter.f_GetKey() == EBuildFileType_None || Iter.f_GetKey() == EBuildFileType_CInclude)
+			if (Iter.f_GetKey() == EBuildFileType_None || Iter.f_GetKey() == EBuildFileType_CInclude || Iter.f_GetKey() == EBuildFileType_GenericNonCompile)
 				continue;
 
 			for (auto &File : *Iter)
@@ -1307,7 +1339,7 @@ fi
 
 				for (auto iBuildFiles = _Project.mp_OrderedBuildTypes.f_GetIterator(); iBuildFiles; ++iBuildFiles)
 				{
-					if (iBuildFiles.f_GetKey() == EBuildFileType_None || iBuildFiles.f_GetKey() == EBuildFileType_CInclude)
+					if (iBuildFiles.f_GetKey() == EBuildFileType_None || iBuildFiles.f_GetKey() == EBuildFileType_CInclude || iBuildFiles.f_GetKey() == EBuildFileType_GenericNonCompile)
 						continue;
 
 					for (auto &FileRef : *iBuildFiles)

@@ -779,6 +779,7 @@ namespace NMib::NBuildSystem
 				, "TEMP_FILES_DIR"
 				, "TEMP_FILE_DIR"
 				, "TEMP_ROOT"
+				, "MODULE_CACHE_DIR"
 			}
 		;
 
