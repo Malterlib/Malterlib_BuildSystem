@@ -627,7 +627,7 @@ namespace NMib::NContainer
 
 				if
 					(
-						(fg_CharIsWhiteSpace(*pParse) && m_ParseDepth == 1 && nParsed > 1)
+						(fg_CharIsWhiteSpace(*pParse) && m_ParseDepth == 1 && nParsed > 1 && m_ObjectArrayParseDepth == 0)
 						|| *pTestParse == '}'
 						|| *pTestParse == ']'
 						|| *pTestParse == ','

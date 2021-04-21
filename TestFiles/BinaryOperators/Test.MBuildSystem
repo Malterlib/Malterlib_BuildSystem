@@ -57,6 +57,7 @@
 		TestValue31 define [string] = (["Test"] && ["Test2"])
 		TestValue32 define bool = (true || Error("Should Not Eval"))
 		TestValue33 define bool = (false && Error("Should Not Eval"))
+		TestValue34 define {...: string} = {Value: "Path0"->Trim() / "Path1", Value2: "Test"}
 	}
 	GenerateFile
 	{
@@ -95,7 +96,8 @@
 					`@(TestValue30->EJSONToString(""))\n`\
 					`@(TestValue31->EJSONToString(""))\n`\
 					`@(TestValue32->EJSONToString(""))\n`\
-					`@(TestValue33->EJSONToString(""))\n`
+					`@(TestValue33->EJSONToString(""))\n`\
+					`@(TestValue34->EJSONToString(""))\n`
 
 		Executable false
 		UnixLineEnds true

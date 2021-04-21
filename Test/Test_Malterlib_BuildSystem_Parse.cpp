@@ -30,6 +30,7 @@ namespace
 						return RegistryTest.f_GenerateStr();
 					}
 				;
+
 				NStr::CStr RegistryStr = R"---(Root
 {
 	TestStr /* Comment */ "Test Str" // Comment
