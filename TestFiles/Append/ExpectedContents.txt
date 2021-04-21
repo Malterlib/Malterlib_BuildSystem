@@ -1,0 +1,28 @@
+Generate File Contents:
+Prepended Testing Appended
+{
+	"Test": "Testing 2",
+	"TestOptional": {
+		"InnerValue": "Testing 3"
+	},
+	"TestOptional.InnerValue": "Testing 4"
+}
+{
+	"Test2": "Test2",
+	"Test1": "Test1",
+	"Test3": "Test3"
+}
+{
+	"Test2": "Test2",
+	"Sub": {
+		"Test1": "Test1",
+		"Test3": "Test3",
+		"Test4": "Test4"
+	}
+}
+[
+	"Test",
+	"Test2"
+]
+[]
+[]

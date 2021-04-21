@@ -1,0 +1,54 @@
+
+*Configuration
+{
+	Debug "Debug Config"
+	Release "Release Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
+
+Type
+{
+	CTest define {
+		Test: string
+		, TestOptional?: string
+	}
+	CTestOneOf define one_of(string, {
+		Test: string
+		, TestOptional?: string
+	})
+}
+
+%GenerateFile "TestFile"
+{
+	Property
+	{
+		CalcValue define string
+		CalcValueUserType define type(CTest)
+		CalcValueUserTypeOneOf define type(CTestOneOf)
+
+		CalcValue "Testing"
+		CalcValueUserType {Test: "Testing 1", TestOptional: "Testing 2"}
+		CalcValueUserTypeOneOf {Test: "Testing 1", TestOptional: "Testing 2"}
+	}
+	GenerateFile
+	{
+		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
+		Contents 	`Generate File Contents:\n`\
+					`@(CalcValue)\n`\
+					`@(CalcValueUserType->ToString())\n`\
+					`@(CalcValueUserTypeOneOf->ToString())\n`
+		
+		Executable false
+		UnixLineEnds true
+		UnicodeBOM false
+	}
+}

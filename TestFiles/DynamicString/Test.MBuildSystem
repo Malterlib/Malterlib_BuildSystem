@@ -1,0 +1,61 @@
+
+*Configuration
+{
+	Debug "Debug Config"
+	Release "Release Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
+
+%GenerateFile "TestFile"
+{
+	Type
+	{
+		CTest define {
+			Value: string
+			, OptionalValue?: string
+		}
+	}
+	Property
+	{
+		fg_TestDynamicString function(bool _bFirst, string _Second) string = _bFirst ? "First" : _Second
+		TestValue1 define string
+		TestValue1 `Dynamic @(fg_TestDynamicString(true, "Second"))`
+
+		TestValue2 define string
+		TestValue2 `Dynamic @(fg_TestDynamicString(false, `Second @(fg_TestDynamicString(false, "Inner Second"))`))`
+
+		TestValue3 define string
+		TestValue3 "Should match"
+		{
+			!!`Dynamic @@ @(fg_TestDynamicString(false, `Second @(fg_TestDynamicString(false, "Inner Second"))`))` "Dynamic @ Second Inner Second"
+		}
+
+		TestValue4 define string
+		TestValue4 "Should match"
+		{
+			`Dynamic @@ @(fg_TestDynamicString(false, `Second @(fg_TestDynamicString(false, "Inner Second"))`))` == "Dynamic @ Second Inner Second"
+		}
+	}
+	GenerateFile
+	{
+		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
+		Contents 	`Generate File Contents:\n`\
+					`@(TestValue1)\n`\
+					`@(TestValue2)\n`\
+					`@(TestValue3)\n`\
+					`@(TestValue4)\n`
+
+		Executable false
+		UnixLineEnds true
+		UnicodeBOM false
+	}
+}

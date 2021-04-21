@@ -7,24 +7,24 @@ namespace NMib::NBuildSystem
 {
 	struct CBuildSystemConfiguration
 	{
-		inline_always CStr const &f_GetName() const;
+		inline_always NStr::CStr const &f_GetName() const;
 		
-		CStr m_Description;
+		NStr::CStr m_Description;
 		CCondition m_Condition;
 		CFilePosition m_Position;
 	};
 
 	struct CConfigurationType
 	{
-		inline_always CStr const &f_GetName() const;
+		inline_always NStr::CStr const &f_GetName() const;
 
-		TCMap<CStr, CBuildSystemConfiguration> m_Configurations;
+		NContainer::TCMap<NStr::CStr, CBuildSystemConfiguration> m_Configurations;
 	};
 	
 	struct CConfigurationTuple
 	{
-		CStr m_Type;
-		CStr m_Name;
+		NStr::CStr m_Type;
+		NStr::CStr m_Name;
 		CFilePosition m_Position;
 	};
 
@@ -33,12 +33,12 @@ namespace NMib::NBuildSystem
 		bool operator < (CConfiguration const &_Right) const;
 		bool operator == (CConfiguration const &_Right) const;
 
-		CStr f_GetFullName() const;
-		CStr f_GetFullSafeName() const;
+		NStr::CStr f_GetFullName() const;
+		NStr::CStr f_GetFullSafeName() const;
 
-		CStr m_Platform;
-		CStr m_PlatformBase;
-		CStr m_Configuration;
+		NStr::CStr m_Platform;
+		NStr::CStr m_PlatformBase;
+		NStr::CStr m_Configuration;
 	};
 }
 

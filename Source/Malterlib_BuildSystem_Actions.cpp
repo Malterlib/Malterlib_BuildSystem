@@ -6,6 +6,27 @@
 
 namespace NMib::NBuildSystem
 {
+	auto CBuildSystem::fs_RunBuildSystem
+		(
+			NFunction::TCFunction<CBuildSystem::ERetry (CBuildSystem &_BuildSystem)> &&_fCommand
+			, EAnsiEncodingFlag _AnsiFlags
+			, NFunction::TCFunction<void (NStr::CStr const &_Output)> const &_fOutputConsole
+		) -> ERetry
+	{
+		CBuildSystem::ERetry Retry = CBuildSystem::ERetry_Again;
+		while (Retry != CBuildSystem::ERetry_None)
+		{
+			CBuildSystem BuildSystem(_AnsiFlags, _fOutputConsole);
+			if (Retry == CBuildSystem::ERetry_Again_NoReconcileOptions)
+				BuildSystem.f_NoReconcileOptions();
+
+			Retry = _fCommand(BuildSystem);
+			if (Retry == CBuildSystem::ERetry_Relaunch || Retry == CBuildSystem::ERetry_Relaunch_NoReconcileOptions)
+				return Retry;
+		}
+		return CBuildSystem::ERetry_None;
+	}
+
 	CBuildSystem::CRepoFilter CBuildSystem::CRepoFilter::fs_ParseParams(NEncoding::CEJSON const &_Params)
 	{
 		CBuildSystem::CRepoFilter Filter;

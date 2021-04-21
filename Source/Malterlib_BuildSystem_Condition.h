@@ -6,14 +6,21 @@
 #include <Mib/Core/Core>
 
 #include "Malterlib_BuildSystem_FilePosition.h"
+#include "Malterlib_BuildSystem_Syntax.h"
 
 namespace NMib::NBuildSystem
 {
 	enum EConditionType
 	{
 		EConditionType_Root
-		, EConditionType_Compare
-		, EConditionType_CompareNot
+		, EConditionType_MatchEqual
+		, EConditionType_MatchNotEqual
+		, EConditionType_CompareEqual
+		, EConditionType_CompareNotEqual
+		, EConditionType_CompareLessThan
+		, EConditionType_CompareLessThanEqual
+		, EConditionType_CompareGreaterThan
+		, EConditionType_CompareGreaterThanEqual
 		, EConditionType_Or
 		, EConditionType_And
 		, EConditionType_Not
@@ -21,16 +28,24 @@ namespace NMib::NBuildSystem
 
 	struct CCondition
 	{
-		inline_always CCondition();
 		bool f_NeedPerFile() const;
-		static void fs_ParseCondition(CRegistryPreserveAll &_Registry, CCondition &_ParentCondition, bool _bRoot = true);
-		bool f_SimpleEval(TCMap<CStr, CStr> const &_Values) const;
+		static bool fs_TryParseCondition(CBuildSystemRegistry const &_Registry, CCondition &_ParentCondition, bool _bRoot = true);
+		static void fs_ParseCondition(CBuildSystemRegistry const &_Registry, CCondition &_ParentCondition, bool _bRoot = true);
+		bool f_SimpleEval(NContainer::TCMap<NStr::CStr, NStr::CStr> const &_Values) const;
+		bool f_IsCompare() const;
 
-		TCLinkedList<CCondition> m_Children;
+		static ch8 const *fs_ConditionTypeToStr(EConditionType _Type);
 
-		CStr m_Subject;
-		CStr m_Value;
-		EConditionType m_Type;
+		template <typename tf_CStr>
+		void f_FormatRecursive(tf_CStr &o_Str, mint _Depth) const;
+		template <typename tf_CStr>
+		void f_Format(tf_CStr &o_Str) const;
+
+		NContainer::TCLinkedList<CCondition> m_Children;
+
+		CBuildSystemSyntax::CValue m_Left;
+		CBuildSystemSyntax::CValue m_Right;
+		EConditionType m_Type = EConditionType_Root;
 		CFilePosition m_Position;
 	};
 }

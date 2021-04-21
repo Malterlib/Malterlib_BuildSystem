@@ -11,9 +11,9 @@ namespace NMib::NBuildSystem
 	enum EGeneratedFileFlag
 	{
 		EGeneratedFileFlag_None = 0
-		, EGeneratedFileFlag_NoDateCheck = DBit(1)
-		, EGeneratedFileFlag_KeepGeneratedFile = DBit(2)
-		, EGeneratedFileFlag_Symlink = DBit(3)
+		, EGeneratedFileFlag_NoDateCheck = DMibBit(1)
+		, EGeneratedFileFlag_KeepGeneratedFile = DMibBit(2)
+		, EGeneratedFileFlag_Symlink = DMibBit(3)
 	};
 
 	struct CGeneratorArchiveState
@@ -27,15 +27,15 @@ namespace NMib::NBuildSystem
 		{
 			CProcessedFile();
 			
-			inline_always CStr const &f_GetFileName() const;
+			inline_always NStr::CStr const &f_GetFileName() const;
 			template <typename tf_CStream>
 			void f_Feed(tf_CStream &_Stream) const;
 			template <typename tf_CStream>
 			void f_Consume(tf_CStream &_Stream);
 
-			bool f_FileChanged(TCAtomic<bool> &o_bChanged, CStr const &_OutputDirectory);
+			bool f_FileChanged(NAtomic::TCAtomic<bool> &o_bChanged, NStr::CStr const &_OutputDirectory, CBuildSystem const &_BuildSystem);
 
-			TCSet<CStr> m_Workspaces;
+			NContainer::TCSet<NStr::CStr> m_Workspaces;
 			NTime::CTime m_WriteTime;
 			EGeneratedFileFlag m_Flags = EGeneratedFileFlag_None;
 		};
@@ -47,12 +47,12 @@ namespace NMib::NBuildSystem
 		template <typename tf_CStream>
 		void f_Consume(tf_CStream &_Stream);
 		
-		TCMap<CStr, CProcessedFile> m_ExeFile;
-		TCMap<CStr, CProcessedFile> m_SourceFiles;
-		TCMap<CStr, CProcessedFile> m_ReferencedFiles;
-		TCMap<CStr, CProcessedFile> m_GeneratedFiles;
-		TCMap<CFindOptions, TCVector<CFile::CFoundFile>> m_SourceSearches;
-		TCMap<CStr, CStr> m_Environment;
+		NContainer::TCMap<NStr::CStr, CProcessedFile> m_ExeFile;
+		NContainer::TCMap<NStr::CStr, CProcessedFile> m_SourceFiles;
+		NContainer::TCMap<NStr::CStr, CProcessedFile> m_ReferencedFiles;
+		NContainer::TCMap<NStr::CStr, CProcessedFile> m_GeneratedFiles;
+		NContainer::TCMap<CFindOptions, NContainer::TCVector<NFile::CFile::CFoundFile>> m_SourceSearches;
+		NContainer::TCMap<NStr::CStr, NStr::CStr> m_Environment;
 		EGenerationFlag m_GenerationFlags = EGenerationFlag_None;
 	};
 }

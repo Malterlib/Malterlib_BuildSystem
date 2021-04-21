@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem.h"
@@ -6,39 +6,22 @@
 
 namespace NMib::NBuildSystem
 {
-	CEntity::CEntity(CEntity &&_Other)
-		: m_ChildEntitiesMap(fg_Move(_Other.m_ChildEntitiesMap))
-		, m_ChildEntitiesOrdered(fg_Move(_Other.m_ChildEntitiesOrdered))
-		, m_Key(fg_Move(_Other.m_Key))
-		, m_Condition(fg_Move(_Other.m_Condition))
-		, m_Properties(fg_Move(_Other.m_Properties))
-		, m_EvaluatedProperties(fg_Move(_Other.m_EvaluatedProperties))
-		, m_PotentialExplicitProperties(fg_Move(_Other.m_PotentialExplicitProperties))
-		, m_PerFilePotentialExplicitProperties(fg_Move(_Other.m_PerFilePotentialExplicitProperties))
-		, m_PropertiesEvalOrder(fg_Move(_Other.m_PropertiesEvalOrder))
-		, m_pParent(nullptr)
-		, m_Position(fg_Move(_Other.m_Position))
+	CStr const &CEntityKey::f_GetName(CFilePosition const &_Position) const
 	{
-#ifdef DMibBuildSystem_DebugReferences
-#ifdef DMibBuildSystem_DebugReferencesAdvanced
-		{
-			DLock(mp_DebugSetLock);
-			mp_DebugSet[this];
-		}
-#endif
-		this->f_RefCountIncrease(DMibRefcountDebuggingOnly(m_DebugSelfRef));
-#endif
-		for (auto iChild = m_ChildEntitiesOrdered.f_GetIterator(); iChild; ++iChild)
-		{
-			iChild->m_pParent = this;
-		}
+		if (!m_Name.f_IsConstantString())
+			CBuildSystem::fs_ThrowError(_Position, "Entity should be a string");
+
+		return m_Name.f_ConstantString();
 	}
 
-	CEntity::CEntity(CEntity const &_Other)
-		: m_Key(_Other.m_Key)
-		, m_Condition(_Other.m_Condition)
-		, m_Position(_Other.m_Position)
+	CEntity::CEntity(CEntity *_pParent)
+		: m_pParent(_pParent)
+		, m_pData(fg_Construct())
+		, m_pChildDependentData(fg_Construct())
 	{
+		if (_pParent)
+			_pParent->m_ChildEntitiesOrdered.f_Insert(*this);
+
 #ifdef DMibBuildSystem_DebugReferences
 #ifdef DMibBuildSystem_DebugReferencesAdvanced
 		{
@@ -48,15 +31,8 @@ namespace NMib::NBuildSystem
 #endif
 		this->f_RefCountIncrease(DMibRefcountDebuggingOnly(m_DebugSelfRef));
 #endif
-		f_SetProperties(_Other);
-		f_SetEntities(_Other);
-		if (_Other.m_pCopiedFrom)
-			m_pCopiedFrom = _Other.m_pCopiedFrom;
-		else
-			m_pCopiedFrom = fg_Explicit(&_Other);
-		m_pCopiedFromEvaluated = fg_Explicit(&_Other);
 	}
-	
+
 #ifdef DMibBuildSystem_DebugReferences
 	CEntity::~CEntity()
 	{
@@ -83,15 +59,6 @@ namespace NMib::NBuildSystem
 			DLock(mp_DebugSetLock);
 			CStr ThisPath = f_GetPath();
 			DTrace("{}\n\n", ThisPath);
-			for (auto iEntity = mp_DebugSet.f_GetIterator(); iEntity; ++iEntity)
-			{
-				auto pEntity = iEntity.f_GetKey();
-				if (pEntity->m_pCopiedFromEvaluated == this || pEntity->m_pCopiedFrom == this)
-				{
-					CStr Path = pEntity->f_GetPath();
-					DTrace("{}\n", Path);
-				}
-			}
 			auto pThis = mp_DebugSet.f_FindEqual(this);
 			(void)pThis;
 			DMibPDebugBreak;
@@ -107,30 +74,188 @@ namespace NMib::NBuildSystem
 	}
 #endif
 
-	CEntity &CEntity::operator = (CEntity &&_Other)
+	CEntity::CEntity(CEntity const &_Other, CEntity *_pParent, EEntityCopyFlag _CopyFlags)
+		: m_pData(_Other.m_pData)
+		, m_pChildDependentData(_Other.m_pChildDependentData)
+		, m_pParent(_pParent)
 	{
-		m_ChildEntitiesMap = fg_Move(_Other.m_ChildEntitiesMap);
-		m_ChildEntitiesOrdered = fg_Move(_Other.m_ChildEntitiesOrdered);
-		m_Key = fg_Move(_Other.m_Key);
-		m_Condition = fg_Move(_Other.m_Condition);
-		m_Properties = fg_Move(_Other.m_Properties);
-		m_EvaluatedProperties = fg_Move(_Other.m_EvaluatedProperties);
-		m_PotentialExplicitProperties = fg_Move(_Other.m_PotentialExplicitProperties);
-		m_PerFilePotentialExplicitProperties = fg_Move(_Other.m_PerFilePotentialExplicitProperties);
-		m_PropertiesEvalOrder = fg_Move(_Other.m_PropertiesEvalOrder);
-		m_Position = _Other.m_Position;
+		DMibCheck(!m_pParent || this->f_GetKey().m_Name.f_IsValid());
 
-		for (auto iChild = m_ChildEntitiesOrdered.f_GetIterator(); iChild; ++iChild)
-			iChild->m_pParent = this;
+		if (_pParent)
+			_pParent->m_ChildEntitiesOrdered.f_Insert(*this);
 
-		return *this;
+#ifdef DMibBuildSystem_DebugReferences
+#ifdef DMibBuildSystem_DebugReferencesAdvanced
+		{
+			DLock(mp_DebugSetLock);
+			mp_DebugSet[this];
+		}
+#endif
+		this->f_RefCountIncrease(DMibRefcountDebuggingOnly(m_DebugSelfRef));
+#endif
+
+		if (!(_CopyFlags & EEntityCopyFlag_NoCheckTypes))
+			f_CheckTypes(_Other);
+
+		if (_CopyFlags & EEntityCopyFlag_CopyExternal)
+			f_CopyExternal(_Other);
+
+		if (_CopyFlags & EEntityCopyFlag_CopyChildren)
+			f_CopyEntities(_Other, _CopyFlags);
 	}
-	
+
+	namespace
+	{
+		CEntityKey g_RootKey;
+	}
+
+	CEntityKey const &CEntity::f_GetKey() const
+	{
+		if (m_pParent)
+			return NContainer::TCMap<CEntityKey, CEntity>::fs_GetKey(*this);
+
+		return g_RootKey;
+	}
+
+	void CEntity::f_CopyAll(CEntity const &_Other, bool _bCopyChildren)
+	{
+		m_pData = _Other.m_pData;
+		m_pChildDependentData = _Other.m_pChildDependentData;
+
+		f_CheckTypes(_Other);
+		f_CopyExternal(_Other);
+
+		if (_bCopyChildren)
+			f_CopyEntities(_Other, EEntityCopyFlag_ClearExistingChildren | EEntityCopyFlag_CopyChildren | EEntityCopyFlag_CopyExternal);
+	}
+
+	void CEntity::f_Assign(CEntity const &_Other)
+	{
+		DMibRequire(m_pParent == nullptr); // Only roots
+
+		m_pData = _Other.m_pData;
+		m_pChildDependentData = _Other.m_pChildDependentData;
+
+		f_CopyEntities(_Other, EEntityCopyFlag_CopyChildren | EEntityCopyFlag_NoCheckTypes);
+	}
+
+	void CEntity::f_CopyEntities(CEntity const &_Other, EEntityCopyFlag _Flags)
+	{
+		if (_Flags & EEntityCopyFlag_ClearExistingChildren)
+			m_ChildEntitiesMap.f_Clear();
+
+		if (_Other.m_ChildEntitiesOrdered.f_IsEmpty())
+			return;
+
+		auto iChild = _Other.m_ChildEntitiesOrdered.f_GetIterator();
+		m_ChildEntitiesMap.f_BatchMapIfNotMapped
+			(
+				[&](TCMap<CEntityKey, CEntity>::CConditionalMapper &_Mapper) -> bool
+				{
+					auto Mapped = _Mapper
+						(
+							iChild->f_GetKey()
+							, *iChild
+							, this
+							, _Flags | EEntityCopyFlag_CopyChildren
+						)
+					;
+					if ((_Flags & EEntityCopyFlag_MergeEntities) && !Mapped.f_WasCreated())
+					{
+						auto &NewChild = *Mapped;
+						auto &NewData = NewChild.f_DataWritable();
+						NewData.m_Condition.m_Children.f_Insert(_Other.f_Data().m_Condition.m_Children);
+						NewChild.f_CopyProperties(*iChild);
+						NewChild.f_CopyEntities(*iChild, _Flags);
+					}
+					++iChild;
+					return iChild;
+				}
+			)
+		;
+	}
+
+	void CEntity::f_CheckTypes(CEntity const &_Other)
+	{
+		auto &ThisData = f_Data();
+
+		for (auto &Definition : ThisData.m_VariableDefinitions)
+		{
+			auto &Key = ThisData.m_VariableDefinitions.fs_GetKey(Definition);
+			for (auto *pParent = m_pParent; pParent; pParent = pParent->m_pParent)
+			{
+				if (auto pExistingType = pParent->f_Data().m_VariableDefinitions.f_FindEqual(Key))
+					CBuildSystem::fs_ThrowError(Definition.m_Type.m_Position, "User type name collision with parent entity", TCVector<CBuildSystemError>{{pExistingType->m_Type.m_Position, "Defined here"}});
+
+				if (auto *pDefinition = pParent->f_ChildDependentData().m_ChildrenVariableDefinitions.f_FindEqual(Key); pDefinition && pDefinition->f_FindEqual(Definition.m_Type.m_Position))
+					continue;
+
+				auto &ChildDependentData = pParent->f_ChildDependentDataWritable();
+				ChildDependentData.m_ChildrenVariableDefinitions[Key].f_Insert(Definition.m_Type.m_Position);
+			}
+		}
+
+		for (auto &UserType : ThisData.m_UserTypes)
+		{
+			auto &Key = ThisData.m_UserTypes.fs_GetKey(UserType);
+
+			for (auto *pParent = m_pParent; pParent; pParent = pParent->m_pParent)
+			{
+				if (auto pExistingType = pParent->f_Data().m_UserTypes.f_FindEqual(Key))
+					CBuildSystem::fs_ThrowError(UserType.m_Position, "User type name collision with parent entity", TCVector<CBuildSystemError>{{pExistingType->m_Position, "Defined here"}});
+
+				if (auto *pUserType = pParent->f_ChildDependentData().m_ChildrenUserTypes.f_FindEqual(Key); pUserType && pUserType->f_FindEqual(UserType.m_Position))
+					continue;
+
+				auto &ChildDependentData = pParent->f_ChildDependentDataWritable();
+				ChildDependentData.m_ChildrenUserTypes[Key][UserType.m_Position];
+			}
+		}
+	}
+
+	void CEntity::f_CopyTypes(CEntity const &_Other)
+	{
+		auto &OtherData = _Other.f_Data();
+		auto &ThisData = f_Data();
+
+		for (auto &Definition : OtherData.m_VariableDefinitions)
+		{
+			auto &Key = OtherData.m_VariableDefinitions.fs_GetKey(Definition);
+			if (auto pOld = ThisData.m_VariableDefinitions.f_FindEqual(Key))
+			{
+				if (pOld->m_Type.m_Type == Definition.m_Type.m_Type)
+					continue;
+			}
+			CBuildSystem::fs_AddEntityVariableDefinition
+				(
+					nullptr
+					, *this
+					, Key
+					, Definition.m_Type.m_Type
+					, Definition.m_Type.m_Position
+					, Definition.m_Type.m_Whitespace
+					, Definition.m_pConditions
+				)
+			;
+		}
+
+		for (auto &UserType : OtherData.m_UserTypes)
+		{
+			auto &Key = OtherData.m_UserTypes.fs_GetKey(UserType);
+			if (auto pOld = ThisData.m_UserTypes.f_FindEqual(Key))
+			{
+				if (pOld->m_Type == UserType.m_Type)
+					continue;
+			}
+			CBuildSystem::fs_AddEntityUserType(*this, Key, UserType.m_Type, UserType.m_Position);
+		}
+	}
+
 	void CEntity::fpr_GetPathKey(TCVector<CEntityKey> &_Dest) const
 	{
-		if (m_pParent && m_pParent->m_Key.m_Type != EEntityType_Root)
+		if (m_pParent && m_pParent->f_GetKey().m_Type != EEntityType_Root)
 			m_pParent->fpr_GetPathKey(_Dest);
-		_Dest.f_Insert(m_Key);
+		_Dest.f_Insert(f_GetKey());
 	}
 
 	TCVector<CEntityKey> CEntity::f_GetPathKey() const
@@ -145,7 +270,7 @@ namespace NMib::NBuildSystem
 		CEntity const *pRet = this;
 		while (pRet)
 		{
-			if (pRet->m_Key.m_Type == EEntityType_Root)
+			if (pRet->f_GetKey().m_Type == EEntityType_Root)
 				break;
 			pRet = pRet->m_pParent;
 		}
@@ -159,36 +284,67 @@ namespace NMib::NBuildSystem
 
 		if (!_Destination.f_IsEmpty())
 			_Destination += "->";
-		_Destination += fg_EntityTypeToStr(m_Key.m_Type);
-		_Destination += ":";
-		_Destination += m_Key.m_Name;
+
+		auto &Key = f_GetKey();
+
+		if (!Key.m_Name.f_IsValid())
+			_Destination += "{}"_f << fg_EntityTypeToStr(Key.m_Type);
+		else if (Key.m_Name.f_IsConstantString())
+			_Destination += "{}:{}"_f << fg_EntityTypeToStr(Key.m_Type) << Key.m_Name.f_ConstantString();
+		else
+			_Destination += "{}:{}"_f << fg_EntityTypeToStr(Key.m_Type) << Key.m_Name;
 	}
 
 	void CEntity::fr_GetPathForGetProperty(CStr &_Destination) const
 	{
-		if (m_Key.m_Type == EEntityType_Root)
+		auto &Key = f_GetKey();
+
+		if (Key.m_Type == EEntityType_Root)
 			return;
-		
+
 		if (m_pParent)
 			m_pParent->fr_GetPathForGetProperty(_Destination);
 
 		if (!_Destination.f_IsEmpty())
 			_Destination += ".";
-		if (m_Key.m_Name.f_FindChars(".\"") >= 0)
+		auto &Name = f_GetKeyName();
+		if (Name.f_FindChars(".\"") >= 0)
 		{
-			CStr ToEspace = fg_EntityTypeToStr(m_Key.m_Type);
+			CStr ToEspace = fg_EntityTypeToStr(Key.m_Type);
 			ToEspace += ":";
-			ToEspace += m_Key.m_Name;
+			ToEspace += Name;
 			_Destination += ToEspace.f_EscapeStr();
 		}
 		else
 		{
-			_Destination += fg_EntityTypeToStr(m_Key.m_Type);
+			_Destination += fg_EntityTypeToStr(Key.m_Type);
 			_Destination += ":";
-			_Destination += m_Key.m_Name;
+			_Destination += Name;
 		}
 	}
-	
+
+	CFilePosition const &CEntity::f_GetFirstValidPosition() const
+	{
+		for (auto *pParent = this; pParent; pParent = pParent->m_pParent)
+		{
+			auto &Data = pParent->f_Data();
+			if (Data.m_Position.f_IsValid())
+				return Data.m_Position;
+		}
+
+		return f_Data().m_Position;
+	}
+
+	NStr::CStr const &CEntity::f_GetKeyName() const
+	{
+		return f_GetKey().f_GetName(f_Data().m_Position);
+	}
+
+	bool CEntity::f_HasFullEval(EPropertyType _PropertyType) const
+	{
+		return (f_Data().m_HasFullEval & (1 << _PropertyType)) != 0;
+	}
+
 	CStr CEntity::f_GetPath() const
 	{
 		CStr Ret;
@@ -204,150 +360,77 @@ namespace NMib::NBuildSystem
 
 		return Ret;
 	}
-	
+
 	void CEntity::f_CopyProperties(CEntity const &_Other)
 	{
-		if (_Other.m_PropertiesEvalOrder.f_IsEmpty())
+		auto &ThisData = f_DataWritable();
+
+		f_CopyTypes(_Other);
+
+		auto &OtherData = _Other.f_Data();
+
+		if (OtherData.m_Properties.f_IsEmpty())
 			return;
-		auto iProp = _Other.m_PropertiesEvalOrder.f_GetIterator();
-		m_Properties.f_BatchMapIfNotMapped
+
+		auto iProp = OtherData.m_Properties.f_GetIterator();
+		ThisData.m_Properties.f_BatchMapIfNotMapped
 			(
-				[&](TCMap<CPropertyKey, TCLinkedList<CProperty>>::CConditionalMapper & _Mapper) -> bool
+				[&](TCMap<CPropertyKey, CEntityData::CPropertyContainer>::CConditionalMapper &_Mapper) -> bool
 				{
-					auto Mapped = _Mapper(iProp->m_Key);
-					auto & NewProp = (*Mapped).f_Insert();
-					NewProp = *iProp;
-					m_PropertiesEvalOrder.f_Insert(NewProp);
+					auto Mapped = _Mapper(iProp.f_GetKey());
+					(*Mapped).f_Insert(*iProp);
+
 					++iProp;
 					return iProp;
 				}
 			)
 		;
+
+		ThisData.m_HasFullEval |= OtherData.m_HasFullEval;
 	}
-	
-	void CEntity::f_CopyPropertiesAndEval(CEntity const &_Other)
+
+	void CEntity::f_CopyProperties(CEntity &&_Other)
 	{
-		if (_Other.m_PropertiesEvalOrder.f_IsEmpty())
+		if (_Other.m_pData->f_RefCountGet() != 0)
+			return f_CopyProperties(fg_Const(_Other));
+
+		auto &ThisData = f_DataWritable();
+
+		f_CopyTypes(_Other);
+
+		auto &OtherData = _Other.f_DataWritable();
+
+		if (OtherData.m_Properties.f_IsEmpty())
 			return;
-		auto iProp = _Other.m_PropertiesEvalOrder.f_GetIterator();
-		m_Properties.f_BatchMapIfNotMapped
+
+		if (ThisData.m_Properties.f_IsEmpty())
+		{
+			ThisData.m_Properties = fg_Move(OtherData.m_Properties);
+			ThisData.m_HasFullEval = OtherData.m_HasFullEval;
+			return;
+		}
+
+		auto iProp = OtherData.m_Properties.f_GetIterator();
+		ThisData.m_Properties.f_BatchMapIfNotMapped
 			(
-				[&](TCMap<CPropertyKey, TCLinkedList<CProperty>>::CConditionalMapper & _Mapper) -> bool
+				[&](TCMap<CPropertyKey, CEntityData::CPropertyContainer>::CConditionalMapper &_Mapper) -> bool
 				{
-					auto Mapped = _Mapper(iProp->m_Key);
-					auto & NewProp = (*Mapped).f_Insert();
-					NewProp = *iProp;
-					m_PropertiesEvalOrder.f_Insert(NewProp);
-					m_PotentialExplicitProperties[iProp->m_Key].f_Insert(&NewProp);
-					
-					if (NewProp.m_Condition.f_NeedPerFile())
-						m_PerFilePotentialExplicitProperties[iProp->m_Key].f_Insert(&NewProp);
-					
+					auto Mapped = _Mapper(iProp.f_GetKey());
+					(*Mapped).f_Insert(fg_Move(*iProp));
+
 					++iProp;
 					return iProp;
 				}
 			)
 		;
+
+		ThisData.m_HasFullEval |= OtherData.m_HasFullEval;
 	}
 
 	void CEntity::f_ClearReferences()
 	{
-		m_pCopiedFrom = nullptr;
-		m_pCopiedFromEvaluated = nullptr;
 		for (auto &Child : m_ChildEntitiesOrdered)
-		{
 			Child.f_ClearReferences();
-		}
-	}
-	
-	void CEntity::f_MergeEntities(CEntity const &_Other)
-	{
-		if (_Other.m_ChildEntitiesOrdered.f_IsEmpty())
-			return;						
-		auto iChild = _Other.m_ChildEntitiesOrdered.f_GetIterator();
-		m_ChildEntitiesMap.f_BatchMapIfNotMapped
-			(
-				[&](TCMap<CEntityKey, CEntity>::CConditionalMapper & _Mapper) -> bool
-				{
-					auto Mapped = _Mapper(iChild->f_GetMapKey(), this);
-					auto &NewChild = *Mapped;
-					if (Mapped.f_WasCreated())
-					{
-						m_ChildEntitiesOrdered.f_Insert(NewChild);
-						NewChild.f_CopyFrom(*iChild, true, nullptr, false);						
-					}
-					else
-					{
-						NewChild.m_Condition.m_Children.f_Insert(_Other.m_Condition.m_Children);
-						NewChild.f_CopyProperties(*iChild);
-						NewChild.f_MergeEntities(*iChild);
-					}
-					++iChild;
-					return iChild;
-				}
-			)
-		;
-	}
-
-	void CEntity::f_CopyEntities(CEntity const &_Other, bool _bDirectCopy)
-	{
-		if (_Other.m_ChildEntitiesOrdered.f_IsEmpty())
-			return;						
-		auto iChild = _Other.m_ChildEntitiesOrdered.f_GetIterator();
-		m_ChildEntitiesMap.f_BatchMapIfNotMapped
-			(
-				[&](TCMap<CEntityKey, CEntity>::CConditionalMapper & _Mapper) -> bool
-				{
-					auto Mapped = _Mapper(iChild->f_GetMapKey(), this);
-					auto &NewChild = *Mapped;
-					m_ChildEntitiesOrdered.f_Insert(NewChild);
-					NewChild.f_CopyFrom(*iChild, true, nullptr, _bDirectCopy);
-					++iChild;
-					return iChild;
-				}
-			)
-		;
-	}
-
-	void CEntity::f_SetProperties(CEntity const &_Other)
-	{
-		DRequire(m_Properties.f_IsEmpty());
-		if (_Other.m_PropertiesEvalOrder.f_IsEmpty())
-			return;
-		auto iProp = _Other.m_PropertiesEvalOrder.f_GetIterator();
-		m_Properties.f_BatchMapIfNotMapped
-			(
-				[&](TCMap<CPropertyKey, TCLinkedList<CProperty>>::CConditionalMapper & _Mapper) -> bool
-				{
-					auto Mapped = _Mapper(iProp->m_Key);
-					auto & NewProp = (*Mapped).f_Insert();
-					NewProp = *iProp;
-					m_PropertiesEvalOrder.f_Insert(NewProp);
-					++iProp;
-					return iProp;
-				}
-			)
-		;
-	}
-	
-	void CEntity::f_SetEntities(CEntity const &_Other)
-	{
-		DRequire(m_ChildEntitiesMap.f_IsEmpty());
-		if (_Other.m_ChildEntitiesOrdered.f_IsEmpty())
-			return;						
-		auto iChild = _Other.m_ChildEntitiesOrdered.f_GetIterator();
-		m_ChildEntitiesMap.f_BatchMap
-			(
-				[&](TCMap<CEntityKey, CEntity>::CMapper & _Mapper) -> bool
-				{
-					auto &NewChild = _Mapper(iChild->f_GetMapKey(), this);
-					m_ChildEntitiesOrdered.f_Insert(NewChild);
-					NewChild = *iChild;
-					++iChild;
-					return iChild;
-				}
-			)
-		;
 	}
 
 	void CEntity::f_ForEachChild(TCFunction<void (CEntity *_pChild)> const &_fChild)
@@ -359,124 +442,30 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	void CEntity::f_CopyFrom(CEntity const &_Other, bool _bCopyChildren, CEntityKey const* _pKey, bool _bDirectCopy)
-	{
-		if (_pKey)
-			m_Key = *_pKey;
-		else
-			m_Key = _Other.m_Key;
-		m_Condition = _Other.m_Condition;
-		m_Position = _Other.m_Position;
-		if (_bDirectCopy)
-		{
-			m_pCopiedFrom = _Other.m_pCopiedFrom;
-			m_pCopiedFromEvaluated = _Other.m_pCopiedFromEvaluated;
-		}
-		else
-		{
-			if (_Other.m_pCopiedFrom)
-				m_pCopiedFrom = _Other.m_pCopiedFrom;
-			else
-				m_pCopiedFrom = fg_Explicit(&_Other);
-			m_pCopiedFromEvaluated = fg_Explicit(&_Other);
-		}
-
-		f_CopyProperties(_Other);
-		
-		if (_bCopyChildren)
-			f_CopyEntities(_Other, _bDirectCopy);
-	}
-	
 	void CEntity::f_CopyExternal(CEntity const &_Other)
 	{
-		for (auto iEvaluated = _Other.m_EvaluatedProperties.f_GetIterator(); iEvaluated; ++iEvaluated)
+		for (auto iEvaluated = _Other.m_EvaluatedProperties.m_Properties.f_GetIterator(); iEvaluated; ++iEvaluated)
 		{
-			if (iEvaluated->m_Type == EEvaluatedPropertyType_External)
-			{
-				m_EvaluatedProperties(iEvaluated.f_GetKey(), *iEvaluated);
-			}
+			if (iEvaluated->f_IsExternal())
+				m_EvaluatedProperties.m_Properties(iEvaluated.f_GetKey(), *iEvaluated);
 		}
 	}
 
-	void CEntity::f_CopyFromWithCopyFrom(CEntity const &_Other, bool _bCopyChildren)
+	CProperty &CEntity::f_AddProperty(CPropertyKey const &_Key, CBuildSystemSyntax::CRootValue const &_Value, CFilePosition const &_Position)
 	{
-		if (_Other.m_pCopiedFrom)
-		{
-			auto &Source = *_Other.m_pCopiedFrom;
-			m_Key = Source.m_Key;
-			m_Condition = Source.m_Condition;
-			m_Position = Source.m_Position;
-			if (Source.m_pCopiedFrom)
-				m_pCopiedFrom = _Other.m_pCopiedFrom;
-			else
-				m_pCopiedFrom = fg_Explicit(&Source);
-			f_CopyProperties(_Other);
-		}
-		else
-			f_CopyFrom(_Other, false);
-
-		f_CopyExternal(_Other);
-		m_pCopiedFromEvaluated = fg_Explicit(&_Other);
-
-		if (_bCopyChildren)
-		{
-			m_ChildEntitiesMap.f_Clear();
-			
-			if (!_Other.m_ChildEntitiesOrdered.f_IsEmpty())
-			{
-				auto iChild = _Other.m_ChildEntitiesOrdered.f_GetIterator();
-				m_ChildEntitiesMap.f_BatchMap
-					(
-						[&](TCMap<CEntityKey, CEntity>::CMapper & _Mapper) -> bool
-						{
-							auto &NewChild = _Mapper(iChild->f_GetMapKey(), this);
-							m_ChildEntitiesOrdered.f_Insert(NewChild);
-							NewChild.f_CopyFromWithCopyFrom(*iChild, _bCopyChildren);
-							++iChild;
-							return iChild;
-						}
-					)
-				;
-			}
-		}
-	}
-
-	CEntity &CEntity::operator = (CEntity const &_Other)
-	{
-		f_CopyFrom(_Other, true);
-		return *this;
-	}
-
-	CEntity::CEntity(CEntity *_pParent)
-		: m_pParent(_pParent)
-	{
-#ifdef DMibBuildSystem_DebugReferences
-#ifdef DMibBuildSystem_DebugReferencesAdvanced
-		{
-			DLock(mp_DebugSetLock);
-			mp_DebugSet[this];
-		}
-#endif
-		this->f_RefCountIncrease(DMibRefcountDebuggingOnly(m_DebugSelfRef));
-#endif
-	}
-
-	CProperty &CEntity::f_AddProperty(CPropertyKey const &_Key, CStr const &_Value, CFilePosition const &_Position)
-	{
-		CProperty Property;
-		Property.m_Key = _Key;
-		Property.m_Value = _Value;
-		Property.m_Position = _Position;
-
-		auto &NewProperty = m_Properties[_Key].f_Insert(Property);
+		auto &ThisData = f_DataWritable();
+		auto &NewProperty = ThisData.m_Properties[_Key].f_Insert();
 		NewProperty.m_Key = _Key;
 		NewProperty.m_Value = _Value;
 		NewProperty.m_Position = _Position;
-		m_PropertiesEvalOrder.f_Insert(NewProperty);
+		DMibCheck(NewProperty.m_Key.m_Type != EPropertyType_Type);
+
+		if (_Key.m_Name == "FullEval")
+			ThisData.m_HasFullEval |= 1 << _Key.m_Type;
 
 		return NewProperty;
 	}
-	
+
 #ifdef DMibBuildSystem_DebugReferences
 #ifdef DMibBuildSystem_DebugReferencesAdvanced
 	CMutual CEntity::mp_DebugSetLock;
@@ -497,9 +486,9 @@ namespace NMib::NBuildSystem
 					DConOut("pChild == this" DNewLine, 0);
 					DMibPDebugBreak;
 				}
-				if (!m_ChildEntitiesMap.f_FindEqual(pChild->f_GetMapKey()))
+				if (!m_ChildEntitiesMap.f_FindEqual(pChild->f_GetKey()))
 				{
-					DConOut("!m_ChildEntitiesMap.f_FindEqual(pChild->f_GetMapKey())" DNewLine, 0);
+					DConOut("!m_ChildEntitiesMap.f_FindEqual(pChild->f_GetKey())" DNewLine, 0);
 					DMibPDebugBreak;
 				}
 			}
@@ -519,13 +508,13 @@ namespace NMib::NBuildSystem
 				DMibPDebugBreak;
 			}
 		}
-		
+
 		f_CheckParents();
-		
+
 		for (auto iChild = m_ChildEntitiesOrdered.f_GetIterator(); iChild; ++iChild)
 			iChild->f_CheckChildren();
 	}
-	
+
 	void CEntity::fpr_CheckParents() const
 	{
 		for (auto iChild = m_ChildEntitiesOrdered.f_GetIterator(); iChild; ++iChild)
@@ -539,7 +528,59 @@ namespace NMib::NBuildSystem
 			pChild->fpr_CheckParents();
 		}
 	}
-	
+
+	CEntityData::CEntityData() = default;
+
+	CEntityData::CEntityData(CEntityData const &_Other)
+		: m_Condition(_Other.m_Condition)
+		, m_Properties(_Other.m_Properties)
+		, m_VariableDefinitions(_Other.m_VariableDefinitions)
+		, m_UserTypes(_Other.m_UserTypes)
+		, m_Position(_Other.m_Position)
+		, m_Debug(_Other.m_Debug)
+		, m_HasFullEval(_Other.m_HasFullEval)
+	{
+	}
+
+	CEntityData const &CEntity::f_Data() const
+	{
+		return *m_pData;
+	}
+
+	CEntityData &CEntity::f_DataWritable()
+	{
+		if (m_pData->f_RefCountGet() == 0)
+			return *m_pData;
+
+		TCSharedPointer<CEntityData> pCopied = fg_Construct(*m_pData);
+		m_pData = fg_Move(pCopied);
+
+		return *m_pData;
+	}
+
+	CEntityChildDependantData::CEntityChildDependantData() = default;
+	CEntityChildDependantData::CEntityChildDependantData(CEntityChildDependantData const &_Other)
+		: m_ChildrenVariableDefinitions(_Other.m_ChildrenVariableDefinitions)
+		, m_ChildrenUserTypes(_Other.m_ChildrenUserTypes)
+	{
+	}
+
+	CEntityChildDependantData const &CEntity::f_ChildDependentData() const
+	{
+		return *m_pChildDependentData;
+	}
+
+	CEntityChildDependantData &CEntity::f_ChildDependentDataWritable()
+	{
+		if (m_pChildDependentData->f_RefCountGet() == 0)
+			return *m_pChildDependentData;
+
+		TCSharedPointer<CEntityChildDependantData> pCopied = fg_Construct(*m_pChildDependentData);
+		m_pChildDependentData = fg_Move(pCopied);
+
+		return *m_pChildDependentData;
+	}
+
 	EEntityType fg_EntityTypeFromStr(CStr const &_String)
 	{
 		if (_String == "Root") return EEntityType_Root;

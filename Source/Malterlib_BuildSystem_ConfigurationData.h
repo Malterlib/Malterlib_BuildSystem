@@ -10,8 +10,9 @@ namespace NMib::NBuildSystem
 		CConfiguraitonData();
 		virtual ~CConfiguraitonData();
 		
-		TCVector<CConfigurationTuple> m_Tuples;
+		NContainer::TCVector<CConfigurationTuple> m_Tuples;
 		CBuildSystemData m_Evaluated;
-		TCMap<CStr, CWorkspaceInfo> m_Workspaces;
+		NContainer::TCMap<NStr::CStr, CWorkspaceInfo> m_Workspaces;
+		NContainer::TCMap<NStr::CStr, CEntity *> m_Targets;
 	};
 }

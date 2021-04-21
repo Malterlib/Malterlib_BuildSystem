@@ -1,0 +1,56 @@
+
+*Configuration
+{
+	Debug "Debug Config"
+	Release "Release Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
+
+Type
+{
+	CTest define {
+		Test: string
+		, TestOptional?: {
+			InnerValue: string
+		}
+		, TestOptional.InnerValue?: string
+	}
+}
+
+%GenerateFile "TestFile"
+{
+	Property
+	{
+		CalcValue function() string
+		CalcValueUserType function() type(CTest)
+
+		CalcValue "Testing"
+		CalcValueUserType {Test: "Testing 1"}
+
+		CalcValue += "Prepended "
+		CalcValue =+ " Appended"
+		CalcValueUserType =+ {Test: "Testing 2"}
+		CalcValueUserType += {TestOptional.InnerValue: "Testing 3"}
+		CalcValueUserType += {"TestOptional.InnerValue": "Testing 4"}
+	}
+	GenerateFile
+	{
+		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
+		Contents 	`Generate File Contents:\n`\
+					`@(CalcValue())\n`\
+					`@(CalcValueUserType()->ToString())\n`
+		Executable false
+		UnixLineEnds true
+		UnicodeBOM false
+	}
+}
+

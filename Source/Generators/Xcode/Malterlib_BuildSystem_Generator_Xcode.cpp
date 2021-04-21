@@ -10,11 +10,10 @@ namespace NMib::NBuildSystem
 	{
 	public:
 
-		TCMap<CPropertyKey, CStr> f_GetValues(CBuildSystem const &_BuildSystem, CStr const &_OutputDir) override
+		TCMap<CPropertyKey, CEJSON> f_GetValues(CBuildSystem const &_BuildSystem, CStr const &_OutputDir) override
 		{
-			TCMap<CPropertyKey, CStr> Values;
+			TCMap<CPropertyKey, CEJSON> Values;
 			
-			Values[CPropertyKey("MToolVersion")] = CStr::fs_ToStr(CBuildSystem::mc_MToolVersion);
 			Values[CPropertyKey("Generator")] = _BuildSystem.f_GetGenerateSettings().m_Generator;
 			Values[CPropertyKey("GeneratorFamily")] = "Xcode";
 			Values[CPropertyKey("BuildSystemBasePath")] = _BuildSystem.f_GetBaseDir();
@@ -42,7 +41,7 @@ namespace NMib::NBuildSystem
 			CStr BuildSystemBase = _BuildSystem.f_GetBaseDir();
 			
 			// Disable &apos; encoding in output XML
-			TCMap<CPropertyKey, CStr> Values = f_GetValues(_BuildSystem, _OutputDir);
+			TCMap<CPropertyKey, CEJSON> Values = f_GetValues(_BuildSystem, _OutputDir);
 
 			TCMap<CConfiguration, TCUniquePointer<CConfiguraitonData>> Configurations;
 
@@ -110,7 +109,7 @@ namespace NMib::NBuildSystem
 			DConOut("Extracted workspaces, projects and files {fe2} s{\n}", Time3 - Time2);
 
 			mint nConfigs = 0;
-			auto fl_CopyGroups
+			auto fCopyGroups
 				= [&](TCMap<CStr, CGroup> &o_Groups, TCMap<CStr, CGroupInfo> const &_Groups, TCMap<CGroupInfo const *, CGroup *> &o_Mapping)
 				{
 					for (auto iGroup = _Groups.f_GetIterator(); iGroup; ++iGroup)
@@ -145,12 +144,12 @@ namespace NMib::NBuildSystem
 					auto &WorkspaceInfo = *iWorkspace;
 					
 					auto &Workspace = GeneratorState.m_Solutions[WorkspaceName];
-					Workspace.m_Position = WorkspaceInfo.m_pEntity->m_Position;
+					Workspace.m_Position = WorkspaceInfo.m_pEntity->f_Data().m_Position;
 					Workspace.m_EntityName = WorkspaceInfo.m_EntityName;
 					Workspace.m_EnabledConfigs[Config] = WorkspaceInfo.m_pEntity;
 					
 					TCMap<CGroupInfo const *, CGroup *> WorkspaceGroupMapping;
-					fl_CopyGroups(Workspace.m_Groups, WorkspaceInfo.m_Groups, WorkspaceGroupMapping);
+					fCopyGroups(Workspace.m_Groups, WorkspaceInfo.m_Groups, WorkspaceGroupMapping);
 					
 					if (!Workspace.m_Link.f_IsInTree())
 						GeneratorState.m_SolutionsByEntity.f_Insert(Workspace);
@@ -161,8 +160,8 @@ namespace NMib::NBuildSystem
 						auto &TargetInfo = *iTarget;
 
 						auto &Target = *Workspace.m_Projects(TargetName, &Workspace);
-						Target.m_Position = TargetInfo.m_pOuterEntity->m_Position;
-						Target.m_ProjectPosition = TargetInfo.m_pInnerEntity->m_Position;
+						Target.m_Position = TargetInfo.m_pOuterEntity->f_Data().m_Position;
+						Target.m_ProjectPosition = TargetInfo.m_pInnerEntity->f_Data().m_Position;
 						Target.m_EntityName = TargetInfo.m_EntityName;
 						Target.m_EnabledConfigs[Config] = TargetInfo.m_pOuterEntity;
 						Target.m_EnabledProjectConfigs[Config] = TargetInfo.m_pInnerEntity;
@@ -183,13 +182,13 @@ namespace NMib::NBuildSystem
 							auto &Dep = DepMap.f_GetResult();
 							Target.m_DependenciesOrdered.f_Insert(Dep);
 
-							Dep.m_Position = DependencyInfo.m_pEntity->m_Position;
+							Dep.m_Position = DependencyInfo.m_pEntity->f_Data().m_Position;
 							Dep.m_EnabledConfigs[Config] = DependencyInfo.m_pEntity;
 							Dep.m_PerConfig[Config].m_bLink = DependencyInfo.m_bLink;
 						}
 						
 						TCMap<CGroupInfo const *, CGroup *> TargetGroupMapping;
-						fl_CopyGroups(Target.m_Groups, TargetInfo.m_Groups, TargetGroupMapping);
+						fCopyGroups(Target.m_Groups, TargetInfo.m_Groups, TargetGroupMapping);
 						
 						for (auto iFile = TargetInfo.m_Files.f_GetIterator(); iFile; ++iFile)
 						{
@@ -197,7 +196,7 @@ namespace NMib::NBuildSystem
 							auto &FileInfo = *iFile;
 
 							auto &File = Target.m_Files[FileName];
-							File.m_Position = FileInfo.m_pEntity->m_Position;
+							File.m_Position = FileInfo.m_pEntity->f_Data().m_Position;
 							File.m_EnabledConfigs[Config] = FileInfo.m_pEntity;
 							if (FileInfo.m_pGroup)
 							{

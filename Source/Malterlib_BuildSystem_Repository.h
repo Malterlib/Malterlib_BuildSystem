@@ -78,7 +78,6 @@ namespace NMib::NBuildSystem::NRepository
 		CStr m_URL;
 		CStr m_DefaultBranch;
 		CStr m_DefaultUpstreamBranch;
-		CStr m_Submodule;
 		CStr m_SubmoduleName;
 		CStr m_Type;
 		CStr m_UserName;
@@ -88,6 +87,7 @@ namespace NMib::NBuildSystem::NRepository
 		TCSet<CStr> m_ProtectedBranches;
 		TCSet<CStr> m_ProtectedTags;
 		CFilePosition m_Position;
+		bool m_bSubmodule = false;
 		bool m_bUpdateSubmodules = false;
 	};
 

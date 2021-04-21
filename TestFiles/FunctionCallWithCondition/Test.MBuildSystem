@@ -1,0 +1,38 @@
+
+*Configuration
+{
+	Debug "Debug Config"
+	Release "Release Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
+
+%GenerateFile "TestFile"
+{
+	Property
+	{
+		Test define bool = false
+
+		TestFunction function(any _Value, any _Default) any = "Test"
+		{
+			!!Test true
+		}
+	}
+	GenerateFile
+	{
+		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
+		Contents 	`Generate File Contents:\n`\
+					`@(TestFunction(1, 2))\n`
+		Executable false
+		UnixLineEnds true
+		UnicodeBOM false
+	}
+}

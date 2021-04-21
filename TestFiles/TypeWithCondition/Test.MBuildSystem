@@ -1,0 +1,27 @@
+
+*Configuration
+{
+	Debug "Debug Config"
+	Release "Release Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
+
+Type
+{
+	CTest define {
+		Test: string
+		, TestOptional?: string
+	}
+	{
+		 !!Platform "TestPlatform"
+	}
+}

@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Repository.h"
@@ -23,22 +23,25 @@ namespace NMib::NBuildSystem
 
 			for (auto &ChildEntity : _Data.m_RootEntity.m_ChildEntitiesOrdered)
 			{
-				if (ChildEntity.m_Key.m_Type != EEntityType_CreateTemplate)
-					continue;
-				if (!_BuildSystem.f_EvalCondition(ChildEntity, ChildEntity.m_Condition))
+				if (ChildEntity.f_GetKey().m_Type != EEntityType_CreateTemplate)
 					continue;
 
-				CStr Name = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_CreateTemplate, "Name");
+				auto &ChildEntityData = ChildEntity.f_Data();
+
+				if (!_BuildSystem.f_EvalCondition(ChildEntity, ChildEntityData.m_Condition, ChildEntityData.m_Debug.f_Find("TraceCondition") >= 0))
+					continue;
+
+				CStr Name = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_CreateTemplate, "Name", CStr());
 
 				if (Name.f_IsEmpty())
-					_BuildSystem.fs_ThrowError(ChildEntity.m_Position, "You have to specify CreateTemplate.Name");
+					_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, "You have to specify CreateTemplate.Name");
 
 				auto Mapped = CreateTemplates(Name);
 				if (!Mapped.f_WasCreated())
 				{
 					_BuildSystem.fs_ThrowError
 						(
-						 	ChildEntity.m_Position
+						 	ChildEntityData.m_Position
 						 	, "Create template with name '{}' already exists"_f << Name
 						  	, TCVector<CBuildSystemError>
 						 	{
@@ -54,7 +57,7 @@ namespace NMib::NBuildSystem
 
 				auto &CreateTemplate = *Mapped;
 
-				CreateTemplate.m_Position = ChildEntity.m_Position;
+				CreateTemplate.m_Position = ChildEntityData.m_Position;
 				CreateTemplate.m_pEntity = &ChildEntity;
 			}
 

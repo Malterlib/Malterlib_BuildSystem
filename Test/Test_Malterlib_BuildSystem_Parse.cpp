@@ -25,7 +25,8 @@ namespace
 				auto fParseGenerate = [&](CStr const &_Source)
 					{
 						CBuildSystemRegistry RegistryTest;
-						RegistryTest.f_ParseStr(_Source, "/Temp/Test.reg");
+						NFile::CFile::fs_WriteStringToFile(NFile::CFile::fs_GetProgramDirectory() / "TestBuildSystemParse.reg", _Source);
+						RegistryTest.f_ParseStr(_Source, NFile::CFile::fs_GetProgramDirectory() / "TestBuildSystemParse.reg");
 						return RegistryTest.f_GenerateStr();
 					}
 				;
@@ -36,44 +37,134 @@ namespace
 	                 "Line 2\n"\
 	                 "Line 3\n"\
 	                 ""
-	TestInt 65
-	TestFloat 65.5
-	TestBoolean true
-	TestNull null
-	TestUndefined undefined
-	TestStringSingle 'String'
-	TestStringSingle2 'String "Test"'
-	TestStringSingle3 'String \''
-	TestStringEmpty ""
-	TestStringEmpty2 ''
-	TestStringEval `String`
-	TestStringEval2 `String @(Target:Target.Test->Function()) String`
-	TestStringEval3 `String @("Test"->Function()) String`
-	TestStringEval4 `String @('Test'->Function()) String`
-	TestStringEval5 `String @(\`@(Test)\`->Function()) String`
-	TestStringEval6 `String @(\`@(Test)\`->Function("Param")) String`
-	TestStringEval7 `String @(\`@(Test)\`->Function(@(Param))) String`
-	TestStringEval8 `String @(Function(@(Param->Function("Param")))) String`
-	TestStringEval9 `String @(Function(@(Param->Function("Param")), \`TestLine\\n\`\\\n`\
-	                `                                               \`TestLine2\`)) String`
-	TestStringEval10 `String @(Function(@(Param->Function("Param")), "TestLine\\n"\\\n`\
-	                 `                                               "TestLine2")) String`
-	TestReference @(Other)
-	Children
+	TestInt 65 // Comment
+	Type
 	{
-		"Test Test" "Test Test 2"
+		CTest define {
+			"int": one_of(int, float)
+		}
+	} // Comment
+	TestDefine define {
+		"test": type(CTest)?,
+		"string": string,
+		"int": one_of(int, float),
+		"float": float,
+		"binary": binary,
+		"date": date,
+		"bool": bool? = false ? true : false,
+		"object": {
+			"test": string
+		},
+		"array": [
+			one_of("Value1", "Value2", {
+				"int": one_of(int, float)
+			})
+		],
+		...: any
+	} // Comment
+	TestFunction function(int _Param0, float _Param1) float // Comment
+	TestFunctionDefaulted function(int _Param0, float _Param1 = 5.05) float = 10.0 // Comment
+	TestFunctionDefaultedDynamic function(int _Param0, float _Param1 = 5.05) string = `@(TestStr) suffix @(_Param0->JSONToString()) @(_Param1->JSONToString())` // Comment
+	TestFunctionDefaultedEquals function(int _Param0, float _Param1 = 5.05) float = 10.0 // Comment
+	TestFunctionDefaultedObj function(int _Param0, type(CObject) _Param1 = {
+		Test: "Testing",
+		"Test1": "Testing 2",
+		'Test2': "Testing 3"
+	}) type(CObject) = {
+		Test: "Testing",
+		"Test1": "Testing 2",
+		'Test2': "Testing 3"
+	} // Comment
+	TestFunctionOptional function(int _Param0, float? _Param1) float // Comment
+	TestFunctionEllipsis function(int _Param0, float _Param0, any... p_Params) string // Comment
+	TestFunctionEllipsisComplex function(int _Param0, float _Param0, one_of(type(CTest), int, "5")... p_Params) string // Comment
+	TestDefineOneOf define one_of("Test", "Test2", int) // Comment
+	TestDefineDefault define one_of("Test", "Test2", int, bool) = true // Comment
+	TestDefineOptionalString define string? = true ? true : false // Comment
+	TestDefineOptionalClass define {
+		one: "One",
+		two: "Two"
+	}? = true // Comment
+	TestFloat 65.5 // Comment
+	{
+		TestFloat == undefined // Comment
 	}
-	TestDate Date(2019-05-29)
-	TestMinute Date(2019-05-29 11:11)
-	TestSecond Date(2019-05-29 11:11:06)
-	TestFraction Date(2019-05-29 11:00:05.545)
-	TestBinary Binary(VGhpcyBpcyBpdAo=)
+	TestBoolean true // Comment
+	TestNull null // Comment
+	TestUndefined undefined // Comment
+	TestStringSingle 'String' // Comment
+	TestStringSingle2 'String "Test"' // Comment
+	TestStringSingle3 'String \'' // Comment
+	TestStringEmpty "" // Comment
+	TestStringEmpty2 '' // Comment
+	TestStringEval `String` // Comment
+	TestStringEvalEscape `String \` Post` // Comment
+	TestStringEval2 `String @(Target:Target.Test->Function()) String` // Comment
+	TestStringEval3 `String @("Test"->Function()) String` // Comment
+	TestStringEval4 `String @('Test'->Function()) String` // Comment
+	TestStringEval5 `String @(`@(Test)`->Function()) String` // Comment
+	TestStringEval5 `String @(`@(Test)`->Function()->Function2()) String` // Comment
+	TestStringEval6 `String @(`@(Test)`->Function("Param")) String` // Comment
+	TestStringEval7 `String @(`@(Test)`->Function(Param)) String` // Comment
+	TestStringEval8 `String @(Function(Param->Function("Param"))) String` // Comment
+	TestStringEval9 `String @(Function(Param->Function("Param"), `TestLine\n`\
+	                                                             `TestLine2`)) String` // Comment
+	TestStringEval10 `String @(Function(Param->Function("Param"), "TestLine\n"\
+	                                                              "TestLine2")) String` // Comment
+
+	`TestStringEvalKey @(Target:Target.Test->Function()) String` "Value" // Comment
+	`TestStringEvalKeyEscape \` Post` "Value" // Comment
+	`TestStringEvalKey2 @(Target:Target.Test->Function()) String` "Value" // Comment
+	`TestStringEvalKey3 @("Test"->Function()) String` "Value" // Comment
+	`TestStringEvalKey4 @('Test'->Function()) String` "Value" // Comment
+	`TestStringEvalKey5 @(`@(Test)`->Function()) String` "Value" // Comment
+	`TestStringEvalKey5 @(`@(Test)`->Function()->Function2()) String` "Value" // Comment
+	`TestStringEvalKey6 @(`@(Test)`->Function("Param")) String` "Value" // Comment
+	`TestStringEvalKey7 @(`@(Test)`->Function(Param)) String` "Value" // Comment
+	`TestStringEvalKey8 @(Function(Param->Function("Param"))) String` "Value" // Comment
+	`TestStringEvalKey9 @(Function(Param->Function("Param"), `TestLine\n`\
+	                                                         `TestLine2`)) String` "Value" // Comment
+	`TestStringEvalKey10 @(Function(Param->Function("Param"), "TestLine\n"\
+	                                                          "TestLine2")) String` "Value" // Comment
+	TestReference Other // Comment
+	TestReferenceFunc `Other`->ToString() // Comment
+	TestObjectReference Other<Prop[0]> // Comment
+	TestArrayReference Other<[0]> // Comment
+	TestTernary Other ? Other1 : Other2 // Comment
+	TestTernaryFunction function() string = Other ? Other1 : Other2 // Comment
+	TestTernaryDefine define string = Other ? Other1 : Other2 // Comment
+	TestDynamicReferenceSuffix Prefix_@(Suffix) // Comment
+	TestDynamicReferenceMiddle Prefix_@(Other)_Suffix // Comment
+	TestDynamicReferencePrefix @(Other)_Suffix // Comment
+	TestDynamicReferenceSuffixEscape Prefix\#_@(Suffix) // Comment
+	TestDynamicReferenceMiddleEscape Prefix\#_@(Other)_\#Suffix // Comment
+	TestDynamicReferencePrefixEscape @(Other)_\#Suffix // Comment
+	TestDynamicReference @(Other) // Comment
+	TestArrayFunctionExpansion Function(Other...) // Comment
+	TestArrayFunctionExpansionCall Function("Test", Other()...) // Comment
+	TestArrayFunctionExpansionConstant Function([
+		"Test",
+		"Test2"
+	]...) // Comment
+	Children // Comment
+	{
+		"Test Test" "Test Test 2" // Comment
+	}
+	TestDate date(2019-05-29) // Comment
+	TestMinute date(2019-05-29 11:11) // Comment
+	TestSecond date(2019-05-29 11:11:06) // Comment
+	TestFraction date(2019-05-29 11:00:05.545) // Comment
+	TestBinary binary(VGhpcyBpcyBpdAo=) // Comment
+	TestInObject {
+		"Date": date(2019-05-29),
+		"Binary": binary(VGhpcyBpcyBpdAo=)
+	} // Comment
 	TestArray [
 		"Test",
 		"Test3\n"\
 		"Test2",
-		@@(AppendArray)
-	]
+		AppendArray...
+	] // Comment
 	TestObject {
 		"Test2": "Test",
 		"Test4\n"\
@@ -82,40 +173,116 @@ namespace
 		'Test5': 'Test',
 		'': 'Test',
 		Test6: "Without quotes",
-		`@(Test) Test`: "Evaluated"
-	}  // Comment
+		`@(Test) Test`: "Evaluated",
+		`@(Test(`Other @(Test)`)) Test`: "Evaluated"
+	} // Comment
 	TestObjectReference {
 		"Test2": "Test",
-		"Test4": @(Other->Function('Str', "Str2", @(Other3), `@(Other4) Test`, true, [
+		"Test4": Other->Function('Str', "Str2", Other3, `@(Other4) Test`, true, [
 			"Array",
 			false
 		], {
 			Object: "Value"
 		}, "TestLine\n"\
 		   "TestLine2\n"\
-		   "TestLine3")),
+		   "TestLine3"),
 		'Test5': 'Test',
 		'': 'Test',
 		Test6: "Without quotes",
 		`@(Test) Test`: "Evaluated",
-		`@(DynamicValue)`: @(Other->Function('Str', "Str2", @(Other3), `@(Other4) Test`, {
+		`@(DynamicValue)`: Other->Function('Str', "Str2", Other3, `@(Other4) Test`, {
 			"JSON": "Value"
 		}, [
 			"JSON",
 			"Array"
-		])),
+		]),
 		<<: [
 			{
 				"Test5": "Value"
 			},
-			@(Target:Compile.AppendObject),
-			@(Target:Compile.AppendObject2),
-			@@(Target:Compile.AppendObjectArray)
+			Target:Compile.AppendObject,
+			Target:Compile.AppendObject2,
+			Prop<Test>,
+			Compile.AppendObject3<Test>,
+			Target:Compile.AppendObject4<Test>,
+			Target:Compile.AppendObjectArray...
 		]
 	}  // Comment
 	{
-		!!Condition true
+		!!Condition true // Comment
 	}
+	TestArrayAppend += [
+		"Test"
+	] // Comment
+	TestObjectAppend += {
+		Key: "Value"
+	} // Comment
+	TestObjectAppendInner += {
+		Key.Inner: "Value"
+	} // Comment
+	TestObjectAppendInnerAccessor #<Key.Inner> += "AppendString" // Comment
+	TestObjectSetAccessor #<Key.Inner> "SetValue" // Comment
+	TestArraySetAccessor #<[Other]> "SetValue" // Comment
+	WildcardValue ~"*Value*" // Comment
+	WildcardCondition "Value" // Comment
+	{
+		!!Value ~"*CompareTo*"
+	}
+	WildcardConditionInAnd "Value" // Comment
+	{
+		&
+		{
+			Value ~"*CompareTo*" // Comment
+		}
+	}
+	WildcardInsideObject "Value" // Comment
+	{
+		!!Value {
+			"Key": ~"*CompareTo*",
+			"Array": [
+				~"*CompareTo*"
+			]
+		} // Comment
+	}
+	Condition "Value"
+	{
+		!!Compile.Value<Test> true // Comment
+		!!Target:Compile.Value<Test> true // Comment
+		!!Value<Property.ArrayProp[0].Prop2> {
+			"Key": ~"*CompareTo*",
+			"Array": [
+				~'*CompareTo*'
+			]
+		} // Comment
+		!!Value<@(DynamicProp).ArrayProp[0].Prop2> {
+			"Key": ~`*CompareTo*`,
+			"Array": [
+				~"*CompareTo*"
+			]
+		} // Comment
+		&
+		{
+			Value<Value1> < Value<Property.ArrayProp[0].Prop2> // Comment
+			Value<Value1> != Value<@(DynamicProp).ArrayProp[0].Prop2> // Comment
+			Value<Value1> >= Value<@(DynamicProp).ArrayProp[IntProp].Prop2> // Comment
+		}
+	}
+	Condition2 "Value2" // Comment
+	{ // Comment
+		`Dynamic` == "Dynamic" // Comment
+	} // Comment
+	\true "Reserved" // Comment
+	Test\.Test\#Test "Escaped" // Comment
+	\ "Empty identifier" // Comment
+	Test\ Space "Space identifier" // Comment
+	TestBinaryOperator1 Value1 / Value2 // Comment
+	TestBinaryOperator2 (Value1 / Value2) // Comment
+	TestBinaryOperator3 Value1 / Value2 + Value3 // Comment
+	TestBinaryOperator4 (Value1 / Value2 + Value3) // Comment
+	TestBinaryOperator5 (Value1 / Value2 - Value3) // Comment
+	TestBinaryOperator6 (Value1 / Value2 * Value3) // Comment
+	TestBinaryOperator7 (Value1 / Value2 % Value3) // Comment
+	TestBinaryOperator8 (Value1 / (Value2 % Value3)) // Comment
 }
 )---";
 				DMibExpect(fParseGenerate(RegistryStr), ==, RegistryStr);
@@ -126,5 +293,6 @@ namespace
 		NStr::CStr mp_TestFilePath;
 	};
 
-	DMibTestRegister(CBuildSystemRegistry_Tests, Malterlib::Encoding);
+	DMibTestRegister(CBuildSystemRegistry_Tests, Malterlib::BuildSystem);
 }
+

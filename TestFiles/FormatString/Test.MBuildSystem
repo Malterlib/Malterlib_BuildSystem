@@ -1,0 +1,41 @@
+
+*Configuration
+{
+	Debug "Debug Config"
+	Release "Release Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
+
+%GenerateFile "TestFile"
+{
+	GenerateFile
+	{
+		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
+		Contents 	`Generate File Contents:\n`\
+					`@('Testing " 123'->ToString())\n`\
+					`@('Testing " 123'->EJSONToString())\n`\
+					`@('Testing " 123'->EJSONToString(""))\n`\
+					`@(ToString('Testing " 123'))\n`\
+					`@(['Testing " 123']->EJSONToString())\n`\
+					`@(['Testing " 123']->EJSONToString(""))\n`\
+					`@(ToString('Testing " 123', 'Testing " 456'))\n`\
+					`@(['Testing " 123', 'Testing " 456']->EJSONToString())\n`\
+					`@(['Testing " 123', 'Testing " 456']->EJSONToString(""))\n`\
+					`@({'Testing " 123': 'Testing " 456'}->ToString())\n`\
+					`@({'Testing " 123': 'Testing " 456'}->EJSONToString())\n`\
+					`@({'Testing " 123': 'Testing " 456'}->EJSONToString(""))\n`
+
+		Executable false
+		UnixLineEnds true
+		UnicodeBOM false
+	}
+}

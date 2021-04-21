@@ -1,0 +1,34 @@
+Generate File Contents:
+{
+	"Test": "Test 1 Appended",
+	"TestOptional": {
+		"InnerValue": "Inner default"
+	},
+	"TestOptional.InnerValue": "Not inner"
+}
+{
+	"Test": "Function default",
+	"TestOptional": {
+		"InnerValue": "Inner Function default"
+	},
+	"TestOptional.InnerValue": "Not inner function default"
+}
+{
+	"Test": "Function default",
+	"TestOptional": {
+		"InnerValue": "Inner class default",
+		"InnerValue2": "Inner class default 2"
+	},
+	"TestOptional.InnerValue": "Not inner function default"
+}
+{
+	"Test": "Function default",
+	"TestOptional": {
+		"InnerValue": "Inner class default",
+		"InnerValue2": {
+			"Test": "Test 1",
+			"Test2": "Test 2"
+		}
+	},
+	"TestOptional.InnerValue": "Not inner function default"
+}

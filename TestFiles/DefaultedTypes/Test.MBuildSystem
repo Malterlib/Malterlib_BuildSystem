@@ -1,0 +1,64 @@
+
+*Configuration
+{
+	Debug "Debug Config"
+	Release "Release Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
+
+%GenerateFile "TestFile"
+{
+	Type
+	{
+		CHalfDefaultedObject define {
+			Defaulted: string = "Defaulted",
+			NotDefaulted: string
+		}
+		CDefaultedObject define {
+			Defaulted: string = "Defaulted",
+			Defaulted2: string = "Defaulted2"
+		}
+	}
+	Property
+	{
+		TestArrayHalf define [type(CHalfDefaultedObject)] = []
+		TestArray define [type(CDefaultedObject)] = []
+
+		TestArrayHalf =+ [{NotDefaulted: "NotDefaulted"}]
+		TestArrayHalf += [{Defaulted: "Defined", NotDefaulted: "NotDefaulted"}]
+		TestArrayHalf =+ {NotDefaulted: "NotDefaulted"}
+		TestArrayHalf += {Defaulted: "Defined", NotDefaulted: "NotDefaulted"}
+
+		TestArray += [{Defaulted: "Defined", Defaulted2: "Defined2"}]
+		TestArray =+ [{}]
+		TestArray += {Defaulted: "Defined", Defaulted2: "Defined2"}
+		TestArray =+ {}
+
+		fg_TestDefault function(type(CHalfDefaultedObject) _Half, type(CDefaultedObject) _Full) string = ""
+		fg_TestDefault =+ _Half->ToString()
+		fg_TestDefault =+ _Full->ToString()
+
+	}
+	GenerateFile
+	{
+		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
+		Contents 	`Generate File Contents:\n`\
+					`@(TestArrayHalf->ToString())\n`\
+					`@(TestArray->ToString())\n`\
+					`@(fg_TestDefault({NotDefaulted: "Defined"}, {}))\n`\
+					`@(fg_TestDefault({Defaulted: "Defined", NotDefaulted: "NotDefaulted"}, {Defaulted: "Defined", Defaulted2: "Defined2"}))\n`
+
+		Executable false
+		UnixLineEnds true
+		UnicodeBOM false
+	}
+}

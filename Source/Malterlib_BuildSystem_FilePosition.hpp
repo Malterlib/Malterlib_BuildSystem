@@ -7,21 +7,32 @@
 
 namespace NMib::NBuildSystem
 {
-	CFilePosition::CFilePosition(CRegistryPreserveAll const &_Position)
-		: m_FileName(_Position.f_GetLocation().m_File)
-		, m_Line(_Position.f_GetLocation().m_Line)
+	CFilePosition::CFilePosition(CBuildSystemRegistry const &_Position)
+		: NStr::CParseLocation(_Position.f_GetLocation())
 	{
 	}
 
-	CFilePosition::CFilePosition()
-		: m_Line(0)
+	CFilePosition::CFilePosition(NStr::CParseLocation const &_Position)
+		: NStr::CParseLocation(_Position)
 	{
 	}
 
-	CFilePosition &CFilePosition::operator = (CRegistryPreserveAll const &_Position)
+	CFilePosition::CFilePosition() = default;
+
+	CFilePosition &CFilePosition::operator = (CBuildSystemRegistry const &_Position)
 	{
-		m_FileName = _Position.f_GetLocation().m_File;
-		m_Line = _Position.f_GetLocation().m_Line;
+		(NStr::CParseLocation &)*this = _Position.f_GetLocation();
+		return *this;
+	}
+
+	CFilePosition &CFilePosition::operator = (NStr::CParseLocation const &_Position)
+	{
+		(NStr::CParseLocation &)*this = _Position;
+		return *this;
+	}
+
+	inline NStr::CParseLocation const &CFilePosition::f_Location() const
+	{
 		return *this;
 	}
 }

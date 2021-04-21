@@ -1,0 +1,144 @@
+{
+	"Workspaces":
+	{
+		"TestWorkspace": {
+			"Position": {
+				"File": "/Deploy/Tests/BuildSystemTests/Simple/Test.MBuildSystem",
+				"Character": 576,
+				"Line": 58,
+				"Column": 12
+			},
+			"Name": "TestWorkspace",
+			"EnabledConfigs": {
+				"TestPlatform TestArch Debug": true,
+				"TestPlatform TestArch Release": true
+			},
+			"Groups": {},
+			"Targets": {
+				"Lib_TestTarget": {
+					"OuterPosition": {
+						"File": "/Deploy/Tests/BuildSystemTests/Simple/Test.MBuildSystem",
+						"Character": 408,
+						"Line": 43,
+						"Column": 14
+					},
+					"InnerPosition": {
+						"File": "/Deploy/Tests/BuildSystemTests/Simple/Test.MBuildSystem",
+						"Character": 171,
+						"Line": 18,
+						"Column": 9
+					},
+					"Name": "Lib_TestTarget",
+					"EnabledConfigs": {
+						"TestPlatform TestArch Debug": true,
+						"TestPlatform TestArch Release": true
+					},
+					"Groups": {
+						"TestGroup": {
+							"Name": "TestGroup"
+						},
+						"TestGroup/TestGroup3": {
+							"Name": "TestGroup3"
+						}
+					},
+					"Files": {
+						"TestGroup": {
+							"/Deploy/Tests/BuildSystemTests/Simple/TestFile3.cpp": {
+								"Position": {
+									"File": "/Deploy/Tests/BuildSystemTests/Simple/Test.MBuildSystem",
+									"Character": 310,
+									"Line": 30,
+									"Column": 10
+								},
+								"EnabledConfigs": {
+									"TestPlatform TestArch Debug": true,
+									"TestPlatform TestArch Release": true
+								}
+							}
+						}
+					}
+				},
+				"TestTarget": {
+					"OuterPosition": {
+						"File": "/Deploy/Tests/BuildSystemTests/Simple/Test.MBuildSystem",
+						"Character": 644,
+						"Line": 65,
+						"Column": 10
+					},
+					"InnerPosition": {
+						"File": "/Deploy/Tests/BuildSystemTests/Simple/Test.MBuildSystem",
+						"Character": 345,
+						"Line": 36,
+						"Column": 9
+					},
+					"Name": "TestTarget",
+					"EnabledConfigs": {
+						"TestPlatform TestArch Debug": true,
+						"TestPlatform TestArch Release": true
+					},
+					"Dependencies": {
+						"Lib_TestTarget": {
+							"Position": {
+								"File": "/Deploy/Tests/BuildSystemTests/Simple/Test.MBuildSystem",
+								"Character": 408,
+								"Line": 43,
+								"Column": 14
+							},
+							"EnabledConfigs": {
+								"TestPlatform TestArch Debug": true,
+								"TestPlatform TestArch Release": true
+							},
+							"PerConfig": {
+								"TestPlatform TestArch Debug": {
+									"Link": true
+								},
+								"TestPlatform TestArch Release": {
+									"Link": true
+								}
+							}
+						}
+					},
+					"Groups": {
+						"TestGroup": {
+							"Name": "TestGroup"
+						},
+						"TestGroup/TestGroup1": {
+							"Name": "TestGroup1"
+						},
+						"TestGroup/TestGroup2": {
+							"Name": "TestGroup2"
+						}
+					},
+					"Files": {
+						"TestGroup": {
+							"/Deploy/Tests/BuildSystemTests/Simple/TestFile1.cpp": {
+								"Position": {
+									"File": "/Deploy/Tests/BuildSystemTests/Simple/Test.MBuildSystem",
+									"Character": 484,
+									"Line": 49,
+									"Column": 10
+								},
+								"EnabledConfigs": {
+									"TestPlatform TestArch Debug": true,
+									"TestPlatform TestArch Release": true
+								}
+							},
+							"/Deploy/Tests/BuildSystemTests/Simple/TestFile2.cpp": {
+								"Position": {
+									"File": "/Deploy/Tests/BuildSystemTests/Simple/Test.MBuildSystem",
+									"Character": 539,
+									"Line": 53,
+									"Column": 10
+								},
+								"EnabledConfigs": {
+									"TestPlatform TestArch Debug": true,
+									"TestPlatform TestArch Release": true
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}

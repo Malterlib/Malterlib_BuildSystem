@@ -12,13 +12,13 @@ namespace NMib::NBuildSystem
 	{
 	}
 
-	CPropertyKey::CPropertyKey(CStr const &_Name)
+	CPropertyKey::CPropertyKey(NStr::CStr const &_Name)
 		: m_Type(EPropertyType_Property)
 		, m_Name(_Name)
 	{
 	}
 
-	CPropertyKey::CPropertyKey(EPropertyType _Type, CStr const &_Name)
+	CPropertyKey::CPropertyKey(EPropertyType _Type, NStr::CStr const &_Name)
 		: m_Type(_Type)
 		, m_Name(_Name)
 	{
@@ -38,7 +38,7 @@ namespace NMib::NBuildSystem
 		return m_Key.m_Type;
 	}
 	
-	CStr const &CProperty::f_GetName() const
+	NStr::CStr const &CProperty::f_GetName() const
 	{
 		return m_Key.m_Name;
 	}
@@ -46,5 +46,16 @@ namespace NMib::NBuildSystem
 	CEvaluatedProperty::CEvaluatedProperty()
 		: m_Type(EEvaluatedPropertyType_Implicit)
 	{
+	}
+
+	inline bool CEvaluatedProperty::f_IsExternal() const
+	{
+		return m_Type == EEvaluatedPropertyType_External || m_Type == EEvaluatedPropertyType_ExternalEnvironment;
+	}
+
+	template <typename tf_CStr>
+	void CPropertyKey::f_Format(tf_CStr &o_Str) const
+	{
+		o_Str += typename tf_CStr::CFormat("{}.{}") << fg_PropertyTypeToStr(m_Type) << m_Name;
 	}
 }

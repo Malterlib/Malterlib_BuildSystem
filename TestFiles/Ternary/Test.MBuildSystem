@@ -1,0 +1,67 @@
+
+*Configuration
+{
+	Debug "Debug Config"
+	Release "Release Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
+
+%GenerateFile "TestFile"
+{
+	Type
+	{
+		CTest define {
+			Value: string
+			, OptionalValue?: string
+		}
+	}
+	Property
+	{
+		fg_TestTernary function(type(CTest) _TestValue) string
+		fg_TestTernary `@(_TestValue<Value>)@(_TestValue->HasMember("OptionalValue") ? _TestValue<OptionalValue> : "Nope")`
+
+		TestTernary1 define string
+		TestTernary1 true ? "Yes" : "No"
+
+		fg_TestTernary2 function(bool _bValue) string
+		fg_TestTernary2 _bValue ? "Yes" : "No"
+
+		fg_TestTernary3 function(bool _bValue) {Value: string}
+		fg_TestTernary3 {
+			Value: _bValue ? "Yes" : "No"
+		}
+
+		fg_TestTernary4 function(bool _bValue) string
+		fg_TestTernary4 _bValue ? {Value: "Yes"} : {Value: "No"} <Value>
+
+		TestObject define type(CTest) = {Value: "Test"}
+		TestObject2 define type(CTest) = {Value: "Test", OptionalValue: "Yep"}
+	}
+	GenerateFile
+	{
+		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
+		Contents 	`Generate File Contents:\n`\
+					`@(fg_TestTernary(TestObject))\n`\
+					`@(fg_TestTernary(TestObject2))\n`\
+					`@(fg_TestTernary2(true))\n`\
+					`@(fg_TestTernary2(false))\n`\
+					`@(fg_TestTernary3(true)->ToString()->Trim())\n`\
+					`@(fg_TestTernary3(false)->ToString()->Trim())\n`\
+					`@(fg_TestTernary4(true))\n`\
+					`@(fg_TestTernary4(false))\n`\
+					`@(TestTernary1)\n`
+
+		Executable false
+		UnixLineEnds true
+		UnicodeBOM false
+	}
+}

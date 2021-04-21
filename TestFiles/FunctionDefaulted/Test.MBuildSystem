@@ -1,0 +1,114 @@
+
+*Configuration
+{
+	Debug "Debug Config"
+	Release "Release Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
+
+%GenerateFile "TestFile"
+{
+	Type
+	{
+		CTestOptional define {
+			InnerValue: string = "Inner class default",
+			InnerValue2: string = "Inner class default 2"
+		} = {InnerValue: undefined, InnerValue2: undefined}
+
+		CTestOptional2 define {
+			InnerValue: string = "Inner class default",
+			InnerValue2: {
+				Test: string,
+				Test2: string
+			} = {Test: "Test 1", Test2: "Test 2"}
+		} = {InnerValue: undefined, InnerValue2: undefined}
+	}
+	Property
+	{
+		TestValue define bool = true
+		CalcValue function(string _Test, string? _Inner = "Inner default", bool? _bAppend = true) {
+			Test: string
+			, TestOptional?: {
+				InnerValue: string
+			}
+			, TestOptional.InnerValue?: string
+		}
+		CalcValue2 function(string _Test, string? _Inner = "Inner default", bool? _bAppend = true) {
+			Test: string
+			, TestOptional?: {
+				InnerValue: string
+			}
+			, TestOptional.InnerValue?: string
+		} = {
+			Test: "Function default"
+			, TestOptional: {
+				InnerValue: "Inner Function default"
+			}
+			, TestOptional.InnerValue: "Not inner function default"
+		}
+
+		CalcValue3 function(string _Test, string? _Inner = "Inner default", bool? _bAppend = true) {
+			Test: string
+			, TestOptional?: type(CTestOptional)
+			, TestOptional.InnerValue?: string
+		} = {
+			Test: "Function default"
+			, TestOptional: undefined
+			, TestOptional.InnerValue: "Not inner function default"
+		}
+
+		CalcValue4 function(string _Test, string? _Inner = TestValue ? "Inner default 1" : "Inner default 2", bool? _bAppend = true) {
+			Test: string
+			, TestOptional?: type(CTestOptional2)
+			, TestOptional.InnerValue?: string
+		} = {
+			Test: "Function default"
+			, TestOptional: undefined
+			, TestOptional.InnerValue: "Not inner function default"
+		}
+
+		GetDefaulted function(any _Value, any _Default) any
+		GetDefaulted _Default
+		{
+			!!_Value undefined
+		}
+		GetDefaulted _Value
+		{
+			!_Value undefined
+		}
+
+		CalcValue {
+			Test: _Test
+			, TestOptional: {
+				InnerValue: GetDefaulted(_Inner, "Default")
+			}
+			, "TestOptional.InnerValue": "Not inner"
+		}
+
+		CalcValue #<Test> =+ " Appended"
+		{
+			!!_bAppend true
+		}
+	}
+	GenerateFile
+	{
+		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
+		Contents 	`Generate File Contents:\n`\
+					`@(CalcValue("Test 1")->ToString())\n`\
+					`@(CalcValue2("Test 1")->ToString())\n`\
+					`@(CalcValue3("Test 1")->ToString())\n`\
+					`@(CalcValue4("Test 1")->ToString())\n`
+		Executable false
+		UnixLineEnds true
+		UnicodeBOM false
+	}
+}

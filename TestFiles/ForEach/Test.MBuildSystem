@@ -1,0 +1,56 @@
+
+*Configuration
+{
+	Debug "Debug Config"
+	Release "Release Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
+
+%GenerateFile "TestFile"
+{
+	Property
+	{
+		fg_ForEachFunctor function(string _Value) [string]
+		fg_ForEachFunctor [`Prefix_@(_Value)`, fg_ForEachFunctor...]
+		{
+			!_Value ""
+		}
+
+		fg_ForEachFunctorAppend function(string _Value) [string]
+		fg_ForEachFunctorAppend =+ `PrefixAppend_@(_Value)`
+		{
+			!_Value ""
+		}
+
+		fg_ForEachFunctorAppendDefaulted function(string _Value) [string] = ["Defaulted"]
+		fg_ForEachFunctorAppendDefaulted =+ `PrefixAppend_@(_Value)`
+		{
+			!_Value ""
+		}
+
+		List define [string]
+		List ["Element0", "Element1", "Element2", "Element3"]
+	}
+	GenerateFile
+	{
+		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
+		Contents 	`Generate File Contents:\n`\
+					`@(List->ForEach("fg_ForEachFunctor")->ToString())\n`\
+					`---\n`\
+					`@(List->ForEach("fg_ForEachFunctorAppend")->ToString())\n`\
+					`---\n`\
+					`@([]->ForEach("fg_ForEachFunctorAppendDefaulted")->ToString())\n`
+		Executable false
+		UnixLineEnds true
+		UnicodeBOM false
+	}
+}

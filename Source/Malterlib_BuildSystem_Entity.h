@@ -5,33 +5,72 @@
 
 #include <Mib/Core/Core>
 
+#include "Malterlib_BuildSystem_Syntax.h"
+
 namespace NMib::NBuildSystem
 {
-	enum EEntityType
-	{
-		EEntityType_Invalid
-		, EEntityType_Root
-		, EEntityType_Target
-		, EEntityType_Group
-		, EEntityType_Workspace
-		, EEntityType_File
-		, EEntityType_Dependency
-		, EEntityType_GeneratorSetting
-		, EEntityType_GenerateFile
-		, EEntityType_Import
-		, EEntityType_Repository
-		, EEntityType_CreateTemplate
-	};
-
 	struct CEntityKey
 	{
-		inline_always CEntityKey();
-
 		inline_always bool operator < (CEntityKey const &_Right) const;
 		inline_always bool operator == (CEntityKey const &_Right) const;
 
-		EEntityType m_Type = EEntityType_Invalid;
-		CStr m_Name;
+		EEntityType m_Type = EEntityType_Root;
+		CBuildSystemSyntax::CValue m_Name;
+
+		NStr::CStr const &f_GetName(CFilePosition const &_Position) const;
+	};
+
+	enum EEntityCopyFlag
+	{
+		EEntityCopyFlag_None = 0
+		, EEntityCopyFlag_CopyChildren = DMibBit(0)
+		, EEntityCopyFlag_CopyExternal = DMibBit(1)
+		, EEntityCopyFlag_MergeEntities = DMibBit(2)
+		, EEntityCopyFlag_ClearExistingChildren = DMibBit(3)
+		, EEntityCopyFlag_NoCheckTypes = DMibBit(4)
+	};
+
+	struct CTypeWithPosition
+	{
+		CBuildSystemSyntax::CType m_Type;
+		CFilePosition m_Position;
+		NStr::CStr m_Whitespace;
+	};
+
+	struct CVariableDefinition;
+
+	struct CEntityData : public NStorage::TCSharedPointerIntrusiveBase<>
+	{
+		using CPropertyContainer = NContainer::TCLinkedList<CProperty>;
+		//using CPropertyContainer = NContainer::TCVector<CProperty, NMemory::CAllocator_Heap, NContainer::TCVectorOptions<1, true, true>>;
+
+		CEntityData();
+		CEntityData(CEntityData const &_Other);
+
+		CCondition m_Condition;
+
+		NContainer::TCMap<CPropertyKey, CVariableDefinition> m_VariableDefinitions;
+		NContainer::TCMap<NStr::CStr, CTypeWithPosition> m_UserTypes;
+		NContainer::TCMap<CPropertyKey, CPropertyContainer> m_Properties;
+
+		CFilePosition m_Position;
+		NStr::CStr m_Debug;
+		uint32 m_HasFullEval = 0;
+	};
+
+	struct CVariableDefinition
+	{
+		CTypeWithPosition m_Type;
+		NStorage::TCSharedPointer<CCondition> m_pConditions;
+	};
+
+	struct CEntityChildDependantData : public NStorage::TCSharedPointerIntrusiveBase<>
+	{
+		CEntityChildDependantData();
+		CEntityChildDependantData(CEntityChildDependantData const &_Other);
+
+		NContainer::TCMap<CPropertyKey, NContainer::TCSet<CFilePosition>> m_ChildrenVariableDefinitions;
+		NContainer::TCMap<NStr::CStr, NContainer::TCSet<CFilePosition>> m_ChildrenUserTypes;
 	};
 
 	struct CEntity
@@ -39,60 +78,56 @@ namespace NMib::NBuildSystem
 		: public TCSharedPointerIntrusiveBase<>
 #endif
 	{
-		CEntity(CEntity &&_Other);
-		CEntity &operator = (CEntity const &_Other);
 		CEntity(CEntity *_pParent);
-		CEntity(CEntity const &_Other);
+		CEntity(CEntity const &_Other, CEntity *_pParent, EEntityCopyFlag _CopyFlags);
 #ifdef DMibBuildSystem_DebugReferences
 		~CEntity();
 #endif
-		CEntity &operator = (CEntity &&_Other);
-
+		void f_Assign(CEntity const &_Other);
 		void f_CheckChildren() const;
-		inline_always CEntityKey const &f_GetMapKey() const;
-		TCVector<CEntityKey> f_GetPathKey() const;
+		NContainer::TCVector<CEntityKey> f_GetPathKey() const;
 		inline_always void f_CheckParents() const;
 		CEntity const *f_GetRoot() const;
-		void fr_GetPath(CStr &_Destination) const;
-		void fr_GetPathForGetProperty(CStr &_Destination) const;
-		CStr f_GetPath() const;
-		CStr f_GetPathForGetProperty() const;
+		void fr_GetPath(NStr::CStr &_Destination) const;
+		void fr_GetPathForGetProperty(NStr::CStr &_Destination) const;
+		NStr::CStr f_GetPath() const;
+		NStr::CStr f_GetPathForGetProperty() const;
+		void f_CopyTypes(CEntity const &_Other);
+		void f_CheckTypes(CEntity const &_Other);
 		void f_CopyProperties(CEntity const &_Other);
-		void f_CopyPropertiesAndEval(CEntity const &_Other);
+		void f_CopyProperties(CEntity &&_Other);
 		void f_ClearReferences();
-		void f_CopyEntities(CEntity const &_Other, bool _bDirectCopy = false);
-		void f_MergeEntities(CEntity const &_Other);
-		void f_SetProperties(CEntity const &_Other);
-		void f_SetEntities(CEntity const &_Other);
-		void f_CopyFrom(CEntity const &_Other, bool _bCopyChildren, CEntityKey const* _pKey = nullptr, bool _bDirectCopy = false);
+		void f_CopyEntities(CEntity const &_Other, EEntityCopyFlag _Flags);
 		void f_CopyExternal(CEntity const &_Other);
-		void f_CopyFromWithCopyFrom(CEntity const &_Other, bool _bCopyChildren);
-		CProperty &f_AddProperty(CPropertyKey const &_Key, CStr const &_Value, CFilePosition const &_Position);
-		void f_ForEachChild(TCFunction<void (CEntity *_pChild)> const &_fChild);
+		void f_CopyAll(CEntity const &_Other, bool _bCopyChildren);
+		CProperty &f_AddProperty(CPropertyKey const &_Key, CBuildSystemSyntax::CRootValue const &_Value, CFilePosition const &_Position);
+		void f_ForEachChild(NFunction::TCFunction<void (CEntity *_pChild)> const &_fChild);
+		NStr::CStr const &f_GetKeyName() const;
+		CFilePosition const &f_GetFirstValidPosition() const;
+		bool f_HasFullEval(EPropertyType _PropertyType)const ;
+
+		CEntityData const &f_Data() const;
+		CEntityData &f_DataWritable();
+
+		CEntityChildDependantData const &f_ChildDependentData() const;
+		CEntityChildDependantData &f_ChildDependentDataWritable();
+
+		CEntityKey const &f_GetKey() const;
 
 	private:
-		void fpr_GetPathKey(TCVector<CEntityKey> &_Dest) const;
+		void fpr_GetPathKey(NContainer::TCVector<CEntityKey> &_Dest) const;
 		void fpr_CheckParents() const;
 
 	public:
-		DLinkDS_Link(CEntity, m_Link);
-		TCMap<CEntityKey, CEntity> m_ChildEntitiesMap;
-		DLinkDS_List(CEntity, m_Link) m_ChildEntitiesOrdered;
+		NStorage::TCSharedPointer<CEntityData> m_pData;
+		NStorage::TCSharedPointer<CEntityChildDependantData> m_pChildDependentData;
+
+		DMibListLinkDS_Link(CEntity, m_Link);
+		NContainer::TCMap<CEntityKey, CEntity> m_ChildEntitiesMap;
+		DMibListLinkDS_List(CEntity, m_Link) m_ChildEntitiesOrdered;
 		CEntity *m_pParent;
-		CEntityKey m_Key;
-		CCondition m_Condition;
 
-		mutable CMutualManyReadSpin m_Lock;
-		mutable TCMap<CPropertyKey, CEvaluatedProperty> m_EvaluatedProperties;
-		mutable TCMap<CPropertyKey, TCVector<CProperty *>> m_PotentialExplicitProperties;
-		mutable TCMap<CPropertyKey, TCVector<CProperty *>> m_PerFilePotentialExplicitProperties;
-		TCMap<CPropertyKey, TCLinkedList<CProperty>> m_Properties;
-		DMibListLinkDS_List(CProperty, m_LinkEvalOrder) m_PropertiesEvalOrder;
-		CFilePosition m_Position;
-		CEntityPointer m_pCopiedFrom;
-		CEntityPointer m_pCopiedFromEvaluated;
-
-		bool m_bEvaluated = false;
+		CEvaluatedProperties m_EvaluatedProperties;
 
 #if defined(DMibBuildSystem_DebugReferences)
 		DMibRefcountDebuggingOnly(NStorage::CRefCountDebugReference m_DebugSelfRef);
@@ -103,7 +138,4 @@ namespace NMib::NBuildSystem
 		static TCSet<CEntity const *> mp_DebugSet;
 #endif
 	};
-
-	EEntityType fg_EntityTypeFromStr(CStr const &_String);
-	CStr fg_EntityTypeToStr(EEntityType _Type);
 }

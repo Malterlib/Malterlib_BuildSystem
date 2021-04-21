@@ -6,7 +6,7 @@
 
 namespace NMib::NBuildSystem
 {
-	CStr fg_EscapeXcodeProjectVar(CStr const& _Var)
+	CStr fg_EscapeXcodeProjectVar(CStr const &_Var)
 	{
 		if (_Var.f_FindChars(" @`!\"#$%&\'()*+,-./:;[{<\\|=]}>^~?_") >= 0)
 			return _Var.f_EscapeStr();

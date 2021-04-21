@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Generator_VisualStudio.h"
@@ -11,7 +11,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		CTimer Timer;
 		Timer.f_Start();
 		CStr OutputDir = CFile::fs_AppendPath(_OutputDir, CStr(CFile::fs_MakeNiceFilename(_Solution.f_GetName())));
-		fg_ParallellForEach
+		fg_ForEach
 			(
 				_Solution.m_Projects
 				, [&](CProject &_Project)
@@ -67,8 +67,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 		for (auto iProject = _Solution.m_Projects.f_GetIterator(); iProject; ++iProject)
 		{
 			CStr ProjectPath = CFile::fs_MakePathRelative(iProject->m_FileName, _OutputDir).f_ReplaceChar('/', '\\');
-			
-			FileData 
+
+			FileData
 				+= CStr::CFormat("Project(\"{}\") = \"{}\", \"{}\", \"{}\"\r\n")
 				<< iProject->f_GetSolutionTypeGUID()
 				<< iProject->f_GetName()
@@ -89,7 +89,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		{
 			GroupToFile[iFile->m_pGroup].f_Insert(iFile);
 		}
-		CStr SolutionDir = CFile::fs_GetPath(OutputFile); 
+		CStr SolutionDir = CFile::fs_GetPath(OutputFile);
 
 		for (auto iGroup = _Solution.m_Groups.f_GetIterator(); iGroup; ++iGroup)
 		{
@@ -132,7 +132,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			for (auto iConfig = _Solution.m_EnabledConfigs.f_GetIterator(); iConfig; ++iConfig)
 				Rows.f_Insert(CStr::CFormat("		{0}|{1} = {0}|{1}\r\n") << iConfig->m_Config << iConfig->m_Platform);
 			Rows.f_Sort();
-			for (auto iRow = Rows.f_GetIterator(); iRow; ++iRow) 
+			for (auto iRow = Rows.f_GetIterator(); iRow; ++iRow)
 				FileData += *iRow;
 			FileData += "	EndGlobalSection\r\n";
 		}
@@ -147,7 +147,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 				{
 					auto pProjectConfig = iProject->m_EnabledConfigs.f_FindEqual(iConfig.f_GetKey());
 					bool bEnabled = !!pProjectConfig;
-					
+
 					if (!pProjectConfig)
 						pProjectConfig = iProject->m_EnabledConfigs.f_FindSmallest();
 
@@ -158,11 +158,11 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 					Rows.f_Insert
 						(
-							CStr::CFormat("		{}.{1}|{2}.ActiveCfg = {3}|{4}\r\n") 
+							CStr::CFormat("		{}.{1}|{2}.ActiveCfg = {3}|{4}\r\n")
 							<< iProject->f_GetGUID()
 							<< iConfig->m_Config
 							<< iConfig->m_Platform
-							<< ProjectConfig.m_Configuration 
+							<< ProjectConfig.m_Configuration
 							<< iProject->m_Platforms[ProjectConfig]
 						)
 					;
@@ -170,16 +170,15 @@ namespace NMib::NBuildSystem::NVisualStudio
 					if (!bEnabled)
 						continue;
 
-					CStr Value = m_BuildSystem.f_EvaluateEntityProperty(**pProjectConfig, EPropertyType_Target, "Disabled");
-					if (Value != "true")
+					if (!m_BuildSystem.f_EvaluateEntityPropertyBool(**pProjectConfig, EPropertyType_Target, "Disabled", false))
 					{
 						Rows.f_Insert
 							(
-								CStr::CFormat("		{}.{1}|{2}.Build.0 = {3}|{4}\r\n") 
+								CStr::CFormat("		{}.{1}|{2}.Build.0 = {3}|{4}\r\n")
 								<< iProject->f_GetGUID()
 								<< iConfig->m_Config
 								<< iConfig->m_Platform
-								<< ProjectConfig.m_Configuration 
+								<< ProjectConfig.m_Configuration
 								<< iProject->m_Platforms[ProjectConfig]
 							)
 						;
@@ -187,7 +186,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 				}
 			}
 			//Rows.f_Sort();
-			for (auto iRow = Rows.f_GetIterator(); iRow; ++iRow) 
+			for (auto iRow = Rows.f_GetIterator(); iRow; ++iRow)
 				FileData += *iRow;
 			FileData += "	EndGlobalSection\r\n";
 		}
@@ -231,7 +230,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		}
 
 		Timer.f_Stop();
-		
+
 		DConOut("Generated workspace: {sl*,a-} {fe2} s{\n}", _Solution.f_GetName() << _MaxSolutionNameLength << Timer.f_GetTime());
 	}
 }

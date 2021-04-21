@@ -8,6 +8,6 @@ namespace NMib::NBuildSystem
 	struct CBuildSystemError
 	{
 		CFilePosition m_Position;
-		CStr m_Error;
+		NStr::CStr m_Error;
 	};
 }

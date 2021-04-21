@@ -13,7 +13,7 @@ namespace NMib::NBuildSystem::NXcode
 	CStr g_ReservedProjectDependenciesGroup("Target Dependencies");
 	CStr g_ReservedGeneratorGroup("~Automatic");
 
-	CStr const& CNativeTarget::f_GetGUID()
+	CStr const &CNativeTarget::f_GetGUID()
 	{
 		if (!mp_GUID.f_IsEmpty())
 			return mp_GUID;
@@ -22,7 +22,7 @@ namespace NMib::NBuildSystem::NXcode
 		return mp_GUID;
 	}
 
-	CStr const& CNativeTarget::f_GetSourcesBuildPhaseGUID()
+	CStr const &CNativeTarget::f_GetSourcesBuildPhaseGUID()
 	{
 		if (!mp_SourcesBuildPhaseGUID.f_IsEmpty())
 			return mp_SourcesBuildPhaseGUID;
@@ -31,7 +31,7 @@ namespace NMib::NBuildSystem::NXcode
 		return mp_SourcesBuildPhaseGUID;
 	}
 
-	CStr const& CNativeTarget::f_GetFrameworksBuildPhaseGUID()
+	CStr const &CNativeTarget::f_GetFrameworksBuildPhaseGUID()
 	{
 		if (!mp_FrameworksBuildPhaseGUID.f_IsEmpty())
 			return mp_FrameworksBuildPhaseGUID;
@@ -41,7 +41,7 @@ namespace NMib::NBuildSystem::NXcode
 	}
 
 #if 0
-	CStr const& CNativeTarget::f_GetHeadersBuildPhaseGUID()
+	CStr const &CNativeTarget::f_GetHeadersBuildPhaseGUID()
 	{
 		if (!mp_HeadersBuildPhaseGUID.f_IsEmpty())
 			return mp_HeadersBuildPhaseGUID;
@@ -51,7 +51,7 @@ namespace NMib::NBuildSystem::NXcode
 	}
 #endif
 
-	CStr const& CNativeTarget::f_GetProductReferenceGUID()
+	CStr const &CNativeTarget::f_GetProductReferenceGUID()
 	{
 		if (!mp_ProductReferenceGUID.f_IsEmpty())
 			return mp_ProductReferenceGUID;
@@ -65,7 +65,7 @@ namespace NMib::NBuildSystem::NXcode
 		return "{} {}{}"_f << _Dependency.f_GetName() << f_Configuration().f_GetFullName() << _pIdentifier;
 	}
 
-	CStr const& CProjectDependency::f_GetFileRefGUID()
+	CStr const &CProjectDependency::f_GetFileRefGUID()
 	{
 		if (!mp_DependencyFileRefGUID.f_IsEmpty())
 			return mp_DependencyFileRefGUID;
@@ -74,7 +74,7 @@ namespace NMib::NBuildSystem::NXcode
 		return mp_DependencyFileRefGUID;
 	}
 
-	CStr const& CProjectDependency::f_GetProductRefGroupGUID()
+	CStr const &CProjectDependency::f_GetProductRefGroupGUID()
 	{
 		if (!mp_DependencyProductRefGroupGUID.f_IsEmpty())
 			return mp_DependencyProductRefGroupGUID;
@@ -83,7 +83,7 @@ namespace NMib::NBuildSystem::NXcode
 		return mp_DependencyProductRefGroupGUID;
 	}
 
-	CStr const& CProjectDependency::CPerConfig::f_GetContainerItemGUID(CProjectDependency const &_Dependency)
+	CStr const &CProjectDependency::CPerConfig::f_GetContainerItemGUID(CProjectDependency const &_Dependency)
 	{
 		if (!mp_DependencyContainerItemGUID.f_IsEmpty())
 			return mp_DependencyContainerItemGUID;
@@ -92,7 +92,7 @@ namespace NMib::NBuildSystem::NXcode
 		return mp_DependencyContainerItemGUID;
 	}
 
-	CStr const& CProjectDependency::CPerConfig::f_GetTargetGUID(CProjectDependency const &_Dependency)
+	CStr const &CProjectDependency::CPerConfig::f_GetTargetGUID(CProjectDependency const &_Dependency)
 	{
 		if (!mp_DependencyTargetGUID.f_IsEmpty())
 			return mp_DependencyTargetGUID;
@@ -101,7 +101,7 @@ namespace NMib::NBuildSystem::NXcode
 		return mp_DependencyTargetGUID;
 	}
 
-	CStr const& CNativeTarget::f_GetBuildConfigurationListGUID()
+	CStr const &CNativeTarget::f_GetBuildConfigurationListGUID()
 	{
 		if (!mp_BuildConfigurationListGUID.f_IsEmpty())
 			return mp_BuildConfigurationListGUID;
@@ -200,7 +200,7 @@ namespace NMib::NBuildSystem::NXcode
 		return CStr();
 	}
 	
-	CStr const& CProjectFile::f_GetFileRefGUID()
+	CStr const &CProjectFile::f_GetFileRefGUID()
 	{
 		if (!mp_FileRefGUID.f_IsEmpty())
 			return mp_FileRefGUID;
@@ -209,7 +209,7 @@ namespace NMib::NBuildSystem::NXcode
 		return mp_FileRefGUID;
 	}
 
-	CStr const& CProjectFile::f_GetBuildRefGUID(CConfiguration const &_Configuration)
+	CStr const &CProjectFile::f_GetBuildRefGUID(CConfiguration const &_Configuration)
 	{
 		auto &BuildRefGUID = mp_BuildRefGUIDs[_Configuration];
 		if (!BuildRefGUID.f_IsEmpty())
@@ -219,7 +219,7 @@ namespace NMib::NBuildSystem::NXcode
 		return BuildRefGUID;
 	}
 
-	CStr const& CProjectFile::f_GetBuildRuleGUID(CConfiguration const &_Configuration)
+	CStr const &CProjectFile::f_GetBuildRuleGUID(CConfiguration const &_Configuration)
 	{
 		auto &BuildRuleGUID = mp_BuildRuleGUIDs[_Configuration];
 		if (!BuildRuleGUID.f_IsEmpty())
@@ -229,7 +229,7 @@ namespace NMib::NBuildSystem::NXcode
 		return BuildRuleGUID;
 	}
 
-	CStr const& CProjectFile::f_GetLastKnownFileType()
+	CStr const &CProjectFile::f_GetLastKnownFileType()
 	{
 		if (!m_LastKnownFileType.f_IsEmpty())
 			return m_LastKnownFileType;
@@ -237,7 +237,7 @@ namespace NMib::NBuildSystem::NXcode
 		m_LastKnownFileType = "text"; // default
 		return m_LastKnownFileType;
 	}
-	CStr const& CProjectFile::f_GetCompileFlagsGUID()
+	CStr const &CProjectFile::f_GetCompileFlagsGUID()
 	{
 		if (!mp_CompileFlagsGUID.f_IsEmpty())
 			return mp_CompileFlagsGUID;
@@ -272,7 +272,7 @@ namespace NMib::NBuildSystem::NXcode
 		return mp_GUID;
 	}
 
-	CStr const& CProject::f_GetBuildConfigurationListGUID()
+	CStr const &CProject::f_GetBuildConfigurationListGUID()
 	{
 		if (!mp_BuildConfigurationListGUID.f_IsEmpty())
 			return mp_BuildConfigurationListGUID;

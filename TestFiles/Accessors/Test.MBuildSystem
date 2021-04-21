@@ -1,0 +1,91 @@
+
+*Configuration
+{
+	Debug "Debug Config"
+	Release "Release Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
+
+%GenerateFile "TestFile"
+{
+	Property
+	{
+		CalcValue define {
+			Test: string
+			, TestOptional?: {
+				InnerValue: string
+			}
+			, TestOptional.InnerValue?: string
+		}
+
+		CalcValue {
+			Test: "Test 1"
+			, TestOptional: {
+				InnerValue: "Test 2"
+			}
+			, "TestOptional.InnerValue": "Test 3"
+		}
+		CalcValue #<Test> "Test 4"
+		CalcValue #<Test> =+ " Appended"
+
+		CalcValueAny define {
+			...: any
+		}
+
+		CalcValueAny {
+			Test: "Test 1"
+			, TestOptional: {
+				InnerValue: "Test 2"
+			}
+			, "TestOptional.InnerValue": "Test 3"
+		}
+		CalcValueAny #<Test> "Test 4"
+		CalcValueAny #<Test> =+ " Appended"
+
+		ArrayAccessIndex define int
+		ArrayAccessIndex 1
+
+		TestValue define string
+		TestValue "false"
+		TestValue "true"
+		{
+			!!CalcValue<Test> "Test 4 Appended"
+		}
+
+		TestValueAny define string
+		TestValueAny "false"
+		TestValueAny "true"
+		{
+			!!CalcValueAny<Test> "Test 4 Appended"
+		}
+	}
+	GenerateFile
+	{
+		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
+		Contents 	`Generate File Contents:\n`\
+					`@(CalcValue<Test>)\n`\
+					`@(CalcValue<TestOptional.InnerValue>)\n`\
+					`@(CalcValue<TestOptional><InnerValue>)\n`\
+					`@(CalcValue<"TestOptional.InnerValue">)\n`\
+					`@(CalcValue<TestOptional><InnerValue>->Split(" ")<[ArrayAccessIndex]>)\n`\
+					`@(TestValue)\n`\
+					`@(CalcValueAny<Test>)\n`\
+					`@(CalcValueAny<TestOptional.InnerValue>)\n`\
+					`@(CalcValueAny<TestOptional><InnerValue>)\n`\
+					`@(CalcValueAny<"TestOptional.InnerValue">)\n`\
+					`@(CalcValueAny<TestOptional><InnerValue>->Split(" ")<[ArrayAccessIndex]>)\n`\
+					`@(TestValueAny)\n`
+		Executable false
+		UnixLineEnds true
+		UnicodeBOM false
+	}
+}

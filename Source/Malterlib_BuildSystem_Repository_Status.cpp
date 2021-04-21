@@ -41,7 +41,6 @@ namespace NMib::NBuildSystem
 			FilterFlags |= EFilterRepoFlag_OnlyTracked;
 
 		CFilteredRepos FilteredRepositories = fg_GetFilteredRepos(Filter, *this, mp_Data, FilterFlags);
-		CRepoEditor RepoEditor = fg_GetRepoEditor(*this, mp_Data);
 
 		if (_Flags & ERepoStatusFlag_UpdateRemotes)
 			fg_UpdateRemotes(*this, FilteredRepositories);
@@ -671,7 +670,10 @@ namespace NMib::NBuildSystem
 			bActionNeeded = bActionNeeded || bActionNeeded;
 		}
 
+		if (!EditorsToLaunch.f_IsEmpty())
 		{
+			CRepoEditor RepoEditor = fg_GetRepoEditor(*this, mp_Data);
+
 			TCActorSequencer<void> EditorLaunchSequencer(RepoEditor.m_bOpenSequential ? 1 : 16);
 
 			for (auto &EditorLaunches : EditorsToLaunch)

@@ -5,9 +5,9 @@
 
 namespace NMib::NBuildSystem
 {
-	CStr const &CGeneratorArchiveState::CProcessedFile::f_GetFileName() const
+	NStr::CStr const &CGeneratorArchiveState::CProcessedFile::f_GetFileName() const
 	{
-		return TCMap<CStr, CProcessedFile>::fs_GetKey(this);
+		return NContainer::TCMap<NStr::CStr, CProcessedFile>::fs_GetKey(this);
 	}
 
 	template <typename tf_CStream>

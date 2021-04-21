@@ -1,0 +1,104 @@
+
+*Configuration
+{
+	Debug "Debug Config"
+	Release "Release Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
+
+%GenerateFile "TestFile"
+{
+	Property
+	{
+		Value1 define float = 5.0
+		Value2 define float = 2.5
+		Value3 define float = 6.0
+		Value4 define [string]?
+		TestValueString define string = `@((Value1 / Value2)->EJSONToString(""))`
+ 		TestValue define float = Value1 / Value2 + Value3
+		TestValue2 define float = Value1 / Value2 + 7.0
+		TestValue3 define string = "Path0" / "Path1"
+		TestValue4 define float = Value1 + 5.0 / Value2
+		TestValue5 define float = Value1 + (5.0 / Value2)
+		TestValue6 define float = (Value1 + 5.0) / Value2
+		TestValue7 define float = 10.0 / 5.0 + 20.0 / 10.0 + 1.0
+		TestValue8 define float = Value1 / (5.0 + Value2)
+		TestValue9 define float = (Value1 / 5.0) + Value2
+		TestValue10 define float = Value1 / 5.0 + Value2
+		TestValue11 define float = 1.0 + 10.0 / 5.0 + 20.0 / 10.0 + 1.0
+		TestValue12 define bool = 1.0 < 2.0
+		TestValue13 define bool = 1.0 + 3.0 * 5.0 < 2.0 * 3.0
+		TestValue14 define float = 1.0 + 3.0 * 5.0
+		TestValue15 define int = 1 | 2
+		TestValue16 define int = 3 & 1
+		TestValue17 define int = 3 ^ 1
+		TestValue18 define int = 1 << 2
+		TestValue19 define int = 8 >> 2
+		TestValue20 define bool = 1.0 < 2.0 && 1.0 < 3.0
+		TestValue21 define bool = 3.0 < 2.0 || 1.0 < 3.0
+		TestValue22 define bool = !true
+		TestValue23 define int = ~3
+		TestValue24 define int = +3
+		TestValue25 define int = -3
+		TestValue26 define float = +3.0
+		TestValue27 define float = -3.0
+		TestValue28 define bool = !5 < !!6
+		TestValue29 define bool = !(5 < 6)
+		TestValue30 define [string] = (Value4 || ["Test"])
+		TestValue31 define [string] = (["Test"] && ["Test2"])
+		TestValue32 define bool = (true || Error("Should Not Eval"))
+		TestValue33 define bool = (false && Error("Should Not Eval"))
+	}
+	GenerateFile
+	{
+		Name BuildSystemOutputDir / "TestGenerateFile.txt"
+		Contents 	`Generate File Contents:\n`\
+					`@(TestValueString)\n`\
+					`@(TestValue->EJSONToString(""))\n`\
+					`@(TestValue2->EJSONToString(""))\n`\
+					`@(TestValue3)\n`\
+					`@(TestValue4->EJSONToString(""))\n`\
+					`@(TestValue5->EJSONToString(""))\n`\
+					`@(TestValue6->EJSONToString(""))\n`\
+					`@(TestValue7->EJSONToString(""))\n`\
+					`@(TestValue8->EJSONToString(""))\n`\
+					`@(TestValue9->EJSONToString(""))\n`\
+					`@(TestValue10->EJSONToString(""))\n`\
+					`@(TestValue11->EJSONToString(""))\n`\
+					`@(TestValue12->EJSONToString(""))\n`\
+					`@(TestValue13->EJSONToString(""))\n`\
+					`@(TestValue14->EJSONToString(""))\n`\
+					`@(TestValue15->EJSONToString(""))\n`\
+					`@(TestValue16->EJSONToString(""))\n`\
+					`@(TestValue17->EJSONToString(""))\n`\
+					`@(TestValue18->EJSONToString(""))\n`\
+					`@(TestValue19->EJSONToString(""))\n`\
+					`@(TestValue20->EJSONToString(""))\n`\
+					`@(TestValue21->EJSONToString(""))\n`\
+					`@(TestValue22->EJSONToString(""))\n`\
+					`@(TestValue23->EJSONToString(""))\n`\
+					`@(TestValue24->EJSONToString(""))\n`\
+					`@(TestValue25->EJSONToString(""))\n`\
+					`@(TestValue26->EJSONToString(""))\n`\
+					`@(TestValue27->EJSONToString(""))\n`\
+					`@(TestValue28->EJSONToString(""))\n`\
+					`@(TestValue29->EJSONToString(""))\n`\
+					`@(TestValue30->EJSONToString(""))\n`\
+					`@(TestValue31->EJSONToString(""))\n`\
+					`@(TestValue32->EJSONToString(""))\n`\
+					`@(TestValue33->EJSONToString(""))\n`
+
+		Executable false
+		UnixLineEnds true
+		UnicodeBOM false
+	}
+}

@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem.h"
@@ -32,7 +32,7 @@ namespace NMib::NBuildSystem
 				return false;
 			}
 
-			CStr f_GetExpandedPath(CStr const &_Path, CStr const& _Base) const override
+			CStr f_GetExpandedPath(CStr const &_Path, CStr const &_Base) const override
 			{
 				return CFile::fs_GetExpandedPath(_Path, _Base);
 			}
@@ -138,7 +138,7 @@ namespace NMib::NBuildSystem
 			if (!CFile::fs_FileExists(_GenerateState.m_EnvironmentStateFile, EFileAttrib_File))
 			{
 				DMibConErrOut2("Cached environment was not found at: {}. Saving current environment.\n", _GenerateState.m_EnvironmentStateFile);
-				mp_Environment = mp_SaveEnvironment = fg_GetSys()->f_Environment();
+				mp_Environment = mp_SaveEnvironment = GenerateSettings.m_Environment;
 				fp_SaveEnvironment();
 			}
 
@@ -157,7 +157,7 @@ namespace NMib::NBuildSystem
 			mp_SaveEnvironment = mp_Environment;
 		}
 		else
-			mp_SaveEnvironment = mp_Environment = fg_GetSys()->f_Environment();
+			mp_SaveEnvironment = mp_Environment = GenerateSettings.m_Environment;
 
 		CStr OverrideEnvironmentFile = CFile::fs_AppendPath(_GenerateState.m_OutputDir, "OverrideEnvironment.json");
 		{
@@ -224,7 +224,7 @@ namespace NMib::NBuildSystem
 		_GenerateState.m_bDisableUserSettings = (GenerateSettings.m_GenerationFlags & EGenerationFlag_DisableUserSettings) != EGenerationFlag_None;
 
 		CStr UserSettingsFileNameLocal = _GenerateState.m_OutputDir / "UserSettings.MSettings";
-		CStr UserSettingsFileNameGlobal = CFile::fs_GetUserHomeDirectory() / "UserSettingGlobal.MSettings";
+		CStr UserSettingsFileNameGlobal = CFile::fs_GetUserHomeDirectory() / "UserSettingGlobalV2.MSettings";
 		mp_UserSettingsFileLocal = UserSettingsFileNameLocal;
 		mp_UserSettingsFileGlobal = UserSettingsFileNameGlobal;
 
@@ -285,17 +285,27 @@ namespace NMib::NBuildSystem
 				bTryParsed = true;
 				fp_ParseData(mp_Data.m_RootEntity, mp_Registry, &mp_Data.m_ConfigurationTypes);
 			}
-			catch (CException const &)
+			catch ([[maybe_unused]] CException const &_Exception)
 			{
-				if (!bTryParsed)
-					fp_ParseData(mp_Data.m_RootEntity, mp_Registry, &mp_Data.m_ConfigurationTypes);
-				if (auto Retry = fp_HandleRepositories(_GenerateState.m_GeneratorValues))
-					return Retry;
-				else
-					throw;
+				try
+				{
+					if (!bTryParsed)
+						fp_ParseData(mp_Data.m_RootEntity, mp_Registry, &mp_Data.m_ConfigurationTypes);
+
+					//DMibConErrOut2("Exception parsing data will try handling repositories:\n{}\n", _Exception);
+
+					if (auto Retry = fp_HandleRepositories(_GenerateState.m_GeneratorValues, true))
+						return Retry;
+					else
+						std::rethrow_exception(_Exception.f_ExceptionPointer());
+				}
+				catch ([[maybe_unused]] CException const &_Exception2)
+				{
+					std::rethrow_exception(_Exception.f_ExceptionPointer());
+				}
 			}
 
-			if (auto Retry = fp_HandleRepositories(_GenerateState.m_GeneratorValues))
+			if (auto Retry = fp_HandleRepositories(_GenerateState.m_GeneratorValues, false))
 				return Retry;
 		}
 		return ERetry_None;
@@ -340,7 +350,7 @@ namespace NMib::NBuildSystem
 								State.m_ExeFile.f_Clear();
 								auto &ExeFile = State.m_ExeFile[CFile::fs_MakePathRelative(CStr(CFile::fs_GetProgramPath()), GenerateState.m_OutputDir)];
 								ExeFile = OldExeFile;
-								ExeFile.f_FileChanged(GenerateState.m_bDependenciesChanged, GenerateState.m_OutputDir);
+								ExeFile.f_FileChanged(GenerateState.m_bDependenciesChanged, GenerateState.m_OutputDir, *this);
 							}
 
 							if (!GenerateState.m_bDependenciesChanged)
@@ -358,11 +368,11 @@ namespace NMib::NBuildSystem
 											{
 												ToProcess.f_Insert
 													(
-														[Files = fg_Move(CurrentInsert), &GenerateState]() mutable
+														[this, Files = fg_Move(CurrentInsert), &GenerateState]() mutable
 														{
 															for (auto pFile : Files)
 															{
-																if (pFile->f_FileChanged(GenerateState.m_bDependenciesChanged, GenerateState.m_OutputDir))
+																if (pFile->f_FileChanged(GenerateState.m_bDependenciesChanged, GenerateState.m_OutputDir, *this))
 																	break;
 															}
 														}
@@ -378,11 +388,11 @@ namespace NMib::NBuildSystem
 								fAddFiles(State.m_GeneratedFiles);
 								ToProcess.f_Insert
 									(
-										[Files = fg_Move(CurrentInsert), &GenerateState]() mutable
+										[this, Files = fg_Move(CurrentInsert), &GenerateState]() mutable
 										{
 											for (auto pFile : Files)
 											{
-												if (pFile->f_FileChanged(GenerateState.m_bDependenciesChanged, GenerateState.m_OutputDir))
+												if (pFile->f_FileChanged(GenerateState.m_bDependenciesChanged, GenerateState.m_OutputDir, *this))
 													break;
 											}
 										}
@@ -418,7 +428,7 @@ namespace NMib::NBuildSystem
 										if (bChangedLocal)
 										{
 											if (!GenerateState.m_bDependenciesChanged.f_Exchange(true))
-												DConOut("Dependency check: Regenerating build system because search changed: {}" DNewLine, FindOptions.m_Path);
+												f_OutputConsole("Dependency check: Regenerating build system because search changed: {}{\n}"_f << FindOptions.m_Path);
 										}
 									}
 								;
@@ -450,12 +460,19 @@ namespace NMib::NBuildSystem
 							{
 								for (auto iEnv = State.m_Environment.f_GetIterator(); iEnv; ++iEnv)
 								{
-									//DConOut("{} = {}" DNewLine, iEnv.f_GetKey() << *iEnv);
+									//f_OutputConsole("{} = {}{\n}"_f << iEnv.f_GetKey() << *iEnv);
 									CStr Value = f_GetEnvironmentVariable(iEnv.f_GetKey());
 
 									if (Value != *iEnv)
 									{
-										DConOut("Dependency check: Regenerating build system because env var '{}' changed: '{}' != '{}'" DNewLine, iEnv.f_GetKey() << Value << *iEnv);
+										f_OutputConsole
+											(
+												"Dependency check: Regenerating build system because env var '{}' changed: '{}' != '{}'{\n}"_f
+												<< iEnv.f_GetKey()
+												<< Value
+												<< *iEnv
+											)
+										;
 										GenerateState.m_bDependenciesChanged = true;
 										break;
 									}
@@ -467,10 +484,11 @@ namespace NMib::NBuildSystem
 
 							if ((mp_GenerateOptions.m_Settings.m_GenerationFlags & InterestingGenerationFlags) != (State.m_GenerationFlags & InterestingGenerationFlags))
 							{
-								DConOut
+								f_OutputConsole
 									(
-										"Dependency check: Regenerating build system because generation flags changed {} != {}" DNewLine
-										, mp_GenerateOptions.m_Settings.m_GenerationFlags << State.m_GenerationFlags
+										"Dependency check: Regenerating build system because generation flags changed {} != {}{\n}"_f
+										<< mp_GenerateOptions.m_Settings.m_GenerationFlags
+										<< State.m_GenerationFlags
 									)
 								;
 								GenerateState.m_bDependenciesChanged = true;
@@ -479,21 +497,21 @@ namespace NMib::NBuildSystem
 							if (!GenerateState.m_bDependenciesChanged)
 							{
 								fp64 Time1 = GenerateState.m_Clock.f_GetTime();
-								DConOut("No changes found {fe2} s{\n}", Time1);
+								f_OutputConsole("No changes found {fe2} s{\n}"_f << Time1);
 
 								return true;
 							}
 						}
 						else
-							DConOut("Dependency check: Regenerating build system because there are no source files in state" DNewLine, 0);
+							f_OutputConsole("Dependency check: Regenerating build system because there are no source files in state{\n}"_f);
 					}
 					else
-						DConOut("Dependency check: Regenerating build system because there is no state file" DNewLine, 0);
+						f_OutputConsole("Dependency check: Regenerating build system because there is no state file{\n}"_f);
 
 					fp64 Time1 = GenerateState.m_Clock.f_GetTime();
 
 					GenerateState.m_bDependenciesChanged = true;
-					DConOut("Checked for changes {fe2} s{\n}", Time1);
+					f_OutputConsole("Checked for changes {fe2} s{\n}"_f << Time1);
 					return false;
 				}
 			)
@@ -510,10 +528,10 @@ namespace NMib::NBuildSystem
 		fp64 Time1 = GenerateState.m_Clock.f_GetTime();
 
 		// Clear out evaluated properties from repositories
-		mp_Data.m_RootEntity.m_EvaluatedProperties.f_Clear();
+		mp_Data.m_RootEntity.m_EvaluatedProperties.m_Properties.f_Clear();
 
 		fp64 Time2 = GenerateState.m_Clock.f_GetTime();
-		DConOut("Parsed data {fe2} s{\n}", Time2 - Time1);
+		f_OutputConsole("Parsed data {fe2} s{\n}"_f << (Time2 - Time1));
 
 		GenerateState.m_pGenerator->f_Generate(*this, mp_Data, GenerateState.m_OutputDir);
 
@@ -541,7 +559,7 @@ namespace NMib::NBuildSystem
 
 		{
 			CGeneratorArchiveState State;
-			auto fl_UpdateFileInfo
+			auto fUpdateFileInfo
 				= [&](TCMap<CStr, CGeneratorArchiveState::CProcessedFile> &_Files, CStr const &_FileName) -> CGeneratorArchiveState::CProcessedFile &
 				{
 					CStr FileName = CFile::fs_MakePathRelative(_FileName, GenerateState.m_OutputDir);
@@ -557,13 +575,13 @@ namespace NMib::NBuildSystem
 				}
 			;
 
-			fl_UpdateFileInfo(State.m_ExeFile, CFile::fs_GetProgramPath());
+			fUpdateFileInfo(State.m_ExeFile, CFile::fs_GetProgramPath());
 
 			mint nSourceFiles = 0;
 			for (auto iFile = mp_SourceFiles.f_GetIterator(); iFile; ++iFile)
 			{
 				++nSourceFiles;
-				fl_UpdateFileInfo(State.m_SourceFiles, *iFile);
+				fUpdateFileInfo(State.m_SourceFiles, *iFile);
 			}
 
 			mint nReferencedFiles = 0;
@@ -572,13 +590,13 @@ namespace NMib::NBuildSystem
 				for (auto iFile = SourceFiles.f_GetIterator(); iFile; ++iFile)
 				{
 					++nReferencedFiles;
-					fl_UpdateFileInfo(State.m_ReferencedFiles, *iFile).m_Flags |= EGeneratedFileFlag_NoDateCheck;
+					fUpdateFileInfo(State.m_ReferencedFiles, *iFile).m_Flags |= EGeneratedFileFlag_NoDateCheck;
 				}
 			}
 
 			mint nGeneratedFiles = 0;
-			
-			
+
+
 			TCMap<CStr, NTime::CTime> GeneratedWriteTimes;
 			{
 				struct CToEdit
@@ -594,7 +612,7 @@ namespace NMib::NBuildSystem
 					auto &ToEdit = pCurrentInsert->f_Insert();
 					ToEdit.m_pPath = &iFile.f_GetKey();
 					ToEdit.m_pWriteTime = &GeneratedWriteTimes[iFile.f_GetKey()];
-					
+
 					if (pCurrentInsert->f_GetLen() >= 1024)
 						pCurrentInsert = &ToProcess.f_Insert();
 				}
@@ -617,7 +635,7 @@ namespace NMib::NBuildSystem
 					)
 				;
 			}
-			
+
 			for (auto iFile = mp_GeneratedFiles.f_GetIterator(); iFile; ++iFile)
 			{
 				CStr FileName = CFile::fs_MakePathRelative(iFile.f_GetKey(), GenerateState.m_OutputDir);
@@ -643,10 +661,10 @@ namespace NMib::NBuildSystem
 				++nFileSearches;
 				nReferencedFiles += iSearch->f_GetLen();
 			}
-			DConOut("{} source files{\n}", nSourceFiles);
-			DConOut("{} file searches{\n}", nFileSearches);
-			DConOut("{} referenced files{\n}", nReferencedFiles);
-			DConOut("{} generated files{\n}", nGeneratedFiles);
+			f_OutputConsole("{} source files{\n}"_f << nSourceFiles);
+			f_OutputConsole("{} file searches{\n}"_f << nFileSearches);
+			f_OutputConsole("{} referenced files{\n}"_f << nReferencedFiles);
+			f_OutputConsole("{} generated files{\n}"_f << nGeneratedFiles);
 
 			for (auto iEnv = mp_UsedExternals.f_GetIterator(); iEnv; ++iEnv)
 			{
@@ -700,11 +718,11 @@ namespace NMib::NBuildSystem
 				}
 				catch (CException const &_Exception)
 				{
-					DConOut("Error deleting file: {}{\n}", _Exception.f_GetErrorStr());
+					f_OutputConsole("Error deleting file: {}{\n}"_f << _Exception.f_GetErrorStr());
 				}
 			}
 		}
-		
+
 		while (!PotentiallyOrphanedDirectories.f_IsEmpty())
 		{
 			TCSet<CStr> NewPotentiallyOrphanedDirectories;
@@ -720,7 +738,7 @@ namespace NMib::NBuildSystem
 				}
 				catch (CException const &_Exception)
 				{
-					DConOut("Error deleting directory: {}{\n}", _Exception.f_GetErrorStr());
+					f_OutputConsole("Error deleting directory: {}{\n}"_f << _Exception.f_GetErrorStr());
 				}
 			}
 			PotentiallyOrphanedDirectories = fg_Move(NewPotentiallyOrphanedDirectories);
@@ -729,15 +747,15 @@ namespace NMib::NBuildSystem
 		if (DeletedFiles.f_GetLen() <= 32)
 		{
 			for (auto &File : DeletedFiles)
-				DConOut("Deleted unused file: {}{\n}", File);
+				f_OutputConsole("Deleted unused file: {}{\n}"_f << File);
 		}
 		else
-			DConOut("Deleted {} unused files{\n}", DeletedFiles.f_GetLen());
-		
+			f_OutputConsole("Deleted {} unused files{\n}"_f << DeletedFiles.f_GetLen());
+
 		fp64 Time4 = GenerateState.m_Clock.f_GetTime();
-		DConOut("Saved state {fe2} s{\n}", Time4 - Time3);
-		DConOut("Total time {fe2} s{\n}", Time4);
-		
+		f_OutputConsole("Saved state {fe2} s{\n}"_f << (Time4 - Time3));
+		f_OutputConsole("Total time {fe2} s{\n}"_f << Time4);
+
 		return mp_FileChanged;
 	}
 }

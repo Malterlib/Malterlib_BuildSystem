@@ -2,11 +2,14 @@
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Generator_VisualStudio.h"
+#include "../../Malterlib_BuildSystem_Evaluate_BuiltinFunctions.h"
+
 #include <Mib/XML/XML>
 #include <Mib/Process/ProcessLaunch>
 #include <Mib/Encoding/JSON>
 #ifdef DPlatformFamily_Windows
 #include <Mib/Core/PlatformSpecific/WindowsRegistry>
+#include <Mib/Core/PlatformSpecific/WindowsFilePath>
 #endif
 
 namespace NMib::NBuildSystem::NVisualStudio
@@ -56,7 +59,12 @@ namespace NMib::NBuildSystem::NVisualStudio
 			{
 #ifdef DPlatformFamily_Windows
 				CStr ProgramData = m_BuildSystem.f_GetEnvironmentVariable("ProgramData");
-				CStr InstancesPath = ProgramData / "Microsoft/VisualStudio/Packages/_Instances";
+				CStr CachePath = ProgramData / "Microsoft/VisualStudio/Packages";
+
+				if (NMib::NPlatform::CWin32_Registry Registry; auto Path = Registry.f_Read_Str("SOFTWARE\\Microsoft\\VisualStudio\\Setup", "CachePath", ""))
+					CachePath = NMib::NFile::NPlatform::fg_ConvertFromWindowsPath(Path);
+
+				CStr InstancesPath = CachePath / "_Instances";
 
 				CStr Errors;
 
@@ -86,7 +94,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 						if (Version[0] == 16 && Version > BestVersion)
 						{
 							BestVersion = Version;
-							BestPath = Json["installationPath"].f_String().f_ReplaceChar('\\', '/');
+							BestPath = NMib::NFile::NPlatform::fg_ConvertFromWindowsPath(Json["installationPath"].f_String());
 						}
 					}
 					catch (CException const &_Exception)
@@ -110,7 +118,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		(
 			CBuildSystem const &_BuildSystem
 			, CBuildSystemData const &_BuildSystemData
-			, TCMap<CPropertyKey, CStr> const &_InitialValues
+			, TCMap<CPropertyKey, CEJSON> const &_InitialValues
 			, CStr const &_OutputDir
 		)
 		: m_BuildSystem(_BuildSystem)
@@ -125,13 +133,13 @@ namespace NMib::NBuildSystem::NVisualStudio
 		m_BuildSystem.f_SetGeneratorInterface(this);
 		CEntityKey Key;
 		Key.m_Type = EEntityType_GeneratorSetting;
-		Key.m_Name = "VisualStudio2012";
+		Key.m_Name.m_Value = "VisualStudio2012";
 
 		auto pEntity = _BuildSystemData.m_RootEntity.m_ChildEntitiesMap.f_FindEqual(Key);
 		if (!pEntity)
 			m_BuildSystem.fs_ThrowError(CFilePosition(), "No VisualStudio2012 generator settings found");
 
-		_BuildSystem.f_EvaluateData(m_GeneratorSettingsData, _InitialValues, pEntity, nullptr, nullptr, true, true);
+		_BuildSystem.f_EvaluateData(m_GeneratorSettingsData, _InitialValues, pEntity, true);
 
 		auto pSettings = m_GeneratorSettingsData.m_RootEntity.m_ChildEntitiesMap.f_FindEqual(Key);
 		if (!pSettings)
@@ -157,9 +165,17 @@ namespace NMib::NBuildSystem::NVisualStudio
 		else if (EnableSourceControl == "true")
 			m_bEnableSourceControl = true;
 
+		_BuildSystem.f_RegisterBuiltinVariables
+			(
+				{
+					{CPropertyKey(EPropertyType_Compile, "XInternalPrecompiledHeaderOutputFile"), g_String}
+ 					, {CPropertyKey(EPropertyType_Builtin, "VisualStudioRoot"), g_String}
+				}
+			)
+		;
 	}
 
-	CStr CGeneratorInstance::f_GetExpandedPath(CStr const &_Path, CStr const& _Base) const
+	CStr CGeneratorInstance::f_GetExpandedPath(CStr const &_Path, CStr const &_Base) const
 	{
 		return CFile::fs_GetExpandedPath(_Path.f_Replace(m_RelativeBasePathAbsolute, m_BuildSystem.f_GetBaseDir()), _Base);
 	}

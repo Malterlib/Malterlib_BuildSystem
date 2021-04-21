@@ -3,10 +3,24 @@
 
 #include "Malterlib_BuildSystem_Registry.h"
 
+#include <Mib/Encoding/JSONShortcuts>
+
 namespace NMib::NContainer
 {
 	using namespace NEncoding;
 	using namespace NBuildSystem;
+
+	TCRegistry_CustomValue<CBuildSystemRegistryValue>::CEJSONParseContext::CEJSONParseContext()
+	{
+		m_bConvertNullToSpace = false;
+		m_Flags = gc_BuildSystemJSONParseFlags;
+	}
+
+	TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::CJSONParseContext()
+	{
+		m_bConvertNullToSpace = false;
+		m_Flags = gc_BuildSystemJSONParseFlags;
+	}
 
 	NTime::CTime TCRegistry_CustomValue<CBuildSystemRegistryValue>::fs_ParseDate(ch8 const * &o_pParse)
 	{
@@ -131,6 +145,113 @@ namespace NMib::NContainer
 	}
 
 	template <>
+	void TCRegistry_CustomValue<CBuildSystemRegistryValue>::fs_ParseKey
+		(
+			ch8 const * &o_pParse
+			, CBuildSystemRegistry::CParseContext &o_ParseContext
+			, bool &o_bWasEscaped
+			, NBuildSystem::CBuildSystemRegistryValue &o_Key
+		)
+	{
+		o_bWasEscaped = false;
+
+		uch8 const *pParse = (uch8 const *)(o_pParse);
+
+		auto fParseValue = [&]() -> NEncoding::CJSON
+			{
+				NEncoding::CJSON Value;
+
+				CJSONParseContext Context;
+				Context.m_pStartParse = (uch8 const *)o_ParseContext.f_GetStartParse();
+				if (!Context.m_pStartParse)
+					Context.m_pStartParse = pParse;
+				Context.m_FileName = o_ParseContext.m_File;
+				Context.m_bSupportBinaryOperators = false;
+
+				NEncoding::NJSON::fg_ParseJSONValue(Value, pParse, Context);
+
+				return Value;
+			}
+		;
+
+		auto fParsePrefixOperator = [&](CStr _Operator)
+			{
+				auto &UserType = o_Key.f_UserType();
+				UserType.m_Type = "BuildSystemToken";
+				UserType.m_Value =
+					{
+						"Type"__= "KeyPrefixOperator"
+						, "Operator"__= fg_Move(_Operator)
+						, "Right"__= fParseValue()
+					}
+				;
+			}
+		;
+
+		auto fParseLogicalOperator = [&](CStr _Operator)
+			{
+				if (!fg_CharIsWhiteSpace(*pParse) && *pParse != '{')
+				{
+					auto ParseLocation = o_ParseContext.f_GetLocation((ch8 const *)pParse);
+					DMibError(NStr::CStr::CFormat("{}Didn't expect anything after {} operator") << o_ParseContext.f_FormatLocation(ParseLocation) << _Operator);
+				}
+
+				auto &UserType = o_Key.f_UserType();
+				UserType.m_Type = "BuildSystemToken";
+				UserType.m_Value =
+					{
+						"Type"__= "KeyLogicalOperator"
+						, "Operator"__= fg_Move(_Operator)
+					}
+				;
+			}
+		;
+
+		if (pParse[0] == '!' && pParse[1] == '!')
+		{
+			pParse += 2;
+			fParsePrefixOperator("!!");
+		}
+		else if (pParse[0] == '!')
+		{
+			pParse += 1;
+			if (*pParse == '{' || fg_CharIsWhiteSpace(*pParse))
+				fParseLogicalOperator("!");
+			else
+				fParsePrefixOperator("!");
+		}
+		else if (pParse[0] == '&')
+		{
+			pParse += 1;
+			fParseLogicalOperator("&");
+		}
+		else if (pParse[0] == '|')
+		{
+			pParse += 1;
+			fParseLogicalOperator("|");
+		}
+		else if (pParse[0] == '*')
+		{
+			pParse += 1;
+			fParsePrefixOperator("*");
+		}
+		else if (pParse[0] == '%')
+		{
+			pParse += 1;
+			fParsePrefixOperator("%");
+		}
+		else if (pParse[0] == '#')
+		{
+			pParse += 1;
+ 			fParsePrefixOperator("#");
+		}
+		else
+			o_Key = CEJSON::fs_FromJSON(fParseValue());
+
+		o_pParse = (ch8 const *)(pParse);
+	}
+
+	template <>
 	CBuildSystemRegistryValue TCRegistry_CustomValue<CBuildSystemRegistryValue>::fs_Parse<CBuildSystemRegistry::CParseContext>
 		(
 		 	ch8 const * &o_pParse
@@ -139,11 +260,6 @@ namespace NMib::NContainer
 		)
 	{
 		o_bWasEscaped = false;
-
-		if (NStr::fg_StrStartsWith(o_pParse, "Date("))
-			return {fs_ParseDate(o_pParse)};
-		else if (NStr::fg_StrStartsWith(o_pParse, "Binary("))
-			return {fs_ParseBinary(o_pParse)};
 
 		NEncoding::CJSON Output;
 
@@ -154,14 +270,12 @@ namespace NMib::NContainer
 		if (!Context.m_pStartParse)
 			Context.m_pStartParse = pParse;
 		Context.m_FileName = o_ParseContext.m_File;
-		Context.m_bConvertNullToSpace = false;
-		Context.m_bAllowUndefined = true;
 
 		NEncoding::NJSON::fg_ParseJSONValue(Output, pParse, Context);
 
 		o_pParse = (ch8 const *)(pParse);
 
-		return {NEncoding::CEJSON::fs_FromJSON(Output)};
+		return NEncoding::CEJSON::fs_FromJSON(fg_Move(Output));
 	}
 
 	bool TCRegistry_CustomValue<CBuildSystemRegistryValue>::fs_ValueIsEmpty(CBuildSystemRegistryValue const &_Value, bool _bForceEscape)
@@ -173,5 +287,16 @@ namespace NMib::NContainer
 			return true;
 		}
 		return false;
+	}
+}
+
+namespace NMib::NBuildSystem
+{
+	CStr const &fg_RegistryNameStringForPath(CBuildSystemRegistryValue const &_Key)
+	{
+		if (_Key.f_IsString())
+			DMibError("Only string keys supported for paths");
+
+		return _Key.f_String();
 	}
 }

@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem.h"
@@ -21,7 +21,7 @@ namespace NMib::NBuildSystem
 		}
 	}
 	
-	void CBuildSystem::fp_TracePropertyEval(bool _bSuccess, CEntity const &_Entity, CProperty const &_Property, CStr const &_Value) const
+	void CBuildSystem::fp_TracePropertyEval(bool _bSuccess, CEntity const &_Entity, CProperty const &_Property, CEJSON const &_Value) const
 	{
 		if (_Property.m_Debug.f_Find("TraceEval") >= 0)
 		{
@@ -31,13 +31,11 @@ namespace NMib::NBuildSystem
 				{
 					DConOut
 						(
-							DMibPFileLineFormat " !!!!!! {} {}:{} = {}" DNewLine
-							, _Property.m_Position.m_FileName 
-							<< _Property.m_Position.m_Line 
-							<< _Entity.f_GetPath() 
-							<< fg_PropertyTypeToStr(_Property.m_Key.m_Type) 
-							<< _Property.m_Key.m_Name
-							<< _Value
+							"{} !!!!!! {} {} = {}" DNewLine
+							, _Property.m_Position.f_Location()
+							<< _Entity.f_GetPath()
+							<< _Property.m_Key
+							<< _Property.m_Value
 						)
 					;
 				}
@@ -46,12 +44,10 @@ namespace NMib::NBuildSystem
 			{
 				DConOut
 					(
-						DMibPFileLineFormat "        {} {}:{} = {}" DNewLine
-						, _Property.m_Position.m_FileName 
-						<< _Property.m_Position.m_Line 
-						<< _Entity.f_GetPath() 
-						<< fg_PropertyTypeToStr(_Property.m_Key.m_Type) 
-						<< _Property.m_Key.m_Name 
+						"{}        {} {} = {}" DNewLine
+						, _Property.m_Position.f_Location()
+						<< _Entity.f_GetPath()
+						<< _Property.m_Key
 						<< _Value
 					)
 				;

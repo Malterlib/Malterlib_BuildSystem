@@ -7,7 +7,7 @@
 namespace NMib::NStr
 {
 	template <typename tf_CStr, typename tf_CSplitChar>
-	NContainer::TCVector<tf_CStr> fg_StrSplit(tf_CStr const& _ToSplit, tf_CSplitChar _SplitChar)
+	NContainer::TCVector<tf_CStr> fg_StrSplit(tf_CStr const &_ToSplit, tf_CSplitChar _SplitChar)
 	{
 		TCVector<tf_CStr> Ret;
 		aint iLast = 0;
@@ -30,7 +30,7 @@ namespace NMib::NBuildSystem
 {
 	namespace NXcode
 	{
-		void CGeneratorInstance::fp_GenerateBuildConfigurationFiles(CProject& _Project, CStr const& _OutputDir) const
+		void CGeneratorInstance::fp_GenerateBuildConfigurationFiles(CProject& _Project, CStr const &_OutputDir) const
 		{
 			CStr OutputDir = CFile::fs_AppendPath(_OutputDir, _Project.f_GetName());
 
@@ -64,7 +64,7 @@ namespace NMib::NBuildSystem
 			}
 		}
 
-		void CGeneratorInstance::fp_GenerateBuildConfigurationFilesList(CProject& _Project, CStr const& _OutputDir, TCVector<CBuildConfiguration>& _ConfigList) const
+		void CGeneratorInstance::fp_GenerateBuildConfigurationFilesList(CProject& _Project, CStr const &_OutputDir, TCVector<CBuildConfiguration>& _ConfigList) const
 		{
 			CStr OutputDir = CFile::fs_AppendPath(_OutputDir, _Project.f_GetName());
 
@@ -99,7 +99,7 @@ namespace NMib::NBuildSystem
 				fp_GetConfigValue(
 					_Project.m_EnabledProjectConfigs
 					, _Project.m_EnabledProjectConfigs
-					, (*_Project.m_EnabledProjectConfigs.f_GetIterator())->m_Position
+					, (*_Project.m_EnabledProjectConfigs.f_GetIterator())->f_Data().m_Position
 					, EPropertyType_Target
 					, "Type"
 					, false
@@ -123,7 +123,14 @@ namespace NMib::NBuildSystem
 					if (NativeTarget.m_Type.f_IsEmpty())
 						NativeTarget.m_Type = ThisTargetType;
 					else if (ThisTargetType != NativeTarget.m_Type)
-						m_BuildSystem.fs_ThrowError((*_Project.m_EnabledProjectConfigs.f_GetIterator())->m_Position, CStr::CFormat("INTERNAL ERROR: Multiple target types found when only one is allowed '{}' != '{}'") << ThisTargetType << NativeTarget.m_Type);
+					{
+						m_BuildSystem.fs_ThrowError
+							(
+								(*_Project.m_EnabledProjectConfigs.f_GetIterator())->f_Data().m_Position
+								, CStr::CFormat("INTERNAL ERROR: Multiple target types found when only one is allowed '{}' != '{}'") << ThisTargetType << NativeTarget.m_Type
+							)
+						;
+					}
 				}
 			}
 
@@ -145,7 +152,7 @@ namespace NMib::NBuildSystem
 				auto *pEnabledConfig = _Project.m_EnabledProjectConfigs.f_FindEqual(Configuration);
 				DCheck(pEnabledConfig);
 
-				TCMap<CConfiguration, CEntityPointer> EnabledConfigs;
+				TCMap<CConfiguration, CEntityMutablePointer> EnabledConfigs;
 				EnabledConfigs[Configuration] = *pEnabledConfig;
 
 				fp_SetEvaluatedValues
@@ -181,8 +188,8 @@ namespace NMib::NBuildSystem
 						{
 							bFoundPostBuildScript = true;
 
-							auto & InputsElement = pEvaluated->m_Element["PostBuildScriptInputs"];
-							auto & OutputsElement = pEvaluated->m_Element["PostBuildScriptOutputs"];
+							auto &InputsElement = pEvaluated->m_Element["PostBuildScriptInputs"];
+							auto &OutputsElement = pEvaluated->m_Element["PostBuildScriptOutputs"];
 							PostBuildScript.m_Inputs = fg_StrSplit(InputsElement.f_GetValue(), ';');
 							PostBuildScript.m_Outputs = fg_StrSplit(OutputsElement.f_GetValue(), ';');
 
@@ -194,8 +201,8 @@ namespace NMib::NBuildSystem
 						{
 							bFoundPreBuildScript = true;
 
-							auto & InputsElement = pEvaluated->m_Element["PreBuildScriptInputs"];
-							auto & OutputsElement = pEvaluated->m_Element["PreBuildScriptOutputs"];
+							auto &InputsElement = pEvaluated->m_Element["PreBuildScriptInputs"];
+							auto &OutputsElement = pEvaluated->m_Element["PreBuildScriptOutputs"];
 							PreBuildScript.m_Inputs = fg_StrSplit(InputsElement.f_GetValue(), ';');
 							PreBuildScript.m_Outputs = fg_StrSplit(OutputsElement.f_GetValue(), ';');
 
@@ -219,7 +226,7 @@ namespace NMib::NBuildSystem
 			{
 				auto &Dependency = *iDependency;
 
-				TCMap<CConfiguration, CEntityPointer> EnabledConfigurations;
+				TCMap<CConfiguration, CEntityMutablePointer> EnabledConfigurations;
 
 				for (auto iConfig = Dependency.m_EnabledConfigs.f_GetIterator(); iConfig; ++iConfig)
 				{
@@ -255,7 +262,7 @@ namespace NMib::NBuildSystem
 			}
 		}
 
-		CStr CGeneratorInstance::fp_MakeNiceSharedFlagValue(CStr const& _Type) const
+		CStr CGeneratorInstance::fp_MakeNiceSharedFlagValue(CStr const &_Type) const
 		{
 			return _Type.f_Replace("+", "P");
 		}
@@ -264,7 +271,7 @@ namespace NMib::NBuildSystem
 		{
 			auto & ThreadLocal = *m_ThreadLocal;
 
-			auto fl_GetSharedFlags = [&] (CStr const& _Type, mint _SettingsNumber, bool _bKey) -> CStr
+			auto fGetSharedFlags = [&] (CStr const &_Type, mint _SettingsNumber, bool _bKey) -> CStr
 			{
 				if (!_bKey)
 				{
@@ -436,7 +443,7 @@ namespace NMib::NBuildSystem
 					}
 				}
 
-				auto fl_GenerateFlags = [&] (CConfigResult const& _ConfigData, CStr const& _FileType, bool _bFileType) -> CStr
+				auto fGenerateFlags = [&] (CConfigResult const &_ConfigData, CStr const &_FileType, bool _bFileType) -> CStr
 				{
 					CStr CompileFlags;
 
@@ -473,7 +480,7 @@ namespace NMib::NBuildSystem
 							CompileFlags += (CStr::CFormat(" {}") << _Value);
 						}
 					;
-					auto fl_BuildFlags = [&] (CElement const& _Element, TCSet<CStr> const *_pValueSet = nullptr)
+					auto fBuildFlags = [&] (CElement const &_Element, TCSet<CStr> const *_pValueSet = nullptr)
 					{
 						if (_Element.m_Property == "GCC_PRECOMPILE_PREFIX_HEADER")
 							return;
@@ -553,7 +560,7 @@ namespace NMib::NBuildSystem
 									pToSet = &ToSet;
 								}
 
-								fl_BuildFlags(*iElement, pToSet);
+								fBuildFlags(*iElement, pToSet);
 								continue;
 							}
 							else
@@ -579,7 +586,7 @@ namespace NMib::NBuildSystem
 										}
 									}
 
-									fl_BuildFlags(*iElement, &ToSet);
+									fBuildFlags(*iElement, &ToSet);
 									continue;
 								}
 							}
@@ -590,7 +597,7 @@ namespace NMib::NBuildSystem
 							}
 						}
 
-						fl_BuildFlags(*iElement);
+						fBuildFlags(*iElement);
 					}
 
 					if (!_bFileType)
@@ -600,7 +607,7 @@ namespace NMib::NBuildSystem
 						{
 							if (!_ConfigData.m_Element.f_FindEqual(iNonShared.f_GetKey()))
 							{
-								fl_BuildFlags(**iNonShared);
+								fBuildFlags(**iNonShared);
 							}
 						}
 						auto const &GlobalNonSharedTypeSet = GlobalNonSharedSet[TranslatedType];
@@ -608,7 +615,7 @@ namespace NMib::NBuildSystem
 						{
 							if (!_ConfigData.m_Element.f_FindEqual(iNonShared.f_GetKey()))
 							{
-								fl_BuildFlags(*iNonShared);
+								fBuildFlags(*iNonShared);
 							}
 						}
 					}
@@ -630,7 +637,7 @@ namespace NMib::NBuildSystem
 
 						// Generate compiler flags for this file for any properties that exist in the overridden properties map (take them from
 						// the shared flags if they do not override them)
-						CStr FlagsForFile = fl_GenerateFlags(ConfigData, iFile->m_Type, false);
+						CStr FlagsForFile = fGenerateFlags(ConfigData, iFile->m_Type, false);
 						if (!FlagsForFile.f_IsEmpty())
 						{
 							auto & OverriddenType = GeneratedOverriddenFlags[iFile->m_Type];
@@ -638,7 +645,7 @@ namespace NMib::NBuildSystem
 							if (MappedOveridden.f_WasCreated())
 								*MappedOveridden = ++SettingsNumber[iFile->m_Type];
 
-							ThreadLocal.mp_CompileFlagsValues[iFile->f_GetCompileFlagsGUID()][Configuration] = fl_GetSharedFlags(iFile->m_Type, *MappedOveridden, false);
+							ThreadLocal.mp_CompileFlagsValues[iFile->f_GetCompileFlagsGUID()][Configuration] = fGetSharedFlags(iFile->m_Type, *MappedOveridden, false);
 						}
 
 						// Some special flags
@@ -695,7 +702,7 @@ namespace NMib::NBuildSystem
 					{
 						for (auto iGeneratedOverriddenFlags = iFileType->f_GetIterator(); iGeneratedOverriddenFlags; ++iGeneratedOverriddenFlags)
 						{
-							CStr Key = fl_GetSharedFlags(iFileType.f_GetKey(), (*iGeneratedOverriddenFlags), true);
+							CStr Key = fGetSharedFlags(iFileType.f_GetKey(), (*iGeneratedOverriddenFlags), true);
 							EvaluatedOverriddenCompileFlags[Key] = iGeneratedOverriddenFlags.f_GetKey();
 						}
 					}
@@ -709,8 +716,8 @@ namespace NMib::NBuildSystem
 						CConfigResult const& ConfigData = (*iFlag)[Configuration];
 
 						// Generate any flags that do not appear in the overridden properties map
-						CStr CompileFlags = fl_GenerateFlags(ConfigData, Type, true);
-						CStr Flags = fl_GetSharedFlags(Type, 0, true);
+						CStr CompileFlags = fGenerateFlags(ConfigData, Type, true);
+						CStr Flags = fGetSharedFlags(Type, 0, true);
 						ThreadLocal.mp_CompileFlagsValues[Flags][Configuration] = CompileFlags;
 					}
 				}
@@ -734,7 +741,7 @@ namespace NMib::NBuildSystem
 			}
 		}
 
-		void CGeneratorInstance::fp_GenerateBuildConfigurationScriptFile(CProject& _Project, CConfiguration const& _Configuration, CStr const& _OutputFile, CStr const& _OutputDir, CStr const &_Contents) const
+		void CGeneratorInstance::fp_GenerateBuildConfigurationScriptFile(CProject& _Project, CConfiguration const &_Configuration, CStr const &_OutputFile, CStr const &_OutputDir, CStr const &_Contents) const
 		{
 			CStr FileData = _Contents.f_Replace("\r\n", "\n");
 
@@ -786,9 +793,9 @@ namespace NMib::NBuildSystem
 		void CGeneratorInstance::fp_GenerateBuildConfigurationFile
 			(
 			 	CProject& _Project
-			 	, CConfiguration const& _Configuration
-			 	, CStr const& _OutputFile
-			 	, CStr const& _OutputDir
+			 	, CConfiguration const &_Configuration
+			 	, CStr const &_OutputFile
+			 	, CStr const &_OutputDir
 			 	, CNativeTarget const &_NativeTarget
 			) const
 		{
@@ -797,7 +804,7 @@ namespace NMib::NBuildSystem
 
 			FileData += "ESCSLASH = /\n";
 
-			auto fl_EscVar
+			auto fEscVar
 				= [](CStr const &_Var) -> CStr
 				{
 					if (_Var.f_Find("//") >= 0)
@@ -811,17 +818,17 @@ namespace NMib::NBuildSystem
 			// Other CPP Flags
 			{
 				if (_NativeTarget.m_CType == "C")
-					FileData += (CStr::CFormat("OTHER_CFLAGS = {}\n") << fl_EscVar(ThreadLocal.mp_OtherCFlags[_Configuration]));
+					FileData += (CStr::CFormat("OTHER_CFLAGS = {}\n") << fEscVar(ThreadLocal.mp_OtherCFlags[_Configuration]));
 				else if (_NativeTarget.m_CType == "ObjC")
-					FileData += (CStr::CFormat("OTHER_CFLAGS = {}\n") << fl_EscVar(ThreadLocal.mp_OtherObjCFlags[_Configuration]));
+					FileData += (CStr::CFormat("OTHER_CFLAGS = {}\n") << fEscVar(ThreadLocal.mp_OtherObjCFlags[_Configuration]));
 				else if (_NativeTarget.m_CType == "C++")
-					FileData += (CStr::CFormat("OTHER_CFLAGS = {}\n") << fl_EscVar(ThreadLocal.mp_OtherCPPFlags[_Configuration]));
+					FileData += (CStr::CFormat("OTHER_CFLAGS = {}\n") << fEscVar(ThreadLocal.mp_OtherCPPFlags[_Configuration]));
 				else if (_NativeTarget.m_CType == "ObjC++")
-					FileData += (CStr::CFormat("OTHER_CFLAGS = {}\n") << fl_EscVar(ThreadLocal.mp_OtherObjCPPFlags[_Configuration]));
+					FileData += (CStr::CFormat("OTHER_CFLAGS = {}\n") << fEscVar(ThreadLocal.mp_OtherObjCPPFlags[_Configuration]));
 				else if (_NativeTarget.m_CType == "Assembler")
-					FileData += (CStr::CFormat("OTHER_CFLAGS = {}\n") << fl_EscVar(ThreadLocal.mp_OtherAssemblerFlags[_Configuration]));
+					FileData += (CStr::CFormat("OTHER_CFLAGS = {}\n") << fEscVar(ThreadLocal.mp_OtherAssemblerFlags[_Configuration]));
 
-				FileData += (CStr::CFormat("MOC_OUTPUT_PATTERN_CPP = {}\n") << fl_EscVar(ThreadLocal.mp_MocOutputPatternCPP));
+				FileData += (CStr::CFormat("MOC_OUTPUT_PATTERN_CPP = {}\n") << fEscVar(ThreadLocal.mp_MocOutputPatternCPP));
 				FileData += "MOC_OUTPUT_PATTERN_NOLINK = $(MOC_OUTPUT_PATTERN)\nMOC_OUTPUT_PATTERN_CPP_NOLINK = $(MOC_OUTPUT_PATTERN_CPP)\n";
 			}
 
@@ -829,8 +836,8 @@ namespace NMib::NBuildSystem
 				{
 					if (_Key == "MALTERLIB_GENERATOR_CLANG")
 					{
-						CStr Value = fl_EscVar(_Value);
-						CStr ValuePlusPlus = fl_EscVar(_Value + "++");
+						CStr Value = fEscVar(_Value);
+						CStr ValuePlusPlus = fEscVar(_Value + "++");
 						if (CFile::fs_GetFileNoExt(Value) == "MTool")
 							ValuePlusPlus = Value;
 
@@ -847,7 +854,7 @@ namespace NMib::NBuildSystem
 					{
 						if (g_PathModSettings.f_FindEqual(_Key))
 						{
-							FileData += "{} = {}\n"_f << _Key << fl_EscVar("{}/{}"_f << _Value << _NativeTarget.m_CType);
+							FileData += "{} = {}\n"_f << _Key << fEscVar("{}/{}"_f << _Value << _NativeTarget.m_CType);
 							return;
 						}
 						else if (_Key == "EXECUTABLE_FOLDER_PATH")
@@ -862,17 +869,17 @@ namespace NMib::NBuildSystem
 						}
 						else if (_Key == "PRODUCT_NAME")
 						{
-							FileData += "{} = {}\n"_f << _Key << fl_EscVar(_Value + _NativeTarget.m_CType);
+							FileData += "{} = {}\n"_f << _Key << fEscVar(_Value + _NativeTarget.m_CType);
 							return;
 						}
 						else if (_Key == "MACH_O_TYPE")
 						{
-							FileData += "{} = {}\n"_f << _Key << fl_EscVar("staticlib");
+							FileData += "{} = {}\n"_f << _Key << fEscVar("staticlib");
 							return;
 						}
 					}
 
-					FileData += "{} = {}\n"_f << _Key << fl_EscVar(_Value);
+					FileData += "{} = {}\n"_f << _Key << fEscVar(_Value);
 				}
 			;
 
@@ -896,7 +903,7 @@ namespace NMib::NBuildSystem
 
 			// MLSRCROOT
 			{
-				FileData += (CStr::CFormat("MLSRCROOT = {}\n") << fl_EscVar(m_RelativeBasePathAbsolute));
+				FileData += (CStr::CFormat("MLSRCROOT = {}\n") << fEscVar(m_RelativeBasePathAbsolute));
 			}
 
 			bool bDoneAdditionalLibraries = false;
@@ -974,7 +981,7 @@ namespace NMib::NBuildSystem
 						if (_NativeTarget.m_bDefaultTarget)
 							iElement->f_SetValue(iElement->f_GetValue().f_Replace("\r\n", "\n").f_Replace("\n", "\\n"));
 						if (bAdditionalLibraries)
-							FileData += (CStr::CFormat("{} = {}{}{}\n") << iElement->m_Property << Extra << fl_EscVar(iElement->f_GetValue()) << ExtraAfter);
+							FileData += (CStr::CFormat("{} = {}{}{}\n") << iElement->m_Property << Extra << fEscVar(iElement->f_GetValue()) << ExtraAfter);
 						else
 							fOutputConfigValue(iElement->m_Property, iElement->f_GetValue());
 					}
@@ -1039,11 +1046,11 @@ namespace NMib::NBuildSystem
 						Link += "-Xlinker -) ";
 				}
 
-				//FileData += (CStr::CFormat("DependencySearchPaths = {}\n") << fl_EscVar(LinkSearchPaths));
-				FileData += "DependencyLibrariesForced = {}\n"_f << fl_EscVar(LinkForced);
-				FileData += "DependencyLibraries = {}\n"_f << fl_EscVar(Link);
-				FileData += "LDFlagsFirst = {}\n"_f << fl_EscVar(LDFlagsFirst);
-				FileData += "MalterlibXcodeObjectFileDirName = $(OBJECT_FILE_DIR_$CURRENT_VARIANT:file)\n"_f << fl_EscVar(Link);
+				//FileData += (CStr::CFormat("DependencySearchPaths = {}\n") << fEscVar(LinkSearchPaths));
+				FileData += "DependencyLibrariesForced = {}\n"_f << fEscVar(LinkForced);
+				FileData += "DependencyLibraries = {}\n"_f << fEscVar(Link);
+				FileData += "LDFlagsFirst = {}\n"_f << fEscVar(LDFlagsFirst);
+				FileData += "MalterlibXcodeObjectFileDirName = $(OBJECT_FILE_DIR_$CURRENT_VARIANT:file)\n"_f << fEscVar(Link);
 
 				if (!bDoneAdditionalLibraries)
 				{

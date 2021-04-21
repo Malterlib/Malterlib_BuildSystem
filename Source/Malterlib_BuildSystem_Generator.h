@@ -9,15 +9,15 @@ namespace NMib::NBuildSystem
 	{
 	public:
 		virtual ~CBuildSystemGenerator();
-		virtual TCMap<CPropertyKey, CStr> f_GetValues(CBuildSystem const &_BuildSystem, CStr const &_OutputDir) = 0;
-		virtual void f_Generate(CBuildSystem const &_BuildSystem, CBuildSystemData const &_BuildSystemData, CStr const &_OutputDir) = 0;
+		virtual NContainer::TCMap<CPropertyKey, NEncoding::CEJSON> f_GetValues(CBuildSystem const &_BuildSystem, NStr::CStr const &_OutputDir) = 0;
+		virtual void f_Generate(CBuildSystem const &_BuildSystem, CBuildSystemData const &_BuildSystemData, NStr::CStr const &_OutputDir) = 0;
 	};
 	
 	struct CGeneratorInterface
 	{
 		virtual ~CGeneratorInterface() = default;
-		virtual bool f_GetBuiltin(CStr const &_Value, CStr &_Result) const = 0;
-		virtual CStr f_GetExpandedPath(CStr const &_Path, CStr const& _Base) const = 0;
-		virtual CSystemEnvironment f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const = 0;
+		virtual bool f_GetBuiltin(NStr::CStr const &_Value, NStr::CStr &_Result) const = 0;
+		virtual NStr::CStr f_GetExpandedPath(NStr::CStr const &_Path, NStr::CStr const &_Base) const = 0;
+		virtual CSystemEnvironment f_GetBuildEnvironment(NStr::CStr const &_Platform, NStr::CStr const &_Architecture) const = 0;
 	};
 }

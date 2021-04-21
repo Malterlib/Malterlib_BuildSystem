@@ -1,0 +1,23 @@
+Generate File Contents:
+{
+	"Test": "Test 1",
+	"TestOptional": {
+		"InnerValue": "Default"
+	},
+	"TestOptional.InnerValue": "Not inner"
+}
+{
+	"Test": "Test 2",
+	"TestOptional": {
+		"InnerValue": "Inner 1"
+	},
+	"TestOptional.InnerValue": "Not inner"
+}
+{
+	"Test": "Test 3 Appended",
+	"TestOptional": {
+		"InnerValue": "Inner 1"
+	},
+	"TestOptional.InnerValue": "Not inner"
+}
+Test 4 Test 2 6

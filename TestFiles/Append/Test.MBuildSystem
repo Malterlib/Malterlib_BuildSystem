@@ -1,0 +1,111 @@
+
+*Configuration
+{
+	Debug "Debug Config"
+	Release "Release Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
+
+Type
+{
+	CTest define {
+		Test: string
+		, TestOptional?: {
+			InnerValue: string
+		}
+		, TestOptional.InnerValue?: string
+	}
+}
+
+Property
+{
+	CalcValueArray define [string]
+	CalcValueArray =+ "TestFile"
+}
+
+%GenerateFile CalcValueArray->Unique()
+{
+	Property
+	{
+		CalcValue define string
+		CalcValueUserType define type(CTest)
+
+		CalcValue "Testing"
+		CalcValueUserType {Test: "Testing 1"}
+
+		CalcValue += "Prepended "
+		CalcValue =+ " Appended"
+		CalcValue += "Prepended "
+		{
+			!!true false
+		}
+		CalcValue =+ " Appended"
+		{
+			!!true false
+		}
+		CalcValueUserType += {Test: "Testing 2"}
+		CalcValueUserType += {TestOptional.InnerValue: "Testing 3"}
+		CalcValueUserType += {"TestOptional.InnerValue": "Testing 4"}
+		CalcValueUserType += {"TestOptional.InnerValue2": "Testing 5"}
+		{
+			!!true false
+		}
+
+		Array define [{...: any}] = [
+			{
+				Test1: "Test1"
+			}
+			,
+			{
+				Test3: "Test3"
+			}
+		]
+
+		CalcObjectRoot define {...: any} = {
+			Test2: "Test2"
+			, <<: Array
+		}
+		CalcObjectSub define {...: any} = {
+			Test2: "Test2"
+			, Sub:
+			{
+				<<: Array
+				, Test4: "Test4"
+			}
+		}
+
+		CalcValueArrayValue function(string _Library) [string] = []
+		CalcValueArrayValue =+ _Library
+		{
+			!!_Library "Test"
+			!!_Library "Test2"
+		}
+
+		CalcValueArrayValueEmpty function(string _Library) [string] = []
+	}
+	GenerateFile
+	{
+		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
+		Contents 	`Generate File Contents:\n`\
+					`@(CalcValue)\n`\
+					`@(CalcValueUserType->ToString())\n`\
+					`@(CalcObjectRoot->ToString())\n`\
+					`@(CalcObjectSub->ToString())\n`\
+					`@(["Test", "Test2", "Test3"]->ForEach("CalcValueArrayValue")->ToString())\n`\
+					`@([]->ForEach("CalcValueArrayValue")->ToString())\n`\
+					`@(["Test", "Test2", "Test3"]->ForEach("CalcValueArrayValueEmpty")->ToString())\n`
+
+		Executable false
+		UnixLineEnds true
+		UnicodeBOM false
+	}
+}

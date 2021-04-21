@@ -5,13 +5,13 @@
 
 namespace NMib::NBuildSystem
 {
-	CStr const &CBuildSystemConfiguration::f_GetName() const
+	NStr::CStr const &CBuildSystemConfiguration::f_GetName() const
 	{
-		return TCMap<CStr, CBuildSystemConfiguration>::fs_GetKey(*this);
+		return NContainer::TCMap<NStr::CStr, CBuildSystemConfiguration>::fs_GetKey(*this);
 	}
 	
-	CStr const &CConfigurationType::f_GetName() const
+	NStr::CStr const &CConfigurationType::f_GetName() const
 	{
-		return TCMap<CStr, CConfigurationType>::fs_GetKey(*this);
+		return NContainer::TCMap<NStr::CStr, CConfigurationType>::fs_GetKey(*this);
 	}
 }

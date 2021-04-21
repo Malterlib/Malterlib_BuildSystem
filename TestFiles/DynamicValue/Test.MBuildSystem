@@ -1,0 +1,46 @@
+
+*Configuration
+{
+	Debug "Debug Config"
+	Release "Release Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
+
+%GenerateFile "TestFile"
+{
+	Property
+	{
+		CalcValue_Suffixed define string = "CalcValue_Suffixed"
+		Prefixed_CalcValue define string = "Prefixed_CalcValue"
+
+		GetCalcValuePrefixed function(string _Value) string
+		GetCalcValuePrefixed Prefixed_@(_Value)
+
+		GetCalcValueSuffixed function(string _Value) string
+		GetCalcValueSuffixed @(_Value)_Suffixed
+
+		GetCalcValueAny function(string _Prefix, string _Value, string _Suffix) string
+		GetCalcValueAny @(_Prefix)@(_Value)@(_Suffix)
+	}
+	GenerateFile
+	{
+		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
+		Contents 	`Generate File Contents:\n`\
+					`@(GetCalcValuePrefixed("CalcValue"))\n`\
+					`@(GetCalcValueSuffixed("CalcValue"))\n`\
+					`@(GetCalcValueAny("Prefixed_", "CalcValue", ""))\n`\
+					`@(GetCalcValueAny("", "CalcValue", "_Suffixed"))\n`
+		Executable false
+		UnixLineEnds true
+		UnicodeBOM false
+	}
+}

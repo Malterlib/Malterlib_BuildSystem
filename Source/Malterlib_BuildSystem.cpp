@@ -13,16 +13,26 @@ namespace NMib::NBuildSystem
 	void fg_Malterlib_BuildSystem_MakeActive_VisualStudio();
 	void fg_Malterlib_BuildSystem_MakeActive_Xcode();
 	
-	CBuildSystem::CBuildSystem(EAnsiEncodingFlag _AnsiFlags)
+	CBuildSystem::CBuildSystem(EAnsiEncodingFlag _AnsiFlags, NFunction::TCFunction<void (NStr::CStr const &_Output)> const &_fOutputConsole)
 		: mp_NowUTC(NTime::CTime::fs_NowUTC())
 		, mp_AnsiFlags(_AnsiFlags)
+		, mp_fOutputConsole(_fOutputConsole)
 	{
+		fp_RegisterBuiltinFunctions();
+		fp_RegisterBuiltinVariables();
+
 		mp_Now = mp_NowUTC.f_ToLocal();
 		fg_Malterlib_BuildSystem_MakeActive_VisualStudio();
 		fg_Malterlib_BuildSystem_MakeActive_Xcode();
 
 		for (mint i = 0; i < EPropertyType_Max; ++i)
 			mp_ExternalProperty[i].m_Key.m_Type = (EPropertyType)i;
+	}
+
+	void CBuildSystem::f_OutputConsole(CStr const &_Output) const
+	{
+		if (mp_fOutputConsole)
+			mp_fOutputConsole(_Output);
 	}
 
 	EAnsiEncodingFlag CBuildSystem::f_AnsiFlags() const
@@ -78,7 +88,7 @@ namespace NMib::NBuildSystem
 		mp_GeneratorInterface = _pInterface;
 	}
 
-	bool CBuildSystem::f_WriteFile(CByteVector const& _FileData, CStr const& _File, EFileAttrib _AddAttribs) const
+	bool CBuildSystem::f_WriteFile(CByteVector const &_FileData, CStr const &_File, EFileAttrib _AddAttribs) const
 	{
 #			if 0
 			CStr FileExtension = CFile::fs_GetExtension(_File);
@@ -146,73 +156,69 @@ namespace NMib::NBuildSystem
 		return false;
 	}
 	
-	void CBuildSystem::f_SetFileChanged(CStr const& _File) const
+	void CBuildSystem::f_SetFileChanged(CStr const &_File) const
 	{
 		//DConOut("Changed: {}\n", _File);
 		mp_FileChanged = true;
 	}
 
-	TCMap<CPropertyKey, CStr> CBuildSystem::f_GetExternalValues(CEntity const &_Entity) const
+	TCMap<CPropertyKey, NEncoding::CEJSON> CBuildSystem::f_GetExternalValues(CEntity const &_Entity) const
 	{
-		TCMap<CPropertyKey, CStr> Ret;
+		TCMap<CPropertyKey, NEncoding::CEJSON> Ret;
 		
-		DLockReadLocked(_Entity.m_Lock);
-
-		for (auto iEval = _Entity.m_EvaluatedProperties.f_GetIterator(); iEval; ++iEval)
+		for (auto &Property : _Entity.m_EvaluatedProperties.m_Properties)
 		{
-			if (iEval->m_Type == EEvaluatedPropertyType_External)
-				Ret[iEval.f_GetKey()] = iEval->m_Value;
+			if (Property.f_IsExternal())
+				Ret[_Entity.m_EvaluatedProperties.m_Properties.fs_GetKey(Property)] = Property.m_Value;
 		}
 		return Ret;
 	}
 
-	CStr CBuildSystem::f_GetExternalProperty(CEntity &_Entity, CPropertyKey const &_Key) const
+	NEncoding::CEJSON CBuildSystem::f_GetExternalProperty(CEntity &_Entity, CPropertyKey const &_Key) const
 	{
-		DMibLockRead(_Entity.m_Lock);
-		auto pEvaluated = _Entity.m_EvaluatedProperties.f_FindEqual(_Key);
+		auto pEvaluated = _Entity.m_EvaluatedProperties.m_Properties.f_FindEqual(_Key);
 		if (pEvaluated)
 			return pEvaluated->m_Value;
-		return CStr();
+		return {};
 	}
 	
-	void CBuildSystem::f_AddExternalProperty(CEntity &_Entity, CPropertyKey const &_Key, CStr const &_Value) const
+	void CBuildSystem::f_AddExternalProperty(CEntity &_Entity, CPropertyKey const &_Key, NEncoding::CEJSON &&_Value) const
 	{
-		DMibLock(_Entity.m_Lock);
-		auto &Evaluated = _Entity.m_EvaluatedProperties[_Key];
-		Evaluated.m_Value = _Value;
+		auto &Evaluated = _Entity.m_EvaluatedProperties.m_Properties[_Key];
+		Evaluated.m_Value = fg_Move(_Value);
 		Evaluated.m_Type = EEvaluatedPropertyType_External;
 		Evaluated.m_pProperty = &mp_ExternalProperty[_Key.m_Type];
 	}
 
-	void CBuildSystem::f_InitEntityForEvaluationNoEnv(CEntity &_Entity, TCMap<CPropertyKey, CStr> const &_InitialValues) const
+	void CBuildSystem::f_InitEntityForEvaluationNoEnv(CEntity &_Entity, TCMap<CPropertyKey, CEJSON> const &_InitialValues, EEvaluatedPropertyType _Type) const
 	{
-		DMibLock(_Entity.m_Lock);
 		for (auto iValue = _InitialValues.f_GetIterator(); iValue; ++iValue)
 		{
-			auto &Evaluated = _Entity.m_EvaluatedProperties[iValue.f_GetKey()];
+			auto &Evaluated = _Entity.m_EvaluatedProperties.m_Properties[iValue.f_GetKey()];
 			Evaluated.m_Value = *iValue;
-			Evaluated.m_Type = EEvaluatedPropertyType_External;
+			Evaluated.m_Type = _Type ;
 			Evaluated.m_pProperty = &mp_ExternalProperty[iValue.f_GetKey().m_Type];
 		}
 	}
 
-	void CBuildSystem::f_InitEntityForEvaluation(CEntity &_Entity, TCMap<CPropertyKey, CStr> const &_InitialValues) const
+	void CBuildSystem::f_InitEntityForEvaluation(CEntity &_Entity, TCMap<CPropertyKey, CEJSON> const &_InitialValues) const
 	{
-		TCMap<CPropertyKey, CStr> Values = _InitialValues;
+		TCMap<CPropertyKey, CEJSON> EnvironmentValues;
 
 		for (auto iEnv = mp_Environment.f_GetIterator(); iEnv; ++iEnv)
 		{
 			CPropertyKey Key;
 			Key.m_Name = iEnv.f_GetKey();
-			auto Mapped = Values(Key);
-			if (Mapped.f_WasCreated())
-				Mapped.f_GetResult() = *iEnv;
+
+			if (!_InitialValues.f_FindEqual(Key))
+				EnvironmentValues(Key, *iEnv);
 		}
 
-		f_InitEntityForEvaluationNoEnv(_Entity, Values);
+		f_InitEntityForEvaluationNoEnv(_Entity, _InitialValues, EEvaluatedPropertyType_External);
+		f_InitEntityForEvaluationNoEnv(_Entity, EnvironmentValues, EEvaluatedPropertyType_ExternalEnvironment);
 	}
 
-	TCVector<TCVector<CConfigurationTuple>> CBuildSystem::f_EvaluateConfigurationTuples(TCMap<CPropertyKey, CStr> const &_InitialValues) const
+	TCVector<TCVector<CConfigurationTuple>> CBuildSystem::f_EvaluateConfigurationTuples(TCMap<CPropertyKey, CEJSON> const &_InitialValues) const
 	{
 		return fp_EvaluateConfigurationTuples(_InitialValues);
 	}

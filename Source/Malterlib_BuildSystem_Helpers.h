@@ -54,7 +54,7 @@ namespace NMib::NBuildSystem
 	};
 #endif
 	
-	CStr fg_EscapeXcodeProjectVar(CStr const& _Var);
+	CStr fg_EscapeXcodeProjectVar(CStr const &_Var);
 }
 
 #include "Malterlib_BuildSystem_Helpers.hpp"

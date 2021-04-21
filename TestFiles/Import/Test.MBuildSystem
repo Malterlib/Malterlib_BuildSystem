@@ -1,0 +1,38 @@
+
+*Configuration
+{
+	Debug "Debug Config"
+	Release "Release Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
+
+Property
+{
+	ImportString define string = ""
+}
+
+Include "Include.MHeader"
+Include "Include.MHeader"
+Import "Import.MHeader"
+
+%GenerateFile "TestFile"
+{
+	GenerateFile
+	{
+		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
+		Contents 	`Generate File Contents:\n`\
+					`@(ImportString)`
+		Executable false
+		UnixLineEnds true
+		UnicodeBOM false
+	}
+}

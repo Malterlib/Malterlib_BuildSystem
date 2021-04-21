@@ -1,0 +1,66 @@
+
+*Configuration
+{
+	Debug "Debug Config"
+	Release "Release Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
+
+%GenerateFile "TestFile"
+{
+	Property
+	{
+		_Test define one_of(string, undefined)
+		_Inner define one_of(string, undefined)
+		_bAppend define one_of(bool, undefined)
+
+		CalcValue function(string _Test, string? _Inner, bool? _bAppend) {
+			Test: string
+			, TestOptional?: {
+				InnerValue: string
+			}
+			, TestOptional.InnerValue?: string
+		}
+
+		GetDefaulted function(any _Value, any _Default) any
+		GetDefaulted _Default
+		{
+			!!_Value undefined
+		}
+		GetDefaulted _Value
+		{
+			!_Value undefined
+		}
+
+		CalcValue {
+			Test: _Test
+			, TestOptional: {
+				InnerValue: GetDefaulted(_Inner, "Default")
+			}
+			, "TestOptional.InnerValue": "Not inner"
+		}
+
+		CalcValue #<Test> =+ " Appended"
+		{
+			!!_bAppend true
+		}
+	}
+	GenerateFile
+	{
+		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
+		Contents 	`Generate File Contents:\n`\
+					`@(CalcValue->ToString())\n`
+		Executable false
+		UnixLineEnds true
+		UnicodeBOM false
+	}
+}

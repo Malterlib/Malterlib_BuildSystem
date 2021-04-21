@@ -1,0 +1,47 @@
+
+*Configuration
+{
+	Debug "Debug Config"
+	Release "Release Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
+
+%GenerateFile "TestFile"
+{
+	Property
+	{
+		TestValue define string = "Test"
+
+		TestDefaulted define string = TestValue
+		TestDefaultedObject define {Test: string} = {
+			Test: TestValue
+		}
+		TestDefaultedString define string = `@(TestValue) suffix`
+		TestDefaultedFunction function(string _Value) string = `@(TestValue) @(_Value)`
+		TestDefaultDynamicString define string
+		TestDefaultDynamicString "Start"
+		TestDefaultDynamicString `@(TestDefaultDynamicString).End`
+	}
+	GenerateFile
+	{
+		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
+		Contents 	`Generate File Contents:\n`\
+					`@(TestDefaulted)\n`\
+					`@(TestDefaultedObject->EJSONToString())\n`\
+					`@(TestDefaultedString)\n`\
+					`@(TestDefaultedFunction("Param"))\n`\
+					`@(TestDefaultDynamicString)\n`
+		Executable false
+		UnixLineEnds true
+		UnicodeBOM false
+	}
+}

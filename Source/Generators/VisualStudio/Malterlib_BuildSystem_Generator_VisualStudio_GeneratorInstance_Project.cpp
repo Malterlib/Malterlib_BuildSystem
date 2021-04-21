@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Generator_VisualStudio.h"
@@ -13,7 +13,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			return m_Win32Platfrom;
 		return _Platform;
 	}
-	
+
 	CStr CGeneratorInstance::f_GetNativePlatform(CStr const &_Platform)
 	{
 		return f_GetNativePlatform(m_ThreadLocal->m_LanguageType, _Platform);
@@ -25,16 +25,28 @@ namespace NMib::NBuildSystem::NVisualStudio
 		ThreadLocal.m_CurrentOutputDir = _OutputDir;
 		ThreadLocal.m_PrefixHeaders.f_Clear();
 
-		auto fl_GetEntityPropertyGlobal
-			= [&](EPropertyType _Type, CStr const &_Name, CFilePosition &_Position) -> CStr
+		auto fGetEntityPropertyGlobalEJSON
+			= [&](EPropertyType _Type, CStr const &_Name, CFilePosition &o_Position, EEJSONType _ExpectedType) -> CEJSON
 			{
 				bool bFirstConfig = true;
-				CStr ReturnValue;
+				CEJSON ReturnValue;
 				CProperty const *pFrom = nullptr;
 				for (auto iConfig = _Project.m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
 				{
 					CProperty const *pFromProperty = nullptr;
-					CStr ThisValue = m_BuildSystem.f_EvaluateEntityProperty(**iConfig, _Type, _Name, pFromProperty);
+					auto ThisValue = m_BuildSystem.f_EvaluateEntityProperty(**iConfig, _Type, _Name, pFromProperty);
+
+					m_BuildSystem.f_CheckPropertyTypeValue
+						(
+							_Type
+							, _Name
+							, ThisValue
+							, _ExpectedType
+							, pFromProperty ? pFromProperty->m_Position : pFrom ? pFrom->m_Position : CFilePosition{}
+							, true
+						)
+					;
+
 					if (bFirstConfig)
 					{
 						ReturnValue = ThisValue;
@@ -51,27 +63,39 @@ namespace NMib::NBuildSystem::NVisualStudio
 					}
 				}
 				if (pFrom)
-					_Position = pFrom->m_Position;
+					o_Position = pFrom->m_Position;
+
 				return ReturnValue;
+			}
+		;
+
+		auto fGetEntityPropertyGlobal
+			= [&](EPropertyType _Type, CStr const &_Name, CFilePosition &o_Position) -> CStr
+			{
+				auto ReturnValue = fGetEntityPropertyGlobalEJSON(_Type, _Name, o_Position, EEJSONType_String);
+				if (!ReturnValue.f_IsValid())
+					return {};
+
+				return ReturnValue.f_String();
 			}
 		;
 
 		CStr ClCompileSuffix;
 		{
 			CFilePosition Position;
-			ClCompileSuffix = fl_GetEntityPropertyGlobal(EPropertyType_Target, "ClCompileSuffix", Position);
+			ClCompileSuffix = fGetEntityPropertyGlobal(EPropertyType_Target, "ClCompileSuffix", Position);
 		}
 
 		CStr WindowsTargetVersion;
 		{
 			CFilePosition Position;
-			WindowsTargetVersion = fl_GetEntityPropertyGlobal(EPropertyType_Target, "PlatformVersion", Position);
+			WindowsTargetVersion = fGetEntityPropertyGlobal(EPropertyType_Target, "PlatformVersion", Position);
 		}
 
 		ELanguageType LanguageType = ELanguageType_Native;
 		{
 			CFilePosition Position;
-			CStr Language = fl_GetEntityPropertyGlobal(EPropertyType_Target, "Language", Position);
+			CStr Language = fGetEntityPropertyGlobal(EPropertyType_Target, "Language", Position);
 
 			if (Language.f_IsEmpty() || Language == "Native")
 				LanguageType = ELanguageType_Native;
@@ -112,7 +136,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			auto pPropsProject = PropsXMLFile.f_CreateDefaultDocument("Project");
 			CXMLDocument::f_SetAttribute(pPropsProject, "ToolsVersion", f_GetToolsVersion());
 			CXMLDocument::f_SetAttribute(pPropsProject, "xmlns", "http://schemas.microsoft.com/developer/msbuild/2003");
-			
+
 			auto pProject = XMLFile.f_CreateDefaultDocument("Project");
 			CXMLDocument::f_SetAttribute(pProject, "DefaultTargets", "Build");
 			CXMLDocument::f_SetAttribute(pProject, "ToolsVersion", f_GetToolsVersion());
@@ -124,7 +148,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 				CXMLDocument::f_SetAttribute(pImport, "Project", "$(MSBuildExtensionsPath)\\$(MSBuildToolsVersion)\\Microsoft.Common.props");
 				CXMLDocument::f_SetAttribute(pImport, "Condition", "Exists('$(MSBuildExtensionsPath)\\$(MSBuildToolsVersion)\\Microsoft.Common.props')");
 			}
-			
+
 			// Framework Version
 			CXMLElement *pPreProjectPropertyGroup;
 			{
@@ -132,7 +156,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 				// External dependencies
 
 				CFilePosition Position;
-				CStr TargetFrameworkVersion = fl_GetEntityPropertyGlobal(EPropertyType_Target, "TargetFrameworkVersion", Position);
+				CStr TargetFrameworkVersion = fGetEntityPropertyGlobal(EPropertyType_Target, "TargetFrameworkVersion", Position);
 
 				auto pPropertyGroup = CXMLDocument::f_CreateElement(pProject, "PropertyGroup");
 				pPreProjectPropertyGroup = pPropertyGroup;
@@ -142,7 +166,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 			for (auto iConfig = _Project.m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
 			{
-				CStr Platform = m_BuildSystem.f_EvaluateEntityProperty(**iConfig, EPropertyType_Target, "VisualStudioPlatform");
+				CStr Platform = m_BuildSystem.f_EvaluateEntityPropertyString(**iConfig, EPropertyType_Target, "VisualStudioPlatform");
 				_Project.m_Platforms[iConfig.f_GetKey()] = Platform;
 			}
 
@@ -175,8 +199,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 						(
 							pConfig
 							, "Condition"
-							, CStr::CFormat("'$(Configuration)|$(Platform)' == '{}|{}'") 
-							<< iConfig.f_GetKey().m_Configuration 
+							, CStr::CFormat("'$(Configuration)|$(Platform)' == '{}|{}'")
+							<< iConfig.f_GetKey().m_Configuration
 							<< Platform
 						)
 					;
@@ -213,9 +237,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 				CEntityKey EntityKey;
 				EntityKey.m_Type = EEntityType_GeneratorSetting;
 				if (LanguageType == ELanguageType_Native)
-					EntityKey.m_Name = "Native_ImportTargets";
+					EntityKey.m_Name.m_Value = "Native_ImportTargets";
 				else if (LanguageType == ELanguageType_CSharp)
-					EntityKey.m_Name = "CSharp_ImportTargets";
+					EntityKey.m_Name.m_Value = "CSharp_ImportTargets";
 				auto pFind = m_pGeneratorSettings->m_ChildEntitiesMap.f_FindEqual(EntityKey);
 				if (pFind)
 					pImportTargets = pFind;
@@ -226,15 +250,14 @@ namespace NMib::NBuildSystem::NVisualStudio
 				EntityKey.m_Type = EEntityType_GeneratorSetting;
 				if (pImportTargets)
 				{
-					EntityKey.m_Name = "Defaults";
+					EntityKey.m_Name.m_Value = "Defaults";
 					auto pInner = pImportTargets->m_ChildEntitiesMap.f_FindEqual(EntityKey);
 					if (pInner)
 					{
-						DLockReadLocked(pInner->m_Lock);
-						for (auto iImport = pInner->m_EvaluatedProperties.f_GetIterator(); iImport; ++iImport)
+						for (auto iImport = pInner->m_EvaluatedProperties.m_Properties.f_GetIterator(); iImport; ++iImport)
 						{
 							auto pImport = CXMLDocument::f_CreateElement(pProject, "Import");
-							CXMLDocument::f_SetAttribute(pImport, "Project", iImport->m_Value);
+							CXMLDocument::f_SetAttribute(pImport, "Project", iImport->m_Value.f_String());
 						}
 					}
 				}
@@ -242,7 +265,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 			// Configuration
 			TCMap<CConfiguration, CConfigResult> TargetTypes;
-			
+
 			{
 				CXMLElement *pConfiguration = pPreProjectPropertyGroup;
 				TCVector<CStr> SearchList;
@@ -258,14 +281,14 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 				TCMap<CStr, CXMLElement *> Parents;
 				Parents[CStr()] = pConfiguration;
-				auto fl_AddTargetConfig
+				auto fAddTargetConfig
 					= [&](CStr const &_Type)
 					{
 						return f_AddConfigValue
 							(
 								_Project.m_EnabledProjectConfigs
 								, _Project.m_EnabledProjectConfigs
-								, (*_Project.m_EnabledProjectConfigs.f_GetIterator())->m_Position
+								, (*_Project.m_EnabledProjectConfigs.f_GetIterator())->f_Data().m_Position
 								, EPropertyType_Target
 								, _Type
 								, Parents
@@ -283,29 +306,29 @@ namespace NMib::NBuildSystem::NVisualStudio
 						;
 					}
 				;
-				TargetTypes = fl_AddTargetConfig("Type");
+				TargetTypes = fAddTargetConfig("Type");
 
-				fl_AddTargetConfig("IntermediateDirectory");
-				fl_AddTargetConfig("OutputDirectory");
+				fAddTargetConfig("IntermediateDirectory");
+				fAddTargetConfig("OutputDirectory");
 
 				if (LanguageType == ELanguageType_Native)
 				{
-					fl_AddTargetConfig("PlatformToolset");
-					fl_AddTargetConfig("CharacterSet");
-					fl_AddTargetConfig("UseOfMfc");
-					fl_AddTargetConfig("UseOfAtl");
-					fl_AddTargetConfig("LinkTimeCodeGeneration");
-					fl_AddTargetConfig("DefaultToolArchitecture");
-					fl_AddTargetConfig("CLRSupport");
-					fl_AddTargetConfig("IgnoreWarnCompileDuplicatedFilename");
+					fAddTargetConfig("PlatformToolset");
+					fAddTargetConfig("CharacterSet");
+					fAddTargetConfig("UseOfMfc");
+					fAddTargetConfig("UseOfAtl");
+					fAddTargetConfig("LinkTimeCodeGeneration");
+					fAddTargetConfig("DefaultToolArchitecture");
+					fAddTargetConfig("CLRSupport");
+					fAddTargetConfig("IgnoreWarnCompileDuplicatedFilename");
 
 				}
 				else if (LanguageType == ELanguageType_CSharp)
 				{
-					fl_AddTargetConfig("FileName");
-					fl_AddTargetConfig("DefaultNamespace");
-					fl_AddTargetConfig("ProjectDir");
-					fl_AddTargetConfig("ToolPath");
+					fAddTargetConfig("FileName");
+					fAddTargetConfig("DefaultNamespace");
+					fAddTargetConfig("ProjectDir");
+					fAddTargetConfig("ToolPath");
 				}
 			}
 
@@ -323,15 +346,14 @@ namespace NMib::NBuildSystem::NVisualStudio
 				EntityKey.m_Type = EEntityType_GeneratorSetting;
 				if (pImportTargets)
 				{
-					EntityKey.m_Name = "Props";
+					EntityKey.m_Name.m_Value = "Props";
 					auto pInner = pImportTargets->m_ChildEntitiesMap.f_FindEqual(EntityKey);
 					if (pInner)
 					{
-						DLockReadLocked(pInner->m_Lock);
-						for (auto iImport = pInner->m_EvaluatedProperties.f_GetIterator(); iImport; ++iImport)
+						for (auto iImport = pInner->m_EvaluatedProperties.m_Properties.f_GetIterator(); iImport; ++iImport)
 						{
 							auto pImport = CXMLDocument::f_CreateElement(pProject, "Import");
-							CXMLDocument::f_SetAttribute(pImport, "Project", iImport->m_Value);
+							CXMLDocument::f_SetAttribute(pImport, "Project", iImport->m_Value.f_String());
 						}
 					}
 				}
@@ -393,7 +415,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 					CXMLDocument::f_SetAttribute(pTarget, "Name", "TransformClCompileProperties_CompileAsC");
 					CXMLDocument::f_SetAttribute(pTarget, "BeforeTargets", "ClCompile");
 //						CXMLDocument::f_SetAttribute(pTarget, "DependsOnTargets", "PrepareForBuild");
-				
+
 					auto pItemGroup = CXMLDocument::f_CreateElement(pTarget, "ItemGroup");
 					pCompileItemGroup_ClCompileAsC = pItemGroup;
 
@@ -408,7 +430,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 					CXMLDocument::f_SetAttribute(pTarget, "Name", "TransformClCompileProperties_CompileAsManaged");
 					CXMLDocument::f_SetAttribute(pTarget, "BeforeTargets", "ClCompile");
 //						CXMLDocument::f_SetAttribute(pTarget, "DependsOnTargets", "PrepareForBuild");
-				
+
 					auto pItemGroup = CXMLDocument::f_CreateElement(pTarget, "ItemGroup");
 					pCompileItemGroup_ClCompileAsManaged = pItemGroup;
 
@@ -417,14 +439,14 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 					CXMLDocument::f_SetAttribute(pCompile, "Condition", "'%(ClCompile.CompileAs)'=='CompileAsManaged'");
 				}
-			
+
 				{
 					auto pTarget = CXMLDocument::f_CreateElement(pPropsProject, "Target");
 
 					CXMLDocument::f_SetAttribute(pTarget, "Name", "TransformClCompileProperties_NotCompileAsC");
 					CXMLDocument::f_SetAttribute(pTarget, "BeforeTargets", "ClCompile");
 //						CXMLDocument::f_SetAttribute(pTarget, "DependsOnTargets", "PrepareForBuild");
-				
+
 					auto pItemGroup = CXMLDocument::f_CreateElement(pTarget, "ItemGroup");
 					pCompileItemGroup_ClCompile = pItemGroup;
 
@@ -444,7 +466,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			TCMap<CStr, CCompilType> CompileTypes;
 			CXMLElement *pFileItemGroup = nullptr;
 			// Files
-			auto fl_GenerateFiles
+			auto fGenerateFiles
 				= [&]()
 				{
 					if (!pFileItemGroup)
@@ -466,7 +488,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 							(
 								iFile->m_EnabledConfigs
 								, _Project.m_EnabledProjectConfigs
-								, (*iFile->m_EnabledConfigs.f_GetIterator())->m_Position
+								, (*iFile->m_EnabledConfigs.f_GetIterator())->f_Data().m_Position
 								, EPropertyType_Compile
 								, "Type"
 								, Parents
@@ -482,9 +504,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 								, _Project
 							)
 						;
-							
+
 						if (Entities.f_IsEmpty())
-							m_BuildSystem.fs_ThrowError((*iFile->m_EnabledConfigs.f_GetIterator())->m_Position, "Internal error");
+							m_BuildSystem.fs_ThrowError((*iFile->m_EnabledConfigs.f_GetIterator())->f_Data().m_Position, "Internal error");
 
 						auto Result = *Entities.f_GetIterator();
 						CStr VSType = CXMLDocument::f_GetValue(Result.m_pElement);
@@ -510,25 +532,23 @@ namespace NMib::NBuildSystem::NVisualStudio
 						for (auto iConfig = iFile->m_EnabledConfigs.f_GetIterator(); iConfig; ++iConfig)
 						{
 							CProperty const *pFromProperty = nullptr;
-							CStr ThisValue = m_BuildSystem.f_EvaluateEntityProperty(**iConfig, EPropertyType_Compile, "Disabled", pFromProperty);
-							if (ThisValue != "true")
+							if (!m_BuildSystem.f_EvaluateEntityPropertyBool(**iConfig, EPropertyType_Compile, "Disabled", pFromProperty, false))
 							{
 								for (auto &Value : Result.m_UntranslatedValues)
 									CompileTypes[Value].m_EnabledConfigs[iConfig.f_GetKey()];
 							}
 						}
 
-
 						if (LanguageType == ELanguageType_Native)
 						{
 							for (auto iConfig = iFile->m_EnabledConfigs.f_GetIterator(); iConfig; ++iConfig)
 							{
-								if (m_BuildSystem.f_EvaluateEntityProperty(**iConfig, EPropertyType_Compile, "PrecompilePrefixHeader") == "true")
+								if (m_BuildSystem.f_EvaluateEntityPropertyTryBool(**iConfig, EPropertyType_Compile, "PrecompilePrefixHeader", false))
 								{
-									CStr PrefixHeader = m_BuildSystem.f_EvaluateEntityProperty(**iConfig, EPropertyType_Compile, "PrefixHeader");
+									CStr PrefixHeader = m_BuildSystem.f_EvaluateEntityPropertyString(**iConfig, EPropertyType_Compile, "PrefixHeader", CStr());
 									if (!PrefixHeader.f_IsEmpty())
 									{
-										CStr FilePath = CFile::fs_GetPath((**iConfig).m_Position.m_FileName);
+										CStr FilePath = CFile::fs_GetPath((**iConfig).f_Data().m_Position.m_File);
 										CStr FullPrefixHeader = f_GetExpandedPath(PrefixHeader, FilePath);
 
 										if (!ThreadLocal.f_FileExists(FullPrefixHeader))
@@ -536,16 +556,15 @@ namespace NMib::NBuildSystem::NVisualStudio
 											// Try relative to output
 											FullPrefixHeader = f_GetExpandedPath(PrefixHeader, ThreadLocal.m_CurrentOutputDir);
 										}
-							
+
 										DCheck(!ThreadLocal.m_CurrentCompileTypes.f_IsEmpty());
-							
+
 										auto &PrefixHeaderMap = ThreadLocal.m_PrefixHeaders[ThreadLocal.m_CurrentCompileTypes][FullPrefixHeader];
 										PrefixHeaderMap.m_bUsed = true;
 									}
 								}
 							}
 						}
-
 
 						TCVector<CStr> SearchLists;
 						if (LanguageType == ELanguageType_Native)
@@ -572,9 +591,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 							if (UntranslatedType == "C")
 								Files_C.f_Insert(Result.m_pElement);
 							else if (UntranslatedType == "C++")
-								Files_Cpp.f_Insert(Result.m_pElement);								
+								Files_Cpp.f_Insert(Result.m_pElement);
 							else if (UntranslatedType == "C++Managed")
-								Files_CppManaged.f_Insert(Result.m_pElement);								
+								Files_CppManaged.f_Insert(Result.m_pElement);
 						}
 
 						f_SetEvaluatedValues
@@ -598,7 +617,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 				}
 			;
 
-			fl_GenerateFiles();
+			fGenerateFiles();
 
 			// Project properties
 			{
@@ -624,7 +643,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 						CStr TargetType = CXMLDocument::f_GetNodeText(iType->m_pElement);
 						DCheck(!TargetType.f_IsEmpty());
 						List.f_Insert(SettingsPrefix + TargetType);
-						
+
 						if (LanguageType == ELanguageType_Native)
 						{
 							if (TargetType == "StaticLibrary" || TargetType == "DynamicLibrary")
@@ -658,7 +677,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 							List.f_Insert("DotNet_SharedTarget");
 						List.f_Insert("SharedTarget");
 					}
-					
+
 					f_SetEvaluatedValues
 						(
 							ProjectParents
@@ -682,8 +701,6 @@ namespace NMib::NBuildSystem::NVisualStudio
 				{
 					if (iType->m_EnabledConfigs.f_IsEmpty())
 						continue;
-					TCMap<CConfiguration, CBuildSystemData> Datas;
-					TCMap<CConfiguration, CEntityPointer> Configs;
 
 					TCMap<CStr, CXMLElement *> ProjectParents;
 					if (LanguageType == ELanguageType_Native)
@@ -722,20 +739,35 @@ namespace NMib::NBuildSystem::NVisualStudio
 						SearchList.f_Insert("DotNet_CompileShared");
 					SearchList.f_Insert("CompileShared");
 
-					TCMap<CPropertyKey, CStr> StartValuesCompile;
+					TCMap<CPropertyKey, CEJSON> StartValuesCompile;
 					StartValuesCompile[CPropertyKey(EPropertyType_Compile, "Type")] = iType.f_GetKey();
+
+					TCVector<CEntity *> ToRemove;
+					auto Cleanup = g_OnScopeExit > [&]
+						{
+							for (auto &pToRemove : ToRemove)
+								pToRemove->m_pParent->m_ChildEntitiesMap.f_Remove(pToRemove->f_GetKey());
+						}
+					;
+
+					TCMap<CConfiguration, CEntityMutablePointer> Configs;
 
 					for (auto iConfig = _Project.m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
 					{
 						if (!iType->m_EnabledConfigs.f_FindEqual(iConfig.f_GetKey()))
 							continue;
-						auto &Data = Datas[iConfig.f_GetKey()];
-							
-						auto pStartEntity = iConfig->f_Get();
-						auto InitialValues = m_BuildSystem.f_GetExternalValues(*(*iConfig)->f_GetRoot());
-						auto PathKey = (*iConfig)->f_GetPathKey();
-						auto pConfig = m_BuildSystem.f_EvaluateData(Data, InitialValues, pStartEntity, &StartValuesCompile, &PathKey, true, false);
-						Configs[iConfig.f_GetKey()] = fg_Explicit(pConfig);
+
+						auto &ConfigEntity = **iConfig;
+						CEntityKey NewEntityKey = ConfigEntity.f_GetKey();
+
+						auto NewEntityMap = ConfigEntity.m_ChildEntitiesMap(NewEntityKey, &ConfigEntity);
+						auto &TempEntity = *NewEntityMap;
+
+						ToRemove.f_Insert(&TempEntity);
+
+						m_BuildSystem.f_InitEntityForEvaluationNoEnv(TempEntity, StartValuesCompile, EEvaluatedPropertyType_External);
+
+						Configs[iConfig.f_GetKey()] = fg_Explicit(&TempEntity);
 					}
 
 					bool bPropertyValue = false;
@@ -786,7 +818,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 								continue;
 
 							CStr FullHeaderPath = iPrefixHeader.f_GetKey();
-							TCMap<CConfiguration, CEntityPointer> EnabledConfigs;
+							TCMap<CConfiguration, CEntityMutablePointer> EnabledConfigs;
 							CFilePosition FilePos;
 							TCPointer<CGroup> pGroup;
 							bool bFile = false;
@@ -803,21 +835,21 @@ namespace NMib::NBuildSystem::NVisualStudio
 								else
 								{
 									EnabledConfigs = _Project.m_EnabledProjectConfigs;
-									if (!iPrefixHeader->m_Position.m_FileName.f_IsEmpty())
+									if (!iPrefixHeader->m_Position.m_File.f_IsEmpty())
 										FilePos = iPrefixHeader->m_Position;
 									else
 										FilePos = _Project.m_Position;
 									if (!ThreadLocal.f_FileExists(FullHeaderPath))
 										m_BuildSystem.fs_ThrowError(FilePos, CStr::CFormat("Prefix header '{}' was not found") << FullHeaderPath);
-										
+
 								}
 								//	m_BuildSystem.fs_ThrowError(_Project.m_Position, CStr::CFormat("Prefix header '{}' not found in project") << FullHeaderPath);
 							}
 
 							CStr RelativePath = CFile::fs_MakePathRelative(FullHeaderPath, PrefixGenDir);
-					
+
 							CStr GUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorPrefixHeaderUUIDNamespace, RelativePath + CompileType).f_GetAsString();
-					
+
 							CStr FileName;
 							if (CompileType == "C++")
 								FileName = CFile::fs_AppendPath(PrefixGenDir, CStr::CFormat("PP_{}_{nfh,sj8,sf0}.cpp") << _Project.m_EntityName << GUID.f_Hash());
@@ -827,7 +859,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 								FileName = CFile::fs_AppendPath(PrefixGenDir, CStr::CFormat("PP_{}_{nfh,sj8,sf0}.c") << _Project.m_EntityName << GUID.f_Hash());
 							else
 								m_BuildSystem.fs_ThrowError(FilePos, CStr::CFormat("Don't know how to generate precompiled header for compiler type {}") << CompileType);
-								
+
 							CStr FileContents;
 							FileContents += CStr::CFormat("#include \"{}\"\r\n") << RelativePath;
 
@@ -841,7 +873,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 								CFile::fs_WriteStringToVector(FileData, CStr(FileContents));
 								m_BuildSystem.f_WriteFile(FileData, FileName);
 							}
-							
+
 							auto FileMap = _Project.m_Files(FileName);
 
 							auto &File = FileMap.f_GetResult();
@@ -885,35 +917,34 @@ namespace NMib::NBuildSystem::NVisualStudio
 									m_BuildSystem.fs_ThrowError
 										(
 											FilePos
-											, CStr::CFormat("Prefix header is not enabled for config '{} - {}'") 
+											, CStr::CFormat("Prefix header is not enabled for config '{} - {}'")
 											<< Platform
 											<< iConfig.f_GetKey().m_Configuration
 										)
 									;
 								}
 								CEntity *pParent;
-								if ((*pFileConfig)->m_Key.m_Type == EEntityType_File)
+								if ((*pFileConfig)->f_GetKey().m_Type == EEntityType_File)
 									pParent = (*pFileConfig)->m_pParent;
 								else
 									pParent = &fg_RemoveQualifiers(*(*pFileConfig));
 								CEntityKey NewEntityKey;
 								NewEntityKey.m_Type = EEntityType_File;
-								NewEntityKey.m_Name = FileName;
+								NewEntityKey.m_Name.m_Value = FileName;
 								auto NewEntityMap = pParent->m_ChildEntitiesMap(NewEntityKey, pParent);
 								auto &NewEntity = *NewEntityMap;
-								pParent->m_ChildEntitiesOrdered.f_Insert(NewEntity);
+								auto &NewData = NewEntity.f_DataWritable();
 								if (bFile)
-									NewEntity.m_Properties = (*pFileConfig)->m_Properties;
-								NewEntity.m_Key = NewEntityKey;
-								NewEntity.m_Position = FilePos;
-								TCMap<CPropertyKey, CStr> Values;
+									NewData.m_Properties = (*pFileConfig)->f_Data().m_Properties;
+								NewData.m_Position = FilePos;
+								TCMap<CPropertyKey, CEJSON> Values;
 								Values[CPropertyKey(EPropertyType_Compile, "Type")] = CompileType;
-								m_BuildSystem.f_InitEntityForEvaluationNoEnv(NewEntity, Values);
+								m_BuildSystem.f_InitEntityForEvaluationNoEnv(NewEntity, Values, EEvaluatedPropertyType_External);
 								{
 									NewEntity.f_AddProperty
 										(
 											CPropertyKey(EPropertyType_Compile, "PrecompilePrefixHeader")
-											, "XInternalCreate"
+											, CBuildSystemSyntax::CRootValue{CBuildSystemSyntax::CValue{CEJSON(CStr("XInternalCreate"))}}
 											, FilePos
 										)
 									;
@@ -922,18 +953,17 @@ namespace NMib::NBuildSystem::NVisualStudio
 									NewEntity.f_AddProperty
 										(
 											CPropertyKey(EPropertyType_Compile, "XInternalPrecompiledHeaderOutputFile")
-											, PCHFile
+											, CBuildSystemSyntax::CRootValue{CBuildSystemSyntax::CValue{CEJSON(PCHFile)}}
 											, FilePos
 										)
 									;
 								}
-								m_BuildSystem.f_ReEvaluateData(NewEntity);
 								File.m_EnabledConfigs[iConfig.f_GetKey()] = fg_Explicit(&NewEntity);
 							}
 						}
 					}
 				}
-				fl_GenerateFiles();
+				fGenerateFiles();
 			}
 
 			// Dependencies
@@ -986,7 +1016,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 								m_BuildSystem.fs_ThrowError
 								(
 									Dependency.m_Position
-									, CStr::CFormat("Dependency project does not have required configuration {} - {}") 
+									, CStr::CFormat("Dependency project does not have required configuration {} - {}")
 									<< _Project.m_Platforms[iConfig.f_GetKey()]
 									<< iConfig.f_GetKey().m_Configuration
 								)
@@ -1030,13 +1060,18 @@ namespace NMib::NBuildSystem::NVisualStudio
 				// External dependencies
 				{
 					CFilePosition Position;
-					CStr ExternalDependencies = fl_GetEntityPropertyGlobal(EPropertyType_Target, "ExternalDependencies", Position);
+					CEJSON ExternalDependencies = fGetEntityPropertyGlobalEJSON(EPropertyType_Target, "ExternalDependencies", Position, EEJSONType_Array);
 
-					while (!ExternalDependencies.f_IsEmpty())
+					if (ExternalDependencies.f_IsValid())
 					{
-						CStr Dependency = fg_GetStrSep(ExternalDependencies, ";");
-						auto pReference = CXMLDocument::f_CreateElement(pItemGroup, "Reference");
-						CXMLDocument::f_SetAttribute(pReference, "Include", Dependency);
+						if (ExternalDependencies.f_IsStringArray())
+							m_BuildSystem.fs_ThrowError(Position, "Expected ExternalDependencies to be a string array");
+
+						for (auto &Dependency : ExternalDependencies.f_Array())
+						{
+							auto pReference = CXMLDocument::f_CreateElement(pItemGroup, "Reference");
+							CXMLDocument::f_SetAttribute(pReference, "Include", Dependency.f_String());
+						}
 					}
 				}
 			}
@@ -1047,20 +1082,19 @@ namespace NMib::NBuildSystem::NVisualStudio
 				EntityKey.m_Type = EEntityType_GeneratorSetting;
 				if (pImportTargets)
 				{
-					EntityKey.m_Name = "Targets";
+					EntityKey.m_Name.m_Value = "Targets";
 					auto pInner = pImportTargets->m_ChildEntitiesMap.f_FindEqual(EntityKey);
 					if (pInner)
 					{
-						DLockReadLocked(pInner->m_Lock);
-						for (auto iImport = pInner->m_EvaluatedProperties.f_GetIterator(); iImport; ++iImport)
+						for (auto iImport = pInner->m_EvaluatedProperties.m_Properties.f_GetIterator(); iImport; ++iImport)
 						{
 							auto pImport = CXMLDocument::f_CreateElement(pProject, "Import");
-							CXMLDocument::f_SetAttribute(pImport, "Project", iImport->m_Value);
+							CXMLDocument::f_SetAttribute(pImport, "Project", iImport->m_Value.f_String());
 						}
 					}
 				}
 			}
-			
+
 			if (LanguageType == ELanguageType_Native)
 			{
 				mint nCompileTypes = 0;
@@ -1274,7 +1308,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 			_Project.m_FileName = FileName;
 		}
-			
+
 		if (LanguageType == ELanguageType_Native)
 		{
 			CXMLDocument FilterXML;

@@ -5,11 +5,6 @@
 
 namespace NMib::NBuildSystem
 {
-	CEntityKey::CEntityKey()
-		: m_Type(EEntityType_Root)
-	{
-	}
-
 	bool CEntityKey::operator < (CEntityKey const &_Right) const
 	{
 		if (m_Type < _Right.m_Type)
@@ -28,10 +23,6 @@ namespace NMib::NBuildSystem
 		return true;
 	}
 	
-	CEntityKey const &CEntity::f_GetMapKey() const
-	{
-		return TCMap<CEntityKey, CEntity>::fs_GetKey(*this);
-	}
 	void CEntity::f_CheckParents() const
 	{
 		fpr_CheckParents();

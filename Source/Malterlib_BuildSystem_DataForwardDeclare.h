@@ -17,10 +17,10 @@ namespace NMib::NBuildSystem
 namespace NMib::NBuildSystem
 {
 #ifdef DMibBuildSystem_DebugReferences
-	typedef TCSharedPointer<CEntity const> CEntityPointer;
-	typedef TCSharedPointer<CEntity> CEntityMutablePointer;
+	typedef NStorage::TCSharedPointer<CEntity const> CEntityPointer;
+	typedef NStorage::TCSharedPointer<CEntity> CEntityMutablePointer;
 #else
-	typedef TCPointer<CEntity const> CEntityPointer;
-	typedef TCPointer<CEntity> CEntityMutablePointer;
+	typedef NStorage::TCPointer<CEntity const> CEntityPointer;
+	typedef NStorage::TCPointer<CEntity> CEntityMutablePointer;
 #endif
 }

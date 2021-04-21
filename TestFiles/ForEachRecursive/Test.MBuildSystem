@@ -1,0 +1,40 @@
+
+*Configuration
+{
+	Debug "Debug Config"
+	Release "Release Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
+
+%GenerateFile "TestFile"
+{
+	Property
+	{
+		fg_ForEachFunctorInner function(string _Value) [string]
+		fg_ForEachFunctorInner =+ [`Prefix_@(_Value)`, AllValues...]
+
+		fg_ForEachFunctor function([string] _AllValues) [string]
+		fg_ForEachFunctor =+ _AllValues->ForEach("fg_ForEachFunctorInner", {AllValues: _AllValues})
+
+		List define [[string]]
+		List [["Element0", "Element1"], ["Element2", "Element3"]]
+	}
+	GenerateFile
+	{
+		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
+		Contents 	`Generate File Contents:\n`\
+					`@(List->ForEach("fg_ForEachFunctor")->ToString())\n`
+		Executable false
+		UnixLineEnds true
+		UnicodeBOM false
+	}
+}

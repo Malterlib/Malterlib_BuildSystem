@@ -4,6 +4,7 @@
 #pragma once
 
 #include <Mib/Core/Core>
+#include <Mib/BuildSystem/Registry>
 
 #ifdef DMibDebug
 //#define DMibBuildSystem_DebugReferences
@@ -24,21 +25,33 @@ namespace NMib::NBuildSystem
 		CBuildSystemData();
 		~CBuildSystemData();
 
-		TCMap<CStr, CConfigurationType> m_ConfigurationTypes;
-		CEntity m_RootEntity = nullptr;
+		CBuildSystemData(CBuildSystemData const &_Other);
 
-		TCSet<CStr> m_SourceFiles;
+		void f_Assign(CBuildSystemData const &_Other);
+
+		NContainer::TCMap<NStr::CStr, CConfigurationType> m_ConfigurationTypes;
+		CEntity m_RootEntity{nullptr};
+
+		NContainer::TCSet<NStr::CStr> m_SourceFiles;
+
 		struct CImportData
 		{
-			CEntity m_RootEntity = nullptr;
-			CRegistryPreserveAll m_Registry;
+			CImportData();
+			CImportData(CImportData const &_Right);
+
+			CEntity m_RootEntity{nullptr};
+			CBuildSystemRegistry m_Registry;
 		};
-		TCLinkedList<CImportData> m_Imports;
 	};
 
 	struct CDependenciesBackup
 	{
-		TCMap<TCVector<CEntityKey>, TCLinkedList<CEntity>> m_Backup;
+		struct CEntityBackup
+		{
+			CEntityKey m_Key;
+			CEntity m_Entity;
+		};
+		NContainer::TCMap<NContainer::TCVector<CEntityKey>, NContainer::TCLinkedList<CEntityBackup>> m_Backup;
 	};
 }
 

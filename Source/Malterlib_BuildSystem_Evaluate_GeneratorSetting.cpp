@@ -12,11 +12,11 @@ namespace NMib::NBuildSystem
 
 	void CBuildSystem::fpr_EvaluateAllGeneratorSettings(CEntity &_Entity) const
 	{
-		if (_Entity.m_Key.m_Type == EEntityType_GeneratorSetting)
-			fp_EvaluateAllProperties(_Entity);
+		if (_Entity.f_GetKey().m_Type == EEntityType_GeneratorSetting)
+			fp_EvaluateAllProperties(_Entity, false);
 		for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; ++iChild)
 		{
-			if (iChild->m_Key.m_Type == EEntityType_GeneratorSetting)
+			if (iChild->f_GetKey().m_Type == EEntityType_GeneratorSetting)
 				fpr_EvaluateAllGeneratorSettings(*iChild);
 		}
 	}

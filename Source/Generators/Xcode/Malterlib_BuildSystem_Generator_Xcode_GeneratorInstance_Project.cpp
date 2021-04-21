@@ -165,72 +165,72 @@ fi
 
 		CStr FileData;
 
-		auto fl_Output = [&] (CStr const& _Data)
+		auto fOutput = [&] (CStr const &_Data)
 			{
 				FileData += _Data;
 				FileData += "\n";
 			}
 		;
 
-		fl_Output("// !$*UTF8*$!\n{\n\tarchiveVersion = 1;\n\tclasses = {\n\t};\n\tobjectVersion = 47;\n\tobjects = {\n");
+		fOutput("// !$*UTF8*$!\n{\n\tarchiveVersion = 1;\n\tclasses = {\n\t};\n\tobjectVersion = 47;\n\tobjects = {\n");
 
-		fl_Output("/* Begin PBXBuildFile section */");
+		fOutput("/* Begin PBXBuildFile section */");
 		fp_GeneratePBXBuildFileSection(_Project, FileData);
-		fl_Output("/* End PBXBuildFile section */\n");
+		fOutput("/* End PBXBuildFile section */\n");
 
-		fl_Output("/* Begin PBXBuildRule section */");
+		fOutput("/* Begin PBXBuildRule section */");
 		fp_GeneratePBXBuildRule(_Project, FileData);
-		fl_Output("/* End PBXBuildRule section */\n");
+		fOutput("/* End PBXBuildRule section */\n");
 
-		fl_Output("/* Begin PBXContainerItemProxy section */");
+		fOutput("/* Begin PBXContainerItemProxy section */");
 		fp_GeneratePBXContainerItemProxySection(_Project, FileData);
-		fl_Output("/* End PBXContainerItemProxy section */\n");
+		fOutput("/* End PBXContainerItemProxy section */\n");
 
-		fl_Output("/* Begin PBXFileReference section */");
+		fOutput("/* Begin PBXFileReference section */");
 		fp_GeneratePBXFileReferenceSection(_Project, _OutputDir, FileData);
-		fl_Output("/* End PBXFileReference section */\n");
+		fOutput("/* End PBXFileReference section */\n");
 
-		fl_Output("/* Begin PBXFrameworksBuildPhase section */");
+		fOutput("/* Begin PBXFrameworksBuildPhase section */");
 		fp_GeneratePBXFrameworksBuildPhaseSection(_Project, FileData);
-		fl_Output("/* End PBXFrameworksBuildPhase section */\n");
+		fOutput("/* End PBXFrameworksBuildPhase section */\n");
 
-		fl_Output("/* Begin PBXGroup section */");
+		fOutput("/* Begin PBXGroup section */");
 		fp_GeneratePBXGroupSection(_Project, FileData);
-		fl_Output("/* End PBXGroup section */\n");
+		fOutput("/* End PBXGroup section */\n");
 
 		fp_GeneratePBXLegacyTargetSection(_Project, FileData);
 
-		fl_Output("/* Begin PBXNativeTarget section */");
+		fOutput("/* Begin PBXNativeTarget section */");
 		fp_GeneratePBXNativeTargetSection(_Project, FileData);
-		fl_Output("/* End PBXNativeTarget section */\n");
+		fOutput("/* End PBXNativeTarget section */\n");
 
-		fl_Output("/* Begin PBXProject section */");
+		fOutput("/* Begin PBXProject section */");
 		fp_GeneratePBXProjectSection(_Project, FileData);
-		fl_Output("/* End PBXProject section */\n");
+		fOutput("/* End PBXProject section */\n");
 
-		fl_Output("/* Begin PBXShellScriptBuildPhase section */");
+		fOutput("/* Begin PBXShellScriptBuildPhase section */");
 		fp_GeneratePBXShellScriptBuildPhaseSection(_Project, FileData);
-		fl_Output("/* End PBXShellScriptBuildPhase section */\n");
+		fOutput("/* End PBXShellScriptBuildPhase section */\n");
 
-		fl_Output("/* Begin PBXSourcesBuildPhase section */");
+		fOutput("/* Begin PBXSourcesBuildPhase section */");
 		fp_GeneratePBXSourcesBuildPhaseSection(_Project, FileData);
-		fl_Output("/* End PBXSourcesBuildPhase section */\n");
+		fOutput("/* End PBXSourcesBuildPhase section */\n");
 
-		fl_Output("/* Begin PBXTargetDependency section */");
+		fOutput("/* Begin PBXTargetDependency section */");
 		fp_GeneratePBXTargetDependencySection(_Project, FileData);
-		fl_Output("/* End PBXTargetDependency section */\n");
+		fOutput("/* End PBXTargetDependency section */\n");
 
-		fl_Output("/* Begin XCBuildConfiguration section */");
+		fOutput("/* Begin XCBuildConfiguration section */");
 		fp_GenerateXCBuildConfigurationSection(_Project, FileData);
-		fl_Output("/* End XCBuildConfiguration section */\n");
+		fOutput("/* End XCBuildConfiguration section */\n");
 
-		fl_Output("/* Begin XCConfigurationList section */");
+		fOutput("/* Begin XCConfigurationList section */");
 		fp_GenerateXCConfigurationList(_Project, FileData);
-		fl_Output("/* End XCConfigurationList section */");
+		fOutput("/* End XCConfigurationList section */");
 
-		fl_Output("\t};");
-		fl_Output((CStr::CFormat("\trootObject = {} /* Project object */;") << _Project.f_GetGUID()).f_GetStr());
-		fl_Output("}");
+		fOutput("\t};");
+		fOutput((CStr::CFormat("\trootObject = {} /* Project object */;") << _Project.f_GetGUID()).f_GetStr());
+		fOutput("}");
 
 		{
 			CStr GeneratedFile = CFile::fs_AppendPath(ThreadLocal.m_ProjectOutputDir,  CStr("generatedContainer"));
@@ -271,23 +271,30 @@ fi
 		}
 	}
 
-	void CGeneratorInstance::fp_CalculateDependencyProductPath(CProject &_Project, CProjectDependency &_Dependency, TCMap<CConfiguration, CEntityPointer> const &_EnabledConfigurations) const
+	void CGeneratorInstance::fp_CalculateDependencyProductPath
+		(
+			CProject &_Project
+			, CProjectDependency &_Dependency
+			, TCMap<CConfiguration, CEntityMutablePointer> const &_EnabledConfigurations
+		) const
 	{
 		TCVector<CStr> SearchList;
 		SearchList.f_Insert("SharedTarget");
 
-		TCMap<CConfiguration, CEntityPointer> TargetConfigs;
+		TCMap<CConfiguration, CEntityMutablePointer> TargetConfigs;
 		for (auto &Entity : _EnabledConfigurations)
 		{
 			auto &Configuration = _EnabledConfigurations.fs_GetKey(Entity);
 			TargetConfigs[Configuration] = _Project.m_EnabledProjectConfigs[Configuration];
 		}
 
+		auto &EnabledConfigData = (*_Project.m_EnabledConfigs.f_GetIterator())->f_Data();
+
 		TCMap<CConfiguration, CConfigResult> ExtensionEntities;
 		fp_GetConfigValue(
 			TargetConfigs
 			, _Project.m_EnabledProjectConfigs
-			, (*_Project.m_EnabledConfigs.f_GetIterator())->m_Position
+			, EnabledConfigData.m_Position
 			, EPropertyType_Target
 			, "FileExtension"
 			, false
@@ -302,7 +309,7 @@ fi
 		fp_GetConfigValue(
 			TargetConfigs
 			, _Project.m_EnabledProjectConfigs
-			, (*_Project.m_EnabledConfigs.f_GetIterator())->m_Position
+			, EnabledConfigData.m_Position
 			, EPropertyType_Target
 			, "FileName"
 			, false
@@ -317,7 +324,7 @@ fi
 		fp_GetConfigValue(
 			TargetConfigs
 			, _Project.m_EnabledProjectConfigs
-			, (*_Project.m_EnabledConfigs.f_GetIterator())->m_Position
+			, EnabledConfigData.m_Position
 			, EPropertyType_Target
 			, "OutputDirectory"
 			, false
@@ -335,7 +342,7 @@ fi
 		fp_GetConfigValue(
 			TargetConfigs
 			, _Project.m_EnabledProjectConfigs
-			, (*_Project.m_EnabledConfigs.f_GetIterator())->m_Position
+			, EnabledConfigData.m_Position
 			, EPropertyType_Target
 			, "Type"
 			, false
@@ -350,7 +357,7 @@ fi
 		fp_GetConfigValue(
 			TargetConfigs
 			, _Project.m_EnabledProjectConfigs
-			, (*_Project.m_EnabledConfigs.f_GetIterator())->m_Position
+			, EnabledConfigData.m_Position
 			, EPropertyType_Target
 			, "EnableLinkerGroups"
 			, false
@@ -365,7 +372,7 @@ fi
 		fp_GetConfigValue(
 			TargetConfigs
 			, _Project.m_EnabledProjectConfigs
-			, (*_Project.m_EnabledConfigs.f_GetIterator())->m_Position
+			, EnabledConfigData.m_Position
 			, EPropertyType_Target
 			, "LinkerGroup"
 			, false
@@ -413,9 +420,6 @@ fi
 		auto & ThreadLocal = *m_ThreadLocal;
 		for (auto Iter = ThreadLocal.mp_EvaluatedTypesInUse.f_GetIterator(); Iter; ++Iter)
 		{
-			TCMap<CConfiguration, CBuildSystemData> Datas;
-			TCMap<CConfiguration, CEntityPointer> Configs;
-
 			CStr Type = Iter.f_GetKey();
 
 			TCVector<CStr> SearchList;
@@ -427,18 +431,32 @@ fi
 			}
 			SearchList.f_Insert("CompileShared");
 
-			TCMap<CPropertyKey, CStr> StartValuesCompile;
+			TCMap<CPropertyKey, CEJSON> StartValuesCompile;
 			StartValuesCompile[CPropertyKey(EPropertyType_Compile, "Type")] = Type;
+
+			TCVector<CEntity *> ToRemove;
+			auto Cleanup = g_OnScopeExit > [&]
+				{
+					for (auto &pToRemove : ToRemove)
+						pToRemove->m_pParent->m_ChildEntitiesMap.f_Remove(pToRemove);
+				}
+			;
+
+			TCMap<CConfiguration, CEntityMutablePointer> Configs;
 
 			for (auto iConfig = _Project.m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
 			{
-				auto &Data = Datas[iConfig.f_GetKey()];
+				auto &ConfigEntity = **iConfig;
+				CEntityKey NewEntityKey = ConfigEntity.f_GetKey();
 
-				auto InitialValues = m_BuildSystem.f_GetExternalValues(*(*iConfig)->f_GetRoot());
-				auto pStartEntity = iConfig->f_Get();
-				auto PathKey = (*iConfig)->f_GetPathKey();
-				auto pConfig = m_BuildSystem.f_EvaluateData(Data, InitialValues, pStartEntity, &StartValuesCompile, &PathKey, true, false);
-				Configs[iConfig.f_GetKey()] = fg_Explicit(pConfig);
+				auto NewEntityMap = ConfigEntity.m_ChildEntitiesMap(NewEntityKey, &ConfigEntity);
+				auto &TempEntity = *NewEntityMap;
+
+				ToRemove.f_Insert(&TempEntity);
+
+				m_BuildSystem.f_InitEntityForEvaluationNoEnv(TempEntity, StartValuesCompile, EEvaluatedPropertyType_External);
+
+				Configs[iConfig.f_GetKey()] = fg_Explicit(&TempEntity);
 			}
 
 			TCMap<CConfiguration, CConfigResult> Entities;
@@ -470,28 +488,56 @@ fi
 			if (IterFile->m_bWasGenerated)
 				continue;
 
-			auto Value = fp_GetSingleConfigValue(IterFile->m_EnabledConfigs, EPropertyType_Compile, "Type");
-			auto CustomCommandLines = fp_GetConfigValues(IterFile->m_EnabledConfigs, EPropertyType_Compile, "Custom_CommandLine");
+			auto Value = fp_GetSingleConfigValue(IterFile->m_EnabledConfigs, EPropertyType_Compile, "Type", EEJSONType_String, true);
+			auto CustomCommandLines = fp_GetConfigValues(IterFile->m_EnabledConfigs, EPropertyType_Compile, "Custom_CommandLine", EEJSONType_String, true);
 
-			CStr Type = Value.m_Value;
-			CStr CompileType = fp_GetSingleConfigValue(IterFile->m_EnabledConfigs, EPropertyType_Compile, "GenericCompileType").m_Value;
+			CStr Type = Value.m_Value.f_IsValid() ? Value.m_Value.f_String() : CStr();
+			auto CompileTypValue = fp_GetSingleConfigValue(IterFile->m_EnabledConfigs, EPropertyType_Compile, "GenericCompileType", EEJSONType_String, true);
+
+			CStr CompileType = CompileTypValue.m_Value.f_IsValid() ? CompileTypValue.m_Value.f_String() : CStr();
+
+			auto DisabledConfigs = fp_GetConfigValues(IterFile->m_EnabledConfigs, EPropertyType_Compile, "Disabled", EEJSONType_Boolean, true);
+
 
 			{
 				bool bWasCustom = false;
 				bool bFirst = true;
+				CConfiguration LastConfig;
 				for (auto &CustomCommandLine : CustomCommandLines)
 				{
-					if (!CustomCommandLine.m_Value.f_IsEmpty())
+					auto &Configuration = CustomCommandLines.fs_GetKey(CustomCommandLine);
+
+					if (auto pDisabled = DisabledConfigs.f_FindEqual(Configuration); pDisabled->m_Value.f_IsValid() && pDisabled->m_Value.f_Boolean())
+						continue;
+
+					auto fReportInconsistent = [&]
+						{
+							m_BuildSystem.fs_ThrowError
+								(
+									CustomCommandLine.m_Position
+									, "Inconsistent usage of Custom_CommandLine for '{}/{}': '{}' and '{}'"_f
+									<< IterFile->f_GetNameGroupPath()
+									<< CFile::fs_GetFile(IterFile->f_GetName())
+									<< LastConfig.f_GetFullName()
+									<< Configuration.f_GetFullName()
+								)
+							;
+						}
+					;
+
+					if (CustomCommandLine.m_Value.f_IsValid())
 					{
 						if (!bFirst)
-							m_BuildSystem.fs_ThrowError(CustomCommandLine.m_Position, "Inconsistent usage of Custom_CommandLine");
+							fReportInconsistent();
 
 						bWasCustom = true;
 						if (!CompileType)
 							Type = "Custom";
 					}
 					else if (bWasCustom)
-						m_BuildSystem.fs_ThrowError(CustomCommandLine.m_Position, "Inconsistent usage of Custom_CommandLine");
+						fReportInconsistent();
+
+					LastConfig = Configuration;
 					bFirst = false;
 				}
 			}
@@ -512,7 +558,7 @@ fi
 				(
 					IterFile->m_EnabledConfigs
 					, _Project.m_EnabledProjectConfigs
-					, (*IterFile->m_EnabledConfigs.f_GetIterator())->m_Position
+					, (*IterFile->m_EnabledConfigs.f_GetIterator())->f_Data().m_Position
 					, EPropertyType_Compile
 					, "Type"
 					, true
@@ -526,7 +572,7 @@ fi
 			;
 
 			if (Entities.f_IsEmpty())
-				m_BuildSystem.fs_ThrowError((*IterFile->m_EnabledConfigs.f_GetIterator())->m_Position, "Compile.Type does not exist");
+				m_BuildSystem.fs_ThrowError((*IterFile->m_EnabledConfigs.f_GetIterator())->f_Data().m_Position, "Compile.Type does not exist");
 
 			auto Result = *Entities.f_GetIterator();
 
@@ -537,7 +583,7 @@ fi
 			{
 				CEntityKey EntityKey;
 				EntityKey.m_Type = EEntityType_GeneratorSetting;
-				EntityKey.m_Name = "ExtraFileTypeMatches";
+				EntityKey.m_Name.m_Value = "ExtraFileTypeMatches";
 				auto pExtraMatches = m_pGeneratorSettings->m_ChildEntitiesMap.f_FindEqual(EntityKey);
 				if (pExtraMatches)
 				{
@@ -545,11 +591,9 @@ fi
 					PropertyKey.m_Type = EPropertyType_Property;
 					PropertyKey.m_Name = CFile::fs_GetExtension(IterFile->f_GetName());
 
-					auto pMatch = pExtraMatches->m_EvaluatedProperties.f_FindEqual(PropertyKey);
+					auto pMatch = pExtraMatches->m_EvaluatedProperties.m_Properties.f_FindEqual(PropertyKey);
 					if (pMatch)
-					{
-						IterFile->m_LastKnownFileType = pMatch->m_Value;
-					}
+						IterFile->m_LastKnownFileType = pMatch->m_Value.f_String();
 				}
 			}
 
@@ -577,9 +621,9 @@ fi
 						|| IterFile->m_Type == "Assembler"
 					)
 				{
-					bool bInitEarly = fp_GetSingleConfigValue(IterFile->m_EnabledConfigs, EPropertyType_Compile, "InitEarly").m_Value == "true";
+					auto InitEarly = fg_Move(fp_GetSingleConfigValue(IterFile->m_EnabledConfigs, EPropertyType_Compile, "InitEarly", EEJSONType_Boolean, true).m_Value);
 
-					if (bInitEarly)
+					if (InitEarly.f_IsValid() && InitEarly.f_Boolean())
 						FileType = EBuildFileType_CCompileInitEarly;
 					else
 						FileType = EBuildFileType_CCompile;
@@ -627,10 +671,9 @@ fi
 				;
 
 				{
-					auto DisabledConfigs = fp_GetConfigValues(IterFile->m_EnabledConfigs, EPropertyType_Compile, "Disabled");
 					for (auto &Disabled : DisabledConfigs)
 					{
-						if (Disabled.m_Value == "true")
+						if (Disabled.m_Value.f_IsValid() && Disabled.m_Value.f_Boolean())
 							BuildRef.m_Disabled[DisabledConfigs.fs_GetKey(Disabled)];
 					}
 				}
@@ -659,88 +702,101 @@ fi
 
 						BuildRefRule.m_GUID = IterFile->f_GetBuildRuleGUID(Configuration);
 
-						BuildRefRule.m_MalterlibCustomBuildCommandLine = CustomCommandLine.m_Value
+						BuildRefRule.m_MalterlibCustomBuildCommandLine = CustomCommandLine.m_Value.f_String()
 							.f_Replace("$(InputFileBase)", "${INPUT_FILE_BASE}")
 							.f_Replace("$(InputFile)", "${INPUT_FILE_NAME}")
 							.f_Replace("$(InputFilePath)", "${INPUT_FILE_PATH}")
 							.f_EscapeStrNoQuotes("\\'\r\n\t", "\\'rnt")
 						;
 
-						CStr WorkingDirectory = fp_GetConfigValue(IterFile->m_EnabledConfigs, Configuration, EPropertyType_Compile, "Custom_WorkingDirectory").m_Value;
+						CStr WorkingDirectory = fp_GetConfigValue
+							(
+								IterFile->m_EnabledConfigs
+								, Configuration
+								, EPropertyType_Compile
+								, "Custom_WorkingDirectory"
+								, EEJSONType_String
+								, false
+							).m_Value.f_String()
+						;
 						BuildRefRule.m_WorkingDirectory = WorkingDirectory.f_EscapeStrNoQuotes("\\'\r\n\t", "\\'rnt");
 
-						CStr Output = fp_GetConfigValue(IterFile->m_EnabledConfigs, Configuration, EPropertyType_Compile, "Custom_Outputs").m_Value;
-						while (!Output.f_IsEmpty())
+ 						CEJSON Outputs = fp_GetConfigValue(IterFile->m_EnabledConfigs, Configuration, EPropertyType_Compile, "Custom_Outputs", EEJSONType_Array, false).m_Value;
+						if (!Outputs.f_IsStringArray())
+							m_BuildSystem.fs_ThrowError(CustomCommandLine.m_Position, "You need to Custom_Outputs as a string array");
+
+						for (auto &ThisOutput : Outputs.f_Array())
 						{
-							CStr ThisOutput = fg_GetStrSep(Output, ";");
-							BuildRefRule.m_Outputs.f_Insert(ThisOutput);
-
+							BuildRefRule.m_Outputs.f_Insert(ThisOutput.f_String());
 							{
-								CEntityKey EntityKey;
-								EntityKey.m_Type = EEntityType_File;
-								EntityKey.m_Name = ThisOutput;
+								CFileKey FileKey;
+								FileKey.m_FileName = ThisOutput.f_String();
 
-								auto pEntity = IterFile->m_EnabledConfigs.f_FindEqual(Configuration);
-								auto pParent = (*pEntity)->m_pParent;
-
-								auto Mapping = pParent->m_ChildEntitiesMap(EntityKey, pParent);
-
-								auto *pNewEntity = &Mapping.f_GetResult();
-								
-								if (Mapping.f_WasCreated())
-									pParent->m_ChildEntitiesOrdered.f_Insert(*pNewEntity);
-
+								CStr OutputType;
+								auto *pFile = _Project.m_Files.f_FindSmallestGreaterThanEqual(FileKey);
+								if (pFile && pFile->f_GetName() == ThisOutput)
+									OutputType = fp_GetConfigValue(pFile->m_EnabledConfigs, Configuration, EPropertyType_Compile, "Type", EEJSONType_String, false).m_Value.f_String();
+								else
 								{
-									TCMap<CConfiguration, CEntityPointer> EnabledConfigs;
-									EnabledConfigs[Configuration] = fg_Explicit(pNewEntity);
 
-									CStr OutputType = fp_GetConfigValue(EnabledConfigs, Configuration, EPropertyType_Compile, "Type").m_Value;
-									if (BuildRefRule.m_OutputType.f_IsEmpty())
-										BuildRefRule.m_OutputType = OutputType;
-									else if (OutputType != BuildRefRule.m_OutputType)
-									{
-										m_BuildSystem.fs_ThrowError
-											(
-												CustomCommandLine.m_Position, "Output type for custom compile cannot be varied per configuration. '{}' != '{}'"_f
-												<< OutputType
-												<< BuildRefRule.m_OutputType
-											)
-										;
-									}
+									CEntityKey EntityKey;
+									EntityKey.m_Type = EEntityType_File;
+									EntityKey.m_Name.m_Value = ThisOutput.f_String();
 
+									auto pEntity = IterFile->m_EnabledConfigs.f_FindEqual(Configuration);
+									auto pParent = (*pEntity)->m_pParent;
+
+									auto Mapping = pParent->m_ChildEntitiesMap(EntityKey, pParent);
+
+									auto *pNewEntity = &Mapping.f_GetResult();
+
+									if (Mapping.f_WasCreated())
+										pParent->m_ChildEntitiesOrdered.f_Insert(*pNewEntity);
+
+									OutputType = fp_GetConfigValue(IterFile->m_EnabledConfigs, Configuration, EPropertyType_Compile, "Type", EEJSONType_String, false).m_Value.f_String();
+
+									if (Mapping.f_WasCreated())
+										pParent->m_ChildEntitiesMap.f_Remove(EntityKey);
+								}
+
+								if (BuildRefRule.m_OutputType.f_IsEmpty())
+								{
+									BuildRefRule.m_OutputType = OutputType;
 									if (FileType == EBuildFileType_CCompile || FileType == EBuildFileType_CCompileInitEarly)
 									{
 										ThreadLocal.mp_UsedCTypes[Configuration][OutputType];
 										ThreadLocal.mp_EvaluatedTypesInUse[OutputType];
 									}
 								}
-
-								if (Mapping.f_WasCreated())
-									pParent->m_ChildEntitiesMap.f_Remove(EntityKey);
+								else if (OutputType != BuildRefRule.m_OutputType)
+								{
+									m_BuildSystem.fs_ThrowError
+										(
+											CustomCommandLine.m_Position, "Output type for custom compile cannot be varied per configuration. '{}' != '{}'"_f
+											<< OutputType
+											<< BuildRefRule.m_OutputType
+										)
+									;
+								}
 							}
 						}
-
 					}
 				}
 
-				auto TabWidth = fp_GetSingleConfigValue(IterFile->m_EnabledConfigs, EPropertyType_Compile, "TabWidth");
-				auto IndentWidth = fp_GetSingleConfigValue(IterFile->m_EnabledConfigs, EPropertyType_Compile, "IndentWidth");
-				auto UsesTabs = fp_GetSingleConfigValue(IterFile->m_EnabledConfigs, EPropertyType_Compile, "UsesTabs");
+				auto TabWidth = fp_GetSingleConfigValue(IterFile->m_EnabledConfigs, EPropertyType_Compile, "TabWidth", EEJSONType_Integer, true);
+				auto IndentWidth = fp_GetSingleConfigValue(IterFile->m_EnabledConfigs, EPropertyType_Compile, "IndentWidth", EEJSONType_Integer, true);
+				auto UsesTabs = fp_GetSingleConfigValue(IterFile->m_EnabledConfigs, EPropertyType_Compile, "UsesTabs", EEJSONType_Boolean, true);
 
-				if (!TabWidth.m_Value.f_IsEmpty())
-					IterFile->m_TabWidth = TabWidth.m_Value.f_ToInt(uint8(0));
-				if (!IndentWidth.m_Value.f_IsEmpty())
-					IterFile->m_IndentWidth = IndentWidth.m_Value.f_ToInt(uint8(0));
-				if (!UsesTabs.m_Value.f_IsEmpty())
+				if (TabWidth.m_Value.f_IsValid())
+					IterFile->m_TabWidth = TabWidth.m_Value.f_Integer();
+				if (IndentWidth.m_Value.f_IsValid())
+					IterFile->m_IndentWidth = IndentWidth.m_Value.f_Integer();
+				if (!UsesTabs.m_Value.f_IsValid())
 				{
-					if (UsesTabs.m_Value == "true")
+					if (UsesTabs.m_Value.f_Boolean())
 						IterFile->m_UsesTabs = 1;
-					else if (UsesTabs.m_Value == "false")
-						IterFile->m_UsesTabs = 2;
 					else
-					{
-						m_BuildSystem.fs_ThrowError(UsesTabs.m_Position, CStr::CFormat("UsesTabs has to be either true or false ('{}' was specified)") << UsesTabs.m_Value);
-					}
+						IterFile->m_UsesTabs = 2;
 				}
 
 				IterFile->m_bHasCompilerFlags = BuildRef.m_bHasCompilerFlags;
@@ -917,7 +973,7 @@ fi
 		ToPerform.f_Perform();
 	}
 
-	void CGeneratorInstance::fp_GeneratePBXFileReferenceSection(CProject &_Project, CStr const& _OutputDir, CStr& _Output) const
+	void CGeneratorInstance::fp_GeneratePBXFileReferenceSection(CProject &_Project, CStr const &_OutputDir, CStr& _Output) const
 	{
 		TCSortedPerform<CStr const &> ToPerform;
 		// File references
@@ -1057,13 +1113,13 @@ fi
 
 		TCMap<CStr, TCVector<CGroupChild>> GroupChildren;
 
-		auto fl_OutputGroupChild = [&] (CStr const& _GUID, CStr const& _Name)
+		auto fOutputGroupChild = [&] (CStr const &_GUID, CStr const &_Name)
 		{
 			_Output += (CStr::CFormat("\t\t\t\t{} /* {} */,\n") << _GUID << _Name);
 		};
 
 		TCSet<CStr> OutputGroups;
-		auto fl_OutputGroup = [&] (CStr const& _GUID, CStr const& _Name)
+		auto fOutputGroup = [&] (CStr const &_GUID, CStr const &_Name)
 		{
 			if (!OutputGroups(_GUID).f_WasCreated())
 				return; // Already output
@@ -1076,7 +1132,7 @@ fi
 			{
 				for (auto Iter = pChildren->f_GetIterator(); Iter; ++Iter)
 				{
-					fl_OutputGroupChild(Iter->m_GUID, Iter->m_Name);
+					fOutputGroupChild(Iter->m_GUID, Iter->m_Name);
 				}
 			}
 
@@ -1107,7 +1163,7 @@ fi
 					pGroup->f_GetGUID()
 					, [&, pGroup]
 					{
-						fl_OutputGroup(pGroup->f_GetGUID(), pGroup->m_Name);
+						fOutputGroup(pGroup->f_GetGUID(), pGroup->m_Name);
 					}
 				)
 			;
@@ -1146,7 +1202,7 @@ fi
 					_Project.f_GetProductRefGroupGUID()
 					, [&]
 					{
-						fl_OutputGroup(_Project.f_GetProductRefGroupGUID(), g_ReservedProductRefGroup);
+						fOutputGroup(_Project.f_GetProductRefGroupGUID(), g_ReservedProductRefGroup);
 					}
 				)
 			;
@@ -1170,7 +1226,7 @@ fi
 					_Project.f_GetConfigurationsGroupGUID()
 					, [&]
 					{
-						fl_OutputGroup(_Project.f_GetConfigurationsGroupGUID(), g_ReservedConfigurationsGroup);
+						fOutputGroup(_Project.f_GetConfigurationsGroupGUID(), g_ReservedConfigurationsGroup);
 					}
 				)
 			;
@@ -1194,7 +1250,7 @@ fi
 					_Project.f_GetProjectDependenciesGroupGUID()
 					, [&]
 					{
-						fl_OutputGroup(_Project.f_GetProjectDependenciesGroupGUID(), g_ReservedProjectDependenciesGroup);
+						fOutputGroup(_Project.f_GetProjectDependenciesGroupGUID(), g_ReservedProjectDependenciesGroup);
 					}
 				)
 			;
@@ -1225,7 +1281,7 @@ fi
 					_Project.f_GetGeneratorGroupGUID()
 					, [&]
 					{
-						fl_OutputGroup(_Project.f_GetGeneratorGroupGUID(), g_ReservedGeneratorGroup);
+						fOutputGroup(_Project.f_GetGeneratorGroupGUID(), g_ReservedGeneratorGroup);
 					}
 				)
 			;
@@ -1247,19 +1303,19 @@ fi
 						if (IterGroup->m_pParent == nullptr)
 						{
 							OutputRootGroups[IterGroup->f_GetGUID()];
-							fl_OutputGroupChild(IterGroup->f_GetGUID(), IterGroup->m_Name);
+							fOutputGroupChild(IterGroup->f_GetGUID(), IterGroup->m_Name);
 						}
 					}
 					for (auto IterFile = _Project.m_Files.f_GetIterator(); IterFile; ++IterFile)
 					{
 						if (IterFile->m_pGroup == nullptr)
-							fl_OutputGroupChild(IterFile->f_GetFileRefGUID(), CFile::fs_GetFile(IterFile->f_GetName()));
+							fOutputGroupChild(IterFile->f_GetFileRefGUID(), CFile::fs_GetFile(IterFile->f_GetName()));
 					}
 
 					if (OutputRootGroups(_Project.f_GetGeneratorGroupGUID()).f_WasCreated())
-						fl_OutputGroupChild(_Project.f_GetGeneratorGroupGUID(), g_ReservedGeneratorGroup);
-					//fl_OutputGroupChild(_Project.f_GetConfigurationsGroupGUID(), g_ReservedConfigurationsGroup);
-					//fl_OutputGroupChild(_Project.f_GetProjectDependenciesGroupGUID(), g_ReservedProjectDependenciesGroup);
+						fOutputGroupChild(_Project.f_GetGeneratorGroupGUID(), g_ReservedGeneratorGroup);
+					//fOutputGroupChild(_Project.f_GetConfigurationsGroupGUID(), g_ReservedConfigurationsGroup);
+					//fOutputGroupChild(_Project.f_GetProjectDependenciesGroupGUID(), g_ReservedProjectDependenciesGroup);
 
 					_Output += "\t\t\t);\n\t\t\tsourceTree = \"<group>\";\n\t\t};\n";
 				}
@@ -1400,7 +1456,7 @@ fi
 			auto &NativeTarget = NativeTargets.f_GetFirst();
 			auto &Configuration = _Project.m_NativeTargets.fs_GetKey(NativeTargets);
 
-			auto fl_OutputScript = [&] (CBuildScript& _Script)
+			auto fOutputScript = [&] (CBuildScript& _Script)
 			{
 				_Output += (CStr::CFormat("\t\t{} /* {} */ = ") << _Script.f_GetGUID(Configuration) << _Script.m_Name);
 				_Output += "{\n\t\t\tisa = PBXShellScriptBuildPhase;\n";
@@ -1425,7 +1481,7 @@ fi
 
 			for (auto iScript = NativeTarget.m_BuildScripts.f_GetIterator(); iScript; ++iScript)
 			{
-				fl_OutputScript(*iScript);
+				fOutputScript(*iScript);
 			}
 		}
 	}
@@ -1434,7 +1490,7 @@ fi
 	{
 		TCSortedPerform<CStr const &> ToPerform;
 
-		auto fl_GenerateBuildConfigurationList = [&] (CStr const& _GUID, CStr const& _Name, CStr const& _Description, TCVector<CBuildConfiguration> const &_ConfigList)
+		auto fGenerateBuildConfigurationList = [&] (CStr const &_GUID, CStr const &_Name, CStr const &_Description, TCVector<CBuildConfiguration> const &_ConfigList)
 		{
 			_Output += (CStr::CFormat("\t\t{} /* Build configuration list for {} \"{}\" */") << _GUID << _Description << _Name);
 			_Output += " = {\n\t\t\tisa = XCConfigurationList;\n\t\t\tbuildConfigurations = (\n";
@@ -1459,7 +1515,7 @@ fi
 						, [&, pNativeTarget = &NativeTarget]
 						{
 							auto &NativeTarget = *pNativeTarget;
-							fl_GenerateBuildConfigurationList(NativeTarget.f_GetBuildConfigurationListGUID(), NativeTarget.m_Name, "PBXNativeTarget", {NativeTarget.m_BuildConfiguration});
+							fGenerateBuildConfigurationList(NativeTarget.f_GetBuildConfigurationListGUID(), NativeTarget.m_Name, "PBXNativeTarget", {NativeTarget.m_BuildConfiguration});
 						}
 					)
 				;
@@ -1470,7 +1526,7 @@ fi
 				_Project.f_GetBuildConfigurationListGUID()
 				, [&]
 				{
-					fl_GenerateBuildConfigurationList(_Project.f_GetBuildConfigurationListGUID(), _Project.f_GetName(), "PBXProject", _Project.m_BuildConfigurationList);
+					fGenerateBuildConfigurationList(_Project.f_GetBuildConfigurationListGUID(), _Project.f_GetName(), "PBXProject", _Project.m_BuildConfigurationList);
 				}
 			)
 		;
@@ -1482,7 +1538,7 @@ fi
 	{
 		TCSortedPerform<CStr const &> ToPerform;
 
-		auto fl_GenerateBuildConfigurationList = [&] (CBuildConfiguration const &_Config, bool _bUseReference)
+		auto fGenerateBuildConfigurationList = [&] (CBuildConfiguration const &_Config, bool _bUseReference)
 		{
 			ToPerform.f_Add
 				(
@@ -1505,10 +1561,10 @@ fi
 		for (auto &NativeTargets : _Project.m_NativeTargets)
 		{
 			for (auto &NativeTarget : NativeTargets)
-				fl_GenerateBuildConfigurationList(NativeTarget.m_BuildConfiguration, true);
+				fGenerateBuildConfigurationList(NativeTarget.m_BuildConfiguration, true);
 		}
 		for (auto &Config : _Project.m_BuildConfigurationList)
-			fl_GenerateBuildConfigurationList(Config, false);
+			fGenerateBuildConfigurationList(Config, false);
 
 		ToPerform.f_Perform();
 	}
@@ -1971,7 +2027,7 @@ fi
 				XMLFile.f_SetAttribute(pScheme, "LastUpgradeVersion", "0450");
 			XMLFile.f_SetAttribute(pScheme, "version", "1.3");
 
-			auto fl_GenerateBuildReference = [&] (CXMLElement* _pParent) -> CStr
+			auto fGenerateBuildReference = [&] (CXMLElement* _pParent) -> CStr
 			{
 				auto pBuildReference = XMLFile.f_CreateElement(_pParent, "BuildableReference");
 				XMLFile.f_SetAttribute(pBuildReference, "BuildableIdentifier", "primary");
@@ -1991,7 +2047,7 @@ fi
 				return BuildableName;
 			};
 
-			auto fl_GenerateRunnablePath = [&] (CXMLElement* _pParent) -> bool
+			auto fGenerateRunnablePath = [&] (CXMLElement* _pParent) -> bool
 			{
 				CElement const& Element = ThreadLocal.mp_EvaluatedTargetSettings[Configuration].m_Element["LocalDebuggerCommand"];
 				if (Element.f_GetValue().f_IsEmpty())
@@ -2016,7 +2072,7 @@ fi
 				XMLFile.f_SetAttribute(pBuildActionEntry, "buildForArchiving", "YES");
 				XMLFile.f_SetAttribute(pBuildActionEntry, "buildForAnalyzing", "YES");
 
-				_Buildable[Configuration][_Project.f_GetGUID()] = fl_GenerateBuildReference(pBuildActionEntry);
+				_Buildable[Configuration][_Project.f_GetGUID()] = fGenerateBuildReference(pBuildActionEntry);
 			}
 
 			// TestAction
@@ -2032,7 +2088,7 @@ fi
 				if (NativeTarget.m_Type == "Application")
 				{
 					auto pMacroExpansion = XMLFile.f_CreateElement(pTestAction, "MacroExpansion");
-					fl_GenerateBuildReference(pMacroExpansion);
+					fGenerateBuildReference(pMacroExpansion);
 				}
 			}
 
@@ -2046,7 +2102,7 @@ fi
 
 				// Working directory
 				bool bUsingCustomWorkingDirectory = false;
-				if (fl_GenerateRunnablePath(pLaunchAction))
+				if (fGenerateRunnablePath(pLaunchAction))
 				{
 					_Runnables[Configuration][SchemeName];
 					CElement const& Element = ThreadLocal.mp_EvaluatedTargetSettings[Configuration].m_Element["customWorkingDirectory"];
@@ -2090,7 +2146,7 @@ fi
 
 				// Working directory
 				bool bUsingCustomWorkingDirectory = false;
-				if (fl_GenerateRunnablePath(pProfileAction))
+				if (fGenerateRunnablePath(pProfileAction))
 				{
 					CElement const& Element = ThreadLocal.mp_EvaluatedTargetSettings[Configuration].m_Element["customWorkingDirectory"];
 					if (!Element.f_GetValue().f_IsEmpty())
@@ -2174,7 +2230,7 @@ fi
 		return bSchemesChanged;
 	}
 
-	void CGeneratorInstance::fp_GenerateToolRunScript(CProject& _Project, CStr const& _OutputDir) const
+	void CGeneratorInstance::fp_GenerateToolRunScript(CProject& _Project, CStr const &_OutputDir) const
 	{
 		auto & ThreadLocal = *m_ThreadLocal;
 		for (auto &NativeTargets : _Project.m_NativeTargets)

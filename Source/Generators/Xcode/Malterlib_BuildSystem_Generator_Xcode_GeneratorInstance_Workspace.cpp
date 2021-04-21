@@ -31,7 +31,7 @@ namespace NMib::NBuildSystem::NXcode
 		TCMap<CConfiguration, TCSet<CStr>> SchemesWithRunnables;
 		TCMap<CConfiguration, TCMap<CStr, CStr>> SchemesWithBuildables;
 
-		fg_ParallellForEach
+		fg_ForEach
 			(
 				_Solution.m_Projects
 				, [&](CProject &_Project)
@@ -73,7 +73,7 @@ namespace NMib::NBuildSystem::NXcode
 				MapProjectsToGroups[iProject->m_pGroup].f_Insert(iProject);
 		}
 
-		TCFunction<void (CXMLElement* _pParent, CGroup* pGroup)> fl_OutputGroup = [&] (CXMLElement* _pParent, CGroup* pGroup)
+		TCFunction<void (CXMLElement* _pParent, CGroup* pGroup)> fOutputGroup = [&] (CXMLElement* _pParent, CGroup* pGroup)
 		{
 			if (!pGroup->m_OutputToWorkspace)
 			{
@@ -85,7 +85,7 @@ namespace NMib::NBuildSystem::NXcode
 				TCVector<CGroup*>& lChildGroups = MapGroupToGroups[pGroup];
 				for (auto iChildGroup = lChildGroups.f_GetIterator(); iChildGroup; ++iChildGroup)
 				{
-					fl_OutputGroup(pGroupRef, *iChildGroup);
+					fOutputGroup(pGroupRef, *iChildGroup);
 				}
 
 				TCVector<CProject*>& lChildProjects = MapProjectsToGroups[pGroup];
@@ -99,7 +99,7 @@ namespace NMib::NBuildSystem::NXcode
 
 		for (auto iGroup = _Solution.m_Groups.f_GetIterator(); iGroup; ++iGroup)
 		{
-			fl_OutputGroup(pWorkspace, &(*iGroup));
+			fOutputGroup(pWorkspace, &(*iGroup));
 		}
 
 		for (auto iProject = _Solution.m_Projects.f_GetIterator(); iProject; ++iProject)
@@ -183,7 +183,8 @@ namespace NMib::NBuildSystem::NXcode
 
 		{
 			ch8 const *pDocumentData;
-			if (fp_GetSingleConfigValue(_Solution.m_EnabledConfigs, EPropertyType_Workspace, "XcodeNewBuildSystem").m_Value == "true")
+			auto Value = fp_GetSingleConfigValue(_Solution.m_EnabledConfigs, EPropertyType_Workspace, "XcodeNewBuildSystem", EEJSONType_Boolean, true);
+			if (Value.m_Value.f_IsValid() && Value.m_Value.f_Boolean())
 			{
 				pDocumentData =
 R"xxx(<?xml version="1.0" encoding="UTF-8"?>
@@ -281,7 +282,7 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 				XMLFile.f_SetAttribute(pScheme, "LastUpgradeVersion", "0450");
 			XMLFile.f_SetAttribute(pScheme, "version", "1.3");
 
-			auto fl_GenerateBuildReference = [&] (CXMLElement* _pParent, CProject& _Project)
+			auto fGenerateBuildReference = [&] (CXMLElement* _pParent, CProject& _Project)
 			{
 				auto &NativeTarget = _Project.f_GetDefaultNativeTarget(Configuration);
 
@@ -320,8 +321,7 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 						continue;
 
 					auto iConfig = Project.m_EnabledProjectConfigs[Configuration];
-					CStr Value = m_BuildSystem.f_EvaluateEntityProperty(*iConfig, EPropertyType_Target, "Disabled");
-					if (Value != "true")
+					if (!m_BuildSystem.f_EvaluateEntityPropertyBool(*iConfig, EPropertyType_Target, "Disabled", false))
 					{
 						auto pBuildActionEntry = XMLFile.f_CreateElement(pBuildActionEntries, "BuildActionEntry");
 						XMLFile.f_SetAttribute(pBuildActionEntry, "buildForTesting", "YES");
@@ -330,7 +330,7 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 						XMLFile.f_SetAttribute(pBuildActionEntry, "buildForArchiving", "YES");
 						XMLFile.f_SetAttribute(pBuildActionEntry, "buildForAnalyzing", "YES");
 
-						fl_GenerateBuildReference(pBuildActionEntry, Project);
+						fGenerateBuildReference(pBuildActionEntry, Project);
 					}
 				}
 			}

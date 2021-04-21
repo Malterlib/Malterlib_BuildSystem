@@ -1,0 +1,42 @@
+Generate File Contents:
+"String1"
+true
+false
+true
+false
+true
+false
+0
+50
+-50
+0.0
+55.5
+-55.5
+Inf
+{
+	"$date": 1584875460000
+}
+{
+	"$binary": "VGVzdEJhc2U2NAo="
+}
+[
+	"Test1",
+	"Test2",
+	"Test3"
+]
+[
+	1,
+	2,
+	3
+]
+{
+	"TestString": "Test",
+	"TestInt": 5,
+	"TestArrayString": [
+		"Test"
+	],
+	"TestArrayInt": [
+		5
+	]
+}
+"5"

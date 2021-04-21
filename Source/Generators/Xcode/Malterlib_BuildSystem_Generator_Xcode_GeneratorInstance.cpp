@@ -2,6 +2,7 @@
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Generator_Xcode.h"
+#include "../../Malterlib_BuildSystem_Evaluate_BuiltinFunctions.h"
 #include <Mib/XML/XML>
 
 namespace NMib::NBuildSystem::NXcode
@@ -15,7 +16,7 @@ namespace NMib::NBuildSystem::NXcode
 		(
 			CBuildSystem const &_BuildSystem
 			, CBuildSystemData const &_BuildSystemData
-			, TCMap<CPropertyKey, CStr> const &_InitialValues
+			, TCMap<CPropertyKey, CEJSON> const &_InitialValues
 			, CStr const &_OutputDir
 		)
 		: m_BuildSystem(_BuildSystem)
@@ -27,24 +28,32 @@ namespace NMib::NBuildSystem::NXcode
 		m_BuildSystem.f_SetGeneratorInterface(this);
 		CEntityKey Key;
 		Key.m_Type = EEntityType_GeneratorSetting;
-		Key.m_Name = "Xcode";
-		CStr Generator = _InitialValues[CPropertyKey(EPropertyType_Property, "Generator")];
+		Key.m_Name.m_Value = "Xcode";
+		CStr Generator = _InitialValues[CPropertyKey(EPropertyType_Property, "Generator")].f_String();
 		m_XcodeVersion = Generator.f_Replace("Xcode", "").f_ToInt(uint32(4));
 		// DConOut("Generator: {} Version: {}" DNewLine, Generator << m_XcodeVersion);
 
 		auto pEntity = _BuildSystemData.m_RootEntity.m_ChildEntitiesMap.f_FindEqual(Key);
 		if (!pEntity)
 			m_BuildSystem.fs_ThrowError(CFilePosition(), "No Xcode generator settings found");
-		_BuildSystem.f_EvaluateData(m_GeneratorSettingsData, _InitialValues, pEntity, nullptr, nullptr, true, true);
+		_BuildSystem.f_EvaluateData(m_GeneratorSettingsData, _InitialValues, pEntity, true);
 
 		auto pSettings = m_GeneratorSettingsData.m_RootEntity.m_ChildEntitiesMap.f_FindEqual(Key);
 		if (!pSettings)
 			m_BuildSystem.fs_ThrowError(CFilePosition(), "No Xcode generator settings found");
 		m_pGeneratorSettings = fg_Explicit(pSettings);
 		_BuildSystem.f_EvaluateAllGeneratorSettings(*pSettings);
+
+		_BuildSystem.f_RegisterBuiltinVariables
+			(
+				{
+					{CPropertyKey("XcodeGeneratorDependencyFiles"), g_StringArray}
+				}
+			)
+		;
 	}
 
-	CStr CGeneratorInstance::f_GetExpandedPath(CStr const &_Path, CStr const& _Base) const
+	CStr CGeneratorInstance::f_GetExpandedPath(CStr const &_Path, CStr const &_Base) const
 	{
 		return CFile::fs_GetExpandedPath(_Path.f_Replace(m_RelativeBasePathAbsolute, m_BuildSystem.f_GetBaseDir()), _Base);
 	}

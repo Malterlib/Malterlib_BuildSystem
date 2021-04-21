@@ -1,0 +1,73 @@
+
+*Configuration
+{
+	Debug "Debug Config"
+	Release "Release Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
+
+Property
+{
+	TestString define string
+	TestBoolTRUE define bool
+	TestBoolFALSE define bool
+	TestBool1 define bool
+	TestBool0 define bool
+	TestBooltrue define bool
+	TestBoolfalse define bool
+	TestInt0 define int
+	TestInt50 define int
+	TestIntNeg50 define int
+	TestFloat0 define float
+	TestFloat55_5 define float
+	TestFloatNeg55_5 define float
+	TestFloatInf define float
+	TestDate define date
+	TestBinary define binary
+	TestArrayString define [string]
+	TestArrayInt define [int]
+	TestObject define {TestString: string, TestInt: int, TestArrayString: [string], TestArrayInt: [int]}
+	TestOneOf define one_of("Option1", 5)
+}
+
+%GenerateFile "TestFile"
+{
+	GenerateFile
+	{
+		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
+		Contents 	`Generate File Contents:\n`\
+					`@(TestString->EJSONToString()->Trim())\n`\
+					`@(TestBoolTRUE->EJSONToString()->Trim())\n`\
+					`@(TestBoolFALSE->EJSONToString()->Trim())\n`\
+					`@(TestBool1->EJSONToString()->Trim())\n`\
+					`@(TestBool0->EJSONToString()->Trim())\n`\
+					`@(TestBooltrue->EJSONToString()->Trim())\n`\
+					`@(TestBoolfalse->EJSONToString()->Trim())\n`\
+					`@(TestInt0->EJSONToString()->Trim())\n`\
+					`@(TestInt50->EJSONToString()->Trim())\n`\
+					`@(TestIntNeg50->EJSONToString()->Trim())\n`\
+					`@(TestFloat0->EJSONToString()->Trim())\n`\
+					`@(TestFloat55_5->EJSONToString()->Trim())\n`\
+					`@(TestFloatNeg55_5->EJSONToString()->Trim())\n`\
+					`@(TestFloatInf->EJSONToString()->Trim())\n`\
+					`@(TestDate->EJSONToString()->Trim())\n`\
+					`@(TestBinary->EJSONToString()->Trim())\n`\
+					`@(TestArrayString->EJSONToString()->Trim())\n`\
+					`@(TestArrayInt->EJSONToString()->Trim())\n`\
+					`@(TestObject->EJSONToString()->Trim())\n`\
+					`@(TestOneOf->EJSONToString()->Trim())\n`
+
+		Executable false
+		UnixLineEnds true
+		UnicodeBOM false
+	}
+}

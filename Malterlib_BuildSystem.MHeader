@@ -44,6 +44,10 @@ Import "../Core/Lib_Malterlib.MTarget"
 	{
 		Dependency.Indirect true
 	}
+	%Dependency "Lib_Malterlib_Perforce"
+	{
+		Dependency.Indirect true
+	}
 	%Group "EmbedCMake"
 	{
 		&
@@ -93,6 +97,17 @@ Property
 
 %Group "{Test}/{Malterlib_BuildSystem}"
 {
+	Property
+	{
+		MalterlibDoExeFS true
+		MalterlibExeFSExtraFiles "@('TestFiles'->MakeAbsolute())/^*|TestFiles;@(MalterlibExeFSExtraFiles)"
+	}
+
+	%Group "TestFiles"
+	{
+		Compile.Disabled true
+		%File "TestFiles/^*"
+	}
 }
 
 Property

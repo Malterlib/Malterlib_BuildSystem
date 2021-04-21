@@ -9,7 +9,7 @@ namespace NMib::NBuildSystem
 {
 	struct CFindOptions
 	{
-		CFindOptions(CStr const &_Path, EFileAttrib _Attribs = (EFileAttrib_File | EFileAttrib_Directory), bool _bRecursive = false, bool _bFollowLinks = true);
+		CFindOptions(NStr::CStr const &_Path, NFile::EFileAttrib _Attribs = (NFile::EFileAttrib_File | NFile::EFileAttrib_Directory), bool _bRecursive = false, bool _bFollowLinks = true);
 		
 		bool operator < (CFindOptions const &_Right) const;
 		
@@ -18,11 +18,11 @@ namespace NMib::NBuildSystem
 		template <typename tf_CStream>
 		void f_Consume(tf_CStream &_Stream);
 
-		CStr m_Path;
-		EFileAttrib m_Attribs;
+		NStr::CStr m_Path;
+		NFile::EFileAttrib m_Attribs;
 		uint8 m_bRecursive;
 		uint8 m_bFollowLinks;
-		TCSet<CStr> m_Exclude;
+		NContainer::TCSet<NStr::CStr> m_Exclude;
 		
 	private:
 		template <typename t_CKey2, typename t_CData2>
@@ -36,24 +36,24 @@ namespace NMib::NBuildSystem
 		CFindCache();
 		~CFindCache();
 		
-		TCMap<CFindOptions, TCVector<CFile::CFoundFile>> f_GetAllTagged() const;
-		TCVector<CFile::CFoundFile> const &f_FindFiles(CFindOptions const &_Options, bool _bTag) const;
-		void f_AddSourceFile(CStr const &_FileName) const;		
-		TCSet<CStr> f_GetSourceFiles() const;
+		NContainer::TCMap<CFindOptions, NContainer::TCVector<NFile::CFile::CFoundFile>> f_GetAllTagged() const;
+		NContainer::TCVector<NFile::CFile::CFoundFile> const &f_FindFiles(CFindOptions const &_Options, bool _bTag) const;
+		void f_AddSourceFile(NStr::CStr const &_FileName) const;		
+		NContainer::TCSet<NStr::CStr> f_GetSourceFiles() const;
 		
 	private:
 		struct CEntry
 		{
-			TCVector<CFile::CFoundFile> m_FoundFiles;
-			TCAtomic<bool> m_bTagged;
-			TCAtomic<bool> m_bFinished;
-			CMutual m_Lock;
+			NContainer::TCVector<NFile::CFile::CFoundFile> m_FoundFiles;
+			NAtomic::TCAtomic<bool> m_bTagged;
+			NAtomic::TCAtomic<bool> m_bFinished;
+			NThread::CMutual m_Lock;
 		};
 	private:
-		mutable align_cacheline CMutual mp_Lock;
-		mutable TCMap<CFindOptions, CEntry> mp_SourceSearches;
-		mutable align_cacheline CMutual mp_SourceFilesLock;
-		mutable TCSet<CStr> mp_SourceFiles;
+		mutable align_cacheline NThread::CMutual mp_Lock;
+		mutable NContainer::TCMap<CFindOptions, CEntry> mp_SourceSearches;
+		mutable align_cacheline NThread::CMutual mp_SourceFilesLock;
+		mutable NContainer::TCSet<NStr::CStr> mp_SourceFiles;
 	};
 }
 

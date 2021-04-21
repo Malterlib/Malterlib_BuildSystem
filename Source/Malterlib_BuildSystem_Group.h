@@ -9,7 +9,7 @@ namespace NMib::NBuildSystem
 	{
 		inline CGroupMember(bool _bIsGroup = false);
 		
-		DLinkDS_Link(CGroupMember, m_GroupMemberLink);
+		DMibListLinkDS_Link(CGroupMember, m_GroupMemberLink);
 		bool m_bIsGroup;
 	};
 	
@@ -17,16 +17,16 @@ namespace NMib::NBuildSystem
 	{
 		inline CGroupInfo();
 		
-		CStr const &f_GetPath() const;
-		CStr f_GetGroupPath() const;
+		NStr::CStr const &f_GetPath() const;
+		NStr::CStr f_GetGroupPath() const;
 		void fr_PruneEmpty();
 		
-		CStr m_Name;
-		TCPointer<CGroupInfo> m_pParent;
-		DLinkDS_List(CGroupMember, m_GroupMemberLink) m_Children;
+		NStr::CStr m_Name;
+		NStorage::TCPointer<CGroupInfo> m_pParent;
+		DMibListLinkDS_List(CGroupMember, m_GroupMemberLink) m_Children;
 		
 	private:
-		CStr mp_GUID;
+		NStr::CStr mp_GUID;
 	};
 }
 

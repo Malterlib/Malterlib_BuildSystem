@@ -34,11 +34,12 @@ namespace NMib::NBuildSystem
 	{
 		bool operator == (CGenerateSettings const &_Right) const;
 
-		CStr m_SourceFile;
-		CStr m_OutputDir;
-		CStr m_Generator;
-		CStr m_Workspace;
-		CStr m_Action = "Build";
+		NStr::CStr m_SourceFile;
+		NStr::CStr m_OutputDir;
+		NStr::CStr m_Generator;
+		NStr::CStr m_Workspace;
+		NStr::CStr m_Action = "Build";
+		NContainer::TCMap<NStr::CStr, NStr::CStr> m_Environment = fg_GetSys()->f_Environment();
 		EGenerationFlag m_GenerationFlags = EGenerationFlag_None;
 	};
 
@@ -47,8 +48,8 @@ namespace NMib::NBuildSystem
 		void f_ParseReconcileActions(NEncoding::CEJSON const &_Params);
 
 		CGenerateSettings m_Settings;
-		TCMap<CStr, EHandleRepositoryAction> m_ReconcileActions;
-		TCMap<CStr, EHandleRepositoryRemovedAction> m_ReconcileRemovedActions;
+		NContainer::TCMap<NStr::CStr, EHandleRepositoryAction> m_ReconcileActions;
+		NContainer::TCMap<NStr::CStr, EHandleRepositoryRemovedAction> m_ReconcileRemovedActions;
 		uint32 m_GitFetchTimeout = 5;
 		bool m_bReconcileForce = false;
 		bool m_bReconcileNoOptions = false;

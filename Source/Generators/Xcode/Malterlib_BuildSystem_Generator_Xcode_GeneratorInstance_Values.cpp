@@ -8,8 +8,8 @@ namespace NMib::NBuildSystem::NXcode
 {
 	void CGeneratorInstance::fp_SetEvaluatedValues
 		(
-			TCMap<CConfiguration, CEntityPointer> const &_Configs
-			, TCMap<CConfiguration, CEntityPointer> const &_AllConfigs
+			TCMap<CConfiguration, CEntityMutablePointer> const &_Configs
+			, TCMap<CConfiguration, CEntityMutablePointer> const &_AllConfigs
 			, bool _bFile
 			, EPropertyType _PropertyType
 			, TCVector<CStr> const *_pSearchList
@@ -22,12 +22,9 @@ namespace NMib::NBuildSystem::NXcode
 	{
 		struct CPropretyEval
 		{
-			TCMap<CConfiguration, CEntity const *> m_Configs;
+			TCMap<CConfiguration, CEntity *> m_Configs;
 			CFilePosition m_Position;
 		};
-		CPropertyKey FullEvalKey;
-		FullEvalKey.m_Type = _PropertyType;
-		FullEvalKey.m_Name = "FullEval";
 		TCMap<CPropertyKey, CPropretyEval> Properties;
 		for (auto iConfig = _Configs.f_GetIterator(); iConfig; ++iConfig)
 		{
@@ -37,14 +34,13 @@ namespace NMib::NBuildSystem::NXcode
 			bool bFullFileSettings = false;
 			if (_bFile)
 			{
-				auto *pConfig = iConfig->f_Get();
+				auto *pConfig = pTopConfig;
 				while (pConfig)
 				{
-					if (pConfig->m_PotentialExplicitProperties.f_FindEqual(FullEvalKey))
+					if (pConfig->f_HasFullEval(_PropertyType))
 					{
 						CProperty const *pFromProperty = nullptr;
-						CStr Value = m_BuildSystem.f_EvaluateEntityProperty(*pTopConfig, _PropertyType, FullEvalKey.m_Name, pFromProperty);
-						bFullFileSettings = Value == "true";
+						bFullFileSettings = m_BuildSystem.f_EvaluateEntityPropertyBool(*pTopConfig, _PropertyType, "FullEval", pFromProperty, false);
 						break;
 					}
 
@@ -54,35 +50,48 @@ namespace NMib::NBuildSystem::NXcode
 
 			while (pConfig)
 			{
+				auto &Key = pConfig->f_GetKey();
 				if (_bFile && !bBelowFileLevel)
 				{
 					if
 						(
-							pConfig->m_Key.m_Type != EEntityType_Group
-							&& pConfig->m_Key.m_Type != EEntityType_GenerateFile
-							&& pConfig->m_Key.m_Type != EEntityType_File
+							Key.m_Type != EEntityType_Group
+							&& Key.m_Type != EEntityType_GenerateFile
+							&& Key.m_Type != EEntityType_File
 						)
 					{
 						bBelowFileLevel = true;
 					}
 				}
-				auto iProperty = pConfig->m_PotentialExplicitProperties.f_GetIterator();
-				if (bBelowFileLevel && !bFullFileSettings)
-					iProperty = pConfig->m_PerFilePotentialExplicitProperties.f_GetIterator();
 
-				for (; iProperty; ++iProperty)
+				bool bUseExplitPerFile = bBelowFileLevel && !bFullFileSettings;
+
+				for (auto iProperty = pConfig->f_Data().m_Properties.f_GetIterator(); iProperty; ++iProperty)
 				{
+					auto &SourceProperties = *iProperty;
 					auto Type = iProperty.f_GetKey().m_Type;
 
 					if (Type != _PropertyType)
 						continue;
 
+					if (bUseExplitPerFile)
+					{
+						bool bNeedPerFile = false;
+						for (auto &Property : SourceProperties)
+						{
+							if (Property.m_bNeedPerFile)
+								bNeedPerFile = true;
+						}
+						if (!bNeedPerFile)
+							continue;
+					}
+
 					if (bBelowFileLevel)
 					{
 						bool bFoundProperty = false;
-						for (auto iSource = iProperty->f_GetIterator(); iSource; ++iSource)
+						for (auto &Property : SourceProperties)
 						{
-							if (m_BuildSystem.f_EvalCondition(*pTopConfig, (*iSource)->m_Condition))
+							if (m_BuildSystem.f_EvalCondition(*pTopConfig, Property.m_Condition, Property.m_Debug.f_Find("TraceCondition") >= 0))
 							{
 								bFoundProperty = true;
 								break;
@@ -93,20 +102,53 @@ namespace NMib::NBuildSystem::NXcode
 					}
 
 					CProperty const *pFromProperty = nullptr;
-					m_BuildSystem.f_EvaluateEntityProperty(*pTopConfig, _PropertyType, iProperty.f_GetKey().m_Name, pFromProperty);
+					auto Value = m_BuildSystem.f_EvaluateEntityProperty(*pTopConfig, _PropertyType, iProperty.f_GetKey().m_Name, pFromProperty);
 
-					if (pFromProperty == nullptr)
+					if (pFromProperty == nullptr || !Value.f_IsValid())
 						continue; // This means that the property is not valid at the top level
 
 					auto &Eval = Properties[iProperty.f_GetKey()];
 					auto MapConfig = Eval.m_Configs(iConfig.f_GetKey());
 					if (MapConfig.f_WasCreated())
 					{
-						if (!iProperty->f_IsEmpty())
-							Eval.m_Position = ((*iProperty)[0])->m_Position;
-						MapConfig.f_GetResult() = iConfig->f_Get();
+						if (!SourceProperties.f_IsEmpty())
+							Eval.m_Position = SourceProperties.f_GetFirst().m_Position;
+						MapConfig.f_GetResult() = pTopConfig;
 					}
 				}
+
+				for (auto &VariableDefinition : pConfig->f_Data().m_VariableDefinitions)
+				{
+					auto &Key = pConfig->f_Data().m_VariableDefinitions.fs_GetKey(VariableDefinition);
+					if (Key.m_Type != _PropertyType)
+						continue;
+
+					auto TypePosition = VariableDefinition.m_Type.m_Position;
+					CBuildSystemSyntax::CType const *pType = m_BuildSystem.f_GetCanonicalDefaultedType(*pConfig, &VariableDefinition.m_Type.m_Type, TypePosition);
+
+					if (!pType->f_IsDefaulted())
+						continue;
+
+					if (!m_BuildSystem.f_EvalCondition(*pTopConfig, *VariableDefinition.m_pConditions, false))
+						continue;
+
+					CProperty const *pFromProperty = nullptr;
+					auto Value = m_BuildSystem.f_EvaluateEntityProperty(*pTopConfig, _PropertyType, Key.m_Name, pFromProperty);
+
+					if (!Value.f_IsValid())
+						continue;
+
+					auto &Eval = Properties[Key];
+					auto MapConfig = Eval.m_Configs(iConfig.f_GetKey());
+					if (MapConfig.f_WasCreated())
+					{
+						Eval.m_Position = VariableDefinition.m_Type.m_Position;
+						MapConfig.f_GetResult() = pTopConfig;
+					}
+					else if (!Eval.m_Position.f_IsValid())
+						Eval.m_Position = VariableDefinition.m_Type.m_Position;
+				}
+
 				pConfig = pConfig->m_pParent;
 			}
 		}
@@ -129,7 +171,14 @@ namespace NMib::NBuildSystem::NXcode
 		}
 	}
 
-	auto CGeneratorInstance::fp_GetConfigValues(TCMap<CConfiguration, CEntityPointer> const &_Configs, EPropertyType _PropType, CStr const &_Property) const
+	auto CGeneratorInstance::fp_GetConfigValues
+		(
+			TCMap<CConfiguration, CEntityMutablePointer> const &_Configs
+			, EPropertyType _PropType
+			, CStr const &_Property
+			, EEJSONType _ExpectedType
+			, bool _bOptional
+		) const
 		-> TCMap<CConfiguration, CSingleValue>
 	{
 		TCMap<CConfiguration, CSingleValue> RetValues;
@@ -138,13 +187,14 @@ namespace NMib::NBuildSystem::NXcode
 		{
 			auto &Ret = RetValues[iConfig.f_GetKey()];
 			CProperty const *pFromProperty = nullptr;
-			CStr Value = m_BuildSystem.f_EvaluateEntityProperty(**iConfig, _PropType, _Property, pFromProperty);
 
-			Ret.m_Value = Value;
+			Ret.m_Value = m_BuildSystem.f_EvaluateEntityProperty(**iConfig, _PropType, _Property, pFromProperty);
 			if (pFromProperty)
 				Ret.m_Position = pFromProperty->m_Position;
 			else
-				Ret.m_Position = (*iConfig)->m_Position;
+				Ret.m_Position = (*iConfig)->f_Data().m_Position;
+
+			m_BuildSystem.f_CheckPropertyTypeValue(_PropType, _Property, Ret.m_Value, _ExpectedType, Ret.m_Position, _bOptional);
 		}
 
 		return RetValues;
@@ -152,10 +202,12 @@ namespace NMib::NBuildSystem::NXcode
 
 	auto CGeneratorInstance::fp_GetConfigValue
 		(
-		 	TCMap<CConfiguration, CEntityPointer> const &_Configs
+		 	TCMap<CConfiguration, CEntityMutablePointer> const &_Configs
 		 	, CConfiguration const &_Configuration
 		 	, EPropertyType _PropType
 		 	, CStr const &_Property
+			, EEJSONType _ExpectedType
+			, bool _bOptional
 		) const
 	 	-> CSingleValue
 	{
@@ -165,22 +217,25 @@ namespace NMib::NBuildSystem::NXcode
 			DMibError("Could not find config in enabled configs");
 
 		CProperty const *pFromProperty = nullptr;
-		CStr Value = m_BuildSystem.f_EvaluateEntityProperty(**pEntity, _PropType, _Property, pFromProperty);
 
-		Ret.m_Value = Value;
+		Ret.m_Value = m_BuildSystem.f_EvaluateEntityProperty(**pEntity, _PropType, _Property, pFromProperty);
 		if (pFromProperty)
 			Ret.m_Position = pFromProperty->m_Position;
 		else
-			Ret.m_Position = (*pEntity)->m_Position;
+			Ret.m_Position = (*pEntity)->f_Data().m_Position;
+
+		m_BuildSystem.f_CheckPropertyTypeValue(_PropType, _Property, Ret.m_Value, _ExpectedType, Ret.m_Position, _bOptional);
 
 		return Ret;
 	}
 
 	CGeneratorInstance::CSingleValue CGeneratorInstance::fp_GetSingleConfigValue
 		(
-			TCMap<CConfiguration, CEntityPointer> const &_Configs
+			TCMap<CConfiguration, CEntityMutablePointer> const &_Configs
 			, EPropertyType _PropType
 			, CStr const &_Property
+			, EEJSONType _ExpectedType
+			, bool _bOptional
 		) const
 	{
 		bool bFirst = true;
@@ -191,7 +246,9 @@ namespace NMib::NBuildSystem::NXcode
 		for (auto iConfig = _Configs.f_GetIterator(); iConfig; ++iConfig)
 		{
 			CProperty const *pFromProperty = nullptr;
-			CStr Value = m_BuildSystem.f_EvaluateEntityProperty(**iConfig, _PropType, _Property, pFromProperty);
+			CEJSON Value = m_BuildSystem.f_EvaluateEntityProperty(**iConfig, _PropType, _Property, pFromProperty);
+
+			m_BuildSystem.f_CheckPropertyTypeValue(_PropType, _Property, Value, _ExpectedType, pFromProperty ? pFromProperty->m_Position : (*iConfig)->f_Data().m_Position, _bOptional);
 
 			if (bFirst)
 			{
@@ -200,7 +257,7 @@ namespace NMib::NBuildSystem::NXcode
 				if (pFromProperty)
 					Ret.m_Position = pFromProperty->m_Position;
 				else
-					Ret.m_Position = (*iConfig)->m_Position;
+					Ret.m_Position = (*iConfig)->f_Data().m_Position;
 				pFromConfig = &iConfig.f_GetKey();
 			}
 			else
@@ -211,7 +268,7 @@ namespace NMib::NBuildSystem::NXcode
 					if (pFromProperty)
 						Position = pFromProperty->m_Position;
 					else
-						Position = (*iConfig)->m_Position;
+						Position = (*iConfig)->f_Data().m_Position;
 					TCVector<CBuildSystemError> OtherErrors;
 					CBuildSystemError &Error = OtherErrors.f_Insert();
 					Error.m_Position = Ret.m_Position;
@@ -226,8 +283,8 @@ namespace NMib::NBuildSystem::NXcode
 
 	void CGeneratorInstance::fp_GetConfigValue
 		(
-			TCMap<CConfiguration, CEntityPointer> const &_Configs
-			, TCMap<CConfiguration, CEntityPointer> const &_AllConfigs
+			TCMap<CConfiguration, CEntityMutablePointer> const &_Configs
+			, TCMap<CConfiguration, CEntityMutablePointer> const &_AllConfigs
 			, CFilePosition const &_Position
 			, EPropertyType _PropType
 			, CStr const &_SourceType
@@ -241,12 +298,12 @@ namespace NMib::NBuildSystem::NXcode
 		) const
 	{
 		auto Position = _Position;
-		if (Position.m_FileName.f_IsEmpty())
-			Position = m_pGeneratorSettings->m_Position;
+		if (Position.m_File.f_IsEmpty())
+			Position = m_pGeneratorSettings->f_Data().m_Position;
 
 		CValueProperties SingleProperties;
 
-		auto fl_GetValueProperties
+		auto fGetValueProperties
 			= [&](CConfiguration const &_Configuration) -> CValueProperties
 			{
 				CEntityKey Key;
@@ -262,7 +319,7 @@ namespace NMib::NBuildSystem::NXcode
 				{
 					for (auto iSearch = pSearchList->f_GetIterator(); iSearch; ++iSearch)
 					{
-						Key.m_Name = *iSearch;
+						Key.m_Name.m_Value = *iSearch;
 						pSettings = m_pGeneratorSettings->m_ChildEntitiesMap.f_FindEqual(Key);
 						if (!pSettings)
 							continue;
@@ -270,18 +327,18 @@ namespace NMib::NBuildSystem::NXcode
 						CPropertyKey PropertyKey;
 						PropertyKey.m_Type = EPropertyType_Property;
 						PropertyKey.m_Name = "Disabled";
-						if (pSettings->m_EvaluatedProperties.f_FindEqual(PropertyKey))
+						if (pSettings->m_EvaluatedProperties.m_Properties.f_FindEqual(PropertyKey))
 						{
 							bDisabled = true;
 							break;
 						}
 
-						Key.m_Name = fg_PropertyTypeToStr(_PropType);
+						Key.m_Name.m_Value = fg_PropertyTypeToStr(_PropType);
 						pSettings = pSettings->m_ChildEntitiesMap.f_FindEqual(Key);
 						if (!pSettings)
 							continue;
 
-						Key.m_Name = _SourceType;
+						Key.m_Name.m_Value = _SourceType;
 						pSettings = pSettings->m_ChildEntitiesMap.f_FindEqual(Key);
 						if (!pSettings)
 							continue;
@@ -315,73 +372,78 @@ namespace NMib::NBuildSystem::NXcode
 				CPropertyKey PropertyKey;
 				PropertyKey.m_Type = EPropertyType_Property;
 				PropertyKey.m_Name = "Disabled";
-				if (pSettings->m_EvaluatedProperties.f_FindEqual(PropertyKey))
+				if (pSettings->m_EvaluatedProperties.m_Properties.f_FindEqual(PropertyKey))
 					Ret.m_bDisabled = true;
 
 				PropertyKey.m_Type = EPropertyType_Property;
 				PropertyKey.m_Name = "Name";
-				Ret.m_pTranslatedPropertyName = pSettings->m_EvaluatedProperties.f_FindEqual(PropertyKey);
+				Ret.m_pTranslatedPropertyName = pSettings->m_EvaluatedProperties.m_Properties.f_FindEqual(PropertyKey);
 
 				PropertyKey.m_Type = EPropertyType_Property;
 				PropertyKey.m_Name = "Substitute";
-				auto pSubstitute = pSettings->m_EvaluatedProperties.f_FindEqual(PropertyKey);
+				auto pSubstitute = pSettings->m_EvaluatedProperties.m_Properties.f_FindEqual(PropertyKey);
 				if (pSubstitute)
-					Ret.m_Substitute = pSubstitute->m_Value;
+					Ret.m_Substitute = pSubstitute->m_Value.f_String();
 
 				PropertyKey.m_Type = EPropertyType_Property;
 				PropertyKey.m_Name = "ConvertSeperator";
-				if (pSettings->m_EvaluatedProperties.f_FindEqual(PropertyKey))
+				if (pSettings->m_EvaluatedProperties.m_Properties.f_FindEqual(PropertyKey))
 					Ret.m_bConvertSeperator = true;
 
 				PropertyKey.m_Type = EPropertyType_Property;
+				PropertyKey.m_Name = "DisableValueSet";
+				if (pSettings->m_EvaluatedProperties.m_Properties.f_FindEqual(PropertyKey))
+					Ret.m_bDisableValueSet = true;
+
+				PropertyKey.m_Type = EPropertyType_Property;
 				PropertyKey.m_Name = "IgnoreEmpty";
-				if (pSettings->m_EvaluatedProperties.f_FindEqual(PropertyKey))
+				if (pSettings->m_EvaluatedProperties.m_Properties.f_FindEqual(PropertyKey))
 					Ret.m_bIgnoreEmtpy = true;
 
 				PropertyKey.m_Type = EPropertyType_Property;
 				PropertyKey.m_Name = "RemoveLastSlash";
-				if (pSettings->m_EvaluatedProperties.f_FindEqual(PropertyKey))
+				if (pSettings->m_EvaluatedProperties.m_Properties.f_FindEqual(PropertyKey))
 					Ret.m_bRemoveLastSlash = true;
 
 				PropertyKey.m_Type = EPropertyType_Property;
 				PropertyKey.m_Name = "Prefix";
-				auto pPrefix = pSettings->m_EvaluatedProperties.f_FindEqual(PropertyKey);
+				auto pPrefix = pSettings->m_EvaluatedProperties.m_Properties.f_FindEqual(PropertyKey);
 				if (pPrefix)
-					Ret.m_Prefix = pPrefix->m_Value;
+					Ret.m_Prefix = pPrefix->m_Value.f_String();
 
 				PropertyKey.m_Type = EPropertyType_Property;
 				PropertyKey.m_Name = "QuoteSeperatedValues";
-				if (pSettings->m_EvaluatedProperties.f_FindEqual(PropertyKey))
+				if (pSettings->m_EvaluatedProperties.m_Properties.f_FindEqual(PropertyKey))
 					Ret.m_bQuoteSeperatedValues = true;
 
 				PropertyKey.m_Type = EPropertyType_Property;
 				PropertyKey.m_Name = "QuoteAfterEquals";
-				if (pSettings->m_EvaluatedProperties.f_FindEqual(PropertyKey))
+				if (pSettings->m_EvaluatedProperties.m_Properties.f_FindEqual(PropertyKey))
 					Ret.m_bQuoteAfterEquals = true;
 
 				PropertyKey.m_Type = EPropertyType_Property;
 				PropertyKey.m_Name = "Seperator";
-				auto pSeperator = pSettings->m_EvaluatedProperties.f_FindEqual(PropertyKey);
+				auto pSeperator = pSettings->m_EvaluatedProperties.m_Properties.f_FindEqual(PropertyKey);
 				if (pSeperator)
-					Ret.m_Seperator = pSeperator->m_Value;
+					Ret.m_Seperator = pSeperator->m_Value.f_String();
 
 				PropertyKey.m_Type = EPropertyType_Property;
 				PropertyKey.m_Name = "OldSeperator";
-				auto pOldSeperator = pSettings->m_EvaluatedProperties.f_FindEqual(PropertyKey);
+				auto pOldSeperator = pSettings->m_EvaluatedProperties.m_Properties.f_FindEqual(PropertyKey);
 				if (pOldSeperator)
-					Ret.m_OldSeperator = pOldSeperator->m_Value;
+					Ret.m_OldSeperator = pOldSeperator->m_Value.f_String();
 
-				Key.m_Name = "Value";
+				Key.m_Name.m_Value = "Value";
 				auto pTranslators = pSettings->m_ChildEntitiesMap.f_FindEqual(Key);
 				if (pTranslators)
 					Ret.m_pTranslators = fg_Explicit(pTranslators);
 
-				Key.m_Name = "ValueSet";
+				Key.m_Name.m_Value = "ValueSet";
 				auto pValueSet = pSettings->m_ChildEntitiesMap.f_FindEqual(Key);
 				if (pValueSet)
 					Ret.m_pValueSet = fg_Explicit(pValueSet);
 
-				Key.m_Name = "Properties";
+				Key.m_Name.m_Value = "Properties";
 				auto pProperties = pSettings->m_ChildEntitiesMap.f_FindEqual(Key);
 				if (pProperties)
 					Ret.m_pProperties = fg_Explicit(pProperties);
@@ -392,16 +454,51 @@ namespace NMib::NBuildSystem::NXcode
 
 		if (_pSearchList)
 		{
-			SingleProperties = fl_GetValueProperties(CConfiguration());
+			SingleProperties = fGetValueProperties(CConfiguration());
 			if (!_bFile && SingleProperties.m_bDisabled)
 				return;
 		}
 
 		TCMap<TCSet<CConfigValue>, CValueConfigs> ConfigOptions;
-		auto fl_AddConfig
-			= [&](CConfiguration const &_Config, CEntity const &_Entity)
+		auto fAddConfig
+			= [&](CConfiguration const &_Config, CEntity &_Entity)
 			{
-				CStr Value = m_BuildSystem.f_EvaluateEntityProperty(_Entity, _PropType, _SourceType);
+				CStr Value;
+
+				{
+					CProperty const *pFromProperty = nullptr;
+					auto BuildSystemValue = m_BuildSystem.f_EvaluateEntityProperty(_Entity, _PropType, _SourceType, pFromProperty);
+
+					if (BuildSystemValue.f_IsValid())
+					{
+						if (BuildSystemValue.f_IsString())
+							Value = fg_Move(BuildSystemValue.f_String());
+						else if (BuildSystemValue.f_IsStringArray())
+							Value = CStr::fs_Join(BuildSystemValue.f_StringArray(), ";");
+						else if (BuildSystemValue.f_IsBoolean())
+							Value = BuildSystemValue.f_AsString();
+						else if (BuildSystemValue.f_IsInteger())
+							Value = BuildSystemValue.f_AsString();
+						else if (BuildSystemValue.f_IsFloat())
+							Value = BuildSystemValue.f_AsString();
+						else if (BuildSystemValue.f_IsArray())
+						{
+							TCVector<CStr> Values;
+
+							for (auto &Value : BuildSystemValue.f_Array())
+							{
+								if (Value.f_IsArray())
+									Values.f_Insert(Value.f_StringArray());
+								else
+									Values.f_Insert(Value.f_String());
+							}
+
+							Value = CStr::fs_Join(Values, ";");
+						}
+						else
+							m_BuildSystem.fs_ThrowError(pFromProperty ? pFromProperty->m_Position : _Entity.f_Data().m_Position, "Expected a string or string array value");
+					}
+				}
 
 				CConfigValue ConfigValue;
 				CValueProperties PropertiesValue;
@@ -409,7 +506,7 @@ namespace NMib::NBuildSystem::NXcode
 				if (_pSearchList)
 					PropertiesValue = SingleProperties;
 				else
-					PropertiesValue = fl_GetValueProperties(_Config);
+					PropertiesValue = fGetValueProperties(_Config);
 
 				if (PropertiesValue.m_bDisabled && !_bFile)
 					return;
@@ -418,7 +515,7 @@ namespace NMib::NBuildSystem::NXcode
 
 				if (PropertiesValue.m_pTranslatedPropertyName)
 				{
-					ConfigValue.m_Property = PropertiesValue.m_pTranslatedPropertyName->m_Value;
+					ConfigValue.m_Property = PropertiesValue.m_pTranslatedPropertyName->m_Value.f_String();
 					ConfigValue.m_bXcodeProperty = true;
 				}
 				else
@@ -431,11 +528,11 @@ namespace NMib::NBuildSystem::NXcode
 					CPropertyKey PropertyKey;
 					PropertyKey.m_Type = EPropertyType_Property;
 					PropertyKey.m_Name = Value;
-					auto pVSProperty = PropertiesValue.m_pTranslators->m_EvaluatedProperties.f_FindEqual(PropertyKey);
+					auto pVSProperty = PropertiesValue.m_pTranslators->m_EvaluatedProperties.m_Properties.f_FindEqual(PropertyKey);
 
 					if (!pVSProperty)
 						m_BuildSystem.fs_ThrowError(Position, CStr::CFormat("No translated property found for value {}") << Value);
-					ConfigValue.m_Value = pVSProperty->m_Value;
+					ConfigValue.m_Value = pVSProperty->m_Value.f_String();
 				}
 
 				if (PropertiesValue.m_bRemoveLastSlash)
@@ -462,7 +559,7 @@ namespace NMib::NBuildSystem::NXcode
 					PropertiesValue.m_OldSeperator != "" &&
 					PropertiesValue.m_Seperator != "")
 				{
-					if (PropertiesValue.m_Seperator == " ")
+					if (PropertiesValue.m_Seperator == " " && !PropertiesValue.m_bDisableValueSet)
 					{
 						ConfigValue.m_bUseValues = true;
 						while(!ConfigValue.m_Value.f_IsEmpty())
@@ -537,12 +634,12 @@ namespace NMib::NBuildSystem::NXcode
 								}
 								else
 									ExtraConfigValue.m_bMainValue = false;
-								ExtraConfigValue.m_Parent = iParent->m_Key.m_Name;
-								ExtraConfigValue.m_Entity = iEntity->m_Key.m_Name;
+								ExtraConfigValue.m_Parent = iParent->f_GetKeyName();
+								ExtraConfigValue.m_Entity = iEntity->f_GetKeyName();
 								ExtraConfigValue.m_bXcodeProperty = ConfigValue.m_bXcodeProperty;
 								if (ExtraConfigValue.m_Entity.f_IsEmpty())
 									ExtraConfigValue.m_Entity = _DefaultEntity;
-								ExtraConfigValue.m_Property = iProperty->m_Key.m_Name;
+								ExtraConfigValue.m_Property = iProperty->f_GetKeyName();
 								ExtraConfigValue.m_Value = OriginalValue;
 								ConfigValues[ExtraConfigValue];
 							}
@@ -553,7 +650,7 @@ namespace NMib::NBuildSystem::NXcode
 				{
 					CEntityKey Key;
 					Key.m_Type = EEntityType_GeneratorSetting;
-					Key.m_Name = Value;
+					Key.m_Name.m_Value = Value;
 					auto pToSet = PropertiesValue.m_pValueSet->m_ChildEntitiesMap.f_FindEqual(Key);
 					if (pToSet)
 					{
@@ -561,7 +658,7 @@ namespace NMib::NBuildSystem::NXcode
 						{
 							for (auto iEntity = iParent->m_ChildEntitiesOrdered.f_GetIterator(); iEntity; ++iEntity)
 							{
-								for (auto iProperty = iEntity->m_EvaluatedProperties.f_GetIterator(); iProperty; ++iProperty)
+								for (auto iProperty = iEntity->m_EvaluatedProperties.m_Properties.f_GetIterator(); iProperty; ++iProperty)
 								{
 									CConfigValue ExtraConfigValue;
 									if (!ConfigValue.m_bMainValue)
@@ -571,13 +668,13 @@ namespace NMib::NBuildSystem::NXcode
 									}
 									else
 										ExtraConfigValue.m_bMainValue = false;
-									ExtraConfigValue.m_Parent = iParent->m_Key.m_Name;
-									ExtraConfigValue.m_Entity = iEntity->m_Key.m_Name;
+									ExtraConfigValue.m_Parent = iParent->f_GetKeyName();
+									ExtraConfigValue.m_Entity = iEntity->f_GetKeyName();
 									ExtraConfigValue.m_bXcodeProperty = ConfigValue.m_bXcodeProperty;
 									if (ExtraConfigValue.m_Entity.f_IsEmpty())
 										ExtraConfigValue.m_Entity = _DefaultEntity;
 									ExtraConfigValue.m_Property = iProperty.f_GetKey().m_Name;
-									ExtraConfigValue.m_Value = iProperty->m_Value;
+									ExtraConfigValue.m_Value = iProperty->m_Value.f_String();
 									ConfigValues[ExtraConfigValue];
 								}
 							}
@@ -598,12 +695,12 @@ namespace NMib::NBuildSystem::NXcode
 		;
 
 		for (auto iConfig = _Configs.f_GetIterator(); iConfig; ++iConfig)
-			fl_AddConfig(iConfig.f_GetKey(), **iConfig);
+			fAddConfig(iConfig.f_GetKey(), **iConfig);
 
 		if (ConfigOptions.f_IsEmpty())
 			return;
 
-		auto fl_AddValue
+		auto fAddValue
 			= [&](CConfigValue const &_Value, CStr const &_Condition, CValueConfigs const &_ValueConfigs) -> CElement
 			{
 				CElement Element;
@@ -633,7 +730,7 @@ namespace NMib::NBuildSystem::NXcode
 		{
 			for (auto iRealValue = ConfigOptions.f_GetIterator().f_GetKey().f_GetIterator(); iRealValue; ++iRealValue)
 			{
-				auto Element = fl_AddValue(*iRealValue, _ExtraCondition, *ConfigOptions.f_GetIterator());
+				auto Element = fAddValue(*iRealValue, _ExtraCondition, *ConfigOptions.f_GetIterator());
 				auto &Configs = *ConfigOptions.f_GetIterator();
 				for (auto iConfig = Configs.m_Configurations.f_GetIterator(); iConfig; ++iConfig)
 				{
@@ -654,7 +751,7 @@ namespace NMib::NBuildSystem::NXcode
 			{
 				for (auto iRealValue = iValue.f_GetKey().f_GetIterator(); iRealValue; ++iRealValue)
 				{
-					auto Element = fl_AddValue(*iRealValue, _ExtraCondition, *iValue);
+					auto Element = fAddValue(*iRealValue, _ExtraCondition, *iValue);
 
 					for (auto iConfig = iValue->m_Configurations.f_GetIterator(); iConfig; ++iConfig)
 					{

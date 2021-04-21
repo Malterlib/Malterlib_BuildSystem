@@ -46,7 +46,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		CStr f_GetGroupPath() const;
 
 		TCPointer<CGroup> m_pGroup;
-		TCMap<CConfiguration, CEntityPointer> m_EnabledConfigs;
+		TCMap<CConfiguration, CEntityMutablePointer> m_EnabledConfigs;
 		CFilePosition m_Position;
 		CStr m_VSType;
 		CStr m_VSFile;
@@ -57,7 +57,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 	{
 		CStr const &f_GetName() const;
 
-		TCMap<CConfiguration, CEntityPointer> m_EnabledConfigs;
+		TCMap<CConfiguration, CEntityMutablePointer> m_EnabledConfigs;
 		CFilePosition m_Position;
 		CStr m_VSFile;
 	};
@@ -83,8 +83,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 		CSolution *m_pSolution;
 
 		TCPointer<CGroup> m_pGroup;
-		TCMap<CConfiguration, CEntityPointer> m_EnabledProjectConfigs;
-		TCMap<CConfiguration, CEntityPointer> m_EnabledConfigs;
+		TCMap<CConfiguration, CEntityMutablePointer> m_EnabledProjectConfigs;
+		TCMap<CConfiguration, CEntityMutablePointer> m_EnabledConfigs;
 		CFilePosition m_Position;
 		CFilePosition m_ProjectPosition;
 		CStr m_FileName;
@@ -167,6 +167,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			EPropertyValidity m_Validity;
 
 			CStr m_Substitute;
+			CStr m_Separator;
 		};
 
 		struct CConfigValue
@@ -220,13 +221,13 @@ namespace NMib::NBuildSystem::NVisualStudio
 			(
 				CBuildSystem const &_BuildSystem
 				, CBuildSystemData const &_BuildSystemData
-				, TCMap<CPropertyKey, CStr> const &_InitialValues
+				, TCMap<CPropertyKey, CEJSON> const &_InitialValues
 				, CStr const &_OutputDir
 			)
 		;
 		~CGeneratorInstance();
 		virtual bool f_GetBuiltin(CStr const &_Value, CStr &_Result) const override;
-		virtual CStr f_GetExpandedPath(CStr const &_Path, CStr const& _Base) const override;
+		virtual CStr f_GetExpandedPath(CStr const &_Path, CStr const &_Base) const override;
 		virtual CSystemEnvironment f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const override;
 
 		CStr f_GetToolsVersion() const;
@@ -235,8 +236,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 		void f_SetEvaluatedValues
 			(
 				TCMap<CStr, CXMLElement *> const &_Parents
-				, TCMap<CConfiguration, CEntityPointer> const &_Configs
-				, TCMap<CConfiguration, CEntityPointer> const &_AllConfigs
+				, TCMap<CConfiguration, CEntityMutablePointer> const &_Configs
+				, TCMap<CConfiguration, CEntityMutablePointer> const &_AllConfigs
 				, bool _bFile
 				, EPropertyType _PropertyType
 				, TCVector<CStr> const *_pSearchList
@@ -251,8 +252,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 		TCMap<CConfiguration, CConfigResult> f_AddConfigValue
 			(
-				TCMap<CConfiguration, CEntityPointer> const &_Configs
-				, TCMap<CConfiguration, CEntityPointer> const &_AllConfigs
+				TCMap<CConfiguration, CEntityMutablePointer> const &_Configs
+				, TCMap<CConfiguration, CEntityMutablePointer> const &_AllConfigs
 				, CFilePosition const &_Position
 				, EPropertyType _PropType
 				, CStr const &_SourceType

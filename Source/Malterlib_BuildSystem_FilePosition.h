@@ -4,18 +4,18 @@
 #pragma once
 
 #include <Mib/Core/Core>
-#include <Mib/Container/Registry>
+#include <Mib/BuildSystem/Registry>
 
 namespace NMib::NBuildSystem
 {
-	struct CFilePosition
+	struct CFilePosition : public NStr::CParseLocation
 	{
-		inline CFilePosition(CRegistryPreserveAll const &_Position);
+		inline CFilePosition(CBuildSystemRegistry const &_Position);
+		inline CFilePosition(NStr::CParseLocation const &_Position);
 		inline CFilePosition();
-		inline CFilePosition &operator = (CRegistryPreserveAll const &_Position);
-
-		CStr m_FileName;
-		int32 m_Line;
+		inline CFilePosition &operator = (CBuildSystemRegistry const &_Position);
+		inline CFilePosition &operator = (NStr::CParseLocation const &_Position);
+		inline NStr::CParseLocation const &f_Location() const;
 	};
 }
 

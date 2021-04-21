@@ -1,0 +1,14 @@
+Generate File Contents:
+TestNope
+TestYep
+Yes
+No
+{
+	"Value": "Yes"
+}
+{
+	"Value": "No"
+}
+Yes
+No
+Yes
