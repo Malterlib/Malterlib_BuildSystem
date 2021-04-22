@@ -3,6 +3,8 @@
 
 Import "../Core/Lib_Malterlib.MTarget"
 
+Property.MalterlibBuildSystemEmbedCMake define bool?
+
 %Group "{Malterlib}/{Lib_Malterlib_BuildSystem}"
 {
 	Property
@@ -13,8 +15,8 @@ Import "../Core/Lib_Malterlib.MTarget"
 	Compile
 	{
 		!!CompileDialect "C"
-		PrefixHeader "@('Source/Malterlib_BuildSystem.h'->MakeAbsolute())"
-		PreprocessorDefines "DMalterlibBuildSystem_EmbedCMake;@(Compile.PreprocessorDefines)"
+		PrefixHeader "Source/Malterlib_BuildSystem.h"->MakeAbsolute()
+		PreprocessorDefines += "DMalterlibBuildSystem_EmbedCMake"
 		{
 			!!MalterlibBuildSystemEmbedCMake true
 		}
@@ -75,21 +77,14 @@ Import "../Core/Lib_Malterlib.MTarget"
 
 Property
 {
-	MalterlibLibrary_BuildSystem true
-	{
-		&
-		{
-			MalterlibLibrary_BuildSystem ""
-			MalterlibLibrary_All true
-		}
-	}
-	MalterlibSubLibraries "BuildSystem;@(MalterlibSubLibraries)"
+	MalterlibLibrary_BuildSystem define bool = MalterlibLibrary_All
+	MalterlibSubLibraries =+ "BuildSystem"
 	{
 		!!MalterlibLibrary_BuildSystem true
 	}
-	MalterlibLibrarySeparate_Lib_Malterlib_BuildSystem true
-//	MalterlibSubLibrarySeparate_Lib_Malterlib_BuildSystem true
-	MalterlibIncludeRoots "@('Include'->MakeAbsolute());@(MalterlibIncludeRoots)"
+	MalterlibLibrarySeparate_Lib_Malterlib_BuildSystem define bool = true
+//	MalterlibSubLibrarySeparate_Lib_Malterlib_BuildSystem define bool = true
+	MalterlibIncludeRoots =+ "Include"->MakeAbsolute()
 	{
 		!!MalterlibLibrary_BuildSystem true
 	}
@@ -100,7 +95,7 @@ Property
 	Property
 	{
 		MalterlibDoExeFS true
-		MalterlibExeFSExtraFiles "@('TestFiles'->MakeAbsolute())/^*|TestFiles;@(MalterlibExeFSExtraFiles)"
+		MalterlibExeFSExtraFiles =+ {Pattern: "TestFiles"->MakeAbsolute() / "*", Recursive: true, Destination: "TestFiles"}
 	}
 
 	%Group "TestFiles"
@@ -113,8 +108,8 @@ Property
 Property
 {
 	!!MalterlibEnableInternalTests true
-	MalterlibTests "Malterlib_BuildSystem;@(MalterlibTests)"
-	MalterlibTestFiles_Malterlib_BuildSystem "@('Test/*'->MakeAbsolute())"
-	MalterlibTestDependencies_Malterlib_BuildSystem "Lib_Malterlib_BuildSystem"
-	MalterlibTestExtraGroups_Malterlib_BuildSystem "{Test}/{Malterlib_BuildSystem}"
+	MalterlibTests =+ "Malterlib_BuildSystem"
+	MalterlibTestFiles_Malterlib_BuildSystem define [type(CEntity)] = ["Test/*"->MakeAbsolute()]
+	MalterlibTestDependencies_Malterlib_BuildSystem define [type(CEntity)] = ["Lib_Malterlib_BuildSystem"]
+	MalterlibTestExtraGroups_Malterlib_BuildSystem define [string] = ["{Test}/{Malterlib_BuildSystem}"]
 }
