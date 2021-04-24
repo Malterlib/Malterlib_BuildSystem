@@ -74,6 +74,26 @@ namespace NMib::NBuildSystem
 		return !m_Value.f_IsOfType<NEncoding::CEJSON>() || m_Value.f_GetAsType<NEncoding::CEJSON>().f_IsValid();
 	}
 
+	bool CBuildSystemSyntax::CValue::f_IsArray() const
+	{
+		return m_Value.f_IsOfType<CArray>();
+	}
+
+	CBuildSystemSyntax::CArray const &CBuildSystemSyntax::CValue::f_Array() const
+	{
+		return m_Value.f_GetAsType<CArray>();
+	}
+
+	bool CBuildSystemSyntax::CValue::f_IsEvalString() const
+	{
+		return m_Value.f_IsOfType<CEvalString>();
+	}
+
+	CBuildSystemSyntax::CEvalString const &CBuildSystemSyntax::CValue::f_EvalString() const
+	{
+		return m_Value.f_GetAsType<CEvalString>();
+	}
+
  	auto CBuildSystemSyntax::CValue::fs_FromJSONToken(NEncoding::CEJSON const &_Token, CStr const &_TokenType, CFilePosition const &_Position, bool _bAppendAllowed) -> CVariant
 	{
 		if (_TokenType == "Expression" || _TokenType == "AppendExpression")
@@ -112,6 +132,25 @@ namespace NMib::NBuildSystem
 			CBuildSystem::fs_ThrowError(_Position, "Unknown build system token type: {}"_f << _TokenType);
 	}
 
+	NEncoding::CEJSON CBuildSystemSyntax::CValue::f_ToJSON() const
+	{
+		switch (m_Value.f_GetTypeID())
+		{
+		case 0: return m_Value.f_Get<0>();
+		case 1: return m_Value.f_Get<1>().f_ToJSON();
+		case 2: return m_Value.f_Get<2>().f_ToJSON();
+		case 3: return m_Value.f_Get<3>().f_ToJSON();
+		case 4: return m_Value.f_Get<4>().f_ToJSON();
+		case 5: return m_Value.f_Get<5>().f_ToJSON();
+		case 6: return m_Value.f_Get<6>().f_ToJSON();
+		case 7: return m_Value.f_Get<7>().f_ToJSON();
+		case 8: return m_Value.f_Get<8>().f_ToJSON();
+		}
+
+		DMibNeverGetHere;
+		return {};
+	}
+
 	auto CBuildSystemSyntax::CValue::fs_FromJSON(CEJSON const &_JSON, CFilePosition const &_Position, bool _bAppendAllowed) -> CValue
 	{
 		CValue Return;
@@ -143,6 +182,26 @@ namespace NMib::NBuildSystem
 			Return.m_Value = _JSON;
 
 		return Return;
+	}
+
+	CEJSON CBuildSystemSyntax::CRootValue::f_ToJSON() const
+ 	{
+		if (!m_Accessors.f_IsEmpty())
+		{
+			CEJSON Return;
+			auto &UserType = Return.f_UserType();
+			UserType.m_Type = "BuildSystemToken";
+			UserType.m_Value["Type"] = "RootValue";
+			UserType.m_Value["Value"] = m_Value.f_ToJSON().f_ToJSON();
+			auto &Accessors = UserType.m_Value["Accessors"].f_Array();
+
+			for (auto &Accessor : m_Accessors)
+				Accessors.f_Insert(Accessor.f_ToJSON().f_ToJSON());
+
+			return Return;
+		}
+		else
+			return m_Value.f_ToJSON();
 	}
 
 	auto CBuildSystemSyntax::CRootValue::fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position, bool _bAppendAllowed) -> CRootValue
@@ -190,6 +249,19 @@ namespace NMib::NBuildSystem
 		return Return;
 	}
 
+	CEJSON CBuildSystemSyntax::CRootKey::f_ToJSON() const
+	{
+		switch (m_Value.f_GetTypeID())
+		{
+		case 0: return m_Value.f_GetAsType<CValue>().f_ToJSON();
+		case 1: return m_Value.f_GetAsType<CKeyPrefixOperator>().f_ToJSON();
+		case 2: return m_Value.f_GetAsType<CKeyLogicalOperator>().f_ToJSON();
+		}
+
+		DMibNeverGetHere;
+		return {};
+	}
+
 	auto CBuildSystemSyntax::CRootKey::fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position) -> CRootKey
  	{
 		CRootKey Return;
@@ -223,5 +295,4 @@ namespace NMib::NBuildSystem
 
 		return Return;
 	}
-
 }

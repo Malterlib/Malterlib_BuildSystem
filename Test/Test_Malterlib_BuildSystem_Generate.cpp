@@ -176,7 +176,7 @@ namespace
 				DMibExpectException
 					(
 						fp_TestGenerate("FunctionCallAsVariable")
-						, DMibErrorInstance
+						, DMibExceptionInstanceParse
 						(
 							"{}/Test.MBuildSystem" DMibPFileLineColumnFormat " error: Trying to access a function as a variable, you need to call it{\n}"
 							DMibPFileLineFormatIndent "{}/Test.MBuildSystem" DMibPFileLineColumnFormat " See definition of function type{\n}"
@@ -184,6 +184,7 @@ namespace
 							<< TempDirectory << "" << 44 << 13
 							<< TempDirectory << "" << 26 << 13
 							<< TempDirectory << "" << 60 << 13
+							, {}
 						)
 					)
 				;
@@ -218,7 +219,10 @@ namespace
 				DMibExpectException
 					(
 						fp_TestGenerate("FunctionCallWithCondition")
-						, DMibErrorInstance("{}/Test.MBuildSystem" DMibPFileLineColumnFormat " error: Define does not support conditions or debug"_f << TempDirectory << "" << 26 << 11)
+						, DMibExceptionInstanceParse
+						(
+							"{}/Test.MBuildSystem" DMibPFileLineColumnFormat " error: Define does not support conditions or debug"_f << TempDirectory << "" << 26 << 11, {}
+						)
 					)
 				;
 			};
@@ -228,7 +232,10 @@ namespace
 				DMibExpectException
 					(
 						fp_TestGenerate("TypeWithCondition")
-						, DMibErrorInstance("{}/Test.MBuildSystem" DMibPFileLineColumnFormat " error: Type does not support conditions or debug"_f << TempDirectory << "" << 25 << 15)
+						, DMibExceptionInstanceParse
+						(
+							"{}/Test.MBuildSystem" DMibPFileLineColumnFormat " error: Type does not support conditions or debug"_f << TempDirectory << "" << 25 << 15, {}
+						)
 					)
 				;
 			};

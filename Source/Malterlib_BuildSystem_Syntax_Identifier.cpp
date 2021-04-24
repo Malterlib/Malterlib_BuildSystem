@@ -5,6 +5,16 @@
 
 namespace NMib::NBuildSystem
 {
+	CBuildSystemSyntax::CRootValue CBuildSystemSyntax::CIdentifier::f_RootValue() &&
+	{
+		return {CBuildSystemSyntax::CValue{CBuildSystemSyntax::CExpression{CBuildSystemSyntax::CParam{fg_Move(*this)}}}};
+	}
+
+	CBuildSystemSyntax::CRootKey CBuildSystemSyntax::CIdentifier::f_RootKey() &&
+	{
+		return {CBuildSystemSyntax::CValue{CBuildSystemSyntax::CExpression{CBuildSystemSyntax::CParam{fg_Move(*this)}}}};
+	}
+
 	bool CBuildSystemSyntax::CIdentifier::f_IsNameConstantString() const
 	{
 		return m_Name.f_IsOfType<CStr>();
@@ -16,6 +26,36 @@ namespace NMib::NBuildSystem
 		return m_Name.f_GetAsType<CStr>();
 	}
 
+	NEncoding::CEJSON CBuildSystemSyntax::CIdentifier::f_ToJSON() const
+	{
+		CEJSON Return;
+		auto &UserType = Return.f_UserType();
+		UserType.m_Type = "BuildSystemToken";
+		UserType.m_Value["Type"] = "Identifier";
+		auto &Name = UserType.m_Value["Name"];
+
+		switch (m_Name.f_GetTypeID())
+		{
+		case 0: Name = m_Name.f_Get<0>(); break;
+		case 1: Name = m_Name.f_Get<1>().f_ToJSONArray(true).f_ToJSON(); break;
+		default: DMibNeverGetHere;
+		}
+
+		auto &EntityType = UserType.m_Value["EntityType"];
+		if (m_EntityType == EEntityType_Invalid)
+			EntityType = "";
+		else
+			EntityType = fg_EntityTypeToStr(m_EntityType);
+
+		auto &PropertyType = UserType.m_Value["PropertyType"];
+		if (m_bEmptyPropertyType || m_PropertyType == EPropertyType_Invalid)
+			PropertyType = "";
+		else
+			PropertyType = fg_PropertyTypeToStr(m_PropertyType);
+
+		return Return;
+	}
+	
 	auto CBuildSystemSyntax::CIdentifier::fs_FromJSON(CEJSON const &_JSON, CFilePosition const &_Position) -> CIdentifier
 	{
 		CIdentifier Return;

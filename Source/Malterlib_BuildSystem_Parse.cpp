@@ -9,10 +9,10 @@ namespace NMib::NBuildSystem
 	CStr CBuildSystem::fs_GetNameIdentifierString(CBuildSystemRegistry const &_Registry)
 	{
 		auto &Name = _Registry.f_GetName();
-		if (!Name.f_IsUserType())
+		if (!Name.f_IsValue())
 			fsp_ThrowError(_Registry, "Only identifiers supported");
 
-		auto Value = CBuildSystemSyntax::CValue::fs_FromJSON(Name, _Registry.f_GetLocation(), false);
+		auto &Value = Name.f_Value();
 
 		if (!Value.f_IsIdentifier())
 			fsp_ThrowError(_Registry, "Only identifiers supported");
@@ -25,20 +25,11 @@ namespace NMib::NBuildSystem
 		return Identifier.f_NameConstantString();
 	}
 
-	CStr const &CBuildSystem::fs_GetNameString(CBuildSystemRegistry const &_Registry)
-	{
-		auto &Name = _Registry.f_GetName();
-		if (!Name.f_IsString())
-			fsp_ThrowError(_Registry, "Only string keys supported");
-
-		return Name.f_String();
-	}
-
-	bool CBuildSystem::fp_HandleKey
+	void CBuildSystem::fp_HandleKey
 		(
 			CBuildSystemRegistry &_Registry
-			, TCFunction<void (CBuildSystemSyntax::CKeyPrefixOperator &_PrefixOprator)> const &_fOnPrefix
-			, TCFunction<void (CBuildSystemSyntax::CIdentifier &_Identifier)> const &_fOnIdentifier
+			, TCFunction<void (CBuildSystemSyntax::CKeyPrefixOperator const &_PrefixOprator)> const &_fOnPrefix
+			, TCFunction<void (CBuildSystemSyntax::CIdentifier const &_Identifier)> const &_fOnIdentifier
 			, ch8 const *_pTypeError
 			, EHandleKeyFlag _Flags
 		) const
@@ -50,39 +41,11 @@ namespace NMib::NBuildSystem
 		;
 
 		auto &Name = _Registry.f_GetName();
-		if (!Name.f_IsUserType())
-			fThrowError();
 
-		auto *pUserType = &Name.f_UserType();
-
-		auto *pType = pUserType->m_Value.f_GetMember("Type");
-
-		if (!pType)
-			fThrowError();
-
-		CEJSON Param;
-		if (pType->f_String() == "Expression")
-		{
-			auto *pParam = pUserType->m_Value.f_GetMember("Param");
-			if (!pParam)
-				return false;
-
-			Param = CEJSON::fs_FromJSON(*pParam);
-
-			if (!Param.f_IsUserType())
-				return false;
-
-			pUserType = &Param.f_UserType();
-
-			pType = pUserType->m_Value.f_GetMember("Type");
-			if (!pType)
-				return false;
-		}
-
-		if (pType->f_String() == "KeyPrefixOperator")
+		if (Name.f_IsKeyPrefixOperator())
 		{
 			CFilePosition Position = _Registry;
-			auto PrefixOperator = CBuildSystemSyntax::CKeyPrefixOperator::fs_FromJSON(*pUserType, Position);
+			auto &PrefixOperator = Name.f_KeyPrefixOperator();
 
 			if (!PrefixOperator.m_Right.f_IsIdentifier())
 				fsp_ThrowError(_Registry, "Expected identifier for prefix operator");
@@ -100,27 +63,25 @@ namespace NMib::NBuildSystem
 
 			_fOnPrefix(PrefixOperator);
 
-			return true;
+			return;
 		}
-		else if (pType->f_String() == "Identifier")
+		else if (Name.f_IsValue())
 		{
-			CFilePosition Position = _Registry;
-			auto Identifier = CBuildSystemSyntax::CIdentifier::fs_FromJSON(*pUserType, Position);
-
-			_fOnIdentifier(Identifier);
-
-			return true;
+			auto &Value = Name.f_Value();
+			if (Value.f_IsIdentifier())
+			{
+				_fOnIdentifier(Value.f_Identifier());
+				return;
+			}
 		}
-		else
-			return false;
+
+		fThrowError();
 	}
 
 	void CBuildSystem::fp_ParseData(CEntity &_RootEntity, CBuildSystemRegistry &_Registry, TCMap<CStr, CConfigurationType> *_pConfigurations) const
 	{
 		bool bFilterWorkspace = !mp_GenerateWorkspace.f_IsEmpty();
 		bFilterWorkspace = false; // This does not work because the name of the workspace can be different from the name of the entity
-		auto pTypeError = "Only entities, and configurations and properties are supported here";
-
 		if (bFilterWorkspace)
 		{
 			TCLinkedList<CBuildSystemRegistry *> ToRemove;
@@ -132,7 +93,7 @@ namespace NMib::NBuildSystem
 				fp_HandleKey
 					(
 						Registry
-						, [&](CBuildSystemSyntax::CKeyPrefixOperator &_PrefixOperator)
+						, [&](CBuildSystemSyntax::CKeyPrefixOperator const &_PrefixOperator)
 						{
 							if (_PrefixOperator.m_Operator != CBuildSystemSyntax::CKeyPrefixOperator::EOperator_Entity)
 								return;
@@ -145,15 +106,15 @@ namespace NMib::NBuildSystem
 
 							auto &Value = Registry.f_GetThisValue();
 
-							if (Value.f_IsString() && Value.f_String() != mp_GenerateWorkspace)
+							if (Value.m_Value.f_IsConstantString() && Value.m_Value.f_ConstantString() != mp_GenerateWorkspace)
 								ToRemove.f_Insert(&Registry);
 							else
 								fp_ParseEntity(_RootEntity, Identifier, Registry);
 						}
-						, [&](CBuildSystemSyntax::CIdentifier &_Identifier)
+						, [&](CBuildSystemSyntax::CIdentifier const &_Identifier)
 						{
 						}
-						, pTypeError
+						, "Only entities, and configurations and properties are supported here"
 						, EHandleKeyFlag_None
 					)
 				;
@@ -169,10 +130,10 @@ namespace NMib::NBuildSystem
 		{
 			auto &Registry = *iReg;
 
-			bool bHandled = fp_HandleKey
+			fp_HandleKey
 				(
 					Registry
-					, [&](CBuildSystemSyntax::CKeyPrefixOperator &_PrefixOperator)
+					, [&](CBuildSystemSyntax::CKeyPrefixOperator const &_PrefixOperator)
 					{
 						auto &Value = Registry.f_GetThisValue();
 
@@ -193,7 +154,7 @@ namespace NMib::NBuildSystem
 						{
 							auto &ConfigurationName = Identifier.f_NameConstantString();
 
-							if (Value.f_IsValid())
+							if (Value.m_Value.f_IsValid())
 								fsp_ThrowError(Registry, "Configuration operator cannot specify a value");
 
 							if (_pConfigurations)
@@ -204,7 +165,7 @@ namespace NMib::NBuildSystem
 						else
 							fsp_ThrowError(Registry, "Unexpected prefix operator: {}"_f << _PrefixOperator.m_Operator);
 					}
-					, [&](CBuildSystemSyntax::CIdentifier &_Identifier)
+					, [&](CBuildSystemSyntax::CIdentifier const &_Identifier)
 					{
 						auto &Value = Registry.f_GetThisValue();
 
@@ -214,7 +175,7 @@ namespace NMib::NBuildSystem
 								&& _Identifier.m_EntityType == EEntityType_Invalid
 								&& _Identifier.f_IsNameConstantString()
 								&& (_Identifier.f_NameConstantString() == "Import" || _Identifier.f_NameConstantString() == "Include")
-								&& Value.f_IsValid()
+								&& Value.m_Value.f_IsValid()
 							)
 						{
 							return; // Error recovery to allow repositories to be handled
@@ -222,26 +183,23 @@ namespace NMib::NBuildSystem
 
 						fp_ParseProperty(&_RootEntity, _Identifier, Registry, pConditions, true);
 					}
-					, pTypeError
+					, "Expected a prefix operator or an property identifier"
 					, EHandleKeyFlag_None
 				)
 			;
-
-			if (!bHandled)
-				fsp_ThrowError(Registry, "Expected a prefix operator or an property identifier");
 		}
 
 		for (auto iReg = _Registry.f_GetChildIterator(); iReg; ++iReg)
 		{
 			auto &Registry = *iReg;
 
-			bool bHandled = fp_HandleKey
+			fp_HandleKey
 				(
 					Registry
-					, [&](CBuildSystemSyntax::CKeyPrefixOperator &_PrefixOperator)
+					, [&](CBuildSystemSyntax::CKeyPrefixOperator const &_PrefixOperator)
 					{
 					}
-					, [&](CBuildSystemSyntax::CIdentifier &_Identifier)
+					, [&](CBuildSystemSyntax::CIdentifier const &_Identifier)
 					{
 						auto &Value = Registry.f_GetThisValue();
 
@@ -251,7 +209,7 @@ namespace NMib::NBuildSystem
 								&& _Identifier.m_EntityType == EEntityType_Invalid
 								&& _Identifier.f_IsNameConstantString()
 								&& (_Identifier.f_NameConstantString() == "Import" || _Identifier.f_NameConstantString() == "Include")
-								&& Value.f_IsValid()
+								&& Value.m_Value.f_IsValid()
 							)
 						{
 							return; // Error recovery to allow repositories to be handled
@@ -259,13 +217,10 @@ namespace NMib::NBuildSystem
 
 						fp_ParseProperty(&_RootEntity, _Identifier, Registry, pConditions, false);
 					}
-					, pTypeError
+					, "Expected a prefix operator or an property identifier"
 					, EHandleKeyFlag_None
 				)
 			;
-
-			if (!bHandled)
-				fsp_ThrowError(Registry, "Expected a prefix operator or an property identifier");
 		}
 	}
 
@@ -288,10 +243,10 @@ namespace NMib::NBuildSystem
 			CBuildSystemRegistry &Registry = *iReg;
 			auto Name = fs_GetNameIdentifierString(Registry);
 			auto const &Value = Registry.f_GetThisValue();
-			if (!Value.f_IsString())
-				fsp_ThrowError(Registry, "Configuration needs to specify description as a string");
+			if (!Value.m_Value.f_IsConstantString())
+				fsp_ThrowError(Registry, "Configuration needs to specify description as a constant string");
 			auto &Configuration = Type.m_Configurations[Name];
-			Configuration.m_Description = Value.f_String();
+			Configuration.m_Description = Value.m_Value.f_ConstantString();
 			Configuration.m_Position = Registry;
 
 			fp_ParseConfigurationConditions(Registry, Configuration);
@@ -399,7 +354,7 @@ namespace NMib::NBuildSystem
 		CProperty Property;
 		Property.m_Key.m_Type = _Type;
 		Property.m_Key.m_Name = _PropertyName;
-		Property.m_Value = CBuildSystemSyntax::CRootValue::fs_FromJSON(_Registry.f_GetThisValue(), _Registry.f_GetLocation(), true);
+		Property.m_Value = _Registry.f_GetThisValue();
 		Property.m_Position = _Registry;
 
 		if (Property.m_Key.m_Type == EPropertyType_Type)
@@ -444,7 +399,7 @@ namespace NMib::NBuildSystem
 		CProperty Property;
 		Property.m_Key.m_Type = _Type;
 		Property.m_Key.m_Name = _PropertyName;
-		Property.m_Value = CBuildSystemSyntax::CRootValue::fs_FromJSON(_Registry.f_GetThisValue(), _Registry.f_GetLocation(), true);
+		Property.m_Value = _Registry.f_GetThisValue();
 		Property.m_Position = _Registry;
 		Property.m_pRegistry = &_Registry;
 
@@ -471,10 +426,10 @@ namespace NMib::NBuildSystem
 				if (CCondition::fs_TryParseCondition(Registry, *pDestinationCondition))
 					continue;
 
-				bool bHandled = fp_HandleKey
+				fp_HandleKey
 					(
 						Registry
-						, [&](CBuildSystemSyntax::CKeyPrefixOperator &_PrefixOperator)
+						, [&](CBuildSystemSyntax::CKeyPrefixOperator const &_PrefixOperator)
 						{
 							if (_PrefixOperator.m_Operator != CBuildSystemSyntax::CKeyPrefixOperator::EOperator_Pragma)
 								fsp_ThrowError(Registry, "Only conditions and debug pragmas statements can be specified for a property");
@@ -490,12 +445,12 @@ namespace NMib::NBuildSystem
 								fsp_ThrowError(Registry, "Only conditions and debug pragmas statements can be specified for a property");
 
 							auto &Value = Registry.f_GetThisValue();
-							if (!Value.f_IsString())
+							if (!Value.m_Value.f_IsConstantString())
 								fsp_ThrowError(Registry, "Only strings are supported for debug pragma statements");
 
-							Property.m_Debug = Value.f_String();
+							Property.m_Debug = Value.m_Value.f_ConstantString();
 						}
-						, [&](CBuildSystemSyntax::CIdentifier &_Identifier)
+						, [&](CBuildSystemSyntax::CIdentifier const &_Identifier)
 						{
 							fsp_ThrowError(Registry, "Only conditions and debug statements can be specified for a property");
 						}
@@ -503,9 +458,6 @@ namespace NMib::NBuildSystem
 						, EHandleKeyFlag_AllowPropertyType
 					)
 				;
-
-				if (!bHandled)
-					fsp_ThrowError(Registry, "Only conditions and debug statements can be specified for a property");
 			}
 
 			Property.m_bNeedPerFile = Property.m_Condition.f_NeedPerFile();
@@ -548,7 +500,7 @@ namespace NMib::NBuildSystem
 			return;
 		}
 
-		if (_Registry.f_GetThisValue().f_IsValid())
+		if (_Registry.f_GetThisValue().m_Value.f_IsValid())
 			fsp_ThrowError(_Registry, "Property groups cannot have a value");
 
 		EPropertyType Type = fg_PropertyTypeFromStr(Identifier);
@@ -582,10 +534,10 @@ namespace NMib::NBuildSystem
 
 			bWasCondition = false;
 
-			bool bHandled = fp_HandleKey
+			fp_HandleKey
 				(
 					Registry
-					, [&](CBuildSystemSyntax::CKeyPrefixOperator &_PrefixOperator)
+					, [&](CBuildSystemSyntax::CKeyPrefixOperator const &_PrefixOperator)
 					{
 						if (_PrefixOperator.m_Operator == CBuildSystemSyntax::CKeyPrefixOperator::EOperator_Entity)
 							fsp_ThrowError(Registry, "You cannot specify entities inside property groups");
@@ -594,7 +546,7 @@ namespace NMib::NBuildSystem
 						else
 							fsp_ThrowError(Registry, "Unexpected prefix operator: {}"_f << _PrefixOperator.m_Operator);
 					}
-					, [&](CBuildSystemSyntax::CIdentifier &_Identifier)
+					, [&](CBuildSystemSyntax::CIdentifier const &_Identifier)
 					{
 						if (_Identifier.m_EntityType != EEntityType_Invalid)
 							fsp_ThrowError(Registry, "You cannot specify an entity type for a property expression");
@@ -614,9 +566,6 @@ namespace NMib::NBuildSystem
 					, EHandleKeyFlag_AllowPropertyType
 				)
 			;
-
-			if (!bHandled)
-				fsp_ThrowError(Registry, "Only conditions and properties are supported here");
 		}
 	}
 
@@ -730,16 +679,14 @@ namespace NMib::NBuildSystem
 		auto const &EntityName = _Registry.f_GetThisValue();
 
 		// Entity
-		if (!EntityName.f_IsValid() && bMustHaveName)
+		if (!EntityName.m_Value.f_IsValid() && bMustHaveName)
 			fsp_ThrowError(_Registry, "An entity must have a name");
 
-		auto RootValue = CBuildSystemSyntax::CRootValue::fs_FromJSON(EntityName, _Registry, true);
-
-		if (!RootValue.m_Accessors.f_IsEmpty())
+		if (!EntityName.m_Accessors.f_IsEmpty())
 			fsp_ThrowError(_Registry, "An entity cannot have accessors");
 
 		CEntityKey Key;
-		Key.m_Name = fg_Move(RootValue.m_Value);
+		Key.m_Name = EntityName.m_Value;
 		Key.m_Type = Type;
 
 		CEntity *pEntity = nullptr;
@@ -824,10 +771,10 @@ namespace NMib::NBuildSystem
 
 			bWasCondition = false;
 
-			bool bHandled = fp_HandleKey
+			fp_HandleKey
 				(
 					Registry
-					, [&](CBuildSystemSyntax::CKeyPrefixOperator &_PrefixOperator)
+					, [&](CBuildSystemSyntax::CKeyPrefixOperator const &_PrefixOperator)
 					{
 						auto &Identifier = _PrefixOperator.m_Right.f_Identifier();
 
@@ -851,15 +798,15 @@ namespace NMib::NBuildSystem
 								fsp_ThrowError(Registry, "Only conditions and debug pragmas statements can be specified for a property");
 
 							auto &Value = Registry.f_GetThisValue();
-							if (!Value.f_IsString())
+							if (!Value.m_Value.f_IsConstantString())
 								fsp_ThrowError(Registry, "Only strings are supported for debug pragma statements");
 
-							pEntity->f_DataWritable().m_Debug = Value.f_String();
+							pEntity->f_DataWritable().m_Debug = Value.m_Value.f_ConstantString();
 						}
 						else
 							fsp_ThrowError(Registry, "Unexpected prefix operator: {}"_f << _PrefixOperator.m_Operator);
 					}
-					, [&](CBuildSystemSyntax::CIdentifier &_Identifier)
+					, [&](CBuildSystemSyntax::CIdentifier const &_Identifier)
 					{
 						fp_ParseProperty(pEntity, _Identifier, Registry, fGetConditions(), true);
 					}
@@ -867,9 +814,6 @@ namespace NMib::NBuildSystem
 					, EHandleKeyFlag_None
 				)
 			;
-
-			if (!bHandled)
-				fsp_ThrowError(Registry, "Expected a prefix operator or an property identifier");
 		}
 
 		for (auto iReg = _Registry.f_GetChildIterator(); iReg; ++iReg)
@@ -879,13 +823,13 @@ namespace NMib::NBuildSystem
 			if (CCondition::fs_TryParseCondition(Registry, Condition))
 				continue;
 
-			bool bHandled = fp_HandleKey
+			fp_HandleKey
 				(
 					Registry
-					, [&](CBuildSystemSyntax::CKeyPrefixOperator &_PrefixOperator)
+					, [&](CBuildSystemSyntax::CKeyPrefixOperator const &_PrefixOperator)
 					{
 					}
-					, [&](CBuildSystemSyntax::CIdentifier &_Identifier)
+					, [&](CBuildSystemSyntax::CIdentifier const &_Identifier)
 					{
 						fp_ParseProperty(pEntity, _Identifier, Registry, fGetConditions(), false);
 					}
@@ -893,9 +837,6 @@ namespace NMib::NBuildSystem
 					, EHandleKeyFlag_None
 				)
 			;
-
-			if (!bHandled)
-				fsp_ThrowError(Registry, "Expected a prefix operator or an property identifier");
 		}
 
 		if (bMergeEntity)

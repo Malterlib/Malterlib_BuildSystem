@@ -5,6 +5,36 @@
 
 namespace NMib::NBuildSystem
 {
+	NEncoding::CEJSON CBuildSystemSyntax::CJSONAccessorEntry::f_ToJSON() const
+	{
+		switch (m_Accessor.f_GetTypeID())
+		{
+		case 0: return m_Accessor.f_Get<0>();
+		case 1: return CEJSON::fs_FromJSON(m_Accessor.f_Get<1>().f_ToJSON().f_UserType().m_Value);
+		case 2:
+			{
+				CEJSON Return;
+				auto &OutObject = Return.f_Object();
+				OutObject["Type"] = "Subscript";
+				auto &OutArgument = OutObject["Argument"];
+
+				auto &Entry = m_Accessor.f_Get<2>();
+				switch (Entry.m_Index.f_GetTypeID())
+				{
+				case 0: OutArgument = Entry.m_Index.f_Get<0>(); break;
+				case 1: OutArgument = Entry.m_Index.f_Get<1>().f_ToJSON(); break;
+				default: DMibNeverGetHere;
+				};
+
+				return Return;
+			}
+			break;
+		default: DMibNeverGetHere;
+		}
+
+		return {};
+	}
+
 	auto CBuildSystemSyntax::CJSONAccessorEntry::fs_FromJSON(CEJSON const &_JSON, CFilePosition const &_Position) -> CJSONAccessorEntry
 	{
 		if (_JSON.f_IsString())
@@ -67,6 +97,22 @@ namespace NMib::NBuildSystem
 			CBuildSystem::fs_ThrowError(_Position, "Invalid accessor type");
 
 		return {};
+	}
+
+	NEncoding::CEJSON CBuildSystemSyntax::CJSONAccessor::f_ToJSON() const
+	{
+		CEJSON Return;
+		auto &UserType = Return.f_UserType();
+		UserType.m_Type = "BuildSystemToken";
+		UserType.m_Value["Type"] = "JSONAccessor";
+		UserType.m_Value["Param"] = m_Param.f_ToJSON().f_ToJSON();
+
+		auto &Accessors = UserType.m_Value["Accessors"].f_Array();
+
+		for (auto &Accessor : m_Accessors)
+			Accessors.f_Insert(Accessor.f_ToJSON().f_ToJSON());
+
+		return Return;
 	}
 
 	auto CBuildSystemSyntax::CJSONAccessor::fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position) -> CJSONAccessor

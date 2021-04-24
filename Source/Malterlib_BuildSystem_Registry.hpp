@@ -6,7 +6,7 @@
 namespace NMib::NContainer
 {
 	template <>
-	struct TCRegistry_CustomValue<NBuildSystem::CBuildSystemRegistryValue>
+	struct TCRegistry_CustomKeyValue<NBuildSystem::CBuildSystemSyntax::CRootKey, NBuildSystem::CBuildSystemSyntax::CRootValue>
 	{
 		static constexpr bool mc_bDefault = false;
 		static constexpr bool mc_bDefaultKey = false;
@@ -142,22 +142,30 @@ namespace NMib::NContainer
 		static NContainer::CByteVector fs_ParseBinary(ch8 const * &o_pParse);
 
 		template <typename tf_CParseContext>
-		static NBuildSystem::CBuildSystemRegistryValue fs_Parse(ch8 const * &o_pParse, tf_CParseContext &o_ParseContext, bool &o_bWasEscaped);
+		static NBuildSystem::CBuildSystemSyntax::CRootValue fs_Parse(ch8 const * &o_pParse, tf_CParseContext &o_ParseContext, bool &o_bWasEscaped);
 
 		template <typename tf_CParseContext>
-		static void fs_ParseKey(ch8 const * &o_pParse, tf_CParseContext &o_ParseContext, bool &o_bWasEscaped, NBuildSystem::CBuildSystemRegistryValue &o_Key);
+		static void fs_ParseKey
+			(
+				ch8 const * &o_pParse
+				, tf_CParseContext &o_ParseContext
+				, bool &o_bWasEscaped
+				, NBuildSystem::CBuildSystemSyntax::CRootKey &o_Key
+				, NBuildSystem::CBuildSystemRegistry::CLocation const &_Location
+			)
+		;
 
 		template <typename tf_CKey, typename tf_CString>
 		static void fs_GenerateKey(tf_CString &o_Output, tf_CKey const &_Value, bool _bForceEscape, mint _Level, tf_CString const &_PreData);
 
-		static bool fs_ValueIsEmpty(NBuildSystem::CBuildSystemRegistryValue const &_Value, bool _bForceEscape);
+		static bool fs_ValueIsEmpty(NBuildSystem::CBuildSystemSyntax::CRootValue const &_Value, bool _bForceEscape);
 
 		template <typename tf_CString>
-		static void fs_Generate(tf_CString &o_Output, NBuildSystem::CBuildSystemRegistryValue const &_Value, bool _bForceEscape, mint _Level, tf_CString const &_PreData);
+		static void fs_Generate(tf_CString &o_Output, NBuildSystem::CBuildSystemSyntax::CRootValue const &_Value, bool _bForceEscape, mint _Level, tf_CString const &_PreData);
 	};
 }
 
 namespace NMib::NBuildSystem
 {
-	using CBuildSystemParseContext = NContainer::TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext;
+	using CBuildSystemParseContext = NContainer::TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext;
 }

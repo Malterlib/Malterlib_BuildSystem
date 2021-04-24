@@ -47,12 +47,16 @@ namespace NMib::NBuildSystem
 
 	bool CBuildSystemSyntax::CFunctionCall::operator < (CFunctionCall const &_Right) const
 	{
-		return fg_TupleReferences(m_Name, m_PropertyType, m_Params, m_bPostFunction) < fg_TupleReferences(_Right.m_Name, _Right.m_PropertyType, _Right.m_Params, _Right.m_bPostFunction);
+		return fg_TupleReferences(m_Name, m_PropertyType, m_bEmptyPropertyType, m_Params, m_bPostFunction)
+			< fg_TupleReferences(_Right.m_Name, _Right.m_PropertyType, _Right.m_bEmptyPropertyType, _Right.m_Params, _Right.m_bPostFunction)
+		;
 	}
 
 	bool CBuildSystemSyntax::CFunctionCall::operator == (CFunctionCall const &_Right) const
 	{
-		return fg_TupleReferences(m_Name, m_PropertyType, m_Params, m_bPostFunction) == fg_TupleReferences(_Right.m_Name, _Right.m_PropertyType, _Right.m_Params, _Right.m_bPostFunction);
+		return fg_TupleReferences(m_Name, m_PropertyType, m_bEmptyPropertyType, m_Params, m_bPostFunction)
+			== fg_TupleReferences(_Right.m_Name, _Right.m_PropertyType, _Right.m_bEmptyPropertyType, _Right.m_Params, _Right.m_bPostFunction)
+		;
 	}
 
 	bool CBuildSystemSyntax::CTernary::operator < (CTernary const &_Right) const
@@ -345,9 +349,50 @@ namespace NMib::NBuildSystem
 		return fg_TupleReferences(m_Value) == fg_TupleReferences(_Right.m_Value);
 	}
 
+	aint CBuildSystemSyntax::CRootKey::f_Cmp(CRootKey const &_Right) const
+	{
+		if (*this < _Right)
+			return -1;
+		else if (_Right < *this)
+			return 1;
+		return 0;
+	}
+
+	bool CBuildSystemSyntax::CRootKey::f_IsValid() const
+	{
+		if (f_IsValue() && !f_Value().f_IsValid())
+			return false;
+		return true;
+	}
+
 	bool CBuildSystemSyntax::CRootKey::f_IsValue() const
 	{
 		return m_Value.f_IsOfType<CValue>();
+	}
+
+	CBuildSystemSyntax::CValue const &CBuildSystemSyntax::CRootKey::f_Value() const
+	{
+		return m_Value.f_GetAsType<CValue>();
+	}
+
+	bool CBuildSystemSyntax::CRootKey::f_IsKeyPrefixOperator() const
+	{
+		return m_Value.f_IsOfType<CKeyPrefixOperator>();
+	}
+
+	CBuildSystemSyntax::CKeyPrefixOperator const &CBuildSystemSyntax::CRootKey::f_KeyPrefixOperator() const
+	{
+		return m_Value.f_GetAsType<CKeyPrefixOperator>();
+	}
+
+	bool CBuildSystemSyntax::CRootKey::f_IsKeyLogicalOperator() const
+	{
+		return m_Value.f_IsOfType<CKeyLogicalOperator>();
+	}
+
+	CBuildSystemSyntax::CKeyLogicalOperator const &CBuildSystemSyntax::CRootKey::f_KeyLogicalOperator() const
+	{
+		return m_Value.f_GetAsType<CKeyLogicalOperator>();
 	}
 
 	bool CBuildSystemSyntax::CKeyPrefixOperator::operator < (CKeyPrefixOperator const &_Right) const

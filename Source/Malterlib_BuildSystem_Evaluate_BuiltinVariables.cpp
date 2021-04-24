@@ -148,6 +148,7 @@ namespace NMib::NBuildSystem
 										{"Find", CBuildSystemSyntax::CClassType::CMember{g_String}}
 										, {"Replace", CBuildSystemSyntax::CClassType::CMember{g_String}}
 									}
+									, {}
 								}
 							)
 							, _[_]
@@ -166,6 +167,7 @@ namespace NMib::NBuildSystem
 										{"CMakeLanguage", CBuildSystemSyntax::CClassType::CMember{g_String}}
 										, {"MalterlibLanguage", CBuildSystemSyntax::CClassType::CMember{g_String}}
 									}
+									, {}
 								}
 							)
 							, _[_]
@@ -196,6 +198,7 @@ namespace NMib::NBuildSystem
 										{"Find", CBuildSystemSyntax::CClassType::CMember{g_String}}
 										, {"Replace", CBuildSystemSyntax::CClassType::CMember{g_String}}
 									}
+									, {}
 								}
 							)
 							, _[_]
@@ -249,6 +252,7 @@ namespace NMib::NBuildSystem
 										, {"URL", CBuildSystemSyntax::CClassType::CMember{g_String}}
 										, {"Write", CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_Boolean, false)}}
 									}
+									, {}
 								}
 							)
 							, _[_]

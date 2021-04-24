@@ -34,43 +34,12 @@ namespace
 		{
 		}
 
-		inline static CJSON ms_ValueName =
-			{
-				"$type"__= "BuildSystemToken"
-				, "$value"__=
-				{
-					"Param"__=
-					{
-						"$type"__= "BuildSystemToken"
-						, "$value"__=
-						{
-							"Type"__= "Identifier"
-							, "EntityType"__= ""
-							, "PropertyType"__= ""
-							, "Name"__= "Value"
-						}
-					}
-					, "Paren"__= false
-					, "Type"__= "Expression"
-				}
-			}
-		;
-
 		CBuildSystemSyntax::CRootValue fs_ParseString(CStr const &_String)
 		{
+			CBuildSystemSyntax::CIdentifier Identifier;
 			CBuildSystemRegistry RegistryTest;
 			RegistryTest.f_ParseStr("Value " + _String);
-			auto pChild = RegistryTest.f_GetChildNoPath(CEJSON::fs_FromJSON(ms_ValueName));
-			return CBuildSystemSyntax::CRootValue::fs_FromJSON(pChild->f_GetThisValue(), pChild->f_GetLocation(), true);
-		}
-
-		CBuildSystemSyntax::CRootValue fs_ParseJSON(CEJSON const &_Value)
-		{
-			CBuildSystemRegistry RegistryTest;
-			RegistryTest.f_ParseStr("Value ''");
-			auto pChild = RegistryTest.f_GetChildNoPath(CEJSON::fs_FromJSON(ms_ValueName));
-			pChild->f_SetThisValue(_Value);
-			return CBuildSystemSyntax::CRootValue::fs_FromJSON(pChild->f_GetThisValue(), pChild->f_GetLocation(), true);
+			return RegistryTest.f_GetChildren().f_GetRoot()->f_GetThisValue();
 		}
 
 		void f_TestJSON()
@@ -129,10 +98,10 @@ namespace
 			DMibExpectException
 				(
 					fs_ParseString("date(-1900-11-15)")
-					, DMibErrorInstance
+					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_7 " Failed to parse value: JSON parse error:{\n}"
 						DPrefixLocation_1_12 " Failed to parse \"-\" as a date: Failed to parse \"-\" as a integer. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]{\n}"_f
+						, {}
 					)
 				)
 			;
@@ -140,50 +109,50 @@ namespace
 			DMibExpectException
 				(
 					fs_ParseString("date()")
-					, DMibErrorInstance
+					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_7 " Failed to parse value: JSON parse error:{\n}"
 						DPrefixLocation_1_12 " Failed to parse \"\" as a date: Missing year. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]{\n}"_f
+						, {}
 					)
 				)
 			;
 			DMibExpectException
 				(
 					fs_ParseString("date(2019)")
-					, DMibErrorInstance
+					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_7 " Failed to parse value: JSON parse error:{\n}"
 						DPrefixLocation_1_12 " Failed to parse \"2019\" as a date: Missing month. ""Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]{\n}"_f
+						, {}
 					)
 				)
 			;
 			DMibExpectException
 				(
 					fs_ParseString("date(2019-11)")
-					, DMibErrorInstance
+					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_7 " Failed to parse value: JSON parse error:{\n}"
 						DPrefixLocation_1_12 " Failed to parse \"2019-11\" as a date: Missing day. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]{\n}"_f
+						, {}
 					)
 				)
 			;
 			DMibExpectException
 				(
 					fs_ParseString("date(2019-13-15)")
-					, DMibErrorInstance
+					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_7 " Failed to parse value: JSON parse error:{\n}"
 						DPrefixLocation_1_12 " Failed to parse \"2019-13-15\" as a date: Invalid month. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]{\n}"_f
+						, {}
 					)
 				)
 			;
 			DMibExpectException
 				(
 					fs_ParseString("date(2019-11-33)")
-					, DMibErrorInstance
+					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_7 " Failed to parse value: JSON parse error:{\n}"
 						DPrefixLocation_1_12 " Failed to parse \"2019-11-33\" as a date: Invalid day. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]{\n}"_f
+						, {}
 					)
 				)
 			;
@@ -199,20 +168,20 @@ namespace
 			DMibExpectException
 				(
 					fs_ParseString("date(2019-11-15 33)")
-					, DMibErrorInstance
+					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_7 " Failed to parse value: JSON parse error:{\n}"
 						DPrefixLocation_1_12 " Failed to parse \"2019-11-15 33\" as a date: Invalid hour. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]{\n}"_f
+						, {}
 					)
 				)
 			;
 			DMibExpectException
 				(
 					fs_ParseString("date(2019-11-15 13:61)")
-					, DMibErrorInstance
+					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_7 " Failed to parse value: JSON parse error:{\n}"
 						DPrefixLocation_1_12 " Failed to parse \"2019-11-15 13:61\" as a date: Invalid minute. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]{\n}"_f
+						, {}
 					)
 				)
 			;
@@ -227,10 +196,10 @@ namespace
 			DMibExpectException
 				(
 					fs_ParseString("date(2019-11-15 13:50:62)")
-					, DMibErrorInstance
+					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_7 " Failed to parse value: JSON parse error:{\n}"
 						DPrefixLocation_1_12 " Failed to parse \"2019-11-15 13:50:62\" as a date: Invalid second. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]{\n}"_f
+						, {}
 					)
 				)
 			;
@@ -245,20 +214,20 @@ namespace
 			DMibExpectException
 				(
 					fs_ParseString("date(2019-11-15 13:50:50.o56)")
-					, DMibErrorInstance
+					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_7 " Failed to parse value: JSON parse error:{\n}"
 						DPrefixLocation_1_12 " Failed to parse \"2019-11-15 13:50:50.\" as a date: Failed to parse \".\" as a float. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]{\n}"_f
+						, {}
 					)
 				)
 			;
 			DMibExpectException
 				(
 					fs_ParseString("date(2019-11-15 13:50:50.1.647)")
-					, DMibErrorInstance
+					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_7 " Failed to parse value: JSON parse error:{\n}"
 						DPrefixLocation_1_12 " Failed to parse \"2019-11-15 13:50:50.\" as a date: Failed to parse \".\" as a float. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]{\n}"_f
+						, {}
 					)
 				)
 			;
@@ -273,10 +242,10 @@ namespace
 			DMibExpectException
 				(
 					fs_ParseString("binary(156..6)")
-					, DMibErrorInstance
+					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_7 " Failed to parse value: JSON parse error:{\n}"
 						DPrefixLocation_1_14 " Unexpected character in Base64 string: .{\n}"_f
+						, {}
 					)
 				)
 			;
@@ -318,8 +287,12 @@ namespace
 			DMibExpectTrue(AppendArray.m_Array[1].f_Get().m_Value.f_IsOfType<CBuildSystemSyntax::CExpression>());
 			DMibExpectTrue(AppendArray.m_Array[2].f_Get().m_Value.f_IsOfType<CBuildSystemSyntax::CExpressionAppend>());
 
-			DMibExpectException(fs_ParseString("{ <<: 5 }"), DMibErrorInstance(DPrefixLocation_1_7 " error: Append object only supports objects, arrays or expressions"));
-			DMibExpectException(fs_ParseString("{ <<: [5] }"), DMibErrorInstance(DPrefixLocation_1_7 " error: Append object array only supports objects expressions or append expressions"));
+			DMibExpectException(fs_ParseString("{ <<: 5 }"), DMibExceptionInstanceParse(DPrefixLocation_1_7 " error: Append object only supports objects, arrays or expressions", {}));
+			DMibExpectException
+				(
+					fs_ParseString("{ <<: [5] }"), DMibExceptionInstanceParse(DPrefixLocation_1_7 " error: Append object array only supports objects expressions or append expressions", {})
+				)
+			;
 		}
 
 		void f_TestArray()
@@ -369,12 +342,6 @@ namespace
 			DMibAssertTrue(EvalString.m_Tokens[3].m_Token.f_IsOfType<TCIndirection<CBuildSystemSyntax::CExpression>>());
 			DMibAssertTrue(EvalString.m_Tokens[4].m_Token.f_IsOfType<CStr>());
 			DMibExpect(EvalString.m_Tokens[4].m_Token.f_GetAsType<CStr>(), ==, "@@(Value<@(DynamicProp).ArrayProp[0].Prop2>)@E");
-		}
-
-		void f_TestBuildSystemToken()
-		{
-			DMibExpectException(fs_ParseJSON(CEJSONUserType{"Test", "Value"}), DMibErrorInstance(DPrefixLocation_1_7 " error: Invalid value user type"));
-			DMibExpectException(fs_ParseJSON(CEJSONUserType{"BuildSystemToken", "Value"}), DMibErrorInstance(DPrefixLocation_1_7 " error: Token is not object"));
 		}
 
 		void f_TestExpression()
@@ -969,13 +936,13 @@ namespace
 			DMibExpectException
 				(
 					fs_ParseString("InvalidPropertyType.Func(@(ValueArray)...)")
-					, DMibErrorInstance(DPrefixLocation_1_7 " error: Unknown property type 'InvalidPropertyType'"_f)
+					, DMibExceptionInstanceParse(DPrefixLocation_1_7 " error: Unknown property type 'InvalidPropertyType'"_f, {})
 				)
 			;
 			DMibExpectException
 				(
 					fs_ParseString("\"Test\"->InvalidPropertyType.Func()")
-					, DMibErrorInstance(DPrefixLocation_1_7 " error: Unknown property type 'InvalidPropertyType'"_f)
+					, DMibExceptionInstanceParse(DPrefixLocation_1_7 " error: Unknown property type 'InvalidPropertyType'"_f, {})
 				)
 			;
 		}
@@ -1058,7 +1025,7 @@ namespace
 			DMibExpectException
 				(
 					fs_ParseString("any")
-					, DMibErrorInstance(DPrefixLocation_1_7 " Failed to parse value: JSON parse error:{\n}" DPrefixLocation_1_7 " Type 'any' can only be used inside define statements{\n}"_f)
+					, DMibExceptionInstanceParse(DPrefixLocation_1_7 " Type 'any' can only be used inside define statements{\n}"_f, {})
 				)
 			;
 		}
@@ -1095,8 +1062,8 @@ namespace
 			DMibAssertTrue(ArrayType.f_IsOfType<CBuildSystemSyntax::CDefaultType>());
 			auto &ArrayInnerType = ArrayType.f_GetAsType<CBuildSystemSyntax::CDefaultType>().m_Type;
 			DMibExpect(ArrayInnerType, ==, CBuildSystemSyntax::CDefaultType::EType_Integer);
-			DMibExpectException(fs_ParseString("define [55]"), DMibErrorInstance(DPrefixLocation_1_7 " error: Invalid type: 55"));
-			DMibExpectException(fs_ParseString("define [int, float]"), DMibErrorInstance(DPrefixLocation_1_7 " error: Array definitions should have one entry"));
+			DMibExpectException(fs_ParseString("define [55]"), DMibExceptionInstanceParse(DPrefixLocation_1_7 " error: Invalid type: 55", {}));
+			DMibExpectException(fs_ParseString("define [int, float]"), DMibExceptionInstanceParse(DPrefixLocation_1_7 " error: Array definitions should have one entry", {}));
 		}
 
 		void f_TestDefineUserType()
@@ -1531,7 +1498,7 @@ namespace
 				(
 					("{}"_f << fs_ParseString("{test: 5, 'test2': 5, \"test3\": 5, `test4 @(Test->Test(`Other @(Other)`))`: 5}")).f_GetStr()
 					, ==
-					, "{test: 5, 'test2': 5, \"test3\": 5, `test4 @(Test->Test(\\`Other @(Other)\\`))`: 5}"
+					, "{test: 5, 'test2': 5, \"test3\": 5, `test4 @(Test->Test(`Other @(Other)`))`: 5}"
 				)
 			;
 			DMibExpect
@@ -1656,10 +1623,6 @@ namespace
 			DMibTestSuite("Array")
 			{
 				f_TestArray();
-			};
-			DMibTestSuite("BuildSystemToken")
-			{
-				f_TestBuildSystemToken();
 			};
 			DMibTestSuite("Expression")
 			{

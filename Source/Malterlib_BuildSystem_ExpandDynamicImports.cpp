@@ -641,15 +641,15 @@ namespace NMib::NBuildSystem
 					CBuildSystemRegistry Registry;
 					Registry.f_ParseStr(FileContents, File.m_Path);
 #ifdef DPlatformFamily_Windows
-					TCMap<CStr, CJSON, CCompare_TStrNoCase> RemappedOutputs;
+					TCMap<CStr, CBuildSystemSyntax::CValue, CCompare_TStrNoCase> RemappedOutputs;
 #else
-					TCMap<CStr, CJSON> RemappedOutputs;
+					TCMap<CStr, CBuildSystemSyntax::CValue> RemappedOutputs;
 #endif
-					auto fParseString = [&](CStr const &_String) -> CJSON
+					auto fParseString = [&](CStr const &_String) -> CBuildSystemSyntax::CValue
 						{
 							CBuildSystemRegistry Registry;
 							Registry.f_ParseStr("Key " + _String);
-							return Registry.f_GetChildIterator()->f_GetThisValue().f_ToJSON();
+							return fg_Move(Registry.f_GetChildIterator()->f_GetThisValue().m_Value);
 						}
 					;
 
@@ -659,13 +659,13 @@ namespace NMib::NBuildSystem
 							{
 								CStr WorkingDirectorySource;
 
-								TCVector<CJSON *> OriginalOutputs;
-								TCVector<CJSON *> CommandLine;
+								TCVector<CBuildSystemSyntax::CParam *> OriginalOutputs;
+								TCVector<CBuildSystemSyntax::CParam *> CommandLine;
 
 								for (auto &Child : o_This.f_GetChildren())
 								{
 									auto Location = Child.f_GetLocation();
-									auto Name = CBuildSystemSyntax::CRootKey::fs_FromJSON(Child.f_GetName(), Location);
+									auto &Name = Child.f_GetName();
 
 									if (!Name.f_IsValue())
 										continue;
@@ -680,7 +680,7 @@ namespace NMib::NBuildSystem
 									if (!Identifier.f_IsNameConstantString())
 										continue;
 
-									auto Value = CBuildSystemSyntax::CRootValue::fs_FromJSON(Child.f_GetThisValue(), Location, true);
+									auto &Value = Child.f_GetThisValue();
 
 									if (Identifier.f_NameConstantString() == "Custom_WorkingDirectory")
 									{
@@ -693,29 +693,31 @@ namespace NMib::NBuildSystem
 
 									if (Identifier.f_NameConstantString() == "Custom_Outputs")
 									{
-										for (auto &Array : fg_Const(Child.f_GetThisValue()).f_Array())
+										for (auto &Output : Child.f_GetThisValue().m_Value.f_Array().m_Array)
 										{
-											auto &String = Array.f_UserType().m_Value["Param"]["$value"]["Params"].f_Array()[0];
-											OriginalOutputs.f_Insert(&fg_RemoveQualifiers(String));
+											auto &Expression = Output.f_Get().m_Value.f_GetAsType<CBuildSystemSyntax::CExpression>();
+											auto &FunctionCall = Expression.m_Expression.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
+											auto &Param = FunctionCall.m_Params[0];
+
+											OriginalOutputs.f_Insert(&fg_RemoveQualifiers(Param));
 										}
 									}
 
 									if (Identifier.f_NameConstantString() == "Custom_CommandLine")
 									{
-										for (auto &EvalStringParam : fg_Const(Child.f_GetThisValue()).f_UserType().m_Value["Value"].f_Array())
+										for (auto &Token : Child.f_GetThisValue().m_Value.f_EvalString().m_Tokens)
 										{
-											if (EvalStringParam["Type"] == "Expression")
+											if (Token.f_IsExpression())
 											{
-												auto &String = EvalStringParam["Param"]["$value"]["Param"]["$value"]["Params"][0]["$value"]["Params"][0];
-												CommandLine.f_Insert(&fg_RemoveQualifiers(String));
+												auto &Expression = Token.f_Expression();
+												auto &Param = Expression.f_Param().f_Expression().f_FunctionCall().m_Params[0].f_Expression().f_FunctionCall().m_Params[0];
+												CommandLine.f_Insert(&fg_RemoveQualifiers(Param));
 											}
 										}
 									}
 								}
 
 								auto Location = o_This.f_GetLocation();
-								auto Name = CBuildSystemSyntax::CRootKey::fs_FromJSON(o_This.f_GetName(), Location);
-								auto Value = CBuildSystemSyntax::CRootValue::fs_FromJSON(o_This.f_GetThisValue(), Location, true);
 
 								if (!WorkingDirectorySource)
 									return;
@@ -728,12 +730,12 @@ namespace NMib::NBuildSystem
 
 								TCVector<CStr> Outputs;
 								for (auto &pOriginalOutput : OriginalOutputs)
-									Outputs.f_Insert(fGetStripped(pOriginalOutput->f_String()));
+									Outputs.f_Insert(fGetStripped(pOriginalOutput->f_Json().f_String()));
 
 								for (auto &pParam : CommandLine)
 								{
-									CStr WorkingDirParam = CFile::fs_GetExpandedPath(pParam->f_String(), WorkingDirectory);
-									CStr StrippedParam = fGetStripped(pParam->f_String());
+									CStr WorkingDirParam = CFile::fs_GetExpandedPath(pParam->f_Json().f_String(), WorkingDirectory);
+									CStr StrippedParam = fGetStripped(pParam->f_Json().f_String());
 									CStr *pWorkingDirOutput = nullptr;
 									CStr *pStrippedOutput = nullptr;
 									mint iOutput = 0;
@@ -753,19 +755,15 @@ namespace NMib::NBuildSystem
 									}
 									if (pStrippedOutput)
 									{
-										RemappedOutputs[StrippedParam]
-											= *pParam
-											= *OriginalOutputs[iOutput]
-											= fParseString(fg_Format("`@(Target:Target.IntermediateDirectory)/{}`", fGetStripped(pParam->f_String(), false)))
-										;
+										auto NewValue = fParseString(fg_Format("`@(Target:Target.IntermediateDirectory)/{}`", fGetStripped(pParam->f_Json().f_String(), false)));
+										RemappedOutputs[StrippedParam] = NewValue;
+										*OriginalOutputs[iOutput] = *pParam = CBuildSystemSyntax::CParam{NewValue.f_EvalString()};
 									}
 									else if (pWorkingDirOutput)
 									{
-										RemappedOutputs[WorkingDirParam]
-											= *pParam
-											= *OriginalOutputs[iOutput]
-											= fParseString(fg_Format("`@(Target:Target.IntermediateDirectory)/{}/{}`", RelativeWorkingDir, pParam->f_String()))
-										;
+										auto NewValue = fParseString(fg_Format("`@(Target:Target.IntermediateDirectory)/{}/{}`", RelativeWorkingDir, pParam->f_Json().f_String()));
+										RemappedOutputs[StrippedParam] = NewValue;
+										*OriginalOutputs[iOutput] = *pParam = CBuildSystemSyntax::CParam{NewValue.f_EvalString()};
 									}
 								}
 							}
@@ -776,14 +774,14 @@ namespace NMib::NBuildSystem
 						(
 							[&](CBuildSystemRegistry &o_This)
 							{
-								if (!o_This.f_GetThisValue().f_IsString())
+								if (!o_This.f_GetThisValue().m_Value.f_IsConstantString())
 									return;
 
-								CStr ExpandedPath = fGetStripped(o_This.f_GetThisValue().f_String());
+								CStr ExpandedPath = fGetStripped(o_This.f_GetThisValue().m_Value.f_ConstantString());
 
 								auto *pRemapped = RemappedOutputs.f_FindEqual(ExpandedPath);
 								if (pRemapped)
-									o_This.f_SetThisValue(CEJSON::fs_FromJSON(*pRemapped));
+									o_This.f_SetThisValue(CBuildSystemSyntax::CRootValue{*pRemapped});
 							}
 						)
 					;

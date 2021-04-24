@@ -5,6 +5,33 @@
 
 namespace NMib::NBuildSystem
 {
+	NEncoding::CEJSON CBuildSystemSyntax::COperator::f_ToJSON() const
+	{
+		CEJSON Return;
+		auto &UserType = Return.f_UserType();
+		UserType.m_Type = "BuildSystemToken";
+		UserType.m_Value["Type"] = "Operator";
+		auto &Operator = UserType.m_Value["Operator"];
+
+		switch (m_Operator)
+		{
+		case EOperator_LessThan: Operator = "<"; break;
+		case EOperator_LessThanEqual: Operator = "<="; break;
+		case EOperator_GreaterThan: Operator = ">"; break;
+		case EOperator_GreaterThanEqual: Operator = ">="; break;
+		case EOperator_Equal: Operator = "=="; break;
+		case EOperator_NotEqual: Operator = "!="; break;
+		case EOperator_MatchEqual: Operator = "<==>"; break;
+		case EOperator_MatchNotEqual: Operator = "<!=>"; break;
+		case EOperator_Append: Operator = "=+"; break;
+		case EOperator_Prepend: Operator = "+="; break;
+		}
+
+		UserType.m_Value["Right"] = m_Right.f_Get().f_ToJSON().f_ToJSON();
+
+		return Return;
+	}
+
 	auto CBuildSystemSyntax::COperator::fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position, bool _bAppendAllowed) -> COperator
 	{
 		auto pOperator = _JSON.f_GetMember("Operator", EJSONType_String);
@@ -43,6 +70,44 @@ namespace NMib::NBuildSystem
 			CBuildSystem::fs_ThrowError(_Position, "Operator token has no valid Right member");
 
 		Return.m_Right = CValue::fs_FromJSON(*pRight, _Position, _bAppendAllowed);
+
+		return Return;
+	}
+
+	NEncoding::CEJSON CBuildSystemSyntax::CBinaryOperator::f_ToJSON() const
+	{
+		CEJSON Return;
+		auto &UserType = Return.f_UserType();
+		UserType.m_Type = "BuildSystemToken";
+		UserType.m_Value["Type"] = "BinaryOperator";
+		auto &Operator = UserType.m_Value["Operator"];
+
+		switch (m_Operator)
+		{
+		case EOperator_LessThan: Operator = "<"; break;
+		case EOperator_LessThanEqual: Operator = "<="; break;
+		case EOperator_GreaterThan: Operator = ">"; break;
+		case EOperator_GreaterThanEqual: Operator = ">="; break;
+		case EOperator_Equal: Operator = "=="; break;
+		case EOperator_NotEqual: Operator = "!="; break;
+		case EOperator_MatchEqual: Operator = "<==>"; break;
+		case EOperator_MatchNotEqual: Operator = "<!=>"; break;
+		case EOperator_Add: Operator = "+"; break;
+		case EOperator_Subtract: Operator = "-"; break;
+		case EOperator_Divide: Operator = "/"; break;
+		case EOperator_Multiply: Operator = "*"; break;
+		case EOperator_Modulus: Operator = "%"; break;
+		case EOperator_BitwiseLeftShift: Operator = "<<"; break;
+		case EOperator_BitwiseRightShift: Operator = ">>"; break;
+		case EOperator_BitwiseAnd: Operator = "&"; break;
+		case EOperator_BitwiseXor: Operator = "^"; break;
+		case EOperator_BitwiseOr: Operator = "|"; break;
+		case EOperator_And: Operator = "&&"; break;
+		case EOperator_Or: Operator = "||"; break;
+		}
+
+		UserType.m_Value["Left"] = m_Left.f_ToJSON().f_ToJSON();
+		UserType.m_Value["Right"] = m_Right.f_ToJSON().f_ToJSON();
 
 		return Return;
 	}
@@ -128,6 +193,27 @@ namespace NMib::NBuildSystem
 		BinaryOperator.m_Right = fParseParam(CEJSON::fs_FromJSON(*pRight));
 
 		return BinaryOperator;
+	}
+
+	NEncoding::CEJSON CBuildSystemSyntax::CPrefixOperator::f_ToJSON() const
+	{
+		CEJSON Return;
+		auto &UserType = Return.f_UserType();
+		UserType.m_Type = "BuildSystemToken";
+		UserType.m_Value["Type"] = "PrefixOperator";
+		auto &Operator = UserType.m_Value["Operator"];
+
+		switch (m_Operator)
+		{
+		case EOperator_LogicalNot: Operator = "!"; break;
+		case EOperator_BitwiseNot: Operator = "~"; break;
+		case EOperator_UnaryPlus: Operator = "+"; break;
+		case EOperator_UnaryMinus: Operator = "-"; break;
+		}
+
+		UserType.m_Value["Right"] = m_Right.f_ToJSON().f_ToJSON();
+
+		return Return;
 	}
 
 	auto CBuildSystemSyntax::CPrefixOperator::fs_FromJSON(CJSON const &_JSON, CFilePosition const &_Position) -> CPrefixOperator

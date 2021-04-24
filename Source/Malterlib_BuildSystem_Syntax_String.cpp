@@ -5,6 +5,38 @@
 
 namespace NMib::NBuildSystem
 {
+	bool CBuildSystemSyntax::CEvalStringToken::f_IsExpression() const
+	{
+		return m_Token.f_IsOfType<NStorage::TCIndirection<CExpression>>();
+	}
+
+	CBuildSystemSyntax::CExpression const &CBuildSystemSyntax::CEvalStringToken::f_Expression() const
+	{
+		return m_Token.f_GetAsType<NStorage::TCIndirection<CExpression>>().f_Get();
+	}
+
+	NEncoding::CEJSON CBuildSystemSyntax::CEvalStringToken::f_ToJSON(bool _bRawString) const
+	{
+		switch (m_Token.f_GetTypeID())
+		{
+		case 0:
+			{
+				if (_bRawString)
+					return m_Token.f_Get<0>();
+				
+				CEJSON Return;
+				auto &ReturnObject = Return.f_Object();
+				ReturnObject["Type"] = "String";
+				ReturnObject["Value"] = m_Token.f_Get<0>();
+				return Return;
+			}
+		case 1: return CEJSON::fs_FromJSON(m_Token.f_Get<1>().f_Get().f_ToJSON().f_UserType().m_Value);
+		default: DMibNeverGetHere;
+		}
+
+		return {};
+	}
+
 	auto CBuildSystemSyntax::CEvalStringToken::fs_FromJSON(CEJSON const &_JSON, CFilePosition const &_Position) -> CEvalStringToken
 	{
 		if (_JSON.f_IsString())
@@ -39,6 +71,28 @@ namespace NMib::NBuildSystem
 		return {};
 	}
 
+	NEncoding::CEJSON CBuildSystemSyntax::CEvalString::f_ToJSONArray(bool _bRawString) const
+	{
+		CEJSON Return;
+
+		auto &Array = Return.f_Array();
+		for (auto &Token : m_Tokens)
+			Array.f_Insert(Token.f_ToJSON(_bRawString));
+
+		return Return;
+	}
+
+	NEncoding::CEJSON CBuildSystemSyntax::CEvalString::f_ToJSON() const
+	{
+		CEJSON Return;
+		auto &UserType = Return.f_UserType();
+		UserType.m_Type = "BuildSystemToken";
+		UserType.m_Value["Type"] = "EvalString";
+		UserType.m_Value["Value"] = f_ToJSONArray(false).f_ToJSON();
+
+		return Return;
+	}
+
 	auto CBuildSystemSyntax::CEvalString::fs_FromJSON(CEJSON const &_JSON, CFilePosition const &_Position) -> CEvalString
 	{
 		if (!_JSON.f_IsArray())
@@ -48,6 +102,24 @@ namespace NMib::NBuildSystem
 
 		for (auto &Token : _JSON.f_Array())
 			Return.m_Tokens.f_Insert(CEvalStringToken::fs_FromJSON(Token, _Position));
+
+		return Return;
+	}
+
+	NEncoding::CEJSON CBuildSystemSyntax::CWildcardString::f_ToJSON() const
+	{
+		CEJSON Return;
+		auto &UserType = Return.f_UserType();
+		UserType.m_Type = "BuildSystemToken";
+		UserType.m_Value["Type"] = "WildcardString";
+		auto &Value = UserType.m_Value["Value"];
+
+		switch (m_String.f_GetTypeID())
+		{
+		case 0: Value = m_String.f_Get<0>(); break;
+		case 1: Value = m_String.f_Get<1>().f_ToJSON().f_UserType().m_Value; break;
+		default: DMibNeverGetHere;
+		}
 
 		return Return;
 	}

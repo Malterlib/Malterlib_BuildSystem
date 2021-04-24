@@ -5,6 +5,24 @@
 
 namespace NMib::NBuildSystem
 {
+	NEncoding::CEJSON CBuildSystemSyntax::CKeyLogicalOperator::f_ToJSON() const
+	{
+		CEJSON Return;
+		auto &UserType = Return.f_UserType();
+		UserType.m_Type = "BuildSystemToken";
+		UserType.m_Value["Type"] = "KeyLogicalOperator";
+		auto &Operator = UserType.m_Value["Operator"];
+
+		switch (m_Operator)
+		{
+		case EOperator_And: Operator = "&"; break;
+		case EOperator_Or: Operator = "|"; break;
+		case EOperator_Not: Operator = "!"; break;
+		}
+
+		return Return;
+	}
+
 	CBuildSystemSyntax::CKeyLogicalOperator CBuildSystemSyntax::CKeyLogicalOperator::fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position)
 	{
  		auto &UserType = _JSON.f_UserType();
@@ -75,6 +93,28 @@ namespace NMib::NBuildSystem
 			CBuildSystem::fs_ThrowError(_Position, "Invalid operator '{}' for PrefixOperator token"_f << Operator);
 	}
 
+	NEncoding::CEJSON CBuildSystemSyntax::CKeyPrefixOperator::f_ToJSON() const
+	{
+		CEJSON Return;
+		auto &UserType = Return.f_UserType();
+		UserType.m_Type = "BuildSystemToken";
+		UserType.m_Value["Type"] = "KeyPrefixOperator";
+		auto &Operator = UserType.m_Value["Operator"];
+
+		switch (m_Operator)
+		{
+		case EOperator_Equal: Operator = "!!"; break;
+		case EOperator_NotEqual: Operator = "!"; break;
+		case EOperator_Entity: Operator = "%"; break;
+		case EOperator_ConfigurationTuple: Operator = "*"; break;
+		case EOperator_Pragma: Operator = "#"; break;
+		}
+
+		UserType.m_Value["Right"] = m_Right.f_ToJSON().f_ToJSON();
+
+		return Return;
+	}
+
 	CBuildSystemSyntax::CKeyPrefixOperator CBuildSystemSyntax::CKeyPrefixOperator::fs_FromJSON(EOperator _Operator, NEncoding::CEJSON const &_JSON, CFilePosition const &_Position)
 	{
  		auto &UserType = _JSON.f_UserType();
@@ -114,16 +154,149 @@ namespace NMib::NBuildSystem
 		return false;
 	}
 
-	CBuildSystemSyntax::CBinaryOperator &CBuildSystemSyntax::CParam::f_GetBinaryOperator()
+	CBuildSystemSyntax::CBinaryOperator &CBuildSystemSyntax::CParam::f_BinaryOperator()
 	{
 		if (m_Param.f_IsOfType<NStorage::TCIndirection<CExpression>>())
 		{
 			auto &Expression = m_Param.f_GetAsType<NStorage::TCIndirection<CExpression>>().f_Get();
 			if (!Expression.m_bParen && Expression.m_Expression.f_IsOfType<CParam>())
-				return Expression.m_Expression.f_GetAsType<CParam>().f_GetBinaryOperator();
+				return Expression.m_Expression.f_GetAsType<CParam>().f_BinaryOperator();
 		}
 
 		return m_Param.f_GetAsType<NStorage::TCIndirection<CBinaryOperator>>();
+	}
+
+	CBuildSystemSyntax::CBinaryOperator const &CBuildSystemSyntax::CParam::f_BinaryOperator() const
+	{
+		if (m_Param.f_IsOfType<NStorage::TCIndirection<CExpression>>())
+		{
+			auto &Expression = m_Param.f_GetAsType<NStorage::TCIndirection<CExpression>>().f_Get();
+			if (!Expression.m_bParen && Expression.m_Expression.f_IsOfType<CParam>())
+				return Expression.m_Expression.f_GetAsType<CParam>().f_BinaryOperator();
+		}
+
+		return m_Param.f_GetAsType<NStorage::TCIndirection<CBinaryOperator>>();
+	}
+
+	bool CBuildSystemSyntax::CParam::f_IsJson() const
+	{
+		return m_Param.f_IsOfType<NEncoding::CEJSON>();
+	}
+
+	NEncoding::CEJSON const &CBuildSystemSyntax::CParam::f_Json() const
+	{
+		return m_Param.f_GetAsType<NEncoding::CEJSON>();
+	}
+
+	bool CBuildSystemSyntax::CParam::f_IsObject() const
+	{
+		return m_Param.f_IsOfType<CObject>();
+	}
+
+	CBuildSystemSyntax::CObject const &CBuildSystemSyntax::CParam::f_Object() const
+	{
+		return m_Param.f_GetAsType<CObject>();
+	}
+
+	bool CBuildSystemSyntax::CParam::f_IsArray() const
+	{
+		return m_Param.f_IsOfType<CArray>();
+	}
+
+	CBuildSystemSyntax::CArray const &CBuildSystemSyntax::CParam::f_Array() const
+	{
+		return m_Param.f_GetAsType<CArray>();
+	}
+
+	bool CBuildSystemSyntax::CParam::f_IsIdentifier() const
+	{
+		return m_Param.f_IsOfType<NStorage::TCIndirection<CIdentifier>>();
+	}
+
+	CBuildSystemSyntax::CIdentifier const &CBuildSystemSyntax::CParam::f_Identifier() const
+	{
+		return m_Param.f_GetAsType<NStorage::TCIndirection<CIdentifier>>();
+	}
+
+	bool CBuildSystemSyntax::CParam::f_IsEvalString() const
+	{
+		return m_Param.f_IsOfType<CEvalString>();
+	}
+
+	CBuildSystemSyntax::CEvalString const &CBuildSystemSyntax::CParam::f_EvalString() const
+	{
+		return m_Param.f_GetAsType<CEvalString>();
+	}
+
+	bool CBuildSystemSyntax::CParam::f_IsWildcardString() const
+	{
+		return m_Param.f_IsOfType<CWildcardString>();
+	}
+
+	CBuildSystemSyntax::CWildcardString const &CBuildSystemSyntax::CParam::f_WildcardString() const
+	{
+		return m_Param.f_GetAsType<CWildcardString>();
+	}
+
+	bool CBuildSystemSyntax::CParam::f_IsExpression() const
+	{
+		return m_Param.f_IsOfType<NStorage::TCIndirection<CExpression>>();
+	}
+
+	CBuildSystemSyntax::CExpression const &CBuildSystemSyntax::CParam::f_Expression() const
+	{
+		return m_Param.f_GetAsType<NStorage::TCIndirection<CExpression>>();
+	}
+
+	bool CBuildSystemSyntax::CParam::f_IsExpressionAppend() const
+	{
+		return m_Param.f_IsOfType<NStorage::TCIndirection<CExpressionAppend>>();
+	}
+
+	CBuildSystemSyntax::CExpressionAppend const &CBuildSystemSyntax::CParam::f_ExpressionAppend() const
+	{
+		return m_Param.f_GetAsType<NStorage::TCIndirection<CExpressionAppend>>();
+	}
+
+	bool CBuildSystemSyntax::CParam::f_IsTernary() const
+	{
+		return m_Param.f_IsOfType<NStorage::TCIndirection<CTernary>>();
+	}
+
+	CBuildSystemSyntax::CTernary const &CBuildSystemSyntax::CParam::f_Ternary() const
+	{
+		return m_Param.f_GetAsType<NStorage::TCIndirection<CTernary>>();
+	}
+
+	bool CBuildSystemSyntax::CParam::f_IsPrefixOperator() const
+	{
+		return m_Param.f_IsOfType<NStorage::TCIndirection<CPrefixOperator>>();
+	}
+
+	CBuildSystemSyntax::CPrefixOperator const &CBuildSystemSyntax::CParam::f_PrefixOperator() const
+	{
+		return m_Param.f_GetAsType<NStorage::TCIndirection<CPrefixOperator>>();
+	}
+
+	NEncoding::CEJSON CBuildSystemSyntax::CParam::f_ToJSON() const
+	{
+		switch (m_Param.f_GetTypeID())
+		{
+		case 0: return m_Param.f_Get<0>();
+		case 1: return m_Param.f_Get<1>().f_ToJSON();
+		case 2: return m_Param.f_Get<2>().f_ToJSON();
+		case 3: return m_Param.f_Get<3>().f_Get().f_ToJSON();
+		case 4: return m_Param.f_Get<4>().f_ToJSON();
+		case 5: return m_Param.f_Get<5>().f_ToJSON();
+		case 6: return m_Param.f_Get<6>().f_Get().f_ToJSON();
+		case 7: return m_Param.f_Get<7>().f_Get().f_ToJSON();
+		case 8: return m_Param.f_Get<8>().f_Get().f_ToJSON();
+		case 9: return m_Param.f_Get<9>().f_Get().f_ToJSON();
+		case 10: return m_Param.f_Get<10>().f_Get().f_ToJSON();
+		}
+
+		DNeverGetHere;
+		return {};
 	}
 
 	auto CBuildSystemSyntax::CParam::fs_FromJSON(CEJSON const &_JSON, CFilePosition const &_Position, NStr::CStr const &_Type, bool _bAppendAllowed) -> CParam
@@ -234,7 +407,7 @@ namespace NMib::NBuildSystem
 					}
 				;
 
-				auto RightBinary = fg_Move(Operator.m_Right.f_GetBinaryOperator());
+				auto RightBinary = fg_Move(Operator.m_Right.f_BinaryOperator());
 
 				auto Prededence = fOperatorPrecedence(Operator.m_Operator);
 				auto PrededenceRightBinary = fOperatorPrecedence(RightBinary.m_Operator);
@@ -248,11 +421,11 @@ namespace NMib::NBuildSystem
 					auto *pDestination = &Operator;
 					while (pDestination->m_Left.f_IsBinaryOperator())
 					{
-						auto &Next = pDestination->m_Left.f_GetBinaryOperator();
+						auto &Next = pDestination->m_Left.f_BinaryOperator();
 						auto PrededenceRightBinary = fOperatorPrecedence(Next.m_Operator);
 						if (PrededenceRightBinary < Prededence)
 							break;
-						pDestination = &pDestination->m_Left.f_GetBinaryOperator();
+						pDestination = &pDestination->m_Left.f_BinaryOperator();
 					}
 
 					auto Left2 = fg_Move(pDestination->m_Left);
@@ -278,6 +451,19 @@ namespace NMib::NBuildSystem
 			CBuildSystem::fs_ThrowError(_Position, "'{}' is not a valid type for Param"_f << _Type);
 
 		return {};
+	}
+
+	NEncoding::CEJSON CBuildSystemSyntax::CTernary::f_ToJSON() const
+	{
+		CEJSON Return;
+		auto &UserType = Return.f_UserType();
+		UserType.m_Type = "BuildSystemToken";
+		UserType.m_Value["Type"] = "Ternary";
+		UserType.m_Value["Conditional"] = m_Conditional.f_ToJSON().f_ToJSON();
+		UserType.m_Value["Left"] = m_Left.f_ToJSON().f_ToJSON();
+		UserType.m_Value["Right"] = m_Right.f_ToJSON().f_ToJSON();
+
+		return Return;
 	}
 
 	auto CBuildSystemSyntax::CTernary::fs_FromJSON(CJSON const &_JSON, CFilePosition const &_Position) -> CTernary
@@ -319,6 +505,22 @@ namespace NMib::NBuildSystem
 		return Ternary;
 	}
 
+	NEncoding::CEJSON CBuildSystemSyntax::CFunctionCall::f_ToJSON() const
+	{
+		CEJSON Return;
+		auto &UserType = Return.f_UserType();
+		UserType.m_Type = "BuildSystemToken";
+		UserType.m_Value["Type"] = m_bPostFunction ? "PostFunction" : "Function";
+		UserType.m_Value["Name"] = m_Name;
+		UserType.m_Value["PropertyType"] = m_bEmptyPropertyType ? CStr("") : fg_PropertyTypeToStr(m_PropertyType);
+
+		auto &Params = UserType.m_Value["Params"].f_Array();
+		for (auto &Param : m_Params)
+			Params.f_Insert(Param.f_ToJSON().f_ToJSON());
+
+		return Return;
+	}
+
 	auto CBuildSystemSyntax::CFunctionCall::fs_FromJSON(CJSON const &_JSON, CFilePosition const &_Position, NStr::CStr const &_Type) -> CFunctionCall
 	{
 		CFunctionCall FunctionCall;
@@ -334,6 +536,7 @@ namespace NMib::NBuildSystem
 			CBuildSystem::fs_ThrowError(_Position, "Function token does not have valid PropertyType member");
 
 		FunctionCall.m_Name = pName->f_String();
+		FunctionCall.m_bEmptyPropertyType = pPropertyType->f_String().f_IsEmpty();
 		FunctionCall.m_PropertyType = fg_PropertyTypeFromStr(pPropertyType->f_String());
 		if (FunctionCall.m_PropertyType == EPropertyType_Invalid)
 			CBuildSystem::fs_ThrowError(_Position, "Unknown property type '{}'"_f << pPropertyType->f_String());
@@ -369,6 +572,69 @@ namespace NMib::NBuildSystem
 		return FunctionCall;
 	}
 
+	bool CBuildSystemSyntax::CExpression::f_IsParam() const
+	{
+		return m_Expression.f_IsOfType<CExpression>();
+	}
+
+	CBuildSystemSyntax::CParam const &CBuildSystemSyntax::CExpression::f_Param() const
+	{
+		return m_Expression.f_GetAsType<CParam>();
+	}
+
+	bool CBuildSystemSyntax::CExpression::f_IsFunctionCall() const
+	{
+		return m_Expression.f_IsOfType<CFunctionCall>();
+	}
+
+	CBuildSystemSyntax::CFunctionCall const &CBuildSystemSyntax::CExpression::f_FunctionCall() const
+	{
+		return m_Expression.f_GetAsType<CFunctionCall>();
+	}
+
+	bool CBuildSystemSyntax::CExpression::f_IsJsonAccessor() const
+	{
+		return m_Expression.f_IsOfType<NStorage::TCIndirection<CJSONAccessor>>();
+	}
+
+	CBuildSystemSyntax::CJSONAccessor const &CBuildSystemSyntax::CExpression::f_JsonAccessor() const
+	{
+		return m_Expression.f_GetAsType<NStorage::TCIndirection<CJSONAccessor>>().f_Get();
+	}
+
+	NEncoding::CEJSON CBuildSystemSyntax::CExpression::f_ToJSON(bool _bAppendExpression) const
+	{
+		CEJSON Return;
+		auto &UserType = Return.f_UserType();
+		UserType.m_Type = "BuildSystemToken";
+		UserType.m_Value["Type"] = _bAppendExpression ? "AppendExpression" : "Expression";
+		UserType.m_Value["Paren"] = m_bParen;
+
+		auto &Param = UserType.m_Value["Param"];
+		switch (m_Expression.f_GetTypeID())
+		{
+		case 0: Param = m_Expression.f_Get<0>().f_ToJSON().f_ToJSON(); break;
+		case 1: Param = m_Expression.f_Get<1>().f_ToJSON().f_ToJSON(); break;
+		case 2: Param = m_Expression.f_Get<2>().f_Get().f_ToJSON().f_ToJSON(); break;
+		default: DMibNeverGetHere;
+		}
+
+		return Return;
+	}
+
+	NEncoding::CEJSON CBuildSystemSyntax::CExpression::f_ToJSONRaw() const
+	{
+		switch (m_Expression.f_GetTypeID())
+		{
+		case 0: return m_Expression.f_Get<0>().f_ToJSON();
+		case 1: return m_Expression.f_Get<1>().f_ToJSON();
+		case 2: return m_Expression.f_Get<2>().f_Get().f_ToJSON();
+		default: DMibNeverGetHere;
+		}
+
+		return {};
+	}
+
 	auto CBuildSystemSyntax::CExpression::fs_FromJSON(CEJSON const &_JSON, CFilePosition const &_Position, bool _bParen) -> CExpression
 	{
 		if (!_JSON.f_IsUserType())
@@ -392,6 +658,11 @@ namespace NMib::NBuildSystem
 			return CExpression{CParam::fs_FromJSON(_JSON, _Position, pType->f_String(), false), _bParen};
 	}
 
+	NEncoding::CEJSON CBuildSystemSyntax::CExpressionAppend::f_ToJSON() const
+	{
+		return static_cast<CExpression const &>(*this).f_ToJSON(true);
+	}
+	
 	auto CBuildSystemSyntax::CExpressionAppend::fs_FromJSON(CEJSON const &_JSON, CFilePosition const &_Position, bool _bParen) -> CExpressionAppend
 	{
 		CExpressionAppend Return;

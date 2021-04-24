@@ -76,40 +76,17 @@ namespace NMib::NBuildSystem
 				[&](CBuildSystemRegistry &_Registry)
 				{
 					auto &Name = _Registry.f_GetName();
-					if (!Name.f_IsUserType())
+
+					if (!Name.f_IsValue())
 						return;
 
-					auto *pUserType = &Name.f_UserType();
+					auto &NameValue = Name.f_Value();
 
-					auto *pType = pUserType->m_Value.f_GetMember("Type");
-
-					if (!pType)
-						return;
-
-					CEJSON Param;
-					if (pType->f_String() == "Expression")
-					{
-						auto *pParam = pUserType->m_Value.f_GetMember("Param");
-						if (!pParam)
-							return;
-
-						Param = CEJSON::fs_FromJSON(*pParam);
-
-						if (!Param.f_IsUserType())
-							return;
-
-						pUserType = &Param.f_UserType();
-
-						pType = pUserType->m_Value.f_GetMember("Type");
-						if (!pType)
-							return;
-					}
-
-					if (pType->f_String() != "Identifier")
+					if (!NameValue.f_IsIdentifier())
 						return;
 
 					CFilePosition Position = _Registry;
-					auto Identifier = CBuildSystemSyntax::CIdentifier::fs_FromJSON(*pUserType, Position);
+					auto &Identifier = NameValue.f_Identifier();
 
 					if (!Identifier.f_IsNameConstantString())
 						return;
@@ -118,7 +95,7 @@ namespace NMib::NBuildSystem
 						return;
 
 					bool bInclude = Identifier.f_NameConstantString() == "Include";
-					bool bImport = Identifier.f_NameConstantString() == "Import" && _Registry.f_GetThisValue().f_IsValid();
+					bool bImport = Identifier.f_NameConstantString() == "Import" && _Registry.f_GetThisValue().m_Value.f_IsValid();
 					if (!bInclude && !bImport)
 						return;
 
@@ -138,10 +115,10 @@ namespace NMib::NBuildSystem
 
 					if (bDoInclude)
 					{
-						if (!_Registry.f_GetThisValue().f_IsString())
-							fsp_ThrowError(_Registry, "Import should be a string value");
+						if (!_Registry.f_GetThisValue().m_Value.f_IsConstantString())
+							fsp_ThrowError(_Registry, "Import should be a constant string value");
 
-						CStr File = _Registry.f_GetThisValue().f_String();
+						CStr File = _Registry.f_GetThisValue().m_Value.f_ConstantString();
 						CStr FullPath = CFile::fs_GetExpandedPath(File, _Path);
 
 						TCVector<CStr> Files;

@@ -4,7 +4,6 @@
 #pragma once
 
 #include <Mib/Core/Core>
-#include <Mib/BuildSystem/Registry>
 
 namespace NMib::NBuildSystem
 {

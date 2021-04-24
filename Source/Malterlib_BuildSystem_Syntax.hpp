@@ -16,22 +16,28 @@ namespace NMib::NBuildSystem
 				{
 					using CValueType = typename NTraits::TCRemoveReferenceAndQualifiers<decltype(_Value)>::CType;
 					if constexpr (NTraits::TCIsSame<CValueType, NStorage::TCIndirection<CExpression>>::mc_Value)
+					{
 						o_Str += "@";
-					o_Str += typename tf_CStr::CFormat("{}") << _Value;
+						o_Str += typename tf_CStr::CFormat("{}") << _Value;
+					}
+					else
+						o_Str += _Value.f_EscapeStrNoQuotes("\\`");
 				}
 			)
 		;
 	}
 
 	template <typename tf_CStr>
-	void CBuildSystemSyntax::CEvalString::f_Format(tf_CStr &o_Str) const
+	void CBuildSystemSyntax::CEvalString::f_Format(tf_CStr &o_Str, bool _bAddQuotes) const
 	{
-		o_Str += "`";
-		NStr::CStr String;
+		if (_bAddQuotes)
+			o_Str += "`";
+
 		for (auto &Token : m_Tokens)
-			String += typename NStr::CStr::CFormat("{}") << Token;
-		o_Str += String.f_EscapeStrNoQuotes("\\`");
-		o_Str += "`";
+			o_Str += typename tf_CStr::CFormat("{}") << Token;
+
+		if (_bAddQuotes)
+			o_Str += "`";
 	}
 
 	template <typename tf_CStr>
@@ -76,7 +82,7 @@ namespace NMib::NBuildSystem
 			o_Str += "->";
 		}
 
-		if (m_PropertyType != EPropertyType_Property)
+		if (!m_bEmptyPropertyType)
 		{
 			o_Str += fg_PropertyTypeToStr(m_PropertyType);
 			o_Str += ".";
@@ -253,7 +259,7 @@ namespace NMib::NBuildSystem
 				{
 					using CValueType = typename NTraits::TCRemoveReferenceAndQualifiers<decltype(_Value)>::CType;
 					if constexpr (NTraits::TCIsSame<CValueType, NStr::CStr>::mc_Value)
-						NContainer::TCRegistry_CustomValue<CBuildSystemRegistryValue>::fs_GenerateIdentifier(o_Str, _Value);
+						NContainer::TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_GenerateIdentifier(o_Str, _Value);
 					else
 					{
 						for (auto &Token : _Value.m_Tokens)
@@ -264,7 +270,7 @@ namespace NMib::NBuildSystem
 									{
 										using CValueType = typename NTraits::TCRemoveReferenceAndQualifiers<decltype(_Value)>::CType;
 										if constexpr (NTraits::TCIsSame<CValueType, NStr::CStr>::mc_Value)
-											NContainer::TCRegistry_CustomValue<CBuildSystemRegistryValue>::fs_GenerateIdentifier(o_Str, _Value);
+											NContainer::TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_GenerateIdentifier(o_Str, _Value);
 										else
 											o_Str += typename tf_CStr::CFormat("@{}") << _Value;
 									}
@@ -374,7 +380,7 @@ namespace NMib::NBuildSystem
 
 		bool bAdded = false;
 
-		for (auto &Member : m_Members)
+		for (auto &Member : m_MembersSorted)
 		{
 			if (bAdded)
 				o_Str += ", ";

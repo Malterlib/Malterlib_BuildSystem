@@ -837,7 +837,7 @@ namespace NMib::NBuildSystem
 									CStr ParseValue = o_Value.f_String();
 									uch8 const *pParse = (uch8 const *)ParseValue.f_GetStr();
 
-									TCRegistry_CustomValue<NBuildSystem::CBuildSystemRegistryValue>::CEJSONParseContext Context;
+									NBuildSystem::CCustomRegistryKeyValue::CEJSONParseContext Context;
 									Context.m_pStartParse = pParse;
 									o_Value = Context.f_ParseDate(pParse, false);
 								}
@@ -863,7 +863,7 @@ namespace NMib::NBuildSystem
 									CStr ParseValue = o_Value.f_String();
 									uch8 const *pParse = (uch8 const *)ParseValue.f_GetStr();
 
-									TCRegistry_CustomValue<NBuildSystem::CBuildSystemRegistryValue>::CEJSONParseContext Context;
+									NBuildSystem::CCustomRegistryKeyValue::CEJSONParseContext Context;
 									Context.m_pStartParse = pParse;
 									o_Value = Context.f_ParseBinary(pParse, false);
 								}
@@ -1162,7 +1162,7 @@ namespace NMib::NBuildSystem
 											CStr ParseValue = o_Value.f_String();
 											uch8 const *pParse = (uch8 const *)ParseValue.f_GetStr();
 
-											TCRegistry_CustomValue<NBuildSystem::CBuildSystemRegistryValue>::CEJSONParseContext Context;
+											NBuildSystem::CCustomRegistryKeyValue::CEJSONParseContext Context;
 											Context.m_pStartParse = pParse;
 
 											CEJSON ConvertedValue = Context.f_ParseDate(pParse, false);
@@ -1175,7 +1175,7 @@ namespace NMib::NBuildSystem
 											CStr ParseValue = o_Value.f_String();
 											uch8 const *pParse = (uch8 const *)ParseValue.f_GetStr();
 
-											TCRegistry_CustomValue<NBuildSystem::CBuildSystemRegistryValue>::CEJSONParseContext Context;
+											NBuildSystem::CCustomRegistryKeyValue::CEJSONParseContext Context;
 											Context.m_pStartParse = pParse;
 
 											CEJSON ConvertedValue = Context.f_ParseBinary(pParse, false);

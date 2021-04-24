@@ -14,6 +14,30 @@ namespace NMib::NBuildSystem
 	CBuildSystemSyntax::CType const CBuildSystemSyntax::CDefaultType::ms_Date{CBuildSystemSyntax::CDefaultType{CBuildSystemSyntax::CDefaultType::EType_Date}};
 	CBuildSystemSyntax::CType const CBuildSystemSyntax::CDefaultType::ms_Binary{CBuildSystemSyntax::CDefaultType{CBuildSystemSyntax::CDefaultType::EType_Binary}};
 
+	NEncoding::CEJSON CBuildSystemSyntax::CDefaultType::f_ToJSON() const
+	{
+		CEJSON Return;
+		auto &UserType = Return.f_UserType();
+		UserType.m_Type = "BuildSystemToken";
+		UserType.m_Value["Type"] = "DefaultType";
+		auto &TypeName = UserType.m_Value["TypeName"];
+
+		switch (m_Type)
+		{
+		case EType_Any: TypeName = "any"; break;
+		case EType_Void: TypeName = "void"; break;
+		case EType_String: TypeName = "string"; break;
+		case EType_Integer: TypeName = "int"; break;
+		case EType_FloatingPoint: TypeName = "float"; break;
+		case EType_Boolean: TypeName = "bool"; break;
+		case EType_Date: TypeName = "date"; break;
+		case EType_Binary: TypeName = "binary"; break;
+		default: DMibNeverGetHere;
+		}
+
+		return Return;
+	}
+
 	auto CBuildSystemSyntax::CDefaultType::fs_FromJSON(CJSON const &_JSON, CFilePosition const &_Position) -> CDefaultType
 	{
 		if (!_JSON.f_IsObject())
@@ -47,6 +71,17 @@ namespace NMib::NBuildSystem
 		return {};
 	}
 
+	NEncoding::CEJSON CBuildSystemSyntax::CTypeDefaulted::f_ToJSON() const
+	{
+		CEJSON Return;
+		auto &UserType = Return.f_UserType();
+		UserType.m_Type = "BuildSystemToken";
+		UserType.m_Value["Type"] = "TypeDefaulted";
+		UserType.m_Value["InnerType"] = m_Type.f_Get().f_ToJSON().f_ToJSON();
+		UserType.m_Value["DefaultValue"] = m_DefaultValue.f_ToJSON().f_ToJSON();
+
+		return Return;
+	}
 
 	auto CBuildSystemSyntax::CTypeDefaulted::fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position) -> CTypeDefaulted
 	{
@@ -79,6 +114,17 @@ namespace NMib::NBuildSystem
 		return CTypeDefaulted{{CType::fs_FromJSON(*pType, _Position)}, CParam::fs_FromJSON(*pDefault, _Position, Type, false)};
 	}
 
+	NEncoding::CEJSON CBuildSystemSyntax::CUserType::f_ToJSON() const
+	{
+		CEJSON Return;
+		auto &UserType = Return.f_UserType();
+		UserType.m_Type = "BuildSystemToken";
+		UserType.m_Value["Type"] = "Type";
+		UserType.m_Value["TypeName"] = m_Name;
+
+		return Return;
+	}
+
 	auto CBuildSystemSyntax::CUserType::fs_FromJSON(NEncoding::CJSON const &_JSON, CFilePosition const &_Position) -> CUserType
 	{
 		if (!_JSON.f_IsObject())
@@ -89,6 +135,73 @@ namespace NMib::NBuildSystem
 			CBuildSystem::fs_ThrowError(_Position, "UserType does not have a valid TypeName member");
 
 		return CUserType{pTypeName->f_String()};
+	}
+
+	CBuildSystemSyntax::CClassType::CMember::CMember() = default;
+	CBuildSystemSyntax::CClassType::CMember::CMember(CMember &&_Other) = default;
+
+	CBuildSystemSyntax::CClassType::CMember::CMember(CMember const &_Other)
+		: m_Type(_Other.m_Type)
+		, m_bOptional(_Other.m_bOptional)
+	{
+	}
+
+	CBuildSystemSyntax::CClassType::CMember::CMember(CType const &_Type, bool _bOptional)
+		: m_Type(_Type)
+		, m_bOptional(_bOptional)
+	{
+	}
+
+	CBuildSystemSyntax::CClassType::CClassType() = default;
+	CBuildSystemSyntax::CClassType::CClassType(CClassType &&_Other) = default;
+
+	CBuildSystemSyntax::CClassType::CClassType(CClassType const &_Other)
+		: m_OtherKeysType(_Other.m_OtherKeysType)
+	{
+		for (auto &Value : _Other.m_MembersSorted)
+		{
+			auto &Key = _Other.m_Members.fs_GetKey(Value);
+			auto &NewValue = m_Members[Key];
+			NewValue.m_Type = Value.m_Type;
+			NewValue.m_bOptional = Value.m_bOptional;
+			m_MembersSorted.f_Insert(NewValue);
+		}
+	}
+
+	CBuildSystemSyntax::CClassType::CClassType(NContainer::TCMap<NStr::CStr, CMember> const &_Members, CType const &_OtherKeysType)
+		: m_Members(_Members)
+		, m_OtherKeysType(NStorage::TCIndirection<CType>(_OtherKeysType))
+	{
+		for (auto &Member : m_Members)
+			m_MembersSorted.f_Insert(Member);
+	}
+
+	NEncoding::CEJSON CBuildSystemSyntax::CClassType::f_ToJSON() const
+	{
+		CEJSON Return;
+		auto &Object = Return.f_Object();
+
+		for (auto &Member : m_MembersSorted)
+		{
+			auto &Key = m_Members.fs_GetKey(Member);
+			if (Member.m_bOptional)
+			{
+				CStr OutKey = Key + "?";
+				OutKey.f_SetUserData(Key.f_GetUserData());
+				Object[OutKey] = Member.m_Type.f_Get().f_ToJSON();
+			}
+			else
+				Object[Key] = Member.m_Type.f_Get().f_ToJSON();
+		}
+
+		if (m_OtherKeysType)
+		{
+			CStr Key = "...";
+			Key.f_SetUserData(EJSONStringType_NoQuote);
+			Object[Key] = m_OtherKeysType->f_Get().f_ToJSON();
+		}
+
+		return Return;
 	}
 
 	auto CBuildSystemSyntax::CClassType::fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position) -> CClassType
@@ -132,9 +245,18 @@ namespace NMib::NBuildSystem
 			auto &ClassMember = ClassType.m_Members[Name];
 			ClassMember.m_bOptional = bOptional;
 			ClassMember.m_Type = CType::fs_FromJSON(Member.f_Value(), _Position);
+			ClassType.m_MembersSorted.f_Insert(ClassMember);
 		}
 
 		return ClassType;
+	}
+
+	NEncoding::CEJSON CBuildSystemSyntax::CArrayType::f_ToJSON() const
+	{
+		CEJSON Return;
+		auto &Array = Return.f_Array();
+		Array.f_Insert(m_Type.f_Get().f_ToJSON());
+		return Return;
 	}
 
 	auto CBuildSystemSyntax::CArrayType::fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position) -> CArrayType
@@ -162,6 +284,11 @@ namespace NMib::NBuildSystem
 		return m_Type.f_IsOfType<CBuildSystemSyntax::CTypeDefaulted>();
 	}
 
+	bool CBuildSystemSyntax::CType::f_IsFunction() const
+	{
+		return m_Type.f_IsOfType<CBuildSystemSyntax::CFunctionType>();
+	}
+
 	bool CBuildSystemSyntax::CType::f_IsAny(TCFunctionNoAlloc<CType const *(CType const *_pType)> const &_fGetCanonical) const
 	{
 		auto *pType = this;
@@ -185,6 +312,39 @@ namespace NMib::NBuildSystem
 		}
 
 		return false;
+	}
+
+	NEncoding::CEJSON CBuildSystemSyntax::CType::f_ToJSON() const
+	{
+		auto fGetType = [&]() -> CEJSON
+			{
+				switch (m_Type.f_GetTypeID())
+				{
+				case 0: return m_Type.f_Get<0>().f_ToJSON();
+				case 1: return m_Type.f_Get<1>().f_ToJSON();
+				case 2: return m_Type.f_Get<2>().f_ToJSON();
+				case 3: return m_Type.f_Get<3>().f_ToJSON();
+				case 4: return m_Type.f_Get<4>().f_ToJSON();
+				case 5: return m_Type.f_Get<5>().f_ToJSON();
+				case 6: return m_Type.f_Get<6>().f_ToJSON();
+				}
+				DNeverGetHere;
+				return {};
+			}
+		;
+
+		if (m_bOptional)
+		{
+			CEJSON Return;
+			auto &UserType = Return.f_UserType();
+			UserType.m_Type = "BuildSystemToken";
+			UserType.m_Value["Type"] = "Optional";
+			UserType.m_Value["Param"] = fGetType().f_ToJSON();
+
+			return Return;
+		}
+		else
+			return fGetType();
 	}
 
 	auto CBuildSystemSyntax::CType::fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position) -> CType
@@ -238,6 +398,26 @@ namespace NMib::NBuildSystem
 		return {};
 	}
 
+	NEncoding::CEJSON CBuildSystemSyntax::COneOf::f_ToJSON() const
+	{
+		CEJSON Return;
+		auto &UserType = Return.f_UserType();
+		UserType.m_Type = "BuildSystemToken";
+		UserType.m_Value["Type"] = "OneOf";
+		auto &OutArray = UserType.m_Value["OneOfList"].f_Array();
+		for (auto &Value : m_OneOf)
+		{
+			switch (Value.f_GetTypeID())
+			{
+			case 0: OutArray.f_Insert(Value.f_Get<0>().f_ToJSON()); break;
+			case 1: OutArray.f_Insert(Value.f_Get<1>().f_Get().f_ToJSON().f_ToJSON()); break;
+			default: DNeverGetHere;
+			}
+		}
+
+		return Return;
+	}
+
 	auto CBuildSystemSyntax::COneOf::fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position) -> COneOf
 	{
 		if (!_JSON.f_IsObject())
@@ -256,6 +436,17 @@ namespace NMib::NBuildSystem
 			else
 				Return.m_OneOf.f_Insert(OneOf);
 		}
+
+		return Return;
+	}
+
+	NEncoding::CEJSON CBuildSystemSyntax::CFunctionParameter::f_ToJSON() const
+	{
+		CEJSON Return;
+		auto &Object = Return.f_Object();
+		Object["Type"] = m_Type.f_Get().f_ToJSON();
+		Object["Name"] = m_Name;
+		Object["Ellipsis"] = m_ParamType == EParamType_Ellipsis;
 
 		return Return;
 	}
@@ -295,6 +486,21 @@ namespace NMib::NBuildSystem
 		return {fg_Move(Type), pName->f_String(), ParamType};
 	}
 
+	NEncoding::CEJSON CBuildSystemSyntax::CFunctionType::f_ToJSON() const
+	{
+		CEJSON Return;
+		auto &UserType = Return.f_UserType();
+		UserType.m_Type = "BuildSystemToken";
+		UserType.m_Value["Type"] = "FunctionType";
+		UserType.m_Value["ReturnType"] = m_Return.f_Get().f_ToJSON().f_ToJSON();
+
+		auto &OutParameters = UserType.m_Value["Parameters"].f_Array();
+		for (auto &Parameter : m_Parameters)
+			OutParameters.f_Insert(Parameter.f_ToJSON().f_ToJSON());
+
+		return Return;
+	}
+
 	auto CBuildSystemSyntax::CFunctionType::fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position) -> CFunctionType
 	{
 		if (!_JSON.f_IsObject())
@@ -313,6 +519,22 @@ namespace NMib::NBuildSystem
 			Parameters.f_Insert(CBuildSystemSyntax::CFunctionParameter::fs_FromJSON(Parameter, _Position));
 
 		return {CBuildSystemSyntax::CType::fs_FromJSON(*pReturnType, _Position), fg_Move(Parameters)};
+	}
+
+	NEncoding::CEJSON CBuildSystemSyntax::CDefine::f_ToJSON() const
+	{
+		if (m_Type.f_IsFunction())
+			return m_Type.f_ToJSON();
+		else
+		{
+			CEJSON Return;
+			auto &UserType = Return.f_UserType();
+			UserType.m_Type = "BuildSystemToken";
+			UserType.m_Value["Type"] = "Define";
+			UserType.m_Value["Define"] = m_Type.f_ToJSON().f_ToJSON();
+
+			return Return;
+		}
 	}
 
 	auto CBuildSystemSyntax::CDefine::fs_FromJSON(CEJSON const &_JSON, CFilePosition const &_Position) -> CDefine

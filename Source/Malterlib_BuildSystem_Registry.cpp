@@ -10,19 +10,19 @@ namespace NMib::NContainer
 	using namespace NEncoding;
 	using namespace NBuildSystem;
 
-	TCRegistry_CustomValue<CBuildSystemRegistryValue>::CEJSONParseContext::CEJSONParseContext()
+	TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext::CEJSONParseContext()
 	{
 		m_bConvertNullToSpace = false;
 		m_Flags = gc_BuildSystemJSONParseFlags;
 	}
 
-	TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::CJSONParseContext()
+	TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::CJSONParseContext()
 	{
 		m_bConvertNullToSpace = false;
 		m_Flags = gc_BuildSystemJSONParseFlags;
 	}
 
-	NTime::CTime TCRegistry_CustomValue<CBuildSystemRegistryValue>::fs_ParseDate(ch8 const * &o_pParse)
+	NTime::CTime TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_ParseDate(ch8 const * &o_pParse)
 	{
 		using namespace NStr;
 
@@ -120,7 +120,7 @@ namespace NMib::NContainer
 		return NTime::CTimeConvert::fs_CreateTime(Year, Month, Day, Hour, Minute, Second, Fraction);
 	}
 
-	NContainer::CByteVector TCRegistry_CustomValue<CBuildSystemRegistryValue>::fs_ParseBinary(ch8 const * &o_pParse)
+	NContainer::CByteVector TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_ParseBinary(ch8 const * &o_pParse)
 	{
 		o_pParse += 7;
 
@@ -145,12 +145,13 @@ namespace NMib::NContainer
 	}
 
 	template <>
-	void TCRegistry_CustomValue<CBuildSystemRegistryValue>::fs_ParseKey
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_ParseKey
 		(
 			ch8 const * &o_pParse
 			, CBuildSystemRegistry::CParseContext &o_ParseContext
 			, bool &o_bWasEscaped
-			, NBuildSystem::CBuildSystemRegistryValue &o_Key
+			, NBuildSystem::CBuildSystemSyntax::CRootKey &o_Key
+			, CBuildSystemRegistry::CLocation const &_Location
 		)
 	{
 		o_bWasEscaped = false;
@@ -176,7 +177,8 @@ namespace NMib::NContainer
 
 		auto fParsePrefixOperator = [&](CStr _Operator)
 			{
-				auto &UserType = o_Key.f_UserType();
+				CEJSON Temp;
+				auto &UserType = Temp.f_UserType();
 				UserType.m_Type = "BuildSystemToken";
 				UserType.m_Value =
 					{
@@ -185,6 +187,8 @@ namespace NMib::NContainer
 						, "Right"__= fParseValue()
 					}
 				;
+
+				o_Key = NBuildSystem::CBuildSystemSyntax::CRootKey::fs_FromJSON(Temp, _Location);
 			}
 		;
 
@@ -196,7 +200,8 @@ namespace NMib::NContainer
 					DMibError(NStr::CStr::CFormat("{}Didn't expect anything after {} operator") << o_ParseContext.f_FormatLocation(ParseLocation) << _Operator);
 				}
 
-				auto &UserType = o_Key.f_UserType();
+				CEJSON Temp;
+				auto &UserType = Temp.f_UserType();
 				UserType.m_Type = "BuildSystemToken";
 				UserType.m_Value =
 					{
@@ -204,6 +209,8 @@ namespace NMib::NContainer
 						, "Operator"__= fg_Move(_Operator)
 					}
 				;
+
+				o_Key = NBuildSystem::CBuildSystemSyntax::CRootKey::fs_FromJSON(Temp, _Location);
 			}
 		;
 
@@ -246,13 +253,13 @@ namespace NMib::NContainer
  			fParsePrefixOperator("#");
 		}
 		else
-			o_Key = CEJSON::fs_FromJSON(fParseValue());
+			o_Key = NBuildSystem::CBuildSystemSyntax::CRootKey::fs_FromJSON(CEJSON::fs_FromJSON(fParseValue()), _Location);
 
 		o_pParse = (ch8 const *)(pParse);
 	}
 
 	template <>
-	CBuildSystemRegistryValue TCRegistry_CustomValue<CBuildSystemRegistryValue>::fs_Parse<CBuildSystemRegistry::CParseContext>
+	NBuildSystem::CBuildSystemSyntax::CRootValue TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_Parse<CBuildSystemRegistry::CParseContext>
 		(
 		 	ch8 const * &o_pParse
 		 	, CBuildSystemRegistry::CParseContext &o_ParseContext
@@ -273,14 +280,16 @@ namespace NMib::NContainer
 
 		NEncoding::NJSON::fg_ParseJSONValue(Output, pParse, Context);
 
+		auto ParseLocation = o_ParseContext.f_GetLocation(o_pParse);
+
 		o_pParse = (ch8 const *)(pParse);
 
-		return NEncoding::CEJSON::fs_FromJSON(fg_Move(Output));
+		return NBuildSystem::CBuildSystemSyntax::CRootValue::fs_FromJSON(NEncoding::CEJSON::fs_FromJSON(fg_Move(Output)), ParseLocation, true);
 	}
 
-	bool TCRegistry_CustomValue<CBuildSystemRegistryValue>::fs_ValueIsEmpty(CBuildSystemRegistryValue const &_Value, bool _bForceEscape)
+	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_ValueIsEmpty(NBuildSystem::CBuildSystemSyntax::CRootValue const &_Value, bool _bForceEscape)
 	{
-		if (!_Value.f_IsValid())
+		if (!_Value.m_Value.f_IsValid())
 		{
 			if (_bForceEscape)
 				return false;
@@ -292,11 +301,11 @@ namespace NMib::NContainer
 
 namespace NMib::NBuildSystem
 {
-	CStr const &fg_RegistryNameStringForPath(CBuildSystemRegistryValue const &_Key)
+	CStr const &fg_RegistryNameStringForPath(CBuildSystemSyntax::CRootKey const &_Key)
 	{
-		if (_Key.f_IsString())
+		if (!_Key.f_IsValue() || !_Key.f_Value().f_IsConstantString())
 			DMibError("Only string keys supported for paths");
 
-		return _Key.f_String();
+		return _Key.f_Value().f_ConstantString();
 	}
 }

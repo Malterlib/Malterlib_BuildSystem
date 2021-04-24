@@ -12,7 +12,7 @@ namespace NMib::NContainer
 	using namespace NBuildSystem;
 	using namespace NStr;
 
-	void TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParseEvalStringString(NStr::CStr &o_Key, uch8 const *&o_pParse)
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseEvalStringString(NStr::CStr &o_Key, uch8 const *&o_pParse)
 	{
 		auto pParse = o_pParse;
 		auto pParseStart = pParse;
@@ -55,7 +55,11 @@ namespace NMib::NContainer
 	}
 
 	template <>
-	void TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParseKey<TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext>
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseKey
+		<
+			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey
+			, CBuildSystemSyntax::CRootValue>::CJSONParseContext
+		>
 		(
 		 	CStr &o_Key
 		 	, uch8 const *&o_pParse
@@ -96,7 +100,7 @@ namespace NMib::NContainer
 	}
 
 	template <typename tf_CParseContext, typename tf_CStr, typename tf_CSourceStr>
-	void TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::fs_GenerateKeyString(tf_CStr &o_String, tf_CSourceStr const &_Key)
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateKeyString(tf_CStr &o_String, tf_CSourceStr const &_Key)
 	{
 		if (_Key.f_GetUserData() == EJSONStringType_NoQuote && _Key == "<<")
 		{
@@ -112,11 +116,11 @@ namespace NMib::NContainer
 	}
 
 	template <typename tf_CParseContext, typename tf_CStr, typename tf_CSourceStr>
-	void TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::fs_GenerateString(tf_CStr &o_String, tf_CSourceStr const &_Value)
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateString(tf_CStr &o_String, tf_CSourceStr const &_Value)
 	{
 		if (_Value.f_GetUserData() == EJSONStringType_Custom)
 		{
-			TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext ParseContext;
+			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext ParseContext;
 			ParseContext.m_pStartParse = (uch8 const *)_Value.f_GetStr();
 			auto pParse = ParseContext.m_pStartParse;
 
@@ -129,104 +133,69 @@ namespace NMib::NContainer
 		CParseContext::fs_GenerateString<CJSONParseContext>(o_String, _Value);
 	}
 
-	template void TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::fs_GenerateKeyString
+	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateKeyString
 		<
-			TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext
+			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext
 			, CStr
 			, CStr
 		>
 		(CStr &o_String, CStr const &_Key)
 	;
-	template void TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::fs_GenerateKeyString
+	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateKeyString
 		<
-			TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext
+			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext
 			, CStrNonTracked
 			, CStr
 		>
 		(CStrNonTracked &o_String, CStr const &_Key)
 	;
-	template void TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::fs_GenerateKeyString
+	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateKeyString
 		<
-			TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext
+			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext
 			, CStrAggregate
 			, CStr
 		>
 		(CStrAggregate &o_String, CStr const &_Key)
 	;
-	template void TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::fs_GenerateKeyString
+	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateKeyString
 		<
-			TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext
+			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext
 			, CStrAggregateNonTracked
 			, CStr
 		>
 		(CStrAggregateNonTracked &o_String, CStr const &_Key)
 	;
 
-	template void TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::fs_GenerateString
+	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateString
 		<
-			TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext
+			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext
 			, CStrNonTracked
 			, CStr
 		>
 		(CStrNonTracked &o_String, CStr const &_Value)
 	;
-	template void TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::fs_GenerateString
+	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateString
 		<
-			TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext
+			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext
 			, CStr
 			, CStr
 		>
 		(CStr &o_String, CStr const &_Value)
 	;
-	template void TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::fs_GenerateString
+	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateString
 		<
-			TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext
+			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext
 			, CStrAggregate
 			, CStr
 		>
 		(CStrAggregate &o_String, CStr const &_Value)
 	;
-	template void TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::fs_GenerateString
+	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateString
 		<
-			TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext
+			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext
 			, CStrAggregateNonTracked
 			, CStr
 		>
 		(CStrAggregateNonTracked &o_String, CStr const &_Value)
 	;
-}
-
-namespace NMib::NBuildSystem
-{
-	CBuildSystemRegistryValue::CBuildSystemRegistryValue(NEncoding::CEJSON &&_Other)
-		: NEncoding::CEJSON(fg_Move(_Other))
-	{
-	}
-
-	CBuildSystemRegistryValue::CBuildSystemRegistryValue(NEncoding::CEJSON const &_Other)
-		: NEncoding::CEJSON(_Other)
-	{
-	}
-
-	CBuildSystemRegistryValue &CBuildSystemRegistryValue::operator = (NEncoding::CEJSON &&_Other)
-	{
-		(NEncoding::CEJSON &)*this = fg_Move(_Other);
-		return *this;
-	}
-
-	CBuildSystemRegistryValue &CBuildSystemRegistryValue::operator = (NEncoding::CEJSON const &_Other)
-	{
-		(NEncoding::CEJSON &)*this = _Other;
-		return *this;
-	}
-
-	aint CBuildSystemRegistryValue::f_Cmp(CBuildSystemRegistryValue const &_Right) const
-	{
-		if (*this < _Right)
-			return -1;
-		else if (_Right < *this)
-			return 1;
-		else
-			return 0;
-	}
 }

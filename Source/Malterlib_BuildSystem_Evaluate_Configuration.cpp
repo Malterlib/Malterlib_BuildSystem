@@ -122,7 +122,12 @@ namespace NMib::NBuildSystem
 		;
 		auto fStringFromIdentifier = [](CBuildSystemRegistry &_Registry, CStr &o_String)
 			{
-				auto Value = CBuildSystemSyntax::CValue::fs_FromJSON(_Registry.f_GetName(), _Registry.f_GetLocation(), false);
+				auto &Name = _Registry.f_GetName();
+				if (!Name.f_IsValue())
+					fs_ThrowError(_Registry, "Expected an identifier");
+
+				auto &Value = Name.f_Value();
+
 				if (!Value.f_IsIdentifier())
 					fs_ThrowError(_Registry, "Expected an identifier");
 

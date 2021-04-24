@@ -12,14 +12,14 @@ namespace NMib::NContainer
 	using namespace NBuildSystem;
 	using namespace NStr;
 
-	void TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContextCatureStringMap::f_MapCharacter(mint _iDestination, mint _iSource, mint _nChars)
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContextCatureStringMap::f_MapCharacter(mint _iDestination, mint _iSource, mint _nChars)
 	{
 		m_StringMap.f_SetAtLeastLen(_iDestination + _nChars, 0);
 		for (mint i = 0; i < _nChars; ++i)
 			m_StringMap[_iDestination + i] = _iSource + i;
 	}
 
-	CParseLocation TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContextCatureStringMap::f_GetLocation(uch8 const *_pParse) const
+	CParseLocation TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContextCatureStringMap::f_GetLocation(uch8 const *_pParse) const
 	{
 		if (!m_pOriginalStartParse)
 			return m_pOriginalParseContext->f_GetLocation(_pParse);
@@ -56,7 +56,7 @@ namespace NMib::NContainer
 		return Location;
 	}
 
-	CJSON TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParseEvalStringToken(uch8 const *&o_pParse)
+	CJSON TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseEvalStringToken(uch8 const *&o_pParse)
 	{
 		auto *pParse = o_pParse;
 		CStr ParsedString;
@@ -152,7 +152,7 @@ namespace NMib::NContainer
 		;
 	}
 
-	CJSON TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParseWildcardStringToken(uch8 const *&o_pParse)
+	CJSON TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseWildcardStringToken(uch8 const *&o_pParse)
 	{
 		auto *pParse = o_pParse;
 		auto pParseStart = pParse;
@@ -218,13 +218,13 @@ namespace NMib::NContainer
 		TCAggregate<CReservedWords> g_ReservedWords = {DAggregateInit};
 	}
 
-	bool TCRegistry_CustomValue<NBuildSystem::CBuildSystemRegistryValue>::fs_IsReservedWord(ch8 const *_pIdentifier)
+	bool NBuildSystem::CCustomRegistryKeyValue::fs_IsReservedWord(ch8 const *_pIdentifier)
 	{
 		return (*g_ReservedWords).m_Words.f_Exists(_pIdentifier);
 	}
 
 	template <typename tf_CStr, typename tf_CStrIdentifier>
-	void TCRegistry_CustomValue<NBuildSystem::CBuildSystemRegistryValue>::fs_GenerateIdentifier(tf_CStr &o_String, tf_CStrIdentifier const &_Identifier)
+	void NBuildSystem::CCustomRegistryKeyValue::fs_GenerateIdentifier(tf_CStr &o_String, tf_CStrIdentifier const &_Identifier)
 	{
 		if (fs_IsReservedWord(_Identifier.f_GetStr()))
 		{
@@ -253,22 +253,22 @@ namespace NMib::NContainer
 		}
 	}
 
-	bool TCRegistry_CustomValue<NBuildSystem::CBuildSystemRegistryValue>::fs_CharIsStartIdentifier(uch8 _Char)
+	bool NBuildSystem::CCustomRegistryKeyValue::fs_CharIsStartIdentifier(uch8 _Char)
 	{
 		return fg_CharIsAnsiAlphabetical(_Char) || _Char == '_' || _Char == '\\';
 	}
 
-	bool TCRegistry_CustomValue<NBuildSystem::CBuildSystemRegistryValue>::fs_CharIsIdentifier(uch8 _Char)
+	bool NBuildSystem::CCustomRegistryKeyValue::fs_CharIsIdentifier(uch8 _Char)
 	{
 		return fg_CharIsAnsiAlphabetical(_Char) || _Char == '_' || fg_CharIsNumber(_Char) || _Char == '\\';
 	}
 
-	bool TCRegistry_CustomValue<NBuildSystem::CBuildSystemRegistryValue>::fs_CharIsIdentifierOrExpression(uch8 _Char)
+	bool NBuildSystem::CCustomRegistryKeyValue::fs_CharIsIdentifierOrExpression(uch8 _Char)
 	{
 		return fs_CharIsIdentifier(_Char) || _Char == '@';
 	}
 
-	CStr TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParseIdentifierLax(uch8 const *&o_pParse)
+	CStr TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseIdentifierLax(uch8 const *&o_pParse)
 	{
 		auto *pParse = o_pParse;
 
@@ -297,7 +297,7 @@ namespace NMib::NContainer
 		return Return;
 	}
 
-	CStr TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParseIdentifier(uch8 const * &o_pParse)
+	CStr TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseIdentifier(uch8 const * &o_pParse)
 	{
 		auto *pParse = o_pParse;
 
@@ -329,7 +329,7 @@ namespace NMib::NContainer
 		return Return;
 	}
 
-	CJSON TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParseJSONAccessor(uch8 const *&o_pParse, NEncoding::CJSON &&_Param)
+	CJSON TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseJSONAccessor(uch8 const *&o_pParse, NEncoding::CJSON &&_Param)
 	{
 		auto pParse = o_pParse;
 		DMibRequire(*pParse == '<');
@@ -440,7 +440,7 @@ namespace NMib::NContainer
 		return fg_Move(Return).f_ToJSON();
 	}
 
-	CEJSON TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParseIdentifierTokenEJSON(uch8 const *&o_pParse)
+	CEJSON TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseIdentifierTokenEJSON(uch8 const *&o_pParse)
 	{
 		auto *pParse = o_pParse;
 
@@ -508,12 +508,12 @@ namespace NMib::NContainer
 		return Return;
 	}
 
-	CJSON TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParseIdentifierToken(uch8 const * &o_pParse)
+	CJSON TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseIdentifierToken(uch8 const * &o_pParse)
 	{
 		return f_ParseIdentifierTokenEJSON(o_pParse).f_ToJSON();
 	}
 
-	CJSON TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParseFunctionToken
+	CJSON TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseFunctionToken
 		(
 			uch8 const *&o_pParse
 			, CJSON *_pFirstParam
@@ -584,7 +584,7 @@ namespace NMib::NContainer
 		return fg_Move(Return).f_ToJSON();
 	}
 
-	CJSON TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParseExpression(uch8 const *&o_pParse, EParseExpressionFlag _Flags, CJSON *_pFirstParam)
+	CJSON TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseExpression(uch8 const *&o_pParse, EParseExpressionFlag _Flags, CJSON *_pFirstParam)
 	{
 		auto *pParse = o_pParse;
 		bool bUseParentheses = !(_Flags & EParseExpressionFlag_NoParentheses);
@@ -899,7 +899,7 @@ namespace NMib::NContainer
 		return Return;
 	}
 
-	CJSON TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParseDefine(uch8 const *&o_pParse)
+	CJSON TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseDefine(uch8 const *&o_pParse)
 	{
 		auto pParse = o_pParse;
 
@@ -926,7 +926,7 @@ namespace NMib::NContainer
 		;
 	}
 
-	CJSON TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParseFunctionType(uch8 const *&o_pParse)
+	CJSON TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseFunctionType(uch8 const *&o_pParse)
 	{
 		auto pParse = o_pParse;
 
@@ -1027,7 +1027,7 @@ namespace NMib::NContainer
 		;
 	}
 
-	CJSON TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParseDefaultType( CStr const &_Identifier)
+	CJSON TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseDefaultType( CStr const &_Identifier)
 	{
 		return
 			{
@@ -1037,7 +1037,7 @@ namespace NMib::NContainer
 		;
 	}
 
-	CJSON TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParseType(uch8 const *&o_pParse)
+	CJSON TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseType(uch8 const *&o_pParse)
 	{
 		auto pParse = o_pParse;
 
@@ -1063,7 +1063,7 @@ namespace NMib::NContainer
 		;
 	}
 
-	void TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParsePostDefine(uch8 const *&o_pParse, NEncoding::CJSON &o_Value)
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParsePostDefine(uch8 const *&o_pParse, NEncoding::CJSON &o_Value)
 	{
 		auto pParse = o_pParse;
 		fg_ParseWhiteSpaceNoLines(pParse);
@@ -1100,7 +1100,7 @@ namespace NMib::NContainer
 		}
 	}
 
-	NEncoding::CJSON TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParseDefaulted(uch8 const *&o_pParse, NEncoding::CJSON &&_Type)
+	NEncoding::CJSON TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseDefaulted(uch8 const *&o_pParse, NEncoding::CJSON &&_Type)
 	{
 		auto pParse = o_pParse;
 
@@ -1130,7 +1130,7 @@ namespace NMib::NContainer
 		;
 	}
 
-	CJSON TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::f_ParseOneOf(uch8 const *&o_pParse)
+	CJSON TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseOneOf(uch8 const *&o_pParse)
 	{
 		auto pParse = o_pParse;
 
@@ -1237,7 +1237,7 @@ namespace NMib::NContainer
 	}
 
 	template <typename tf_CStr>
-	void TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::fs_GenerateEvalString(tf_CStr &o_String, NEncoding::CJSON const &_Token, mint _Depth)
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateEvalString(tf_CStr &o_String, NEncoding::CJSON const &_Token, mint _Depth)
 	{
 		o_String += "`";
 		for (auto &Token : _Token.f_Array())
@@ -1264,7 +1264,7 @@ namespace NMib::NContainer
 	}
 
 	template <typename tf_CStr>
-	void TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::fs_GenerateExpression
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateExpression
 		(
 		 	tf_CStr &o_String
 		 	, CJSON const &_Token
@@ -1634,7 +1634,7 @@ namespace NMib::NContainer
 
 			if (pPropertyType->f_String())
 			{
-				o_String += pName->f_String();
+				o_String += pPropertyType->f_String();
 				o_String += ".";
 			}
 
@@ -1713,7 +1713,7 @@ namespace NMib::NContainer
 			DMibError("Token Type '{}' not supported"_f << TokenType);
 	}
 
-	template void TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::fs_GenerateExpression
+	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateExpression
 		(
 		 	CStr &o_String
 		 	, CJSON const &_Token
@@ -1722,7 +1722,7 @@ namespace NMib::NContainer
 		)
 	;
 
-	template void TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::fs_GenerateExpression
+	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateExpression
 		(
 		 	CStrNonTracked &o_String
 		 	, CJSON const &_Token
@@ -1731,7 +1731,7 @@ namespace NMib::NContainer
 		)
 	;
 
-	template void TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::fs_GenerateExpression
+	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateExpression
 		(
 		 	CStrAggregate &o_String
 		 	, CJSON const &_Token
@@ -1740,7 +1740,7 @@ namespace NMib::NContainer
 		)
 	;
 
-	template void TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext::fs_GenerateExpression
+	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateExpression
 		(
 			CStrAggregateNonTracked &o_String
 		 	, CJSON const &_Token

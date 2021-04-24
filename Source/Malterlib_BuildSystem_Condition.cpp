@@ -76,45 +76,11 @@ namespace NMib::NBuildSystem
 
 		do
 		{
-			if (!Name.f_IsUserType())
-				break;
-
-			auto *pUserType = &Name.f_UserType();
-
-			auto *pType = pUserType->m_Value.f_GetMember("Type");
-			if (!pType)
-				break;
-
-			CEJSON const *pSourceJson = &Name;
-
-			CEJSON ExpressionParam;
-			if (pType->f_String() == "Expression")
+			if (Name.f_IsKeyPrefixOperator())
 			{
-				auto *pParam = pUserType->m_Value.f_GetMember("Param");
-				if (!pParam)
-					break;
+				auto &PrefixOperator = Name.f_KeyPrefixOperator();
 
-				ExpressionParam = CEJSON::fs_FromJSON(*pParam);
-
-				if (!ExpressionParam.f_IsUserType())
-					break;
-
-				pUserType = &ExpressionParam.f_UserType();
-
-				pType = pUserType->m_Value.f_GetMember("Type");
-				if (!pType)
-					break;
-
-				pSourceJson = &ExpressionParam;
-			}
-
-			auto &Type = pType->f_String();
-
-			if (Type == "KeyPrefixOperator")
-			{
-				auto PrefixOperatorType = CBuildSystemSyntax::CKeyPrefixOperator::fs_TypeFromJSON(*pSourceJson, _Registry.f_GetLocation());
-
-				switch (PrefixOperatorType)
+				switch (PrefixOperator.m_Operator)
 				{
 				case CBuildSystemSyntax::CKeyPrefixOperator::EOperator_Equal:
 					{
@@ -122,19 +88,17 @@ namespace NMib::NBuildSystem
 							CBuildSystem::fs_ThrowError(_Registry, "!! condition only supported at root level");
 
 						auto ConditionType = EConditionType_MatchEqual;
-						auto PrefixOperator = CBuildSystemSyntax::CKeyPrefixOperator::fs_FromJSON(PrefixOperatorType, *pSourceJson, _Registry.f_GetLocation());
 
-						auto RightValueRoot = CBuildSystemSyntax::CRootValue::fs_FromJSON(_Registry.f_GetThisValue(), _Registry.f_GetLocation(), false);
-						auto &RightValue = RightValueRoot.m_Value;
+						auto &RightValue = _Registry.f_GetThisValue().m_Value;
 
 						if (RightValue.m_Value.f_IsOfType<CBuildSystemSyntax::COperator>())
 							CBuildSystem::fs_ThrowError(_Registry, "You cannot specify both !! condition and explicit operator");
 
 						auto &Condition = _ParentCondition.m_Children.f_Insert(fg_Construct());
 						Condition.m_Type = ConditionType;
-						Condition.m_Left = fg_Move(PrefixOperator.m_Right);
+						Condition.m_Left = PrefixOperator.m_Right;
 						Condition.m_Position = _Registry;
-						Condition.m_Right = fg_Move(RightValue);
+						Condition.m_Right = RightValue;
 					}
 					break;
 				case CBuildSystemSyntax::CKeyPrefixOperator::EOperator_NotEqual:
@@ -142,18 +106,16 @@ namespace NMib::NBuildSystem
 						auto *pParentCondition = &_ParentCondition;
 						auto ConditionType = EConditionType_MatchNotEqual;
 
-						auto PrefixOperator = CBuildSystemSyntax::CKeyPrefixOperator::fs_FromJSON(PrefixOperatorType, *pSourceJson, _Registry.f_GetLocation());
-						auto RightValueRoot = CBuildSystemSyntax::CRootValue::fs_FromJSON(_Registry.f_GetThisValue(), _Registry.f_GetLocation(), false);
-						auto &RightValue = RightValueRoot.m_Value;
+						auto &RightValue = _Registry.f_GetThisValue().m_Value;
 
 						if (RightValue.m_Value.f_IsOfType<CBuildSystemSyntax::COperator>())
 							CBuildSystem::fs_ThrowError(_Registry, "You cannot specify both ! condition and explicit operator");
 
 						auto &Condition = pParentCondition->m_Children.f_Insert(fg_Construct());
 						Condition.m_Type = ConditionType;
-						Condition.m_Left = fg_Move(PrefixOperator.m_Right);
+						Condition.m_Left = PrefixOperator.m_Right;
 						Condition.m_Position = _Registry;
-						Condition.m_Right = fg_Move(RightValue);
+						Condition.m_Right = RightValue;
 					}
 					break;
 				default:
@@ -162,15 +124,15 @@ namespace NMib::NBuildSystem
 
 				bHandled = true;
 			}
-			else if (Type == "KeyLogicalOperator")
+			else if (Name.f_IsKeyLogicalOperator())
 			{
-				auto KeyLogicalOperator = CBuildSystemSyntax::CKeyLogicalOperator::fs_FromJSON(*pSourceJson, _Registry.f_GetLocation());
+				auto &KeyLogicalOperator = Name.f_KeyLogicalOperator();
 
 				switch (KeyLogicalOperator.m_Operator)
 				{
 				case CBuildSystemSyntax::CKeyLogicalOperator::EOperator_And:
 					{
-						if (_Registry.f_GetThisValue().f_IsValid())
+						if (_Registry.f_GetThisValue().m_Value.f_IsValid())
 							CBuildSystem::fs_ThrowError(_Registry, "And condition can only be specified as a container for children, not directly");
 
 						auto &Condition = _ParentCondition.m_Children.f_Insert(fg_Construct());
@@ -182,7 +144,7 @@ namespace NMib::NBuildSystem
 					break;
 				case CBuildSystemSyntax::CKeyLogicalOperator::EOperator_Or:
 					{
-						if (_Registry.f_GetThisValue().f_IsValid())
+						if (_Registry.f_GetThisValue().m_Value.f_IsValid())
 							CBuildSystem::fs_ThrowError(_Registry, "Or condition can only be specified as a container for children, not directly");
 
 						auto &Condition = _ParentCondition.m_Children.f_Insert(fg_Construct());
@@ -197,7 +159,7 @@ namespace NMib::NBuildSystem
 						if (_Registry.f_GetChildren().f_GetLen() != 1)
 							CBuildSystem::fs_ThrowError(_Registry, "Not condition must have excatly one child");
 
-						if (_Registry.f_GetThisValue().f_IsValid())
+						if (_Registry.f_GetThisValue().m_Value.f_IsValid())
 							CBuildSystem::fs_ThrowError(_Registry, "You cannot specify a value here");
 
 						auto &Condition = _ParentCondition.m_Children.f_Insert(fg_Construct());
@@ -215,23 +177,20 @@ namespace NMib::NBuildSystem
 		while (false)
 			;
 
-		if (!bHandled)
+		if (!bHandled && Name.f_IsValue())
 		{
-			auto LeftValueRoot = CBuildSystemSyntax::CRootValue::fs_FromJSON(Name, _Registry.f_GetLocation(), false);
-			auto RightValueRoot = CBuildSystemSyntax::CRootValue::fs_FromJSON(_Registry.f_GetThisValue(), _Registry.f_GetLocation(), false);
-			auto &LeftValue = LeftValueRoot.m_Value;
-			auto &RightValue = RightValueRoot.m_Value;
+			auto &LeftValue = Name.f_Value();
+			auto *pRightValue = &_Registry.f_GetThisValue().m_Value;
 
 			EConditionType ConditionType = EConditionType_MatchEqual;
-			if (RightValue.m_Value.f_IsOfType<CBuildSystemSyntax::COperator>())
+			if (pRightValue->m_Value.f_IsOfType<CBuildSystemSyntax::COperator>())
 			{
-				auto &Operator = RightValue.m_Value.f_GetAsType<CBuildSystemSyntax::COperator>();
+				auto &Operator = pRightValue->m_Value.f_GetAsType<CBuildSystemSyntax::COperator>();
 				
 				if (!fg_ConvertOperator(ConditionType, Operator.m_Operator, _Registry))
 					return false;
 				
-				auto Temp = fg_Move(Operator.m_Right.f_Get());
-				RightValue = fg_Move(Temp);
+				pRightValue = &Operator.m_Right.f_Get();
 			}
 			else
 			{
@@ -241,9 +200,9 @@ namespace NMib::NBuildSystem
 
 			auto &Condition = _ParentCondition.m_Children.f_Insert(fg_Construct());
 			Condition.m_Type = ConditionType;
-			Condition.m_Left = fg_Move(LeftValue);
+			Condition.m_Left = LeftValue;
 			Condition.m_Position = _Registry;
-			Condition.m_Right = fg_Move(RightValue);
+			Condition.m_Right = *pRightValue;
 		}
 
 		if (bParseChildren)

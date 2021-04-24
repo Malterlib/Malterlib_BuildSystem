@@ -83,8 +83,8 @@ namespace
 	TestDefineDefault define one_of("Test", "Test2", int, bool) = true // Comment
 	TestDefineOptionalString define string? = true ? true : false // Comment
 	TestDefineOptionalClass define {
-		one: "One",
-		two: "Two"
+		one: one_of("One"),
+		two: one_of("Two")
 	}? = true // Comment
 	TestFloat 65.5 // Comment
 	{

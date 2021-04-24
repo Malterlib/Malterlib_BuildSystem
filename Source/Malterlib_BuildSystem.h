@@ -310,7 +310,6 @@ namespace NMib::NBuildSystem
 		[[noreturn]] static void fs_ThrowError(CFilePosition const &_Position, NStr::CStr const &_Error);
 		[[noreturn]] static void fs_ThrowError(CFilePosition const &_Position, NStr::CStr const &_Error, NContainer::TCVector<CBuildSystemError> const &_Errors);
 		[[noreturn]] static void fs_ThrowError(CBuildSystemRegistry const &_Registry, NStr::CStr const &_Error);
-		static NStr::CStr const &fs_GetNameString(CBuildSystemRegistry const &_Registry);
 		static NStr::CStr fs_GetNameIdentifierString(CBuildSystemRegistry const &_Registry);
 		void f_AddSourceFile(NStr::CStr const &_File) const;
 		void f_CheckPropertyTypeValue
@@ -618,11 +617,11 @@ namespace NMib::NBuildSystem
 			, EHandleKeyFlag_AllowPropertyType = DMibBit(0)
 		};
 
-		bool fp_HandleKey
+		void fp_HandleKey
 			(
 				CBuildSystemRegistry &_Registry
-				, NFunction::TCFunction<void (CBuildSystemSyntax::CKeyPrefixOperator &_PrefixOprator)> const &_fOnPrefix
-				, NFunction::TCFunction<void (CBuildSystemSyntax::CIdentifier &_Identifier)> const &_fOnIdentifier
+				, NFunction::TCFunction<void (CBuildSystemSyntax::CKeyPrefixOperator const &_PrefixOprator)> const &_fOnPrefix
+				, NFunction::TCFunction<void (CBuildSystemSyntax::CIdentifier const &_Identifier)> const &_fOnIdentifier
 				, ch8 const *_pTypeError
 				, EHandleKeyFlag _Flags
 			) const

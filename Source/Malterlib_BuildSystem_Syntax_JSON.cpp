@@ -5,6 +5,15 @@
 
 namespace NMib::NBuildSystem
 {
+	NEncoding::CEJSON CBuildSystemSyntax::CArray::f_ToJSON() const
+	{
+		CEJSON Return;
+		auto &Array = Return.f_Array();
+		for (auto &Value : m_Array)
+			Array.f_Insert(Value.f_Get().f_ToJSON());
+		return Return;
+	}
+
 	auto CBuildSystemSyntax::CArray::fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position, bool _bAppendAllowed) -> CArray
 	{
 		CArray Array;
@@ -28,6 +37,41 @@ namespace NMib::NBuildSystem
 		}
 	}
 
+	NEncoding::CEJSON CBuildSystemSyntax::CObject::f_ToJSON() const
+	{
+		CEJSON Return;
+		auto &Object = Return.f_Object();
+		for (auto &Value : m_ObjectSorted)
+		{
+			auto &Key = m_Object.fs_GetKey(Value);
+			CStr OutKey;
+			switch (Key.m_Key.f_GetTypeID())
+			{
+			case 0:
+				{
+					OutKey = Key.m_Key.f_Get<0>();
+					DMibFastCheck(OutKey.f_GetUserData() == Key.m_Key.f_Get<0>().f_GetUserData());
+				}
+				break;
+			case 1:
+				{
+					Key.m_Key.f_Get<1>().f_Format(OutKey, false);
+					OutKey.f_SetUserData(EJSONStringType_Custom);
+				}
+				break;
+			case 2:
+				{
+					OutKey = "<<";
+					OutKey.f_SetUserData(EJSONStringType_NoQuote);
+				}
+				break;
+			}
+
+			Object[OutKey] = Value.m_Value.f_Get().f_ToJSON();
+		}
+		return Return;
+	}
+	
 	auto CBuildSystemSyntax::CObject::fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position, bool _bAppendAllowed) -> CObject
 	{
 		CObject Object;
@@ -60,7 +104,7 @@ namespace NMib::NBuildSystem
 				break;
 			case EJSONStringType_Custom:
 				{
-					TCRegistry_CustomValue<CBuildSystemRegistryValue>::CJSONParseContext ParseContext;
+					TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext ParseContext;
 					ParseContext.m_FileName = _Position.m_File;
 					ParseContext.m_StartLine = _Position.m_Line;
 					ParseContext.m_StartColumn = _Position.m_Column;
