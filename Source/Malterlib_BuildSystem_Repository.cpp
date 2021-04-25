@@ -881,6 +881,8 @@ namespace NMib::NBuildSystem
 
 			TCMap<CStr, CFilePosition> RepoRoots;
 
+			CColors Colors(_BuildSystem.f_AnsiFlags());
+
 			for (auto &ChildEntity : _Data.m_RootEntity.m_ChildEntitiesOrdered)
 			{
 				if (ChildEntity.f_GetKey().m_Type != EEntityType_Repository)
@@ -888,94 +890,126 @@ namespace NMib::NBuildSystem
 
 				auto &ChildEntityData = ChildEntity.f_Data();
 
-				if (!_BuildSystem.f_EvalCondition(ChildEntity, ChildEntityData.m_Condition, ChildEntityData.m_Debug.f_Find("TraceCondition") >= 0))
-					continue;
-
-				CStr Location = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "Location", CStr());
-
-				if (Location.f_IsEmpty())
-					_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, "You have to specify Repository.Location");
-
-				CStr ReposDirectory = CFile::fs_GetPath(Location);
-
-				auto &ReposLocation = Repos[ReposDirectory];
-
-				CStr RepoName = CFile::fs_GetFile(Location);
-
-				auto RepoMap = ReposLocation.m_Repositories(RepoName, RepoName);
-
-				if (!RepoMap.f_WasCreated())
-					_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, fg_Format("Duplicate repository location: {}", Location));
-
-				if (!RepoRoots(Location, ChildEntityData.m_Position).f_WasCreated())
+				try
 				{
-					CBuildSystemError Error;
-					Error.m_Error = "Other specification";
-					Error.m_Position = RepoRoots[Location];
+					if (!_BuildSystem.f_EvalCondition(ChildEntity, ChildEntityData.m_Condition, ChildEntityData.m_Debug.f_Find("TraceCondition") >= 0))
+						continue;
 
-					_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, "Repository location already specified specified previously", fg_CreateVector(Error));
-				}
+					CStr Location = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "Location", CStr());
 
-				auto &Repo = *RepoMap;
-				Repo.m_Identity = ChildEntity.f_GetKeyName();
-				Repo.m_Location = Location;
-				Repo.m_ConfigFile = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "ConfigFile", CStr());
-				Repo.m_StateFile = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "StateFile", CStr());
-				Repo.m_URL = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "URL", CStr());
-				Repo.m_DefaultBranch = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "DefaultBranch", CStr());
-				Repo.m_DefaultUpstreamBranch = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "DefaultUpstreamBranch", CStr());
-				Repo.m_Tags.f_AddContainer(_BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, EPropertyType_Repository, "Tags", TCVector<CStr>()));
-				Repo.m_bSubmodule = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, EPropertyType_Repository, "Submodule", false);
-				Repo.m_SubmoduleName = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "SubmoduleName", CStr());
-				Repo.m_Type = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "Type", CStr());
-				Repo.m_UserName = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "UserName", CStr());
-				Repo.m_UserEmail = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "UserEmail", CStr());
-				Repo.m_ProtectedBranches.f_AddContainer(_BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, EPropertyType_Repository, "ProtectedBranches", TCVector<CStr>()));
-				Repo.m_ProtectedTags.f_AddContainer(_BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, EPropertyType_Repository, "ProtectedTags", TCVector<CStr>()));
-				Repo.m_bUpdateSubmodules = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, EPropertyType_Repository, "UpdateSubmodules", false);
+					if (Location.f_IsEmpty())
+						_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, "You have to specify Repository.Location");
 
-				TCVector<CStr> NoPushRemotes = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, EPropertyType_Repository, "NoPushRemotes", TCVector<CStr>());
+					CStr ReposDirectory = CFile::fs_GetPath(Location);
 
-				auto Remotes = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "Remotes");
+					auto ConfigFile = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "ConfigFile", CStr());
+					auto StateFile = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "StateFile", CStr());
+					auto URL = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "URL", CStr());
+					auto DefaultBranch = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "DefaultBranch", CStr());
+					auto DefaultUpstreamBranch = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "DefaultUpstreamBranch", CStr());
+					auto Tags = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, EPropertyType_Repository, "Tags", TCVector<CStr>());
+					auto bSubmodule = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, EPropertyType_Repository, "Submodule", false);
+					auto SubmoduleName = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "SubmoduleName", CStr());
+					auto Type = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "Type", CStr());
+					auto UserName = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "UserName", CStr());
+					auto UserEmail = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "UserEmail", CStr());
+					auto ProtectedBranches = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, EPropertyType_Repository, "ProtectedBranches", TCVector<CStr>());
+					auto ProtectedTags = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, EPropertyType_Repository, "ProtectedTags", TCVector<CStr>());
+					auto bUpdateSubmodules = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, EPropertyType_Repository, "UpdateSubmodules", false);
+					auto bExcludeFromSeen = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, EPropertyType_Repository, "ExcludeFromSeen", false);
 
-				for (auto &Remote : Remotes.f_Array())
-				{
-					CStr Name = Remote["Name"].f_String();
-					if (Repo.m_Remotes.f_FindEqual(Name))
-						_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, fg_Format("Same remote '{}' specified multiple times", Name));
+					TCVector<CStr> NoPushRemotes = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, EPropertyType_Repository, "NoPushRemotes", TCVector<CStr>());
 
-					CStr URL = Remote["URL"].f_String();
+					auto Remotes = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "Remotes");
 
-					auto &OutRemote = Repo.m_Remotes[Name];
-					OutRemote.m_URL = URL;
 
-					if (auto pValue = Remote.f_GetMember("Write"))
-						OutRemote.m_bCanPush = pValue->f_Boolean();
+					auto &ReposLocation = Repos[ReposDirectory];
 
-					for (auto &Wildcard : NoPushRemotes)
+					CStr RepoName = CFile::fs_GetFile(Location);
+
+					auto RepoMap = ReposLocation.m_Repositories(RepoName, RepoName);
+
+					if (!RepoMap.f_WasCreated())
+						_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, fg_Format("Duplicate repository location: {}", Location));
+
+					if (!RepoRoots(Location, ChildEntityData.m_Position).f_WasCreated())
 					{
-						if (fg_StrMatchWildcard(Name.f_GetStr(), Wildcard.f_GetStr()) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
+						CBuildSystemError Error;
+						Error.m_Error = "Other specification";
+						Error.m_Position = RepoRoots[Location];
+
+						_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, "Repository location already specified specified previously", fg_CreateVector(Error));
+					}
+
+					auto &Repo = *RepoMap;
+					Repo.m_Identity = ChildEntity.f_GetKeyName();
+					Repo.m_Location = Location;
+					Repo.m_ConfigFile = ConfigFile;
+					Repo.m_StateFile = StateFile;
+					Repo.m_URL = URL;
+					Repo.m_DefaultBranch = DefaultBranch;
+					Repo.m_DefaultUpstreamBranch = DefaultUpstreamBranch;
+					Repo.m_Tags.f_AddContainer(Tags);
+					Repo.m_bSubmodule = bSubmodule;
+					Repo.m_SubmoduleName = SubmoduleName;
+					Repo.m_Type = Type;
+					Repo.m_UserName = UserName;
+					Repo.m_UserEmail = UserEmail;
+					Repo.m_ProtectedBranches.f_AddContainer(ProtectedBranches);
+					Repo.m_ProtectedTags.f_AddContainer(ProtectedTags);
+					Repo.m_bUpdateSubmodules = bUpdateSubmodules;
+					Repo.m_bExcludeFromSeen = bExcludeFromSeen;
+
+					for (auto &Remote : Remotes.f_Array())
+					{
+						CStr Name = Remote["Name"].f_String();
+						if (Repo.m_Remotes.f_FindEqual(Name))
+							_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, fg_Format("Same remote '{}' specified multiple times", Name));
+
+						CStr URL = Remote["URL"].f_String();
+
+						auto &OutRemote = Repo.m_Remotes[Name];
+						OutRemote.m_URL = URL;
+
+						if (auto pValue = Remote.f_GetMember("Write"))
+							OutRemote.m_bCanPush = pValue->f_Boolean();
+
+						for (auto &Wildcard : NoPushRemotes)
 						{
-							OutRemote.m_bCanPush = false;
-							break;
+							if (fg_StrMatchWildcard(Name.f_GetStr(), Wildcard.f_GetStr()) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
+							{
+								OutRemote.m_bCanPush = false;
+								break;
+							}
 						}
 					}
+					Repo.m_Position = ChildEntityData.m_Position;
+
+					if (Repo.m_URL.f_IsEmpty())
+						_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, "You have to specify Repository.URL");
+					if (Repo.m_ConfigFile.f_IsEmpty() && Repo.m_Type != "Root")
+						_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, "You have to specify Repository.ConfigFile");
+					if (Repo.m_StateFile.f_IsEmpty() && Repo.m_Type != "Root")
+						_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, "You have to specify Repository.StateFile");
+					if (Repo.m_ConfigFile == Repo.m_StateFile && Repo.m_Type != "Root")
+						_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, "You have to specify Repository.ConfigFile and Repository.StateFile must not be same file");
+					if (Repo.m_DefaultBranch.f_IsEmpty())
+						_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, "You have to specify Repository.DefaultBranch");
+					if (Repo.m_bSubmodule && Repo.m_SubmoduleName.f_IsEmpty())
+						_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, "You have to specify Repository.SubmoduleName");
 				}
-				Repo.m_Position = ChildEntityData.m_Position;
-
-				if (Repo.m_URL.f_IsEmpty())
-					_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, "You have to specify Repository.URL");
-				if (Repo.m_ConfigFile.f_IsEmpty() && Repo.m_Type != "Root")
-					_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, "You have to specify Repository.ConfigFile");
-				if (Repo.m_StateFile.f_IsEmpty() && Repo.m_Type != "Root")
-					_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, "You have to specify Repository.StateFile");
-				if (Repo.m_ConfigFile == Repo.m_StateFile && Repo.m_Type != "Root")
-					_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, "You have to specify Repository.ConfigFile and Repository.StateFile must not be same file");
-				if (Repo.m_DefaultBranch.f_IsEmpty())
-					_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, "You have to specify Repository.DefaultBranch");
-				if (Repo.m_bSubmodule && Repo.m_SubmoduleName.f_IsEmpty())
-					_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, "You have to specify Repository.SubmoduleName");
-
+				catch (CException const &_Exception)
+				{
+					DMibConErrOut2
+						(
+							"{}Ignored exception trying to get repository {}{}:\n{}\n\n"
+							, Colors.f_StatusWarning()
+							, ChildEntity.f_GetKey().m_Name
+							, Colors.f_Default()
+							, _Exception.f_GetErrorStr().f_Indent(DMibPFileLineFormatIndent)
+						)
+					;
+				}
 			}
 
 			TCVector<TCMap<CStr, CReposLocation>> ReposOrdered;
@@ -1059,7 +1093,7 @@ namespace NMib::NBuildSystem
 
 	using namespace NRepository;
 
-	CBuildSystem::ERetry CBuildSystem::fp_HandleRepositories(TCMap<CPropertyKey, CEJSON> const &_Values, bool _bInResponseToError)
+	CBuildSystem::ERetry CBuildSystem::fp_HandleRepositories(TCMap<CPropertyKey, CEJSON> const &_Values)
 	{
 		f_InitEntityForEvaluation(mp_Data.m_RootEntity, _Values);
 		f_ExpandRepositoryEntities(mp_Data);
@@ -1132,6 +1166,7 @@ namespace NMib::NBuildSystem
 			MaxRepoWidth = fg_Max(MaxRepoWidth, (mint)RepoName.f_GetLen());
 
 		TCSet<CStr> SeenRepositories;
+		TCSet<CStr> ExcludeFromSeenRepositories;
 
 		for (auto &Repos : ReposOrdered)
 		{
@@ -1143,7 +1178,10 @@ namespace NMib::NBuildSystem
 					if (Repo.m_Location.f_StartsWith(mp_BaseDir))
 					{
 						RepoName = CFile::fs_MakePathRelative(Repo.m_Location, mp_BaseDir);
-						SeenRepositories[RepoName];
+						if (!Repo.m_bExcludeFromSeen)
+							SeenRepositories[RepoName];
+						else
+							ExcludeFromSeenRepositories[RepoName];
 					}
 					else
 						RepoName = Repo.m_Location;
@@ -1241,7 +1279,6 @@ namespace NMib::NBuildSystem
 			}
 		}
 
-		if (!_bInResponseToError)
 		{
 			bool bForceReset = fg_GetSys()->f_GetEnvironmentVariable("MalterlibRepositoryHardReset", "") == "true";
 			bool bLastSeenActionNeeded = false;
@@ -1249,7 +1286,7 @@ namespace NMib::NBuildSystem
 			for (auto &LastSeen : LastSeenRepositories)
 			{
 				CStr FullRepoPath = mp_BaseDir / LastSeen;
-				if (!SeenRepositories.f_FindEqual(LastSeen) && CFile::fs_FileExists(FullRepoPath, EFileAttrib_Directory))
+				if (!SeenRepositories.f_FindEqual(LastSeen) && !ExcludeFromSeenRepositories.f_FindEqual(LastSeen) && CFile::fs_FileExists(FullRepoPath, EFileAttrib_Directory))
 				{
 					EHandleRepositoryRemovedAction Action = fGetReconcileRemovedActionByName(LastSeen);
 

@@ -4,6 +4,7 @@
 #include "Malterlib_BuildSystem.h"
 #include "Malterlib_BuildSystem_GeneratorState.h"
 #include "Malterlib_BuildSystem_Preprocessor.h"
+#include "Malterlib_BuildSystem_Repository.h"
 
 #include <Mib/Core/RuntimeType>
 #include <Mib/Cryptography/UUID>
@@ -101,6 +102,8 @@ namespace NMib::NBuildSystem
 			_GenerateState.m_OutputDir = CFile::fs_GetExpandedPath(GenerateSettings.m_OutputDir);
 
 		_GenerateState.m_RelativeFileLocation = CFile::fs_MakePathRelative(_GenerateState.m_FileLocation, _GenerateState.m_OutputDir);
+
+		NRepository::CColors Colors(f_AnsiFlags());
 
 		mp_OutputDir = _GenerateState.m_OutputDir;
 		mp_GenerateWorkspace = GenerateSettings.m_Workspace;
@@ -290,22 +293,44 @@ namespace NMib::NBuildSystem
 				try
 				{
 					if (!bTryParsed)
-						fp_ParseData(mp_Data.m_RootEntity, mp_Registry, &mp_Data.m_ConfigurationTypes);
+					{
+						try
+						{
+							fp_ParseData(mp_Data.m_RootEntity, mp_Registry, &mp_Data.m_ConfigurationTypes);
+						}
+						catch ([[maybe_unused]] CException const &_Exception2)
+						{
+							DMibConErrOut2
+								(
+									"{}Error trying to parse data to handle repositories (will try anyway):{}\n{}\n\n"
+									, Colors.f_StatusWarning()
+									, Colors.f_Default()
+									, _Exception2.f_GetErrorStr().f_Indent(DMibPFileLineFormatIndent)
+								)
+							;
+						}
+					}
 
-					//DMibConErrOut2("Exception parsing data will try handling repositories:\n{}\n", _Exception);
-
-					if (auto Retry = fp_HandleRepositories(_GenerateState.m_GeneratorValues, true))
+					if (auto Retry = fp_HandleRepositories(_GenerateState.m_GeneratorValues))
 						return Retry;
 					else
 						std::rethrow_exception(_Exception.f_ExceptionPointer());
 				}
 				catch ([[maybe_unused]] CException const &_Exception2)
 				{
+					DMibConErrOut2
+						(
+							"{}Error trying to handle repositories as fallback:{}\n{}\n\n"
+							, Colors.f_StatusWarning()
+							, Colors.f_Default()
+							, _Exception2.f_GetErrorStr().f_Indent(DMibPFileLineFormatIndent)
+						)
+					;
 					std::rethrow_exception(_Exception.f_ExceptionPointer());
 				}
 			}
 
-			if (auto Retry = fp_HandleRepositories(_GenerateState.m_GeneratorValues, false))
+			if (auto Retry = fp_HandleRepositories(_GenerateState.m_GeneratorValues))
 				return Retry;
 		}
 		return ERetry_None;

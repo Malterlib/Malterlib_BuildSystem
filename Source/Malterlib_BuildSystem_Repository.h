@@ -88,6 +88,7 @@ namespace NMib::NBuildSystem::NRepository
 		TCSet<CStr> m_ProtectedTags;
 		CFilePosition m_Position;
 		bool m_bSubmodule = false;
+		bool m_bExcludeFromSeen = false;
 		bool m_bUpdateSubmodules = false;
 	};
 

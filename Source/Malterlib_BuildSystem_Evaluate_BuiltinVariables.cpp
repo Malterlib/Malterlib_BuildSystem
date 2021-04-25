@@ -230,6 +230,7 @@ namespace NMib::NBuildSystem
 					, {CPropertyKey(EPropertyType_Repository, "DefaultUpstreamBranch"), fg_Defaulted(g_String, "")}
 					, {CPropertyKey(EPropertyType_Repository, "Tags"), g_StringArrayDefaultedEmpty}
 					, {CPropertyKey(EPropertyType_Repository, "Submodule"), fg_Defaulted(g_Boolean, false)}
+					, {CPropertyKey(EPropertyType_Repository, "ExcludeFromSeen"), fg_Defaulted(g_Boolean, false)}
 					, {CPropertyKey(EPropertyType_Repository, "SubmoduleName"), fg_Defaulted(g_String, "")}
 					, {CPropertyKey(EPropertyType_Repository, "Type"), fg_Defaulted(g_String, "")}
 					, {CPropertyKey(EPropertyType_Repository, "UserName"), fg_Defaulted(g_String, "")}

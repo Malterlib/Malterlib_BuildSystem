@@ -776,7 +776,7 @@ namespace NMib::NBuildSystem
 		;
 		void fp_TracePropertyEval(bool _bSuccess, CEntity const &_Entity, CProperty const &_Property, NEncoding::CEJSON const &_Value) const;
 
-		ERetry fp_HandleRepositories(NContainer::TCMap<CPropertyKey, NEncoding::CEJSON> const &_Values, bool _bInResponseToError);
+		ERetry fp_HandleRepositories(NContainer::TCMap<CPropertyKey, NEncoding::CEJSON> const &_Values);
 
 		void fp_SaveEnvironment();
 
