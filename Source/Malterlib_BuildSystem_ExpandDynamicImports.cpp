@@ -619,15 +619,15 @@ namespace NMib::NBuildSystem
 					FileContents = fg_Move(NewFileContents);
 				}
 
+				for (auto &Replace : ReplaceContents)
+					FileContents = fReplace(FileContents, fg_Get<0>(Replace), fg_Get<1>(Replace));
+
 				FileContents = fReplace(FileContents, TempDirectoryFind, RelativeDest);
 				FileContents = fReplace(FileContents, TempDirectory, RelativeDestBare);
 				FileContents = fReplace(FileContents, SourceBaseFind, RelativeSource);
 				FileContents = fReplace(FileContents, SourceBase, RelativeSourceBare);
 				FileContents = fReplace(FileContents, BaseDirFind, RelativeBase);
 				FileContents = fReplace(FileContents, BaseDir, RelativeBaseBare);
-
-				for (auto &Replace : ReplaceContents)
-					FileContents = fReplace(FileContents, fg_Get<0>(Replace), fg_Get<1>(Replace));
 
 				if (CFile::fs_GetExtension(File.m_Path) == "MHeader")
 				{
