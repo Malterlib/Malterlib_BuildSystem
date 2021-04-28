@@ -65,7 +65,7 @@ namespace NMib::NBuildSystem
 							fg_FunctionType(g_Any, fg_FunctionParam(g_Any, "_ToReturn"), fg_FunctionParam(g_Any, "p_LogValues", g_Ellipsis))
 							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
 							{
-								DMibConOut("{}\n", fg_FormatJSONArray(_Params[1].f_Array(), false));
+								_This.f_OutputConsole("{}\n"_f << fg_FormatJSONArray(_Params[1].f_Array(), false));
 								return fg_Move(_Params[0]);
 							}
 						}
@@ -78,7 +78,7 @@ namespace NMib::NBuildSystem
 							fg_FunctionType(g_Any, fg_FunctionParam(g_Any, "_ToReturn"), fg_FunctionParam(g_Any, "p_LogValues", g_Ellipsis))
 							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
 							{
-								DMibConErrOut("{}\n", fg_FormatJSONArray(_Params[1].f_Array(), false));
+								_This.f_OutputConsole("{}\n"_f << fg_FormatJSONArray(_Params[1].f_Array(), false), true);
 								return fg_Move(_Params[0]);
 							}
 						}

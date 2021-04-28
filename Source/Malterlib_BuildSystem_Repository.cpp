@@ -121,10 +121,17 @@ namespace NMib::NBuildSystem
 			return m_Configs.f_FindEqual(Identifier);
 		}
 
-		CStateHandler::CStateHandler(CStr const &_BasePath, CStr const &_OutputDir, EAnsiEncodingFlag _AnsiFlags)
+		CStateHandler::CStateHandler
+			(
+				CStr const &_BasePath
+				, CStr const &_OutputDir
+				, EAnsiEncodingFlag _AnsiFlags
+				, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
+			)
 			: mp_BasePath(_BasePath)
 			, mp_OutputDir(_OutputDir)
 			, mp_AnsiFlags(_AnsiFlags)
+			, mp_fOutputConsole(_fOutputConsole)
 		{
 		}
 
@@ -136,6 +143,12 @@ namespace NMib::NBuildSystem
 		CMutual &CStateHandler::f_ConsoleOutputLock()
 		{
 			return mp_ConsoleOutputLock;
+		}
+
+		void CStateHandler::f_ConsoleOutput(CStr const &_Output, bool _bError)
+		{
+			if (mp_fOutputConsole)
+				mp_fOutputConsole(_Output, _bError);
 		}
 
 		void CStateHandler::f_SetHash(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Hash, CStr const &_Identifier)
@@ -302,13 +315,13 @@ namespace NMib::NBuildSystem
 			CStr ReplacedRepo = RepoName.f_Replace("/", "{}{}/{}"_f << Colors.f_Default() << Colors.f_Foreground256(250) << RepoColor ^ 1);
 			{
 				DMibLock(o_StateHandler.f_ConsoleOutputLock());
-				DMibConOut2
+				o_StateHandler.f_ConsoleOutput
 					(
-						"{}{}{}   {}\n"
-						, RepoColor
-						, ReplacedRepo
-						, Colors.f_Default()
-						, _Info
+						"{}{}{}   {}\n"_f
+						<< RepoColor
+						<< ReplacedRepo
+						<< Colors.f_Default()
+						<< _Info
 					)
 				;
 			}
@@ -1003,13 +1016,14 @@ namespace NMib::NBuildSystem
 				}
 				catch (CException const &_Exception)
 				{
-					DMibConErrOut2
+					_BuildSystem.f_OutputConsole
 						(
-							"{}Ignored exception trying to get repository {}{}:\n{}\n\n"
-							, Colors.f_StatusWarning()
-							, ChildEntity.f_GetKey().m_Name
-							, Colors.f_Default()
-							, _Exception.f_GetErrorStr().f_Indent(DMibPFileLineFormatIndent)
+							"{}Ignored exception trying to get repository {}{}:\n{}\n\n"_f
+							<< Colors.f_StatusWarning()
+							<< ChildEntity.f_GetKey().m_Name
+							<< Colors.f_Default()
+							<< _Exception.f_GetErrorStr().f_Indent(DMibPFileLineFormatIndent)
+							, true
 						)
 					;
 				}
@@ -1120,7 +1134,7 @@ namespace NMib::NBuildSystem
 		TCAtomic<bool> bChanged;
 		TCAtomic<bool> bBinariesChange;
 
-		CStateHandler StateHandler{mp_BaseDir, mp_OutputDir, mp_AnsiFlags};
+		CStateHandler StateHandler{mp_BaseDir, mp_OutputDir, mp_AnsiFlags, mp_fOutputConsole};
 
 		CColors Colors(mp_AnsiFlags);
 
@@ -1212,17 +1226,17 @@ namespace NMib::NBuildSystem
 						CLockFile LockFile{LockFileName};
 
 						if (mp_bDebugFileLocks)
-							DMibConErrOut2("{} File lock: {}\n", &LockFile, LockFileName);
+							f_OutputConsole("{} File lock: {}\n"_f << &LockFile << LockFileName, true);
 
 						LockFile.f_LockWithException(5.0*60.0);
 
 						if (mp_bDebugFileLocks)
-							DMibConErrOut2("{} File locked: {}\n", &LockFile, LockFileName);
+							f_OutputConsole("{} File locked: {}\n"_f << &LockFile << LockFileName, true);
 
 						auto CleanupLock = g_OnScopeExit > [&]
 							{
 								if (mp_bDebugFileLocks)
-									DMibConErrOut2("{} File lock released: {}\n", &LockFile, LockFileName);
+									f_OutputConsole("{} File lock released: {}\n"_f << &LockFile << LockFileName, true);
 							}
 						;
 

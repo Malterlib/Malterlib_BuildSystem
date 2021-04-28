@@ -9,21 +9,42 @@
 
 namespace NMib::NBuildSystem::NRepository
 {
-	CGitLaunches::CState::CState(CStr const &_BaseDir, CStr const &_ProgressDescription, EAnsiEncodingFlag _AnsiFlags)
+	CGitLaunches::CState::CState
+		(
+			CStr const &_BaseDir
+			, CStr const &_ProgressDescription
+			, EAnsiEncodingFlag _AnsiFlags
+			, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
+		)
 		: m_BaseDir(_BaseDir)
 		, m_ProgressDescription(_ProgressDescription)
 		, m_AnsiFlags(_AnsiFlags)
+		, m_fOutputConsole(_fOutputConsole)
 	{
 	}
 
-	CGitLaunches::CGitLaunches(CStr const &_BaseDir, CStr const &_ProgressDescription, EAnsiEncodingFlag _AnsiFlags)
-		: m_pState(fg_Construct(_BaseDir, _ProgressDescription, _AnsiFlags))
+	CGitLaunches::CGitLaunches
+		(
+			CStr const &_BaseDir
+			, CStr const &_ProgressDescription
+			, EAnsiEncodingFlag _AnsiFlags
+			, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
+		)
+		: m_pState(fg_Construct(_BaseDir, _ProgressDescription, _AnsiFlags, _fOutputConsole))
 	{
 	}
 
 	namespace
 	{
-		void fg_OutputRepoLine(EOutputType _OutputType, CStr const &_RepoName, mint _LongestRepoName, CStr const &_Line, EAnsiEncodingFlag _AnsiFlags)
+		void fg_OutputRepoLine
+			(
+				EOutputType _OutputType
+				, CStr const &_RepoName
+				, mint _LongestRepoName
+				, CStr const &_Line
+				, EAnsiEncodingFlag _AnsiFlags
+				, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
+			)
 		{
 			CStr RepoColor;
 
@@ -38,24 +59,30 @@ namespace NMib::NBuildSystem::NRepository
 			}
 
 			CStr ReplacedRepo = _RepoName.f_Replace("/", "{}{}/{}"_f << Colors.f_Default() << Colors.f_Foreground256(250) << RepoColor ^ 1);
-			DMibConOut2
-				(
-					"{}{sl*,sf ,a-}{} {}|{}  {}\n"
-					, RepoColor
-					, ReplacedRepo
-					, _LongestRepoName + ReplacedRepo.f_GetLen() - _RepoName.f_GetLen()
-					, Colors.f_Default()
-					, Colors.f_Foreground256(242)
-					, Colors.f_Default()
-					, _Line
-				)
-			;
+			if (_fOutputConsole)
+			{
+				_fOutputConsole
+					(
+						"{}{sl*,sf ,a-}{} {}|{}  {}\n"_f
+						<< RepoColor
+						<< ReplacedRepo
+						<< _LongestRepoName + ReplacedRepo.f_GetLen() - _RepoName.f_GetLen()
+						<< Colors.f_Default()
+						<< Colors.f_Foreground256(242)
+						<< Colors.f_Default()
+						<< _Line
+						, false
+					)
+				;
+			}
 		}
-		void fg_OutputSectionLine(EAnsiEncodingFlag _AnsiFlags)
+
+		void fg_OutputSectionLine(EAnsiEncodingFlag _AnsiFlags, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole)
 		{
 			CColors Colors(_AnsiFlags);
 
-			DMibConOut2("{}--------------------------------------------------------------------------------{}\n", Colors.f_Foreground256(242), Colors.f_Default());
+			if (_fOutputConsole)
+				_fOutputConsole("{}--------------------------------------------------------------------------------{}\n"_f << Colors.f_Foreground256(242) << Colors.f_Default(), false);
 		}
 	}
 
@@ -90,7 +117,7 @@ namespace NMib::NBuildSystem::NRepository
 				{
 					if (!bDidOutputSection)
 					{
-						fg_OutputSectionLine(m_AnsiFlags);
+						fg_OutputSectionLine(m_AnsiFlags, m_fOutputConsole);
 						bDidOutputSection = true;
 					}
 				}
@@ -103,12 +130,12 @@ namespace NMib::NBuildSystem::NRepository
 					{
 						if (Line == "ForceSection")
 							Line = "";
-						fg_OutputRepoLine(Output.m_OutputType, _Name, LongestRepo, Line, m_AnsiFlags);
+						fg_OutputRepoLine(Output.m_OutputType, _Name, LongestRepo, Line, m_AnsiFlags, m_fOutputConsole);
 					}
 				}
 
 				if (bDidOutputSection)
-					fg_OutputSectionLine(m_AnsiFlags);
+					fg_OutputSectionLine(m_AnsiFlags, m_fOutputConsole);
 			}
 		;
 
@@ -133,7 +160,13 @@ namespace NMib::NBuildSystem::NRepository
 		if (m_nDoneRepos == m_nRepos.f_Load())
 			ToOutput = CStr{"{sj*}"_f << "" << ToOutput.f_GetLen()}; // Clear previous output
 
-		DMibConOut2("{}\x1B[{}D", ToOutput, ToOutput.f_GetLen());
+		f_ConsoleOutput("{}\x1B[{}D"_f << ToOutput << ToOutput.f_GetLen());
+	}
+
+	void CGitLaunches::CState::f_ConsoleOutput(CStr const &_Output, bool _bError) const
+	{
+		if (m_fOutputConsole)
+			m_fOutputConsole(_Output, _bError);
 	}
 
 	COnScopeExitShared CGitLaunches::f_RepoDoneScope() const

@@ -35,7 +35,7 @@ namespace NMib::NBuildSystem
 	class CBuildSystem
 	{
 	public:
-		CBuildSystem(NCommandLine::EAnsiEncodingFlag _AnsiFlags, NFunction::TCFunction<void (NStr::CStr const &_Output)> const &_fOutputConsole);
+		CBuildSystem(NCommandLine::EAnsiEncodingFlag _AnsiFlags, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole);
 		CBuildSystem(CBuildSystem const &) = delete;
 		CBuildSystem(CBuildSystem &&) = delete;
 
@@ -331,7 +331,7 @@ namespace NMib::NBuildSystem
 			(
 				NFunction::TCFunction<CBuildSystem::ERetry (CBuildSystem &_BuildSystem)> &&_fCommand
 				, NCommandLine::EAnsiEncodingFlag _AnsiFlags
-				, NFunction::TCFunction<void (NStr::CStr const &_Output)> const &_fOutputConsole
+				, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
 			)
 		;
 
@@ -382,7 +382,8 @@ namespace NMib::NBuildSystem
 
 		void f_RegisterFunctions(NContainer::TCMap<NStr::CStr, CBuiltinFunction> &&_Functions);
 		void f_RegisterBuiltinVariables(NContainer::TCMap<CPropertyKey, CBuildSystemSyntax::CType> &&_Variables) const;
-		void f_OutputConsole(NStr::CStr const &_Output) const;
+		void f_OutputConsole(NStr::CStr const &_Output, bool _bError = false) const;
+		NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &f_OutputConsoleFunctor() const;
 
 		static void fs_AddEntityVariableDefinition
 			(
@@ -803,7 +804,7 @@ namespace NMib::NBuildSystem
 			) const
 		;
 
-		NFunction::TCFunction<void (NStr::CStr const &_Output)> mp_fOutputConsole;
+		NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> mp_fOutputConsole;
 
 		NContainer::TCMap<NStr::CStr, CBuiltinFunction> mp_BuiltinFunctions;
 		mutable NContainer::TCMap<CPropertyKey, CTypeWithPosition> mp_BuiltinVariablesDefinitions;

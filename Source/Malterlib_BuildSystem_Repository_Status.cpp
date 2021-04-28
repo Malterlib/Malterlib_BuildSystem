@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Repository.h"
@@ -45,7 +45,7 @@ namespace NMib::NBuildSystem
 		if (_Flags & ERepoStatusFlag_UpdateRemotes)
 			fg_UpdateRemotes(*this, FilteredRepositories);
 
-		CGitLaunches Launches{mp_BaseDir, "Getting repo status", mp_AnsiFlags};
+		CGitLaunches Launches{mp_BaseDir, "Getting repo status", mp_AnsiFlags, mp_fOutputConsole};
 
 		CColors Colors(mp_AnsiFlags);
 
@@ -711,7 +711,7 @@ namespace NMib::NBuildSystem
 		}
 
 		if (bActionNeeded)
-			DConErrOut2("\a");
+			f_OutputConsole("\a", true);
 
 		return ERetry_None;
 	}

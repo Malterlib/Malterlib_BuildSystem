@@ -51,7 +51,7 @@ namespace NMib::NBuildSystem
 			TCVector<TCVector<CConfigurationTuple>> Tuples = _BuildSystem.f_EvaluateConfigurationTuples(Values);
 			
 			fp64 Time1 = Clock.f_GetTime();
-			DConOut("Evaluated config tuples {fe2} s{\n}", Time1);
+			_BuildSystem.f_OutputConsole("Evaluated config tuples {fe2} s{\n}"_f << Time1);
 
 			for (auto iTuple = Tuples.f_GetIterator(); iTuple; ++iTuple)
 			{
@@ -97,7 +97,7 @@ namespace NMib::NBuildSystem
 			}
 
 			fp64 Time2 = Clock.f_GetTime();
-			DConOut("Evaluated configurations {fe2} s{\n}", Time2 - Time1);
+			_BuildSystem.f_OutputConsole("Evaluated configurations {fe2} s{\n}"_f << (Time2 - Time1));
 			
 			TCSet<CStr> ReservedGroups;
 			ReservedGroups[g_ReservedGeneratorGroup / g_ReservedConfigurationsGroup];
@@ -106,7 +106,7 @@ namespace NMib::NBuildSystem
 
 			_BuildSystem.f_GenerateBuildSystem(Configurations, Values, ReservedGroups, "XcodeGeneratorDependencyFiles");
 			fp64 Time3 = Clock.f_GetTime();
-			DConOut("Extracted workspaces, projects and files {fe2} s{\n}", Time3 - Time2);
+			_BuildSystem.f_OutputConsole("Extracted workspaces, projects and files {fe2} s{\n}"_f << (Time3 - Time2));
 
 			mint nConfigs = 0;
 			auto fCopyGroups
@@ -210,7 +210,7 @@ namespace NMib::NBuildSystem
 				}
 			}
 			fp64 Time4 = Clock.f_GetTime();
-			DConOut("Translated workspaces, projects and files for {} configurations {fe2} s{\n}", nConfigs << Time4 - Time3);
+			_BuildSystem.f_OutputConsole("Translated workspaces, projects and files for {} configurations {fe2} s{\n}"_f << nConfigs << (Time4 - Time3));
 			
 			mint MaxWorkspaceNameLen = 0;
 			for (auto iSolution = GeneratorState.m_Solutions.f_GetIterator(); iSolution; ++iSolution)
@@ -228,7 +228,7 @@ namespace NMib::NBuildSystem
 			;
 
 			fp64 Time5 = Clock.f_GetTime();
-			DConOut("Generated workspaces {fe2} s{\n}", Time5 - Time4);
+			_BuildSystem.f_OutputConsole("Generated workspaces {fe2} s{\n}"_f << (Time5 - Time4));
 		}
 	};
 	

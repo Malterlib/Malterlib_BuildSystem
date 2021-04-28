@@ -231,6 +231,6 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 		Timer.f_Stop();
 
-		DConOut("Generated workspace: {sl*,a-} {fe2} s{\n}", _Solution.f_GetName() << _MaxSolutionNameLength << Timer.f_GetTime());
+		m_BuildSystem.f_OutputConsole("Generated workspace: {sl*,a-} {fe2} s{\n}"_f << _Solution.f_GetName() << _MaxSolutionNameLength << Timer.f_GetTime());
 	}
 }

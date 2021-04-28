@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem.h"
@@ -12,8 +12,8 @@ namespace NMib::NBuildSystem
 {
 	void fg_Malterlib_BuildSystem_MakeActive_VisualStudio();
 	void fg_Malterlib_BuildSystem_MakeActive_Xcode();
-	
-	CBuildSystem::CBuildSystem(EAnsiEncodingFlag _AnsiFlags, NFunction::TCFunction<void (NStr::CStr const &_Output)> const &_fOutputConsole)
+
+	CBuildSystem::CBuildSystem(EAnsiEncodingFlag _AnsiFlags, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole)
 		: mp_NowUTC(NTime::CTime::fs_NowUTC())
 		, mp_AnsiFlags(_AnsiFlags)
 		, mp_fOutputConsole(_fOutputConsole)
@@ -29,10 +29,15 @@ namespace NMib::NBuildSystem
 			mp_ExternalProperty[i].m_Key.m_Type = (EPropertyType)i;
 	}
 
-	void CBuildSystem::f_OutputConsole(CStr const &_Output) const
+	void CBuildSystem::f_OutputConsole(CStr const &_Output, bool _bError) const
 	{
 		if (mp_fOutputConsole)
-			mp_fOutputConsole(_Output);
+			mp_fOutputConsole(_Output, _bError);
+	}
+
+	NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &CBuildSystem::f_OutputConsoleFunctor() const
+	{
+		return mp_fOutputConsole;
 	}
 
 	EAnsiEncodingFlag CBuildSystem::f_AnsiFlags() const
@@ -45,7 +50,7 @@ namespace NMib::NBuildSystem
 		DMibLockRead(mp_SourceFilesLock);
 		return mp_SourceFiles;
 	}
-	
+
 	void CBuildSystem::f_AddSourceFile(CStr const &_File) const
 	{
 		DMibLock(mp_SourceFilesLock);
@@ -65,8 +70,8 @@ namespace NMib::NBuildSystem
 		}
 		else if (File.m_Contents != _Data || (File.m_Flags & EGeneratedFileFlag_Symlink) != (_Flags & EGeneratedFileFlag_Symlink))
 		{
-			DMibConOut("Original contents:" DNewLine DNewLine "{}" DNewLine DNewLine, File.m_Contents);
-			DMibConOut("Incompatible contents:" DNewLine DNewLine "{}" DNewLine DNewLine, _Data);
+			f_OutputConsole("Original contents:{\n}{\n}{}{\n}{\n}"_f << File.m_Contents);
+			f_OutputConsole("Incompatible contents:{\n}{\n}{}{\n}{\n}"_f << _Data);
 			return false;
 		}
 		else
@@ -93,7 +98,7 @@ namespace NMib::NBuildSystem
 #			if 0
 			CStr FileExtension = CFile::fs_GetExtension(_File);
 			CStr FileName = CFile::fs_GetFile(_File);
-		
+
 			if (FileName != "VersionInfo.cpp" && FileExtension != "plist" && CFile::fs_FileExists(_File))
 			{
 				CByteVector OldFileContents = CFile::fs_ReadFile(_File);
@@ -104,7 +109,7 @@ namespace NMib::NBuildSystem
 					NSys::fg_Debug_DiffStrings(CFile::fs_ReadStringFromVector(OldFileContents), CFile::fs_ReadStringFromVector(_FileData), UniqueName, UniqueName);
 			}
 #			endif
-		if 
+		if
 		(
 			CFile::fs_CopyFileDiff
 			(
@@ -128,19 +133,19 @@ namespace NMib::NBuildSystem
 								if (CPerforceClientThrow::fs_GetFromP4Config(_Destination, Client))
 								{
 									Client.f_OpenForEdit(_Destination);
-									DConOut("Opened file for edit in Perforce: {}{\n}", _Destination);
+									f_OutputConsole("Opened file for edit in Perforce: {}{\n}"_f << _Destination);
 									bSuccess = true;
 								}
 							}
 							catch (NException::CException const &_Error)
 							{
 								CStr Error = _Error.f_GetErrorStr();
-								DConErrOut("Failed to checkout via Perforce:{\n}{}{\n}", Error);
+								f_OutputConsole("Failed to checkout via Perforce:{\n}{}{\n}"_f << Error, true);
 							}
 
 							if (!bSuccess)
 							{
-								DConOut2("Removed file write protection: {}{\n}", _Destination);
+								f_OutputConsole("Removed file write protection: {}{\n}"_f << _Destination);
 								CFile::fs_SetAttributes(_Destination, (Attributes & ~EFileAttrib_ReadOnly)  | (mp_SupportedAttributes & EFileAttrib_UserWrite) | mp_ValidAttributes);
 							}
 						}
@@ -155,17 +160,17 @@ namespace NMib::NBuildSystem
 		}
 		return false;
 	}
-	
+
 	void CBuildSystem::f_SetFileChanged(CStr const &_File) const
 	{
-		//DConOut("Changed: {}\n", _File);
+		//m_BuildSystem.f_OutputConsole("Changed: {}\n"_f << _File);
 		mp_FileChanged = true;
 	}
 
 	TCMap<CPropertyKey, NEncoding::CEJSON> CBuildSystem::f_GetExternalValues(CEntity const &_Entity) const
 	{
 		TCMap<CPropertyKey, NEncoding::CEJSON> Ret;
-		
+
 		for (auto &Property : _Entity.m_EvaluatedProperties.m_Properties)
 		{
 			if (Property.f_IsExternal())
@@ -181,7 +186,7 @@ namespace NMib::NBuildSystem
 			return pEvaluated->m_Value;
 		return {};
 	}
-	
+
 	void CBuildSystem::f_AddExternalProperty(CEntity &_Entity, CPropertyKey const &_Key, NEncoding::CEJSON &&_Value) const
 	{
 		auto &Evaluated = _Entity.m_EvaluatedProperties.m_Properties[_Key];

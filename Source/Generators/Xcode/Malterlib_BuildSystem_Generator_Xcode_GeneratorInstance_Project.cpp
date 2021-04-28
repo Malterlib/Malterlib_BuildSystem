@@ -1848,8 +1848,6 @@ fi
 				}
 			}
 
-			//DConOut("pNewElement->GetText(): {}\n", pNewElement->Value().c_str());
-			//XMLFile.f_SetAttribute(pOverrideElement, CStr(pAttribute->Name().c_str()), CStr(pAttribute->Value().c_str()));
 			if (fg_StrCmp(pNewElement->Value(), "CommandLineArguments") == 0)
 			{
 

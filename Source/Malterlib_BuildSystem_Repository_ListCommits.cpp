@@ -81,11 +81,11 @@ namespace NMib::NBuildSystem
 		if (_Flags & ERepoListCommitsFlag_UpdateRemotes)
 			fg_UpdateRemotes(*this, FilteredRepositories, " (Disable with --local) ");
 
-		CGitLaunches Launches{mp_BaseDir, "Listing Commits", mp_AnsiFlags};
+		CGitLaunches Launches{mp_BaseDir, "Listing Commits", mp_AnsiFlags, mp_fOutputConsole};
 
 		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
-		CStateHandler StateHandler{mp_BaseDir, mp_OutputDir, mp_AnsiFlags};
+		CStateHandler StateHandler{mp_BaseDir, mp_OutputDir, mp_AnsiFlags, mp_fOutputConsole};
 
 		CColors Colors(mp_AnsiFlags);
 
@@ -660,7 +660,7 @@ namespace NMib::NBuildSystem
 					if (i != 0 && i == nLines - 1)
 						ToOutput += "\n";
 				}
-				DConOutRaw(ToOutput);
+				f_OutputConsole(ToOutput);
 			}
 		}
 		else

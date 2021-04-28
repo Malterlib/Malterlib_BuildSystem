@@ -65,7 +65,7 @@ namespace
 						return Retry;
 					}
 					, NCommandLine::EAnsiEncodingFlag_None
-					, [](CStr const &_Output)
+					, [](CStr const &_Output, bool _bError)
 					{
 					}
 				)

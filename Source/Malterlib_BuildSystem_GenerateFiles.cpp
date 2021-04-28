@@ -201,7 +201,7 @@ namespace NMib::NBuildSystem
 											{
 												if (CFile::fs_FileExists(ParentPath, EFileAttrib_Link))
 												{
-													DConErrOut2("Deleting symlink in parent path '{}'\n", ParentPath);
+													f_OutputConsole("Deleting symlink in parent path '{}'\n"_f << ParentPath, true);
 													CFile::fs_DeleteFile(ParentPath);
 													return true;
 												}
@@ -238,17 +238,17 @@ namespace NMib::NBuildSystem
 									CLockFile LockFile(FileLockName);
 
 									if (mp_bDebugFileLocks)
-										DMibConErrOut2("{} File lock: {}\n", &LockFile, FileLockName);
+										f_OutputConsole("{} File lock: {}\n"_f << &LockFile << FileLockName, true);
 
 									LockFile.f_Lock();
 
 									if (mp_bDebugFileLocks)
-										DMibConErrOut2("{} File locked: {}\n", &LockFile, FileLockName);
+										f_OutputConsole("{} File locked: {}\n"_f << &LockFile << FileLockName, true);
 
 									auto CleanupLock = g_OnScopeExit > [&]
 										{
 											if (mp_bDebugFileLocks)
-												DMibConErrOut2("{} File lock released: {}\n", &LockFile, FileLockName);
+												f_OutputConsole("{} File lock released: {}\n"_f << &LockFile << FileLockName, true);
 										}
 									;
 
@@ -264,11 +264,11 @@ namespace NMib::NBuildSystem
 											if (Resolved == Contents)
 												break;
 #endif
-											DConErrOut2("Deleting invalid symlink '{}': {} != {}\n", Path, Resolved, Contents);
+											f_OutputConsole("Deleting invalid symlink '{}': {} != {}\n"_f << Path << Resolved << Contents, true);
 										}
 										catch (CExceptionFile const &)
 										{
-											DConErrOut2("Deleting path invalid symlink '{}'\n", Path);
+											f_OutputConsole("Deleting path invalid symlink '{}'\n"_f << Path, true);
 										}
 
 										if (!fCheckParentPaths())

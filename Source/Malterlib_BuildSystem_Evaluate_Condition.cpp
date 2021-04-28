@@ -280,15 +280,15 @@ namespace NMib::NBuildSystem
 
 		if (_TraceDepth)
 		{
-			DConOut("{sj*}         {}" DNewLine, "" << _TraceDepth*3 << _Context.f_GetPath());
-			DConOut("{sj*}         {}" DNewLine, "" << _TraceDepth*3 << _OriginalContext.f_GetPath());
+			f_OutputConsole("{sj*}         {}{\n}"_f << "" << (_TraceDepth * 3) << _Context.f_GetPath());
+			f_OutputConsole("{sj*}         {}{\n}"_f << "" << (_TraceDepth * 3) << _OriginalContext.f_GetPath());
 
 			if (bRet)
 			{
-				DConOut
+				f_OutputConsole
 					(
-						"{sj*}         {} {} {}" DNewLine
-						, ""
+						"{sj*}         {} {} {}{\n}"_f
+						<< ""
 						<< _TraceDepth * 3
 						<< LeftValue.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat)
 						<< CCondition::fs_ConditionTypeToStr(_ConditionType)
@@ -298,10 +298,10 @@ namespace NMib::NBuildSystem
 			}
 			else
 			{
-				DConOut
+				f_OutputConsole
 					(
-						"{sj*}       ! {} {} {}" DNewLine
-						, ""
+						"{sj*}       ! {} {} {}{\n}"_f
+						<< ""
 						<< _TraceDepth * 3
 						<< LeftValue.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat)
 						<< CCondition::fs_ConditionTypeToStr(_ConditionType)
@@ -332,9 +332,9 @@ namespace NMib::NBuildSystem
 				if (_TraceDepth)
 				{
 					if (_Condition.m_Type == EConditionType_Root)
-						DConOut("{sj*}Root" DNewLine, "" << _TraceDepth*3);
+						f_OutputConsole("{sj*}Root{\n}"_f << "" << _TraceDepth*3);
 					else
-						DConOut("{sj*}Or" DNewLine, "" << _TraceDepth*3);
+						f_OutputConsole("{sj*}Or{\n}"_f << "" << _TraceDepth*3);
 				}
 				for (auto iCondition = _Condition.m_Children.f_GetIterator(); iCondition; ++iCondition)
 				{
@@ -344,9 +344,9 @@ namespace NMib::NBuildSystem
 						if (_TraceDepth)
 						{
 							if (_Condition.m_Type == EConditionType_Root)
-								DConOut("{sj*}Success" DNewLine, "" << _TraceDepth*3);
+								f_OutputConsole("{sj*}Success{\n}"_f << "" << (_TraceDepth * 3));
 							else
-								DConOut("{sj*}Success" DNewLine, "" << _TraceDepth*3);
+								f_OutputConsole("{sj*}Success{\n}"_f << "" << (_TraceDepth * 3));
 						}
 						return true;
 					}
@@ -358,9 +358,9 @@ namespace NMib::NBuildSystem
 						if (_TraceDepth)
 						{
 							if (_Condition.m_Type == EConditionType_Root)
-								DConOut("{sj*}Success" DNewLine, "" << _TraceDepth*3);
+								f_OutputConsole("{sj*}Success{\n}"_f << "" << (_TraceDepth * 3));
 							else
-								DConOut("{sj*}Success" DNewLine, "" << _TraceDepth*3);
+								f_OutputConsole("{sj*}Success{\n}"_f << "" << (_TraceDepth * 3));
 						}
 						return true;
 					}
@@ -368,9 +368,9 @@ namespace NMib::NBuildSystem
 				if (_TraceDepth)
 				{
 					if (_Condition.m_Type == EConditionType_Root)
-						DConOut("{sj*}Failure" DNewLine, "" << _TraceDepth*3);
+						f_OutputConsole("{sj*}Failure{\n}"_f << "" << (_TraceDepth * 3));
 					else
-						DConOut("{sj*}Failure" DNewLine, "" << _TraceDepth*3);
+						f_OutputConsole("{sj*}Failure{\n}"_f << "" << (_TraceDepth * 3));
 				}
 
 				return false;
@@ -379,26 +379,26 @@ namespace NMib::NBuildSystem
 		case EConditionType_And:
 			{
 				if (_TraceDepth)
-					DConOut("{sj*}And" DNewLine, "" << _TraceDepth*3);
+					f_OutputConsole("{sj*}And{\n}"_f << "" << (_TraceDepth * 3));
 				for (auto iCondition = _Condition.m_Children.f_GetIterator(); iCondition; ++iCondition)
 				{
 					auto &Condition = (*iCondition);
 					if (!fpr_EvalCondition(_Context, _OriginalContext, Condition, _EvalContext, _TraceDepth ? _TraceDepth + 1 : 0, _pParentContext))
 					{
 						if (_TraceDepth)
-							DConOut("{sj*}Failure" DNewLine, "" << _TraceDepth*3);
+							f_OutputConsole("{sj*}Failure{\n}"_f << "" << (_TraceDepth * 3));
 						return false;
 					}
 				}
 				if (_TraceDepth)
-					DConOut("{sj*}Success" DNewLine, "" << _TraceDepth*3);
+					f_OutputConsole("{sj*}Success{\n}"_f << "" << (_TraceDepth * 3));
 				return true;
 			}
 			break;
 		case EConditionType_Not:
 			{
 				if (_TraceDepth)
-					DConOut("{sj*}Not" DNewLine, "" << _TraceDepth*3);
+					f_OutputConsole("{sj*}Not{\n}"_f << "" << (_TraceDepth * 3));
 
 				for (auto iCondition = _Condition.m_Children.f_GetIterator(); iCondition; ++iCondition)
 				{
@@ -407,9 +407,9 @@ namespace NMib::NBuildSystem
 					if (_TraceDepth)
 					{
 						if (bRet)
-							DConOut("{sj*}Success" DNewLine, "" << _TraceDepth*3);
+							f_OutputConsole("{sj*}Success{\n}"_f << "" << (_TraceDepth * 3));
 						else
-							DConOut("{sj*}Failure" DNewLine, "" << _TraceDepth*3);
+							f_OutputConsole("{sj*}Failure{\n}"_f << "" << (_TraceDepth * 3));
 					}
 
 
@@ -431,9 +431,31 @@ namespace NMib::NBuildSystem
 				if (_TraceDepth)
 				{
 					if (bRet)
-						DConOut("{sj*}Success: {} {} {}" DNewLine, "" << _TraceDepth*3 << _Condition.m_Left << CCondition::fs_ConditionTypeToStr(_Condition.m_Type) << _Condition.m_Right);
+					{
+						f_OutputConsole
+							(
+								"{sj*}Success: {} {} {}{\n}"_f
+								<< ""
+								<< (_TraceDepth * 3)
+								<< _Condition.m_Left
+								<< CCondition::fs_ConditionTypeToStr(_Condition.m_Type)
+								<< _Condition.m_Right
+							)
+						;
+					}
 					else
-						DConOut("{sj*}Failure: {} {} {}" DNewLine, "" << _TraceDepth*3 << _Condition.m_Left << CCondition::fs_ConditionTypeToStr(_Condition.m_Type) << _Condition.m_Right);
+					{
+						f_OutputConsole
+							(
+								"{sj*}Failure: {} {} {}{\n}"_f
+								<< ""
+								<< (_TraceDepth * 3)
+								<< _Condition.m_Left
+								<< CCondition::fs_ConditionTypeToStr(_Condition.m_Type)
+								<< _Condition.m_Right
+							)
+						;
+					}
 				}
 				return bRet;
 			}

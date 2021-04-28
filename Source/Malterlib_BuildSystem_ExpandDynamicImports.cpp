@@ -353,14 +353,14 @@ namespace NMib::NBuildSystem
 			CStr NewDependenciesHash = DependenciesHash.f_GetDigest().f_GetString();
 
 			if (bVerboseHash)
-				DMibConOut2("Import hash string for '{}': {}\n", LockDirectory, HashContents);
+				f_OutputConsole("Import hash string for '{}': {}\n"_f << LockDirectory << HashContents);
 
 			bool bCacheUpToDate = NewDependenciesHash == LastDependenciesHash;
 			if (bCacheUpToDate || !bUpdateCache)
 			{
 				if (!bCacheUpToDate)
 				{
-					DMibConOut("WARNING: Import cache out of date (CMake), but updating has been disabled with Import.CMake_UpdateCache: {}\n", CmakeCacheDirectory);
+					f_OutputConsole("WARNING: Import cache out of date (CMake), but updating has been disabled with Import.CMake_UpdateCache: {}\n"_f << CmakeCacheDirectory);
 				}
 				{
 					DLock(mp_CMakeGenerateLock);
@@ -380,7 +380,7 @@ namespace NMib::NBuildSystem
 				}
 			}
 
-			DMibConOut2("Import cache out of date (CMake): {}\n", CmakeCacheDirectory);
+			f_OutputConsole("Import cache out of date (CMake): {}\n"_f << CmakeCacheDirectory);
 		}
 
 		CProcessLaunchParams LaunchParams;
@@ -845,14 +845,14 @@ namespace NMib::NBuildSystem
 							if (CPerforceClientThrow::fs_GetFromP4Config(File, Client))
 							{
 								Client.f_Delete(File);
-								DConOut2("Deleted file in Perforce: {}{\n}", File);
+								f_OutputConsole("Deleted file in Perforce: {}{\n}"_f << File);
 								continue;
 							}
 						}
 						catch (NException::CException const &_Error)
 						{
 							CStr Error = _Error.f_GetErrorStr();
-							DConErrOut("Failed delete file in Perforce:{\n}{}{\n}", Error);
+							f_OutputConsole("Failed delete file in Perforce:{\n}{}{\n}"_f << Error, true);
 						}
 						CFile::fs_SetAttributes(File, (Attributes & ~EFileAttrib_ReadOnly)  | (SupportedAttributes & EFileAttrib_UserWrite) | ValidAttributes);
 					}
@@ -862,7 +862,7 @@ namespace NMib::NBuildSystem
 		}
 
 		if (bVerbose)
-			DMibConErrOut2("{}\n{}\n", StdOut, StdErr);
+			f_OutputConsole("{}\n{}\n"_f << StdOut << StdErr, true);
 
 		CFile::fs_WriteStringToFile(FullRebuildVersionFile, FullRebuildVersion, false);
 		CFile::fs_WriteStringToFile(LastHashContentsFile, HashContents, false);

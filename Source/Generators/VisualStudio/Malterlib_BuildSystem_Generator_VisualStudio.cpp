@@ -68,7 +68,7 @@ namespace NMib::NBuildSystem
 			TCVector<TCVector<CConfigurationTuple>> Tuples = _BuildSystem.f_EvaluateConfigurationTuples(Values);
 			
 			fp64 Time1 = Clock.f_GetTime();
-			DConOut("Evaluated config tuples {fe2} s{\n}", Time1);
+			_BuildSystem.f_OutputConsole("Evaluated config tuples {fe2} s{\n}"_f << Time1);
 
 			for (auto iTuple = Tuples.f_GetIterator(); iTuple; ++iTuple)
 			{
@@ -140,7 +140,7 @@ namespace NMib::NBuildSystem
 			TCSet<CStr> ReservedGroups;
 			_BuildSystem.f_GenerateBuildSystem(Configurations, Values, ReservedGroups, CStr());
 			fp64 Time2 = Clock.f_GetTime();
-			DConOut("Extracted workspaces, projects and files {fe2} s{\n}", Time2 - Time1);
+			_BuildSystem.f_OutputConsole("Extracted workspaces, projects and files {fe2} s{\n}"_f << (Time2 - Time1));
 
 			mint nConfigs = 0;
 			auto fCopyGroups
@@ -246,7 +246,7 @@ namespace NMib::NBuildSystem
 				}
 			}
 			fp64 Time3 = Clock.f_GetTime();
-			DConOut("Translated workspaces, projects and files for {} configurations {fe2} s{\n}", nConfigs << Time3 - Time2);
+			_BuildSystem.f_OutputConsole("Translated workspaces, projects and files for {} configurations {fe2} s{\n}"_f << nConfigs << (Time3 - Time2));
 
 			mint MaxSolutionNameLength = 0;
 			for (auto iSolution = GeneratorState.m_Solutions.f_GetIterator(); iSolution; ++iSolution)
@@ -265,7 +265,7 @@ namespace NMib::NBuildSystem
 			;
 
 			fp64 Time4 = Clock.f_GetTime();
-			DConOut("Generated workspaces {fe2} s{\n}", Time4 - Time3);
+			_BuildSystem.f_OutputConsole("Generated workspaces {fe2} s{\n}"_f << (Time4 - Time3));
 		}
 	};
 

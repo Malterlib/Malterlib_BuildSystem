@@ -13,14 +13,14 @@ namespace NMib::NBuildSystem
 			DLockReadLocked(mp_UsedExternalsLock);
 			bRecorded = mp_UsedExternals.f_FindEqual(_Name);
 		}
-			
+
 		if (!bRecorded)
 		{
 			DMibLock(mp_UsedExternalsLock);
 			mp_UsedExternals[_Name];
 		}
 	}
-	
+
 	void CBuildSystem::fp_TracePropertyEval(bool _bSuccess, CEntity const &_Entity, CProperty const &_Property, CEJSON const &_Value) const
 	{
 		if (_Property.m_Debug.f_Find("TraceEval") >= 0)
@@ -29,10 +29,10 @@ namespace NMib::NBuildSystem
 			{
 				if (_Property.m_Debug.f_Find("TraceEvalSuccess") < 0)
 				{
-					DConOut
+					f_OutputConsole
 						(
-							"{} !!!!!! {} {} = {}" DNewLine
-							, _Property.m_Position.f_Location()
+							"{} !!!!!! {} {} = {}{\n}"_f
+							<< _Property.m_Position.f_Location()
 							<< _Entity.f_GetPath()
 							<< _Property.m_Key
 							<< _Property.m_Value
@@ -42,10 +42,10 @@ namespace NMib::NBuildSystem
 			}
 			else
 			{
-				DConOut
+				f_OutputConsole
 					(
-						"{}        {} {} = {}" DNewLine
-						, _Property.m_Position.f_Location()
+						"{}        {} {} = {}{\n}"_f
+						<< _Property.m_Position.f_Location()
 						<< _Entity.f_GetPath()
 						<< _Property.m_Key
 						<< _Value

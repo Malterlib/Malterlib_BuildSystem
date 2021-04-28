@@ -10,7 +10,7 @@ namespace NMib::NBuildSystem
 		(
 			NFunction::TCFunction<CBuildSystem::ERetry (CBuildSystem &_BuildSystem)> &&_fCommand
 			, EAnsiEncodingFlag _AnsiFlags
-			, NFunction::TCFunction<void (NStr::CStr const &_Output)> const &_fOutputConsole
+			, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
 		) -> ERetry
 	{
 		CBuildSystem::ERetry Retry = CBuildSystem::ERetry_Again;

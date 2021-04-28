@@ -140,7 +140,7 @@ namespace NMib::NBuildSystem
 		{
 			if (!CFile::fs_FileExists(_GenerateState.m_EnvironmentStateFile, EFileAttrib_File))
 			{
-				DMibConErrOut2("Cached environment was not found at: {}. Saving current environment.\n", _GenerateState.m_EnvironmentStateFile);
+				f_OutputConsole("Cached environment was not found at: {}. Saving current environment.\n"_f << _GenerateState.m_EnvironmentStateFile, true);
 				mp_Environment = mp_SaveEnvironment = GenerateSettings.m_Environment;
 				fp_SaveEnvironment();
 			}
@@ -300,12 +300,13 @@ namespace NMib::NBuildSystem
 						}
 						catch ([[maybe_unused]] CException const &_Exception2)
 						{
-							DMibConErrOut2
+							f_OutputConsole
 								(
-									"{}Error trying to parse data to handle repositories (will try anyway):{}\n{}\n\n"
-									, Colors.f_StatusWarning()
-									, Colors.f_Default()
-									, _Exception2.f_GetErrorStr().f_Indent(DMibPFileLineFormatIndent)
+									"{}Error trying to parse data to handle repositories (will try anyway):{}\n{}\n\n"_f
+									<< Colors.f_StatusWarning()
+									<< Colors.f_Default()
+									<< _Exception2.f_GetErrorStr().f_Indent(DMibPFileLineFormatIndent)
+									, true
 								)
 							;
 						}
@@ -318,12 +319,13 @@ namespace NMib::NBuildSystem
 				}
 				catch ([[maybe_unused]] CException const &_Exception2)
 				{
-					DMibConErrOut2
+					f_OutputConsole
 						(
-							"{}Error trying to handle repositories as fallback:{}\n{}\n\n"
-							, Colors.f_StatusWarning()
-							, Colors.f_Default()
-							, _Exception2.f_GetErrorStr().f_Indent(DMibPFileLineFormatIndent)
+							"{}Error trying to handle repositories as fallback:{}\n{}\n\n"_f
+							<<  Colors.f_StatusWarning()
+							<< Colors.f_Default()
+							<< _Exception2.f_GetErrorStr().f_Indent(DMibPFileLineFormatIndent)
+							, true
 						)
 					;
 					std::rethrow_exception(_Exception.f_ExceptionPointer());

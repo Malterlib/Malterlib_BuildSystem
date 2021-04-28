@@ -31,8 +31,7 @@ namespace NMib::NBuildSystem::NXcode
 		Key.m_Name.m_Value = "Xcode";
 		CStr Generator = _InitialValues[CPropertyKey(EPropertyType_Property, "Generator")].f_String();
 		m_XcodeVersion = Generator.f_Replace("Xcode", "").f_ToInt(uint32(4));
-		// DConOut("Generator: {} Version: {}" DNewLine, Generator << m_XcodeVersion);
-
+		
 		auto pEntity = _BuildSystemData.m_RootEntity.m_ChildEntitiesMap.f_FindEqual(Key);
 		if (!pEntity)
 			m_BuildSystem.fs_ThrowError(CFilePosition(), "No Xcode generator settings found");

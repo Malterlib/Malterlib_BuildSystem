@@ -118,7 +118,14 @@ namespace NMib::NBuildSystem::NRepository
 
 	struct CStateHandler
 	{
-		CStateHandler(CStr const &_BasePath, CStr const &_OutputDir, EAnsiEncodingFlag _AnsiFlags);
+		CStateHandler
+			(
+				CStr const &_BasePath
+				, CStr const &_OutputDir
+				, EAnsiEncodingFlag _AnsiFlags
+				, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
+			)
+		;
 
 		void f_SetHash(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Hash, CStr const &_Identifier);
 		CStr f_GetHash(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Identifier);
@@ -127,6 +134,7 @@ namespace NMib::NBuildSystem::NRepository
 		void f_AddGitIgnore(CStr const &_FileName, CBuildSystem const &_BuildSystem);
 		static CConfigFile fs_ParseConfigFile(CStr const &_Contents, CStr const &_FileName);
 		CMutual &f_ConsoleOutputLock();
+		void f_ConsoleOutput(CStr const &_Output, bool _bError = false);
 		TCSet<CStr> f_GetLastSeenRepositories();
 		EAnsiEncodingFlag f_AnsiFlags() const;
 
@@ -142,11 +150,19 @@ namespace NMib::NBuildSystem::NRepository
 		TCMap<CStr, CStr> mp_LastSeenRepositories;
 		CMutual mp_ConsoleOutputLock;
 		EAnsiEncodingFlag mp_AnsiFlags;
+		NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> mp_fOutputConsole;
 	};
 
 	struct CGitLaunches
 	{
-		CGitLaunches(CStr const &_BaseDir, CStr const &_ProgressDescription, EAnsiEncodingFlag _AnsiFlags);
+		CGitLaunches
+			(
+				CStr const &_BaseDir
+				, CStr const &_ProgressDescription
+				, EAnsiEncodingFlag _AnsiFlags
+				, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
+			)
+		;
 
 		void f_SetNumRepos(mint _nRepos, bool _bReport = true);
 		void f_MeasureRepos(TCVector<TCVector<CRepository *>> const &_FilteredRepositories, bool _bReport = true);
@@ -173,10 +189,18 @@ namespace NMib::NBuildSystem::NRepository
 
 		struct CState
 		{
-			CState(CStr const &_BaseDir, CStr const &_ProgressDescription, EAnsiEncodingFlag _AnsiFlags);
+			CState
+				(
+					CStr const &_BaseDir
+					, CStr const &_ProgressDescription
+					, EAnsiEncodingFlag _AnsiFlags
+					, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
+				)
+			;
 			~CState();
 
 			void f_OutputState() const;
+			void f_ConsoleOutput(CStr const &_Output, bool _bError = false) const;
 
 			CMutual m_Lock;
 			CStr m_BaseDir;
@@ -196,6 +220,7 @@ namespace NMib::NBuildSystem::NRepository
 			mint m_LongestRepo = 0;
 			TCAtomic<mint> m_nRepos = 0;
 			EAnsiEncodingFlag m_AnsiFlags;
+			NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> m_fOutputConsole;
 		};
 
 		CStr f_GetRepoName(CRepository const &_Repo) const;

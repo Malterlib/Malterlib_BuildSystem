@@ -110,7 +110,7 @@ namespace NMib::NBuildSystem
 									}
 									catch (CException const &_Exception)
 									{
-										DConErrOut2("Failed to check ExecuteCommmand state: {}\n", _Exception);
+										_This.f_OutputConsole("Failed to check ExecuteCommmand state: {}\n"_f << _Exception, true);
 									}
 								}
 

@@ -152,7 +152,7 @@ namespace NMib::NBuildSystem::NXcode
 		}
 
 		Timer.f_Stop();
-		DConOut("Generated workspace: {sl*,a-} {fe2} s{\n}", _Solution.f_GetName() << _MaxWorkspaceNameLen << Timer.f_GetTime());
+		m_BuildSystem.f_OutputConsole("Generated workspace: {sl*,a-} {fe2} s{\n}"_f << _Solution.f_GetName() << _MaxWorkspaceNameLen << Timer.f_GetTime());
 	}
 
 	bool CGeneratorInstance::fp_GenerateBuildAllSchemes(CSolution &_Solution, CStr const &_OutputDir, TCMap<CConfiguration, TCSet<CStr>> &_Runnables, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable) const

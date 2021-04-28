@@ -15,7 +15,7 @@ namespace NMib::NBuildSystem
 
 		CFilteredRepos FilteredRepositories = fg_GetFilteredRepos(_Filter, *this, mp_Data);
 
-		CGitLaunches Launches{mp_BaseDir, "Branching repos", mp_AnsiFlags};
+		CGitLaunches Launches{mp_BaseDir, "Branching repos", mp_AnsiFlags, mp_fOutputConsole};
 
 		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
@@ -72,7 +72,7 @@ namespace NMib::NBuildSystem
 
 		CFilteredRepos FilteredRepositories = fg_GetFilteredRepos(_Filter, *this, mp_Data);
 
-		CGitLaunches Launches{mp_BaseDir, "Unbranching repos", mp_AnsiFlags};
+		CGitLaunches Launches{mp_BaseDir, "Unbranching repos", mp_AnsiFlags, mp_fOutputConsole};
 
 		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
@@ -134,7 +134,7 @@ namespace NMib::NBuildSystem
 		if (_Flags & ERepoCleanupBranchesFlag_UpdateRemotes)
 			fg_UpdateRemotes(*this, FilteredRepositories);
 
-		CGitLaunches Launches{mp_BaseDir, "Cleaning up branches", mp_AnsiFlags};
+		CGitLaunches Launches{mp_BaseDir, "Cleaning up branches", mp_AnsiFlags, mp_fOutputConsole};
 
 		CColors Colors(mp_AnsiFlags);
 
@@ -384,7 +384,7 @@ namespace NMib::NBuildSystem
 		if (_Flags & ERepoCleanupTagsFlag_UpdateRemotes)
 			fg_UpdateRemotes(*this, FilteredRepositories);
 
-		CGitLaunches Launches{mp_BaseDir, "Cleaning up tags", mp_AnsiFlags};
+		CGitLaunches Launches{mp_BaseDir, "Cleaning up tags", mp_AnsiFlags, mp_fOutputConsole};
 
 		CColors Colors(mp_AnsiFlags);
 
