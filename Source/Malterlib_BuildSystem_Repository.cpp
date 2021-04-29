@@ -471,6 +471,9 @@ namespace NMib::NBuildSystem
 						bChanged = true;
 
 						fLaunchGit({"branch", "-u", "origin/{}"_f << _Repo.m_DefaultBranch}, Location);
+
+						if (_Repo.m_bUpdateSubmodules)
+							fLaunchGit({"submodule", "update", "--init"}, Location);
 					}
 					catch (CException const &_Exception)
 					{
