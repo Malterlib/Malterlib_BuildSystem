@@ -480,6 +480,9 @@ namespace NMib::NBuildSystem
 				{
 					Params.f_Insert("-DCMAKE_FIND_ROOT_PATH=" + SysRoot);
 					Params.f_Insert("-DCMAKE_SYSROOT=" + SysRoot);
+					LaunchParams.m_Environment["PKG_CONFIG_SYSROOT_DIR"] = SysRoot;
+					LaunchParams.m_Environment["PKG_CONFIG_LIBDIR"] = "{}:{}"_f << (SysRoot / "usr/lib/pkgconfig") << (SysRoot / "usr/share/pkgconfig");
+					LaunchParams.m_Environment["PKG_CONFIG_PATH"] = "";
 				}
 
 				CStr CompilerExternalToolchain = f_EvaluateEntityPropertyString(_Entity, EPropertyType_Import, "CMake_CExternalToolChain", CStr());

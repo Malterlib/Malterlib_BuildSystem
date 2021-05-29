@@ -187,22 +187,49 @@ namespace NMib::NBuildSystem
 		return {};
 	}
 
-	void CBuildSystem::f_AddExternalProperty(CEntity &_Entity, CPropertyKey const &_Key, NEncoding::CEJSON &&_Value) const
+	bool CBuildSystem::f_AddExternalProperty(CEntity &_Entity, CPropertyKey const &_Key, NEncoding::CEJSON &&_Value) const
 	{
-		auto &Evaluated = _Entity.m_EvaluatedProperties.m_Properties[_Key];
-		Evaluated.m_Value = fg_Move(_Value);
+		auto Mapped = _Entity.m_EvaluatedProperties.m_Properties(_Key);
+		auto &Evaluated = *Mapped;
+
+		bool bChanged = Mapped.f_WasCreated() || Evaluated.m_Value != _Value;
+
+		if (bChanged)
+			Evaluated.m_Value = fg_Move(_Value);
 		Evaluated.m_Type = EEvaluatedPropertyType_External;
 		Evaluated.m_pProperty = &mp_ExternalProperty[_Key.m_Type];
+
+		return bChanged;
 	}
 
 	void CBuildSystem::f_InitEntityForEvaluationNoEnv(CEntity &_Entity, TCMap<CPropertyKey, CEJSON> const &_InitialValues, EEvaluatedPropertyType _Type) const
 	{
 		for (auto iValue = _InitialValues.f_GetIterator(); iValue; ++iValue)
 		{
+			if
+				(
+					_Type == EEvaluatedPropertyType_ExternalEnvironment
+					&& iValue->f_IsString()
+					&& iValue->f_String() == "undefined"
+				)
+			{
+				continue;
+			}
+
 			auto &Evaluated = _Entity.m_EvaluatedProperties.m_Properties[iValue.f_GetKey()];
 			Evaluated.m_Value = *iValue;
-			Evaluated.m_Type = _Type ;
+			Evaluated.m_Type = _Type;
 			Evaluated.m_pProperty = &mp_ExternalProperty[iValue.f_GetKey().m_Type];
+
+			if
+				(
+					_Type == EEvaluatedPropertyType_ExternalEnvironment
+					&& iValue->f_IsString()
+					&& iValue->f_String() == "3FFADB4E-9D9D-4CD7-8FA8-539C6ABF79BA"
+				)
+			{
+				Evaluated.m_Value = "undefined";
+			}
 		}
 	}
 
