@@ -14,7 +14,7 @@ namespace
 	using namespace NMib::NBuildSystem;
 	using namespace NMib::NStorage;
 
-	class CBuildSystemGenerator_Test : public CBuildSystemGenerator, public CGeneratorInterface
+	class CBuildSystemGenerator_Test : public CBuildSystemGenerator, public ICGeneratorInterface
 	{
 		// CGeneratorInterface
 		bool f_GetBuiltin(NStr::CStr const &_Value, NStr::CStr &_Result) const override
@@ -162,7 +162,7 @@ namespace
 
 			TCSet<CStr> ReservedGroups;
 
-			_BuildSystem.f_GenerateBuildSystem(Configurations, Values, ReservedGroups, "TestGeneratorDependencyFiles");
+			_BuildSystem.f_GenerateBuildSystem(Configurations, Values);
 
 			CEJSON BuildSystemData;
 
@@ -208,7 +208,9 @@ namespace
 				for (auto iWorkspace = ConfigData.m_Workspaces.f_GetIterator(); iWorkspace; ++iWorkspace)
 				{
 					auto &WorkspaceName = iWorkspace.f_GetKey();
-					auto &WorkspaceInfo = *iWorkspace;
+					auto &WorkspaceInfo = **iWorkspace;
+
+					_BuildSystem.f_GenerateBuildSystem_Workspace(Config, ConfigData, &WorkspaceInfo, ReservedGroups, "TestGeneratorDependencyFiles");
 
 					auto &Workspace = OutWorkspace[WorkspaceName];
 					fStorePosition(Workspace["Position"], WorkspaceInfo.m_pEntity->f_Data().m_Position);

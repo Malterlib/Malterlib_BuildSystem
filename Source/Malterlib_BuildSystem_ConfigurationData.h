@@ -12,7 +12,7 @@ namespace NMib::NBuildSystem
 		
 		NContainer::TCVector<CConfigurationTuple> m_Tuples;
 		CBuildSystemData m_Evaluated;
-		NContainer::TCMap<NStr::CStr, TCUniquePointer<CWorkspaceInfo>> m_Workspaces;
+		NContainer::TCMap<NStr::CStr, NStorage::TCUniquePointer<CWorkspaceInfo>> m_Workspaces;
 		NContainer::TCMap<NStr::CStr, CEntityMutablePointer> m_Targets;
 	};
 }

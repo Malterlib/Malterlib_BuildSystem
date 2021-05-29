@@ -10,7 +10,7 @@ namespace NMib::NBuildSystem
 		CWorkspaceInfo();
 		~CWorkspaceInfo();
 
-		TCUniquePointer<CBuildSystemData> m_pEvaluated;
+		NStorage::TCUniquePointer<CBuildSystemData> m_pEvaluated;
 		NStr::CStr m_EntityName;
 		CEntityMutablePointer m_pEntity;
 		NContainer::TCMap<NStr::CStr, CGroupInfo> m_Groups;
