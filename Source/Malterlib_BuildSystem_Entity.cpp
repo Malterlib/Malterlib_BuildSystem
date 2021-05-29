@@ -14,6 +14,26 @@ namespace NMib::NBuildSystem
 		return m_Name.f_ConstantString();
 	}
 
+	CEntity::CEntity(CEntity &&_Other)
+		: m_pData(fg_Move(_Other.m_pData))
+		, m_pChildDependentData(fg_Move(_Other.m_pChildDependentData))
+		, m_Link(fg_Move(_Other.m_Link))
+		, m_ChildEntitiesMap(fg_Move(_Other.m_ChildEntitiesMap))
+		, m_ChildEntitiesOrdered(fg_Move(_Other.m_ChildEntitiesOrdered))
+		, m_pParent(fg_Exchange(_Other.m_pParent, nullptr))
+		, m_EvaluatedProperties(fg_Move(_Other.m_EvaluatedProperties))
+	{
+#ifdef DMibBuildSystem_DebugReferences
+#ifdef DMibBuildSystem_DebugReferencesAdvanced
+		{
+			DLock(mp_DebugSetLock);
+			mp_DebugSet[this];
+		}
+#endif
+		this->f_RefCountIncrease(DMibRefcountDebuggingOnly(m_DebugSelfRef));
+#endif
+	}
+
 	CEntity::CEntity(CEntity *_pParent)
 		: m_pParent(_pParent)
 		, m_pData(fg_Construct())
@@ -66,6 +86,19 @@ namespace NMib::NBuildSystem
 		{
 			DLock(mp_DebugSetLock);
 			mp_DebugSet.f_Remove(this);
+		}
+#endif
+#if DMibConfig_RefcountDebugging
+		if (RefCount != 1)
+		{
+			DMibLock(this->m_Debug->m_Lock);
+			mint iCallstack = 0;
+			for (auto &Callstack : this->m_Debug->m_Callstacks)
+			{
+				DMibTrace2("        Reference callstack {}\n", iCallstack);
+				Callstack.f_Trace(12);
+				++iCallstack;
+			}
 		}
 #endif
 		DCheck(RefCount == 1)(RefCount)(f_GetPath());

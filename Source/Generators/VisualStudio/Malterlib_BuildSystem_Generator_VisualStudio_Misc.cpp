@@ -126,7 +126,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 	CStr const &CSolution::f_GetName() const
 	{
-		return TCMap<CStr, CSolution>::fs_GetKey(*this);
+		return m_Name;
 	}
 
 	void CSolution::f_FindRecursiveDependencies(CBuildSystem const &_BuildSystem)

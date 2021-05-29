@@ -191,7 +191,7 @@ namespace NMib::NBuildSystem
 		fExpandDependency(fg_RemoveQualifiers(_Target));
 	}
 
-	void CBuildSystem::f_ExpandTargetDependencies(CBuildSystemData &_BuildSystemData, CEntity const &_Target, CDependenciesBackup &o_Backup) const
+	void CBuildSystem::f_ExpandTargetDependencies(CWorkspaceInfo &_Workspace, CBuildSystemData &_BuildSystemData, CEntity const &_Target, CDependenciesBackup &o_Backup) const
 	{
 		if (o_Backup.m_Backup.f_IsEmpty())
 			f_ExpandTargetDependenciesBackup(_BuildSystemData, _Target, o_Backup);
@@ -263,6 +263,7 @@ namespace NMib::NBuildSystem
 				}
 			}
 		}
+
 		// Expand entities
 		{
 			TCFunction<void (CEntity &_Entity)> fExpandDependency
@@ -302,7 +303,6 @@ namespace NMib::NBuildSystem
 			;
 			fExpandDependency(fg_RemoveQualifiers(_Target));
 		}
-
 	}
 
 	void CBuildSystem::f_ExpandTargetGroups(CBuildSystemData &_BuildSystemData, CEntity const &_Target) const

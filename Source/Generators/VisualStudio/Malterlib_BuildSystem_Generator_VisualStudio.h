@@ -123,6 +123,13 @@ namespace NMib::NBuildSystem::NVisualStudio
 		CStr const &f_GetName() const;
 		void f_FindRecursiveDependencies(CBuildSystem const &_BuildSystem);
 
+		CSolution(CStr const &_Name)
+			: m_Name(_Name)
+		{
+		}
+
+		CStr m_Name;
+
 		TCMap<CStr, CGroup> m_Groups;
 		TCMap<CStr, CProject> m_Projects;
 		TCMap<CStr, CSolutionFile> m_SolutionFiles;
@@ -132,17 +139,15 @@ namespace NMib::NBuildSystem::NVisualStudio
 		CStr m_EntityName;
 
 		TCMap<CConfiguration, CConfigDisplay> m_EnabledConfigs;
-
-		TCAVLLink<> m_Link;
+		TCMap<CConfiguration, TCUniquePointer<CWorkspaceInfo>> m_WorkspaceInfos;
 	};
 
 	struct CGeneratorState
 	{
-		TCMap<CStr, CSolution> m_Solutions;
-		TCAVLTree<&CSolution::m_Link, CSolution::CCompare> m_SolutionsByEntity;
+		TCMap<CStr, TCUniquePointer<CSolution>> m_Solutions;
 	};
 
-	struct CGeneratorInstance : public CGeneratorInterface
+	struct CGeneratorInstance : public ICGeneratorInterface
 	{
 		enum EPropertyValidity
 		{
@@ -207,10 +212,11 @@ namespace NMib::NBuildSystem::NVisualStudio
 		{
 			bool f_FileExists(CStr const &_Path);
 			void f_CreateDirectory(CStr const &_Path);
+			void f_Clear();
 
 			CStr m_CurrentOutputDir;
 			TCMap<TCMap<CStr, CStr>, TCMap<CStr, CPrefixHeader>> m_PrefixHeaders;
-			ELanguageType m_LanguageType;
+			ELanguageType m_LanguageType = ELanguageType_Native;
 			TCMap<CStr, CStr> m_CurrentCompileTypes;
 
 			TCMap<CStr, zbool> m_FileExistsCache;
@@ -226,6 +232,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 			)
 		;
 		~CGeneratorInstance();
+
+		void f_ClearThreadLocal() const;
+
 		virtual bool f_GetBuiltin(CStr const &_Value, CStr &_Result) const override;
 		virtual CStr f_GetExpandedPath(CStr const &_Path, CStr const &_Base) const override;
 		virtual CSystemEnvironment f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const override;
@@ -271,7 +280,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			) const
 		;
 		void f_GenerateProjectFile(CProject &_Project, CStr const &_OutputDir) const;
-		void f_GenerateSolutionFile(CSolution &_Solution, CStr const &_OutputDir, mint _MaxSolutionNameLength) const;
+		void f_GenerateSolutionFile(CSolution &_Solution, CStr const &_OutputDir) const;
 
 		CStr f_GetNativePlatform(CStr const &_Platform);
 		CStr f_GetNativePlatform(ELanguageType _Language, CStr const &_Platform);
@@ -286,7 +295,6 @@ namespace NMib::NBuildSystem::NVisualStudio
 		CStr m_RelativeBasePathAbsolute;
 
 		CEntityPointer m_pGeneratorSettings;
-		CEntityPointer m_pTargetSettings;
 
 		mutable TCThreadLocal<CThreadLocal> m_ThreadLocal;
 

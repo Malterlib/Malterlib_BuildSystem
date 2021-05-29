@@ -5,10 +5,6 @@
 
 namespace NMib::NBuildSystem
 {
-	CWorkspaceInfo::CWorkspaceInfo(CBuildSystemData const &_Data)
-		: m_Evaluated(_Data)
-	{
-	}
-
+	CWorkspaceInfo::CWorkspaceInfo() = default;
 	CWorkspaceInfo::~CWorkspaceInfo() = default;
 }

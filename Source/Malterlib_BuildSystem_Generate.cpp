@@ -16,7 +16,7 @@ namespace NMib::NBuildSystem
 
 	namespace
 	{
-		struct CLocalGeneratorInteface : public CGeneratorInterface
+		struct CLocalGeneratorInteface : public ICGeneratorInterface
 		{
 			CLocalGeneratorInteface(CStr const &_OutputDir)
 				: m_OutputDir(_OutputDir)

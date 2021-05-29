@@ -114,6 +114,11 @@ namespace NMib::NBuildSystem::NVisualStudio
 		return s_Path = CFile::fs_GetExpandedPath(m_BuildSystem.f_GetEnvironmentVariable(fg_Format("VS{}COMNTOOLS", VSVersion)) + "../..");
 	}
 
+	void CGeneratorInstance::f_ClearThreadLocal() const
+	{
+		m_ThreadLocal->f_Clear();
+	}
+
 	CGeneratorInstance::CGeneratorInstance
 		(
 			CBuildSystem const &_BuildSystem

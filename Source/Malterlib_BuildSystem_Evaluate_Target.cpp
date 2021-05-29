@@ -8,7 +8,7 @@ namespace NMib::NBuildSystem
 	void CBuildSystem::f_EvaluateTarget
 		(
 			CBuildSystemData &_Destination
-			, TCMap<CStr, CEntity *> const &_Targets
+			, TCMap<CStr, CEntityMutablePointer> const &_Targets
 			, CEntity &_Entity
 		) const
 	{
@@ -108,7 +108,7 @@ namespace NMib::NBuildSystem
 	void CBuildSystem::fp_EvaluateTarget
 		(
 			CBuildSystemData &_Destination
-			, TCMap<CStr, CEntity *> const &_Targets
+			, TCMap<CStr, CEntityMutablePointer> const &_Targets
 			, TCLinkedList<CEntity *> &_ToEval
 			, CEntity &_Entity
 		) const

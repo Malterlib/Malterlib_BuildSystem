@@ -6,10 +6,8 @@
 
 namespace NMib::NBuildSystem::NVisualStudio
 {
-	void CGeneratorInstance::f_GenerateSolutionFile(CSolution &_Solution, CStr const &_OutputDir, mint _MaxSolutionNameLength) const
+	void CGeneratorInstance::f_GenerateSolutionFile(CSolution &_Solution, CStr const &_OutputDir) const
 	{
-		CTimer Timer;
-		Timer.f_Start();
 		CStr OutputDir = CFile::fs_AppendPath(_OutputDir, CStr(CFile::fs_MakeNiceFilename(_Solution.f_GetName())));
 		fg_ForEach
 			(
@@ -228,9 +226,5 @@ namespace NMib::NBuildSystem::NVisualStudio
 			CFile::fs_WriteStringToVector(FileDataVector, CStr(FileData));
 			m_BuildSystem.f_WriteFile(FileDataVector, OutputFile);
 		}
-
-		Timer.f_Stop();
-
-		m_BuildSystem.f_OutputConsole("Generated workspace: {sl*,a-} {fe2} s{\n}"_f << _Solution.f_GetName() << _MaxSolutionNameLength << Timer.f_GetTime());
 	}
 }

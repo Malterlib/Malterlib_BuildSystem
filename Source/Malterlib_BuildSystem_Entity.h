@@ -14,6 +14,12 @@ namespace NMib::NBuildSystem
 		inline_always bool operator < (CEntityKey const &_Right) const;
 		inline_always bool operator == (CEntityKey const &_Right) const;
 
+		template <typename tf_CStr>
+		void f_Format(tf_CStr &o_Str) const
+		{
+			o_Str += typename tf_CStr::CFormat("{}:{}") << fg_EntityTypeToStr(m_Type) << m_Name;
+		}
+
 		EEntityType m_Type = EEntityType_Root;
 		CBuildSystemSyntax::CValue m_Name;
 
@@ -78,6 +84,8 @@ namespace NMib::NBuildSystem
 		: public TCSharedPointerIntrusiveBase<>
 #endif
 	{
+		CEntity(CEntity const &_Other) = delete;
+		CEntity(CEntity &&_Other);
 		CEntity(CEntity *_pParent);
 		CEntity(CEntity const &_Other, CEntity *_pParent, EEntityCopyFlag _CopyFlags);
 #ifdef DMibBuildSystem_DebugReferences

@@ -11,6 +11,7 @@ namespace NMib::NBuildSystem
 
 		DMibListLinkDS_Link(CTargetDependencyInfo, m_Link);
 		CEntityMutablePointer m_pEntity;
+		CFilePosition m_Position;
 		bool m_bLink = false;
 	};
 
@@ -59,5 +60,7 @@ namespace NMib::NBuildSystem
 		NContainer::TCMap<CFileKey, CTargetFileInfo> m_Files;
 
 		CDependenciesBackup m_DependenciesBackup;
+
+		bool m_bIsExpanded = false;
 	};
 }

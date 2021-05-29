@@ -7,9 +7,9 @@
 
 namespace NMib::NBuildSystem::NXcode
 {
-	void CGeneratorInstance::f_GenerateWorkspaceFile(CSolution &_Solution, CStr const &_OutputDir, mint _MaxWorkspaceNameLen) const
+	void CGeneratorInstance::f_GenerateWorkspaceFile(CSolution &_Solution, CStr const &_OutputDir) const
 	{
-		auto & ThreadLocal = *m_ThreadLocal;
+		auto &ThreadLocal = *m_ThreadLocal;
 		CXMLDocument XMLFile(false);
 		auto pOldFile = ThreadLocal.m_pXMLFile;
 		ThreadLocal.m_pXMLFile = &XMLFile;
@@ -22,8 +22,6 @@ namespace NMib::NBuildSystem::NXcode
 			)
 		;
 
-		CTimer Timer;
-		Timer.f_Start();
 		CStr OutputDir = CFile::fs_AppendPath(CFile::fs_AppendPath(_OutputDir, "Files"), CStr(CFile::fs_MakeNiceFilename(_Solution.f_GetName())));
 		ThreadLocal.f_CreateDirectory(OutputDir);
 
@@ -150,9 +148,6 @@ namespace NMib::NBuildSystem::NXcode
 				}
 			}
 		}
-
-		Timer.f_Stop();
-		m_BuildSystem.f_OutputConsole("Generated workspace: {sl*,a-} {fe2} s{\n}"_f << _Solution.f_GetName() << _MaxWorkspaceNameLen << Timer.f_GetTime());
 	}
 
 	bool CGeneratorInstance::fp_GenerateBuildAllSchemes(CSolution &_Solution, CStr const &_OutputDir, TCMap<CConfiguration, TCSet<CStr>> &_Runnables, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable) const
@@ -163,7 +158,7 @@ namespace NMib::NBuildSystem::NXcode
 		auto fWriteSchemeFile = [&](CStr const &_FileName, CStr const &_Data, bool _bDoWrite = true) -> bool
 			{
 				bool bWasCreated;
-				if (!m_BuildSystem.f_AddGeneratedFile(_FileName, _Data, _Solution.f_GetName(), bWasCreated, EGeneratedFileFlag_NoDateCheck | EGeneratedFileFlag_KeepGeneratedFile))
+				if (!m_BuildSystem.f_AddGeneratedFile(_FileName, _Data, _Solution.f_GetName(), bWasCreated, EGeneratedFileFlag_NoDateCheck))
 					DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << _FileName));
 
 				if (bWasCreated && (_bDoWrite || !CFile::fs_FileExists(_FileName)))

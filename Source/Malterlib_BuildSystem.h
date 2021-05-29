@@ -158,15 +158,23 @@ namespace NMib::NBuildSystem
 			FEvalPropertyFunction m_fFunction;
 		};
 
-		void f_SetGeneratorInterface(CGeneratorInterface *_pInterface) const;
+		void f_SetGeneratorInterface(ICGeneratorInterface *_pInterface) const;
 		void f_GenerateBuildSystem
 			(
 				NContainer::TCMap<CConfiguration, NStorage::TCUniquePointer<CConfiguraitonData>> &o_Configurations
 				, NContainer::TCMap<CPropertyKey, NEncoding::CEJSON> const &_Values
+			) const
+		;
+		void f_GenerateBuildSystem_Workspace
+			(
+				CConfiguration const &_Config
+				, CConfiguraitonData const &_ConfigData
+				, CWorkspaceInfo *_pWorkspace
 				, NContainer::TCSet<NStr::CStr> const &_ReservedGroups
 				, NStr::CStr const &_DependencyFilesName
 			) const
 		;
+
 		inline_always CGenerateSettings const &f_GetGenerateSettings() const;
 		inline_always CGenerateOptions const &f_GetGenerateOptions() const;
 		NStr::CStr f_GetBaseDir() const;
@@ -180,7 +188,7 @@ namespace NMib::NBuildSystem
 		void f_ExpandDynamicImports(CBuildSystemData &_BuildSystemData) const;
 		void f_ExpandGlobalTargetsAndWorkspaces(CBuildSystemData &_BuildSystemData) const;
 		void f_ExpandTargetDependenciesBackup(CBuildSystemData &_BuildSystemData, CEntity const &_Target, CDependenciesBackup &o_Backup) const;
-		void f_ExpandTargetDependencies(CBuildSystemData &_BuildSystemData, CEntity const &_Target, CDependenciesBackup &o_Backup) const;
+		void f_ExpandTargetDependencies(CWorkspaceInfo &_Workspace, CBuildSystemData &_BuildSystemData, CEntity const &_Target, CDependenciesBackup &o_Backup) const;
 		void f_ExpandTargetGroups(CBuildSystemData &_BuildSystemData, CEntity const &_Target) const;
 		void f_ExpandTargetFiles(CBuildSystemData &_BuildSystemData, CEntity const &_Target) const;
 		void f_ExpandWorkspaceTargets(CBuildSystemData &_BuildSystemData, CEntity const &_Target) const;
@@ -206,20 +214,20 @@ namespace NMib::NBuildSystem
 		void f_EvalGlobalWorkspaces
 			(
 				CBuildSystemData &_Destination
-				, NContainer::TCMap<NStr::CStr, CEntity *> &_Targets
+				, NContainer::TCMap<NStr::CStr, CEntityMutablePointer> &_Targets
 			) const
 		;
 		void f_EvaluateTargetsInWorkspace
 			(
 				CBuildSystemData &_Destination
-				, NContainer::TCMap<NStr::CStr, CEntity *> const &_Targets
+				, NContainer::TCMap<NStr::CStr, CEntityMutablePointer> const &_Targets
 				, CEntity &_Workspace
 			) const
 		;
 		void f_EvaluateTarget
 			(
 				CBuildSystemData &_Destination
-				, NContainer::TCMap<NStr::CStr, CEntity *> const &_Targets
+				, NContainer::TCMap<NStr::CStr, CEntityMutablePointer> const &_Targets
 				, CEntity &_Entity
 			) const
 		;
@@ -304,7 +312,7 @@ namespace NMib::NBuildSystem
 		void f_InitEntityForEvaluation(CEntity &_Entity, NContainer::TCMap<CPropertyKey, NEncoding::CEJSON> const &_InitialValues) const;
 		void f_InitEntityForEvaluationNoEnv(CEntity &_Entity, NContainer::TCMap<CPropertyKey, NEncoding::CEJSON> const &_InitialValues, EEvaluatedPropertyType _Type) const;
 		NEncoding::CEJSON f_GetExternalProperty(CEntity &_Entity, CPropertyKey const &_Key) const;
-		void f_AddExternalProperty(CEntity &_Entity, CPropertyKey const &_Key, NEncoding::CEJSON &&_Value) const;
+		bool f_AddExternalProperty(CEntity &_Entity, CPropertyKey const &_Key, NEncoding::CEJSON &&_Value) const;
 		NContainer::TCVector<NContainer::TCVector<CConfigurationTuple>> f_EvaluateConfigurationTuples(NContainer::TCMap<CPropertyKey, NEncoding::CEJSON> const &_InitialValues) const;
 		bool f_EvalCondition(CEntity &_Context, CCondition const &_Condition, bool _bTrace = false) const;
 		[[noreturn]] static void fs_ThrowError(CFilePosition const &_Position, NStr::CStr const &_Error);
@@ -457,7 +465,7 @@ namespace NMib::NBuildSystem
 			CGeneratorArchiveState m_GlobalState;
 			CGeneratorArchiveState m_BeforeGlobalState;
 			NContainer::TCMap<CPropertyKey, NEncoding::CEJSON> m_GeneratorValues;
-			NStorage::TCUniquePointer<CGeneratorInterface> m_pLocalGeneratorInterface;
+			NStorage::TCUniquePointer<ICGeneratorInterface> m_pLocalGeneratorInterface;
 			COnScopeExitShared m_LocalGeneratorInterfaceCleanup;
 			bool m_bUseCachedEnvironment = false;
 			bool m_bDisableUserSettings = false;
@@ -733,13 +741,13 @@ namespace NMib::NBuildSystem
 		void fp_EvalGlobalWorkspaces
 			(
 				CBuildSystemData &_Destination
-				, NContainer::TCMap<NStr::CStr, CEntity *> &_Targets
+				, NContainer::TCMap<NStr::CStr, CEntityMutablePointer> &_Targets
 			) const
 		;
 		void fp_EvaluateTargetsInWorkspace
 			(
 				CBuildSystemData &_Destination
-				, NContainer::TCMap<NStr::CStr, CEntity *> const &_Targets
+				, NContainer::TCMap<NStr::CStr, CEntityMutablePointer> const &_Targets
 				, CEntity &_Workspace
 			) const
 		;
@@ -747,7 +755,7 @@ namespace NMib::NBuildSystem
 		void fp_EvaluateTarget
 			(
 				CBuildSystemData &_Destination
-				, NContainer::TCMap<NStr::CStr, CEntity *> const &_Targets
+				, NContainer::TCMap<NStr::CStr, CEntityMutablePointer> const &_Targets
 				, NContainer::TCLinkedList<CEntity *> &_ToEval
 				, CEntity &_Entity
 			) const
@@ -821,7 +829,7 @@ namespace NMib::NBuildSystem
 		CBuildSystemData mp_Data;
 		CProperty mp_ExternalProperty[EPropertyType_Max];
 
-		mutable NStorage::TCPointer<CGeneratorInterface> mp_GeneratorInterface;
+		mutable NStorage::TCPointer<ICGeneratorInterface> mp_GeneratorInterface;
 
 		mutable CUserSettingsState mp_UserSettingsLocal;
 		mutable CUserSettingsState mp_UserSettingsGlobal;

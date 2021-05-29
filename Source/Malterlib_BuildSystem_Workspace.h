@@ -7,10 +7,10 @@ namespace NMib::NBuildSystem
 {
 	struct align_cacheline CWorkspaceInfo
 	{
-		CWorkspaceInfo(CBuildSystemData const &_Data);
+		CWorkspaceInfo();
 		~CWorkspaceInfo();
 
-		CBuildSystemData m_Evaluated;
+		TCUniquePointer<CBuildSystemData> m_pEvaluated;
 		NStr::CStr m_EntityName;
 		CEntityMutablePointer m_pEntity;
 		NContainer::TCMap<NStr::CStr, CGroupInfo> m_Groups;

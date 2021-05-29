@@ -88,7 +88,7 @@ namespace NMib::NBuildSystem
 		return mp_BaseDir;
 	}
 
-	void CBuildSystem::f_SetGeneratorInterface(CGeneratorInterface *_pInterface) const
+	void CBuildSystem::f_SetGeneratorInterface(ICGeneratorInterface *_pInterface) const
 	{
 		mp_GeneratorInterface = _pInterface;
 	}

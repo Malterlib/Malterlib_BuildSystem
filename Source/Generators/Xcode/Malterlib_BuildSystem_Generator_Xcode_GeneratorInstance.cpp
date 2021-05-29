@@ -52,6 +52,11 @@ namespace NMib::NBuildSystem::NXcode
 		;
 	}
 
+	void CGeneratorInstance::f_ClearThreadLocal() const
+	{
+		*m_ThreadLocal = CThreadLocal();
+	}
+
 	CStr CGeneratorInstance::f_GetExpandedPath(CStr const &_Path, CStr const &_Base) const
 	{
 		return CFile::fs_GetExpandedPath(_Path.f_Replace(m_RelativeBasePathAbsolute, m_BuildSystem.f_GetBaseDir()), _Base);
@@ -129,11 +134,6 @@ namespace NMib::NBuildSystem::NXcode
 			return false;
 		
 		return m_Values < _Right.m_Values;
-	}
-	
-	CGeneratorInstance::CThreadLocal::CThreadLocal()
-		: m_pXMLFile(nullptr)
-	{
 	}
 	
 	void CGeneratorInstance::CThreadLocal::f_CreateDirectory(CStr const &_Path)

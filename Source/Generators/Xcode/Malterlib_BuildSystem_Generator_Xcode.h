@@ -291,26 +291,30 @@ namespace NMib::NBuildSystem::NXcode
 		CStr const &f_GetName() const;
 		void f_FindRecursiveDependencies(CBuildSystem const &_BuildSystem);
 
-		TCMap<CStr, CGroup> m_Groups;
-		TCMap<CStr, CProject> m_Projects;
+		CSolution(CStr const &_Name)
+			: m_Name(_Name)
+		{
+		}
+
+		CStr m_Name;
+
+		TCMap<CConfiguration, TCUniquePointer<CWorkspaceInfo>> m_WorkspaceInfos;
+		TCMap<CConfiguration, CEntityMutablePointer> m_EnabledConfigs;
 		TCMap<CStr, CSolutionFile> m_SolutionFiles;
+		TCMap<CStr, CProject> m_Projects;
+		TCMap<CStr, CGroup> m_Groups;
 
 		CFilePosition m_Position;
 
 		CStr m_EntityName;
-
-		TCMap<CConfiguration, CEntityMutablePointer> m_EnabledConfigs;
-
-		TCAVLLink<> m_Link;
 	};
 
 	struct CGeneratorState
 	{
-		TCMap<CStr, CSolution> m_Solutions;
-		TCAVLTree<&CSolution::m_Link, CSolution::CCompare> m_SolutionsByEntity;
+		TCMap<CStr, TCUniquePointer<CSolution>> m_Solutions;
 	};
 
-	struct CGeneratorInstance : public CGeneratorInterface
+	struct CGeneratorInstance : public ICGeneratorInterface
 	{
 		CGeneratorInstance
 			(
@@ -327,7 +331,8 @@ namespace NMib::NBuildSystem::NXcode
 		virtual CSystemEnvironment f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const override;
 
 		void f_GenerateProjectFile(CProject &_Project, CStr const &_OutputDir, TCMap<CConfiguration, TCSet<CStr>> &_Runnables, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable) const;
-		void f_GenerateWorkspaceFile(CSolution &_Solution, CStr const &_OutputDir, mint _MaxWorkspaceNameLen) const;
+		void f_GenerateWorkspaceFile(CSolution &_Solution, CStr const &_OutputDir) const;
+		void f_ClearThreadLocal() const;
 
 		// Members
 		CBuildSystem const &m_BuildSystem;
@@ -342,7 +347,6 @@ namespace NMib::NBuildSystem::NXcode
 		uint32 m_XcodeVersion;
 
 		CEntityPointer m_pGeneratorSettings;
-		CEntityPointer m_pTargetSettings;
 
 	private:
 		struct CValueProperties
@@ -413,11 +417,9 @@ namespace NMib::NBuildSystem::NXcode
 
 		struct CThreadLocal
 		{
-			CThreadLocal();
-
 			void f_CreateDirectory(CStr const &_Path);
 
-			CXMLDocument *m_pXMLFile;
+			CXMLDocument *m_pXMLFile = nullptr;
 			TCMap<CConfiguration, TCSet<CStr>> mp_UsedCTypes;
 			TCMap<CStr> mp_EvaluatedTypesInUse;
 			TCMap<CConfiguration, TCMap<CStr, CStr>> mp_XcodeSettingsFromTypes;

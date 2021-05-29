@@ -21,9 +21,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 	void CGeneratorInstance::f_GenerateProjectFile(CProject &_Project, CStr const &_OutputDir) const
 	{
-		auto & ThreadLocal = *m_ThreadLocal;
+		f_ClearThreadLocal();
+		auto &ThreadLocal = *m_ThreadLocal;
 		ThreadLocal.m_CurrentOutputDir = _OutputDir;
-		ThreadLocal.m_PrefixHeaders.f_Clear();
 
 		auto fGetEntityPropertyGlobalEJSON
 			= [&](EPropertyType _Type, CStr const &_Name, CFilePosition &o_Position, EEJSONType _ExpectedType) -> CEJSON

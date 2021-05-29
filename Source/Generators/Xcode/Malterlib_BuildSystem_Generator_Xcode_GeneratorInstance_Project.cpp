@@ -10,22 +10,8 @@ namespace NMib::NBuildSystem::NXcode
 {
 	void CGeneratorInstance::f_GenerateProjectFile(CProject &_Project, CStr const &_OutputDir, TCMap<CConfiguration, TCSet<CStr>> &_Runnables, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable) const
 	{
-		auto & ThreadLocal = *m_ThreadLocal;
-		ThreadLocal.mp_EvaluatedTypesInUse.f_Clear();
-		ThreadLocal.mp_UsedCTypes.f_Clear();
-		ThreadLocal.mp_XcodeSettingsFromTypes.f_Clear();
-		ThreadLocal.mp_CompileFlagsValues.f_Clear();
-		ThreadLocal.mp_EvaluatedOverriddenCompileFlags.f_Clear();
-		ThreadLocal.mp_EvaluatedTargetSettings.f_Clear();
-		ThreadLocal.mp_EvaluatedTypeCompileFlags.f_Clear();
-		ThreadLocal.mp_EvaluatedCompileFlags.f_Clear();
-		ThreadLocal.mp_OtherCPPFlags.f_Clear();
-		ThreadLocal.mp_OtherObjCPPFlags.f_Clear();
-		ThreadLocal.mp_OtherAssemblerFlags.f_Clear();
-		ThreadLocal.mp_OtherCFlags.f_Clear();
-		ThreadLocal.mp_OtherObjCFlags.f_Clear();
-		ThreadLocal.mp_MocOutputPatternCPP.f_Clear();
-		ThreadLocal.mp_BuildRules.f_Clear();
+		auto &ThreadLocal = *m_ThreadLocal;
+		f_ClearThreadLocal();
 
 		ThreadLocal.m_ProjectOutputDir = CFile::fs_AppendPath(_OutputDir, CStr(_Project.f_GetName() + ".xcodeproj"));
 		ThreadLocal.f_CreateDirectory(ThreadLocal.m_ProjectOutputDir);

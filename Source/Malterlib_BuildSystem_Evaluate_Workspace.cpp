@@ -8,7 +8,7 @@ namespace NMib::NBuildSystem
 	void CBuildSystem::f_EvalGlobalWorkspaces
 		(
 			CBuildSystemData &_Destination
-			, TCMap<CStr, CEntity *> &_Targets
+			, TCMap<CStr, CEntityMutablePointer> &_Targets
 		) const
 	{
 		fp_EvalGlobalWorkspaces
@@ -22,7 +22,7 @@ namespace NMib::NBuildSystem
 	void CBuildSystem::f_EvaluateTargetsInWorkspace
 		(
 			CBuildSystemData &_Destination
-			, TCMap<CStr, CEntity *> const &_Targets
+			, TCMap<CStr, CEntityMutablePointer> const &_Targets
 			, CEntity &_Workspace
 		) const
 	{
@@ -105,7 +105,7 @@ namespace NMib::NBuildSystem
 	void CBuildSystem::fp_EvalGlobalWorkspaces
 		(
 			CBuildSystemData &_Destination
-			, TCMap<CStr, CEntity *> &_Targets
+			, TCMap<CStr, CEntityMutablePointer> &_Targets
 		) const
 	{
 		{
@@ -130,7 +130,7 @@ namespace NMib::NBuildSystem
 								if (!Mapped.f_WasCreated())
 									fsp_ThrowError(**Mapped, ChildEntity.f_Data().m_Position, "Target with same name already specified in another scope");
 
-								*Mapped = &ChildEntity;
+								*Mapped = fg_Explicit(&ChildEntity);
 							}
 							break;
 						default:
@@ -176,7 +176,7 @@ namespace NMib::NBuildSystem
 					auto Mapped = _Targets(ChildEntity.f_GetKeyName());
 					if (!Mapped.f_WasCreated())
 						fsp_ThrowError(**Mapped, ChildEntity.f_Data().m_Position, "Target with same name already specified in another scope");
-					*Mapped = &ChildEntity;
+					*Mapped = fg_Explicit(&ChildEntity);
 				}
 			}
 		}
@@ -192,7 +192,7 @@ namespace NMib::NBuildSystem
 	void CBuildSystem::fp_EvaluateTargetsInWorkspace
 		(
 			CBuildSystemData &_Destination
-			, TCMap<CStr, CEntity *> const &_Targets
+			, TCMap<CStr, CEntityMutablePointer> const &_Targets
 			, CEntity &_Workspace
 		) const
 	{
