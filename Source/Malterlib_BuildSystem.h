@@ -348,6 +348,7 @@ namespace NMib::NBuildSystem
 
 		ERetry f_Action_Repository_Update(CGenerateOptions const &_GenerateOptions);
 		ERetry f_Action_Repository_Status(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoStatusFlag _Flags);
+		NConcurrency::TCFuture<ERetry> f_Action_Repository_Status_Async(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoStatusFlag _Flags);
 		ERetry f_Action_Repository_ForEachRepo(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, bool _bParallell, NContainer::TCVector<NStr::CStr> const &_Params);
 
 		ERetry f_Action_Repository_Branch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, NStr::CStr const &_Branch, ERepoBranchFlag _Flags);
