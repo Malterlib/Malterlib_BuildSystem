@@ -16,6 +16,9 @@ Property.MalterlibBuildSystemEmbedCMake define bool?
 	{
 		!!CompileDialect "C"
 		PrefixHeader "Source/Malterlib_BuildSystem.h"->MakeAbsolute()
+		{
+			!!Compile.Type "C++"
+		}
 		PreprocessorDefines += "DMalterlibBuildSystem_EmbedCMake"
 		{
 			!!MalterlibBuildSystemEmbedCMake true
