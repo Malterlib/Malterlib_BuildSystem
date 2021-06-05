@@ -19,7 +19,7 @@ namespace NMib::NBuildSystem
 		mint iProperty = 0;
 		if (_Function == EBuiltinFunctionGetProperty_HasEntity)
 		{
-			if (_Params.f_GetLen() != 1 || _Params[iProperty].f_IsString())
+			if (_Params.f_GetLen() != 1 || !_Params[iProperty].f_IsString())
 				fsp_ThrowError(_Context, "HasEntity takes one string parameter");
 			EntityName = _Params[iProperty].f_String();
 			++iProperty;
