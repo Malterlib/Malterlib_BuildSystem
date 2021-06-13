@@ -31,6 +31,7 @@ namespace NMib::NBuildSystem
 			auto &Key = ChildEntity.f_GetKey();
 			switch (Key.m_Type)
 			{
+			case EEntityType_Import:
 			case EEntityType_Group:
 				{
 					auto pRet = fpr_FindChildTarget(ChildEntity, _EntityKey);
@@ -70,6 +71,7 @@ namespace NMib::NBuildSystem
 					switch (Key.m_Type)
 					{
 					case EEntityType_Group:
+					case EEntityType_Import:
 					case EEntityType_Target:
 						{
 							fFindDependencies(fg_RemoveQualifiers(ChildEntity));

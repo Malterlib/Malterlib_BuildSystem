@@ -94,6 +94,16 @@ namespace NMib::NBuildSystem
 		return m_Value.f_GetAsType<CEvalString>();
 	}
 
+	bool CBuildSystemSyntax::CValue::f_IsExpression() const
+	{
+		return m_Value.f_IsOfType<CExpression>();
+	}
+
+	CBuildSystemSyntax::CExpression const &CBuildSystemSyntax::CValue::f_Expression() const
+	{
+		return m_Value.f_GetAsType<CExpression>();
+	}
+
  	auto CBuildSystemSyntax::CValue::fs_FromJSONToken(NEncoding::CEJSON const &_Token, CStr const &_TokenType, CFilePosition const &_Position, bool _bAppendAllowed) -> CVariant
 	{
 		if (_TokenType == "Expression" || _TokenType == "AppendExpression")

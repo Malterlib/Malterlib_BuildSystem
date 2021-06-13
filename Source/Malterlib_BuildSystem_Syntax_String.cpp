@@ -15,6 +15,16 @@ namespace NMib::NBuildSystem
 		return m_Token.f_GetAsType<NStorage::TCIndirection<CExpression>>().f_Get();
 	}
 
+	bool CBuildSystemSyntax::CEvalStringToken::f_IsString() const
+	{
+		return m_Token.f_IsOfType<CStr>();
+	}
+
+	CStr const &CBuildSystemSyntax::CEvalStringToken::f_String() const
+	{
+		return m_Token.f_GetAsType<CStr>();
+	}
+
 	NEncoding::CEJSON CBuildSystemSyntax::CEvalStringToken::f_ToJSON(bool _bRawString) const
 	{
 		switch (m_Token.f_GetTypeID())

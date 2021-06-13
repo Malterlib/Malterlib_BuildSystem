@@ -100,6 +100,7 @@ namespace
 	TestStringEmpty2 '' // Comment
 	TestStringEval `String` // Comment
 	TestStringEvalEscape `String \` Post` // Comment
+	TestStringEvalEscapeEval `String @@ String` // Comment
 	TestStringEval2 `String @(Target:Target.Test->Function()) String` // Comment
 	TestStringEval3 `String @("Test"->Function()) String` // Comment
 	TestStringEval4 `String @('Test'->Function()) String` // Comment

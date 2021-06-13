@@ -152,13 +152,7 @@ namespace NMib::NBuildSystem::NXcode
 	{
 		if (!mp_BuildSetting.f_IsEmpty())
 			return mp_BuildSetting;
-		mp_BuildSetting += "echo \\\"{0}\\\"\\n"
-		"\\\"{0}\\\"\\n"
-		"export ErrorReturn=$?\\n"
-		"if [ $ErrorReturn != 0 ] ; then\\n"
-		"	echo Script \\\"{0}\\\" failed with exit code $ErrorReturn\\n"
-		"	exit 1\\n"
-		"fi\\n"_f << m_ScriptName;
+		mp_BuildSetting += "{}\\n"_f << m_Script.f_Replace("\n", "\\n").f_Replace("\"", "\\\"");
 		return mp_BuildSetting;
 	}
 

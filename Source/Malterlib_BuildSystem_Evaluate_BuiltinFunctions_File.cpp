@@ -137,6 +137,42 @@ namespace NMib::NBuildSystem
 					}
 					,
 					{
+						"FileExists"
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_Boolean, fg_FunctionParam(g_String, "_FileName"))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							{
+								return CFile::fs_FileExists(_Params[0].f_String(), EFileAttrib_File);
+							}
+						}
+					}
+					,
+					{
+						"DirectoryExists"
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_Boolean, fg_FunctionParam(g_String, "_FileName"))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							{
+								return CFile::fs_FileExists(_Params[0].f_String(), EFileAttrib_Directory);
+							}
+						}
+					}
+					,
+					{
+						"FileOrDirectoryExists"
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_Boolean, fg_FunctionParam(g_String, "_FileName"))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							{
+								return CFile::fs_FileExists(_Params[0].f_String());
+							}
+						}
+					}
+					,
+					{
 						"FindFilesIn"
 						, CBuiltinFunction
 						{

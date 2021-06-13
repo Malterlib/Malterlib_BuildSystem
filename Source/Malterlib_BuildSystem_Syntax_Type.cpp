@@ -168,12 +168,16 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	CBuildSystemSyntax::CClassType::CClassType(NContainer::TCMap<NStr::CStr, CMember> const &_Members, CType const &_OtherKeysType)
-		: m_Members(_Members)
-		, m_OtherKeysType(NStorage::TCIndirection<CType>(_OtherKeysType))
+	CBuildSystemSyntax::CClassType::CClassType(NContainer::TCVector<NStorage::TCTuple<NStr::CStr, CMember>> const &_Members, NStorage::TCOptional<CType> const &_OtherKeysType)
 	{
-		for (auto &Member : m_Members)
-			m_MembersSorted.f_Insert(Member);
+		if (_OtherKeysType)
+			m_OtherKeysType = *_OtherKeysType;
+
+		for (auto &Member : _Members)
+		{
+			auto &NewMember = *m_Members(fg_Get<0>(Member), fg_Get<1>(Member));
+			m_MembersSorted.f_Insert(NewMember);
+		}
 	}
 
 	NEncoding::CEJSON CBuildSystemSyntax::CClassType::f_ToJSON() const

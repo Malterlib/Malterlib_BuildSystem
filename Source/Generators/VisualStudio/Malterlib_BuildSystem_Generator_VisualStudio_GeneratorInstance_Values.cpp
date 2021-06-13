@@ -4,6 +4,32 @@
 #include "Malterlib_BuildSystem_Generator_VisualStudio.h"
 #include <Mib/XML/XML>
 
+#ifdef DPlatformFamily_Windows
+#include <Mib/Core/PlatformSpecific/WindowsFilePath>
+
+namespace
+{
+	void fg_ShortenPath(CStr &o_Path)
+	{
+		if (o_Path.f_GetLen() > 200)
+		{
+			CStr EndPath;
+			while (!CFile::fs_FileExists(o_Path))
+			{
+				EndPath = CFile::fs_GetFile(o_Path) / EndPath;
+				o_Path = CFile::fs_GetPath(o_Path);
+			}
+			bool bExists = CFile::fs_FileExists(o_Path);
+										
+			if (o_Path)
+				o_Path = NFile::NPlatform::fg_ConvertToShortWindowsPath<CWStr, CStr>(o_Path, false) / EndPath;
+			else
+				o_Path = EndPath;
+		}
+	}
+}
+#endif
+
 namespace NMib::NBuildSystem::NVisualStudio
 {
 	void CGeneratorInstance::f_SetEvaluatedValues
@@ -302,6 +328,11 @@ namespace NMib::NBuildSystem::NVisualStudio
 					Ret.m_bEscapeSeparated = true;
 
 				PropertyKey.m_Type = EPropertyType_Property;
+				PropertyKey.m_Name = "ShortenFilenames";
+				if (pSettings->m_EvaluatedProperties.m_Properties.f_FindEqual(PropertyKey))
+					Ret.m_bShortenFilenames = true;
+
+				PropertyKey.m_Type = EPropertyType_Property;
 				PropertyKey.m_Name = "Validity";
 				if (auto pProp = pSettings->m_EvaluatedProperties.m_Properties.f_FindEqual(PropertyKey))
 				{
@@ -400,7 +431,17 @@ namespace NMib::NBuildSystem::NVisualStudio
 						if (BuildSystemValue.f_IsString())
 							Value = fg_Move(BuildSystemValue.f_String());
 						else if (BuildSystemValue.f_IsStringArray())
-							Value = CStr::fs_Join(BuildSystemValue.f_StringArray(), pSeparator);
+						{
+							auto Values = BuildSystemValue.f_StringArray();
+#ifdef DPlatformFamily_Windows
+							if (PropertiesValue.m_bShortenFilenames)
+							{
+								for (auto &Value : Values)
+									fg_ShortenPath(Value);
+							}
+#endif
+							Value = CStr::fs_Join(Values, pSeparator);
+						}
 						else if (BuildSystemValue.f_IsBoolean())
 							Value = BuildSystemValue.f_AsString();
 						else if (BuildSystemValue.f_IsInteger())
@@ -419,6 +460,13 @@ namespace NMib::NBuildSystem::NVisualStudio
 									Values.f_Insert(Value.f_String());
 							}
 
+#ifdef DPlatformFamily_Windows
+							if (PropertiesValue.m_bShortenFilenames)
+							{
+								for (auto &Value : Values)
+									fg_ShortenPath(Value);
+							}
+#endif
 							Value = CStr::fs_Join(Values, pSeparator);
 						}
 						else
@@ -882,29 +930,20 @@ namespace NMib::NBuildSystem::NVisualStudio
 		;
 
 		TCMap<CConfiguration, CConfigResult> Ret;
-		if (ConfigOptions.f_GetLen() == 1 && fp_IsSameConfig(_AllConfigs, ConfigOptions.f_GetIterator()->m_Configurations))
+		bool bCanUseSingleConfig = ConfigOptions.f_GetLen() == 1 && fp_IsSameConfig(_AllConfigs, ConfigOptions.f_GetIterator()->m_Configurations);
+
+		if (bFile)
 		{
-			auto pEntity = fAddValue(ConfigOptions.f_GetIterator().f_GetKey(), CStr(), *ConfigOptions.f_GetIterator());
-			auto &Configs = *ConfigOptions.f_GetIterator();
-			for (auto iConfig = Configs.m_Configurations.f_GetIterator(); iConfig; ++iConfig)
-			{
-				auto &RetValue = Ret[iConfig.f_GetKey()];
-				RetValue.m_pElement = pEntity;
-				RetValue.m_UntranslatedValues += Configs.m_OriginalValues;
-			}
+			if (ConfigOptions.f_GetLen() != 1)
+				m_BuildSystem.fs_ThrowError(Position, "This property cannot be varied by configuration");
 		}
-		else
+
+		for (auto iValue = ConfigOptions.f_GetIterator(); iValue; ++iValue)
 		{
-			if (bFile)
-			{
-				if (ConfigOptions.f_GetLen() != 1)
-					m_BuildSystem.fs_ThrowError(Position, "This property cannot be varied by configuration");
-			}
+			CStr Condition;
 
-			for (auto iValue = ConfigOptions.f_GetIterator(); iValue; ++iValue)
+			if (!bCanUseSingleConfig || iValue.f_GetKey().f_FindSmallest()->m_Property == "ExcludedFromBuild")
 			{
-				CStr Condition;
-
 				bool bFirstPlatform = true;
 				for (auto iPlatform = iValue->m_ByPlatform.f_GetIterator(); iPlatform; ++iPlatform)
 				{
@@ -925,16 +964,17 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 					Condition += "))";
 				}
+			}
 
-				auto pEntity = fAddValue(iValue.f_GetKey(), Condition, *iValue);
-				for (auto iConfig = iValue->m_Configurations.f_GetIterator(); iConfig; ++iConfig)
-				{
-					auto &RetValue = Ret[iConfig.f_GetKey()];
-					RetValue.m_pElement = pEntity;
-					RetValue.m_UntranslatedValues += iValue->m_OriginalValues;
-				}
+			auto pEntity = fAddValue(iValue.f_GetKey(), Condition, *iValue);
+			for (auto iConfig = iValue->m_Configurations.f_GetIterator(); iConfig; ++iConfig)
+			{
+				auto &RetValue = Ret[iConfig.f_GetKey()];
+				RetValue.m_pElement = pEntity;
+				RetValue.m_UntranslatedValues += iValue->m_OriginalValues;
 			}
 		}
+
 		return Ret;
 	}
 }

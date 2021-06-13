@@ -67,7 +67,6 @@ Property.MalterlibBuildSystemEmbedCMake define bool?
 		Dependency.Indirect true
 
 		%Dependency "Lib_CMakeLib"
-		%Dependency "Lib_CMakeServerLib"
 		%Dependency "Lib_cmlibuv"
 		%Dependency "Lib_cmjsoncpp"
 		%Dependency "Lib_cmlibarchive"

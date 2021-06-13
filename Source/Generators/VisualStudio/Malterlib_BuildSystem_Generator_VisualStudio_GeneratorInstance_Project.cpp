@@ -1064,7 +1064,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 					if (ExternalDependencies.f_IsValid())
 					{
-						if (ExternalDependencies.f_IsStringArray())
+						if (!ExternalDependencies.f_IsStringArray())
 							m_BuildSystem.fs_ThrowError(Position, "Expected ExternalDependencies to be a string array");
 
 						for (auto &Dependency : ExternalDependencies.f_Array())

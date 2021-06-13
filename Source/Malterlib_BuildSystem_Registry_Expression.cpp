@@ -1252,7 +1252,7 @@ namespace NMib::NContainer
 				auto pValue = Token.f_GetMember("Value", EJSONType_String);
 				if (!pValue)
 					DMibError("String token does not have valid Value member");
-				fg_GenerateJSONString<'`', CJSONParseContext, false>(o_String, pValue->f_String());
+				fg_GenerateJSONString<'`', CJSONParseContext, false>(o_String, pValue->f_String().f_Replace("@", "@@"));
 			}
 			else
 			{

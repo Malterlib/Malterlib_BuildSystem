@@ -118,6 +118,11 @@ namespace NMib::NBuildSystem
 						auto &ChildEntity = *iEntity;
 						switch (ChildEntity.f_GetKey().m_Type)
 						{
+						case EEntityType_Import:
+							{
+								fFindTargetsRecursive(ChildEntity);
+							}
+							break;
 						case EEntityType_Group:
 							{
 								if (!f_EvaluateEntityPropertyBool(ChildEntity, EPropertyType_Group, "HideTargets", false))
@@ -147,7 +152,9 @@ namespace NMib::NBuildSystem
 				auto &ChildEntity = *iChild;
 				auto &Key = ChildEntity.f_GetKey();
 				++iChild;
-				if (Key.m_Type == EEntityType_Group)
+				if (Key.m_Type == EEntityType_Import)
+					fFindTargets(ChildEntity);
+				else if (Key.m_Type == EEntityType_Group)
 				{
 					if (!f_EvaluateEntityPropertyBool(ChildEntity, EPropertyType_Group, "HideTargets", false))
 						fFindTargets(ChildEntity);
@@ -216,6 +223,7 @@ namespace NMib::NBuildSystem
 
 					switch (ChildEntity.f_GetKey().m_Type)
 					{
+					case EEntityType_Import:
 					case EEntityType_Group:
 						{
 							fFindTargetsRecursive(ChildEntity);

@@ -3,6 +3,8 @@
 
 #include "Malterlib_BuildSystem.h"
 
+#include <Mib/Cryptography/UUID>
+
 namespace NMib::NBuildSystem
 {
 	CEJSON CBuildSystem::fp_EvaluatePropertyValueObject(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CObject const &_Value) const
@@ -1517,6 +1519,22 @@ namespace NMib::NBuildSystem
 					Ret += ".exe";
 				#endif
 				return fg_Move(Ret);
+			}
+			else if (Key.m_Name == "CMakeRoot")
+			{
+				CUniversallyUniqueIdentifier UUIDNamespace("{EF53758B-02E4-4DE4-88CC-43513C7F6E2E}");
+
+				CStr CmakeProgramPath = CFile::fs_GetProgramDirectory() / "MToolCMake";
+
+#ifdef DPlatformFamily_Windows
+		        CmakeProgramPath += ".exe";
+#endif
+				CUniversallyUniqueIdentifier UUID{EUniversallyUniqueIdentifierGenerate_StringHash, UUIDNamespace, CmakeProgramPath.f_LowerCase()};
+
+				CStr CacheDirectory = CFile::fs_GetPath(CFile::fs_GetUserLocalProgramCacheDirectory()) / "MToolCMake";
+				CStr CmakeRoot = fg_Format("{}/{}/CMakeRoot", CacheDirectory, UUID.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum));
+
+				return fg_Move(CmakeRoot);
 			}
 			else if (Key.m_Name == "MalterlibExe")
 			{

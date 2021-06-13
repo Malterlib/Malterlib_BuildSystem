@@ -46,6 +46,7 @@ namespace NMib::NBuildSystem::NXcode
 						NewNativeTarget.m_Name = "{}{} {}"_f << _Project.f_GetName() << UsedType << Configuration.f_GetFullName();
 						NewNativeTarget.m_CType = UsedType;
 						NewNativeTarget.m_BuildScripts.f_Clear();
+						NewNativeTarget.m_CustomBuildScripts.f_Clear();
 						NativeTarget.m_CTargets.f_Insert(&NewNativeTarget);
 					}
 
@@ -145,7 +146,6 @@ fi
 
 		fp_GenerateBuildConfigurationFiles(_Project, _OutputDir);
 		fp_GenerateBuildConfigurationFilesList(_Project, _OutputDir, _Project.m_BuildConfigurationList);
-		fp_GenerateToolRunScript(_Project, _OutputDir);
 
 		bool bSchemesChanged = fp_GenerateSchemes(_Project, _Runnables, _Buildable);
 
@@ -184,7 +184,7 @@ fi
 		fp_GeneratePBXGroupSection(_Project, FileData);
 		fOutput("/* End PBXGroup section */\n");
 
-		fp_GeneratePBXLegacyTargetSection(_Project, FileData);
+		fp_GeneratePBXAggregateTargetSection(_Project, FileData);
 
 		fOutput("/* Begin PBXNativeTarget section */");
 		fp_GeneratePBXNativeTargetSection(_Project, FileData);
@@ -483,8 +483,6 @@ fi
 			CStr CompileType = CompileTypValue.m_Value.f_IsValid() ? CompileTypValue.m_Value.f_String() : CStr();
 
 			auto DisabledConfigs = fp_GetConfigValues(IterFile->m_EnabledConfigs, EPropertyType_Compile, "Disabled", EEJSONType_Boolean, true);
-
-
 			{
 				bool bWasCustom = false;
 				bool bFirst = true;
@@ -513,7 +511,7 @@ fi
 
 					if (CustomCommandLine.m_Value.f_IsValid())
 					{
-						if (!bFirst)
+						if (!bFirst && !bWasCustom)
 							fReportInconsistent();
 
 						bWasCustom = true;
@@ -684,17 +682,19 @@ fi
 						if (BuildRef.m_Disabled.f_FindEqual(Configuration))
 							continue;
 
-						auto &BuildRefRule = BuildRef.m_BuildRules[Configuration];
+						auto &FileName = IterFile->f_GetName();
 
-						BuildRefRule.m_GUID = IterFile->f_GetBuildRuleGUID(Configuration);
-
-						BuildRefRule.m_MalterlibCustomBuildCommandLine = CustomCommandLine.m_Value.f_String()
-							.f_Replace("$(InputFileBase)", "${INPUT_FILE_BASE}")
-							.f_Replace("$(InputFile)", "${INPUT_FILE_NAME}")
-							.f_Replace("$(InputFilePath)", "${INPUT_FILE_PATH}")
-							.f_EscapeStrNoQuotes("\\'\r\n\t", "\\'rnt")
+						auto fReplaceVariables = [&](CStr const &_String) -> CStr
+							{
+								return _String
+									.f_Replace("$(InputFileBase)", CFile::fs_GetFileNoExt(FileName))
+									.f_Replace("$(InputFile)", CFile::fs_GetFile(FileName))
+									.f_Replace("$(InputFilePath)", FileName)
+								;
+							}
 						;
 
+						auto ScriptContents = fReplaceVariables(CustomCommandLine.m_Value.f_String()).f_EscapeStrNoQuotes("\\'\r\n\t", "\\'rnt");
 						CStr WorkingDirectory = fp_GetConfigValue
 							(
 								IterFile->m_EnabledConfigs
@@ -705,29 +705,62 @@ fi
 								, false
 							).m_Value.f_String()
 						;
-						BuildRefRule.m_WorkingDirectory = WorkingDirectory.f_EscapeStrNoQuotes("\\'\r\n\t", "\\'rnt");
 
- 						CEJSON Outputs = fp_GetConfigValue(IterFile->m_EnabledConfigs, Configuration, EPropertyType_Compile, "Custom_Outputs", EEJSONType_Array, false).m_Value;
-						if (!Outputs.f_IsStringArray())
+ 						CEJSON InputsJson = fp_GetConfigValue(IterFile->m_EnabledConfigs, Configuration, EPropertyType_Compile, "Custom_Inputs", EEJSONType_Array, false).m_Value;
+						if (!InputsJson.f_IsStringArray())
+							m_BuildSystem.fs_ThrowError(CustomCommandLine.m_Position, "You need to Custom_Inputs as a string array");
+
+						TCVector<CStr> Inputs;
+						for (auto &Input : InputsJson.f_Array())
+							Inputs.f_Insert(fReplaceVariables(Input.f_String()));
+
+ 						CEJSON OutputsJson = fp_GetConfigValue(IterFile->m_EnabledConfigs, Configuration, EPropertyType_Compile, "Custom_Outputs", EEJSONType_Array, false).m_Value;
+						if (!OutputsJson.f_IsStringArray())
 							m_BuildSystem.fs_ThrowError(CustomCommandLine.m_Position, "You need to Custom_Outputs as a string array");
 
-						for (auto &ThisOutput : Outputs.f_Array())
+						TCVector<CStr> Outputs;
+						for (auto &Output : OutputsJson.f_Array())
+							Outputs.f_Insert(fReplaceVariables(Output.f_String()));
+
+						auto &NativeTarget = _Project.f_GetDefaultNativeTarget(Configuration);
+
 						{
-							BuildRefRule.m_Outputs.f_Insert(ThisOutput.f_String());
+							CStr FileName = (*IterFile).f_GetName();
+
+							auto &Script = NativeTarget.m_CustomBuildScripts.f_Insert();
+							Script.m_Name = "Custom {}"_f << FileName;
+							Script.m_Script = "#/bin/bash\n\n";
+							Script.m_Script += "set -eo pipefail\n\n";
+							Script.m_Script += "export PATH=$MalterlibBuildSystemExecutablePath:$PATH\n\n";
+							Script.m_Script += "{}\n\n"_f << NativeTarget.m_ScriptExport;
+							Script.m_Script += "cd {}\n\n"_f << fg_StrEscapeBashDoubleQuotes(WorkingDirectory);
+							Script.m_Script += ScriptContents.f_Replace("\r\n", "\n");
+							Script.m_Outputs = Outputs;
+							Script.m_Inputs = Inputs;
+							Script.m_bCustom = true;
+
+							for (auto &Output: Script.m_Outputs)
 							{
 								CFileKey FileKey;
-								FileKey.m_FileName = ThisOutput.f_String();
+								FileKey.m_FileName = Output;
 
-								CStr OutputType;
 								auto *pFile = _Project.m_Files.f_FindSmallestGreaterThanEqual(FileKey);
-								if (pFile && pFile->f_GetName() == ThisOutput)
-									OutputType = fp_GetConfigValue(pFile->m_EnabledConfigs, Configuration, EPropertyType_Compile, "Type", EEJSONType_String, false).m_Value.f_String();
+								if (pFile && pFile->f_GetName() == Output)
+								{
+									CStr OutputType = fp_GetConfigValue(pFile->m_EnabledConfigs, Configuration, EPropertyType_Compile, "Type", EEJSONType_String, false).m_Value.f_String();
+									Script.m_OutputTypes[OutputType];
+
+									if (FileType == EBuildFileType_CCompile || FileType == EBuildFileType_CCompileInitEarly)
+									{
+										ThreadLocal.mp_UsedCTypes[Configuration][OutputType];
+										ThreadLocal.mp_EvaluatedTypesInUse[OutputType];
+									}
+								}
 								else
 								{
-
 									CEntityKey EntityKey;
 									EntityKey.m_Type = EEntityType_File;
-									EntityKey.m_Name.m_Value = ThisOutput.f_String();
+							EntityKey.m_Name = {CEJSON(Output)};
 
 									auto pEntity = IterFile->m_EnabledConfigs.f_FindEqual(Configuration);
 									auto pParent = (*pEntity)->m_pParent;
@@ -739,30 +772,22 @@ fi
 									if (Mapping.f_WasCreated())
 										pParent->m_ChildEntitiesOrdered.f_Insert(*pNewEntity);
 
-									OutputType = fp_GetConfigValue(IterFile->m_EnabledConfigs, Configuration, EPropertyType_Compile, "Type", EEJSONType_String, false).m_Value.f_String();
+									{
+										TCMap<CConfiguration, CEntityMutablePointer> EnabledConfigs;
+										EnabledConfigs[Configuration] = fg_Explicit(pNewEntity);
+
+										CStr OutputType = fp_GetConfigValue(EnabledConfigs, Configuration, EPropertyType_Compile, "Type", EEJSONType_String, false).m_Value.f_String();
+										Script.m_OutputTypes[OutputType];
+
+										if (FileType == EBuildFileType_CCompile || FileType == EBuildFileType_CCompileInitEarly)
+										{
+											ThreadLocal.mp_UsedCTypes[Configuration][OutputType];
+											ThreadLocal.mp_EvaluatedTypesInUse[OutputType];
+										}
+									}
 
 									if (Mapping.f_WasCreated())
 										pParent->m_ChildEntitiesMap.f_Remove(EntityKey);
-								}
-
-								if (BuildRefRule.m_OutputType.f_IsEmpty())
-								{
-									BuildRefRule.m_OutputType = OutputType;
-									if (FileType == EBuildFileType_CCompile || FileType == EBuildFileType_CCompileInitEarly)
-									{
-										ThreadLocal.mp_UsedCTypes[Configuration][OutputType];
-										ThreadLocal.mp_EvaluatedTypesInUse[OutputType];
-									}
-								}
-								else if (OutputType != BuildRefRule.m_OutputType)
-								{
-									m_BuildSystem.fs_ThrowError
-										(
-											CustomCommandLine.m_Position, "Output type for custom compile cannot be varied per configuration. '{}' != '{}'"_f
-											<< OutputType
-											<< BuildRefRule.m_OutputType
-										)
-									;
 								}
 							}
 						}
@@ -777,7 +802,7 @@ fi
 					IterFile->m_TabWidth = TabWidth.m_Value.f_Integer();
 				if (IndentWidth.m_Value.f_IsValid())
 					IterFile->m_IndentWidth = IndentWidth.m_Value.f_Integer();
-				if (!UsesTabs.m_Value.f_IsValid())
+				if (UsesTabs.m_Value.f_IsValid())
 				{
 					if (UsesTabs.m_Value.f_Boolean())
 						IterFile->m_UsesTabs = 1;
@@ -844,12 +869,17 @@ fi
 				for (auto &BuildRule : File.m_BuildRules)
 				{
 					auto &Configuration = File.m_BuildRules.fs_GetKey(BuildRule);
+
+					if (_Project.f_GetDefaultNativeTarget(Configuration).m_ProductType.f_IsEmpty())
+						continue;
+
 					ToPerform.f_Add
 						(
 							BuildRule.m_GUID
 							,[FileName, BuildRule, &o_Output]
 							{
 								CStr OutputFiles;
+								CStr InputFiles;
 								TCSet<CStr> OutputDirs;
 								CStr CreateOutputDirs;
 
@@ -863,6 +893,17 @@ fi
 
 									fg_AddStrSep(OutputFiles, "\t\t\t\t\t\t\"{}\""_f << OutputReplaced, ",\n");
 									OutputDirs[CFile::fs_GetPath(OutputReplaced)];
+								}
+
+								for (auto &Input : BuildRule.m_Inputs)
+								{
+									CStr InputReplaced = Input
+										.f_Replace("$(InputFileBase)", "${INPUT_FILE_BASE}")
+										.f_Replace("$(InputFile)", "${INPUT_FILE_NAME}")
+										.f_Replace("$(InputFilePath)", "${INPUT_FILE_PATH}")
+									;
+
+									fg_AddStrSep(InputFiles, "\t\t\t\t\t\t\"{}\""_f << InputReplaced, ",\n");
 								}
 
 								for (auto &OutputDir : OutputDirs)
@@ -881,6 +922,9 @@ fi
 					outputFiles = (
 {}
 					);
+					inputFiles = (
+{}
+					);
 									 script = "#!/bin/bash\nexport PATH=\"$MalterlibBuildSystemExecutablePath:$PATH\"\neval $OTHER_INPUT_FILE_FLAGS\n{}\ncd \"{}\"\n{}\n";
 				};
 		)-----"
@@ -888,6 +932,7 @@ fi
 									<< BuildRule.m_GUID
 									<< FileName.f_EscapeStr()
 									<< OutputFiles
+									<< InputFiles
 									<< CreateOutputDirs
 									<< BuildRule.m_WorkingDirectory.f_EscapeStrNoQuotes()
 									<< BuildRule.m_MalterlibCustomBuildCommandLine.f_EscapeStrNoQuotes()
@@ -896,7 +941,7 @@ fi
 							}
 						)
 					;
-					ThreadLocal.mp_BuildRules[Configuration][BuildRule.m_GUID] = BuildRule.m_OutputType;
+					ThreadLocal.mp_BuildRules[Configuration][BuildRule.m_GUID] = BuildRule.m_OutputTypes;
 				}
 			}
 		}
@@ -911,7 +956,7 @@ fi
 		auto & ThreadLocal = *m_ThreadLocal;
 		for (auto Iter = _Project.mp_OrderedBuildTypes.f_GetIterator(); Iter; ++Iter)
 		{
-			if (Iter.f_GetKey() == EBuildFileType_None || Iter.f_GetKey() == EBuildFileType_CInclude || Iter.f_GetKey() == EBuildFileType_GenericNonCompile)
+			if (Iter.f_GetKey() == EBuildFileType_None || Iter.f_GetKey() == EBuildFileType_CInclude || Iter.f_GetKey() == EBuildFileType_GenericNonCompile || Iter.f_GetKey() == EBuildFileType_Custom || Iter.f_GetKey() == EBuildFileType_GenericCustom)
 				continue;
 
 			for (auto &File : *Iter)
@@ -1375,13 +1420,16 @@ fi
 
 			for (auto &NativeTarget : NativeTargets)
 			{
+				if (NativeTarget.m_ProductType.f_IsEmpty())
+					continue;
+
 				_Output += (CStr::CFormat("\t\t{} /* Sources */") << NativeTarget.f_GetSourcesBuildPhaseGUID());
 				_Output += " = {\n\t\t\tisa = PBXSourcesBuildPhase;\n";
 				_Output += (CStr::CFormat("\t\t\tbuildActionMask = {};\n\t\t\tfiles = (\n") << NativeTarget.m_BuildActionMask);
 
 				for (auto iBuildFiles = _Project.mp_OrderedBuildTypes.f_GetIterator(); iBuildFiles; ++iBuildFiles)
 				{
-					if (iBuildFiles.f_GetKey() == EBuildFileType_None || iBuildFiles.f_GetKey() == EBuildFileType_CInclude || iBuildFiles.f_GetKey() == EBuildFileType_GenericNonCompile)
+					if (iBuildFiles.f_GetKey() == EBuildFileType_None || iBuildFiles.f_GetKey() == EBuildFileType_CInclude || iBuildFiles.f_GetKey() == EBuildFileType_GenericNonCompile || iBuildFiles.f_GetKey() == EBuildFileType_Custom || iBuildFiles.f_GetKey() == EBuildFileType_GenericCustom)
 						continue;
 
 					for (auto &FileRef : *iBuildFiles)
@@ -1394,10 +1442,34 @@ fi
 							if (!pRule)
 								continue;
 
-							if (!NativeTarget.m_IncludedTypes.f_IsEmpty() && !NativeTarget.m_IncludedTypes.f_FindEqual(pRule->m_OutputType))
-								continue;
-							if (!NativeTarget.m_ExcludedTypes.f_IsEmpty() && NativeTarget.m_ExcludedTypes.f_FindEqual(pRule->m_OutputType))
-								continue;
+							if (!NativeTarget.m_IncludedTypes.f_IsEmpty())
+							{
+								bool bFoundIncluded = false;
+								for (auto &Type : pRule->m_OutputTypes)
+								{
+									if (NativeTarget.m_IncludedTypes.f_FindEqual(Type))
+									{
+										bFoundIncluded = true;
+										break;
+									}
+								}
+								if (!bFoundIncluded)
+									continue;
+							}
+							if (!NativeTarget.m_ExcludedTypes.f_IsEmpty())
+							{
+								bool bFoundExcluded = false;
+								for (auto &Type : pRule->m_OutputTypes)
+								{
+									if (NativeTarget.m_ExcludedTypes.f_FindEqual(Type))
+									{
+										bFoundExcluded = true;
+										break;
+									}
+								}
+								if (bFoundExcluded)
+									continue;
+							}
 						}
 						else
 						{
@@ -1443,32 +1515,37 @@ fi
 			auto &Configuration = _Project.m_NativeTargets.fs_GetKey(NativeTargets);
 
 			auto fOutputScript = [&] (CBuildScript& _Script)
-			{
-				_Output += (CStr::CFormat("\t\t{} /* {} */ = ") << _Script.f_GetGUID(Configuration) << _Script.m_Name);
-				_Output += "{\n\t\t\tisa = PBXShellScriptBuildPhase;\n";
-				_Output += (CStr::CFormat("\t\t\tbuildActionMask = {};\n\t\t\tfiles = (\n") << NativeTarget.m_BuildActionMask);
-				// Output files used in script here
-				_Output += "\t\t\t);\n\t\t\tinputPaths = (\n";
+				{
+					_Output += (CStr::CFormat("\t\t{} /* {} */ = ") << _Script.f_GetGUID(Configuration) << _Script.m_Name);
+					_Output += "{\n\t\t\tisa = PBXShellScriptBuildPhase;\n";
+					_Output += (CStr::CFormat("\t\t\tbuildActionMask = {};\n\t\t\tfiles = (\n") << NativeTarget.m_BuildActionMask);
+					// Output files used in script here
+					_Output += "\t\t\t);\n\t\t\tinputPaths = (\n";
 
-				for (CStr const &Input : _Script.m_Inputs)
-					_Output += (CStr::CFormat("\t\t\t\t\"{}\",\n") << Input);
+					for (CStr const &Input : _Script.m_Inputs)
+						_Output += (CStr::CFormat("\t\t\t\t\"{}\",\n") << Input);
 
-				_Output += CStr::CFormat("\t\t\t);\n\t\t\tname = {};\n\t\t\toutputPaths = (\n") << fg_EscapeXcodeProjectVar(_Script.m_Name);
+					_Output += CStr::CFormat("\t\t\t);\n\t\t\tname = {};\n\t\t\toutputPaths = (\n") << fg_EscapeXcodeProjectVar(_Script.m_Name);
 
-				for (CStr const &Output : _Script.m_Outputs)
-					_Output += (CStr::CFormat("\t\t\t\t\"{}\",\n") << Output);
+					for (CStr const &Output : _Script.m_Outputs)
+						_Output += (CStr::CFormat("\t\t\t\t\"{}\",\n") << Output);
 
-				_Output += "\t\t\t);\n\t\t\trunOnlyForDeploymentPostprocessing = 0;\n\t\t\tshellPath = /bin/bash;\n";
-				_Output += (CStr::CFormat("\t\t\tshellScript = \"{}\";\n") << _Script.f_GetScriptSetting());
-				_Output += "\t\t\tshowEnvVarsInLog = 0;\n";
+					_Output += "\t\t\t);\n\t\t\trunOnlyForDeploymentPostprocessing = 0;\n\t\t\tshellPath = /bin/bash;\n";
+					_Output += (CStr::CFormat("\t\t\tshellScript = \"{}\";\n") << _Script.f_GetScriptSetting());
+					_Output += "\t\t\tshowEnvVarsInLog = 0;\n";
 
-				_Output += "\t\t};\n";
-			};
+					if (!_Script.m_bCustom && !_Script.m_bPreBuild && !_Script.m_bPostBuild)
+						_Output += "\t\t\talwaysOutOfDate = 1;\n";
 
-			for (auto iScript = NativeTarget.m_BuildScripts.f_GetIterator(); iScript; ++iScript)
-			{
-				fOutputScript(*iScript);
-			}
+					_Output += "\t\t};\n";
+				}
+			;
+
+			for (auto &Script : NativeTarget.m_BuildScripts)
+				fOutputScript(Script);
+
+			for (auto &Script : NativeTarget.m_CustomBuildScripts)
+				fOutputScript(Script);
 		}
 	}
 
@@ -1632,7 +1709,7 @@ fi
 		ToPerform.f_Perform();
 	}
 
-	void CGeneratorInstance::fp_GeneratePBXLegacyTargetSection(CProject &_Project, CStr& _Output) const
+	void CGeneratorInstance::fp_GeneratePBXAggregateTargetSection(CProject &_Project, CStr& _Output) const
 	{
 		bool bBegin = false;
 		for (auto &NativeTargets : _Project.m_NativeTargets)
@@ -1645,20 +1722,39 @@ fi
 			if (!bBegin)
 			{
 				bBegin = true;
-				_Output += "/* Begin PBXLegacyTarget section */\n\n";
+				_Output += "/* Begin PBXAggregateTarget section */\n";
 			}
 
 			auto &Configuration = _Project.m_NativeTargets.fs_GetKey(NativeTargets);
 
-			CStr RunScript = "ExternalBuildToolRun_{}.sh"_f << Configuration.f_GetFullSafeName();
-
 			_Output += (CStr::CFormat("\t\t{} /* {} */ = ") << NativeTarget.f_GetGUID() << NativeTarget.m_Name);
-			_Output += "{\n\t\t\tisa = PBXLegacyTarget;\n";
-			_Output += (CStr::CFormat("\t\t\tbuildArgumentsString = \"{}\";\n") << (NativeTarget.m_bGeneratedBuildScript ? RunScript.f_GetStr() : "-c 'exit 0'"));
-			_Output += (CStr::CFormat("\t\t\tbuildConfigurationList = {} /* Build configuration list for PBXLegacyTarget \"{}\" */;\n") << NativeTarget.f_GetBuildConfigurationListGUID() << NativeTarget.m_Name);
-			_Output += (CStr::CFormat("\t\t\tbuildPhases = ();\n\t\t\tbuildToolPath = \"{}\";\n") << CStr("/bin/bash"));
-			_Output += "\t\t\tbuildWorkingDirectory = \"${PROJECT_DIR}/";
-			_Output += (CStr::CFormat("{}\";\n") << CFile::fs_MakeNiceFilename(_Project.f_GetName()));
+			_Output += "{\n\t\t\tisa = PBXAggregateTarget;\n";
+
+			_Output += (CStr::CFormat("\t\t\tbuildConfigurationList = {} /* Build configuration list for PBXAggregateTarget \"{}\" */;\n") << NativeTarget.f_GetBuildConfigurationListGUID() << NativeTarget.m_Name);
+
+			_Output += "\t\t\tbuildPhases = (\n";
+
+			for (auto iScript = NativeTarget.m_BuildScripts.f_GetIterator(); iScript; ++iScript)
+			{
+				if (iScript->m_bPreBuild)
+					_Output += (CStr::CFormat("\t\t\t\t{} /* {} */,\n") << iScript->f_GetGUID(Configuration) << iScript->m_Name);
+			}
+			for (auto iScript = NativeTarget.m_BuildScripts.f_GetIterator(); iScript; ++iScript)
+			{
+				if (!iScript->m_bPreBuild && !iScript->m_bPostBuild)
+					_Output += (CStr::CFormat("\t\t\t\t{} /* {} */,\n") << iScript->f_GetGUID(Configuration) << iScript->m_Name);
+			}
+			for (auto iScript = NativeTarget.m_CustomBuildScripts.f_GetIterator(); iScript; ++iScript)
+				_Output += (CStr::CFormat("\t\t\t\t{} /* {} */,\n") << iScript->f_GetGUID(Configuration) << iScript->m_Name);
+
+			for (auto iScript = NativeTarget.m_BuildScripts.f_GetIterator(); iScript; ++iScript)
+			{
+				if (iScript->m_bPostBuild)
+					_Output += (CStr::CFormat("\t\t\t\t{} /* {} */,\n") << iScript->f_GetGUID(Configuration) << iScript->m_Name);
+			}
+
+			_Output += "\t\t\t);\n";
+
 			// Dependencies
 			_Output += "\n\t\t\tdependencies = (\n";
 			for (auto iDependency = _Project.m_DependenciesOrdered.f_GetIterator(); iDependency; ++iDependency)
@@ -1670,11 +1766,11 @@ fi
 					continue;
 				_Output += (CStr::CFormat("\t\t\t\t{} /* PBXTargetDependency */,\n") << pPerConfig->f_GetTargetGUID(*iDependency));
 			}
-			_Output += (CStr::CFormat("\t\t\t);\n\t\t\tname = \"{}\";\n\t\t\tpassBuildSettingsInEnvironment = 1;\n\t\t\tproductName = {};\n") << NativeTarget.m_Name << NativeTarget.m_ProductName);
+			_Output += (CStr::CFormat("\t\t\t);\n\t\t\tname = \"{}\";\n\t\t\tproductName = {};\n") << NativeTarget.m_Name << NativeTarget.m_ProductName);
 			_Output += "\t\t};\n";
 		}
 		if (bBegin)
-			_Output += "/* End PBXLegacyTarget section */\n\n";
+			_Output += "/* End PBXAggregateTarget section */\n\n";
 	}
 
 	void CGeneratorInstance::fp_GeneratePBXNativeTargetSection(CProject &_Project, CStr& _Output) const
@@ -1684,6 +1780,8 @@ fi
 		for (auto &NativeTargets : _Project.m_NativeTargets)
 		{
 			auto &Configuration = _Project.m_NativeTargets.fs_GetKey(NativeTargets);
+
+			auto &DefaultNativeTarget = _Project.f_GetDefaultNativeTarget(Configuration);
 
 			for (auto &NativeTarget : NativeTargets)
 			{
@@ -1700,8 +1798,42 @@ fi
 				// Pre build scripts
 				for (auto iScript = NativeTarget.m_BuildScripts.f_GetIterator(); iScript; ++iScript)
 				{
-					if (!iScript->m_bPostBuild)
+					if (iScript->m_bPreBuild)
 						_Output += (CStr::CFormat("\t\t\t\t{} /* {} */,\n") << iScript->f_GetGUID(Configuration) << iScript->m_Name);
+				}
+
+				for (auto &Script : DefaultNativeTarget.m_CustomBuildScripts)
+				{
+					if (!NativeTarget.m_IncludedTypes.f_IsEmpty())
+					{
+						bool bFoundIncluded = false;
+						for (auto &Type : Script.m_OutputTypes)
+						{
+							if (NativeTarget.m_IncludedTypes.f_FindEqual(Type))
+							{
+								bFoundIncluded = true;
+								break;
+							}
+						}
+						if (!bFoundIncluded)
+							continue;
+					}
+					if (!NativeTarget.m_ExcludedTypes.f_IsEmpty())
+					{
+						bool bFoundExcluded = false;
+						for (auto &Type : Script.m_OutputTypes)
+						{
+							if (NativeTarget.m_ExcludedTypes.f_FindEqual(Type))
+							{
+								bFoundExcluded = true;
+								break;
+							}
+						}
+						if (bFoundExcluded)
+							continue;
+					}
+
+					_Output += (CStr::CFormat("\t\t\t\t{} /* {} */,\n") << Script.f_GetGUID(Configuration) << Script.m_Name);
 				}
 
 				// Sources, Frameworks, Headers
@@ -1728,14 +1860,38 @@ fi
 				auto pBuildRule = ThreadLocal.mp_BuildRules.f_FindEqual(Configuration);
 				if (pBuildRule)
 				{
-					for (CStr const &OutputType : *pBuildRule)
+					for (TCSet<CStr> const &OutputTypes : *pBuildRule)
 					{
-						auto &BuildRule = pBuildRule->fs_GetKey(OutputType);
+						auto &BuildRule = pBuildRule->fs_GetKey(OutputTypes);
 
-						if (!NativeTarget.m_IncludedTypes.f_IsEmpty() && !NativeTarget.m_IncludedTypes.f_FindEqual(OutputType))
-							continue;
-						if (!NativeTarget.m_ExcludedTypes.f_IsEmpty() && NativeTarget.m_ExcludedTypes.f_FindEqual(OutputType))
-							continue;
+						if (!NativeTarget.m_IncludedTypes.f_IsEmpty())
+						{
+							bool bFoundIncluded = false;
+							for (auto &Type : OutputTypes)
+							{
+								if (NativeTarget.m_IncludedTypes.f_FindEqual(Type))
+								{
+									bFoundIncluded = true;
+									break;
+								}
+							}
+							if (!bFoundIncluded)
+								continue;
+						}
+						if (!NativeTarget.m_ExcludedTypes.f_IsEmpty())
+						{
+							bool bFoundExcluded = false;
+							for (auto &Type : OutputTypes)
+							{
+								if (NativeTarget.m_ExcludedTypes.f_FindEqual(Type))
+								{
+									bFoundExcluded = true;
+									break;
+								}
+							}
+							if (bFoundExcluded)
+								continue;
+						}
 
 						_Output += CStr::CFormat("\t\t\t\t{} /* PBXBuildRule */,\n") << BuildRule;
 					}
@@ -2212,137 +2368,5 @@ fi
 			}
 		}
 		return bSchemesChanged;
-	}
-
-	void CGeneratorInstance::fp_GenerateToolRunScript(CProject& _Project, CStr const &_OutputDir) const
-	{
-		auto & ThreadLocal = *m_ThreadLocal;
-		for (auto &NativeTargets : _Project.m_NativeTargets)
-		{
-			auto &NativeTarget = NativeTargets.f_GetFirst();
-
-			if (NativeTarget.m_Type != "Makefile")
-				continue;
-
-			auto &Configuration = _Project.m_NativeTargets.fs_GetKey(NativeTargets);
-
-			CStr BuildScript = "\tcase $CONFIGURATION in\n";
-			CStr CleanScript = BuildScript;
-
-			bool bBuildScript = false;
-			bool bCleanScript = false;
-
-			// Pre build scripts
-			auto pConfig = ThreadLocal.mp_EvaluatedTargetSettings.f_FindEqual(Configuration);
-
-			if (pConfig)
-			{
-				CStr Name = (CStr::CFormat("{} {}") << Configuration.m_Platform << Configuration.m_Configuration);
-
-				CStr DependencyFile;
-				if (auto pDependencyFile = pConfig->m_Element.f_FindEqual("DependencyFile"))
-					DependencyFile = pDependencyFile->f_GetValue();
-
-				if (auto pCommandLine_Clean = pConfig->m_Element.f_FindEqual("CommandLine_Clean"))
-				{
-					CleanScript += CStr::CFormat("\t\t\t\"{}\")\n") << Name;
-					CleanScript += CStr::CFormat("\t\t\t\texport MalterlibDependencyFile=\"{}\"\n") << DependencyFile;
-					if (NativeTarget.m_ScriptExport)
-						CleanScript += CStr::CFormat("\t\t\t\t{}\n") << NativeTarget.m_ScriptExport;
-					CleanScript += CStr::CFormat("\t\t\t\tbash {}\n") << pCommandLine_Clean->f_GetValue();
-					CleanScript += "\t\t\t\texit $?\n";
-					CleanScript += "\t\t\t;;\n";
-
-					bCleanScript = true;
-				}
-
-				if (auto pCommandLine_Build = pConfig->m_Element.f_FindEqual("CommandLine_Build"))
-				{
-					BuildScript += (CStr::CFormat("\t\t\t\"{}\")\n") << Name);
-					BuildScript += CStr::CFormat("\t\t\t\texport MalterlibDependencyFile=\"{}\"\n") << DependencyFile;
-					if (NativeTarget.m_ScriptExport)
-						BuildScript += CStr::CFormat("\t\t\t\t{}\n") << NativeTarget.m_ScriptExport;
-
-					for (auto iScript = NativeTarget.m_BuildScripts.f_GetIterator(); iScript; ++iScript)
-					{
-						if (!iScript->m_bPostBuild)
-						{
-							if (iScript->m_ScriptName)
-							{
-								BuildScript += (CStr::CFormat("\t\t\t\tbash \"{}\"\n") << iScript->m_ScriptName);
-								BuildScript += "\t\t\t\tErrorLevel=$?\n";
-								BuildScript += "\t\t\t\tif [ $ErrorLevel -ne 0 ] ; then\n";
-								BuildScript += "\t\t\t\t\texit $ErrorLevel\n";
-								BuildScript += "\t\t\t\tfi\n";
-							}
-						}
-					}
-					BuildScript += (CStr::CFormat("\t\t\t\tbash {}\n") << pCommandLine_Build->f_GetValue());
-					BuildScript += "\t\t\t\tErrorLevel=$?\n";
-					BuildScript += "\t\t\t\tif [ $ErrorLevel -ne 0 ] ; then\n";
-					BuildScript += "\t\t\t\t\texit $ErrorLevel\n";
-					BuildScript += "\t\t\t\tfi\n";
-					for (auto iScript = NativeTarget.m_BuildScripts.f_GetIterator(); iScript; ++iScript)
-					{
-						if (iScript->m_bPostBuild)
-						{
-							if (iScript->m_ScriptName)
-							{
-								BuildScript += (CStr::CFormat("\t\t\t\tbash \"{}\"\n") << iScript->m_ScriptName);
-								BuildScript += "\t\t\t\tErrorLevel=$?\n";
-								BuildScript += "\t\t\t\tif [ $ErrorLevel -ne 0 ] ; then\n";
-								BuildScript += "\t\t\t\t\texit $ErrorLevel\n";
-								BuildScript += "\t\t\t\tfi\n";
-							}
-						}
-					}
-					if (!DependencyFile.f_IsEmpty())
-					{
-						BuildScript += CStr::CFormat("\t\t\t\tif [ ! -f \"{}\" ]; then\n") << DependencyFile;
-						BuildScript += CStr::CFormat("\t\t\t\t\tMTool TouchOrCreate \"{}\"\n") << DependencyFile;
-						BuildScript += "\t\t\t\tfi\n";
-					}
-					BuildScript += "\t\t\t;;\n";
-					bBuildScript = true;
-				}
-
-			}
-
-			BuildScript += "\t\tesac\n";
-			CleanScript += "\t\tesac\n";
-
-			CStr ScriptData;
-
-			if (bBuildScript || bCleanScript)
-			{
-				NativeTarget.m_bGeneratedBuildScript = true;
-				ScriptData = "#!/bin/bash\n\n";
-				ScriptData += "export PATH=$MalterlibBuildSystemExecutablePath:$PATH\n";
-
-
-				ScriptData += (CStr::CFormat("case $ACTION in\n\t\"\")\n\t\t{}\n\t\t;;\n\t\"clean\")\n\t\t{}\n\t\t;;\nesac\nexit 0")
-													<< BuildScript
-													<< CleanScript);
-			}
-
-			if (!ScriptData.f_IsEmpty())
-			{
-				CStr OutputFile = CFile::fs_AppendPath(_OutputDir, CFile::fs_MakeNiceFilename(_Project.f_GetName()));
-				ThreadLocal.f_CreateDirectory(OutputFile);
-
-				OutputFile = CFile::fs_AppendPath(OutputFile, "ExternalBuildToolRun_{}.sh"_f << Configuration.f_GetFullSafeName());
-
-				bool bWasCreated;
-				if (!m_BuildSystem.f_AddGeneratedFile(OutputFile, ScriptData, _Project.m_pSolution->f_GetName(), bWasCreated))
-					DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << OutputFile));
-
-				if (bWasCreated)
-				{
-					CByteVector FileDataVector;
-					CFile::fs_WriteStringToVector(FileDataVector, CStr(ScriptData), false);
-					m_BuildSystem.f_WriteFile(FileDataVector, OutputFile);
-				}
-			}
-		}
 	}
 }

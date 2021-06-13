@@ -858,7 +858,12 @@ namespace NMib::NBuildSystem
 		mutable NContainer::TCMap<NStr::CStr, CGeneratedFile> mp_GeneratedFiles;
 
 		align_cacheline mutable NThread::CMutual mp_CMakeGenerateLock;
-		mutable NContainer::TCMap<NStr::CStr, NThread::CMutual> mp_CMakeGenerateLocks;
+		struct CCMakeGenerateState
+		{
+			NThread::CMutual m_Lock;
+			bool m_bTried = false;
+		};
+		mutable NContainer::TCMap<NStr::CStr, CCMakeGenerateState> mp_CMakeGenerateState;
 		mutable NContainer::TCMap<NStr::CStr, NStr::CStr> mp_CMakeGenerated;
 		mutable NContainer::TCMap<NStr::CStr, NStr::CStr> mp_CMakeGeneratedContents;
 

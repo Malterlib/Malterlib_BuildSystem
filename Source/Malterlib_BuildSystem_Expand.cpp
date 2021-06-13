@@ -121,9 +121,10 @@ namespace NMib::NBuildSystem
 							Key.m_Type == EEntityType_Workspace
 							|| Key.m_Type == EEntityType_Group
 							|| Key.m_Type == EEntityType_Root
+							|| Key.m_Type == EEntityType_Import
 						)
 					{
-						if (Key.m_Type == EEntityType_Group && Child.m_pParent == &_BuildSystemData.m_RootEntity)
+						if ((Key.m_Type == EEntityType_Group || Key.m_Type == EEntityType_Import) && Child.m_pParent == &_BuildSystemData.m_RootEntity)
 						{
 							// Root groups shoud not be considered
 							continue;
@@ -169,8 +170,9 @@ namespace NMib::NBuildSystem
 					auto &Key = Child.f_GetKey();
 					if
 						(
-							(Key.m_Type == EEntityType_Target)
+							Key.m_Type == EEntityType_Target
 							|| Key.m_Type == EEntityType_Group
+							|| Key.m_Type == EEntityType_Import
 						)
 					{
 						Path.f_Insert(Child.f_GetKey());
@@ -210,8 +212,9 @@ namespace NMib::NBuildSystem
 							auto &Key = Child.f_GetKey();
 							if
 								(
-									(Key.m_Type == EEntityType_Target)
+									Key.m_Type == EEntityType_Target
 									|| Key.m_Type == EEntityType_Group
+		 							|| Key.m_Type == EEntityType_Import
 								)
 							{
 								fExpandDependency(Child);
@@ -276,8 +279,9 @@ namespace NMib::NBuildSystem
 						auto &Key = Child.f_GetKey();
 						if
 							(
-								(Key.m_Type == EEntityType_Target)
+								Key.m_Type == EEntityType_Target
 								|| Key.m_Type == EEntityType_Group
+								|| Key.m_Type == EEntityType_Import
 							)
 						{
 							fExpandDependency(Child);
@@ -318,8 +322,9 @@ namespace NMib::NBuildSystem
 					auto &Key = Child.f_GetKey();
 					if
 						(
-							(Key.m_Type == EEntityType_Target)
+							Key.m_Type == EEntityType_Target
 							|| Key.m_Type == EEntityType_Group
+ 							|| Key.m_Type == EEntityType_Import
 						)
 					{
 						fExpandGroup(Child);
@@ -359,8 +364,9 @@ namespace NMib::NBuildSystem
 					auto &Key = Child.f_GetKey();
 					if
 						(
-							(Key.m_Type == EEntityType_Target)
+							Key.m_Type == EEntityType_Target
 							|| Key.m_Type == EEntityType_Group
+ 							|| Key.m_Type == EEntityType_Import
 						)
 					{
 						fExpandFile(Child);
@@ -402,6 +408,7 @@ namespace NMib::NBuildSystem
 					if
 						(
 							Key.m_Type == EEntityType_Group
+							|| Key.m_Type == EEntityType_Import
 						)
 					{
 						fExpandEntities(Child);
@@ -443,6 +450,7 @@ namespace NMib::NBuildSystem
 					if
 						(
 							Key.m_Type == EEntityType_Group
+ 							|| Key.m_Type == EEntityType_Import
 						)
 					{
 						fExpandEntities(Child);
@@ -540,6 +548,8 @@ namespace NMib::NBuildSystem
 		}
 
 		CEntity *pInsertAfter = &_Entity;
+		Entities.f_Sort();
+		Entities.f_UniqueIfSorted();
 
 		for (auto const &SourceEntity : Entities)
 		{
@@ -692,6 +702,9 @@ namespace NMib::NBuildSystem
 								fsp_ThrowError(EntityData.m_Position, "Internal error: pOldEntity == &_Entity && (Files.f_GetLen() != 1 || Entities.f_GetLen() != 1)");
 							return nullptr; // We don't need to do anything
 						}
+						if (pOldEntity == pInsertAfter)
+							pInsertAfter = pParent->m_ChildEntitiesOrdered.fs_GetPrev(pInsertAfter);
+
 						pParent->m_ChildEntitiesMap.f_Remove(pOldEntity);
 						//fsp_ThrowError(_Registry, CStr::CFormat("Entity {} already declared (when adding pattern {})") << FullFileName << SearchPath);
 					}
@@ -720,6 +733,10 @@ namespace NMib::NBuildSystem
 							fsp_ThrowError(EntityData.m_Position, "Internal error: pOldEntity == &_Entity && (Entities.f_GetLen() != 1)");
 						return nullptr; // We don't need to do anything
 					}
+
+					if (pOldEntity == pInsertAfter)
+						pInsertAfter = _ParentEntity.m_ChildEntitiesOrdered.fs_GetPrev(pInsertAfter);
+
 					_ParentEntity.m_ChildEntitiesMap.f_Remove(pOldEntity);
 					//fsp_ThrowError(_Registry, CStr::CFormat("Entity {} already declared (when adding pattern {})") << EntityName << SearchPath);
 				}

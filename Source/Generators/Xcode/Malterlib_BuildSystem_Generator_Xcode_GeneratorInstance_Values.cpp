@@ -214,7 +214,18 @@ namespace NMib::NBuildSystem::NXcode
 		CGeneratorInstance::CSingleValue Ret;
 		auto pEntity = _Configs.f_FindEqual(_Configuration);
 		if (!pEntity)
-			DMibError("Could not find config in enabled configs");
+		{
+			CFilePosition Position;
+			if (!_Configs.f_IsEmpty())
+				Position = _Configs.f_FindSmallest()->f_Get()->f_Data().m_Position;
+
+			m_BuildSystem.fs_ThrowError
+				(
+					Position
+					, "When getting {}.{} Could not find config '{}' in enabled configs: {vs}"_f << fg_PropertyTypeToStr(_PropType) << _Property << _Configuration << _Configs.f_KeySet()
+				)
+			;
+		}
 
 		CProperty const *pFromProperty = nullptr;
 
@@ -548,7 +559,7 @@ namespace NMib::NBuildSystem::NXcode
 
 				if (!PropertiesValue.m_Substitute.f_IsEmpty())
 				{
-					if (_SourceType == "PostBuildScript" || _SourceType == "PreBuildScript")
+					if (_SourceType == "PostBuildScript" || _SourceType == "PreBuildScript" || _SourceType == "ToolBuildScript")
 						PropertiesValue.m_Substitute = PropertiesValue.m_Substitute.f_Replace(";", ":");
 
 					CStr NewValue = CStr::CFormat(PropertiesValue.m_Substitute) << ConfigValue.m_Value;

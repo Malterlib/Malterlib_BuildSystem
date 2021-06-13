@@ -169,6 +169,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			bool m_bDisabled = false;
 			bool m_bConvertPath = false;
 			bool m_bEscapeSeparated = false;
+			bool m_bShortenFilenames = false;
 			EPropertyValidity m_Validity;
 
 			CStr m_Substitute;

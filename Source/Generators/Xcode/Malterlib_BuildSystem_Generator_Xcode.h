@@ -58,12 +58,13 @@ namespace NMib::NBuildSystem::NXcode
 
 		CStr m_Name;
 		CStr m_Script;
-		CStr m_ScriptName;
 		TCVector<CStr> m_Inputs;
 		TCVector<CStr> m_Outputs;
+		TCSet<CStr> m_OutputTypes;
 
 		bool m_bPostBuild = false;
 		bool m_bPreBuild = false;
+		bool m_bCustom = false;
 
 	private:
 		mutable CStr mp_BuildSetting;
@@ -94,6 +95,7 @@ namespace NMib::NBuildSystem::NXcode
 
 		CBuildConfiguration m_BuildConfiguration;
 		TCMap<CStr, CBuildScript> m_BuildScripts;
+		TCVector<CBuildScript> m_CustomBuildScripts;
 		CStr m_ScriptExport;
 
 		TCSet<CStr> m_IncludedTypes;
@@ -205,8 +207,9 @@ namespace NMib::NBuildSystem::NXcode
 		CStr m_GUID;
 		CStr m_MalterlibCustomBuildCommandLine;
 		CStr m_WorkingDirectory;
-		CStr m_OutputType;
+		TCSet<CStr> m_OutputTypes;
 		TCVector<CStr> m_Outputs;
+		TCVector<CStr> m_Inputs;
 	};
 
 	struct CBuildFileRef
@@ -433,7 +436,7 @@ namespace NMib::NBuildSystem::NXcode
 			TCMap<CConfiguration, CStr> mp_OtherCFlags; // Required for moc files
 			TCMap<CConfiguration, CStr> mp_OtherObjCFlags; // Required for moc files
 			TCMap<CConfiguration, CStr> mp_OtherAssemblerFlags; // Required for moc files
-			TCMap<CConfiguration, TCMap<CStr, CStr>> mp_BuildRules;
+			TCMap<CConfiguration, TCMap<CStr, TCSet<CStr>>> mp_BuildRules;
 			CStr mp_MocOutputPatternCPP;
 			CStr m_ProjectOutputDir;
 
@@ -447,7 +450,6 @@ namespace NMib::NBuildSystem::NXcode
 		void fp_GenerateBuildConfigurationFilesList(CProject& _Project, CStr const &_OutputDir, TCVector<CBuildConfiguration>& _ConfigList) const;
 		void fp_GenerateBuildConfigurationFiles(CProject& _Project, CStr const &_OutputDir) const;
 		void fp_GenerateBuildConfigurationFile(CProject& _Project, CConfiguration const &_Configuration, CStr const &_OutputFile, CStr const &_OutputDir, CNativeTarget const &_NativeTarget) const;
-		void fp_GenerateBuildConfigurationScriptFile(CProject& _Project, CConfiguration const &_Configuration, CStr const &_OutputFile, CStr const &_OutputDir, CStr const &_Contents) const;
 		void fp_GenerateCompilerFlags(CProject& _Project) const;
 		CStr fp_MakeNiceSharedFlagValue(CStr const &_Type) const;
 		void fp_GeneratePBXSourcesBuildPhaseSection(CProject &_Project, CStr& _Output) const;
@@ -461,14 +463,12 @@ namespace NMib::NBuildSystem::NXcode
 		void fp_GeneratePBXGroupSection(CProject &_Project, CStr& _Output) const;
 		void fp_GeneratePBXProjectSection(CProject &_Project, CStr& _Output) const;
 
-		void fp_GeneratePBXLegacyTargetSection(CProject& _Project, CStr& _Output) const;
+		void fp_GeneratePBXAggregateTargetSection(CProject& _Project, CStr& _Output) const;
 		void fp_GeneratePBXNativeTargetSection(CProject &_Project, CStr& _Output) const;
 		void fp_GenerateXCConfigurationList(CProject &_Project, CStr& _Output) const;
 		void fp_GenerateXCBuildConfigurationSection(CProject &_Project, CStr& _Output) const;
 		void fp_GeneratePBXContainerItemProxySection(CProject& _Project, CStr& _Output) const;
 		void fp_GeneratePBXTargetDependencySection(CProject& _Project, CStr& _Output) const;
-
-		void fp_GenerateToolRunScript(CProject& _Project, CStr const &_OutputDir) const;
 
 		static void fspr_MergeScheme(CXMLNode const* _pExistingNode, CXMLNode const* _pPrevNode, CXMLNode* _pNewNode);
 		bool fp_GenerateSchemes(CProject& _Project, TCMap<CConfiguration, TCSet<CStr>> &_Runnables, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable) const;

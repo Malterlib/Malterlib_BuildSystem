@@ -115,6 +115,35 @@ namespace NMib::NBuildSystem
 		return Return;
 	}
 
+	CBuildSystemSyntax::CValue CBuildSystemSyntax::CValue::fs_Identifier(CStr const &_Identifier, EPropertyType _PropertyType)
+	{
+		return
+			{
+				CBuildSystemSyntax::CExpression
+				{
+					CBuildSystemSyntax::CParam
+					{
+						NStorage::TCIndirection<CBuildSystemSyntax::CIdentifier>
+						{
+							CBuildSystemSyntax::CIdentifier
+							{
+								_Identifier
+								, EEntityType_Invalid
+								, _PropertyType
+								, _PropertyType == EPropertyType_Property
+							}
+						}
+					}
+				}
+			}
+		;
+	}
+
+	CBuildSystemSyntax::CKeyPrefixOperator CBuildSystemSyntax::CKeyPrefixOperator::fs_Entity(CStr const &_Name)
+	{
+		return {EOperator_Entity, CBuildSystemSyntax::CValue::fs_Identifier(_Name)};
+	}
+
 	CBuildSystemSyntax::CKeyPrefixOperator CBuildSystemSyntax::CKeyPrefixOperator::fs_FromJSON(EOperator _Operator, NEncoding::CEJSON const &_JSON, CFilePosition const &_Position)
 	{
  		auto &UserType = _JSON.f_UserType();
@@ -574,7 +603,7 @@ namespace NMib::NBuildSystem
 
 	bool CBuildSystemSyntax::CExpression::f_IsParam() const
 	{
-		return m_Expression.f_IsOfType<CExpression>();
+		return m_Expression.f_IsOfType<CParam>();
 	}
 
 	CBuildSystemSyntax::CParam const &CBuildSystemSyntax::CExpression::f_Param() const

@@ -155,6 +155,8 @@ namespace NMib::NBuildSystem
 				TCMap<CConfiguration, CEntityMutablePointer> EnabledConfigs;
 				EnabledConfigs[Configuration] = *pEnabledConfig;
 
+				NativeTarget.m_ScriptExport = fp_GetSingleConfigValue(EnabledConfigs, EPropertyType_Target, "ExportScriptEnvironmentContents", EEJSONType_String, false).m_Value.f_String();
+
 				fp_SetEvaluatedValues
 					(
 						EnabledConfigs
@@ -180,6 +182,9 @@ namespace NMib::NBuildSystem
 					CBuildScript PreBuildScript;
 					PreBuildScript.m_bPreBuild = true;
 
+					bool bFoundToolBuildScript = false;
+					CBuildScript ToolBuildScript;
+
 					auto pEvaluated = ThreadLocal.mp_EvaluatedTargetSettings.f_FindEqual(Configuration);
 
 					if (pEvaluated)
@@ -195,7 +200,40 @@ namespace NMib::NBuildSystem
 
 							CElement const& BuildScript = pEvaluated->m_Element["PostBuildScript"];
 							PostBuildScript.m_Name = BuildScript.m_Property;
-							PostBuildScript.m_Script = BuildScript.f_GetValue();
+							PostBuildScript.m_Script = BuildScript.f_GetValue().f_Replace("\r\n", "\n");
+						}
+						if (pEvaluated->m_Element.f_Exists("ToolBuildScript"))
+						{
+							bFoundToolBuildScript = true;
+
+							auto &InputsElement = pEvaluated->m_Element["ToolBuildScriptInputs"];
+							auto &OutputsElement = pEvaluated->m_Element["ToolBuildScriptOutputs"];
+							ToolBuildScript.m_Inputs = fg_StrSplit(InputsElement.f_GetValue(), ';');
+							ToolBuildScript.m_Outputs = fg_StrSplit(OutputsElement.f_GetValue(), ';');
+
+							CStr DependencyFile;
+							if (auto pDependencyFile = pEvaluated->m_Element.f_FindEqual("DependencyFile"))
+								DependencyFile = pDependencyFile->f_GetValue();
+
+							CElement const& BuildScript = pEvaluated->m_Element["ToolBuildScript"];
+							ToolBuildScript.m_Name = BuildScript.m_Property;
+							ToolBuildScript.m_Script =
+								"export MalterlibDependencyFile=\"{}\"\n"
+								"set -eo pipefail\n"
+								"cd \"${{PROJECT_DIR}\"\n"
+								"{}\n"
+								"{}\n"_f
+								<< DependencyFile
+								<< NativeTarget.m_ScriptExport
+								<< BuildScript.f_GetValue().f_Replace("\r\n", "\n")
+							;
+
+							if (!DependencyFile.f_IsEmpty())
+							{
+								ToolBuildScript.m_Script += CStr::CFormat("if [ ! -f \"{}\" ]; then\n") << DependencyFile;
+								ToolBuildScript.m_Script += CStr::CFormat("\tMTool TouchOrCreate \"{}\"\n") << DependencyFile;
+								ToolBuildScript.m_Script += "fi\n";
+							}
 						}
 						if (pEvaluated->m_Element.f_Exists("PreBuildScript"))
 						{
@@ -208,12 +246,14 @@ namespace NMib::NBuildSystem
 
 							CElement const& BuildScript = pEvaluated->m_Element["PreBuildScript"];
 							PreBuildScript.m_Name = BuildScript.m_Property;
-							PreBuildScript.m_Script = BuildScript.f_GetValue();
+							PreBuildScript.m_Script = BuildScript.f_GetValue().f_Replace("\r\n", "\n");
 						}
 					}
 
 					if (bFoundPostBuildScript)
 						NativeTarget.m_BuildScripts[PostBuildScript.m_Name] = fg_Move(PostBuildScript);
+					if (bFoundToolBuildScript)
+						NativeTarget.m_BuildScripts[ToolBuildScript.m_Name] = fg_Move(ToolBuildScript);
 					if (bFoundPreBuildScript)
 						NativeTarget.m_BuildScripts[PreBuildScript.m_Name] = fg_Move(PreBuildScript);
 				}
@@ -683,7 +723,7 @@ namespace NMib::NBuildSystem
 									else if (iFlag->m_Property == "FilesExcludedFromCompile")
 									{
 										if (iFlag->f_GetValue() == "true" && iFile->m_LastKnownFileType.f_Find("nolink") == -1)
-											iFile->m_LastKnownFileType += "nolink";
+											iFile->m_LastKnownFileType += ".nolink";
 									}
 									else
 									{
@@ -737,24 +777,6 @@ namespace NMib::NBuildSystem
 							SpecificSettings[Configuration];
 						}
 					}
-				}
-			}
-		}
-
-		void CGeneratorInstance::fp_GenerateBuildConfigurationScriptFile(CProject& _Project, CConfiguration const &_Configuration, CStr const &_OutputFile, CStr const &_OutputDir, CStr const &_Contents) const
-		{
-			CStr FileData = _Contents.f_Replace("\r\n", "\n");
-
-			{
-				bool bWasCreated;
-				if (!m_BuildSystem.f_AddGeneratedFile(_OutputFile, FileData, _Project.m_pSolution->f_GetName(), bWasCreated))
-					DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << _OutputFile));
-
-				if (bWasCreated)
-				{
-					CByteVector FileDataVector;
-					CFile::fs_WriteStringToVector(FileDataVector, CStr(FileData), false);
-					m_BuildSystem.f_WriteFile(FileDataVector, _OutputFile, EFileAttrib_Executable);
 				}
 			}
 		}
@@ -947,10 +969,6 @@ namespace NMib::NBuildSystem
 						LDFlagsFirst = iElement->f_GetValue();
 					else if (!bDoneAdditionalLibraries && iElement->m_Property == "OTHER_LIBTOOLFLAGS" && m_XcodeVersion >= 6)
 						bAdditionalLibraries = true;
-					else if (iElement->m_Property == "ExportScriptEnvironmentContents" && _NativeTarget.m_bDefaultTarget)
-					{
-						_Project.f_GetDefaultNativeTarget(_Configuration).m_ScriptExport = iElement->f_GetValue();
-					}
 
 					CStr Extra;
 					CStr ExtraAfter;
@@ -966,16 +984,8 @@ namespace NMib::NBuildSystem
 						ExtraAfter = " $DependencyLibraries";
 					}
 
-					if (auto pBuildScript = _Project.f_GetDefaultNativeTarget(_Configuration).m_BuildScripts.f_FindEqual(iElement->m_Property))
-					{
-						if (_NativeTarget.m_bDefaultTarget)
-						{
-							CStr ScriptName = _OutputFile + "." + iElement->m_Property + ".sh";
-							pBuildScript->m_ScriptName = ScriptName;
-							fp_GenerateBuildConfigurationScriptFile(_Project, _Configuration, ScriptName, _OutputDir, pBuildScript->m_Script);
-							FileData += (CStr::CFormat("{} = {}\n") << iElement->m_Property << ScriptName);
-						}
-					}
+					if (_Project.f_GetDefaultNativeTarget(_Configuration).m_BuildScripts.f_FindEqual(iElement->m_Property))
+						;
 					else if (!iElement->m_Property.f_IsEmpty())
 					{
 						if (_NativeTarget.m_bDefaultTarget)

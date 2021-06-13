@@ -345,6 +345,30 @@ namespace NMib::NBuildSystem
 					}
 					,
 					{
+						"StartsWith"
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_Boolean, fg_FunctionParam(g_String, "_Source"), fg_FunctionParam(g_String, "_StringToFind"))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							{
+								return _Params[0].f_String().f_StartsWith(_Params[1].f_String());
+							}
+						}
+					}
+					,
+					{
+						"EndsWith"
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_Boolean, fg_FunctionParam(g_String, "_Source"), fg_FunctionParam(g_String, "_StringToFind"))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							{
+								return _Params[0].f_String().f_EndsWith(_Params[1].f_String());
+							}
+						}
+					}
+					,
+					{
 						"Format"
 						, CBuiltinFunction
 						{

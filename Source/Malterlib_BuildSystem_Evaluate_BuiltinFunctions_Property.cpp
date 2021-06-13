@@ -39,6 +39,7 @@ namespace NMib::NBuildSystem
 		}
 
 		CEJSON Return;
+		CStr NotFoundError;
 
 		auto pEntity = &_Context.m_OriginalContext;
 		{
@@ -70,11 +71,25 @@ namespace NMib::NBuildSystem
 					if (!pEntity)
 						pEntity = &_Context.m_OriginalContext;
 
+					bool bFound = false;
+					for (auto &Entity : pEntity->m_ChildEntitiesOrdered)
+					{
+						if (Entity.f_GetKey().m_Type == EntityKey.m_Type)
+						{
+							bFound = true;
+							pEntity = &Entity;
+							break;
+						}
+					}
+
+					if (bFound)
+						continue;
+
 					while (pEntity && pEntity->f_GetKey().m_Type != EntityKey.m_Type)
 						pEntity = pEntity->m_pParent;
 
 					if (!pEntity)
-						fsp_ThrowError(_Context, fg_Format("No parent with type '{}' found", Type));
+						fsp_ThrowError(_Context, fg_Format("No child or parent with type '{}' found", Type));
 					continue;
 				}
 
@@ -92,6 +107,7 @@ namespace NMib::NBuildSystem
 					}
 					if (!pChild)
 					{
+						NotFoundError = "Root not found";
 						pEntity = nullptr;
 						break;
 					}
@@ -102,6 +118,12 @@ namespace NMib::NBuildSystem
 				auto pChild = pEntity->m_ChildEntitiesMap.f_FindEqual(EntityKey);
 				if (!pChild)
 				{
+					NotFoundError = "Children that do exists at '{}':"_f << pEntity->f_GetPathForGetProperty();
+					for (auto &ChildEntity : pEntity->m_ChildEntitiesMap)
+					{
+						auto &Key = ChildEntity.f_GetKey();
+						NotFoundError += "\n    {}:{}"_f << fg_EntityTypeToStr(Key.m_Type) << Key.m_Name;
+					}
 					pEntity = nullptr;
 					break;
 				}
@@ -121,7 +143,7 @@ namespace NMib::NBuildSystem
 			if (!pEntity)
 			{
 				if (_Function == EBuiltinFunctionGetProperty_GetProperty)
-					fsp_ThrowError(_Context, _Context.m_Position, CStr::CFormat("Entity '{}' not found") << EntityName);
+					fsp_ThrowError(_Context, _Context.m_Position, CStr::CFormat("Entity '{}' not found. {}") << EntityName << NotFoundError);
 				else
 					Return = false;
 			}

@@ -33,6 +33,9 @@ namespace NMib::NBuildSystem
 		bool operator < (CConfiguration const &_Right) const;
 		bool operator == (CConfiguration const &_Right) const;
 
+		template <typename tf_CStr>
+		void f_Format(tf_CStr &o_Str) const;
+
 		NStr::CStr f_GetFullName() const;
 		NStr::CStr f_GetFullSafeName() const;
 

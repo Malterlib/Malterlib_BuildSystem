@@ -14,4 +14,10 @@ namespace NMib::NBuildSystem
 	{
 		return NContainer::TCMap<NStr::CStr, CConfigurationType>::fs_GetKey(*this);
 	}
+
+	template <typename tf_CStr>
+	void CConfiguration::f_Format(tf_CStr &o_Str) const
+	{
+		o_Str += f_GetFullName();
+	}
 }

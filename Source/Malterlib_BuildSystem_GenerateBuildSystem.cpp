@@ -43,7 +43,11 @@ namespace NMib::NBuildSystem
 			CEntity *pEntity = &Evaluated.m_RootEntity;
 
 			for (auto &Key : Keys)
-				pEntity = pEntity->m_ChildEntitiesMap.f_FindEqual(Key);
+			{
+				auto pNextEntity = pEntity->m_ChildEntitiesMap.f_FindEqual(Key);;
+				DMibFastCheck(pNextEntity);
+				pEntity = pNextEntity;
+			}
 
 			WorkspaceTargets[Targets.fs_GetKey(pTarget)] = fg_Explicit(pEntity);
 		}
@@ -134,6 +138,11 @@ namespace NMib::NBuildSystem
 					auto &ChildEntity = *iEntity;
 					switch (ChildEntity.f_GetKey().m_Type)
 					{
+					case EEntityType_Import:
+						{
+							fFindTargetsRecursive(ChildEntity, _pParentGroup);
+						}
+						break;
 					case EEntityType_Group:
 						{
 							auto &Name = ChildEntity.f_GetKeyName();
@@ -360,6 +369,7 @@ namespace NMib::NBuildSystem
 										{
 										case EEntityType_Group:
 										case EEntityType_Target:
+										case EEntityType_Import:
 											{
 												auto const *pToProcess = &ChildEntity;
 
@@ -530,7 +540,12 @@ namespace NMib::NBuildSystem
 											bool bIndirect = f_EvaluateEntityPropertyBool(ChildEntity, EPropertyType_Dependency, "Indirect", false);
 
 											if (bIndirect)
-												continue;
+											{
+												bool bIndirectOrdered = f_EvaluateEntityPropertyBool(ChildEntity, EPropertyType_Dependency, "IndirectOrdered", false);
+
+												if (!bIndirectOrdered)
+													continue;
+											}
 										}
 
 										CEJSON Properties = f_EvaluateEntityPropertyObject
@@ -726,6 +741,7 @@ namespace NMib::NBuildSystem
 								{
 								case EEntityType_GenerateFile:
 								case EEntityType_Target:
+								case EEntityType_Import:
 									{
 										fFindFilesRecursive(ChildEntity, _pParentGroup);
 									}

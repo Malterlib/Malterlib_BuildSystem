@@ -215,6 +215,20 @@ namespace NMib::NBuildSystem
 					}
 					,
 					{
+						"Sort"
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_AnyArray, fg_FunctionParam(g_AnyArray, "_Array"))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							{
+								TCVector<CEJSON> Return = fg_Move(_Params[0].f_Array());
+								Return.f_Sort();
+								return fg_Move(Return);
+							}
+						}
+					}
+					,
+					{
 						"Concat"
 						, CBuiltinFunction
 						{

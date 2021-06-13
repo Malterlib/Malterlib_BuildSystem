@@ -83,6 +83,7 @@ namespace NMib::NBuildSystem
 					, {CPropertyKey(EPropertyType_Target, "PreBuildScriptInputs"), fg_Defaulted(g_StringArray, _[_])}
 
 					, {CPropertyKey(EPropertyType_Dependency, "Indirect"), fg_Defaulted(g_Boolean, false)}
+					, {CPropertyKey(EPropertyType_Dependency, "IndirectOrdered"), fg_Defaulted(g_Boolean, false)}
 					, {CPropertyKey(EPropertyType_Dependency, "Link"), fg_Defaulted(g_Boolean, true)}
 					, {CPropertyKey(EPropertyType_Dependency, "Target"), fg_Optional(g_String)}
 					, {CPropertyKey(EPropertyType_Dependency, "TargetProperties"), fg_Defaulted(g_ObjectWithAny, EJSONType_Object)}
@@ -147,6 +148,9 @@ namespace NMib::NBuildSystem
 									{
 										{"Find", CBuildSystemSyntax::CClassType::CMember{g_String}}
 										, {"Replace", CBuildSystemSyntax::CClassType::CMember{g_String}}
+										, {"FilePatterns", CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_StringArray, EJSONType_Array)}}
+										, {"ExcludeFilePatterns", CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_StringArray, EJSONType_Array)}}
+										, {"ApplyToPaths", CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_Boolean, false)}}
 									}
 									, {}
 								}
@@ -154,6 +158,31 @@ namespace NMib::NBuildSystem
 							, _[_]
 						)
 					}
+					,
+					{
+						CPropertyKey(EPropertyType_Import, "CMake_CacheDuplicateLines")
+						, fg_Defaulted
+						(
+							fg_Array
+							(
+								CBuildSystemSyntax::CClassType
+								{
+									{
+										{"Match", CBuildSystemSyntax::CClassType::CMember{g_String}}
+										, {"Find", CBuildSystemSyntax::CClassType::CMember{g_String}}
+										, {"Replace", CBuildSystemSyntax::CClassType::CMember{g_String}}
+										, {"FilePatterns", CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_StringArray, EJSONType_Array)}}
+										, {"ExcludeFilePatterns", CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_StringArray, EJSONType_Array)}}
+									}
+									, {}
+								}
+							)
+							, _[_]
+						)
+					}
+					, {CPropertyKey(EPropertyType_Import, "CMake_Environment"), fg_Defaulted(CBuildSystemSyntax::CType{CBuildSystemSyntax::CClassType({}, g_String)}, EJSONType_Object)}
+					, {CPropertyKey(EPropertyType_Import, "CMake_CacheIgnoreInputs"), fg_Defaulted(g_StringArray, EJSONType_Array)}
+					, {CPropertyKey(EPropertyType_Import, "CMake_IncludeInHash"), fg_Defaulted(g_StringArray, EJSONType_Array)}
 					,
 					{
 						CPropertyKey(EPropertyType_Import, "CMake_Languages")
@@ -174,6 +203,7 @@ namespace NMib::NBuildSystem
 						)
 					}
 					, {CPropertyKey(EPropertyType_Import, "CMake_Config"), g_String}
+					, {CPropertyKey(EPropertyType_Import, "CMake_IntermediateName"), g_String}
 					, {CPropertyKey(EPropertyType_Import, "CMake_Variables"), g_StringArrayDefaultedEmpty}
 					, {CPropertyKey(EPropertyType_Import, "CMake_ExcludeFromHash"), g_StringArrayDefaultedEmpty}
 					, {CPropertyKey(EPropertyType_Import, "SharedTempDirectory"), fg_Defaulted(g_String, "")}

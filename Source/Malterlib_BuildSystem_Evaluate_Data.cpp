@@ -150,6 +150,7 @@ namespace NMib::NBuildSystem
 					Key.m_Type == EEntityType_Workspace
 					|| Key.m_Type == EEntityType_Target
 					|| Key.m_Type == EEntityType_Group
+					|| Key.m_Type == EEntityType_Import
 				)
 			)
 			{
@@ -176,6 +177,7 @@ namespace NMib::NBuildSystem
 					Key.m_Type != EEntityType_Workspace
 					&& Key.m_Type != EEntityType_Target
 					&& Key.m_Type != EEntityType_Group
+					&& Key.m_Type != EEntityType_Import
 				)
 			)
 			{
