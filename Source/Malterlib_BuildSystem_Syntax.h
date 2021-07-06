@@ -655,7 +655,7 @@ namespace NMib::NBuildSystem
 			bool f_IsExpression() const;
 			CExpression const &f_Expression() const;
 
-			static CValue fs_Identifier(CStr const &_Identifier, EPropertyType _PropertyType = EPropertyType_Property);
+			static CValue fs_Identifier(NStr::CStr const &_Identifier, EPropertyType _PropertyType = EPropertyType_Property);
 
 			CVariant m_Value;
 		};
@@ -688,7 +688,7 @@ namespace NMib::NBuildSystem
 			static CKeyPrefixOperator fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position);
 			NEncoding::CEJSON f_ToJSON() const;
 			static CKeyPrefixOperator fs_FromJSON(EOperator _Operator, NEncoding::CEJSON const &_JSON, CFilePosition const &_Position);
-			static CKeyPrefixOperator fs_Entity(CStr const &_Name);
+			static CKeyPrefixOperator fs_Entity(NStr::CStr const &_Name);
 
 			template <typename tf_CStr>
 			void f_Format(tf_CStr &o_Str) const;
