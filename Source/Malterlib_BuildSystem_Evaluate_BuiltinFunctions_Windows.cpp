@@ -30,7 +30,7 @@ namespace NMib::NBuildSystem
 							{
 		#ifdef DPlatformFamily_Windows
 								if (_Params.f_GetLen() != 3 || !_Params[0].f_IsString() || !_Params[1].f_IsString() || !_Params[2].f_IsString())
-									fsp_ThrowError(_Context, "Explode takes three string parameters: <Root> <Key> <ValueName>");
+									fs_ThrowError(_Context, "Explode takes three string parameters: <Root> <Key> <ValueName>");
 
 								using ERegRoot = NMib::NPlatform::CWin32_Registry::ERegRoot;
 								ERegRoot RegRoot;
