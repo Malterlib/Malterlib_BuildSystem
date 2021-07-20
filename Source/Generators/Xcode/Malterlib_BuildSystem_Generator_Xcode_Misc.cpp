@@ -152,7 +152,8 @@ namespace NMib::NBuildSystem::NXcode
 	{
 		if (!mp_BuildSetting.f_IsEmpty())
 			return mp_BuildSetting;
-		mp_BuildSetting += "{}\\n"_f << m_Script.f_Replace("\n", "\\n").f_Replace("\"", "\\\"");
+
+		mp_BuildSetting += "{}\\n"_f << m_Script.f_EscapeStrNoQuotes("\\\"").f_Replace("\n", "\\n");
 		return mp_BuildSetting;
 	}
 
