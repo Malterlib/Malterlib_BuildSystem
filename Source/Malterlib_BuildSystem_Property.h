@@ -13,7 +13,8 @@ namespace NMib::NBuildSystem
 		inline_always CPropertyKey(NStr::CStr const &_Name);
 		inline_always CPropertyKey(EPropertyType _Type, NStr::CStr const &_Name);
 		inline_always bool operator < (CPropertyKey const &_Right) const;
-		static CPropertyKey fs_FromString(NStr::CStr const &_String, CFilePosition const &_Position);
+		template <typename tf_CContext>
+		static CPropertyKey fs_FromString(NStr::CStr const &_String, tf_CContext &&_Context);
 
 		template <typename tf_CStr>
 		void f_Format(tf_CStr &o_Str) const;
@@ -66,5 +67,3 @@ namespace NMib::NBuildSystem
 		CEvaluatedProperties *m_pParentProperties = nullptr;
 	};
 }
-
-#include "Malterlib_BuildSystem_Property.hpp"

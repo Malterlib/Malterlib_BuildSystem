@@ -53,7 +53,7 @@ namespace NMib::NBuildSystem
 							fg_FunctionType(g_Void, fg_FunctionParam(g_Any, "p_ErrorValues", g_Ellipsis))
 							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
 							{
-								fsp_ThrowError(_Context, fg_FormatJSONArray(_Params[0].f_Array(), false));
+								fs_ThrowError(_Context, fg_FormatJSONArray(_Params[0].f_Array(), false));
 							}
 						}
 					}
@@ -92,7 +92,7 @@ namespace NMib::NBuildSystem
 							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
 							{
 								if (_Params.f_GetLen() != 1 || !_Params[0].f_IsString())
-									fsp_ThrowError(_Context, "MalterlibTime takes one string parameter");
+									fs_ThrowError(_Context, "MalterlibTime takes one string parameter");
 
 								NTime::CTime Time = _This.mp_NowUTC;
 								return CStr::CFormat(_Params[0].f_String()) << Time.f_GetSeconds() << Time.f_GetFractionInt();
@@ -239,9 +239,9 @@ namespace NMib::NBuildSystem
 							)
 							, [this](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
 							{
-								CPropertyKey PropertyKey = CPropertyKey::fs_FromString(_Params[0].f_String(), _Context.m_Position);
+								CPropertyKey PropertyKey = CPropertyKey::fs_FromString(_Params[0].f_String(), _Context);
 
-								auto *pTypeWithPosition = fp_GetTypeForProperty(_Context.m_OriginalContext, PropertyKey);
+								auto *pTypeWithPosition = fp_GetTypeForProperty(_Context, PropertyKey);
 								return !!pTypeWithPosition;
 							}
 						}

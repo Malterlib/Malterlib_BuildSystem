@@ -138,7 +138,7 @@ namespace NMib::NBuildSystem
 					, fg_OperatorToConditionType(_Value.m_Operator)
 					, [&](CStr const &_Error)
 					{
-						fsp_ThrowError(_Context, _Error);
+						fs_ThrowError(_Context, _Error);
 					}
 				)
 			;
@@ -178,10 +178,10 @@ namespace NMib::NBuildSystem
 		}
 
 		if (Left.f_EType() != Right.f_EType())
-			fsp_ThrowError(_Context, "Trying to operate on values of different types:\n{}\n{}"_f << Left << Right);
+			fs_ThrowError(_Context, "Trying to operate on values of different types:\n{}\n{}"_f << Left << Right);
 
 		if (Left.f_IsObject())
-			fsp_ThrowError(_Context, "Objects are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << Left << Right);
+			fs_ThrowError(_Context, "Objects are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << Left << Right);
 		else if (Left.f_IsArray())
 		{
 			switch (_Value.m_Operator)
@@ -194,7 +194,7 @@ namespace NMib::NBuildSystem
 				}
 				break;
 			default:
-				fsp_ThrowError(_Context, "Arrays are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << Left << Right);
+				fs_ThrowError(_Context, "Arrays are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << Left << Right);
 				break;
 			}
 		}
@@ -205,7 +205,7 @@ namespace NMib::NBuildSystem
 			case COp::EOperator_Add: return Left.f_String() + Right.f_String();
 			case COp::EOperator_Divide: return Left.f_String() / Right.f_String();
 			default:
-				fsp_ThrowError(_Context, "Strings are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << Left << Right);
+				fs_ThrowError(_Context, "Strings are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << Left << Right);
 				break;
 			}
 		}
@@ -224,7 +224,7 @@ namespace NMib::NBuildSystem
 			case COp::EOperator_BitwiseXor: return Left.f_Integer() ^ Right.f_Integer();
 			case COp::EOperator_BitwiseOr: return Left.f_Integer() | Right.f_Integer();
 			default:
-				fsp_ThrowError(_Context, "Integers are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << Left << Right);
+				fs_ThrowError(_Context, "Integers are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << Left << Right);
 				break;
 			}
 		}
@@ -238,16 +238,16 @@ namespace NMib::NBuildSystem
 			case COp::EOperator_Multiply: return Left.f_Float() * Right.f_Float();
 			case COp::EOperator_Modulus: return Left.f_Float().f_Mod(Right.f_Float());
 			default:
-				fsp_ThrowError(_Context, "Floats are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << Left << Right);
+				fs_ThrowError(_Context, "Floats are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << Left << Right);
 				break;
 			}
 		}
 		else if (Left.f_IsBoolean())
-			fsp_ThrowError(_Context, "Booleans are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << Left << Right);
+			fs_ThrowError(_Context, "Booleans are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << Left << Right);
 		else if (Left.f_IsUserType())
-			fsp_ThrowError(_Context, "User types ({}) not supported for binary operator {}:\n{}\n{}"_f << Left.f_UserType().m_Type << fg_OperatorName(_Value.m_Operator) << Left << Right);
+			fs_ThrowError(_Context, "User types ({}) not supported for binary operator {}:\n{}\n{}"_f << Left.f_UserType().m_Type << fg_OperatorName(_Value.m_Operator) << Left << Right);
 		else
-			fsp_ThrowError(_Context, "Value type not supported for binary operator {}:\n{}\n{}"_f << Left.f_UserType().m_Type << fg_OperatorName(_Value.m_Operator) << Left << Right);
+			fs_ThrowError(_Context, "Value type not supported for binary operator {}:\n{}\n{}"_f << Left.f_UserType().m_Type << fg_OperatorName(_Value.m_Operator) << Left << Right);
 
 		return {};
 	}
@@ -259,11 +259,11 @@ namespace NMib::NBuildSystem
 		auto Right = fp_EvaluatePropertyValueParam(_Context, _Value.m_Right);
 
 		if (Right.f_IsObject())
-			fsp_ThrowError(_Context, "Objects not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << Right);
+			fs_ThrowError(_Context, "Objects not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << Right);
 		else if (Right.f_IsArray())
-			fsp_ThrowError(_Context, "Arrays not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << Right);
+			fs_ThrowError(_Context, "Arrays not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << Right);
 		else if (Right.f_IsString())
-			fsp_ThrowError(_Context, "Arrays not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << Right);
+			fs_ThrowError(_Context, "Arrays not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << Right);
 		else if (Right.f_IsInteger())
 		{
 			switch (_Value.m_Operator)
@@ -273,7 +273,7 @@ namespace NMib::NBuildSystem
 			case COp::EOperator_UnaryPlus: return +Right.f_Integer();
 			case COp::EOperator_UnaryMinus: return -Right.f_Integer();
 			default:
-				fsp_ThrowError(_Context, "Integers not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << Right);
+				fs_ThrowError(_Context, "Integers not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << Right);
 				break;
 			}
 		}
@@ -284,7 +284,7 @@ namespace NMib::NBuildSystem
 			case COp::EOperator_UnaryPlus: return +Right.f_Float();
 			case COp::EOperator_UnaryMinus: return -Right.f_Float();
 			default:
-				fsp_ThrowError(_Context, "Floats not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << Right);
+				fs_ThrowError(_Context, "Floats not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << Right);
 				break;
 			}
 		}
@@ -294,14 +294,14 @@ namespace NMib::NBuildSystem
 			{
 			case COp::EOperator_LogicalNot: return !Right.f_Boolean();
 			default:
-				fsp_ThrowError(_Context, "Floats not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << Right);
+				fs_ThrowError(_Context, "Floats not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << Right);
 				break;
 			}
 		}
 		else if (Right.f_IsUserType())
-			fsp_ThrowError(_Context, "User types ({}) not supported for prefix operator {}:\n{}"_f << Right.f_UserType().m_Type << fg_OperatorName(_Value.m_Operator) << Right);
+			fs_ThrowError(_Context, "User types ({}) not supported for prefix operator {}:\n{}"_f << Right.f_UserType().m_Type << fg_OperatorName(_Value.m_Operator) << Right);
 		else
-			fsp_ThrowError(_Context, "Value type not supported for prefix operator {}:\n{}"_f << Right.f_UserType().m_Type << fg_OperatorName(_Value.m_Operator) << Right);
+			fs_ThrowError(_Context, "Value type not supported for prefix operator {}:\n{}"_f << Right.f_UserType().m_Type << fg_OperatorName(_Value.m_Operator) << Right);
 
 		return {};
 	}

@@ -85,7 +85,7 @@ namespace NMib::NBuildSystem
 		DMibErrorParse((NStr::CStr::CFormat("{} error: {}") << _Registry.f_GetLocation() << _Error).f_GetStr(), {ParseError});
 	}
 
-	void CBuildSystem::fsp_ThrowError
+	void CBuildSystem::fs_ThrowError
 		(
 			CEvalPropertyValueContext &_Context
 			, CFilePosition const &_Position
@@ -123,13 +123,13 @@ namespace NMib::NBuildSystem
 		DMibErrorParse(Error, ParseErrors);
 	}
 
-	void CBuildSystem::fsp_ThrowError
+	void CBuildSystem::fs_ThrowError
 		(
 			CEvalPropertyValueContext &_Context
 			, NStr::CStr const &_Error
 			, NContainer::TCVector<CBuildSystemError> const &_Errors
 		)
 	{
-		fsp_ThrowError(_Context, _Context.m_Position, _Error, _Errors);
+		fs_ThrowError(_Context, _Context.m_Position, _Error, _Errors);
 	}
 }

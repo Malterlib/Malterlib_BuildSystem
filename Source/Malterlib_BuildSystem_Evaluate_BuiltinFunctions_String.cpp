@@ -66,7 +66,7 @@ namespace NMib::NBuildSystem
 								}
 								catch (CException const &_Exception)
 								{
-									fsp_ThrowError(_Context, "Failed to convert EJSON to string: {}"_f << _Exception);
+									fs_ThrowError(_Context, "Failed to convert EJSON to string: {}"_f << _Exception);
 								}
 								return Return;
 							}
@@ -100,7 +100,7 @@ namespace NMib::NBuildSystem
 								}
 								catch (CException const &_Exception)
 								{
-									fsp_ThrowError(_Context, "Failed to convert JSON to string: {}"_f << _Exception);
+									fs_ThrowError(_Context, "Failed to convert JSON to string: {}"_f << _Exception);
 								}
 								return Return;
 							}
@@ -125,7 +125,7 @@ namespace NMib::NBuildSystem
 								}
 								catch (CException const &_Exception)
 								{
-									fsp_ThrowError(_Context, "Failed to parse EJSON string: {}"_f << _Exception);
+									fs_ThrowError(_Context, "Failed to parse EJSON string: {}"_f << _Exception);
 								}
 								return Return;
 							}
@@ -150,7 +150,7 @@ namespace NMib::NBuildSystem
 								}
 								catch (CException const &_Exception)
 								{
-									fsp_ThrowError(_Context, "Failed to parse JSON string: {}"_f << _Exception);
+									fs_ThrowError(_Context, "Failed to parse JSON string: {}"_f << _Exception);
 								}
 								return Return;
 							}
@@ -466,7 +466,7 @@ namespace NMib::NBuildSystem
 									else if (Type == "float")
 										Parse >> OutputVar.f_Float();
 									else
-										fsp_ThrowError(_Context, "Only string, int, and float are supported");
+										fs_ThrowError(_Context, "Only string, int, and float are supported");
 								}
 
 								Parse.f_Parse(_Params[0].f_String());
@@ -489,7 +489,7 @@ namespace NMib::NBuildSystem
 							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
 							{
 								if (_Params.f_GetLen() < 1 || _Params.f_GetLen() > 2 || !_Params[0].f_IsString() || (_Params.f_GetLen() > 1 && _Params[1].f_IsString()))
-									fsp_ThrowError(_Context, "Sanitize takes one or two string parameters: String [Format]");
+									fs_ThrowError(_Context, "Sanitize takes one or two string parameters: String [Format]");
 
 								CStr Format = "rfc1034";
 								if (_Params[1].f_IsValid())

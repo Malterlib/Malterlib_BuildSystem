@@ -35,7 +35,7 @@ namespace NMib::NBuildSystem
 					auto fApplyObject = [&](CEJSON const &_Object)
 						{
 							if (!_Object.f_IsObject())
-								fsp_ThrowError(_Context, "Append object expects object arguments");
+								fs_ThrowError(_Context, "Append object expects object arguments");
 
 							for (auto iObject = _Object.f_Object().f_SortedIterator(); iObject; ++iObject)
 								Object[iObject->f_Name()] = iObject->f_Value();
@@ -51,7 +51,7 @@ namespace NMib::NBuildSystem
 							if (!Entry.f_IsValid())
 								continue;
 							if (!Entry.f_IsObject())
-								fsp_ThrowError(_Context, "Append object array expected arrays members to evalutate to objects");
+								fs_ThrowError(_Context, "Append object array expected arrays members to evalutate to objects");
 
 							fApplyObject(Entry);
 						}
@@ -67,7 +67,7 @@ namespace NMib::NBuildSystem
 							for (auto &Entry : ExpressionResult.f_Array())
 							{
 								if (!Entry.f_IsObject())
-									fsp_ThrowError(_Context, "Append object expression array expected arrays members to evalutate to objects");
+									fs_ThrowError(_Context, "Append object expression array expected arrays members to evalutate to objects");
 
 								fApplyObject(Entry);
 							}
@@ -76,7 +76,7 @@ namespace NMib::NBuildSystem
 							fApplyObject(ExpressionResult);
 					}
 					else
-						fsp_ThrowError(_Context, "Append object only supports objects, arrays or expressions evaluating to objects or arrays");
+						fs_ThrowError(_Context, "Append object only supports objects, arrays or expressions evaluating to objects or arrays");
 				}
 				break;
 			default:
@@ -107,7 +107,7 @@ namespace NMib::NBuildSystem
 				else if (!ToAppend.f_IsValid())
 					; // Undefined values are ignored
 				else
-					fsp_ThrowError(_Context, "Append expressions expects an array to expand. {} resulted in : {}"_f << Expression << ToAppend);
+					fs_ThrowError(_Context, "Append expressions expects an array to expand. {} resulted in : {}"_f << Expression << ToAppend);
 			}
 			else
 				ReturnArray.f_Insert(fp_EvaluatePropertyValue(_Context, Entry.f_Get(), nullptr));
@@ -143,7 +143,7 @@ namespace NMib::NBuildSystem
 				auto Expression = fp_EvaluatePropertyValueExpression(_Context, ExpressionToken);
 				if (!Expression.f_IsString())
 				{
-					fsp_ThrowError
+					fs_ThrowError
 						(
 							_Context
 							, "Expressions in eval strings needs to evaluate to strings.\n\tExpression: {}\n\tValue: {}\n\tEvaluated string: {}\n"_f
@@ -180,7 +180,7 @@ namespace NMib::NBuildSystem
 				auto ExpressionResult = fp_EvaluatePropertyValueExpression(_Context, Accessor.m_Accessor.f_GetAsType<CBuildSystemSyntax::CExpression>());
 				if (!ExpressionResult.f_IsString())
 				{
-					fsp_ThrowError
+					fs_ThrowError
 						(
 							_Context
 							, "Expression {} does not evalutate to a string value for member access"_f << Accessor.m_Accessor.f_GetAsType<CBuildSystemSyntax::CExpression>()
@@ -199,7 +199,7 @@ namespace NMib::NBuildSystem
 					auto ExpressionResult = fp_EvaluatePropertyValueExpression(_Context, Subscript.m_Index.f_GetAsType<CBuildSystemSyntax::CExpression>());
 					if (!ExpressionResult.f_IsInteger())
 					{
-						fsp_ThrowError
+						fs_ThrowError
 							(
 								_Context
 								, "Expression {} does not evalutate to a integer value for array subscript access"_f
@@ -254,7 +254,7 @@ namespace NMib::NBuildSystem
 				auto pUserType = fp_GetUserTypeWithPositionForProperty(_Context.m_Context, UserTypeName);
 
 				if (!pUserType)
-					fsp_ThrowError(_Context, o_TypePosition, "Could not find user type of name '{}'"_f << UserTypeName);
+					fs_ThrowError(_Context, o_TypePosition, "Could not find user type of name '{}'"_f << UserTypeName);
 
 				pType = &pUserType->m_Type;
 				o_TypePosition = pUserType->m_Position;
@@ -300,7 +300,7 @@ namespace NMib::NBuildSystem
 						return pCanonicalType->m_Type.f_GetAsType<tf_CType>();
 				}
 			}
-			fsp_ThrowError(m_Context, "Could not apply accessor to type. Type '{}' does not have a {}"_f << *_pType << _pTypeName);
+			fs_ThrowError(m_Context, "Could not apply accessor to type. Type '{}' does not have a {}"_f << *_pType << _pTypeName);
 		}
 
 		auto f_GetCanonicalFunctor() const
@@ -349,7 +349,7 @@ namespace NMib::NBuildSystem
 						if (ClassType.m_OtherKeysType)
 							Vars.m_pType = &ClassType.m_OtherKeysType.f_Get().f_Get();
 						else
-							fsp_ThrowError(Vars.m_Context, "No member named '{}' in type '{}'"_f << _MemberName << *Vars.m_pType);
+							fs_ThrowError(Vars.m_Context, "No member named '{}' in type '{}'"_f << _MemberName << *Vars.m_pType);
 					}
 				}
 				, [&Vars](int64 _Index)
@@ -375,13 +375,13 @@ namespace NMib::NBuildSystem
 	CEJSON CBuildSystem::fp_EvaluatePropertyValueOperator(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::COperator const &_Value, CWritePropertyContext *_pWriteContext) const
 	{
 		if (_Value.m_Operator != CBuildSystemSyntax::COperator::EOperator_Append && _Value.m_Operator != CBuildSystemSyntax::COperator::EOperator_Prepend)
-			fsp_ThrowError(_Context, "Operator expressions can only be used in conditions");
+			fs_ThrowError(_Context, "Operator expressions can only be used in conditions");
 
 		bool bPrepend = _Value.m_Operator == CBuildSystemSyntax::COperator::EOperator_Prepend;
 		ch8 const *pOperatorName = bPrepend ? "prepend += operator" : "append =+ operator";
 
 		if (!_pWriteContext)
-			fsp_ThrowError(_Context, "{cc} can only be used at root"_f << pOperatorName);
+			fs_ThrowError(_Context, "{cc} can only be used at root"_f << pOperatorName);
 
 		auto &Property = _pWriteContext->m_Property;
 
@@ -389,10 +389,10 @@ namespace NMib::NBuildSystem
 		Identifier.m_PropertyType = Property.m_Type;
 		Identifier.m_Name = Property.m_Name;
 
- 		auto *pTypeWithPosition = fp_GetTypeForProperty(_Context.m_OriginalContext, Property);
+ 		auto *pTypeWithPosition = fp_GetTypeForProperty(_Context, Property);
 
 		if (!pTypeWithPosition)
-			fsp_ThrowError(_Context, "Found no type for {}"_f << Property);
+			fs_ThrowError(_Context, "Found no type for {}"_f << Property);
 
 		auto TypePosition = pTypeWithPosition->m_Position;
 
@@ -402,13 +402,13 @@ namespace NMib::NBuildSystem
 			pType = fp_GetCanonicalType(_Context, &pType->m_Type.f_GetAsType<CBuildSystemSyntax::CFunctionType>().m_Return.f_Get(), TypePosition);
 
 		if (!pType)
-			fsp_ThrowError(_Context, "Could not resolve type for {}"_f << Property);
+			fs_ThrowError(_Context, "Could not resolve type for {}"_f << Property);
 
 		CEJSON OriginalValue;
 		if (_pWriteContext->m_pWriteDestination)
 		{
 			if (!_pWriteContext->m_pAccessors)
-				fsp_ThrowError(_Context, "No accessors specified");
+				fs_ThrowError(_Context, "No accessors specified");
 
 			pType = fp_ApplyAccessorsToType(_Context, pType, *_pWriteContext->m_pAccessors, TypePosition);
 
@@ -431,7 +431,7 @@ namespace NMib::NBuildSystem
 						for (auto &Component : Member.f_Name().f_Split("."))
 						{
 							if (pObject->f_IsValid() && !pObject->f_IsObject())
-								fsp_ThrowError(_Context, "Encountered non object subobject of wrong type while appending '{}'"_f << Member.f_Name());
+								fs_ThrowError(_Context, "Encountered non object subobject of wrong type while appending '{}'"_f << Member.f_Name());
 
 							pObject = &(*pObject)[Component];
 						}
@@ -446,7 +446,7 @@ namespace NMib::NBuildSystem
 		if (pType->m_Type.f_IsOfType<CBuildSystemSyntax::CArrayType>())
 		{
 			if (OriginalValue.f_IsValid() && !OriginalValue.f_IsArray())
-				fsp_ThrowError(_Context, "Expected original value to be an array for {}. Value: {}"_f << pOperatorName << OriginalValue);
+				fs_ThrowError(_Context, "Expected original value to be an array for {}. Value: {}"_f << pOperatorName << OriginalValue);
 
 			auto &OriginalArray = OriginalValue.f_Array();
 
@@ -489,7 +489,7 @@ namespace NMib::NBuildSystem
 				fp_DoesValueConformToType(_Context, *pType, TypePosition, Right, EDoesValueConformToTypeFlag_None, &ConformErrorArray);
 				fp_DoesValueConformToType(_Context, pType->m_Type.f_GetAsType<CBuildSystemSyntax::CArrayType>().m_Type.f_Get(), TypePosition, Right, EDoesValueConformToTypeFlag_None, &ConformErrorElement);
 
-				fsp_ThrowError
+				fs_ThrowError
 					(
 						_Context
 						, "Value to append does not conform to the type for {}: {}\n"
@@ -508,10 +508,10 @@ namespace NMib::NBuildSystem
 		else if (pType->m_Type.f_IsOfType<CBuildSystemSyntax::CClassType>())
 		{
 			if (!Right.f_IsObject())
-				fsp_ThrowError(_Context, "Can only append objects to objects with {}"_f << pOperatorName);
+				fs_ThrowError(_Context, "Can only append objects to objects with {}"_f << pOperatorName);
 
 			if (!OriginalValue.f_IsObject() && OriginalValue.f_IsValid())
-				fsp_ThrowError(_Context, "Expected original value to be an object for {}"_f << pOperatorName);
+				fs_ThrowError(_Context, "Expected original value to be an object for {}"_f << pOperatorName);
 
 			fApplyObject();
 		}
@@ -523,7 +523,7 @@ namespace NMib::NBuildSystem
 			case CBuildSystemSyntax::CDefaultType::EType_Void:
 			case CBuildSystemSyntax::CDefaultType::EType_Boolean:
 			case CBuildSystemSyntax::CDefaultType::EType_Date:
-				fsp_ThrowError(_Context, "{cc} is not supported for this type. Type is: {}"_f << pOperatorName << *pType);
+				fs_ThrowError(_Context, "{cc} is not supported for this type. Type is: {}"_f << pOperatorName << *pType);
 				break;
 			case CBuildSystemSyntax::CDefaultType::EType_Any:
 				{
@@ -556,7 +556,7 @@ namespace NMib::NBuildSystem
 
 						if (OriginalValue.f_EType() != Right.f_EType())
 						{
-							fsp_ThrowError
+							fs_ThrowError
 								(
 									_Context
 									, "{cc} on any type needs left and right to be of same type. Type is: {} != {}"_f
@@ -602,7 +602,7 @@ namespace NMib::NBuildSystem
 					case NEncoding::EEJSONType_Boolean:
 					case NEncoding::EEJSONType_UserType:
 					case NEncoding::EEJSONType_Invalid:
-						fsp_ThrowError
+						fs_ThrowError
 							(
 								_Context
 								, "{cc} on any type does not support appending JSON type: {}"_f << pOperatorName << fg_EJSONTypeToString(OriginalValue.f_EType())
@@ -618,9 +618,9 @@ namespace NMib::NBuildSystem
 						break;
 
 					if (OriginalValue.f_IsValid() && OriginalValue.f_EType() != NEncoding::EEJSONType_String)
-						fsp_ThrowError(_Context, "Expected original value to be a string for {}"_f << pOperatorName);
+						fs_ThrowError(_Context, "Expected original value to be a string for {}"_f << pOperatorName);
 					if (Right.f_EType() != NEncoding::EEJSONType_String)
-						fsp_ThrowError(_Context, "Expected right value to be a string for {}"_f << pOperatorName);
+						fs_ThrowError(_Context, "Expected right value to be a string for {}"_f << pOperatorName);
 
 					if (bPrepend)
 					{
@@ -637,9 +637,9 @@ namespace NMib::NBuildSystem
 						break;
 
 					if (OriginalValue.f_IsValid() && OriginalValue.f_EType() != NEncoding::EEJSONType_Integer)
-						fsp_ThrowError(_Context, "Expected original value to be an integer for {}"_f << pOperatorName);
+						fs_ThrowError(_Context, "Expected original value to be an integer for {}"_f << pOperatorName);
 					if (Right.f_EType() != NEncoding::EEJSONType_Integer)
-						fsp_ThrowError(_Context, "Expected right value to be an integer for {}"_f << pOperatorName);
+						fs_ThrowError(_Context, "Expected right value to be an integer for {}"_f << pOperatorName);
 
 					OriginalValue.f_Integer() += Right.f_Integer();
 				}
@@ -650,9 +650,9 @@ namespace NMib::NBuildSystem
 						break;
 
 					if (OriginalValue.f_IsValid() && OriginalValue.f_EType() != NEncoding::EEJSONType_Float)
-						fsp_ThrowError(_Context, "Expected original value to be a float for {}"_f << pOperatorName);
+						fs_ThrowError(_Context, "Expected original value to be a float for {}"_f << pOperatorName);
 					if (Right.f_EType() != NEncoding::EEJSONType_Float)
-						fsp_ThrowError(_Context, "Expected right value to be a float for {}"_f << pOperatorName);
+						fs_ThrowError(_Context, "Expected right value to be a float for {}"_f << pOperatorName);
 
 					OriginalValue.f_Float() += Right.f_Float();
 				}
@@ -663,9 +663,9 @@ namespace NMib::NBuildSystem
 						break;
 
 					if (OriginalValue.f_IsValid() && OriginalValue.f_EType() != NEncoding::EEJSONType_Binary)
-						fsp_ThrowError(_Context, "Expected original value to be binary for {}"_f << pOperatorName);
+						fs_ThrowError(_Context, "Expected original value to be binary for {}"_f << pOperatorName);
 					if (Right.f_EType() != NEncoding::EEJSONType_Binary)
-						fsp_ThrowError(_Context, "Expected right value to be binary for {}"_f << pOperatorName);
+						fs_ThrowError(_Context, "Expected right value to be binary for {}"_f << pOperatorName);
 
 					if (bPrepend)
 					{
@@ -679,20 +679,20 @@ namespace NMib::NBuildSystem
 			}
 		}
 		else
-			fsp_ThrowError(_Context, "Append += operator is only supported for array and class types. Current type is: {}"_f << *pType);
+			fs_ThrowError(_Context, "Append += operator is only supported for array and class types. Current type is: {}"_f << *pType);
 
 		return OriginalValue;
 	}
 
 	CEJSON CBuildSystem::fp_EvaluatePropertyValueDefine(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CDefine const &_Value) const
 	{
-		fsp_ThrowError(_Context, "Define expressions can only be used at root");
+		fs_ThrowError(_Context, "Define expressions can only be used at root");
 		return {};
 	}
 
 	CEJSON CBuildSystem::fp_EvaluatePropertyValueExpressionAppend(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CExpressionAppend const &_Value) const
 	{
-		fsp_ThrowError(_Context, "Append expressions can only be used in arrays or as function parameters");
+		fs_ThrowError(_Context, "Append expressions can only be used in arrays or as function parameters");
 		return {};
 	}
 
@@ -708,13 +708,17 @@ namespace NMib::NBuildSystem
 		return nullptr;
 	}
 
-	CTypeWithPosition const *CBuildSystem::fp_GetTypeForProperty(CEntity const &_Entity, CPropertyKey const &_VariableName) const
+	CTypeWithPosition const *CBuildSystem::fp_GetTypeForProperty(CBuildSystem::CEvalPropertyValueContext &_Context, CPropertyKey const &_VariableName) const
 	{
+		auto *pOverriddenType = _Context.m_EvalContext.m_OverriddenTypes.f_FindEqual(_VariableName);
+		if (pOverriddenType)
+			return pOverriddenType;
+
 		auto pBuiltin = mp_BuiltinVariablesDefinitions.f_FindEqual(_VariableName);
 		if (pBuiltin)
 			return &*pBuiltin;
 
-		for (auto *pEntity = &_Entity; pEntity; pEntity = pEntity->m_pParent)
+		for (auto *pEntity = &_Context.m_OriginalContext; pEntity; pEntity = pEntity->m_pParent)
 		{
 			auto pType = pEntity->f_Data().m_VariableDefinitions.f_FindEqual(_VariableName);
 			if (pType)
@@ -890,7 +894,7 @@ namespace NMib::NBuildSystem
 
 					auto *pType = fp_GetUserTypeWithPositionForProperty(_Context.m_Context, SpecificType.m_Name);
 					if (!pType)
-						fsp_ThrowError(_Context, "Could not find user type of name '{}'"_f << SpecificType.m_Name);
+						fs_ThrowError(_Context, "Could not find user type of name '{}'"_f << SpecificType.m_Name);
 
 					if (o_pError)
 						o_pError->m_ErrorPath.f_Insert("type({})"_f << SpecificType.m_Name);
@@ -1315,10 +1319,10 @@ namespace NMib::NBuildSystem
 			, EDoesValueConformToTypeFlag _Flags
 		) const
 	{
-		auto *pType = fp_GetTypeForProperty(_Context.m_OriginalContext, _Property);
+		auto *pType = fp_GetTypeForProperty(_Context, _Property);
 
 		if (!pType)
-			fsp_ThrowError(_Context, _Position, "Found no type for {}"_f << _Property);
+			fs_ThrowError(_Context, _Position, "Found no type for {}"_f << _Property);
 
 		fp_CheckValueConformToType
 			(
@@ -1359,7 +1363,7 @@ namespace NMib::NBuildSystem
 					Errors.f_Insert({TypePosition, "See definition of function type"});
 				if (_TypePosition != TypePosition && _TypePosition.f_IsValid())
 					Errors.f_Insert({TypePosition, "See definition of function type (original)"});
-				fsp_ThrowError(_Context, _Position, "Trying to access a function as a variable, you need to call it", Errors);
+				fs_ThrowError(_Context, _Position, "Trying to access a function as a variable, you need to call it", Errors);
 			}
 		}
 
@@ -1382,7 +1386,7 @@ namespace NMib::NBuildSystem
 			if (_TypePosition != TypePosition && _TypePosition.f_IsValid())
 				Errors.f_Insert({_TypePosition, "See definition of type (original)"});
 
-			fsp_ThrowError
+			fs_ThrowError
 				(
 					_Context
 					, _Position
@@ -1409,7 +1413,7 @@ namespace NMib::NBuildSystem
 				{
 					if (!Return.f_IsObject())
 					{
-						fsp_ThrowError
+						fs_ThrowError
 							(
 								_Context
 								, "JSON value '{}' is not an object so cannot apply member name '{}'"_f
@@ -1428,12 +1432,12 @@ namespace NMib::NBuildSystem
 				, [&](int64 _Index)
 				{
 					if (!Return.f_IsArray())
-						fsp_ThrowError(_Context, "JSON value '{}' is not an array so cannot apply subscript index"_f << Return.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined));
+						fs_ThrowError(_Context, "JSON value '{}' is not an array so cannot apply subscript index"_f << Return.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined));
 
 					auto &Array = Return.f_Array();
 
 					if (_Index >= int64(TCLimitsInt<smint>::mc_Max) || _Index < 0 || _Index >= int64(Array.f_GetLen()))
-						fsp_ThrowError(_Context, "Index {} is out of range for array that has {} elements"_f << _Index << Array.f_GetLen());
+						fs_ThrowError(_Context, "Index {} is out of range for array that has {} elements"_f << _Index << Array.f_GetLen());
 
 					Return = fg_Move(Array[_Index]);
 				}
@@ -1464,7 +1468,7 @@ namespace NMib::NBuildSystem
 
 			if (!pOriginalContext)
 			{
-				fsp_ThrowError
+				fs_ThrowError
 					(
 						_Context
 						, "No entity with type '{}' found in parent entities for path: {}"_f << fg_EntityTypeToStr(_Value.m_EntityType) << _Context.m_OriginalContext.f_GetPath()
@@ -1548,7 +1552,7 @@ namespace NMib::NBuildSystem
 			{
 				CStr Ret;
 				if (!mp_GeneratorInterface->f_GetBuiltin(Key.m_Name, Ret))
-					fsp_ThrowError(_Context, CStr::CFormat("Unrecognized builtin '{}'") << Key.m_Name);
+					fs_ThrowError(_Context, CStr::CFormat("Unrecognized builtin '{}'") << Key.m_Name);
 				return fg_Move(Ret);
 			}
 		}
@@ -1557,19 +1561,19 @@ namespace NMib::NBuildSystem
 			auto &ContextKey = pOriginalContext->f_GetKey();
 
 			if (ContextKey.m_Type == EEntityType_Root)
-				fsp_ThrowError(_Context, "Cannot access this on root entity");
+				fs_ThrowError(_Context, "Cannot access this on root entity");
 
 			if (Key.m_Name == "Identity")
 			{
 				if (!ContextKey.m_Name.f_IsConstantString())
-					fsp_ThrowError(_Context, "Identity can only be gotten from entity with constant string name. Path: {}"_f << pOriginalContext->f_GetPath());
+					fs_ThrowError(_Context, "Identity can only be gotten from entity with constant string name. Path: {}"_f << pOriginalContext->f_GetPath());
 
 				return pOriginalContext->f_GetKeyName();
 			}
 			else if (Key.m_Name == "IdentityAsAbsolutePath")
 			{
 				if (!ContextKey.m_Name.f_IsConstantString())
-					fsp_ThrowError(_Context, "Identity can only be gotten from entity with constant string name. Path: {}"_f << pOriginalContext->f_GetPath());
+					fs_ThrowError(_Context, "Identity can only be gotten from entity with constant string name. Path: {}"_f << pOriginalContext->f_GetPath());
 
 				return CFile::fs_GetExpandedPath(pOriginalContext->f_GetKeyName(), CFile::fs_GetPath(pOriginalContext->f_Data().m_Position.m_File));
 			}
@@ -1578,7 +1582,7 @@ namespace NMib::NBuildSystem
 			else if (Key.m_Name == "Type")
 				return fg_EntityTypeToStr(ContextKey.m_Type);
 			else
-				fsp_ThrowError(_Context, CStr::CFormat("Unrecognized entity (this) accessor '{}'") << Key.m_Name);
+				fs_ThrowError(_Context, CStr::CFormat("Unrecognized entity (this) accessor '{}'") << Key.m_Name);
 		}
 		else if (pOriginalContext == &_Context.m_OriginalContext)
 		{
@@ -1651,7 +1655,7 @@ namespace NMib::NBuildSystem
 	{
 		CEJSON Conditional = fp_EvaluatePropertyValueParam(_Context, _Value.m_Conditional);
 		if (!Conditional.f_IsBoolean())
-			fsp_ThrowError(_Context, "Expected conditional to evalute to a boolean");
+			fs_ThrowError(_Context, "Expected conditional to evalute to a boolean");
 
 		if (Conditional.f_Boolean())
 			return fp_EvaluatePropertyValueParam(_Context, _Value.m_Left);
@@ -1664,7 +1668,7 @@ namespace NMib::NBuildSystem
 		if (!_Value.m_Accessors.f_IsEmpty())
 		{
 			if (!_pProperty)
-				fsp_ThrowError(_Context, "Accessors are only supported at root");
+				fs_ThrowError(_Context, "Accessors are only supported at root");
 
 			CBuildSystemSyntax::CIdentifier Identifier;
 			Identifier.m_PropertyType = _pProperty->m_Type;
@@ -1681,19 +1685,19 @@ namespace NMib::NBuildSystem
 					{
 						auto pMember = pWriteDestination->f_GetMember(_MemberName);
 						if (!pMember)
-							fsp_ThrowError(_Context, "No member named '{}' in JSON object"_f << _MemberName);
+							fs_ThrowError(_Context, "No member named '{}' in JSON object"_f << _MemberName);
 
 						pWriteDestination = pMember;
 					}
 					, [&](int64 _Index)
 					{
 						if (!pWriteDestination->f_IsArray())
-							fsp_ThrowError(_Context, "JSON object is not an array so cannot apply subscript index");
+							fs_ThrowError(_Context, "JSON object is not an array so cannot apply subscript index");
 
 						auto &Array = pWriteDestination->f_Array();
 
 						if (_Index >= int64(TCLimitsInt<smint>::mc_Max) || _Index < 0 || _Index >= int64(Array.f_GetLen()))
-							fsp_ThrowError(_Context, "Index {} is out of range for array that has {} elements"_f << _Index << Array.f_GetLen());
+							fs_ThrowError(_Context, "Index {} is out of range for array that has {} elements"_f << _Index << Array.f_GetLen());
 
 						pWriteDestination = &Array[_Index];
 					}
@@ -1748,7 +1752,7 @@ namespace NMib::NBuildSystem
 				else if (!ToAppend.f_IsValid())
 					; // Undefined values are ignored
 				else
-					fsp_ThrowError(_Context, "Append expressions expects an array to expand. {} resulted in : {}"_f << Expression << ToAppend);
+					fs_ThrowError(_Context, "Append expressions expects an array to expand. {} resulted in : {}"_f << Expression << ToAppend);
 			}
 			else
 				EvalParams.f_Insert(fp_EvaluatePropertyValueParam(_Context, Param));
@@ -1761,7 +1765,7 @@ namespace NMib::NBuildSystem
 			for (auto &EvalParam : EvalParams)
 			{
 				if (!iParamType)
-					fsp_ThrowError(_Context, "Too many parameters for function '{}' with type: {}"_f << _FunctionCall.m_Name << _FunctionType);
+					fs_ThrowError(_Context, "Too many parameters for function '{}' with type: {}"_f << _FunctionCall.m_Name << _FunctionType);
 
 				fp_CheckValueConformToType
 					(
@@ -1815,7 +1819,7 @@ namespace NMib::NBuildSystem
 					_fConsumeParam(fg_Move(Param), *iParamType, false);
 				}
 				else
-					fsp_ThrowError(_Context, "Missing parameters for function '{}' with type: {}"_f << _FunctionCall.m_Name << _FunctionType);
+					fs_ThrowError(_Context, "Missing parameters for function '{}' with type: {}"_f << _FunctionCall.m_Name << _FunctionType);
 				++iParam;
 			}
 		}
@@ -1864,16 +1868,16 @@ namespace NMib::NBuildSystem
 
 		CPropertyKey PropertyKey(_FunctionCall.m_PropertyType, _FunctionCall.m_Name);
 
-		auto *pTypeWithPosition = fp_GetTypeForProperty(_Context.m_OriginalContext, PropertyKey);
+		auto *pTypeWithPosition = fp_GetTypeForProperty(_Context, PropertyKey);
 		if (!pTypeWithPosition)
-			fsp_ThrowError(_Context, "No such function: {}"_f << PropertyKey);
+			fs_ThrowError(_Context, "No such function: {}"_f << PropertyKey);
 
 		auto TypePosition = pTypeWithPosition->m_Position;
 
 		CBuildSystemSyntax::CType const *pType = fp_GetCanonicalType(_Context, &pTypeWithPosition->m_Type, TypePosition);
 
 		if (!pType->m_Type.f_IsOfType<CBuildSystemSyntax::CFunctionType>())
-			fsp_ThrowError(_Context, "Type is a variable, not a fuction: {}"_f << PropertyKey);
+			fs_ThrowError(_Context, "Type is a variable, not a fuction: {}"_f << PropertyKey);
 
 		auto &FunctionType = pType->m_Type.f_GetAsType<CBuildSystemSyntax::CFunctionType>();
 

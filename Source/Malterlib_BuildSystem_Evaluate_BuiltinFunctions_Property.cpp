@@ -17,10 +17,13 @@ namespace NMib::NBuildSystem
 		CPropertyKey PropertyKey;
 		CStr EntityName;
 		mint iProperty = 0;
+
+		CTypeWithPosition const *pOverrideType = nullptr;
+
 		if (_Function == EBuiltinFunctionGetProperty_HasEntity)
 		{
 			if (_Params.f_GetLen() != 1 || !_Params[iProperty].f_IsString())
-				fsp_ThrowError(_Context, "HasEntity takes one string parameter");
+				fs_ThrowError(_Context, "HasEntity takes one string parameter");
 			EntityName = _Params[iProperty].f_String();
 			++iProperty;
 		}
@@ -28,20 +31,33 @@ namespace NMib::NBuildSystem
 		{
 			PropertyKey.m_Type = fg_PropertyTypeFromStr(_Params[iProperty].f_String());
 			if (PropertyKey.m_Type == EPropertyType_Invalid)
-				fsp_ThrowError(_Context, CStr::CFormat("Invalid property type '{}'") << _Params[iProperty]);
+				fs_ThrowError(_Context, "Invalid property type '{}'"_f << _Params[iProperty]);
 			++iProperty;
 
 			PropertyKey.m_Name = _Params[iProperty].f_String();
 			++iProperty;
 
-			EntityName = _Params[iProperty].f_String();
-			++iProperty;
+			if (_Function == EBuiltinFunctionGetProperty_GetWithType)
+			{
+				CPropertyKey GetFrom = CPropertyKey::fs_FromString(_Params[iProperty].f_String(), _Context);
+				++iProperty;
+
+				pOverrideType = fp_GetTypeForProperty(_Context, GetFrom);
+				if (!pOverrideType)
+					fs_ThrowError(_Context, "No type found for property '{}'"_f << GetFrom);
+			}
+			else
+			{
+				EntityName = _Params[iProperty].f_String();
+				++iProperty;
+			}
 		}
 
 		CEJSON Return;
 		CStr NotFoundError;
 
 		auto pEntity = &_Context.m_OriginalContext;
+		if (_Function != EBuiltinFunctionGetProperty_GetWithType)
 		{
 			CStr Entity = EntityName;
 			pEntity = nullptr;
@@ -57,14 +73,14 @@ namespace NMib::NBuildSystem
 
 					pEntity = pEntity->m_pParent;
 					if (!pEntity)
-						fsp_ThrowError(_Context, "No parent found. {}"_f << _Context.m_OriginalContext.f_GetPath());
+						fs_ThrowError(_Context, "No parent found. {}"_f << _Context.m_OriginalContext.f_GetPath());
 					continue;
 				}
 
 				CEntityKey EntityKey;
 				EntityKey.m_Type = fg_EntityTypeFromStr(Type);
 				if (EntityKey.m_Type == EEntityType_Invalid)
-					fsp_ThrowError(_Context, CStr::CFormat("Invalid entity type '{}'") << Type);
+					fs_ThrowError(_Context, "Invalid entity type '{}'"_f << Type);
 
 				if (SubEntity == "*")
 				{
@@ -89,7 +105,7 @@ namespace NMib::NBuildSystem
 						pEntity = pEntity->m_pParent;
 
 					if (!pEntity)
-						fsp_ThrowError(_Context, fg_Format("No child or parent with type '{}' found", Type));
+						fs_ThrowError(_Context, fg_Format("No child or parent with type '{}' found", Type));
 					continue;
 				}
 
@@ -143,7 +159,7 @@ namespace NMib::NBuildSystem
 			if (!pEntity)
 			{
 				if (_Function == EBuiltinFunctionGetProperty_GetProperty)
-					fsp_ThrowError(_Context, _Context.m_Position, CStr::CFormat("Entity '{}' not found. {}") << EntityName << NotFoundError);
+					fs_ThrowError(_Context, _Context.m_Position, "Entity '{}' not found. {}"_f << EntityName << NotFoundError);
 				else
 					Return = false;
 			}
@@ -155,7 +171,7 @@ namespace NMib::NBuildSystem
 				{
 					for (auto &Member : _Params[iProperty].f_Object())
 					{
-						CPropertyKey Key = CPropertyKey::fs_FromString(Member.f_Name(), _Context.m_Position);
+						CPropertyKey Key = CPropertyKey::fs_FromString(Member.f_Name(), _Context);
 						auto &Property = TempProperties.m_Properties[Key];
 						Property.m_Value = Member.f_Value();
 						Property.m_Type = EEvaluatedPropertyType_Implicit;
@@ -164,6 +180,10 @@ namespace NMib::NBuildSystem
 				}
 
 				CEvaluationContext EvalContext(&TempProperties);
+
+				if (pOverrideType)
+					EvalContext.m_OverriddenTypes[PropertyKey] = *pOverrideType;
+
 				CEvalPropertyValueContext Context{*pEntity, *pEntity, pEntity->f_Data().m_Position, EvalContext, &_Context};
 
 				{
@@ -217,6 +237,25 @@ namespace NMib::NBuildSystem
 					}
 					,
 					{
+						"GetWithType"
+						, CBuiltinFunction
+						{
+							fg_FunctionType
+							(
+								g_String
+								, fg_FunctionParam(g_String, "_PropertyType")
+								, fg_FunctionParam(g_String, "_PropertyName")
+								, fg_FunctionParam(g_String, "_VariableToGetTypeFrom")
+								, fg_FunctionParam(fg_Optional(g_ObjectWithAny), "_Properties", g_Optional)
+							)
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							{
+								return _This.fp_BuiltinFunction_GetProperty(_Context, fg_Move(_Params), EBuiltinFunctionGetProperty_GetWithType, &_Context);
+							}
+						}
+					}
+					,
+					{
 						"HasProperty"
 						, CBuiltinFunction
 						{
@@ -258,7 +297,7 @@ namespace NMib::NBuildSystem
 
 								EEntityType EntityType = fg_EntityTypeFromStr(EntityTypeStr);
 								if (EntityType == EEntityType_Invalid)
-									fsp_ThrowError(_Context, CStr::CFormat("Invalid entity type '{}'") << EntityTypeStr);
+									fs_ThrowError(_Context, "Invalid entity type '{}'"_f << EntityTypeStr);
 
 								auto pOriginalContext = &_Context.m_OriginalContext;
 								while (pOriginalContext && pOriginalContext->f_GetKey().m_Type != EntityType)
@@ -501,7 +540,7 @@ namespace NMib::NBuildSystem
 									else if (JSONTypeString == "UserType")
 										JSONType = EEJSONType_UserType;
 									else
-										fsp_ThrowError(_Context, CStr::CFormat("Invalid JSON type '{}'") << JSONTypeString);
+										fs_ThrowError(_Context, "Invalid JSON type '{}'"_f << JSONTypeString);
 
 									return !!_Params[0].f_GetMember(_Params[1].f_String(), JSONType);
 								}

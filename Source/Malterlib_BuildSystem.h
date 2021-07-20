@@ -135,6 +135,7 @@ namespace NMib::NBuildSystem
 			CEvaluatedProperties *m_pEvaluatedProperties = nullptr;
 			NContainer::TCLinkedList<CExplodeStackEntry> m_ExplodeListStack;
 			CBuildSystemSyntax::CFunctionType const *m_pCallingFunction = nullptr;
+			TCMap<CPropertyKey, CTypeWithPosition> m_OverriddenTypes;
 		};
 
 		struct CEvalPropertyValueContext
@@ -318,6 +319,21 @@ namespace NMib::NBuildSystem
 		[[noreturn]] static void fs_ThrowError(CFilePosition const &_Position, NStr::CStr const &_Error);
 		[[noreturn]] static void fs_ThrowError(CFilePosition const &_Position, NStr::CStr const &_Error, NContainer::TCVector<CBuildSystemError> const &_Errors);
 		[[noreturn]] static void fs_ThrowError(CBuildSystemRegistry const &_Registry, NStr::CStr const &_Error);
+		[[noreturn]] static void fs_ThrowError
+			(
+				CEvalPropertyValueContext &_Context
+				, CFilePosition const &_Position
+				, NStr::CStr const &_Error
+				, NContainer::TCVector<CBuildSystemError> const &_Errors = {}
+			)
+		;
+		[[noreturn]] static void fs_ThrowError
+			(
+				CEvalPropertyValueContext &_Context
+				, NStr::CStr const &_Error
+				, NContainer::TCVector<CBuildSystemError> const &_Errors = {}
+			)
+		;
 		static NStr::CStr fs_GetNameIdentifierString(CBuildSystemRegistry const &_Registry);
 		void f_AddSourceFile(NStr::CStr const &_File) const;
 		void f_CheckPropertyTypeValue
@@ -485,6 +501,7 @@ namespace NMib::NBuildSystem
 			EBuiltinFunctionGetProperty_GetProperty
 			, EBuiltinFunctionGetProperty_HasProperty
 			, EBuiltinFunctionGetProperty_HasEntity
+			, EBuiltinFunctionGetProperty_GetWithType
 		};
 
 		enum EFindFilesFunctionType
@@ -529,7 +546,7 @@ namespace NMib::NBuildSystem
 				, NStorage::TCSharedPointer<CCondition> const &_pConditions
 			) const
 		;
-		CTypeWithPosition const *fp_GetTypeForProperty(CEntity const &_Entity, CPropertyKey const &_VariableName) const;
+		CTypeWithPosition const *fp_GetTypeForProperty(CBuildSystem::CEvalPropertyValueContext &_Context, CPropertyKey const &_VariableName) const;
 		CTypeWithPosition const *fp_GetUserTypeWithPositionForProperty(CEntity const &_Entity, NStr::CStr const &_UserType) const;
 
 		enum EDoesValueConformToTypeFlag
@@ -606,20 +623,6 @@ namespace NMib::NBuildSystem
 		[[noreturn]] static void fsp_ThrowError(CEntity const &_Entity, CFilePosition const &_Position, NStr::CStr const &_Error);
 		[[noreturn]] static void fsp_ThrowError(CEntity const &_Entity, CFilePosition const &_Position, NStr::CStr const &_Error, NContainer::TCVector<CBuildSystemError> const &_Errors);
 		[[noreturn]] static void fsp_ThrowError(CBuildSystemRegistry const &_Registry, NStr::CStr const &_Error);
-		[[noreturn]] static void fsp_ThrowError
-			(
-				CEvalPropertyValueContext &_Context
-				, CFilePosition const &_Position
-				, NStr::CStr const &_Error
-				, NContainer::TCVector<CBuildSystemError> const &_Errors = {}
-			)
-		;
-		[[noreturn]] static void fsp_ThrowError
-			(
-				CEvalPropertyValueContext &_Context
-				, NStr::CStr const &_Error
-				, NContainer::TCVector<CBuildSystemError> const &_Errors = {}
-			);
 
 		enum EHandleKeyFlag
 		{
@@ -875,6 +878,7 @@ namespace NMib::NBuildSystem
 }
 
 #include "Malterlib_BuildSystem.hpp"
+#include "Malterlib_BuildSystem_Property.hpp"
 
 #ifndef DMibPNoShortCuts
 	using namespace NMib::NBuildSystem;

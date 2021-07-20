@@ -72,22 +72,6 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	CPropertyKey CPropertyKey::fs_FromString(CStr const &_String, CFilePosition const &_Position)
-	{
-		if (auto iPoint = _String.f_FindChar('.'); iPoint >= 0)
-		{
-			CStr PropertyType = _String.f_Left(iPoint);
-
-			EPropertyType Type = fg_PropertyTypeFromStr(_String.f_Left(iPoint));
-			if (PropertyType.f_IsEmpty() || Type == EPropertyType_Invalid)
-				CBuildSystem::fs_ThrowError(_Position, CStr::CFormat("Unrecognized property '{}'") << PropertyType);
-
-			return {Type, _String.f_Extract(iPoint + 1)};
-		}
-
-		return {EPropertyType_Property, _String};
-	}
-
 	void CBuildSystem::f_CheckPropertyTypeValue
 		(
 			EPropertyType _PropType

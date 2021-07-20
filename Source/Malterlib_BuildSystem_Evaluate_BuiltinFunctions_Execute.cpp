@@ -70,7 +70,7 @@ namespace NMib::NBuildSystem
 								TCVector<CStr> Inputs = _Params[1].f_StringArray();
 
 								if (GenerateStateFile.f_IsEmpty())
-									fsp_ThrowError(_Context, "You need to specify states file");
+									fs_ThrowError(_Context, "You need to specify states file");
 
 								CStr Ret;
 
@@ -123,7 +123,7 @@ namespace NMib::NBuildSystem
 								}
 								catch (CException const &_Exception)
 								{
-									fsp_ThrowError(_Context, fg_Format("ExecuteCommand({vs,vb}) failed: {}", FunctionParams, _Exception));
+									fs_ThrowError(_Context, fg_Format("ExecuteCommand({vs,vb}) failed: {}", FunctionParams, _Exception));
 								}
 
 								CExecuteCommandState State;

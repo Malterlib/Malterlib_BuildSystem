@@ -24,17 +24,17 @@ namespace NMib::NBuildSystem
 							)
 							, [this](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
 							{
-								CPropertyKey FunctionPropertyKey = CPropertyKey::fs_FromString(_Params[1].f_String(), _Context.m_Position);
+								CPropertyKey FunctionPropertyKey = CPropertyKey::fs_FromString(_Params[1].f_String(), _Context);
 
-								auto *pTypeWithPosition = fp_GetTypeForProperty(_Context.m_OriginalContext, FunctionPropertyKey);
+								auto *pTypeWithPosition = fp_GetTypeForProperty(_Context, FunctionPropertyKey);
 								if (!pTypeWithPosition)
-									fsp_ThrowError(_Context, "Expected function as argument to ForEach, instead got: {}"_f << FunctionPropertyKey);
+									fs_ThrowError(_Context, "Expected function as argument to ForEach, instead got: {}"_f << FunctionPropertyKey);
 
 								auto TypePosition = pTypeWithPosition->m_Position;
 								CBuildSystemSyntax::CType const *pType = fp_GetCanonicalType(_Context, &pTypeWithPosition->m_Type, TypePosition);
 
 								if (!pType->m_Type.f_IsOfType<CBuildSystemSyntax::CFunctionType>())
-									fsp_ThrowError(_Context, "Expected function as argument to ForEach, instead got: {}"_f << FunctionPropertyKey);
+									fs_ThrowError(_Context, "Expected function as argument to ForEach, instead got: {}"_f << FunctionPropertyKey);
 
 								auto &FunctionType = pType->m_Type.f_GetAsType<CBuildSystemSyntax::CFunctionType>();
 
@@ -54,7 +54,7 @@ namespace NMib::NBuildSystem
 								{
 									for (auto &Member : _Params[2].f_Object())
 									{
-										CPropertyKey Key = CPropertyKey::fs_FromString(Member.f_Name(), _Context.m_Position);
+										CPropertyKey Key = CPropertyKey::fs_FromString(Member.f_Name(), _Context);
 										auto &Property = TempProperties.m_Properties[Key];
 										Property.m_Value = Member.f_Value();
 										Property.m_Type = EEvaluatedPropertyType_Implicit;
