@@ -463,6 +463,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 				TCSet<CConfiguration> m_EnabledConfigs;
 			};
 
+			auto const FileTypeKey = CPropertyKey(EPropertyType_Compile, "Type");
+
 			TCMap<CStr, CCompilType> CompileTypes;
 			CXMLElement *pFileItemGroup = nullptr;
 			// Files
@@ -740,7 +742,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 					SearchList.f_Insert("CompileShared");
 
 					TCMap<CPropertyKey, CEJSON> StartValuesCompile;
-					StartValuesCompile[CPropertyKey(EPropertyType_Compile, "Type")] = iType.f_GetKey();
+					StartValuesCompile[FileTypeKey] = iType.f_GetKey();
 
 					TCVector<CEntity *> ToRemove;
 					auto Cleanup = g_OnScopeExit > [&]
@@ -928,6 +930,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 									pParent = (*pFileConfig)->m_pParent;
 								else
 									pParent = &fg_RemoveQualifiers(*(*pFileConfig));
+
 								CEntityKey NewEntityKey;
 								NewEntityKey.m_Type = EEntityType_File;
 								NewEntityKey.m_Name.m_Value = FileName;
@@ -935,10 +938,14 @@ namespace NMib::NBuildSystem::NVisualStudio
 								auto &NewEntity = *NewEntityMap;
 								auto &NewData = NewEntity.f_DataWritable();
 								if (bFile)
+								{
 									NewData.m_Properties = (*pFileConfig)->f_Data().m_Properties;
+									NewData.m_Properties.f_Remove(FileTypeKey);
+									
+								}
 								NewData.m_Position = FilePos;
 								TCMap<CPropertyKey, CEJSON> Values;
-								Values[CPropertyKey(EPropertyType_Compile, "Type")] = CompileType;
+								Values[FileTypeKey] = CompileType;
 								m_BuildSystem.f_InitEntityForEvaluationNoEnv(NewEntity, Values, EEvaluatedPropertyType_External);
 								{
 									NewEntity.f_AddProperty
