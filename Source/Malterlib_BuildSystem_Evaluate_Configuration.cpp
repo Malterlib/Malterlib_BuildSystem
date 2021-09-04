@@ -12,24 +12,13 @@ namespace NMib::NBuildSystem
 			CStr m_ConfigType;
 			CStr m_ConfigName;
 
-			bool operator < (CConfigKey const &_Right) const
-			{
-				if (m_ConfigType < _Right.m_ConfigType)
-					return true;
-				else if (m_ConfigType > _Right.m_ConfigType)
-					return false;
-
-				return m_ConfigName < _Right.m_ConfigName;
-			}
+			auto operator <=> (CConfigKey const &_Right) const = default;
 		};
 
 		struct CConfigTuple
 		{
 			TCMap<CConfigKey, CBuildSystemConfiguration const *> m_Keys;
-			bool operator < (CConfigTuple const &_Right) const
-			{
-				return m_Keys < _Right.m_Keys;
-			}
+			auto operator <=> (CConfigTuple const &_Right) const = default;
 		};
 
 	}

@@ -11,8 +11,7 @@ namespace NMib::NBuildSystem
 {
 	struct CEntityKey
 	{
-		inline_always bool operator < (CEntityKey const &_Right) const;
-		inline_always bool operator == (CEntityKey const &_Right) const;
+		inline_always auto operator <=> (CEntityKey const &_Right) const = default;
 
 		template <typename tf_CStr>
 		void f_Format(tf_CStr &o_Str) const
@@ -20,10 +19,10 @@ namespace NMib::NBuildSystem
 			o_Str += typename tf_CStr::CFormat("{}:{}") << fg_EntityTypeToStr(m_Type) << m_Name;
 		}
 
+		NStr::CStr const &f_GetName(CFilePosition const &_Position) const;
+
 		EEntityType m_Type = EEntityType_Root;
 		CBuildSystemSyntax::CValue m_Name;
-
-		NStr::CStr const &f_GetName(CFilePosition const &_Position) const;
 	};
 
 	enum EEntityCopyFlag

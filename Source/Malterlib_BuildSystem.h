@@ -135,7 +135,7 @@ namespace NMib::NBuildSystem
 			CEvaluatedProperties *m_pEvaluatedProperties = nullptr;
 			NContainer::TCLinkedList<CExplodeStackEntry> m_ExplodeListStack;
 			CBuildSystemSyntax::CFunctionType const *m_pCallingFunction = nullptr;
-			TCMap<CPropertyKey, CTypeWithPosition> m_OverriddenTypes;
+			NContainer::TCMap<CPropertyKey, CTypeWithPosition> m_OverriddenTypes;
 		};
 
 		struct CEvalPropertyValueContext

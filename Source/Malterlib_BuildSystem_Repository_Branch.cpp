@@ -448,9 +448,9 @@ namespace NMib::NBuildSystem
 									return "refs/tags/{}"_f << m_Tag;
 								}
 
-								bool operator < (CTag const &_Right) const
+								auto operator <=> (CTag const &_Right) const
 								{
-									return fg_TupleReferences(m_Remote, m_Tag) < fg_TupleReferences(_Right.m_Remote, _Right.m_Tag);
+									return fg_TupleReferences(m_Remote, m_Tag) <=> fg_TupleReferences(_Right.m_Remote, _Right.m_Tag);
 								}
 
 								CStr m_Remote;

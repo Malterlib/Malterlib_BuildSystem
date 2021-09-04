@@ -29,10 +29,7 @@ namespace NMib::NBuildSystem
 		NStr::CStr m_FileName;
 		NStr::CStr m_GroupPath;
 
-		bool operator < (CFileKey const &_Other) const
-		{
-			return NStorage::fg_TupleReferences(m_FileName, m_GroupPath) < NStorage::fg_TupleReferences(_Other.m_FileName, _Other.m_GroupPath);
-		}
+		auto operator <=> (CFileKey const &_Other) const = default;
 	};
 
 	struct align_cacheline CTargetInfo : public CGroupMember

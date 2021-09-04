@@ -20,13 +20,6 @@ namespace NMib::NBuildSystem
 	{
 	}
 	
-	bool CFindOptions::operator < (CFindOptions const &_Right) const
-	{
-		return fg_TupleReferences(m_Path, m_Attribs, m_bRecursive, m_bFollowLinks, m_Exclude) 
-			< fg_TupleReferences(_Right.m_Path, _Right.m_Attribs, _Right.m_bRecursive, _Right.m_bFollowLinks, _Right.m_Exclude)
-		;
-	}
-	
 	CFindCache::CFindCache() = default;
 	CFindCache::~CFindCache() = default;
 	

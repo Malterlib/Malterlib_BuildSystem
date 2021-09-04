@@ -12,9 +12,9 @@ namespace NMib::NBuildSystem
 	}
 	
 	template <typename t_CSortKey>
-	bool TCSortedPerform<t_CSortKey>::CToSortBy::operator < (CToSortBy const &_Other) const
+	COrdering_Weak TCSortedPerform<t_CSortKey>::CToSortBy::operator <=> (CToSortBy const &_Other) const
 	{
-		return m_SortBy < _Other.m_SortBy;
+		return m_SortBy <=> _Other.m_SortBy;
 	}
 	
 	template <typename t_CSortKey>
@@ -43,9 +43,9 @@ namespace NMib::NBuildSystem
 	}
 	
 	template <typename t_CSortKey>
-	bool TCSortedPerform<t_CSortKey &>::CToSortBy::operator < (CToSortBy const &_Other) const
+	COrdering_Weak TCSortedPerform<t_CSortKey &>::CToSortBy::operator <=> (CToSortBy const &_Other) const
 	{
-		return *m_pSortBy < *_Other.m_pSortBy;
+		return *m_pSortBy <=> *_Other.m_pSortBy;
 	}
 	
 	template <typename t_CSortKey>

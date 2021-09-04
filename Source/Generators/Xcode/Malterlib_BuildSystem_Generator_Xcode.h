@@ -383,7 +383,7 @@ namespace NMib::NBuildSystem::NXcode
 			bool m_bMainValue = false;
 			bool m_bUseValues = false;
 
-			bool operator < (CConfigValue const &_Right) const;
+			COrdering_Weak operator <=> (CConfigValue const &_Right) const;
 		};
 
 		struct CElement

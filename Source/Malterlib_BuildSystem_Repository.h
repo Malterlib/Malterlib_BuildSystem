@@ -318,10 +318,7 @@ namespace NMib::NBuildSystem::NRepository
 
 	struct CGitVersion
 	{
-		bool operator < (CGitVersion const &_Right) const
-		{
-			return fg_TupleReferences(m_Major, m_Minor, m_Patch) < fg_TupleReferences(_Right.m_Major, _Right.m_Minor, _Right.m_Patch);
-		}
+		auto operator <=> (CGitVersion const &_Right) const = default;
 
 		uint32 m_Major = 0;
 		uint32 m_Minor = 0;

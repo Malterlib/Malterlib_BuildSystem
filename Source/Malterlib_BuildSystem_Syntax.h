@@ -70,7 +70,7 @@ namespace NMib::NBuildSystem
 			void f_Format(tf_CStr &o_Str) const;
 			static CEvalStringToken fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position);
 			NEncoding::CEJSON f_ToJSON(bool _bRawString) const;
-			bool operator < (CEvalStringToken const &_Right) const;
+			COrdering_Partial operator <=> (CEvalStringToken const &_Right) const;
 			bool operator == (CEvalStringToken const &_Right) const;
 
 			bool f_IsExpression() const;
@@ -89,7 +89,7 @@ namespace NMib::NBuildSystem
 			static CEvalString fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position);
 			NEncoding::CEJSON f_ToJSON() const;
 			NEncoding::CEJSON f_ToJSONArray(bool _bRawString) const;
-			bool operator < (CEvalString const &_Right) const;
+			COrdering_Partial operator <=> (CEvalString const &_Right) const;
 			bool operator == (CEvalString const &_Right) const;
 
 			NContainer::TCVector<CEvalStringToken> m_Tokens;
@@ -101,7 +101,7 @@ namespace NMib::NBuildSystem
 			void f_Format(tf_CStr &o_Str) const;
 			static CWildcardString fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position);
 			NEncoding::CEJSON f_ToJSON() const;
-			bool operator < (CWildcardString const &_Right) const;
+			COrdering_Partial operator <=> (CWildcardString const &_Right) const;
 			bool operator == (CWildcardString const &_Right) const;
 
 			NStorage::TCVariant<NStr::CStr, CEvalString> m_String;
@@ -113,7 +113,7 @@ namespace NMib::NBuildSystem
 			void f_Format(tf_CStr &o_Str) const;
 			static CArray fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position, bool _bAppendAllowed);
 			NEncoding::CEJSON f_ToJSON() const;
-			bool operator < (CArray const &_Right) const;
+			COrdering_Partial operator <=> (CArray const &_Right) const;
 			bool operator == (CArray const &_Right) const;
 
 			NContainer::TCVector<NStorage::TCIndirection<CValue>> m_Array;
@@ -123,7 +123,7 @@ namespace NMib::NBuildSystem
 		{
 			template <typename tf_CStr>
 			void f_Format(tf_CStr &o_Str) const;
-			bool operator < (CAppendObject const &_Right) const;
+			COrdering_Partial operator <=> (CAppendObject const &_Right) const;
 			bool operator == (CAppendObject const &_Right) const;
 		};
 
@@ -131,7 +131,7 @@ namespace NMib::NBuildSystem
 		{
 			template <typename tf_CStr>
 			void f_Format(tf_CStr &o_Str) const;
-			bool operator < (CObjectKey const &_Right) const;
+			COrdering_Partial operator <=> (CObjectKey const &_Right) const;
 			bool operator == (CObjectKey const &_Right) const;
 
 			NStorage::TCVariant<NStr::CStr, CEvalString, CAppendObject> m_Key;
@@ -141,7 +141,7 @@ namespace NMib::NBuildSystem
 		{
 			struct CObjectValue
 			{
-				bool operator < (CObjectValue const &_Right) const;
+				COrdering_Partial operator <=> (CObjectValue const &_Right) const;
 				bool operator == (CObjectValue const &_Right) const;
 
 				DMibListLinkDS_Link(CObjectValue, m_Link);
@@ -156,7 +156,7 @@ namespace NMib::NBuildSystem
 			void f_Format(tf_CStr &o_Str) const;
 			static CObject fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position, bool _bAppendAllowed);
 			NEncoding::CEJSON f_ToJSON() const;
-			bool operator < (CObject const &_Right) const;
+			COrdering_Partial operator <=> (CObject const &_Right) const;
 			bool operator == (CObject const &_Right) const;
 
 			NContainer::TCMap<CObjectKey, CObjectValue> m_Object;
@@ -173,7 +173,7 @@ namespace NMib::NBuildSystem
 			void f_Format(tf_CStr &o_Str) const;
 			static CParam fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position, NStr::CStr const &_Type, bool _bAppendAllowed);
 			NEncoding::CEJSON f_ToJSON() const;
-			bool operator < (CParam const &_Right) const;
+			COrdering_Partial operator <=> (CParam const &_Right) const;
 			bool operator == (CParam const &_Right) const;
 			bool f_IsBinaryOperator() const;
 			CBinaryOperator &f_BinaryOperator();
@@ -232,7 +232,7 @@ namespace NMib::NBuildSystem
 			void f_Format(tf_CStr &o_Str) const;
 			static CFunctionCall fs_FromJSON(NEncoding::CJSON const &_JSON, CFilePosition const &_Position, NStr::CStr const &_Type);
 			NEncoding::CEJSON f_ToJSON() const;
-			bool operator < (CFunctionCall const &_Right) const;
+			COrdering_Partial operator <=> (CFunctionCall const &_Right) const;
 			bool operator == (CFunctionCall const &_Right) const;
 
 			NStr::CStr m_Name;
@@ -250,7 +250,7 @@ namespace NMib::NBuildSystem
 			void f_Format(tf_CStr &o_Str) const;
 			static CTernary fs_FromJSON(NEncoding::CJSON const &_JSON, CFilePosition const &_Position);
 			NEncoding::CEJSON f_ToJSON() const;
-			bool operator < (CTernary const &_Right) const;
+			COrdering_Partial operator <=> (CTernary const &_Right) const;
 			bool operator == (CTernary const &_Right) const;
 
 			CParam m_Conditional;
@@ -290,7 +290,7 @@ namespace NMib::NBuildSystem
 			void f_Format(tf_CStr &o_Str) const;
 			static CBinaryOperator fs_FromJSON(NEncoding::CJSON const &_JSON, CFilePosition const &_Position);
 			NEncoding::CEJSON f_ToJSON() const;
-			bool operator < (CBinaryOperator const &_Right) const;
+			COrdering_Partial operator <=> (CBinaryOperator const &_Right) const;
 			bool operator == (CBinaryOperator const &_Right) const;
 
 			EOperator m_Operator = EOperator_LessThan;
@@ -312,7 +312,7 @@ namespace NMib::NBuildSystem
 			void f_Format(tf_CStr &o_Str) const;
 			static CPrefixOperator fs_FromJSON(NEncoding::CJSON const &_JSON, CFilePosition const &_Position);
 			NEncoding::CEJSON f_ToJSON() const;
-			bool operator < (CPrefixOperator const &_Right) const;
+			COrdering_Partial operator <=> (CPrefixOperator const &_Right) const;
 			bool operator == (CPrefixOperator const &_Right) const;
 
 			EOperator m_Operator = EOperator_LogicalNot;
@@ -326,7 +326,7 @@ namespace NMib::NBuildSystem
 			static CExpression fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position, bool _bParen);
 			NEncoding::CEJSON f_ToJSON(bool _bAppendExpression = false) const;
 			NEncoding::CEJSON f_ToJSONRaw() const;
-			bool operator < (CExpression const &_Right) const;
+			COrdering_Partial operator <=> (CExpression const &_Right) const;
 			bool operator == (CExpression const &_Right) const;
 
 			bool f_IsParam() const;
@@ -348,7 +348,7 @@ namespace NMib::NBuildSystem
 			void f_Format(tf_CStr &o_Str) const;
 			static CExpressionAppend fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position, bool _bParen);
 			NEncoding::CEJSON f_ToJSON() const;
-			bool operator < (CExpressionAppend const &_Right) const;
+			COrdering_Partial operator <=> (CExpressionAppend const &_Right) const;
 			bool operator == (CExpressionAppend const &_Right) const;
 		};
 
@@ -356,7 +356,7 @@ namespace NMib::NBuildSystem
 		{
 			template <typename tf_CStr>
 			void f_Format(tf_CStr &o_Str) const;
-			bool operator < (CJSONSubscript const &_Right) const;
+			COrdering_Partial operator <=> (CJSONSubscript const &_Right) const;
 			bool operator == (CJSONSubscript const &_Right) const;
 
 			NStorage::TCVariant<uint32, CExpression> m_Index;
@@ -368,7 +368,7 @@ namespace NMib::NBuildSystem
 			void f_Format(tf_CStr &o_Str) const;
 			static CJSONAccessorEntry fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position);
 			NEncoding::CEJSON f_ToJSON() const;
-			bool operator < (CJSONAccessorEntry const &_Right) const;
+			COrdering_Partial operator <=> (CJSONAccessorEntry const &_Right) const;
 			bool operator == (CJSONAccessorEntry const &_Right) const;
 
 			NStorage::TCVariant<NStr::CStr, CExpression, CJSONSubscript> m_Accessor;
@@ -382,7 +382,7 @@ namespace NMib::NBuildSystem
 			void f_Format(tf_CStr &o_Str) const;
 			static CJSONAccessor fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position);
 			NEncoding::CEJSON f_ToJSON() const;
-			bool operator < (CJSONAccessor const &_Right) const;
+			COrdering_Partial operator <=> (CJSONAccessor const &_Right) const;
 			bool operator == (CJSONAccessor const &_Right) const;
 
 			CParam m_Param;
@@ -395,7 +395,7 @@ namespace NMib::NBuildSystem
 			void f_Format(tf_CStr &o_Str) const;
 			static CIdentifier fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position);
 			NEncoding::CEJSON f_ToJSON() const;
-			bool operator < (CIdentifier const &_Right) const;
+			COrdering_Partial operator <=> (CIdentifier const &_Right) const;
 			bool operator == (CIdentifier const &_Right) const;
 
 			bool f_IsNameConstantString() const;
@@ -429,7 +429,7 @@ namespace NMib::NBuildSystem
 			void f_Format(tf_CStr &o_Str) const;
 			static CDefaultType fs_FromJSON(NEncoding::CJSON const &_JSON, CFilePosition const &_Position);
 			NEncoding::CEJSON f_ToJSON() const;
-			bool operator < (CDefaultType const &_Right) const;
+			COrdering_Partial operator <=> (CDefaultType const &_Right) const;
 			bool operator == (CDefaultType const &_Right) const;
 
 			static CType const ms_Any;
@@ -450,7 +450,7 @@ namespace NMib::NBuildSystem
 			void f_Format(tf_CStr &o_Str) const;
 			static CUserType fs_FromJSON(NEncoding::CJSON const &_JSON, CFilePosition const &_Position);
 			NEncoding::CEJSON f_ToJSON() const;
-			bool operator < (CUserType const &_Right) const;
+			COrdering_Partial operator <=> (CUserType const &_Right) const;
 			bool operator == (CUserType const &_Right) const;
 
 			NStr::CStr m_Name;
@@ -460,7 +460,7 @@ namespace NMib::NBuildSystem
 		{
 			struct CMember
 			{
-				bool operator < (CMember const &_Right) const;
+				COrdering_Partial operator <=> (CMember const &_Right) const;
 				bool operator == (CMember const &_Right) const;
 
 				CMember();
@@ -482,7 +482,7 @@ namespace NMib::NBuildSystem
 			void f_Format(tf_CStr &o_Str) const;
 			static CClassType fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position);
 			NEncoding::CEJSON f_ToJSON() const;
-			bool operator < (CClassType const &_Right) const;
+			COrdering_Partial operator <=> (CClassType const &_Right) const;
 			bool operator == (CClassType const &_Right) const;
 
 			NContainer::TCMap<NStr::CStr, CMember> m_Members;
@@ -496,7 +496,7 @@ namespace NMib::NBuildSystem
 			void f_Format(tf_CStr &o_Str) const;
 			static CArrayType fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position);
 			NEncoding::CEJSON f_ToJSON() const;
-			bool operator < (CArrayType const &_Right) const;
+			COrdering_Partial operator <=> (CArrayType const &_Right) const;
 			bool operator == (CArrayType const &_Right) const;
 
 			NStorage::TCIndirection<CType> m_Type;
@@ -510,7 +510,7 @@ namespace NMib::NBuildSystem
 			void f_Format(tf_CStr &o_Str) const;
 			static COneOf fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position);
 			NEncoding::CEJSON f_ToJSON() const;
-			bool operator < (COneOf const &_Right) const;
+			COrdering_Partial operator <=> (COneOf const &_Right) const;
 			bool operator == (COneOf const &_Right) const;
 
 			NContainer::TCVector<CVariant> m_OneOf;
@@ -529,7 +529,7 @@ namespace NMib::NBuildSystem
 			void f_Format(tf_CStr &o_Str) const;
 			static CFunctionParameter fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position);
 			NEncoding::CEJSON f_ToJSON() const;
-			bool operator < (CFunctionParameter const &_Right) const;
+			COrdering_Partial operator <=> (CFunctionParameter const &_Right) const;
 			bool operator == (CFunctionParameter const &_Right) const;
 
 			NStorage::TCIndirection<CType> m_Type;
@@ -543,7 +543,7 @@ namespace NMib::NBuildSystem
 			void f_Format(tf_CStr &o_Str) const;
 			static CFunctionType fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position);
 			NEncoding::CEJSON f_ToJSON() const;
-			bool operator < (CFunctionType const &_Right) const;
+			COrdering_Partial operator <=> (CFunctionType const &_Right) const;
 			bool operator == (CFunctionType const &_Right) const;
 
 			NStorage::TCIndirection<CType> m_Return;
@@ -556,7 +556,7 @@ namespace NMib::NBuildSystem
 			void f_Format(tf_CStr &o_Str) const;
 			static CTypeDefaulted fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position);
 			NEncoding::CEJSON f_ToJSON() const;
-			bool operator < (CTypeDefaulted const &_Right) const;
+			COrdering_Partial operator <=> (CTypeDefaulted const &_Right) const;
 			bool operator == (CTypeDefaulted const &_Right) const;
 
 			NStorage::TCIndirection<CType> m_Type;
@@ -569,7 +569,7 @@ namespace NMib::NBuildSystem
 			void f_Format(tf_CStr &o_Str) const;
 			static CType fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position);
 			NEncoding::CEJSON f_ToJSON() const;
-			bool operator < (CType const &_Right) const;
+			COrdering_Partial operator <=> (CType const &_Right) const;
 			bool operator == (CType const &_Right) const;
 			bool f_IsAny(NFunction::TCFunctionNoAlloc<CType const *(CType const *_pType)> const &_fGetCanonical = {}) const;
 			bool f_IsOptional() const;
@@ -588,7 +588,7 @@ namespace NMib::NBuildSystem
 			void f_Format(tf_CStr &o_Str) const;
 			static CDefine fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position);
 			NEncoding::CEJSON f_ToJSON() const;
-			bool operator < (CDefine const &_Right) const;
+			COrdering_Partial operator <=> (CDefine const &_Right) const;
 			bool operator == (CDefine const &_Right) const;
 
 			CType m_Type;
@@ -614,7 +614,7 @@ namespace NMib::NBuildSystem
 			void f_Format(tf_CStr &o_Str) const;
 			static COperator fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position, bool _bAppendAllowed);
 			NEncoding::CEJSON f_ToJSON() const;
-			bool operator < (COperator const &_Right) const;
+			COrdering_Partial operator <=> (COperator const &_Right) const;
 			bool operator == (COperator const &_Right) const;
 
 			EOperator m_Operator = EOperator_LessThan;
@@ -630,7 +630,7 @@ namespace NMib::NBuildSystem
 			static CValue fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position, bool _bAppendAllowed);
 			NEncoding::CEJSON f_ToJSON() const;
 			static CVariant fs_FromJSONToken(NEncoding::CEJSON const &_Token, NStr::CStr const &_TokenType, CFilePosition const &_Position, bool _bAppendAllowed);
-			bool operator < (CValue const &_Right) const;
+			COrdering_Partial operator <=> (CValue const &_Right) const;
 			bool operator == (CValue const &_Right) const;
 
 			bool f_IsConstantString() const;
@@ -666,7 +666,7 @@ namespace NMib::NBuildSystem
 			void f_Format(tf_CStr &o_Str) const;
 			static CRootValue fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position, bool _bAppendAllowed);
 			NEncoding::CEJSON f_ToJSON() const;
-			bool operator < (CRootValue const &_Right) const;
+			COrdering_Partial operator <=> (CRootValue const &_Right) const;
 			bool operator == (CRootValue const &_Right) const;
 
 			CValue m_Value;
@@ -692,7 +692,7 @@ namespace NMib::NBuildSystem
 
 			template <typename tf_CStr>
 			void f_Format(tf_CStr &o_Str) const;
-			bool operator < (CKeyPrefixOperator const &_Right) const;
+			COrdering_Partial operator <=> (CKeyPrefixOperator const &_Right) const;
 			bool operator == (CKeyPrefixOperator const &_Right) const;
 
 			EOperator m_Operator = EOperator_Equal;
@@ -713,7 +713,7 @@ namespace NMib::NBuildSystem
 
 			template <typename tf_CStr>
 			void f_Format(tf_CStr &o_Str) const;
-			bool operator < (CKeyLogicalOperator const &_Right) const;
+			COrdering_Partial operator <=> (CKeyLogicalOperator const &_Right) const;
 			bool operator == (CKeyLogicalOperator const &_Right) const;
 
 			EOperator m_Operator = EOperator_And;
@@ -725,7 +725,7 @@ namespace NMib::NBuildSystem
 			void f_Format(tf_CStr &o_Str) const;
 			static CRootKey fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position);
 			NEncoding::CEJSON f_ToJSON() const;
-			bool operator < (CRootKey const &_Right) const;
+			COrdering_Partial operator <=> (CRootKey const &_Right) const;
 			bool operator == (CRootKey const &_Right) const;
 			bool f_IsValue() const;
 			bool f_IsKeyPrefixOperator() const;

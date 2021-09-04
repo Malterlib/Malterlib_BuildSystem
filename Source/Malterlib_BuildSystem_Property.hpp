@@ -24,15 +24,6 @@ namespace NMib::NBuildSystem
 	{
 	}
 
-	bool CPropertyKey::operator < (CPropertyKey const &_Right) const
-	{
-		if (m_Type < _Right.m_Type)
-			return true;
-		else if (m_Type > _Right.m_Type)
-			return false;
-		return m_Name < _Right.m_Name;
-	}
-	
 	EPropertyType CProperty::f_GetType() const
 	{
 		return m_Key.m_Type;

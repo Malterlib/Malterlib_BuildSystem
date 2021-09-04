@@ -30,8 +30,7 @@ namespace NMib::NBuildSystem
 
 	struct align_cacheline CConfiguration
 	{
-		bool operator < (CConfiguration const &_Right) const;
-		bool operator == (CConfiguration const &_Right) const;
+		auto operator <=> (CConfiguration const &_Right) const = default;
 
 		template <typename tf_CStr>
 		void f_Format(tf_CStr &o_Str) const;

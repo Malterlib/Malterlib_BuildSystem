@@ -113,27 +113,11 @@ namespace NMib::NBuildSystem::NXcode
 		return false;
 	}
 
-	bool CGeneratorInstance::CConfigValue::operator < (CConfigValue const &_Right) const
+	COrdering_Weak CGeneratorInstance::CConfigValue::operator <=> (CConfigValue const &_Right) const
 	{
-		if (m_Parent < _Right.m_Parent)
-			return true;
-		else if (m_Parent > _Right.m_Parent)
-			return false;
-		if (m_Entity < _Right.m_Entity)
-			return true;
-		else if (m_Entity > _Right.m_Entity)
-			return false;
-		if (m_Property < _Right.m_Property)
-			return true;
-		else if (m_Property > _Right.m_Property)
-			return false;
-
-		if (m_Value < _Right.m_Value)
-			return true;
-		else if (m_Value > _Right.m_Value)
-			return false;
-		
-		return m_Values < _Right.m_Values;
+		return fg_TupleReferences(m_Parent, m_Entity, m_Property, m_Value, m_Values)
+			<=> fg_TupleReferences(_Right.m_Parent, _Right.m_Entity, _Right.m_Property, _Right.m_Value, _Right.m_Values)
+		;
 	}
 	
 	void CGeneratorInstance::CThreadLocal::f_CreateDirectory(CStr const &_Path)

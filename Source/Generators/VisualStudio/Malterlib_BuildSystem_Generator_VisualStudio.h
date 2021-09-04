@@ -185,7 +185,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 			bool m_bMainValue = false;
 
-			inline bool operator < (CConfigValue const &_Right) const;
+			inline COrdering_Weak operator <=> (CConfigValue const &_Right) const;
 		};
 
 		struct CPrefixHeader

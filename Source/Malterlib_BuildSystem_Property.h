@@ -12,7 +12,9 @@ namespace NMib::NBuildSystem
 		inline_always CPropertyKey();
 		inline_always CPropertyKey(NStr::CStr const &_Name);
 		inline_always CPropertyKey(EPropertyType _Type, NStr::CStr const &_Name);
-		inline_always bool operator < (CPropertyKey const &_Right) const;
+
+		inline_always auto operator <=> (CPropertyKey const &_Right) const = default;
+
 		template <typename tf_CContext>
 		static CPropertyKey fs_FromString(NStr::CStr const &_String, tf_CContext &&_Context);
 
