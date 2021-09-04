@@ -51,15 +51,15 @@ namespace NMib::NBuildSystem
 	}
 
 	template <typename tf_CContext>
-	CPropertyKey CPropertyKey::fs_FromString(CStr const &_String, tf_CContext &&_Context)
+	CPropertyKey CPropertyKey::fs_FromString(NStr::CStr const &_String, tf_CContext &&_Context)
 	{
 		if (auto iPoint = _String.f_FindChar('.'); iPoint >= 0)
 		{
-			CStr PropertyType = _String.f_Left(iPoint);
+			NStr::CStr PropertyType = _String.f_Left(iPoint);
 
 			EPropertyType Type = fg_PropertyTypeFromStr(_String.f_Left(iPoint));
 			if (PropertyType.f_IsEmpty() || Type == EPropertyType_Invalid)
-				CBuildSystem::fs_ThrowError(_Context, CStr::CFormat("Unrecognized property '{}'") << PropertyType);
+				CBuildSystem::fs_ThrowError(_Context, NStr::CStr::CFormat("Unrecognized property '{}'") << PropertyType);
 
 			return {Type, _String.f_Extract(iPoint + 1)};
 		}
