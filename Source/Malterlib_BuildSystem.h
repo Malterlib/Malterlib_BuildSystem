@@ -113,6 +113,7 @@ namespace NMib::NBuildSystem
 		{
 			ERepoBranchFlag_None = 0
 			, ERepoBranchFlag_Pretend = DMibBit(0)
+			, ERepoBranchFlag_Force = DMibBit(1)
 		};
 
 		struct CWildcardColumn

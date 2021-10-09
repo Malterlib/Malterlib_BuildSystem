@@ -35,7 +35,9 @@ namespace NMib::NBuildSystem
 
 				TCVector<CStr> ParamsCheckout;
 
-				if (!fg_BranchExists(Repo, _Branch))
+				if (_Flags & ERepoBranchFlag_Force)
+					ParamsCheckout = {"checkout", "-B", _Branch};
+				else if (!fg_BranchExists(Repo, _Branch))
 					ParamsCheckout = {"checkout", "-b", _Branch};
 				else
 					ParamsCheckout = {"checkout", _Branch};
@@ -91,12 +93,21 @@ namespace NMib::NBuildSystem
 				if (CurrentBranch == Repo.m_DefaultBranch)
 					continue;
 
+				TCVector<CStr> ParamsCheckout;
+
+				if (_Flags & ERepoBranchFlag_Force)
+					ParamsCheckout = {"checkout", "-B", Repo.m_DefaultBranch};
+				else if (!fg_BranchExists(Repo, Repo.m_DefaultBranch))
+					ParamsCheckout = {"checkout", "-b", Repo.m_DefaultBranch};
+				else
+					ParamsCheckout = {"checkout", Repo.m_DefaultBranch};
+
 				if (_Flags & ERepoBranchFlag_Pretend)
-					Launches.f_Output(EOutputType_Normal, Repo, "git checkout {}"_f << Repo.m_DefaultBranch);
+					Launches.f_Output(EOutputType_Normal, Repo, "git {}"_f << CProcessLaunchParams::fs_GetParams(ParamsCheckout));
 				else
 				{
 					TCPromise<void> LaunchResult;
-					Launches.f_Launch(Repo, {"checkout", Repo.m_DefaultBranch}, fg_LogAllFunctor()) > [Launches, LaunchResult](TCAsyncResult<void> &&_Result)
+					Launches.f_Launch(Repo, ParamsCheckout, fg_LogAllFunctor()) > [Launches, LaunchResult](TCAsyncResult<void> &&_Result)
 						{
 							Launches.f_RepoDone();
 							LaunchResult.f_SetResult(_Result);
