@@ -362,7 +362,7 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 					{
 						auto pCommandLineArgument = XMLFile.f_CreateElement(pCommandLineArguments, "CommandLineArgument");
 						XMLFile.f_SetAttribute(pCommandLineArgument, "argument", Runnable);
-						XMLFile.f_SetAttribute(pCommandLineArgument, "isEnabled", "YES");
+						XMLFile.f_SetAttribute(pCommandLineArgument, "isEnabled", "NO");
 					}
 				}
 
