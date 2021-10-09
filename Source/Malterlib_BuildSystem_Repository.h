@@ -348,6 +348,7 @@ namespace NMib::NBuildSystem::NRepository
 	TCFuture<TCVector<CLocalFileChange>> fg_GetLocalFileChanges(CGitLaunches const &_GitLaunches, CRepository const &_Repo, bool _bIncludeUntracked);
 	TCFuture<CGitBranches> fg_GetBranches(CGitLaunches const &_GitLaunches, CRepository const &_Repo, bool _bRemote);
 	TCFuture<TCVector<CStr>> fg_GetRemotes(CGitLaunches const &_GitLaunches, CRepository const &_Repo);
+	TCFuture<TCMap<CStr, CRemote>> fg_GetPushRemotes(CGitLaunches const &_GitLaunches, CRepository const &_Repo, TCVector<CStr> const &_Remotes);
 	TCFuture<TCVector<CLogEntry>> fg_GetLogEntries(CGitLaunches const &_GitLaunches, CRepository const &_Repo, CStr const &_From, CStr const &_To, bool _bReportBadRevision = true);
 	TCFuture<TCVector<CLogEntryFull>> fg_GetLogEntriesFull(CGitLaunches const &_GitLaunches, CRepository const &_Repo, CStr const &_From, CStr const &_To);
 
@@ -356,7 +357,9 @@ namespace NMib::NBuildSystem::NRepository
 	CStr fg_GetRemoteHead(CRepository const &_Repo, CStr const &_Remote);
 
 	void fg_UpdateRemotes(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage = {});
+	TCFuture<void> fg_UpdateRemotesAsync(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage = {});
 	TCMap<CStr, CStr> fg_FetchEnvironment(CBuildSystem const &_BuildSystem);
 
+	TCFuture<CFilteredRepos> fg_GetFilteredReposAsync(CBuildSystem::CRepoFilter const &_Filter, CBuildSystem &_BuildSystem, CBuildSystemData &_Data, EFilterRepoFlag _Flags = EFilterRepoFlag_None);
 	CFilteredRepos fg_GetFilteredRepos(CBuildSystem::CRepoFilter const &_Filter, CBuildSystem &_BuildSystem, CBuildSystemData &_Data, EFilterRepoFlag _Flags = EFilterRepoFlag_None);
 }

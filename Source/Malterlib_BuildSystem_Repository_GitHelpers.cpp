@@ -295,6 +295,60 @@ namespace NMib::NBuildSystem::NRepository
 		return Promise.f_MoveFuture();
 	}
 
+	TCFuture<TCMap<CStr, CRemote>> fg_GetPushRemotes(CGitLaunches const &_GitLaunches, CRepository const &_Repo, TCVector<CStr> const &_Remotes)
+	{
+		TCPromise<TCMap<CStr, CRemote>> Promise;
+
+		_GitLaunches.f_Launch(_Repo, {"remote"}) > Promise / [Promise, &_GitLaunches, &_Repo](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
+			{
+				if (_Result.m_ExitCode)
+				{
+					Promise.f_SetException(DMibErrorInstance(_Result.f_GetErrorOut()));
+					return;
+				}
+
+				TCActorResultMap<CStr, CProcessLaunchActor::CSimpleLaunchResult> UrlResults;
+
+				for (auto &Remote : _Result.f_GetStdOut().f_SplitLine<true>())
+					_GitLaunches.f_Launch(_Repo, {"remote", "get-url", Remote, "--push"}) > UrlResults.f_AddResult(Remote);
+
+				UrlResults.f_GetResults() > Promise / [Promise](TCMap<CStr, TCAsyncResult<CProcessLaunchActor::CSimpleLaunchResult>> &&_Results)
+					{
+						TCMap<CStr, CRemote> Remotes;
+
+						if
+							(
+								!fg_CombineResults
+								(
+									Promise
+									, fg_Move(_Results)
+									, [&](CStr const &_Remote, CProcessLaunchActor::CSimpleLaunchResult const &_LaunchResult)
+									{
+										if (_LaunchResult.m_ExitCode)
+										{
+											if (!Promise.f_IsSet())
+												Promise.f_SetException(DMibErrorInstance(_LaunchResult.f_GetErrorOut()));
+											return;
+										}
+										Remotes[_Remote] = CRemote{_LaunchResult.f_GetStdOut().f_Trim()};
+									}
+								)
+							)
+						{
+							return;
+						}
+
+						if (!Promise.f_IsSet())
+							Promise.f_SetResult(fg_Move(Remotes));
+					}
+				;
+
+			}
+		;
+
+		return Promise.f_MoveFuture();
+	}
+
 	TCFuture<TCVector<CLogEntry>> fg_GetLogEntries(CGitLaunches const &_GitLaunches, CRepository const &_Repo, CStr const &_From, CStr const &_To, bool _bReportBadRevision)
 	{
 		TCPromise<TCVector<CLogEntry>> Promise;
@@ -522,10 +576,28 @@ namespace NMib::NBuildSystem::NRepository
 
 	void fg_UpdateRemotes(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage)
 	{
+		TCSharedPointer<CDefaultRunLoop> pRunLoop = fg_Construct();
+		auto CleanupRunLoop = g_OnScopeExit > [&]
+			{
+				while (pRunLoop->f_RefCountGet() > 0)
+					pRunLoop->f_WaitOnceTimeout(0.1);
+			}
+		;
+		TCActor<CDispatchingActor> HelperActor(fg_Construct(), pRunLoop->f_Dispatcher());
+		auto CleanupHelperActor = g_OnScopeExit > [&]
+			{
+				HelperActor->f_BlockDestroy(pRunLoop->f_ActorDestroyLoop());
+			}
+		;
+		CCurrentlyProcessingActorScope CurrentActor{HelperActor};
+
+		fg_UpdateRemotesAsync(_BuildSystem, _FilteredRepositories, _ExtraMessage).f_CallSync(pRunLoop);
+	}
+
+	TCFuture<void> fg_UpdateRemotesAsync(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage)
+	{
 		CGitLaunches Launches{_BuildSystem.f_GetBaseDir(), "Fetching remotes" + _ExtraMessage, _BuildSystem.f_AnsiFlags(), _BuildSystem.f_OutputConsoleFunctor()};
 		Launches.f_MeasureRepos(_FilteredRepositories.m_FilteredRepositories);
-
-		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
 		TCActorResultVector<void> Results;
 
@@ -536,11 +608,6 @@ namespace NMib::NBuildSystem::NRepository
 		for (auto &[RepoBound, iSequence] : AllRepos)
 		{
 			auto &Repo = RepoBound;
-			TCPromise<void> Promise;
-
-			TCVector<CStr> FetchParams = {"fetch", "--all", "--prune", "--tags", "-q"};
-			if (_BuildSystem.f_GetGenerateOptions().m_bForceUpdateRemotes)
-				FetchParams.f_Insert("--force");
 
 			struct CBranchState
 			{
@@ -553,64 +620,66 @@ namespace NMib::NBuildSystem::NRepository
 				CStr m_RemoteBranch;
 			};
 
-			TCActorResultMap<CStr, void> RemoteQueryResults;
-			TCSharedPointer<TCMap<CStr, CBranchState>> pRemoteHeadBranches = fg_Construct();
-
-			auto RepoDoneScope = Launches.f_RepoDoneScope();
-
-			auto Remotes = Repo.m_Remotes;
-			Remotes["origin"].m_URL = Repo.m_URL;
-
-			for (auto &Remote : Remotes)
-			{
-				auto &RemoteName = Remote.f_Name();
-				(*pRemoteHeadBranches)[RemoteName].m_LocalBranch = fg_GetRemoteHead(Repo, RemoteName);
-
-				Launches.f_Launch
-					(
-					 	Repo
-					 	, {"ls-remote", "--symref", RemoteName, "HEAD"}
-					 	, [=](CProcessLaunchActor::CSimpleLaunchResult const &_Result) -> CStr
-					 	{
-							CStr StdOut = _Result.f_GetStdOut();
-							for (auto &Line : StdOut.f_SplitLine<true>())
-							{
-								if (Line.f_StartsWith("ref: refs/heads/") && Line.f_EndsWith("	HEAD"))
-								{
-									CStr RemoteBranch;
-									(CStr::CParse("ref: refs/heads/{}	HEAD") >> RemoteBranch).f_Parse(Line);
-									(*pRemoteHeadBranches)[RemoteName].m_RemoteBranch = RemoteBranch;
-									break;
-								}
-							}
-							return {};
-						}
-					 	, {}
-					 	, FetchEnvironment
-					)
-					> RemoteQueryResults.f_AddResult(Remote.f_Name())
-				;
-			}
-
-			Launches.f_Launch(Repo, FetchParams, fg_LogAllFunctor(), {}, FetchEnvironment)
-				+ RemoteQueryResults.f_GetResults()
-				+ Launches.f_Launch(Repo, {"for-each-ref", "--format=%(upstream:short)", "refs/heads/{}"_f << Repo.m_DefaultBranch})
-				> [=]
-				(
-				 	TCAsyncResult<void> &&_FetchResult
-				 	, TCAsyncResult<TCMap<CStr, TCAsyncResult<void>>> &&_RemoteHeadResults
-				 	, TCAsyncResult<CProcessLaunchActor::CSimpleLaunchResult> &&_TrackingResult
-				)
+			g_Dispatch / [&_BuildSystem, Launches, Repo, FetchEnvironment]() -> TCFuture<void>
 				{
-					fg_CombineResults(Promise, fg_Move(_RemoteHeadResults));
+					TCActorResultMap<CStr, void> RemoteQueryResults;
+					TCSharedPointer<TCMap<CStr, CBranchState>> pRemoteHeadBranches = fg_Construct();
 
-					if (!_FetchResult && !Promise.f_IsSet())
-						Promise.f_SetException(_FetchResult);
+					auto RepoDoneScope = Launches.f_RepoDoneScope();
+
+					auto Remotes = Repo.m_Remotes;
+					Remotes["origin"].m_URL = Repo.m_URL;
+
+					for (auto &Remote : Remotes)
+					{
+						auto &RemoteName = Remote.f_Name();
+						(*pRemoteHeadBranches)[RemoteName].m_LocalBranch = fg_GetRemoteHead(Repo, RemoteName);
+
+						Launches.f_Launch
+							(
+								Repo
+								, {"ls-remote", "--symref", RemoteName, "HEAD"}
+								, [=](CProcessLaunchActor::CSimpleLaunchResult const &_Result) -> CStr
+								{
+									CStr StdOut = _Result.f_GetStdOut();
+									for (auto &Line : StdOut.f_SplitLine<true>())
+									{
+										if (Line.f_StartsWith("ref: refs/heads/") && Line.f_EndsWith("	HEAD"))
+										{
+											CStr RemoteBranch;
+											(CStr::CParse("ref: refs/heads/{}	HEAD") >> RemoteBranch).f_Parse(Line);
+											(*pRemoteHeadBranches)[RemoteName].m_RemoteBranch = RemoteBranch;
+											break;
+										}
+									}
+									return {};
+								}
+								, {}
+								, FetchEnvironment
+							)
+							> RemoteQueryResults.f_AddResult(Remote.f_Name())
+						;
+					}
+
+					TCVector<CStr> FetchParams = {"fetch", "--all", "--prune", "--tags", "-q"};
+					if (_BuildSystem.f_GetGenerateOptions().m_bForceUpdateRemotes)
+						FetchParams.f_Insert("--force");
+
+					auto [FetchResult, RemoteHeadResults, TrackingResult] = co_await
+						(
+							Launches.f_Launch(Repo, FetchParams, fg_LogAllFunctor(), {}, FetchEnvironment)
+							+ RemoteQueryResults.f_GetResults()
+							+ Launches.f_Launch(Repo, {"for-each-ref", "--format=%(upstream:short)", "refs/heads/{}"_f << Repo.m_DefaultBranch})
+						).f_Wrap()
+					;
+
+					fg_Move(FetchResult) | g_Unwrap;
+					(fg_Move(RemoteHeadResults) | g_Unwrap) | g_Unwrap;
 
 					TCActorResultVector<void> SetHeadResults;
 
 					CStr ExpectedTracking = "origin/{}"_f << Repo.m_DefaultBranch;
-					CStr CurrentTracking = _TrackingResult ? _TrackingResult->f_GetStdOut().f_Trim() : CStr();
+					CStr CurrentTracking = TrackingResult ? TrackingResult->f_GetStdOut().f_Trim() : CStr();
 					if (CurrentTracking != ExpectedTracking)
 					{
 						Launches.f_Output(EOutputType_Normal, Repo, "Updating default branch remote tracking branch from {} to {}"_f << CurrentTracking << ExpectedTracking);
@@ -627,30 +696,17 @@ namespace NMib::NBuildSystem::NRepository
 						}
 					}
 
-					SetHeadResults.f_GetResults() > Promise / [=](TCVector<TCAsyncResult<void>> &&_SetHeadResults)
-						{
-							TCPromise<void> ResultPromise;
-							if (!fg_CombineResults(ResultPromise, fg_Move(_SetHeadResults)))
-							{
-								if (!Promise.f_IsSet())
-									ResultPromise.f_MoveFuture() > Promise;
-								return;
-							}
+					co_await SetHeadResults.f_GetResults() | g_Unwrap;
 
-							(void)RepoDoneScope;
-
-							if (!Promise.f_IsSet())
-								Promise.f_SetResult();
-						}
-					;
+					co_return {};
 				}
+				> Results.f_AddResult();
 			;
-
-			Promise.f_MoveFuture() > Results.f_AddResult();
 		}
 
-		for (auto &Result : Results.f_GetResults().f_CallSync())
-			Result.f_Access();
+		co_await Results.f_GetResults() | g_Unwrap;
+
+		co_return {};
 	}
 
 	CGitVersion fg_GetGitVersion()

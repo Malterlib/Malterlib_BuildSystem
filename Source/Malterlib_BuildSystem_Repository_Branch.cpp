@@ -50,7 +50,7 @@ namespace NMib::NBuildSystem
 					Launches.f_Launch(Repo, ParamsCheckout, fg_LogAllFunctor()) > [=](TCAsyncResult<void> &&_Result)
 						{
 							Launches.f_RepoDone();
-							LaunchResult.f_SetResult(_Result);
+							LaunchResult.f_SetResult(fg_Move(_Result));
 						}
 					;
 					LaunchResult.f_MoveFuture() > Results.f_AddResult();
@@ -110,7 +110,7 @@ namespace NMib::NBuildSystem
 					Launches.f_Launch(Repo, ParamsCheckout, fg_LogAllFunctor()) > [Launches, LaunchResult](TCAsyncResult<void> &&_Result)
 						{
 							Launches.f_RepoDone();
-							LaunchResult.f_SetResult(_Result);
+							LaunchResult.f_SetResult(fg_Move(_Result));
 						}
 					;
 					LaunchResult.f_MoveFuture() > Results.f_AddResult();

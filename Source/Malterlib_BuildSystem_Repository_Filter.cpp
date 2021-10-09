@@ -7,9 +7,29 @@ namespace NMib::NBuildSystem::NRepository
 {
 	CFilteredRepos fg_GetFilteredRepos(CBuildSystem::CRepoFilter const &_Filter, CBuildSystem &_BuildSystem, CBuildSystemData &_Data, EFilterRepoFlag _Flags)
 	{
-		CGitLaunches Launches{_BuildSystem.f_GetBaseDir(), "Filtering repos", _BuildSystem.f_AnsiFlags(), _BuildSystem.f_OutputConsoleFunctor()};
+		TCSharedPointer<CDefaultRunLoop> pRunLoop = fg_Construct();
+		auto CleanupRunLoop = g_OnScopeExit > [&]
+			{
+				while (pRunLoop->f_RefCountGet() > 0)
+					pRunLoop->f_WaitOnceTimeout(0.1);
+			}
+		;
+		TCActor<CDispatchingActor> HelperActor(fg_Construct(), pRunLoop->f_Dispatcher());
+		auto CleanupHelperActor = g_OnScopeExit > [&]
+			{
+				HelperActor->f_BlockDestroy(pRunLoop->f_ActorDestroyLoop());
+			}
+		;
+		CCurrentlyProcessingActorScope CurrentActor{HelperActor};
 
-		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
+		return fg_GetFilteredReposAsync(_Filter, _BuildSystem, _Data, _Flags).f_CallSync(pRunLoop);
+	}
+
+	TCFuture<CFilteredRepos> fg_GetFilteredReposAsync(CBuildSystem::CRepoFilter const &_Filter, CBuildSystem &_BuildSystem, CBuildSystemData &_Data, EFilterRepoFlag _Flags)
+	{
+		co_await ECoroutineFlag_AllowReferences;
+
+		CGitLaunches Launches{_BuildSystem.f_GetBaseDir(), "Filtering repos", _BuildSystem.f_AnsiFlags(), _BuildSystem.f_OutputConsoleFunctor()};
 
 		CFilteredRepos FilteredRepos;
 		FilteredRepos.m_ReposOrdered = fg_GetRepos(_BuildSystem, _Data);
@@ -53,7 +73,7 @@ namespace NMib::NBuildSystem::NRepository
 					if (_Filter.m_bOnlyChanged)
 					{
 						++nLaunchRepos;
-						g_Dispatch(Launches.m_pState->m_OutputActor) / [=]() mutable
+						g_Dispatch / [=]() mutable
 							{
 								Launches.f_SetNumRepos(nLaunchRepos);
 							}
@@ -77,14 +97,14 @@ namespace NMib::NBuildSystem::NRepository
 			++iStage;
 		}
 
-		auto SyncedResults = DeferredResultsOrdered.f_GetResults().f_CallSync();
+		auto SyncedResults = co_await DeferredResultsOrdered.f_GetResults() | g_Unwrap;
 		for (auto &Repos : SyncedResults)
 		{
 			mint iStage = SyncedResults.fs_GetKey(Repos);
 
-			for (auto &IsChanged : *Repos)
+			for (auto &IsChanged : Repos)
 			{
-				CRepository *pRepo = (*Repos).fs_GetKey(IsChanged);
+				CRepository *pRepo = Repos.fs_GetKey(IsChanged);
 				if (!*IsChanged)
 					continue;
 
@@ -99,6 +119,6 @@ namespace NMib::NBuildSystem::NRepository
 			FilteredRepos.m_FilteredRepositories.f_Insert(fg_Move(Repos));
 		}
 
-		return FilteredRepos;
+		co_return fg_Move(FilteredRepos);
 	}
 }

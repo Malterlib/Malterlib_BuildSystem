@@ -30,28 +30,28 @@ namespace NMib::NBuildSystem
 	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Status_Async(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoStatusFlag _Flags)
 	{
 		TCSharedPointer<CGenerateEphemeralState> pGenerateState = fg_Construct();
-		CFilteredRepos FilteredRepositories;
 		try
 		{
 			if (ERetry Retry = fp_GeneratePrepare(_GenerateOptions, *pGenerateState, nullptr); Retry != ERetry_None)
 				co_return Retry;
 
-			CRepoFilter Filter = _Filter;
-
-			EFilterRepoFlag FilterFlags = EFilterRepoFlag_IncludePull;
-
-			if (_Flags & CBuildSystem::ERepoStatusFlag_OnlyTracked)
-				FilterFlags |= EFilterRepoFlag_OnlyTracked;
-
-			FilteredRepositories = fg_GetFilteredRepos(Filter, *this, mp_Data, FilterFlags);
-
-			if (_Flags & ERepoStatusFlag_UpdateRemotes)
-				fg_UpdateRemotes(*this, FilteredRepositories);
 		}
 		catch (CException const &_Exception)
 		{
 			co_return _Exception.f_ExceptionPointer();
 		}
+
+		CRepoFilter Filter = _Filter;
+
+		EFilterRepoFlag FilterFlags = EFilterRepoFlag_IncludePull;
+
+		if (_Flags & CBuildSystem::ERepoStatusFlag_OnlyTracked)
+			FilterFlags |= EFilterRepoFlag_OnlyTracked;
+
+		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredReposAsync(Filter, *this, mp_Data, FilterFlags);
+
+		if (_Flags & ERepoStatusFlag_UpdateRemotes)
+			co_await fg_UpdateRemotesAsync(*this, FilteredRepositories);
 
 		CGitLaunches Launches{mp_BaseDir, "Getting repo status", mp_AnsiFlags, mp_fOutputConsole};
 

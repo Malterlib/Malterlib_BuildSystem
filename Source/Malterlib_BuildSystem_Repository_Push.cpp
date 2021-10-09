@@ -44,138 +44,101 @@ namespace NMib::NBuildSystem
 			return Promise.f_MoveFuture();
 		}
 
-		TCFuture<TCSet<CStr>> fg_CanPush(CGitLaunches const &_Launches, CRepository const &_Repo, TCVector<CStr> const &_Remotes, CGitBranches const &_Branches)
+		TCFuture<TCSet<CStr>> fg_CanPush(CGitLaunches _Launches, CRepository _Repo, TCVector<CStr> _Remotes, CGitBranches _Branches, bool _bForce)
 		{
 			CColors Colors(_Launches.m_pState->m_AnsiFlags);
 
-			TCPromise<TCSet<CStr>> Promise;
+			TCActorResultMap<CStr, CProcessLaunchActor::CSimpleLaunchResult> CanPushResultsMap;
+
+			for (auto &Remote : _Remotes)
 			{
-				TCActorResultMap<CStr, CProcessLaunchActor::CSimpleLaunchResult> CanPushResults;
-
-				for (auto &Remote : _Remotes)
-				{
-					_Launches.f_Launch
-						(
-							_Repo
-							, {"merge-base", "--is-ancestor", "{}/{}"_f << Remote << _Branches.m_Current, _Branches.m_Current}
-						)
-						> CanPushResults.f_AddResult(Remote)
-					;
-				}
-
-				CanPushResults.f_GetResults() > Promise / [=](TCMap<CStr, TCAsyncResult<CProcessLaunchActor::CSimpleLaunchResult>> &&_CanPushResults)
-					{
-						TCSet<CStr> NewPush;
-						bool bAllFastForward = true;
-						if
-							(
-								!fg_CombineResults
-								(
-									Promise
-									, fg_Move(_CanPushResults)
-									, [&](CStr const &_Remote, CProcessLaunchActor::CSimpleLaunchResult &&_Result)
-									{
-										if (_Result.m_ExitCode == 1)
-										{
-											_Launches.f_Output
-												(
-													EOutputType_Error
-													, _Repo
-													, "Cannot fast forward to {2}{}/{}{3}\n"_f
-													<< _Remote
-													<< _Branches.m_Current
-													<< Colors.f_RepositoryName()
-													<< Colors.f_Default()
-												)
-											;
-											bAllFastForward = false;
-										}
-										else if (_Result.m_ExitCode)
-										{
-											CStr Output = _Result.f_GetCombinedOut().f_Trim();
-											if (Output == CStr{"fatal: Not a valid object name {}/{}"_f << _Remote << _Branches.m_Current})
-												NewPush[_Remote];
-											else
-											{
-												_Launches.f_Output
-													(
-														EOutputType_Error
-														, _Repo
-														, "Error determining fast forward to {3}{}/{}{4}: {}\n"_f
-														<< _Remote
-														<< _Branches.m_Current
-														<< Output
-														<< Colors.f_RepositoryName()
-														<< Colors.f_Default()
-													)
-												;
-												bAllFastForward = false;
-											}
-										}
-									}
-								)
-							)
-						{
-							return;
-						}
-
-						if (!bAllFastForward)
-						{
-							Promise.f_SetException(DMibErrorInstance("Could not fast-forward against all remotes, please resolve."));
-							return;
-						}
-
-						Promise.f_SetResult(fg_Move(NewPush));
-					}
+				_Launches.f_Launch
+					(
+						_Repo
+						, {"merge-base", "--is-ancestor", "{}/{}"_f << Remote << _Branches.m_Current, _Branches.m_Current}
+					)
+					> CanPushResultsMap.f_AddResult(Remote)
 				;
 			}
-			return Promise.f_MoveFuture();
+
+			auto CanPushResults = co_await CanPushResultsMap.f_GetResults() | g_Unwrap;
+
+			TCSet<CStr> NewPush;
+			bool bAllFastForward = true;
+			for (auto &Result : CanPushResults)
+			{
+				auto &Remote = CanPushResults.fs_GetKey(Result);
+				if (Result.m_ExitCode == 1)
+				{
+					if (!_bForce)
+					{
+						_Launches.f_Output
+							(
+								EOutputType_Error
+								, _Repo
+								, "Cannot fast forward to {2}{}/{}{3}\n"_f
+								<< Remote
+								<< _Branches.m_Current
+								<< Colors.f_RepositoryName()
+								<< Colors.f_Default()
+							)
+						;
+						bAllFastForward = false;
+					}
+				}
+				else if (Result.m_ExitCode)
+				{
+					CStr Output = Result.f_GetCombinedOut().f_Trim();
+					if (Output == CStr{"fatal: Not a valid object name {}/{}"_f << Remote << _Branches.m_Current})
+						NewPush[Remote];
+					else
+					{
+						if (!_bForce)
+						{
+							_Launches.f_Output
+								(
+									EOutputType_Error
+									, _Repo
+									, "Error determining fast forward to {3}{}/{}{4}: {}\n"_f
+									<< Remote
+									<< _Branches.m_Current
+									<< Output
+									<< Colors.f_RepositoryName()
+									<< Colors.f_Default()
+								)
+							;
+							bAllFastForward = false;
+						}
+					}
+				}
+			}
+
+			if (!bAllFastForward)
+				co_return DMibErrorInstance("Could not fast-forward against all remotes, please resolve.");
+
+			co_return fg_Move(NewPush);
 		}
 
-		TCFuture<TCSet<CStr>> fg_NeedPush(CGitLaunches const &_Launches, CRepository const &_Repo, TCVector<CStr> const &_Remotes, CGitBranches const &_Branches)
+		TCFuture<TCSet<CStr>> fg_NeedPush(CGitLaunches _Launches, CRepository _Repo, TCVector<CStr> _Remotes, CGitBranches _Branches)
 		{
-			TCPromise<TCSet<CStr>> Promise;
+			TCActorResultMap<CStr, TCVector<CLogEntry>> NeedPushResults;
+
+			for (auto &Remote : _Remotes)
+				fg_GetLogEntries(_Launches, _Repo, "{}/{}"_f << Remote << _Branches.m_Current, _Branches.m_Current, false) > NeedPushResults.f_AddResult(Remote);
+
+			auto ResultsUnwrapped = co_await NeedPushResults.f_GetResults() | g_Unwrap;
+
+			TCSet<CStr> NeedPush;
+			for (auto &Commits : ResultsUnwrapped)
 			{
-				TCActorResultMap<CStr, TCVector<CLogEntry>> NeedPushResults;
-
-				for (auto &Remote : _Remotes)
-					fg_GetLogEntries(_Launches, _Repo, "{}/{}"_f << Remote << _Branches.m_Current, _Branches.m_Current, false) > NeedPushResults.f_AddResult(Remote);
-
-				NeedPushResults.f_GetResults() > Promise / [=](TCMap<CStr, TCAsyncResult<TCVector<CLogEntry>>> &&_NeedPushResults)
-					{
-						TCSet<CStr> NeedPush;
-						bool bAllFastForward = true;
-						if
-							(
-								!fg_CombineResults
-								(
-									Promise
-									, fg_Move(_NeedPushResults)
-									, [&](CStr const &_Remote, TCVector<CLogEntry> &&_Commits)
-									{
-										if (!_Commits.f_IsEmpty())
-											NeedPush[_Remote];
-									}
-								)
-							)
-						{
-							return;
-						}
-
-						if (!bAllFastForward)
-						{
-							Promise.f_SetException(DMibErrorInstance("Could not fast-forward against all remotes, please resolve."));
-							return;
-						}
-
-						Promise.f_SetResult(fg_Move(NeedPush));
-					}
-				;
+				if (!Commits.f_IsEmpty())
+					NeedPush[ResultsUnwrapped.fs_GetKey(Commits)];
 			}
-			return Promise.f_MoveFuture();
+
+			co_return fg_Move(NeedPush);
 		}
 	}
-	
+
 	CBuildSystem::ERetry CBuildSystem::f_Action_Repository_Push
 		(
 		 	CGenerateOptions const &_GenerateOptions
@@ -184,17 +147,48 @@ namespace NMib::NBuildSystem
 		 	, ERepoPushFlag _PushFlags
 		)
 	{
-		CGenerateEphemeralState GenerateState;
-		if (ERetry Retry = fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
-			return Retry;
+		TCSharedPointer<CDefaultRunLoop> pRunLoop = fg_Construct();
+		auto CleanupRunLoop = g_OnScopeExit > [&]
+			{
+				while (pRunLoop->f_RefCountGet() > 0)
+					pRunLoop->f_WaitOnceTimeout(0.1);
+			}
+		;
+		TCActor<CDispatchingActor> HelperActor(fg_Construct(), pRunLoop->f_Dispatcher());
+		auto CleanupHelperActor = g_OnScopeExit > [&]
+			{
+				HelperActor->f_BlockDestroy(pRunLoop->f_ActorDestroyLoop());
+			}
+		;
+		CCurrentlyProcessingActorScope CurrentActor{HelperActor};
 
-		CFilteredRepos FilteredRepositories = fg_GetFilteredRepos(_Filter, *this, mp_Data);
+		return fg_CallSafe(this, &CBuildSystem::f_Action_Repository_Push_Async, _GenerateOptions, _Filter, _Remotes, _PushFlags).f_CallSync(pRunLoop);
+	}
+
+	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Push_Async
+		(
+		 	CGenerateOptions const &_GenerateOptions
+		 	, CRepoFilter const &_Filter
+		 	, TCVector<CStr> const &_Remotes
+		 	, ERepoPushFlag _PushFlags
+		)
+	{
+		TCSharedPointer<CGenerateEphemeralState> pGenerateState = fg_Construct();
+		try
+		{
+			if (ERetry Retry = fp_GeneratePrepare(_GenerateOptions, *pGenerateState, nullptr); Retry != ERetry_None)
+				co_return Retry;
+		}
+		catch (CException const &_Exception)
+		{
+			co_return _Exception.f_ExceptionPointer();
+		}
+
+		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredReposAsync(_Filter, *this, mp_Data);
 
 		CGitLaunches Launches{mp_BaseDir, (_PushFlags & ERepoPushFlag_Pretend) ? "Pretending to push repos" : "Pushing repos", mp_AnsiFlags, mp_fOutputConsole};
 
 		CColors Colors(mp_AnsiFlags);
-
-		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
 
@@ -210,129 +204,113 @@ namespace NMib::NBuildSystem
 				auto &Repo = *pRepo;
 				OutputOrderSet[Launches.f_GetRepoName(Repo)];
 
-				TCFuture<TCVector<CStr>> RemotesFuture;
-
-				if (_Remotes.f_IsEmpty())
-					RemotesFuture = fg_GetRemotes(Launches, Repo);
-				else
-					RemotesFuture = TCPromise<TCVector<CStr>>() <<= _Remotes;
-
-				TCPromise<bool> LaunchResult;
-				fg_Move(RemotesFuture) + fg_GetBranches(Launches, Repo, false)
-					> LaunchResult / [=](TCVector<CStr> &&_Remotes, CGitBranches &&_Branches)
+				g_Dispatch / [this, Launches, Repo, _Remotes, _PushFlags, Colors]() -> TCFuture<bool>
 					{
-						{
-							TCVector<CStr> NewRemotes;
-
-							for (auto &Remote : _Remotes)
+						auto OnExit = g_OnScopeExit > [&]
 							{
-								if (auto pRemote = Repo.m_Remotes.f_FindEqual(Remote); pRemote && !pRemote->m_bCanPush)
-									continue;
-
-								if (!(_PushFlags & ERepoPushFlag_NonDefaultToAll) && _Branches.m_Current != Repo.m_DefaultBranch && Remote != "origin")
-									continue;
-
-								NewRemotes.f_Insert(Remote);
-							}
-
-							_Remotes = fg_Move(NewRemotes);
-						}
-						if (_Branches.m_Current.f_IsEmpty())
-						{
-							Launches.f_RepoDone();
-							LaunchResult.f_SetResult(false);
-							return;
-						}
-
-						fg_NeedPush(Launches, Repo, _Remotes, _Branches) > LaunchResult / [=](TCSet<CStr> &&_NeedRemotes)
-							{
-								if (_NeedRemotes.f_IsEmpty())
-								{
-									Launches.f_RepoDone();
-									LaunchResult.f_SetResult(false);
-									return;
-								}
-
-								fg_Fetch(*this, Launches, Repo) > LaunchResult / [=]
-									{
-										fg_CanPush(Launches, Repo, _Remotes, _Branches) > LaunchResult / [=](TCSet<CStr> &&_NewPush)
-											{
-												TCActorResultVector<void> PushResults;
-
-												for (auto &Remote : _Remotes)
-												{
-													if (_PushFlags & ERepoPushFlag_Pretend)
-													{
-														if (_NewPush.f_FindEqual(Remote))
-														{
-															Launches.f_Output
-																(
-																	EOutputType_Normal
-																	, Repo
-																	, "New branch {2}{}{3} on {2}{}{3}\n"_f
-																	<< _Branches.m_Current
-																	<< Remote
-																	<< Colors.f_RepositoryName()
-																	<< Colors.f_Default()
-																)
-															;
-														}
-														else if (_NeedRemotes.f_FindEqual(Remote))
-														{
-															Launches.f_Output
-																(
-																	EOutputType_Normal
-																	, Repo
-																	, "Update {2}{}{3} on {2}{}{3}\n"_f
-																	<< _Branches.m_Current
-																	<< Remote
-																	<< Colors.f_RepositoryName()
-																	<< Colors.f_Default()
-																)
-															;
-														}
-													}
-													else if (_NeedRemotes.f_FindEqual(Remote))
-													{
-														TCVector<CStr> Params;
-
-														Params = {"push", Remote, _Branches.m_Current};
-
-														if (_PushFlags & ERepoPushFlag_FollowTags)
-															Params.f_InsertAfter(0, "--follow-tags");
-
-														if (Remote == "origin")
-															Params.f_InsertAfter(0, "-u");
-
-														Launches.f_Launch(Repo, Params, fg_LogAllFunctor()) > PushResults.f_AddResult();
-													}
-												}
-
-												PushResults.f_GetResults() > LaunchResult / [=](TCVector<TCAsyncResult<void>> &&_PushResults)
-													{
-														Launches.f_RepoDone();
-
-														if (!fg_CombineResults(LaunchResult, fg_Move(_PushResults)))
-															return;
-
-														LaunchResult.f_SetResult(true);
-													}
-												;
-											}
-										;
-									}
-								;
+								Launches.f_RepoDone();
 							}
 						;
-					}
-				;
 
-				LaunchResult.f_MoveFuture() > Results.f_AddResult();
+						auto [PushRemotes, Branches] = co_await (fg_GetPushRemotes(Launches, Repo, _Remotes) + fg_GetBranches(Launches, Repo, false));
+
+						TCVector<CStr> Remotes;
+						{
+							TCSet<CStr> AddedUrls;
+							for (auto &Remote : PushRemotes)
+							{
+								if (auto pRemote = Repo.m_Remotes.f_FindEqual(Remote.f_Name()); pRemote && !pRemote->m_bCanPush)
+									continue;
+
+								if (!(_PushFlags & ERepoPushFlag_NonDefaultToAll) && Branches.m_Current != Repo.m_DefaultBranch && Remote.f_Name() != "origin")
+									continue;
+
+								if (!AddedUrls(Remote.m_URL).f_WasCreated())
+									continue;
+
+								Remotes.f_Insert(Remote.f_Name());
+							}
+						}
+
+						if (Branches.m_Current.f_IsEmpty())
+							co_return false;
+
+						TCSet<CStr> NeedRemotes = co_await fg_NeedPush(Launches, Repo, Remotes, Branches);
+
+						if (NeedRemotes.f_IsEmpty())
+							co_return false;
+
+						if (!(_PushFlags & ERepoPushFlag_Force))
+							co_await fg_Fetch(*this, Launches, Repo);
+
+						auto NewPush = co_await fg_CanPush(Launches, Repo, Remotes, Branches, _PushFlags & ERepoPushFlag_Force);
+
+						TCActorResultVector<void> PushResults;
+
+						for (auto &Remote : Remotes)
+						{
+							TCVector<CStr> Params;
+
+							Params = {"push", Remote, Branches.m_Current};
+
+							if (_PushFlags & ERepoPushFlag_FollowTags)
+								Params.f_InsertAfter(0, "--follow-tags");
+
+							if (_PushFlags & ERepoPushFlag_Force)
+								Params.f_InsertAfter(0, "--force-with-lease");
+
+							if (Remote == "origin")
+								Params.f_InsertAfter(0, "-u");
+
+							if (_PushFlags & ERepoPushFlag_Pretend)
+							{
+								if (NewPush.f_FindEqual(Remote))
+								{
+									Launches.f_Output
+										(
+											EOutputType_Normal
+											, Repo
+											, "New branch {3}{}{4} on {3}{}{4}: git {}"_f
+											<< Branches.m_Current
+											<< Remote
+											<< CProcessLaunchParams::fs_GetParams(Params)
+											<< Colors.f_RepositoryName()
+											<< Colors.f_Default()
+										)
+									;
+								}
+								else if (NeedRemotes.f_FindEqual(Remote))
+								{
+									Launches.f_Output
+										(
+											EOutputType_Normal
+											, Repo
+											, "{} {4}{}{5} on {4}{}{5}: git {}"_f
+											<< ((_PushFlags & ERepoPushFlag_Force) ? "Force update" : "Update")
+											<< Branches.m_Current
+											<< Remote
+											<< CProcessLaunchParams::fs_GetParams(Params)
+											<< Colors.f_RepositoryName()
+											<< Colors.f_Default()
+										)
+									;
+								}
+							}
+							else if (NeedRemotes.f_FindEqual(Remote))
+								Launches.f_Launch(Repo, Params, fg_LogAllFunctor()) > PushResults.f_AddResult();
+						}
+
+						co_await PushResults.f_GetResults() | g_Unwrap;
+
+						co_return true;
+					}
+					> Results.f_AddResult()
+				;
 			}
 
 			bool bDidPush = false;
-			for (auto &Result : Results.f_GetResults().f_CallSync())
-				bDidPush |= *Result;
+			for (auto ResultsUnwrapped = co_await Results.f_GetResults() | g_Unwrap; auto &bResult : ResultsUnwrapped)
+				bDidPush = bDidPush || bResult;
 
 			if (bDidPush)
 			{
@@ -344,8 +322,9 @@ namespace NMib::NBuildSystem
 				++PushOrderGroup;
 			}
 		}
+
 		Launches.f_SetOutputOrder(OutputOrder);
 
-		return ERetry_None;
+		co_return ERetry_None;
 	}
 }

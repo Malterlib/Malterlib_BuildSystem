@@ -352,9 +352,9 @@ namespace NMib::NBuildSystem::NRepository
 					return;
 				}
 
-				fg_Timeout(_Editor.m_Sleep) > Promise / [=]
+				fg_Timeout(_Editor.m_Sleep) > Promise / [=, Result = fg_Move(_Result)]() mutable
 					{
-						Promise.f_SetResult(_Result);
+						Promise.f_SetResult(fg_Move(Result));
 					}
 				;
 			}

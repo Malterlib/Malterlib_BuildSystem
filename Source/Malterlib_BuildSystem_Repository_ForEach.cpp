@@ -33,7 +33,7 @@ namespace NMib::NBuildSystem
 				TCPromise<void> Result;
 				Launches.f_Launch(Repo, _Params, fg_LogAllFunctor()) > [=](TCAsyncResult<void> &&_Result)
 					{
-						Result.f_SetResult(_Result);
+						Result.f_SetResult(fg_Move(_Result));
 						Launches.f_RepoDone();
 					}
 				;

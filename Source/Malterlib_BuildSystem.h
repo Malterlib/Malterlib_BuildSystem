@@ -107,6 +107,7 @@ namespace NMib::NBuildSystem
 			, ERepoPushFlag_Pretend = DMibBit(0)
 			, ERepoPushFlag_FollowTags = DMibBit(1)
 			, ERepoPushFlag_NonDefaultToAll = DMibBit(2)
+			, ERepoPushFlag_Force = DMibBit(3)
 		};
 
 		enum ERepoBranchFlag
@@ -388,6 +389,8 @@ namespace NMib::NBuildSystem
 			)
 		;
 		ERetry f_Action_Repository_Push(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, NContainer::TCVector<NStr::CStr> const &_Remotes, ERepoPushFlag _PushFlags);
+		NConcurrency::TCFuture<ERetry> f_Action_Repository_Push_Async(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, NContainer::TCVector<NStr::CStr> const &_Remotes, ERepoPushFlag _PushFlags);
+
 		ERetry f_Action_Repository_ListCommits
 			(
 			 	CGenerateOptions const &_GenerateOptions
