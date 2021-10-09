@@ -58,7 +58,7 @@ namespace NMib::NBuildSystem
 			CByteVector FileData;
 			CFile::fs_WriteStringToVector(FileData, JSON.f_ToString());
 
-			CStr EnvironmentStateFile = CFile::fs_AppendPath(mp_OutputDir, "Environment.json");
+			CStr EnvironmentStateFile = mp_OutputDir / "Environment.json";
 
 			CFile::fs_CreateDirectory(CFile::fs_GetPath(EnvironmentStateFile));
 			CFile::fs_CopyFileDiff(FileData, EnvironmentStateFile, CTime::fs_NowUTC());
@@ -117,7 +117,8 @@ namespace NMib::NBuildSystem
 				)
 			;
 
-			_GenerateState.m_GlobalGeneratorStateFileName = CFile::fs_AppendPath(_GenerateState.m_OutputDir, "GeneratorStates/" + UniqueIdentifier.f_GetAsString() + ".MGeneratorState");
+			_GenerateState.m_GlobalGeneratorStateFileName = _GenerateState.m_OutputDir / "GeneratorStates" / (UniqueIdentifier.f_GetAsString() + ".MGeneratorState");
+			mp_GeneratorStateFileName = _GenerateState.m_OutputDir / "GeneratorStates" / (UniqueIdentifier.f_GetAsString() + ".TouchOnly");
 		}
 		{
 			CUniversallyUniqueIdentifier UniqueIdentifier
@@ -128,12 +129,11 @@ namespace NMib::NBuildSystem
 				)
 			;
 
-			_GenerateState.m_WorkspaceGeneratorStateFileName = CFile::fs_AppendPath(_GenerateState.m_OutputDir, "GeneratorStates/" + UniqueIdentifier.f_GetAsString() + ".MGeneratorState");
+			_GenerateState.m_WorkspaceGeneratorStateFileName = _GenerateState.m_OutputDir / "GeneratorStates" / (UniqueIdentifier.f_GetAsString() + ".MGeneratorState");
 		}
 
-		_GenerateState.m_EnvironmentStateFile = CFile::fs_AppendPath(_GenerateState.m_OutputDir, "Environment.json");
+		_GenerateState.m_EnvironmentStateFile = _GenerateState.m_OutputDir / "Environment.json";
 
-		mp_GeneratorStateFileName = _GenerateState.m_GlobalGeneratorStateFileName;
 		_GenerateState.m_bUseCachedEnvironment = (GenerateSettings.m_GenerationFlags & EGenerationFlag_UseCachedEnvironment) != EGenerationFlag_None;
 
 		if (_GenerateState.m_bUseCachedEnvironment)
@@ -162,7 +162,7 @@ namespace NMib::NBuildSystem
 		else
 			mp_SaveEnvironment = mp_Environment = GenerateSettings.m_Environment;
 
-		CStr OverrideEnvironmentFile = CFile::fs_AppendPath(_GenerateState.m_OutputDir, "OverrideEnvironment.json");
+		CStr OverrideEnvironmentFile = _GenerateState.m_OutputDir / "OverrideEnvironment.json";
 		{
 			if (CFile::fs_FileExists(OverrideEnvironmentFile, EFileAttrib_File))
 			{
@@ -192,23 +192,46 @@ namespace NMib::NBuildSystem
 				Stream >> _GenerateState.m_GlobalState;
 
 				if (_GenerateState.m_GlobalState.m_GeneratedFiles.f_IsEmpty())
+				{
+					if (mp_GenerateWorkspace)
+					{
+						DMibConErrOut2("Generating all workspaces: Empty generated files\n");
+						mp_GenerateWorkspace.f_Clear();
+					}
+				}
+			}
+			catch (CException const &_Exception)
+			{
+				if (mp_GenerateWorkspace)
+				{
+					DMibConErrOut2("Generating all workspaces: Exception reading state: {}\n", _Exception);
 					mp_GenerateWorkspace.f_Clear();
+				}
+				_GenerateState.m_GlobalState = CGeneratorArchiveState();
 			}
 			catch (...)
 			{
+				if (mp_GenerateWorkspace)
+				{
+					DMibConErrOut2("Generating all workspaces: Generic exception reading state\n");
+					mp_GenerateWorkspace.f_Clear();
+				}
 				_GenerateState.m_GlobalState = CGeneratorArchiveState();
-				mp_GenerateWorkspace.f_Clear();
 			}
 		}
 		else
-			mp_GenerateWorkspace.f_Clear(); // If we don't have global state we need to create the whole thing to get the correct generated files
+		{
+			if (mp_GenerateWorkspace)
+			{
+				DMibConErrOut2("Generating all workspaces: No global state found at '{}'\n", _GenerateState.m_GlobalGeneratorStateFileName);
+				mp_GenerateWorkspace.f_Clear(); // If we don't have global state we need to create the whole thing to get the correct generated files
+			}
+		}
 
 		_GenerateState.m_BeforeGlobalState = _GenerateState.m_GlobalState;
 
 		if (mp_GenerateWorkspace.f_IsEmpty())
-		{
 			_GenerateState.m_GlobalState.m_GeneratedFiles.f_Clear();
-		}
 		else
 		{
 			for (auto iFile = _GenerateState.m_GlobalState.m_GeneratedFiles.f_GetIterator(); iFile; )
@@ -548,7 +571,12 @@ namespace NMib::NBuildSystem
 			return false;
 
 		if (!GenerateState.m_bDependenciesChanged)
+		{
+			if (!CFile::fs_FileExists(mp_GeneratorStateFileName))
+				CFile::fs_Touch(mp_GeneratorStateFileName);
+
 			return false;
+		}
 
 		GenerateState.m_LocalGeneratorInterfaceCleanup.f_Clear();
 
@@ -716,6 +744,7 @@ namespace NMib::NBuildSystem
 				CFile::fs_CreateDirectory(CFile::fs_GetPath(GenerateState.m_GlobalGeneratorStateFileName));
 				CFile::fs_CopyFileDiff(Stream.f_MoveVector(), GenerateState.m_GlobalGeneratorStateFileName, CTime::fs_NowUTC());
 			}
+			CFile::fs_Touch(mp_GeneratorStateFileName);
 		}
 
 		TCVector<CStr> DeletedFiles;
