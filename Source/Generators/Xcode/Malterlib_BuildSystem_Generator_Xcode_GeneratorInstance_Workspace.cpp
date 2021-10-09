@@ -188,6 +188,8 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 <dict>
 	<key>DisableBuildSystemDeprecationWarning</key>
 	<true/>
+	<key>DisableBuildSystemDeprecationDiagnostic</key>
+	<true/>
 	<key>IDEWorkspaceSharedSettings_AutocreateContextsIfNeeded</key>
 	<false/>
 	<key>PreviewsEnabled</key>
@@ -206,6 +208,8 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 	<key>BuildSystemType</key>
 	<string>Original</string>
 	<key>DisableBuildSystemDeprecationWarning</key>
+	<true/>
+	<key>DisableBuildSystemDeprecationDiagnostic</key>
 	<true/>
 	<key>IDEWorkspaceSharedSettings_AutocreateContextsIfNeeded</key>
 	<false/>
