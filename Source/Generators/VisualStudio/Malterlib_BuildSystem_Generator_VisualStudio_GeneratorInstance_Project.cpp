@@ -772,13 +772,6 @@ namespace NMib::NBuildSystem::NVisualStudio
 						Configs[iConfig.f_GetKey()] = fg_Explicit(&TempEntity);
 					}
 
-					bool bPropertyValue = false;
-					if (LanguageType == ELanguageType_Native)
-					{
-						if (iType.f_GetKey() == "C" || iType.f_GetKey() == "C++" || iType.f_GetKey() == "C++Managed")
-							bPropertyValue = true;
-					}
-
 					CStr DefaultEntity;
 					if (LanguageType == ELanguageType_Native)
 						DefaultEntity = iType->m_VSType;
@@ -794,7 +787,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 							, &SearchList
 							, nullptr
 							, DefaultEntity
-							, false // bPropertyValue
+							, false
 							, false
 							, LanguageType == ELanguageType_CSharp
 							, _Project

@@ -394,30 +394,23 @@ namespace NMib::NBuildSystem::NRepository
 			{
 				bool bIsError = !_Result || _Result->m_ExitCode;
 
-				bool bDidOutput = false;
-
 				if (_Result)
 				{
 					CStr Output = fHandleResult(*_Result);
 
 					if (!Output.f_IsEmpty())
-					{
-						bDidOutput = true;
 						This.f_Output(bIsError ? EOutputType_Error : EOutputType_Normal, _Repo, Output, _Prefix);
-					}
 				}
 
 				if (!_Result)
 				{
 					This.f_Output(EOutputType_Error, _Repo, "Failed: {}\n"_f << _Result.f_GetExceptionStr(), _Prefix);
-					bDidOutput = true;
 					Result.f_SetException(_Result);
 				}
 				else if (_Result->m_ExitCode)
 				{
 					This.f_Output(EOutputType_Error, _Repo, "Failed with exit code: {}\n"_f << _Result->m_ExitCode, _Prefix);
 					Result.f_SetException(DMibErrorInstance("Error status"));
-					bDidOutput = true;
 				}
 				else
 					Result.f_SetResult();
