@@ -3,6 +3,10 @@
 
 #pragma once
 
+#include "Malterlib_BuildSystem_Configuration.h"
+#include "Malterlib_BuildSystem_Data.h"
+#include "Malterlib_BuildSystem_Workspace.h"
+
 namespace NMib::NBuildSystem
 {
 	struct align_cacheline CConfiguraitonData

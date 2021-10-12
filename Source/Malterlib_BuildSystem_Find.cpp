@@ -3,6 +3,8 @@
 
 #include <Mib/Core/Core>
 
+#include "Malterlib_BuildSystem_Find.h"
+
 namespace NMib::NBuildSystem
 {
 	CFindOptions::CFindOptions()

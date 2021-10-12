@@ -4,6 +4,7 @@
 #pragma once
 
 #include <Mib/Core/Core>
+#include "Malterlib_BuildSystem_Registry.h"
 
 namespace NMib::NBuildSystem
 {

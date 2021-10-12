@@ -1,7 +1,7 @@
 // Copyright © 2021 Favro Holding AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
-#include "Malterlib_BuildSystem_Target.h"
+#include "Malterlib_BuildSystem_Workspace.h"
 
 namespace NMib::NBuildSystem
 {

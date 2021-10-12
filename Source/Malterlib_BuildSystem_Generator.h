@@ -3,8 +3,13 @@
 
 #pragma once
 
+#include "Malterlib_BuildSystem_Property.h"
+
 namespace NMib::NBuildSystem
 {
+	class CBuildSystem;
+	struct CBuildSystemData;
+
 	class CBuildSystemGenerator
 	{
 	public:

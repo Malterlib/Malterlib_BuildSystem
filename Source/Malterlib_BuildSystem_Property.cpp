@@ -3,6 +3,7 @@
 
 #include <Mib/Core/Core>
 #include "Malterlib_BuildSystem_Property.h"
+#include "Malterlib_BuildSystem.h"
 
 namespace NMib::NBuildSystem
 {

@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include "Malterlib_BuildSystem_Condition.h"
+
 namespace NMib::NBuildSystem
 {
 	struct CBuildSystemConfiguration

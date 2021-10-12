@@ -2,6 +2,7 @@
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Registry.h"
+#include "Malterlib_BuildSystem_FilePosition.h"
 
 #include <Mib/Encoding/JSONShortcuts>
 

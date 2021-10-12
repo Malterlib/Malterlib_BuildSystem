@@ -3,8 +3,15 @@
 
 #pragma once
 
+#include "Malterlib_BuildSystem_DataForwardDeclare.h"
+#include "Malterlib_BuildSystem_Group.h"
+#include "Malterlib_BuildSystem_FilePosition.h"
+#include "Malterlib_BuildSystem_Data.h"
+
 namespace NMib::NBuildSystem
 {
+	struct CWorkspaceInfo;
+	
 	struct CTargetDependencyInfo
 	{
 		NStr::CStr const &f_GetName() const;

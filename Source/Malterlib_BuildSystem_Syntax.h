@@ -6,6 +6,7 @@
 #include <Mib/Core/Core>
 #include <Mib/Storage/Indirection>
 #include <Mib/Storage/Optional>
+#include <Mib/Encoding/EJSON>
 
 namespace NMib::NBuildSystem
 {

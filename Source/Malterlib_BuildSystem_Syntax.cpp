@@ -2,6 +2,8 @@
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Syntax.h"
+#include "Malterlib_BuildSystem_Registry.h"
+#include "Malterlib_BuildSystem.h"
 
 namespace NMib::NBuildSystem
 {

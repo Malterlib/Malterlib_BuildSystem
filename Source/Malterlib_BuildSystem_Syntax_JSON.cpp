@@ -1,7 +1,10 @@
 // Copyright © 2021 Favro Holding AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
+#include <Mib/Encoding/JSONParse>
+
 #include "Malterlib_BuildSystem_Syntax.h"
+#include "Malterlib_BuildSystem.h"
 
 namespace NMib::NBuildSystem
 {

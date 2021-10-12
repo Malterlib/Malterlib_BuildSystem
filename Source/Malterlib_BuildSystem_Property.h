@@ -5,6 +5,9 @@
 
 #include <Mib/Core/Core>
 
+#include "Malterlib_BuildSystem_Syntax.h"
+#include "Malterlib_BuildSystem_Condition.h"
+
 namespace NMib::NBuildSystem
 {
 	struct CPropertyKey

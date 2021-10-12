@@ -3,6 +3,9 @@
 
 #pragma once
 
+#include "Malterlib_BuildSystem_Group.h"
+#include "Malterlib_BuildSystem_Target.h"
+
 namespace NMib::NBuildSystem
 {
 	struct align_cacheline CWorkspaceInfo
