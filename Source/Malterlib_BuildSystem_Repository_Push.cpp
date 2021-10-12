@@ -44,7 +44,7 @@ namespace NMib::NBuildSystem
 			return Promise.f_MoveFuture();
 		}
 
-		TCFuture<TCSet<CStr>> fg_CanPush(CGitLaunches _Launches, CRepository _Repo, TCVector<CStr> _Remotes, CGitBranches _Branches, bool _bForce)
+		TCFuture<TCSet<CStr>> DMibWorkaroundUBSanSectionErrors fg_CanPush(CGitLaunches _Launches, CRepository _Repo, TCVector<CStr> _Remotes, CGitBranches _Branches, bool _bForce)
 		{
 			CColors Colors(_Launches.m_pState->m_AnsiFlags);
 
@@ -119,7 +119,7 @@ namespace NMib::NBuildSystem
 			co_return fg_Move(NewPush);
 		}
 
-		TCFuture<TCSet<CStr>> fg_NeedPush(CGitLaunches _Launches, CRepository _Repo, TCVector<CStr> _Remotes, CGitBranches _Branches)
+		TCFuture<TCSet<CStr>> DMibWorkaroundUBSanSectionErrors fg_NeedPush(CGitLaunches _Launches, CRepository _Repo, TCVector<CStr> _Remotes, CGitBranches _Branches)
 		{
 			TCActorResultMap<CStr, TCVector<CLogEntry>> NeedPushResults;
 
@@ -165,7 +165,7 @@ namespace NMib::NBuildSystem
 		return fg_CallSafe(this, &CBuildSystem::f_Action_Repository_Push_Async, _GenerateOptions, _Filter, _Remotes, _PushFlags).f_CallSync(pRunLoop);
 	}
 
-	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Push_Async
+	TCFuture<CBuildSystem::ERetry> DMibWorkaroundUBSanSectionErrors CBuildSystem::f_Action_Repository_Push_Async
 		(
 		 	CGenerateOptions const &_GenerateOptions
 		 	, CRepoFilter const &_Filter

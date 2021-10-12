@@ -594,7 +594,7 @@ namespace NMib::NBuildSystem::NRepository
 		fg_UpdateRemotesAsync(_BuildSystem, _FilteredRepositories, _ExtraMessage).f_CallSync(pRunLoop);
 	}
 
-	TCFuture<void> fg_UpdateRemotesAsync(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage)
+	TCFuture<void> DMibWorkaroundUBSanSectionErrors fg_UpdateRemotesAsync(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage)
 	{
 		CGitLaunches Launches{_BuildSystem.f_GetBaseDir(), "Fetching remotes" + _ExtraMessage, _BuildSystem.f_AnsiFlags(), _BuildSystem.f_OutputConsoleFunctor()};
 		Launches.f_MeasureRepos(_FilteredRepositories.m_FilteredRepositories);
@@ -620,7 +620,7 @@ namespace NMib::NBuildSystem::NRepository
 				CStr m_RemoteBranch;
 			};
 
-			g_Dispatch / [&_BuildSystem, Launches, Repo, FetchEnvironment]() -> TCFuture<void>
+			g_Dispatch / [&_BuildSystem, Launches, Repo, FetchEnvironment]() DMibWorkaroundUBSanSectionErrors -> TCFuture<void>
 				{
 					TCActorResultMap<CStr, void> RemoteQueryResults;
 					TCSharedPointer<TCMap<CStr, CBranchState>> pRemoteHeadBranches = fg_Construct();

@@ -25,7 +25,13 @@ namespace NMib::NBuildSystem::NRepository
 		return fg_GetFilteredReposAsync(_Filter, _BuildSystem, _Data, _Flags).f_CallSync(pRunLoop);
 	}
 
-	TCFuture<CFilteredRepos> fg_GetFilteredReposAsync(CBuildSystem::CRepoFilter const &_Filter, CBuildSystem &_BuildSystem, CBuildSystemData &_Data, EFilterRepoFlag _Flags)
+	TCFuture<CFilteredRepos> DMibWorkaroundUBSanSectionErrors fg_GetFilteredReposAsync
+		(
+			CBuildSystem::CRepoFilter const &_Filter
+			, CBuildSystem &_BuildSystem
+			, CBuildSystemData &_Data
+			, EFilterRepoFlag _Flags
+		)
 	{
 		co_await ECoroutineFlag_AllowReferences;
 
