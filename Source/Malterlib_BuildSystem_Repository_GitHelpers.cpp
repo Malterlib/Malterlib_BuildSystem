@@ -427,7 +427,7 @@ namespace NMib::NBuildSystem::NRepository
 							if (TimeZone.f_GetLen() != 5)
 								return _String;
 
-							o_Time = CTimeConvert::fs_FromCreateFromUnixSeconds(Date.f_ToInt());
+							o_Time = CTimeConvert::fs_FromUnixSeconds(Date.f_ToInt());
 
 							bool bNegative = TimeZone[0] != '+';
 							auto TimeSpan = CTimeSpanConvert::fs_CreateHourSpan(TimeZone.f_Extract(1, 2).f_ToInt());

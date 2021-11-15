@@ -503,7 +503,7 @@ namespace NMib::NContainer
 						else if (Value.f_Type() != EJSONType_Integer)
 							DMibError("Invalid EJSON: $date value must be an integer");
 
-						Time = NTime::CTimeConvert::fs_FromCreateFromUnixMilliseconds(Value.f_Integer());
+						Time = NTime::CTimeConvert::fs_FromUnixMilliseconds(Value.f_Integer());
 
 						auto DateTime = NTime::CTimeConvert(Time).f_ExtractDateTime();
 
