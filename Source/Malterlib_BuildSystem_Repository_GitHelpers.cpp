@@ -596,6 +596,8 @@ namespace NMib::NBuildSystem::NRepository
 
 	TCFuture<void> DMibWorkaroundUBSanSectionErrors fg_UpdateRemotesAsync(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage)
 	{
+		co_await ECoroutineFlag_AllowReferences;
+
 		CGitLaunches Launches{_BuildSystem.f_GetBaseDir(), "Fetching remotes" + _ExtraMessage, _BuildSystem.f_AnsiFlags(), _BuildSystem.f_OutputConsoleFunctor()};
 		Launches.f_MeasureRepos(_FilteredRepositories.m_FilteredRepositories);
 
