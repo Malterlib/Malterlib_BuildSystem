@@ -128,7 +128,7 @@ namespace NMib::NContainer
 		ch8 const *pParse = o_pParse;
 		NStr::fg_ParseWhiteSpaceNoLines(pParse);
 		auto pStart = pParse;
-		while (*pParse == '=' || NEncoding::g_Base64EncodingTableReverse[(uch8)*pParse] != -1)
+		while (*pParse == '=' || NEncoding::g_Base64EncodingTableReverse[(uint8)*pParse] != -1)
 			++pParse;
 		auto pEnd = pParse;
 		NStr::fg_ParseWhiteSpaceNoLines(pParse);
