@@ -5,22 +5,22 @@
 
 namespace NMib::NBuildSystem
 {
-	void CBuildSystem::f_GenerateGlobalFiles(CBuildSystemData &_BuildSystemData) const
+	void CBuildSystem::f_GenerateGlobalFiles(CBuildSystemData &_BuildSystemData, bool _bBeforeImports) const
 	{
-		fp_GenerateFiles(_BuildSystemData, _BuildSystemData.m_RootEntity, false, EEntityType_Root);
+		fp_GenerateFiles(_BuildSystemData, _BuildSystemData.m_RootEntity, false, EEntityType_Root, _bBeforeImports);
 	}
 
 	void CBuildSystem::f_GenerateWorkspaceFiles(CBuildSystemData &_BuildSystemData, CEntity &_Target) const
 	{
-		fp_GenerateFiles(_BuildSystemData, _Target, true, EEntityType_Workspace);
+		fp_GenerateFiles(_BuildSystemData, _Target, true, EEntityType_Workspace, false);
 	}
 
 	void CBuildSystem::f_GenerateTargetFiles(CBuildSystemData &_BuildSystemData, CEntity &_Target) const
 	{
-		fp_GenerateFiles(_BuildSystemData, _Target, true, EEntityType_Target);
+		fp_GenerateFiles(_BuildSystemData, _Target, true, EEntityType_Target, false);
 	}
 
-	void CBuildSystem::fp_GenerateFiles(CBuildSystemData &_BuildSystemData, CEntity &_Entity, bool _bRecursive, EEntityType _Type) const
+	void CBuildSystem::fp_GenerateFiles(CBuildSystemData &_BuildSystemData, CEntity &_Entity, bool _bRecursive, EEntityType _Type, bool _bBeforeImports) const
 	{
 		CStr Workspace;
 
@@ -139,6 +139,9 @@ namespace NMib::NBuildSystem
 						;
 
 						if (!f_EvalCondition(TempEntity, ToGenerateData.m_Condition, ToGenerateData.m_Debug.f_Find("TraceCondition") >= 0))
+							continue;
+
+						if (f_EvaluateEntityPropertyBool(TempEntity, EPropertyType_GenerateFile, "BeforeImports", false) != _bBeforeImports)
 							continue;
 
 						CStr Path = mp_GeneratorInterface->f_GetExpandedPath(f_EvaluateEntityPropertyString(TempEntity, EPropertyType_GenerateFile, "Name", CStr()), f_GetBaseDir());

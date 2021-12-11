@@ -182,7 +182,7 @@ namespace NMib::NBuildSystem
 		inline_always CGenerateOptions const &f_GetGenerateOptions() const;
 		NStr::CStr f_GetBaseDir() const;
 		bool f_AddGeneratedFile(NStr::CStr const &_File, NStr::CStr const &_Data, NStr::CStr const &_Workspace, bool &_bWasCreated, EGeneratedFileFlag _Flags = EGeneratedFileFlag_None) const;
-		void f_GenerateGlobalFiles(CBuildSystemData &_BuildSystemData) const;
+		void f_GenerateGlobalFiles(CBuildSystemData &_BuildSystemData, bool _bBeforeImports) const;
 		void f_GenerateWorkspaceFiles(CBuildSystemData &_BuildSystemData, CEntity &_Target) const;
 		void f_GenerateTargetFiles(CBuildSystemData &_BuildSystemData, CEntity &_Target) const;
 		void f_ExpandRepositoryEntities(CBuildSystemData &_BuildSystemData) const;
@@ -771,7 +771,7 @@ namespace NMib::NBuildSystem
 		void fp_UpdateDependenciesNames(CEntity *_pTargetOuterEntity) const;
 		void fp_EvaluateWorkspace(CBuildSystemData &_Destination, CEntity &_Entity) const;
 		void fp_UsedExternal(NStr::CStr const &_Name) const;
-		void fp_GenerateFiles(CBuildSystemData &_BuildSystemData, CEntity &_Entity, bool _bRecursive, EEntityType _Type) const;
+		void fp_GenerateFiles(CBuildSystemData &_BuildSystemData, CEntity &_Entity, bool _bRecursive, EEntityType _Type, bool _bBeforeImports) const;
 		CEntity *fp_AddEntity
 			(
 				CEntity const &_Entity

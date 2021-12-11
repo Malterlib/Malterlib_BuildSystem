@@ -242,6 +242,7 @@ namespace NMib::NBuildSystem
 					, {CPropertyKey(EPropertyType_GenerateFile, "Name"), g_String}
 					, {CPropertyKey(EPropertyType_GenerateFile, "Contents"), g_String}
 					, {CPropertyKey(EPropertyType_GenerateFile, "UnicodeBOM"), fg_Defaulted(g_Boolean, true)}
+					, {CPropertyKey(EPropertyType_GenerateFile, "BeforeImports"), fg_Defaulted(g_Boolean, false)}
 					, {CPropertyKey(EPropertyType_GenerateFile, "UTF16"),  fg_Defaulted(g_Boolean, false)}
 					, {CPropertyKey(EPropertyType_GenerateFile, "Executable"), fg_Defaulted(g_Boolean, false)}
 					, {CPropertyKey(EPropertyType_GenerateFile, "UnixLineEnds"), fg_Defaulted(g_Boolean, false)}

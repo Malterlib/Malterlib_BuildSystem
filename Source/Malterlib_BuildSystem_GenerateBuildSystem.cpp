@@ -893,11 +893,12 @@ namespace NMib::NBuildSystem
 					}
 
 					f_EvaluateDataMain(_pConfig->m_Evaluated, ConfigValues);
+					f_GenerateGlobalFiles(_pConfig->m_Evaluated, true);
 					f_ExpandDynamicImports(_pConfig->m_Evaluated);
 					f_ExpandGlobalTargetsAndWorkspaces(_pConfig->m_Evaluated);
 					f_EvalGlobalWorkspaces(_pConfig->m_Evaluated, _pConfig->m_Targets);
 					f_ExpandGlobalEntities(_pConfig->m_Evaluated);
-					f_GenerateGlobalFiles(_pConfig->m_Evaluated);
+					f_GenerateGlobalFiles(_pConfig->m_Evaluated, false);
 
 					auto &ConfigData = *_pConfig;
 
