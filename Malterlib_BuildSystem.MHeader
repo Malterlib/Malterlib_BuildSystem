@@ -3,7 +3,7 @@
 
 Import "../Core/Lib_Malterlib.MTarget"
 
-Property.MalterlibBuildSystemEmbedCMake define bool?
+Property.MalterlibBuildSystemEmbedCMake: bool?
 
 %Group "{Malterlib}/{Lib_Malterlib_BuildSystem}"
 {
@@ -64,6 +64,7 @@ Property.MalterlibBuildSystemEmbedCMake define bool?
 			MalterlibBuildSystemEmbedCMake true
 			!DocumentationEnabled true
 		}
+
 		Dependency.Indirect true
 
 		%Dependency "Lib_CMake_CMakeLib"
@@ -82,13 +83,13 @@ Property.MalterlibBuildSystemEmbedCMake define bool?
 
 Property
 {
-	MalterlibLibrary_BuildSystem define bool = MalterlibLibrary_All
+	MalterlibLibrary_BuildSystem: bool = MalterlibLibrary_All
 	MalterlibSubLibraries =+ "BuildSystem"
 	{
 		!!MalterlibLibrary_BuildSystem true
 	}
-	MalterlibLibrarySeparate_Lib_Malterlib_BuildSystem define bool = true
-//	MalterlibSubLibrarySeparate_Lib_Malterlib_BuildSystem define bool = true
+	MalterlibLibrarySeparate_Lib_Malterlib_BuildSystem: bool = true
+//	MalterlibSubLibrarySeparate_Lib_Malterlib_BuildSystem: bool = true
 	MalterlibIncludeRoots =+ "Include"->MakeAbsolute()
 	{
 		!!MalterlibLibrary_BuildSystem true
@@ -116,7 +117,7 @@ Property
 {
 	!!MalterlibEnableInternalTests true
 	MalterlibTests =+ "Malterlib_BuildSystem"
-	MalterlibTestFiles_Malterlib_BuildSystem define [type(CEntity)] = ["Test/*"->MakeAbsolute()]
-	MalterlibTestDependencies_Malterlib_BuildSystem define [type(CEntity)] = ["Lib_Malterlib_BuildSystem"]
-	MalterlibTestExtraGroups_Malterlib_BuildSystem define [string] = ["{Test}/{Malterlib_BuildSystem}"]
+	MalterlibTestFiles_Malterlib_BuildSystem: [type(CEntity)] = ["Test/*"->MakeAbsolute()]
+	MalterlibTestDependencies_Malterlib_BuildSystem: [type(CEntity)] = ["Lib_Malterlib_BuildSystem"]
+	MalterlibTestExtraGroups_Malterlib_BuildSystem: [string] = ["{Test}/{Malterlib_BuildSystem}"]
 }
