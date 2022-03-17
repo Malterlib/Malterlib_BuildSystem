@@ -16,15 +16,15 @@ Changes in sub-repositories needs to be reconciled.
 
 Choose how you want to reconcile changes:
 
-Accept recommended actions   : {0}./mib update_repos --reconcile=*:auto{1}
-Rebase all                   : {0}./mib update_repos --reconcile=*:rebase{1}
-Reset all                    : {0}./mib update_repos --reconcile=*:reset{1}
+Accept recommended actions   : {0}./mib update_repos '--reconcile=*:auto'{1}
+Rebase all                   : {0}./mib update_repos '--reconcile=*:rebase'{1}
+Reset all                    : {0}./mib update_repos '--reconcile=*:reset'{1}
 
 To choose separate action for different repositories you can specify wildcards. The last matching wildcard wins:
-{0}./mib update_repos --reconcile=*:auto,External/*:reset{1}
+{0}./mib update_repos '--reconcile=*:auto,External/*:reset'{1}
 
 To force the action even for repositories that you have not yet seen
-{0}./mib update_repos --reconcile=*:auto --reconcile-force{1}
+{0}./mib update_repos '--reconcile=*:auto --reconcile-force'{1}
 
 To show current status without reconciling use:
 {0}./mib status --skip-update{1}
@@ -44,16 +44,16 @@ Removed sub-repositories needs to be reconciled.
 
 Choose how you want to reconcile changes:
 
-Leave removed repositories on disk    : {0}./mib update_repos --reconcile-removed=*:leave{1}
-Delete removed repositories from disk : {0}./mib update_repos --reconcile-removed=*:delete{1}
+Leave removed repositories on disk    : {0}./mib update_repos '--reconcile-removed=*:leave'{1}
+Delete removed repositories from disk : {0}./mib update_repos '--reconcile-removed=*:delete'{1}
 
 {2}Warning:{1} Specifying {0}delete{1} for reconcile removed will delete the repository and any unpushed work permanently.
 
 To choose separate action for different repositories you can specify wildcards. The last matching wildcard wins:
-{0}./mib update_repos --reconcile-removed=*:leave,External/*:delete{1}
+{0}./mib update_repos '--reconcile-removed=*:leave,External/*:delete'{1}
 
 To force the action even for repositories that you have not yet seen the recommended action for
-{0}./mib update_repos --reconcile-remove=*:delete --reconcile-force{1}
+{0}./mib update_repos '--reconcile-remove=*:delete' --reconcile-force{1}
 
 To show current status without reconciling use:
 {0}./mib status --skip-update{1}
