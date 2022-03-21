@@ -29,7 +29,6 @@ namespace NMib::NBuildSystem
 		TCVector<CToSortBy> m_ToSort;
 	};
 
-#ifndef DDocumentation_Doxygen
 	template <typename t_CSortKey>
 	class TCSortedPerform<t_CSortKey &>
 	{
@@ -52,8 +51,7 @@ namespace NMib::NBuildSystem
 		TCLinkedList<TCFunction<void ()>> m_ToPerform;
 		TCVector<CToSortBy> m_ToSort;
 	};
-#endif
-	
+
 	CStr fg_EscapeXcodeProjectVar(CStr const &_Var);
 }
 

@@ -14,7 +14,7 @@ namespace NMib::NBuildSystem
 	{
 	}
 
-	CFindOptions::CFindOptions(CStr const &_Path, EFileAttrib _Attribs, bool _bRecursive, bool _bFollowLinks)
+	CFindOptions::CFindOptions(CStr const &_Path, NFile::EFileAttrib _Attribs, bool _bRecursive, bool _bFollowLinks)
 		: m_Path(_Path)
 		, m_Attribs(_Attribs)
 		, m_bRecursive(_bRecursive)

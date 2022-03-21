@@ -7,6 +7,7 @@
 
 namespace NMib::NContainer
 {
+#ifndef DDocumentation_Doxygen
 	using namespace NEncoding;
 	using namespace NEncoding::NJSON;
 	using namespace NBuildSystem;
@@ -674,4 +675,5 @@ namespace NMib::NContainer
 		 	, ch8 const *_pPrettySeparator
 		)
 	;
+#endif
 }

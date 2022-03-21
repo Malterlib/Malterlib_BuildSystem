@@ -13,7 +13,7 @@ namespace NMib::NBuildSystem
 	void fg_Malterlib_BuildSystem_MakeActive_VisualStudio();
 	void fg_Malterlib_BuildSystem_MakeActive_Xcode();
 
-	CBuildSystem::CBuildSystem(EAnsiEncodingFlag _AnsiFlags, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole)
+	CBuildSystem::CBuildSystem(NCommandLine::EAnsiEncodingFlag _AnsiFlags, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole)
 		: mp_NowUTC(NTime::CTime::fs_NowUTC())
 		, mp_AnsiFlags(_AnsiFlags)
 		, mp_fOutputConsole(_fOutputConsole)

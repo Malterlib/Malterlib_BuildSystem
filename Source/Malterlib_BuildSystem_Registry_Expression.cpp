@@ -7,6 +7,7 @@
 
 namespace NMib::NContainer
 {
+#ifndef DDocumentation_Doxygen
 	using namespace NEncoding;
 	using namespace NEncoding::NJSON;
 	using namespace NBuildSystem;
@@ -1748,4 +1749,5 @@ namespace NMib::NContainer
 			, mint _Depth
 		)
 	;
+#endif
 }

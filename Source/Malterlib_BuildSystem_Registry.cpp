@@ -8,6 +8,7 @@
 
 namespace NMib::NContainer
 {
+#ifndef DDocumentation_Doxygen
 	using namespace NEncoding;
 	using namespace NBuildSystem;
 
@@ -298,6 +299,7 @@ namespace NMib::NContainer
 		}
 		return false;
 	}
+#endif
 }
 
 namespace NMib::NBuildSystem

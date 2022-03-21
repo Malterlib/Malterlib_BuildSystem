@@ -7,6 +7,7 @@
 
 namespace NMib::NContainer
 {
+#ifndef DDocumentation_Doxygen
 	using namespace NEncoding;
 	using namespace NEncoding::NJSON;
 	using namespace NBuildSystem;
@@ -198,4 +199,5 @@ namespace NMib::NContainer
 		>
 		(CStrAggregateNonTracked &o_String, CStr const &_Value)
 	;
+#endif
 }
