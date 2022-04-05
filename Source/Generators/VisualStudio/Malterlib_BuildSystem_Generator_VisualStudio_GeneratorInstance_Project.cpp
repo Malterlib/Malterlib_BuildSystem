@@ -133,11 +133,11 @@ namespace NMib::NBuildSystem::NVisualStudio
 		CXMLDocument PropsXMLFile;
 		{
 			// Project root
-			auto pPropsProject = PropsXMLFile.f_CreateDefaultDocument("Project");
+			auto pPropsProject = PropsXMLFile.f_CreateDefaultDocument("Project", "xml version=\"1.0\" encoding=\"utf-8\"");
 			CXMLDocument::f_SetAttribute(pPropsProject, "ToolsVersion", f_GetToolsVersion());
 			CXMLDocument::f_SetAttribute(pPropsProject, "xmlns", "http://schemas.microsoft.com/developer/msbuild/2003");
 
-			auto pProject = XMLFile.f_CreateDefaultDocument("Project");
+			auto pProject = XMLFile.f_CreateDefaultDocument("Project", "xml version=\"1.0\" encoding=\"utf-8\"");
 			CXMLDocument::f_SetAttribute(pProject, "DefaultTargets", "Build");
 			CXMLDocument::f_SetAttribute(pProject, "ToolsVersion", f_GetToolsVersion());
 			CXMLDocument::f_SetAttribute(pProject, "xmlns", "http://schemas.microsoft.com/developer/msbuild/2003");
@@ -1312,7 +1312,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		if (LanguageType == ELanguageType_Native)
 		{
 			CXMLDocument FilterXML;
-			auto pProject = FilterXML.f_CreateDefaultDocument("Project");
+			auto pProject = FilterXML.f_CreateDefaultDocument("Project", "xml version=\"1.0\" encoding=\"utf-8\"");
 			CXMLDocument::f_SetAttribute(pProject, "ToolsVersion", f_GetToolsVersion());
 			CXMLDocument::f_SetAttribute(pProject, "xmlns", "http://schemas.microsoft.com/developer/msbuild/2003");
 

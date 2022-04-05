@@ -21,16 +21,10 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 	CStr CGeneratorInstance::f_GetToolsVersion() const
 	{
-		if (m_Version == 2012)
-			return "4.0";
-		else if (m_Version == 2013)
-			return "12.0";
-		else if (m_Version == 2015)
-			return "14.0";
-		else if (m_Version == 2017)
-			return "15.0";
-		else if (m_Version == 2019)
+		if (m_Version == 2019)
 			return "16.0";
+		else if (m_Version == 2022)
+			return "17.0";
 		DError("Implement this");
 	}
 
@@ -43,20 +37,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 		uint32 VSVersion = 0;
 		switch (m_Version)
 		{
-		case 2012: VSVersion = 110; break;
-		case 2013: VSVersion = 120; break;
-		case 2015: VSVersion = 140; break;
-		case 2017:
-			{
-#ifdef DPlatformFamily_Windows
-				NMib::NPlatform::CWin32_Registry Registry;
-
-				CStr Path = Registry.f_Read_Str("SOFTWARE\\WOW6432Node\\Microsoft\\VisualStudio\\SxS\\VS7", "15.0");
-				return s_Path = Path;
-#endif
-			}
 		case 2019:
-			{
+		case 2022:
+		{
 #ifdef DPlatformFamily_Windows
 				CStr ProgramData = m_BuildSystem.f_GetEnvironmentVariable("ProgramData");
 				CStr CachePath = ProgramData / "Microsoft/VisualStudio/Packages";
@@ -82,6 +65,10 @@ namespace NMib::NBuildSystem::NVisualStudio
 				BestVersion.f_SetLen(4);
 				CStr BestPath;
 
+				uint32 ExpectedVersion = 16;
+				if (m_Version == 2022)
+					ExpectedVersion = 17;
+
 				for (auto &InstanceDir : CFile::fs_FindFiles(InstancesPath / "*", EFileAttrib_Directory))
 				{
 					CStr StateFile = InstanceDir / "state.json";
@@ -91,7 +78,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 						CJSON const Json = CJSON::fs_FromString(JsonContents, StateFile);
 						auto Version = fParseVersion(Json["installationVersion"].f_String());
-						if (Version[0] == 16 && Version > BestVersion)
+						if (Version[0] == ExpectedVersion && Version > BestVersion)
 						{
 							BestVersion = Version;
 							BestPath = NMib::NFile::NPlatform::fg_ConvertFromWindowsPath(Json["installationPath"].f_String());
@@ -104,7 +91,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 				}
 
 				if (BestPath.f_IsEmpty())
-					DError("Failed to find Visual Studio 2019 path. {}\n"_f << Errors);
+					DError("Failed to find Visual Studio {} path. {}\n"_f << m_Version << Errors);
 
 				return s_Path = BestPath;
 #endif
@@ -131,7 +118,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		, m_OutputDir(_OutputDir)
 		, m_Win32Platfrom("Win32")
 	{
-		m_Version = _BuildSystem.f_GetGenerateSettings().m_Generator.f_Replace("VisualStudio", "").f_ToInt(uint32(2012));
+		m_Version = _BuildSystem.f_GetGenerateSettings().m_Generator.f_Replace("VisualStudio", "").f_ToInt(uint32(2022));
 
 		m_RelativeBasePath = CFile::fs_MakePathRelative(m_BuildSystem.f_GetBaseDir(), m_OutputDir + "/Files/Temp");
 		m_RelativeBasePathAbsolute = "$(ProjectDir)" + m_RelativeBasePath;
@@ -210,10 +197,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 		CStr VCVarsDirectory;
 
-		if (m_Version >= 2017)
-			VCVarsDirectory = VisualStudioRoot + "/VC/Auxiliary/Build";
-		else
-			VisualStudioRoot + "/VC";
+		VCVarsDirectory = VisualStudioRoot + "/VC/Auxiliary/Build";
 
 		CStr VSArchitecture;
 #ifdef DArchitecture_x86

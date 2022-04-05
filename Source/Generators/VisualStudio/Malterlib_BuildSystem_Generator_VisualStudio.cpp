@@ -350,23 +350,14 @@ namespace NMib::NBuildSystem
 		}
 	};
 
-	using CBuildSystemGenerator_VisualStudio2012 = CBuildSystemGenerator_VisualStudio;  
-	using CBuildSystemGenerator_VisualStudio2013 = CBuildSystemGenerator_VisualStudio;  
-	using CBuildSystemGenerator_VisualStudio2015 = CBuildSystemGenerator_VisualStudio;  
-	using CBuildSystemGenerator_VisualStudio2017 = CBuildSystemGenerator_VisualStudio;  
-	using CBuildSystemGenerator_VisualStudio2019 = CBuildSystemGenerator_VisualStudio;  
-	DMibRuntimeClass(CBuildSystemGenerator, CBuildSystemGenerator_VisualStudio2012);
-	DMibRuntimeClass(CBuildSystemGenerator, CBuildSystemGenerator_VisualStudio2013);
-	DMibRuntimeClass(CBuildSystemGenerator, CBuildSystemGenerator_VisualStudio2015);
-	DMibRuntimeClass(CBuildSystemGenerator, CBuildSystemGenerator_VisualStudio2017);
+	using CBuildSystemGenerator_VisualStudio2019 = CBuildSystemGenerator_VisualStudio;
+	using CBuildSystemGenerator_VisualStudio2022 = CBuildSystemGenerator_VisualStudio;
 	DMibRuntimeClass(CBuildSystemGenerator, CBuildSystemGenerator_VisualStudio2019);
+	DMibRuntimeClass(CBuildSystemGenerator, CBuildSystemGenerator_VisualStudio2022);
 	void fg_Malterlib_BuildSystem_MakeActive_VisualStudio()
 	{
-		DMibRuntimeClassMakeActive(CBuildSystemGenerator_VisualStudio2012);
-		DMibRuntimeClassMakeActive(CBuildSystemGenerator_VisualStudio2013);
-		DMibRuntimeClassMakeActive(CBuildSystemGenerator_VisualStudio2015);
-		DMibRuntimeClassMakeActive(CBuildSystemGenerator_VisualStudio2017);
 		DMibRuntimeClassMakeActive(CBuildSystemGenerator_VisualStudio2019);
+		DMibRuntimeClassMakeActive(CBuildSystemGenerator_VisualStudio2022);
 	}
 }
 

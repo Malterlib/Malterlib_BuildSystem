@@ -25,27 +25,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		CStr FileData;
 
 		FileData += "\r\n";
-		if (m_Version == 2012)
-		{
-			FileData += "Microsoft Visual Studio Solution File, Format Version 12.00\r\n";
-			FileData += CStr::CFormat("# Visual Studio {}\r\n") << m_Version;
-		}
-		else if (m_Version == 2013)
-		{
-			FileData += "Microsoft Visual Studio Solution File, Format Version 12.00\r\n";
-			FileData += CStr::CFormat("# Visual Studio {}\r\n") << m_Version;
-			FileData += "VisualStudioVersion = 12.0.20617.1 PREVIEW\r\n";
-			FileData += "MinimumVisualStudioVersion = 10.0.40219.1\r\n";
-
-		}
-		else if (m_Version == 2015)
-		{
-			FileData += "Microsoft Visual Studio Solution File, Format Version 12.00\r\n";
-			FileData += "# Visual Studio 14\r\n";
-			FileData += "VisualStudioVersion = 14.0.22823.1\r\n";
-			FileData += "MinimumVisualStudioVersion = 10.0.40219.1\r\n";
-		}
-		else if (m_Version == 2017)
+		if (m_Version == 2017)
 		{
 			FileData += "Microsoft Visual Studio Solution File, Format Version 12.00\r\n";
 			FileData += "# Visual Studio 15\r\n";
@@ -57,6 +37,13 @@ namespace NMib::NBuildSystem::NVisualStudio
 			FileData += "Microsoft Visual Studio Solution File, Format Version 12.00\r\n";
 			FileData += "# Visual Studio Version 16\r\n";
 			FileData += "VisualStudioVersion = 16.0.28714.193\r\n";
+			FileData += "MinimumVisualStudioVersion = 10.0.40219.1\r\n";
+		}
+		else if (m_Version == 2022)
+		{
+			FileData += "Microsoft Visual Studio Solution File, Format Version 12.00\r\n";
+			FileData += "# Visual Studio Version 17\r\n";
+			FileData += "VisualStudioVersion = 17.1.32328.378\r\n";
 			FileData += "MinimumVisualStudioVersion = 10.0.40219.1\r\n";
 		}
 		else

@@ -53,7 +53,7 @@ namespace NMib::NBuildSystem::NXcode
 		;
 
 		// Workspace root
-		auto pWorkspace = XMLFile.f_CreateDefaultDocument("Workspace");
+		auto pWorkspace = XMLFile.f_CreateDefaultDocument("Workspace", "xml version=\"1.0\" encoding=\"UTF-8\"");
 		XMLFile.f_SetAttribute(pWorkspace, "version", "1.0");
 
 		TCMap<TCPointer<CGroup>, TCVector<CGroup*>> MapGroupToGroups;
