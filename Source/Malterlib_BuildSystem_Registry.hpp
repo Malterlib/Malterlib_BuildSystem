@@ -95,7 +95,7 @@ namespace NMib::NContainer
 			{
 				bool bOldSupportBinaryOperators = m_bSupportBinaryOperators;
 				m_bSupportBinaryOperators = true;
-				return g_OnScopeExit > [this, bOldSupportBinaryOperators]
+				return g_OnScopeExit / [this, bOldSupportBinaryOperators]
 					{
 						m_bSupportBinaryOperators = bOldSupportBinaryOperators;
 					}
@@ -105,7 +105,7 @@ namespace NMib::NContainer
 			{
 				bool bOldParseAfterValue = m_bParseAfterValue;
 				m_bParseAfterValue = false;
-				return g_OnScopeExit > [this, bOldParseAfterValue]
+				return g_OnScopeExit / [this, bOldParseAfterValue]
 					{
 						m_bParseAfterValue = bOldParseAfterValue;
 					}

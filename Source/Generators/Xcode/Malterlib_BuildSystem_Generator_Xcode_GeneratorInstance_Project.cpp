@@ -421,7 +421,7 @@ fi
 			StartValuesCompile[CPropertyKey(EPropertyType_Compile, "Type")] = Type;
 
 			TCVector<CEntity *> ToRemove;
-			auto Cleanup = g_OnScopeExit > [&]
+			auto Cleanup = g_OnScopeExit / [&]
 				{
 					for (auto &pToRemove : ToRemove)
 						pToRemove->m_pParent->m_ChildEntitiesMap.f_Remove(pToRemove);
@@ -2146,7 +2146,7 @@ fi
 			CXMLDocument XMLFile(false);
 			auto pOldFile = ThreadLocal.m_pXMLFile;
 			ThreadLocal.m_pXMLFile = &XMLFile;
-			auto Cleanup = g_OnScopeExit > [&]
+			auto Cleanup = g_OnScopeExit / [&]
 				{
 					ThreadLocal.m_pXMLFile = pOldFile;
 				}

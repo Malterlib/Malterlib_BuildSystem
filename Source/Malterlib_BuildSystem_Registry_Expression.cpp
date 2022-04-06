@@ -907,7 +907,7 @@ namespace NMib::NContainer
 		bool bPreviousParsingDefine = m_bParsingDefine;
 		m_bParsingDefine = true;
 
-		auto Cleanup = g_OnScopeExit > [&]
+		auto Cleanup = g_OnScopeExit / [&]
 			{
 				m_bParsingDefine = bPreviousParsingDefine;
 			}
@@ -934,7 +934,7 @@ namespace NMib::NContainer
 		bool bPreviousParsingDefine = m_bParsingDefine;
 		m_bParsingDefine = true;
 
-		auto Cleanup = g_OnScopeExit > [&]
+		auto Cleanup = g_OnScopeExit / [&]
 			{
 				m_bParsingDefine = bPreviousParsingDefine;
 			}
@@ -1108,7 +1108,7 @@ namespace NMib::NContainer
 		bool bPreviousParsingDefine = m_bParsingDefine;
 		m_bParsingDefine = false;
 
-		auto Cleanup = g_OnScopeExit > [&]
+		auto Cleanup = g_OnScopeExit / [&]
 			{
 				m_bParsingDefine = bPreviousParsingDefine;
 			}

@@ -560,7 +560,7 @@ namespace NMib::NBuildSystem
 			auto NewEntityMap = _Entity.m_ChildEntitiesMap(NewEntityKey, &_Entity);
 			auto &TempEntity = *NewEntityMap;
 
-			auto Cleanup = g_OnScopeExit > [&]
+			auto Cleanup = g_OnScopeExit / [&]
 				{
 					if (NewEntityMap.f_WasCreated())
 						_Entity.m_ChildEntitiesMap.f_Remove(NewEntityKey);

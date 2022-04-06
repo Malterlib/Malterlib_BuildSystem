@@ -509,7 +509,7 @@ namespace NMib::NBuildSystem
 
 		pCMakeGenerateState->m_bTried = true;
 
-		auto SetInvalidGenerated = g_OnScopeExit > [&]
+		auto SetInvalidGenerated = g_OnScopeExit / [&]
 			{
 				DLock(mp_CMakeGenerateLock);
 				mp_CMakeGenerated[LockDirectory];
@@ -777,7 +777,7 @@ namespace NMib::NBuildSystem
 
 		if (!CmakeCacheDirectory.f_IsEmpty())
 		{
-			auto Cleanup = g_OnScopeExit > [&, StartTime = Clock.f_GetTime()]
+			auto Cleanup = g_OnScopeExit / [&, StartTime = Clock.f_GetTime()]
 				{
 					f_OutputConsole("{}: Creating CMake cache took {fe1} s\n"_f << CmakeCacheDirectory << (Clock.f_GetTime() - StartTime));
 				}
@@ -1071,7 +1071,7 @@ namespace NMib::NBuildSystem
 						CStr Line(pLineStart, pParse - pLineStart);
 						fg_ParseEndOfLine(pParse);
 
-						auto Cleanup = g_OnScopeExit > [&, pParse]
+						auto Cleanup = g_OnScopeExit / [&, pParse]
 							{
 								NewFileContents.f_AddStr(pLineStart, pParse - pLineStart);
 							}
@@ -1552,7 +1552,7 @@ namespace NMib::NBuildSystem
 
 										for (auto &EntryIndirection : Array.m_Array)
 										{
-											auto AddEntryScope = g_OnScopeExit > [&]
+											auto AddEntryScope = g_OnScopeExit / [&]
 												{
 													NewValues.f_Insert(fg_Move(EntryIndirection));
 												}

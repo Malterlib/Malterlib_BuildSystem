@@ -703,14 +703,14 @@ namespace NMib::NBuildSystem
 	CBuildSystem::ERetry CBuildSystem::f_Action_Repository_Status(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoStatusFlag _Flags)
 	{
 		TCSharedPointer<CDefaultRunLoop> pRunLoop = fg_Construct();
-		auto CleanupRunLoop = g_OnScopeExit > [&]
+		auto CleanupRunLoop = g_OnScopeExit / [&]
 			{
 				while (pRunLoop->f_RefCountGet() > 0)
 					pRunLoop->f_WaitOnceTimeout(0.1);
 			}
 		;
 		TCActor<CDispatchingActor> HelperActor(fg_Construct(), pRunLoop->f_Dispatcher());
-		auto CleanupHelperActor = g_OnScopeExit > [&]
+		auto CleanupHelperActor = g_OnScopeExit / [&]
 			{
 				HelperActor->f_BlockDestroy(pRunLoop->f_ActorDestroyLoop());
 			}

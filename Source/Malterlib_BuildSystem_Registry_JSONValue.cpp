@@ -235,7 +235,7 @@ namespace NMib::NContainer
 			return true;
 
 		++m_ParseDepth;
-		auto Cleanup = g_OnScopeExit > [&]
+		auto Cleanup = g_OnScopeExit / [&]
 			{
 				--m_ParseDepth;
 			}

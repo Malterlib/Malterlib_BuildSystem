@@ -1233,7 +1233,7 @@ namespace NMib::NBuildSystem
 						if (mp_bDebugFileLocks)
 							f_OutputConsole("{} File locked: {}\n"_f << &LockFile << LockFileName, true);
 
-						auto CleanupLock = g_OnScopeExit > [&]
+						auto CleanupLock = g_OnScopeExit / [&]
 							{
 								if (mp_bDebugFileLocks)
 									f_OutputConsole("{} File lock released: {}\n"_f << &LockFile << LockFileName, true);

@@ -745,7 +745,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 					StartValuesCompile[FileTypeKey] = iType.f_GetKey();
 
 					TCVector<CEntity *> ToRemove;
-					auto Cleanup = g_OnScopeExit > [&]
+					auto Cleanup = g_OnScopeExit / [&]
 						{
 							for (auto &pToRemove : ToRemove)
 								pToRemove->m_pParent->m_ChildEntitiesMap.f_Remove(pToRemove->f_GetKey());

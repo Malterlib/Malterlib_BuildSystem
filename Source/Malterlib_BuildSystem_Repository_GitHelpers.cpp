@@ -577,14 +577,14 @@ namespace NMib::NBuildSystem::NRepository
 	void fg_UpdateRemotes(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage)
 	{
 		TCSharedPointer<CDefaultRunLoop> pRunLoop = fg_Construct();
-		auto CleanupRunLoop = g_OnScopeExit > [&]
+		auto CleanupRunLoop = g_OnScopeExit / [&]
 			{
 				while (pRunLoop->f_RefCountGet() > 0)
 					pRunLoop->f_WaitOnceTimeout(0.1);
 			}
 		;
 		TCActor<CDispatchingActor> HelperActor(fg_Construct(), pRunLoop->f_Dispatcher());
-		auto CleanupHelperActor = g_OnScopeExit > [&]
+		auto CleanupHelperActor = g_OnScopeExit / [&]
 			{
 				HelperActor->f_BlockDestroy(pRunLoop->f_ActorDestroyLoop());
 			}

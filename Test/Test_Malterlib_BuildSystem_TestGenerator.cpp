@@ -102,7 +102,7 @@ namespace
 			mp_BaseDir = _BuildSystem.f_GetBaseDir();
 
 			_BuildSystem.f_SetGeneratorInterface(this);
-			auto Cleanup = g_OnScopeExit > [&]
+			auto Cleanup = g_OnScopeExit / [&]
 				{
 					_BuildSystem.f_SetGeneratorInterface(nullptr);
 				}

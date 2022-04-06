@@ -42,7 +42,7 @@ namespace NMib::NBuildSystem
 
 								auto &ExplodeStackEntry = _Context.m_EvalContext.m_ExplodeListStack.f_InsertFirst();
 
-								auto CleanUp = g_OnScopeExit > [&]()
+								auto CleanUp = g_OnScopeExit / [&]()
 									{
 										_Context.m_EvalContext.m_ExplodeListStack.f_Remove(ExplodeStackEntry);
 									}

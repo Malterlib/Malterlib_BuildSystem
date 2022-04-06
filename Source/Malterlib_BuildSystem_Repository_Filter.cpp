@@ -8,14 +8,14 @@ namespace NMib::NBuildSystem::NRepository
 	CFilteredRepos fg_GetFilteredRepos(CBuildSystem::CRepoFilter const &_Filter, CBuildSystem &_BuildSystem, CBuildSystemData &_Data, EFilterRepoFlag _Flags)
 	{
 		TCSharedPointer<CDefaultRunLoop> pRunLoop = fg_Construct();
-		auto CleanupRunLoop = g_OnScopeExit > [&]
+		auto CleanupRunLoop = g_OnScopeExit / [&]
 			{
 				while (pRunLoop->f_RefCountGet() > 0)
 					pRunLoop->f_WaitOnceTimeout(0.1);
 			}
 		;
 		TCActor<CDispatchingActor> HelperActor(fg_Construct(), pRunLoop->f_Dispatcher());
-		auto CleanupHelperActor = g_OnScopeExit > [&]
+		auto CleanupHelperActor = g_OnScopeExit / [&]
 			{
 				HelperActor->f_BlockDestroy(pRunLoop->f_ActorDestroyLoop());
 			}

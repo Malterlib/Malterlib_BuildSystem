@@ -259,7 +259,7 @@ namespace NMib::NBuildSystem
 		{
 			_GenerateState.m_pLocalGeneratorInterface = fg_Construct<CLocalGeneratorInteface>(_GenerateState.m_OutputDir);
 
-			_GenerateState.m_LocalGeneratorInterfaceCleanup = g_OnScopeExitShared > [this, pOldInterface = fg_Move(mp_GeneratorInterface)]() mutable
+			_GenerateState.m_LocalGeneratorInterfaceCleanup = g_OnScopeExitShared / [this, pOldInterface = fg_Move(mp_GeneratorInterface)]() mutable
 				{
 					mp_GeneratorInterface = fg_Move(pOldInterface);
 				}

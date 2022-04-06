@@ -98,7 +98,7 @@ namespace NMib::NBuildSystem
 						auto NewEntityMap = ToGenerate.m_ChildEntitiesMap(NewEntityKey, &ToGenerate);
 						auto &TempEntity = *NewEntityMap;
 
-						auto Cleanup = g_OnScopeExit > [&]
+						auto Cleanup = g_OnScopeExit / [&]
 							{
 								if (NewEntityMap.f_WasCreated())
 									ToGenerate.m_ChildEntitiesMap.f_Remove(NewEntityKey);
@@ -249,7 +249,7 @@ namespace NMib::NBuildSystem
 									if (mp_bDebugFileLocks)
 										f_OutputConsole("{} File locked: {}\n"_f << &LockFile << FileLockName, true);
 
-									auto CleanupLock = g_OnScopeExit > [&]
+									auto CleanupLock = g_OnScopeExit / [&]
 										{
 											if (mp_bDebugFileLocks)
 												f_OutputConsole("{} File lock released: {}\n"_f << &LockFile << FileLockName, true);

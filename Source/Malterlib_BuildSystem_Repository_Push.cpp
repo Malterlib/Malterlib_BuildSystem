@@ -148,14 +148,14 @@ namespace NMib::NBuildSystem
 		)
 	{
 		TCSharedPointer<CDefaultRunLoop> pRunLoop = fg_Construct();
-		auto CleanupRunLoop = g_OnScopeExit > [&]
+		auto CleanupRunLoop = g_OnScopeExit / [&]
 			{
 				while (pRunLoop->f_RefCountGet() > 0)
 					pRunLoop->f_WaitOnceTimeout(0.1);
 			}
 		;
 		TCActor<CDispatchingActor> HelperActor(fg_Construct(), pRunLoop->f_Dispatcher());
-		auto CleanupHelperActor = g_OnScopeExit > [&]
+		auto CleanupHelperActor = g_OnScopeExit / [&]
 			{
 				HelperActor->f_BlockDestroy(pRunLoop->f_ActorDestroyLoop());
 			}
@@ -206,7 +206,7 @@ namespace NMib::NBuildSystem
 
 				g_Dispatch / [this, Launches, Repo, _Remotes, _PushFlags, Colors]() -> TCFuture<bool>
 					{
-						auto OnExit = g_OnScopeExit > [&]
+						auto OnExit = g_OnScopeExit / [&]
 							{
 								Launches.f_RepoDone();
 							}

@@ -1909,7 +1909,7 @@ namespace NMib::NBuildSystem
 
 		auto pOldFunction = _Context.m_EvalContext.m_pCallingFunction;
 		_Context.m_EvalContext.m_pCallingFunction = &FunctionType;
-		auto Cleanup = g_OnScopeExit > [&]
+		auto Cleanup = g_OnScopeExit / [&]
 			{
 				_Context.m_EvalContext.m_pCallingFunction = pOldFunction;
 			}
