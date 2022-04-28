@@ -30,7 +30,7 @@ namespace NMib::NBuildSystem
 			mp_DebugSet[this];
 		}
 #endif
-		this->f_RefCountIncrease(DMibRefcountDebuggingOnly(m_DebugSelfRef));
+		this->m_RefCount.f_Increase(DMibRefCountDebuggingOnly(m_DebugSelfRef));
 #endif
 	}
 
@@ -49,7 +49,7 @@ namespace NMib::NBuildSystem
 			mp_DebugSet[this];
 		}
 #endif
-		this->f_RefCountIncrease(DMibRefcountDebuggingOnly(m_DebugSelfRef));
+		this->m_RefCount.f_Increase(DMibRefCountDebuggingOnly(m_DebugSelfRef));
 #endif
 	}
 
@@ -64,7 +64,7 @@ namespace NMib::NBuildSystem
 			{
 				auto &Child = *iChild;
 				++iChild;
-				if (Child.f_RefCountGet() == 1)
+				if (Child.m_RefCount.f_Get() == 1)
 				{
 					m_ChildEntitiesMap.f_Remove(&Child);
 					bDoneSomething = true;
@@ -72,7 +72,7 @@ namespace NMib::NBuildSystem
 			}
 		}
 		m_ChildEntitiesMap.f_Clear();
-		mint RefCount = this->f_RefCountDecrease(DMibRefcountDebuggingOnly(m_DebugSelfRef));
+		mint RefCount = this->m_RefCount.f_Decrease(DMibRefCountDebuggingOnly(m_DebugSelfRef));
 #ifdef DMibBuildSystem_DebugReferencesAdvanced
 		if (RefCount > 1)
 		{
@@ -88,7 +88,7 @@ namespace NMib::NBuildSystem
 			mp_DebugSet.f_Remove(this);
 		}
 #endif
-#if DMibConfig_RefcountDebugging
+#if DMibConfig_RefCountDebugging
 		if (RefCount != 1)
 		{
 			DMibLock(this->m_Debug->m_Lock);
@@ -124,7 +124,7 @@ namespace NMib::NBuildSystem
 			mp_DebugSet[this];
 		}
 #endif
-		this->f_RefCountIncrease(DMibRefcountDebuggingOnly(m_DebugSelfRef));
+		this->m_RefCount.f_Increase(DMibRefCountDebuggingOnly(m_DebugSelfRef));
 #endif
 
 		if (!(_CopyFlags & EEntityCopyFlag_NoCheckTypes))
@@ -424,7 +424,7 @@ namespace NMib::NBuildSystem
 
 	void CEntity::f_CopyProperties(CEntity &&_Other)
 	{
-		if (_Other.m_pData->f_RefCountGet() != 0)
+		if (_Other.m_pData->m_RefCount.f_Get() != 0)
 			return f_CopyProperties(fg_Const(_Other));
 
 		auto &ThisData = f_DataWritable();
@@ -582,7 +582,7 @@ namespace NMib::NBuildSystem
 
 	CEntityData &CEntity::f_DataWritable()
 	{
-		if (m_pData->f_RefCountGet() == 0)
+		if (m_pData->m_RefCount.f_Get() == 0)
 			return *m_pData;
 
 		TCSharedPointer<CEntityData> pCopied = fg_Construct(*m_pData);
@@ -605,7 +605,7 @@ namespace NMib::NBuildSystem
 
 	CEntityChildDependantData &CEntity::f_ChildDependentDataWritable()
 	{
-		if (m_pChildDependentData->f_RefCountGet() == 0)
+		if (m_pChildDependentData->m_RefCount.f_Get() == 0)
 			return *m_pChildDependentData;
 
 		TCSharedPointer<CEntityChildDependantData> pCopied = fg_Construct(*m_pChildDependentData);

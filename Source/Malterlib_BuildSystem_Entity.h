@@ -44,13 +44,15 @@ namespace NMib::NBuildSystem
 
 	struct CVariableDefinition;
 
-	struct CEntityData : public NStorage::TCSharedPointerIntrusiveBase<>
+	struct CEntityData
 	{
 		using CPropertyContainer = NContainer::TCLinkedList<CProperty>;
 		//using CPropertyContainer = NContainer::TCVector<CProperty, NMemory::CAllocator_Heap, NContainer::TCVectorOptions<1, true, true>>;
 
 		CEntityData();
 		CEntityData(CEntityData const &_Other);
+
+		NStorage::CIntrusiveRefCount m_RefCount;
 
 		CCondition m_Condition;
 
@@ -69,19 +71,18 @@ namespace NMib::NBuildSystem
 		NStorage::TCSharedPointer<CCondition> m_pConditions;
 	};
 
-	struct CEntityChildDependantData : public NStorage::TCSharedPointerIntrusiveBase<>
+	struct CEntityChildDependantData
 	{
 		CEntityChildDependantData();
 		CEntityChildDependantData(CEntityChildDependantData const &_Other);
+
+		NStorage::CIntrusiveRefCount m_RefCount;
 
 		NContainer::TCMap<CPropertyKey, NContainer::TCSet<CFilePosition>> m_ChildrenVariableDefinitions;
 		NContainer::TCMap<NStr::CStr, NContainer::TCSet<CFilePosition>> m_ChildrenUserTypes;
 	};
 
 	struct CEntity
-#ifdef DMibBuildSystem_DebugReferences
-		: public TCSharedPointerIntrusiveBase<>
-#endif
 	{
 		CEntity(CEntity const &_Other) = delete;
 		CEntity(CEntity &&_Other);
@@ -126,6 +127,9 @@ namespace NMib::NBuildSystem
 		void fpr_CheckParents() const;
 
 	public:
+#ifdef DMibBuildSystem_DebugReferences
+		NStorage::CIntrusiveRefCount m_RefCount;
+#endif
 		NStorage::TCSharedPointer<CEntityData> m_pData;
 		NStorage::TCSharedPointer<CEntityChildDependantData> m_pChildDependentData;
 
@@ -137,7 +141,7 @@ namespace NMib::NBuildSystem
 		CEvaluatedProperties m_EvaluatedProperties;
 
 #if defined(DMibBuildSystem_DebugReferences)
-		DMibRefcountDebuggingOnly(NStorage::CRefCountDebugReference m_DebugSelfRef);
+		DMibRefCountDebuggingOnly(NStorage::CRefCountDebugReference m_DebugSelfRef);
 #endif
 
 #if defined(DMibBuildSystem_DebugReferences) && defined(DMibBuildSystem_DebugReferencesAdvanced)
