@@ -89,8 +89,10 @@ namespace NMib::NBuildSystem
 			, ERepoStatusFlag_AllBranches = DMibBit(4)
 			, ERepoStatusFlag_UseDefaultUpstreamBranch = DMibBit(5)
 			, ERepoStatusFlag_OpenEditor = DMibBit(6)
-			, ERepoStatusFlag_NeedActionOnPush = DMibBit(7)
-			, ERepoStatusFlag_NonDefaultToAll = DMibBit(8)
+			, ERepoStatusFlag_NonDefaultToAll = DMibBit(7)
+			, ERepoStatusFlag_NeedActionOnPush = DMibBit(8)
+			, ERepoStatusFlag_NeedActionOnPull = DMibBit(9)
+			, ERepoStatusFlag_NeedActionOnLocalChanges = DMibBit(10)
 		};
 
 		enum ERepoListCommitsFlag

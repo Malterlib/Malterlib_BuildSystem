@@ -291,7 +291,8 @@ namespace NMib::NBuildSystem
 								if (bIsCurrentBranch && !State.m_LocalChanges.f_IsEmpty())
 								{
 									bIsChanged = true;
-									bNeedAction = true;
+									if (_Flags & ERepoStatusFlag_NeedActionOnLocalChanges)
+										bNeedAction = true;
 
 									Messages.f_Insert
 										(
@@ -334,7 +335,8 @@ namespace NMib::NBuildSystem
 									if (!ToPull.f_IsEmpty())
 									{
 										bIsChanged = true;
-										bNeedAction = true;
+										if (_Flags & ERepoStatusFlag_NeedActionOnPull)
+											bNeedAction = true;
 										RemotesWithAction[ToLocalPull.fs_GetKey(ToPull)];
 									}
 									else
