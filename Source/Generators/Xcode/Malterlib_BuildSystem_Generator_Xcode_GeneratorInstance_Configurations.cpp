@@ -1044,7 +1044,7 @@ namespace NMib::NBuildSystem
 					{
 						if (LinkConfig.m_bInternal && _NativeTarget.m_ProductType != "com.apple.product-type.library.static")
 						{
-							if (_Configuration.m_PlatformBase.f_StartsWith("OSX"))
+							if (_Configuration.m_PlatformBase.f_StartsWith("macOS"))
 								LinkForced += "-force_load \"{}/{}\" "_f << LinkConfig.m_pPerConfig->m_SearchPath << LinkConfig.m_pPerConfig->m_CalculatedPath;
 							else
 								LinkForced += "-Xlinker --whole-archive \"{}/{}\" -Xlinker --no-whole-archive "_f << LinkConfig.m_pPerConfig->m_SearchPath << LinkConfig.m_pPerConfig->m_CalculatedPath;

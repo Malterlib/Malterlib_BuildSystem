@@ -22,12 +22,22 @@ namespace NMib::NBuildSystem
 			Values[CPropertyKey("BuildSystemFile")] = _BuildSystem.f_GetGenerateSettings().m_SourceFile;
 			Values[CPropertyKey("BuildSystemName")] = CFile::fs_GetFileNoExt(_BuildSystem.f_GetGenerateSettings().m_SourceFile);
 
+#ifdef DPlatformFamily_OSX
+			// TODO: Change back
 			if (_BuildSystem.f_GetEnvironmentVariable("HostPlatform").f_IsEmpty())
-				Values[CPropertyKey("HostPlatform")] = DMibStringize(DPlatform);
+				Values[CPropertyKey("HostPlatform")] = "macOS";
+			if (_BuildSystem.f_GetEnvironmentVariable("HostPlatformFamily").f_IsEmpty())
+				Values[CPropertyKey("HostPlatformFamily")] = "macOS";
+			if (_BuildSystem.f_GetEnvironmentVariable("HostArchitecture").f_IsEmpty())
+				Values[CPropertyKey("HostArchitecture")] = DMibStringize(DArchitecture);
+#else
+			if (_BuildSystem.f_GetEnvironmentVariable("HostPlatform").f_IsEmpty())
+				Values[CPropertyKey("HostPlatform")] = DMibStringize(DPlatformFamily);
 			if (_BuildSystem.f_GetEnvironmentVariable("HostPlatformFamily").f_IsEmpty())
 				Values[CPropertyKey("HostPlatformFamily")] = DMibStringize(DPlatformFamily);
 			if (_BuildSystem.f_GetEnvironmentVariable("HostArchitecture").f_IsEmpty())
 				Values[CPropertyKey("HostArchitecture")] = DMibStringize(DArchitecture);
+#endif
 
 			return Values;
 		}
