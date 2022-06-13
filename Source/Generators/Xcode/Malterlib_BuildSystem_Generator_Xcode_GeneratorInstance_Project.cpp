@@ -990,7 +990,12 @@ fi
 									}
 
 									if (!Value.f_IsEmpty())
-										_Output += CStr::CFormat(" settings = {{COMPILER_FLAGS = ${}; };") << Value;
+									{
+										if (m_XcodeVersion >= 14)
+											_Output += CStr::CFormat(" settings = {{COMPILER_FLAGS = \"$({})\"; };") << Value;
+										else
+											_Output += CStr::CFormat(" settings = {{COMPILER_FLAGS = ${}; };") << Value;
+									}
 								}
 
 								_Output += " };\n";
