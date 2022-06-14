@@ -1029,8 +1029,6 @@ fi
 							CStr PathRelativeToProj = CFile::fs_MakePathRelative(File.f_GetName(), _OutputDir);
 							_Output += CStr::CFormat("\t\t{} /* {} */ = {{isa = PBXFileReference; ") << FileRefGUID << FileName;
 
-							// E2D82353D65B5D12A259517E053FEE25 /* InputRemapper_Shared.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; indentWidth = 4; name = InputRemapper_Shared.cpp; path = ../../../Projects/InputRemapperOSX/InputRemapper_Shared.cpp; sourceTree = "<group>"; tabWidth = 4; usesTabs = 1; };
-
 							if (LastKnownFileType.f_StartsWith("file.") || LastKnownFileType.f_StartsWith("wrapper."))
 								_Output += CStr::CFormat("lastKnownFileType = {};") << LastKnownFileType;
 							else if (LastKnownFileType == "image.png")

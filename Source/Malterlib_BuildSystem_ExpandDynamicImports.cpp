@@ -687,12 +687,7 @@ namespace NMib::NBuildSystem
 
 			Params.f_Insert("-DCMAKE_TOOLCHAIN_NO_PREFIX=1");
 
-#ifdef DPlatformFamily_OSX
-			// TODO: Remove
-			if (Platform != "macOS")
-#else
 			if (Platform != DMibStringize(DPlatform))
-#endif
 			{
 				CStr SysRoot = f_EvaluateEntityPropertyString(_Entity, EPropertyType_Import, "CMake_SysRoot", CStr());
 				if (!SysRoot.f_IsEmpty())
