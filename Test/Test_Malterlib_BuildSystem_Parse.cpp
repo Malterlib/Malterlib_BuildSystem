@@ -24,9 +24,12 @@ namespace
 			{
 				auto fParseGenerate = [&](CStr const &_Source)
 					{
+						auto DebugFile = NFile::CFile::fs_GetProgramDirectory() / "TestBuildSystemParse.reg";
+						fg_TestAddCleanupPath(DebugFile);
+
 						CBuildSystemRegistry RegistryTest;
-						NFile::CFile::fs_WriteStringToFile(NFile::CFile::fs_GetProgramDirectory() / "TestBuildSystemParse.reg", _Source);
-						RegistryTest.f_ParseStr(_Source, NFile::CFile::fs_GetProgramDirectory() / "TestBuildSystemParse.reg");
+						NFile::CFile::fs_WriteStringToFile(DebugFile, _Source);
+						RegistryTest.f_ParseStr(_Source, DebugFile);
 						return RegistryTest.f_GenerateStr();
 					}
 				;

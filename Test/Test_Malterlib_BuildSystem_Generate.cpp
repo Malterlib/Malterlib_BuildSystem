@@ -89,10 +89,13 @@ namespace
 		CTestGenerate fp_TestGenerate(CStr const &_TestName, TCOptional<TCMap<CStr, CStr>> const &_Environment = {})
 		{
 			CTestGenerate TestGenerate;
-
-			auto BuildSystemData = fp_Generate(_TestName, _Environment);
 			TestGenerate.m_SourceDirectory = CFile::fs_GetProgramDirectory() / "BuildSystemTests" / _TestName;
 			TestGenerate.m_OutputDirectory = CFile::fs_GetProgramDirectory() / "BuildSystemTestsOutput" / _TestName;
+
+			fg_TestAddCleanupPath(TestGenerate.m_SourceDirectory);
+			fg_TestAddCleanupPath(TestGenerate.m_OutputDirectory);
+
+			auto BuildSystemData = fp_Generate(_TestName, _Environment);
 			CStr BuildSystemDataFile = TestGenerate.m_SourceDirectory / "ExpectedBuildSystemData.json";
 
 			CStr StringContents = CFile::fs_ReadStringFromFile(BuildSystemDataFile, true);
