@@ -9,22 +9,26 @@ namespace NMib::NBuildSystem
 {
 	void CBuildSystemSyntax::fs_FormatString(NStr::CStrAggregate &o_String, NStr::CStr const &_SourceString)
 	{
-		CBuildSystemParseContext::fs_GenerateString<CBuildSystemParseContext>(o_String, _SourceString);
+		NStr::CStrAggregate::CAppender Appender(o_String);
+		CBuildSystemParseContext::fs_GenerateString<CBuildSystemParseContext>(Appender, _SourceString);
 	}
 
 	void CBuildSystemSyntax::fs_FormatString(NStr::CStrAggregateNonTracked &o_String, NStr::CStr const &_SourceString)
 	{
-		CBuildSystemParseContext::fs_GenerateString<CBuildSystemParseContext>(o_String, _SourceString);
+		NStr::CStrAggregateNonTracked::CAppender Appender(o_String);
+		CBuildSystemParseContext::fs_GenerateString<CBuildSystemParseContext>(Appender, _SourceString);
 	}
 
 	void CBuildSystemSyntax::fs_FormatKeyString(NStr::CStrAggregate &o_String, NStr::CStr const &_SourceString)
 	{
-		CBuildSystemParseContext::fs_GenerateKeyString<CBuildSystemParseContext>(o_String, _SourceString);
+		NStr::CStrAggregate::CAppender Appender(o_String);
+		CBuildSystemParseContext::fs_GenerateKeyString<CBuildSystemParseContext>(Appender, _SourceString);
 	}
 
 	void CBuildSystemSyntax::fs_FormatKeyString(NStr::CStrAggregateNonTracked &o_String, NStr::CStr const &_SourceString)
 	{
-		CBuildSystemParseContext::fs_GenerateKeyString<CBuildSystemParseContext>(o_String, _SourceString);
+		NStr::CStrAggregateNonTracked::CAppender Appender(o_String);
+		CBuildSystemParseContext::fs_GenerateKeyString<CBuildSystemParseContext>(Appender, _SourceString);
 	}
 
 	bool CBuildSystemSyntax::CValue::f_IsIdentifier() const

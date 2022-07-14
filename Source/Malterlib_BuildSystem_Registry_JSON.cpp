@@ -137,67 +137,35 @@ namespace NMib::NContainer
 	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateKeyString
 		<
 			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext
-			, CStr
+			, CStr::CAppender
 			, CStr
 		>
-		(CStr &o_String, CStr const &_Key)
+		(CStr::CAppender &o_String, CStr const &_Key)
 	;
 	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateKeyString
 		<
 			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext
-			, CStrNonTracked
+			, CStrNonTracked::CAppender
 			, CStr
 		>
-		(CStrNonTracked &o_String, CStr const &_Key)
-	;
-	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateKeyString
-		<
-			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext
-			, CStrAggregate
-			, CStr
-		>
-		(CStrAggregate &o_String, CStr const &_Key)
-	;
-	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateKeyString
-		<
-			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext
-			, CStrAggregateNonTracked
-			, CStr
-		>
-		(CStrAggregateNonTracked &o_String, CStr const &_Key)
+		(CStrNonTracked::CAppender &o_String, CStr const &_Key)
 	;
 
 	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateString
 		<
 			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext
-			, CStrNonTracked
+			, CStrNonTracked::CAppender
 			, CStr
 		>
-		(CStrNonTracked &o_String, CStr const &_Value)
+		(CStrNonTracked::CAppender &o_String, CStr const &_Value)
 	;
 	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateString
 		<
 			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext
-			, CStr
-			, CStr
-		>
-		(CStr &o_String, CStr const &_Value)
-	;
-	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateString
-		<
-			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext
-			, CStrAggregate
+			, CStr::CAppender
 			, CStr
 		>
-		(CStrAggregate &o_String, CStr const &_Value)
-	;
-	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateString
-		<
-			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext
-			, CStrAggregateNonTracked
-			, CStr
-		>
-		(CStrAggregateNonTracked &o_String, CStr const &_Value)
+		(CStr::CAppender &o_String, CStr const &_Value)
 	;
 #endif
 }

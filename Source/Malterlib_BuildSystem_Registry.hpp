@@ -29,7 +29,7 @@ namespace NMib::NContainer
 			CEJSONParseContext();
 
 			template <typename tf_CParseContext, typename tf_CStr>
-			static bool fs_GenerateValue(tf_CStr &o_String, NEncoding::CJSON const &_Value, mint _Depth, ch8 const *_pPrettySeparator);
+			static bool fs_GenerateValue(tf_CStr &o_String, NEncoding::CJSON const &_Value, mint _Depth, ch8 const *_pPrettySeparator, NEncoding::EJSONDialectFlag _Flags);
 
 			NContainer::CByteVector f_ParseBinary(uch8 const * &o_pParse, bool _bWithinParenthesis);
 			NTime::CTime f_ParseDate(uch8 const * &o_pParse, bool _bWithinParenthesis);
@@ -83,7 +83,7 @@ namespace NMib::NContainer
 			void f_ParseAfterValue(NEncoding::CJSON &o_Value, uch8 const *&o_pParse);
 
 			template <typename tf_CParseContext, typename tf_CStr>
-			static bool fs_GenerateValue(tf_CStr &o_String, NEncoding::CJSON const &_Value, mint _Depth, ch8 const *_pPrettySeparator);
+			static bool fs_GenerateValue(tf_CStr &o_String, NEncoding::CJSON const &_Value, mint _Depth, ch8 const *_pPrettySeparator, NEncoding::EJSONDialectFlag _Flags);
 
 			template <typename tf_CParseContext, typename tf_CStr, typename tf_CSourceStr>
 			static void fs_GenerateKeyString(tf_CStr &o_String, tf_CSourceStr const &_Key);

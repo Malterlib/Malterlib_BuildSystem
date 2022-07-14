@@ -179,7 +179,10 @@ namespace NMib::NBuildSystem
 			++pParse;
 		}
 
-		NJSON::fg_GenerateJSONString<'`', CBuildSystemParseContext, true>(EvalString, EscapedString);
+		{
+			CStr::CAppender Appender(EvalString);
+			NJSON::fg_GenerateJSONString<'`', CBuildSystemParseContext, true>(Appender, EscapedString);
+		}
 		try
 		{
 			Registry.f_ParseStr("Key " + EvalString);

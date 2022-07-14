@@ -258,8 +258,10 @@ namespace NMib::NBuildSystem
 				[&](auto const &_Value)
 				{
 					using CValueType = typename NTraits::TCRemoveReferenceAndQualifiers<decltype(_Value)>::CType;
+					typename tf_CStr::CAppender Appender(o_Str);
+
 					if constexpr (NTraits::TCIsSame<CValueType, NStr::CStr>::mc_Value)
-						NContainer::TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_GenerateIdentifier(o_Str, _Value);
+						NContainer::TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_GenerateIdentifier(Appender, _Value);
 					else
 					{
 						for (auto &Token : _Value.m_Tokens)
@@ -270,7 +272,7 @@ namespace NMib::NBuildSystem
 									{
 										using CValueType = typename NTraits::TCRemoveReferenceAndQualifiers<decltype(_Value)>::CType;
 										if constexpr (NTraits::TCIsSame<CValueType, NStr::CStr>::mc_Value)
-											NContainer::TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_GenerateIdentifier(o_Str, _Value);
+											NContainer::TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_GenerateIdentifier(Appender, _Value);
 										else
 											o_Str += typename tf_CStr::CFormat("@{}") << _Value;
 									}
@@ -448,7 +450,10 @@ namespace NMib::NBuildSystem
 					[&](auto const &_Value)
 					{
 						if constexpr (NTraits::TCIsSameDereferencedUnqualified<decltype(_Value), NEncoding::CEJSON>::mc_Value)
-							NEncoding::NJSON::fg_GenerateJSONValue<CBuildSystemParseContext>(o_Str, _Value.f_ToJSON(), 0, nullptr, gc_BuildSystemJSONParseFlags);
+						{
+							typename tf_CStr::CAppender Appender(o_Str);
+							NEncoding::NJSON::fg_GenerateJSONValue<CBuildSystemParseContext>(Appender, _Value.f_ToJSON(), 0, nullptr, gc_BuildSystemJSONParseFlags);
+						}
 						else
 							o_Str += typename tf_CStr::CFormat("{}") << _Value;
 					}
@@ -528,7 +533,10 @@ namespace NMib::NBuildSystem
 				[&](auto const &_Value)
 				{
 					if constexpr (NTraits::TCIsSameDereferencedUnqualified<decltype(_Value), NEncoding::CEJSON>::mc_Value)
-						NEncoding::NJSON::fg_GenerateJSONValue<CBuildSystemParseContext>(o_Str, _Value.f_ToJSON(), 0, nullptr, gc_BuildSystemJSONParseFlags);
+					{
+						typename tf_CStr::CAppender Appender(o_Str);
+						NEncoding::NJSON::fg_GenerateJSONValue<CBuildSystemParseContext>(Appender, _Value.f_ToJSON(), 0, nullptr, gc_BuildSystemJSONParseFlags);
+					}
 					else
 						o_Str += typename tf_CStr::CFormat("{}") << _Value;
 				}

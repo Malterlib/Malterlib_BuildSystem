@@ -238,18 +238,18 @@ namespace NMib::NContainer
 		if (*pParse)
 		{
 			if (!fs_CharIsStartIdentifier(*pParse) || *pParse == '\\')
-				o_String.f_AddChar('\\');
+				o_String += '\\';
 
-			o_String.f_AddChar(*pParse);
+			o_String += *pParse;
 			++pParse;
 		}
 		
 		while (*pParse)
 		{
 			if (!fs_CharIsIdentifier(*pParse) || *pParse == '\\')
-				o_String.f_AddChar('\\');
+				o_String += '\\';
 
-			o_String.f_AddChar(*pParse);
+			o_String += *pParse;
 			++pParse;
 		}
 	}
@@ -1449,7 +1449,10 @@ namespace NMib::NContainer
 				if (pEllipsis->f_Boolean())
 					o_String += "...";
 
-				o_String += typename tf_CStr::CFormat(" {}") << pName->f_String();
+				{
+					auto Committed = o_String.f_Commit();
+					Committed.m_String += typename tf_CStr::CString::CFormat(" {}") << pName->f_String();
+				}
 
 				if (pDefaultValue)
 				{
@@ -1716,7 +1719,7 @@ namespace NMib::NContainer
 
 	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateExpression
 		(
-		 	CStr &o_String
+		 	CStr::CAppender &o_String
 		 	, CJSON const &_Token
 		 	, bool _bQuoteStrings
 			, mint _Depth
@@ -1725,25 +1728,7 @@ namespace NMib::NContainer
 
 	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateExpression
 		(
-		 	CStrNonTracked &o_String
-		 	, CJSON const &_Token
-		 	, bool _bQuoteStrings
-			, mint _Depth
-		)
-	;
-
-	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateExpression
-		(
-		 	CStrAggregate &o_String
-		 	, CJSON const &_Token
-		 	, bool _bQuoteStrings
-			, mint _Depth
-		)
-	;
-
-	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateExpression
-		(
-			CStrAggregateNonTracked &o_String
+		 	CStrNonTracked::CAppender &o_String
 		 	, CJSON const &_Token
 		 	, bool _bQuoteStrings
 			, mint _Depth

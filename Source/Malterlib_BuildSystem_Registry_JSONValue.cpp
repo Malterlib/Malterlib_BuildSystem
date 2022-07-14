@@ -458,7 +458,8 @@ namespace NMib::NContainer
 			return;
 		}
 
-		fg_GenerateJSONValue<CJSONParseContext>(o_Output, _Value.f_ToJSON().f_ToJSON(), _Level, "\t", gc_BuildSystemJSONParseFlags);
+		CStr::CAppender Appender(o_Output);
+		fg_GenerateJSONValue<CJSONParseContext>(Appender, _Value.f_ToJSON().f_ToJSON(), _Level, "\t", gc_BuildSystemJSONParseFlags);
 	}
 
 	template <>
@@ -478,11 +479,19 @@ namespace NMib::NContainer
 			return;
 		}
 
-		fg_GenerateJSONValue<CJSONParseContext>(o_Output, _Value.f_ToJSON().f_ToJSON(), _Level, "\t", gc_BuildSystemJSONParseFlags);
+		CStr::CAppender Appender(o_Output);
+		fg_GenerateJSONValue<CJSONParseContext>(Appender, _Value.f_ToJSON().f_ToJSON(), _Level, "\t", gc_BuildSystemJSONParseFlags);
 	}
 
 	template <typename tf_CParseContext, typename tf_CStr>
-	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext::fs_GenerateValue(tf_CStr &o_String, NEncoding::CJSON const &_Value, mint _Depth, ch8 const *_pPrettySeparator)
+	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext::fs_GenerateValue
+		(
+			tf_CStr &o_String
+			, NEncoding::CJSON const &_Value
+			, mint _Depth
+			, ch8 const *_pPrettySeparator
+			, EJSONDialectFlag _Flags
+		)
 	{
 		// TODO: Handle without converting to EJSON
 		if (_Value.f_IsObject())
@@ -521,7 +530,10 @@ namespace NMib::NContainer
 							}
 						}
 
-						o_String += typename tf_CStr::CFormat("date({tc*})") << Time << nComponents;
+						{
+							auto Committed = o_String.f_Commit();
+							Committed.m_String += typename tf_CStr::CString::CFormat("date({tc*})") << Time << nComponents;
+						}
 						return true;
 					}
 					else if (Name == "$binary")
@@ -529,7 +541,10 @@ namespace NMib::NContainer
 						if (Value.f_Type() != EJSONType_String)
 							DMibError("Invalid EJSON: $binary value must be a string");
 
-						o_String += typename tf_CStr::CFormat("binary({})") << Value.f_String();
+						{
+							auto Committed = o_String.f_Commit();
+							Committed.m_String += typename tf_CStr::CString::CFormat("binary({})") << Value.f_String();
+						}
 						return true;
 					}
 				}
@@ -540,9 +555,16 @@ namespace NMib::NContainer
 	}
 	
 	template <typename tf_CParseContext, typename tf_CStr>
-	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateValue(tf_CStr &o_String, NEncoding::CJSON const &_Value, mint _Depth, ch8 const *_pPrettySeparator)
+	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateValue
+		(
+			tf_CStr &o_String
+			, NEncoding::CJSON const &_Value
+			, mint _Depth
+			, ch8 const *_pPrettySeparator
+			, EJSONDialectFlag _Flags
+		)
 	{
-		if (CEJSONParseContext::fs_GenerateValue<CEJSONParseContext>(o_String, _Value, _Depth, _pPrettySeparator))
+		if (CEJSONParseContext::fs_GenerateValue<CEJSONParseContext>(o_String, _Value, _Depth, _pPrettySeparator, _Flags))
 			return true;
 
 		if (_Value.f_IsObject())
@@ -586,93 +608,58 @@ namespace NMib::NContainer
 		return false;
 	}
 
-	template bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateValue<TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext, NStr::CStr>
+	template bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateValue
+		<
+			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext
+			, NStr::CStr::CAppender
+		>
 		(
-	   		CStr &o_String
+	   		CStr::CAppender &o_String
 		 	, CJSON const &_Value
 		 	, mint _Depth
 		 	, ch8 const *_pPrettySeparator
+			, EJSONDialectFlag _Flags
 		)
 	;
 	template bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateValue
 		<
 			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext
-			, NStr::CStrNonTracked
+			, NStr::CStrNonTracked::CAppender
 		>
 		(
-	   		CStrNonTracked &o_String
+	   		CStrNonTracked::CAppender &o_String
 		 	, CJSON const &_Value
 		 	, mint _Depth
 		 	, ch8 const *_pPrettySeparator
-		)
-	;
-	template bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateValue
-		<
-			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext
-			, NStr::CStrAggregate
-		>
-		(
-	   		CStrAggregate &o_String
-		 	, CJSON const &_Value
-		 	, mint _Depth
-		 	, ch8 const *_pPrettySeparator
-		)
-	;
-	template bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateValue
-		<
-			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext
-			, NStr::CStrAggregateNonTracked
-		>
-		(
-	   		CStrAggregateNonTracked &o_String
-		 	, CJSON const &_Value
-		 	, mint _Depth
-		 	, ch8 const *_pPrettySeparator
+			, EJSONDialectFlag _Flags
 		)
 	;
 
-	template bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext::fs_GenerateValue<TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext, NStr::CStr>
+	template bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext::fs_GenerateValue
+		<
+			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey
+			, CBuildSystemSyntax::CRootValue>::CEJSONParseContext
+			, CStr::CAppender
+		>
 		(
-	   		CStr &o_String
+	   		CStr::CAppender &o_String
 		 	, CJSON const &_Value
 		 	, mint _Depth
 		 	, ch8 const *_pPrettySeparator
+			, EJSONDialectFlag _Flags
 		)
 	;
 	template bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext::fs_GenerateValue
 		<
 			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext
-			, NStr::CStrNonTracked
+			, NStr::CStrNonTracked::CAppender
 		>
 		(
-	   		CStrNonTracked &o_String
+	   		CStrNonTracked::CAppender &o_String
 		 	, CJSON const &_Value
 		 	, mint _Depth
 		 	, ch8 const *_pPrettySeparator
-		)
-	;
-	template bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext::fs_GenerateValue
-		<
-			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext
-			, NStr::CStrAggregate
-		>
-		(
-	   		CStrAggregate &o_String
-		 	, CJSON const &_Value
-		 	, mint _Depth
-		 	, ch8 const *_pPrettySeparator
-		)
-	;
-	template bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext::fs_GenerateValue
-		<
-			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext
-			, NStr::CStrAggregateNonTracked
-		>
-		(
-	   		CStrAggregateNonTracked &o_String
-		 	, CJSON const &_Value
-		 	, mint _Depth
-		 	, ch8 const *_pPrettySeparator
+			, EJSONDialectFlag _Flags
 		)
 	;
 #endif
