@@ -9,26 +9,50 @@ namespace NMib::NBuildSystem::NXcode
 	{
 		return _Node.m_EntityName;
 	}
-	
-	CStr const &CGeneratorInstance::CElement::f_GetValue() const
+
+	bool CElement::f_IsEmpty() const
 	{
 		if (m_bUseValues)
-			CBuildSystem::fs_ThrowError(m_Position, fg_Format("Trying to access value with array length {} as a single value", m_ValueSet.f_GetLen()));
+			return m_ValueSet.f_IsEmpty();
+
+		return m_Value.f_IsEmpty();
+	}
+
+	CStr const &CElement::f_GetValue() const
+	{
+		if (m_bUseValues)
+			CBuildSystem::fs_ThrowError(m_Positions, fg_Format("Trying to access value with array length {} as a single value", m_ValueSet.f_GetLen()));
+
 		return m_Value;
 	}
+
+	inline TCVector<CStr> CElement::f_ValueArray() const
+	{
+		if (!m_bUseValues)
+		{
+			if (m_Value.f_IsEmpty())
+				return {};
+
+			CBuildSystem::fs_ThrowError(m_Positions, fg_Format("Trying to access single value as array", m_ValueSet.f_GetLen()));
+		}
+
+		return fs_ValueArray(m_ValueSet);
+	}
 	
-	void CGeneratorInstance::CElement::f_SetValue(CStr const &_Value)
+	void CElement::f_SetValue(CStr const &_Value)
 	{
 		m_bUseValues = false;
 		m_Value = _Value;
 	}
 	
-	bool CGeneratorInstance::CElement::f_IsSameValue(CElement const &_Other) const
+	bool CElement::f_IsSameValue(CElement const &_Other) const
 	{
 		if (m_bUseValues != _Other.m_bUseValues)
 			return false;
+
 		if (m_bUseValues)
 			return m_ValueSet == _Other.m_ValueSet;
+
 		return m_Value == _Other.m_Value;
 	}
 	
@@ -40,6 +64,7 @@ namespace NMib::NBuildSystem::NXcode
 			if (!_AllConfigs.f_FindEqual(iConfig.f_GetKey()))
 				return false;
 		}
+
 		for (auto iConfig = _AllConfigs.f_GetIterator(); iConfig; ++iConfig)
 		{
 			if (!_Configs.f_FindEqual(iConfig.f_GetKey()))

@@ -8,12 +8,7 @@
 
 namespace NMib::NBuildSystem::NXcode
 {
-	extern CUniversallyUniqueIdentifier g_GeneratorUUIDNamespace;
-
-	extern CStr g_ReservedProductRefGroup;
-	extern CStr g_ReservedConfigurationsGroup;
-	extern CStr g_ReservedProjectDependenciesGroup;
-	extern CStr g_ReservedGeneratorGroup;
+	extern CUniversallyUniqueIdentifier const gc_GeneratorUUIDNamespace;
 
 	// These are ordered as Xcode requires them.
 	enum EBuildFileType
@@ -104,6 +99,7 @@ namespace NMib::NBuildSystem::NXcode
 		int32 m_BuildActionMask;
 		bool m_bGeneratedBuildScript = false;
 		bool m_bDefaultTarget = false;
+		bool m_bGenerateScheme = false;
 
 	private:
 		CStr mp_GUID;
@@ -130,14 +126,71 @@ namespace NMib::NBuildSystem::NXcode
 		CStr mp_GUID;
 	};
 
+	struct CPBXFileReference
+	{
+		TCValueWithPositions<CStr> m_LastKnownFileType;
+		TCValueWithPositions<CStr> m_ExplicitFileType;
+		TCValueWithPositions<int32> m_FileEncoding = {0};
+		TCValueWithPositions<int32> m_TabWidth = {0};
+		TCValueWithPositions<int32> m_UsesTabs = {0};
+		TCValueWithPositions<int32> m_IndentWidth = {0};
+	};
+
+	struct CElement
+	{
+		inline CStr const &f_GetValue() const;
+		CStr f_GetCombinedValue() const;
+		inline TCVector<CStr> f_ValueArray() const;
+		static TCVector<CStr> fs_ValueArray(TCSet<TCVariant<CStr, TCVector<CStr>>> const &_Values);
+		inline void f_SetValue(CStr const &_Value);
+		inline bool f_IsSameValue(CElement const &_Other) const;
+		inline bool f_IsEmpty() const;
+		CStr const &f_GetProperty() const
+		{
+			return TCMap<CStr, CElement>::fs_GetKey(*this);
+		}
+
+		template <typename tf_CStr>
+		void f_Format(tf_CStr &o_Str) const
+		{
+			o_Str += typename tf_CStr::CFormat("m_ValueSet {vs}   m_Value {}   m_bXcodeProperty {}   m_bUseValues {}\n")
+				<< m_ValueSet
+				<< m_Value
+				<< m_bXcodeProperty
+				<< m_bUseValues
+			;
+		}
+
+		TCSet<TCVariant<CStr, TCVector<CStr>>> m_ValueSet;
+		CStr m_Value;
+		CBuildSystemUniquePositions m_Positions;
+		bool m_bXcodeProperty = false;
+		bool m_bUseValues = false;
+	};
+
+	struct CConfigResultCompile
+	{
+		template <typename tf_CStr>
+		void f_Format(tf_CStr &o_Str) const
+		{
+			o_Str += typename tf_CStr::CFormat("Elements: {}\n") << m_Element;
+		}
+
+		TCValueWithPositions<CStr> m_Type;
+		CPBXFileReference m_PBXFileReference;
+		TCMap<CStr, CElement> m_Element;
+	};
+
 	struct CProjectFile
 	{
 		TCPointer<CGroup> m_pGroup;
 		TCMap<CConfiguration, CEntityMutablePointer> m_EnabledConfigs;
+		TCMap<CConfiguration, CConfigResultCompile> m_CompileResults;
 		CFilePosition m_Position;
 		CStr m_Type;
 		CStr m_LastKnownFileType;
-		bool m_bWasGenerated = false;
+		CStr m_ExplicitFileType;
+		int32 m_FileEncoding = 0;
 		bool m_bHasCompilerFlags = false;
 		uint8 m_TabWidth = 0; // 0 means unset
 		uint8 m_IndentWidth = 0; // 0 means unset
@@ -194,6 +247,7 @@ namespace NMib::NBuildSystem::NXcode
 		CStr m_Type;
 		TCMap<CConfiguration, CPerConfig> m_PerConfig;
 		bool m_bInternal = false;
+		bool m_bExternal = false;
 
 	private:
 		CStr mp_DependencyProductRefGroupGUID;
@@ -223,7 +277,7 @@ namespace NMib::NBuildSystem::NXcode
 		CStr m_CompileFlagsGUID;
 		CStr m_Type;
 		CStr m_FileRefGUID;
-		bool m_bHasCompilerFlags;
+		bool m_bHasCompilerFlags = false;
 	};
 
 	struct align_cacheline CProject
@@ -259,7 +313,7 @@ namespace NMib::NBuildSystem::NXcode
 
 		TCPointer<CGroup> m_pGroup;
 		TCMap<CConfiguration, CEntityMutablePointer> m_EnabledProjectConfigs;
-		TCMap<CConfiguration, CEntityMutablePointer> m_EnabledConfigs;
+		//TCMap<CConfiguration, CEntityMutablePointer> m_EnabledConfigs;
 		CFilePosition m_Position;
 		CFilePosition m_ProjectPosition;
 		CStr m_FileName;
@@ -306,6 +360,10 @@ namespace NMib::NBuildSystem::NXcode
 		TCMap<CStr, CSolutionFile> m_SolutionFiles;
 		TCMap<CStr, CProject> m_Projects;
 		TCMap<CStr, CGroup> m_Groups;
+		CStr m_IntermediatePath;
+		CStr m_OutputPath;
+
+		mint m_nTotalTargets = 0;
 
 		CFilePosition m_Position;
 
@@ -323,19 +381,18 @@ namespace NMib::NBuildSystem::NXcode
 			(
 				CBuildSystem const &_BuildSystem
 				, CBuildSystemData const &_BuildSystemData
-				, TCMap<CPropertyKey, CEJSON> const &_InitialValues
+				, TCMap<CPropertyKey, CEJSONSorted> const &_InitialValues
 				, CStr const &_OutputDir
 			)
 		;
 		~CGeneratorInstance();
 
-		virtual bool f_GetBuiltin(CStr const &_Value, CStr &_Result) const override;
-		virtual CStr f_GetExpandedPath(CStr const &_Path, CStr const &_Base) const override;
-		virtual CSystemEnvironment f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const override;
+		CValuePotentiallyByRef f_GetBuiltin(CBuildSystemUniquePositions *_pStorePositions, CStr const &_Value, bool &o_bSuccess) const override;
+		CStr f_GetExpandedPath(CStr const &_Path, CStr const &_Base) const override;
+		CSystemEnvironment f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const override;
 
-		void f_GenerateProjectFile(CProject &_Project, CStr const &_OutputDir, TCMap<CConfiguration, TCSet<CStr>> &_Runnables, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable) const;
-		void f_GenerateWorkspaceFile(CSolution &_Solution, CStr const &_OutputDir) const;
-		void f_ClearThreadLocal() const;
+		TCFuture<void> f_GenerateProjectFile(CProject &_Project, CStr const &_OutputDir, TCMap<CConfiguration, TCSet<CStr>> &_Runnables, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable) const;
+		TCFuture<void> f_GenerateWorkspaceFile(CSolution &_Solution, CStr const &_OutputDir) const;
 
 		// Members
 		CBuildSystem const &m_BuildSystem;
@@ -344,62 +401,15 @@ namespace NMib::NBuildSystem::NXcode
 		CBuildSystemData m_GeneratorSettingsData;
 
 		CGeneratorState m_State;
-		CStr m_OutputDir;
-		CStr m_RelativeBasePathAbsolute;
-		CStr m_RelativeBasePath;
+		CEJSONSorted m_OutputDir;
+		CEJSONSorted m_RelativeBasePathAbsolute;
+		CEJSONSorted m_RelativeBasePath;
 		uint32 m_XcodeVersion;
 
-		CEntityPointer m_pGeneratorSettings;
+		CEJSONSorted m_Builtin_ProjectPath = ".";
+		CEJSONSorted m_Builtin_Inherit = "";
 
 	private:
-		struct CValueProperties
-		{
-			TCPointer<CEvaluatedProperty const> m_pTranslatedPropertyName;
-			CEntityPointer m_pTranslators;
-			CEntityPointer m_pValueSet;
-			CEntityPointer m_pProperties;
-			CStr m_Substitute;
-			bool m_bDisabled = false;
-			bool m_bConvertSeperator = false;
-			bool m_bDisableValueSet = false;
-			bool m_bQuoteSeperatedValues = false;
-			bool m_bQuoteAfterEquals = false;
-			bool m_bRemoveLastSlash = false;
-			bool m_bIgnoreEmtpy = false;
-			CStr m_Seperator;
-			CStr m_OldSeperator;
-			CStr m_Prefix;
-		};
-
-		struct CConfigValue
-		{
-			CStr m_Parent;
-			CStr m_Entity;
-			CStr m_Property;
-			CStr m_Value;
-			TCVector<CStr> m_Values;
-
-			bool m_bXcodeProperty = false;
-			bool m_bMainValue = false;
-			bool m_bUseValues = false;
-
-			COrdering_Weak operator <=> (CConfigValue const &_Right) const;
-		};
-
-		struct CElement
-		{
-			inline CStr const &f_GetValue() const;
-			inline void f_SetValue(CStr const &_Value);
-			inline bool f_IsSameValue(CElement const &_Other) const;
-
-			CStr m_Property;
-			TCSet<CStr> m_ValueSet;
-			CStr m_Value;
-			CFilePosition m_Position;
-			bool m_bXcodeProperty = false;
-			bool m_bUseValues = false;
-		};
-
 		struct CValueConfigs
 		{
 			TCSet<CConfiguration> m_Configurations;
@@ -407,116 +417,128 @@ namespace NMib::NBuildSystem::NXcode
 			TCSet<CStr> m_OriginalValues;
 		};
 
-		struct CConfigResult
+		struct CConfigResultTarget
 		{
+			template <typename tf_CStr>
+			void f_Format(tf_CStr &o_Str) const
+			{
+				o_Str += typename tf_CStr::CFormat("Elements: {}\n") << m_Element;
+			}
+
+			TCValueWithPositions<CStr> m_TargetType;
+			TCValueWithPositions<CStr> m_ProductType;
+			TCValueWithPositions<CStr> m_Name;
 			TCMap<CStr, CElement> m_Element;
 		};
 
 		struct CSingleValue
 		{
-			CFilePosition m_Position;
-			CEJSON m_Value;
+			CSingleValue(CValuePotentiallyByRef &&_Value)
+				: m_Value(fg_Move(_Value))
+			{
+			}
+
+			CBuildSystemUniquePositions m_Positions;
+			CValuePotentiallyByRef m_Value;
 		};
 
-		struct CThreadLocal
+		struct CSharedState
 		{
 			void f_CreateDirectory(CStr const &_Path);
-
-			CXMLDocument *m_pXMLFile = nullptr;
-			TCMap<CConfiguration, TCSet<CStr>> mp_UsedCTypes;
-			TCMap<CStr> mp_EvaluatedTypesInUse;
-			TCMap<CConfiguration, TCMap<CStr, CStr>> mp_XcodeSettingsFromTypes;
-			TCMap<CStr, TCMap<CConfiguration, CStr>> mp_CompileFlagsValues;
-			TCMap<CConfiguration, TCMap<CStr, CStr>> mp_EvaluatedOverriddenCompileFlags;
-			TCMap<CConfiguration, CConfigResult> mp_EvaluatedTargetSettings;
-			TCMap<CStr, TCMap<CConfiguration, CConfigResult>> mp_EvaluatedTypeCompileFlags;
-			TCMap<CStr, TCMap<CConfiguration, CConfigResult>> mp_EvaluatedCompileFlags;
-			TCMap<CConfiguration, CStr> mp_OtherCPPFlags; // Required for moc files
-			TCMap<CConfiguration, CStr> mp_OtherObjCPPFlags; // Required for moc files
-			TCMap<CConfiguration, CStr> mp_OtherCFlags; // Required for moc files
-			TCMap<CConfiguration, CStr> mp_OtherObjCFlags; // Required for moc files
-			TCMap<CConfiguration, CStr> mp_OtherAssemblerFlags; // Required for moc files
-			TCMap<CConfiguration, TCMap<CStr, TCSet<CStr>>> mp_BuildRules;
-			CStr mp_MocOutputPatternCPP;
-			CStr m_ProjectOutputDir;
 
 			TCSet<CStr> m_CreateDirectoryCache;
 		};
 
-		bool fp_GenerateBuildAllSchemes(CSolution &_Solution, CStr const &_OutputDir, TCMap<CConfiguration, TCSet<CStr>> &_Runnables, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable) const;
+		struct CWorkspaceState : public CSharedState
+		{
+		};
+
+		struct CProjectState : public CSharedState
+		{
+			TCMap<CConfiguration, TCSet<CStr>> m_UsedCTypes;
+			TCSet<CStr> m_EvaluatedTypesInUse;
+			TCMap<CConfiguration, TCMap<CStr, CStr>> m_XcodeSettingsFromTypes;
+			TCMap<CStr, TCMap<CConfiguration, CStr>> m_CompileFlagsValues;
+			TCMap<CConfiguration, TCMap<CStr, CStr>> m_EvaluatedOverriddenCompileFlags;
+			TCMap<CConfiguration, CConfigResultTarget> m_EvaluatedTargetSettings;
+			TCMap<CStr, TCMap<CConfiguration, CConfigResultCompile>> m_EvaluatedTypeCompileFlags;
+			TCMap<CStr, TCMap<CConfiguration, CConfigResultCompile>> m_EvaluatedCompileFlags;
+			TCMap<CConfiguration, CStr> m_OtherCPPFlags; // Required for moc files
+			TCMap<CConfiguration, CStr> m_OtherObjCPPFlags; // Required for moc files
+			TCMap<CConfiguration, CStr> m_OtherCFlags; // Required for moc files
+			TCMap<CConfiguration, CStr> m_OtherObjCFlags; // Required for moc files
+			TCMap<CConfiguration, CStr> m_OtherAssemblerFlags; // Required for moc files
+			TCMap<CConfiguration, TCMap<CStr, TCSet<CStr>>> m_BuildRules;
+			CStr m_MocOutputPatternCPP;
+			CStr m_ProjectOutputDir;
+		};
+
+		bool fp_GenerateBuildAllSchemes
+			(
+				CWorkspaceState &_WorkspaceState
+				, CSolution &_Solution
+				, CStr const &_OutputDir
+				, TCMap<CConfiguration, TCSet<CStr>> &_Runnables
+				, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable
+			) const
+		;
 
 		void fp_CalculateDependencyProductPath(CProject &_Project, CProjectDependency &_Dependency, TCMap<CConfiguration, CEntityMutablePointer> const &_EnabledConfigurations) const;
 
-		void fp_GenerateBuildConfigurationFilesList(CProject& _Project, CStr const &_OutputDir, TCVector<CBuildConfiguration>& _ConfigList) const;
-		void fp_GenerateBuildConfigurationFiles(CProject& _Project, CStr const &_OutputDir) const;
-		void fp_GenerateBuildConfigurationFile(CProject& _Project, CConfiguration const &_Configuration, CStr const &_OutputFile, CStr const &_OutputDir, CNativeTarget const &_NativeTarget) const;
-		void fp_GenerateCompilerFlags(CProject& _Project) const;
+		void fp_GenerateBuildConfigurationFilesList(CProjectState &_ProjectState, CProject& _Project, CStr const &_OutputDir, TCVector<CBuildConfiguration>& _ConfigList) const;
+		void fp_GenerateBuildConfigurationFiles(CProjectState &_ProjectState, CProject& _Project, CStr const &_OutputDir) const;
+		void fp_GenerateBuildConfigurationFile(CProjectState &_ProjectState,CProject& _Project, CConfiguration const &_Configuration, CStr const &_OutputFile, CStr const &_OutputDir, CNativeTarget const &_NativeTarget) const;
+		void fp_GenerateCompilerFlags(CProjectState &_ProjectState, CProject& _Project) const;
 		CStr fp_MakeNiceSharedFlagValue(CStr const &_Type) const;
 		void fp_GeneratePBXSourcesBuildPhaseSection(CProject &_Project, CStr& _Output) const;
 		void fp_GeneratePBXFrameworksBuildPhaseSection(CProject &_Project, CStr& _Output) const;
 
 		void fp_GeneratePBXShellScriptBuildPhaseSection(CProject& _Project, CStr& _Output) const;
 
-		void fp_GeneratePBXBuildFileSection(CProject &_Project, CStr &o_Output) const;
-		void fp_GeneratePBXBuildRule(CProject &_Project, CStr& _Output) const;
+		void fp_GeneratePBXBuildFileSection(CProjectState &_ProjectState, CProject &_Project, CStr &o_Output) const;
+		void fp_GeneratePBXBuildRule(CProjectState &_ProjectState, CProject &_Project, CStr& _Output) const;
 		void fp_GeneratePBXFileReferenceSection(CProject &_Project, CStr const &_OutputDir, CStr& _Output) const;
 		void fp_GeneratePBXGroupSection(CProject &_Project, CStr& _Output) const;
 		void fp_GeneratePBXProjectSection(CProject &_Project, CStr& _Output) const;
 
 		void fp_GeneratePBXAggregateTargetSection(CProject& _Project, CStr& _Output) const;
-		void fp_GeneratePBXNativeTargetSection(CProject &_Project, CStr& _Output) const;
+		void fp_GeneratePBXNativeTargetSection(CProjectState &_ProjectState, CProject &_Project, CStr& _Output) const;
 		void fp_GenerateXCConfigurationList(CProject &_Project, CStr& _Output) const;
 		void fp_GenerateXCBuildConfigurationSection(CProject &_Project, CStr& _Output) const;
 		void fp_GeneratePBXContainerItemProxySection(CProject& _Project, CStr& _Output) const;
 		void fp_GeneratePBXTargetDependencySection(CProject& _Project, CStr& _Output) const;
 
 		static void fspr_MergeScheme(CXMLNode const* _pExistingNode, CXMLNode const* _pPrevNode, CXMLNode* _pNewNode);
-		bool fp_GenerateSchemes(CProject& _Project, TCMap<CConfiguration, TCSet<CStr>> &_Runnables, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable) const;
+		bool fp_GenerateSchemes(CProjectState &_ProjectState, CProject& _Project, TCMap<CConfiguration, TCSet<CStr>> &_Runnables, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable) const;
 
 		// Values
 
-		void fp_EvaluateFiles(CProject& _Project) const;
-		void fp_EvaluateFileTypeCompileFlags(CProject& _Project) const;
-		void fp_EvaluateTargetSettings(CProject& _Project) const;
+		TCFuture<void> fp_EvaluateFiles(CProjectState &_ProjectState, CProject &_Project) const;
+		TCFuture<void> fp_EvaluateFileTypeCompileFlags(CProjectState &_ProjectState, CProject& _Project) const;
+		TCFuture<void> fp_EvaluateTargetSettings(CProjectState &_ProjectState, CProject& _Project) const;
 		void fp_EvaluateDependencies(CProject& _Project) const;
 
-		void fp_SetEvaluatedValues
+		static CStr fs_EscapeCommandLineArgument(CStr const &_String);
+
+		void fp_SetEvaluatedValuesTarget
 			(
-				TCMap<CConfiguration, CEntityMutablePointer> const &_Configs
-				, TCMap<CConfiguration, CEntityMutablePointer> const &_AllConfigs
-				, bool _bFile
-				, EPropertyType _PropertyType
-				, TCVector<CStr> const *_pSearchList
-				, TCMap<CConfiguration, TCVector<CStr>> const *_pSearchListPerConfig
-				, CStr const &_DefaultEntity
-				, bool _bPropertyCondition
-				, bool _bAddPropertyDefined
-				, TCMap<CConfiguration, CConfigResult> &_Result
+				CEntityMutablePointer const &_Entity
+				, CConfigResultTarget &o_Result
+				, CStr const &_Name
 			) const
 		;
-
-		void fp_GetConfigValue
+		void fp_SetEvaluatedValuesCompile
 			(
-				TCMap<CConfiguration, CEntityMutablePointer> const &_Configs
-				, TCMap<CConfiguration, CEntityMutablePointer> const &_AllConfigs
-				, CFilePosition const &_Position
-				, EPropertyType _PropType
-				, CStr const &_SourceType
+				CEntityMutablePointer const &_Entity
 				, bool _bFile
-				, bool _bExcludeFromBuildCondition
-				, TCVector<CStr> const *_pSearchList
-				, TCMap<CConfiguration, TCVector<CStr>> const *_pSearchListPerConfig
-				, CStr const &_DefaultEntity
-				, CStr const &_ExtraCondition
-				, TCMap<CConfiguration, CConfigResult> &_Result
+				, CConfigResultCompile &o_Result
 			) const
 		;
 
 		CSingleValue fp_GetSingleConfigValue
 			(
 				TCMap<CConfiguration, CEntityMutablePointer> const &_Configs
-				, EPropertyType _PropType
-				, CStr const &_Property
+				, CPropertyKeyReference const &_PropertyKey
 				, EEJSONType _ExpectedType
 				, bool _bOptional
 			) const
@@ -525,8 +547,7 @@ namespace NMib::NBuildSystem::NXcode
 			(
 				TCMap<CConfiguration, CEntityMutablePointer> const &_Configs
 				, CConfiguration const &_Configuration
-				, EPropertyType _PropType
-				, CStr const &_Property
+				, CPropertyKeyReference const &_PropertyKey
 				, EEJSONType _ExpectedType
 				, bool _bOptional
 			) const
@@ -534,8 +555,7 @@ namespace NMib::NBuildSystem::NXcode
 		TCMap<CConfiguration, CSingleValue> fp_GetConfigValues
 			(
 				TCMap<CConfiguration, CEntityMutablePointer> const &_Configs
-				, EPropertyType _PropType
-				, CStr const &_Property
+				, CPropertyKeyReference const &_PropertyKey
 				, EEJSONType _ExpectedType
 				, bool _bOptional
 			) const
@@ -544,7 +564,14 @@ namespace NMib::NBuildSystem::NXcode
 		template <typename tf_CSet0, typename tf_CSet1>
 		bool fp_IsSameConfig(tf_CSet0 const &_Configs, tf_CSet1 const &_AllConfigs) const;
 
-		mutable TCThreadLocal<CThreadLocal> m_ThreadLocal;
+		template <typename tf_CValue, typename tf_FGetValue>
+		static void fsp_GetSingleValue
+			(
+				TCMap<CConfiguration, CConfigResultCompile> const &_CompileEntities
+				, tf_CValue &o_Value
+				, tf_FGetValue const &_fGetValue
+			)
+		;
 	};
 }
 

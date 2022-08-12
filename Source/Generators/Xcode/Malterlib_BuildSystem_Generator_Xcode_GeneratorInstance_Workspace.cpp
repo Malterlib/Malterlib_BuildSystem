@@ -7,53 +7,37 @@
 
 namespace NMib::NBuildSystem::NXcode
 {
-	void CGeneratorInstance::f_GenerateWorkspaceFile(CSolution &_Solution, CStr const &_OutputDir) const
+	TCFuture<void> CGeneratorInstance::f_GenerateWorkspaceFile(CSolution &_Solution, CStr const &_OutputDir) const
 	{
-		auto &ThreadLocal = *m_ThreadLocal;
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+
 		CXMLDocument XMLFile(false);
-		auto pOldFile = ThreadLocal.m_pXMLFile;
-		ThreadLocal.m_pXMLFile = &XMLFile;
-		auto Cleanup = fg_OnScopeExit
-			(
-				[&]()
-				{
-					ThreadLocal.m_pXMLFile = pOldFile;
-				}
-			)
-		;
+
+		CWorkspaceState WorkspaceState;
 
 		CStr OutputDir = CFile::fs_AppendPath(CFile::fs_AppendPath(_OutputDir, "Files"), CStr(CFile::fs_MakeNiceFilename(_Solution.f_GetName())));
-		ThreadLocal.f_CreateDirectory(OutputDir);
+		WorkspaceState.f_CreateDirectory(OutputDir);
 
-		CMutual SchemesWithRunnablesLock;
 		TCMap<CConfiguration, TCSet<CStr>> SchemesWithRunnables;
 		TCMap<CConfiguration, TCMap<CStr, CStr>> SchemesWithBuildables;
 
-		fg_ForEach
-			(
-				_Solution.m_Projects
-				, [&](CProject &_Project)
-				{
-					TCMap<CConfiguration, TCSet<CStr>> Runnables;
-					TCMap<CConfiguration, TCMap<CStr, CStr>> Buildables;
-					f_GenerateProjectFile(_Project, OutputDir, Runnables, Buildables);
-					{
-						DLock(SchemesWithRunnablesLock);
-						for (auto iConfig = Runnables.f_GetIterator(); iConfig; ++iConfig)
-						{
-							SchemesWithRunnables[iConfig.f_GetKey()] += *iConfig;
-						}
-						for (auto iConfig = Buildables.f_GetIterator(); iConfig; ++iConfig)
-						{
-							SchemesWithBuildables[iConfig.f_GetKey()] += *iConfig;
-						}
-					}
-				}
-			)
-		;
+		for (auto &Project : _Solution.m_Projects)
+		{
+			TCMap<CConfiguration, TCSet<CStr>> Runnables;
+			TCMap<CConfiguration, TCMap<CStr, CStr>> Buildables;
+			co_await f_GenerateProjectFile(Project, OutputDir, Runnables, Buildables);
+
+			for (auto iConfig = Runnables.f_GetIterator(); iConfig; ++iConfig)
+				SchemesWithRunnables[iConfig.f_GetKey()] += *iConfig;
+
+			for (auto iConfig = Buildables.f_GetIterator(); iConfig; ++iConfig)
+				SchemesWithBuildables[iConfig.f_GetKey()] += *iConfig;
+
+			co_await g_Yield;
+		}
 
 		// Workspace root
-		auto pWorkspace = XMLFile.f_CreateDefaultDocument("Workspace", "xml version=\"1.0\" encoding=\"UTF-8\"");
+		auto pWorkspace = XMLFile.f_CreateDefaultDocument(gc_ConstString_Workspace, "xml version=\"1.0\" encoding=\"UTF-8\"");
 		XMLFile.f_SetAttribute(pWorkspace, "version", "1.0");
 
 		TCMap<TCPointer<CGroup>, TCVector<CGroup*>> MapGroupToGroups;
@@ -75,7 +59,7 @@ namespace NMib::NBuildSystem::NXcode
 		{
 			if (!pGroup->m_OutputToWorkspace)
 			{
-				auto pGroupRef = XMLFile.f_CreateElement(_pParent, "Group");
+				auto pGroupRef = XMLFile.f_CreateElement(_pParent, gc_ConstString_Group);
 				XMLFile.f_SetAttribute(pGroupRef, "location", "container:");
 				XMLFile.f_SetAttribute(pGroupRef, "name", pGroup->m_Name);
 				pGroup->m_OutputToWorkspace = true;
@@ -110,8 +94,8 @@ namespace NMib::NBuildSystem::NXcode
 		}
 
 		OutputDir = CFile::fs_AppendPath(_OutputDir, CStr(CFile::fs_MakeNiceFilename(_Solution.f_GetName()) + ".xcworkspace"));
-		ThreadLocal.f_CreateDirectory(OutputDir);
-		CStr GeneratedFile = CFile::fs_AppendPath(OutputDir,  CStr("generatedContainer"));
+		WorkspaceState.f_CreateDirectory(OutputDir);
+		CStr GeneratedFile = CFile::fs_AppendPath(OutputDir, CStr(gc_ConstString_generatedContainer));
 		{
 			bool bWasCreated;
 			if (!m_BuildSystem.f_AddGeneratedFile(GeneratedFile, CStr(), _Solution.f_GetName(), bWasCreated))
@@ -125,7 +109,7 @@ namespace NMib::NBuildSystem::NXcode
 			}
 		}
 		CStr FileName = CFile::fs_AppendPath(OutputDir,  CStr("contents.xcworkspacedata"));
-		bool bSchemeChanged = fp_GenerateBuildAllSchemes(_Solution, OutputDir, SchemesWithRunnables, SchemesWithBuildables);
+		bool bSchemeChanged = fp_GenerateBuildAllSchemes(WorkspaceState, _Solution, OutputDir, SchemesWithRunnables, SchemesWithBuildables);
 		{
 			CStr XMLData = XMLFile.f_GetAsString(EXMLOutputDialect_Xcode);
 			bool bWasCreated;
@@ -148,12 +132,20 @@ namespace NMib::NBuildSystem::NXcode
 				}
 			}
 		}
+
+		co_return {};
 	}
 
-	bool CGeneratorInstance::fp_GenerateBuildAllSchemes(CSolution &_Solution, CStr const &_OutputDir, TCMap<CConfiguration, TCSet<CStr>> &_Runnables, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable) const
+	bool CGeneratorInstance::fp_GenerateBuildAllSchemes
+		(
+			CWorkspaceState &_WorkspaceState
+			, CSolution &_Solution
+			, CStr const &_OutputDir
+			, TCMap<CConfiguration, TCSet<CStr>> &_Runnables
+			, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable
+		) const
 	{
 		bool bSchemesChanged = false;
-		auto & ThreadLocal = *m_ThreadLocal;
 
 		auto fWriteSchemeFile = [&](CStr const &_FileName, CStr const &_Data, bool _bDoWrite = true) -> bool
 			{
@@ -165,7 +157,7 @@ namespace NMib::NBuildSystem::NXcode
 				{
 					CByteVector FileData;
 					CFile::fs_WriteStringToVector(FileData, _Data, false);
-					ThreadLocal.f_CreateDirectory(CFile::fs_GetPath(_FileName));
+					_WorkspaceState.f_CreateDirectory(CFile::fs_GetPath(_FileName));
 					if (m_BuildSystem.f_WriteFile(FileData, _FileName))
 					{
 						bSchemesChanged = true;
@@ -178,8 +170,9 @@ namespace NMib::NBuildSystem::NXcode
 
 		{
 			ch8 const *pDocumentData;
-			auto Value = fp_GetSingleConfigValue(_Solution.m_EnabledConfigs, EPropertyType_Workspace, "XcodeNewBuildSystem", EEJSONType_Boolean, true);
-			if (Value.m_Value.f_IsValid() && Value.m_Value.f_Boolean())
+			auto Value = fp_GetSingleConfigValue(_Solution.m_EnabledConfigs, gc_ConstKey_Workspace_XcodeNewBuildSystem, EEJSONType_Boolean, true);
+
+			if (Value.m_Value.f_Get().f_IsValid() && Value.m_Value.f_Get().f_Boolean())
 			{
 				pDocumentData =
 R"xxx(<?xml version="1.0" encoding="UTF-8"?>
@@ -224,17 +217,24 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 		}
 
 		{
-			ch8 const *pDocumentData =
+			auto IntermediatePath = fp_GetSingleConfigValue(_Solution.m_EnabledConfigs, gc_ConstKey_Workspace_IntermediateDirectory, EEJSONType_String, "").m_Value.f_Get().f_String() / "";
+			auto OutputPath = fp_GetSingleConfigValue(_Solution.m_EnabledConfigs, gc_ConstKey_Workspace_OutputDirectory, EEJSONType_String, "").m_Value.f_Get().f_String() / "";
+
+			CStr DocumentData =
 R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
 	<key>BuildLocationStyle</key>
-	<string>UseTargetSettings</string>
+	<string>CustomLocation</string>
 	<key>CustomBuildLocationType</key>
-	<string>RelativeToDerivedData</string>
+	<string>Absolute</string>
 	<key>DerivedDataLocationStyle</key>
 	<string>Default</string>
+	<key>CustomBuildIntermediatesPath</key>
+	<string>{}</string>
+	<key>CustomBuildProductsPath</key>
+	<string>{}</string>
 	<key>IssueFilterStyle</key>
 	<string>ShowActiveSchemeOnly</string>
 	<key>LiveSourceIssuesEnabled</key>
@@ -243,29 +243,22 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 	<true/>
 </dict>
 </plist>
-)xxx";
+)xxx"_f
+				<< IntermediatePath
+				<< OutputPath
+			;
 			CStr FileName = _OutputDir / ("xcuserdata/{}.xcuserdatad/WorkspaceSettings.xcsettings"_f << NProcess::NPlatform::fg_Process_GetUserName());
 
-			bool bUpdated = fWriteSchemeFile(FileName + ".generated", pDocumentData);
-			fWriteSchemeFile(FileName, pDocumentData, bUpdated); // Only write first time or when above contents are changed
+			bool bUpdated = fWriteSchemeFile(FileName + ".generated", DocumentData);
+			fWriteSchemeFile(FileName, DocumentData, bUpdated); // Only write first time or when above contents are changed
 		}
 
 		CStr OutputDir = CFile::fs_AppendPath(_OutputDir, CStr("xcshareddata/xcschemes"));
-		ThreadLocal.f_CreateDirectory(OutputDir);
+		_WorkspaceState.f_CreateDirectory(OutputDir);
 
 		for (auto Iter = _Solution.m_EnabledConfigs.f_GetIterator(); Iter; ++Iter)
 		{
 			CXMLDocument XMLFile(false);
-			auto pOldFile = ThreadLocal.m_pXMLFile;
-			ThreadLocal.m_pXMLFile = &XMLFile;
-			auto Cleanup = fg_OnScopeExit
-				(
-					[&]()
-					{
-						ThreadLocal.m_pXMLFile = pOldFile;
-					}
-				)
-			;
 
 			CConfiguration const& Configuration = Iter.f_GetKey();
 			CStr Name = (CStr::CFormat("{} {}") << Configuration.m_Platform << Configuration.m_Configuration).f_GetStr();
@@ -306,8 +299,8 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 			// BuildAction
 			{
 				auto pBuildAction = XMLFile.f_CreateElement(pScheme, "BuildAction");
-				XMLFile.f_SetAttribute(pBuildAction, "parallelizeBuildables", "YES");
-				XMLFile.f_SetAttribute(pBuildAction, "buildImplicitDependencies", "YES");
+				XMLFile.f_SetAttribute(pBuildAction, "parallelizeBuildables", gc_ConstString_YES);
+				XMLFile.f_SetAttribute(pBuildAction, "buildImplicitDependencies", gc_ConstString_YES);
 
 				auto pBuildActionEntries = XMLFile.f_CreateElement(pBuildAction, "BuildActionEntries");
 
@@ -320,14 +313,14 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 						continue;
 
 					auto iConfig = Project.m_EnabledProjectConfigs[Configuration];
-					if (!m_BuildSystem.f_EvaluateEntityPropertyBool(*iConfig, EPropertyType_Target, "Disabled", false))
+					if (!m_BuildSystem.f_EvaluateEntityPropertyBool(*iConfig, gc_ConstKey_Target_Disabled, false))
 					{
 						auto pBuildActionEntry = XMLFile.f_CreateElement(pBuildActionEntries, "BuildActionEntry");
-						XMLFile.f_SetAttribute(pBuildActionEntry, "buildForTesting", "YES");
-						XMLFile.f_SetAttribute(pBuildActionEntry, "buildForRunning", "YES");
-						XMLFile.f_SetAttribute(pBuildActionEntry, "buildForProfiling", "YES");
-						XMLFile.f_SetAttribute(pBuildActionEntry, "buildForArchiving", "YES");
-						XMLFile.f_SetAttribute(pBuildActionEntry, "buildForAnalyzing", "YES");
+						XMLFile.f_SetAttribute(pBuildActionEntry, "buildForTesting", gc_ConstString_YES);
+						XMLFile.f_SetAttribute(pBuildActionEntry, "buildForRunning", gc_ConstString_YES);
+						XMLFile.f_SetAttribute(pBuildActionEntry, "buildForProfiling", gc_ConstString_YES);
+						XMLFile.f_SetAttribute(pBuildActionEntry, "buildForArchiving", gc_ConstString_YES);
+						XMLFile.f_SetAttribute(pBuildActionEntry, "buildForAnalyzing", gc_ConstString_YES);
 
 						fGenerateBuildReference(pBuildActionEntry, Project);
 					}
@@ -340,7 +333,7 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 				XMLFile.f_SetAttribute(pTestAction, "buildConfiguration", Name);
 				XMLFile.f_SetAttribute(pTestAction, "selectedDebuggerIdentifier", "Xcode.DebuggerFoundation.Debugger.LLDB");
 				XMLFile.f_SetAttribute(pTestAction, "selectedLauncherIdentifier", "Xcode.DebuggerFoundation.Launcher.LLDB");
-				XMLFile.f_SetAttribute(pTestAction, "shouldUseLaunchSchemeArgsEnv", "YES");
+				XMLFile.f_SetAttribute(pTestAction, "shouldUseLaunchSchemeArgsEnv", gc_ConstString_YES);
 				XMLFile.f_CreateElement(pTestAction, "Testables");
 			}
 
@@ -351,8 +344,8 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 				XMLFile.f_SetAttribute(pLaunchAction, "selectedDebuggerIdentifier", "Xcode.DebuggerFoundation.Debugger.LLDB");
 				XMLFile.f_SetAttribute(pLaunchAction, "selectedLauncherIdentifier", "Xcode.DebuggerFoundation.Launcher.LLDB");
 				XMLFile.f_SetAttribute(pLaunchAction, "launchStyle", "0");
-				XMLFile.f_SetAttribute(pLaunchAction, "useCustomWorkingDirectory", "NO");
-				XMLFile.f_SetAttribute(pLaunchAction, "customWorkingDirectory", "[MulitLaunchSchemes]");
+				XMLFile.f_SetAttribute(pLaunchAction, "useCustomWorkingDirectory", gc_ConstString_NO);
+				XMLFile.f_SetAttribute(pLaunchAction, gc_ConstString_customWorkingDirectory, "[MulitLaunchSchemes]");
 
 				auto &Runnables = _Runnables[Configuration];
 				if (!Runnables.f_IsEmpty())
@@ -360,16 +353,16 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 					auto pCommandLineArguments = XMLFile.f_CreateElement(pLaunchAction, "CommandLineArguments");
 					for (auto &Runnable : Runnables)
 					{
-						auto pCommandLineArgument = XMLFile.f_CreateElement(pCommandLineArguments, "CommandLineArgument");
-						XMLFile.f_SetAttribute(pCommandLineArgument, "argument", Runnable);
-						XMLFile.f_SetAttribute(pCommandLineArgument, "isEnabled", "NO");
+						auto pCommandLineArgument = XMLFile.f_CreateElement(pCommandLineArguments, gc_ConstString_CommandLineArgument);
+						XMLFile.f_SetAttribute(pCommandLineArgument, gc_ConstString_argument, Runnable);
+						XMLFile.f_SetAttribute(pCommandLineArgument, "isEnabled", gc_ConstString_NO);
 					}
 				}
 
-				XMLFile.f_SetAttribute(pLaunchAction, "ignoresPersistentStateOnLaunch", "NO");
-				XMLFile.f_SetAttribute(pLaunchAction, "debugDocumentVersioning", "YES");
+				XMLFile.f_SetAttribute(pLaunchAction, "ignoresPersistentStateOnLaunch", gc_ConstString_NO);
+				XMLFile.f_SetAttribute(pLaunchAction, "debugDocumentVersioning", gc_ConstString_YES);
 				XMLFile.f_SetAttribute(pLaunchAction, "debugServiceExtension", "internal");
-				XMLFile.f_SetAttribute(pLaunchAction, "allowLocationSimulation", "YES");
+				XMLFile.f_SetAttribute(pLaunchAction, "allowLocationSimulation", gc_ConstString_YES);
 				XMLFile.f_CreateElement(pLaunchAction, "AdditionalOptions");
 			}
 
@@ -377,10 +370,10 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 			{
 				auto pProfileAction = XMLFile.f_CreateElement(pScheme, "ProfileAction");
 				XMLFile.f_SetAttribute(pProfileAction, "buildConfiguration", Name);
-				XMLFile.f_SetAttribute(pProfileAction, "shouldUseLaunchSchemeArgsEnv", "YES");
+				XMLFile.f_SetAttribute(pProfileAction, "shouldUseLaunchSchemeArgsEnv", gc_ConstString_YES);
 				XMLFile.f_SetAttribute(pProfileAction, "savedToolIdentifier", "");
-				XMLFile.f_SetAttribute(pProfileAction, "useCustomWorkingDirectory", "NO");
-				XMLFile.f_SetAttribute(pProfileAction, "debugDocumentVersioning", "YES");
+				XMLFile.f_SetAttribute(pProfileAction, "useCustomWorkingDirectory", gc_ConstString_NO);
+				XMLFile.f_SetAttribute(pProfileAction, "debugDocumentVersioning", gc_ConstString_YES);
 			}
 
 			// AnalyzeAction
@@ -393,7 +386,7 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 			{
 				auto pArchiveAction = XMLFile.f_CreateElement(pScheme, "ArchiveAction");
 				XMLFile.f_SetAttribute(pArchiveAction, "buildConfiguration", Name);
-				XMLFile.f_SetAttribute(pArchiveAction, "revealArchiveInOrganizer", "YES");
+				XMLFile.f_SetAttribute(pArchiveAction, "revealArchiveInOrganizer", gc_ConstString_YES);
 			}
 
 			CStr FileName = CFile::fs_AppendPath(OutputDir,  (CStr::CFormat("{}.xcscheme") << CFile::fs_MakeNiceFilename((CStr::CFormat("{} {}") << CStr("Build All") << Name).f_GetStr())).f_GetStr());

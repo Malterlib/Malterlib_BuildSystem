@@ -16,50 +16,31 @@ namespace NMib::NBuildSystem::NXcode
 		(
 			CBuildSystem const &_BuildSystem
 			, CBuildSystemData const &_BuildSystemData
-			, TCMap<CPropertyKey, CEJSON> const &_InitialValues
+			, TCMap<CPropertyKey, CEJSONSorted> const &_InitialValues
 			, CStr const &_OutputDir
 		)
 		: m_BuildSystem(_BuildSystem)
 		, m_BuildSystemData(_BuildSystemData)
 		, m_OutputDir(_OutputDir)
 	{
-		m_RelativeBasePath = CFile::fs_MakePathRelative(m_BuildSystem.f_GetBaseDir(), m_OutputDir + "/Files/Temp");
-		m_RelativeBasePathAbsolute = "$SRCROOT/" + m_RelativeBasePath;
+		m_RelativeBasePath = CFile::fs_MakePathRelative(m_BuildSystem.f_GetBaseDir(), m_OutputDir.f_String() + "/Files/Temp");
+		m_RelativeBasePathAbsolute = "$SRCROOT/" + m_RelativeBasePath.f_String();
 		m_BuildSystem.f_SetGeneratorInterface(this);
-		CEntityKey Key;
-		Key.m_Type = EEntityType_GeneratorSetting;
-		Key.m_Name.m_Value = "Xcode";
-		CStr Generator = _InitialValues[CPropertyKey(EPropertyType_Property, "Generator")].f_String();
-		m_XcodeVersion = Generator.f_Replace("Xcode", "").f_ToInt(uint32(4));
+		CStr Generator = _InitialValues[CPropertyKey(_BuildSystem.f_StringCache(), EPropertyType_Property, gc_ConstString_Generator)].f_String();
+		m_XcodeVersion = Generator.f_Replace("Xcode", "").f_ToInt(uint32(13));
 		
-		auto pEntity = _BuildSystemData.m_RootEntity.m_ChildEntitiesMap.f_FindEqual(Key);
-		if (!pEntity)
-			m_BuildSystem.fs_ThrowError(CFilePosition(), "No Xcode generator settings found");
-		_BuildSystem.f_EvaluateData(m_GeneratorSettingsData, _InitialValues, pEntity, true);
-
-		auto pSettings = m_GeneratorSettingsData.m_RootEntity.m_ChildEntitiesMap.f_FindEqual(Key);
-		if (!pSettings)
-			m_BuildSystem.fs_ThrowError(CFilePosition(), "No Xcode generator settings found");
-		m_pGeneratorSettings = fg_Explicit(pSettings);
-		_BuildSystem.f_EvaluateAllGeneratorSettings(*pSettings);
-
 		_BuildSystem.f_RegisterBuiltinVariables
 			(
 				{
-					{CPropertyKey("XcodeGeneratorDependencyFiles"), DMibBuildSystemTypeWithPosition(g_StringArray)}
+					{CPropertyKey(_BuildSystem.f_StringCache(), gc_ConstString_XcodeGeneratorDependencyFiles), DMibBuildSystemTypeWithPosition(g_StringArray)}
 				}
 			)
 		;
 	}
 
-	void CGeneratorInstance::f_ClearThreadLocal() const
-	{
-		*m_ThreadLocal = CThreadLocal();
-	}
-
 	CStr CGeneratorInstance::f_GetExpandedPath(CStr const &_Path, CStr const &_Base) const
 	{
-		return CFile::fs_GetExpandedPath(_Path.f_Replace(m_RelativeBasePathAbsolute, m_BuildSystem.f_GetBaseDir()), _Base);
+		return CFile::fs_GetExpandedPath(_Path.f_Replace(m_RelativeBasePathAbsolute.f_String(), m_BuildSystem.f_GetBaseDir()), _Base);
 	}
 
 	CSystemEnvironment CGeneratorInstance::f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const
@@ -67,60 +48,49 @@ namespace NMib::NBuildSystem::NXcode
 		return fg_GetSys()->f_Environment();
 	}
 
-	bool CGeneratorInstance::f_GetBuiltin(CStr const &_Value, CStr &_Result) const
+	CValuePotentiallyByRef CGeneratorInstance::f_GetBuiltin(CBuildSystemUniquePositions *_pStorePositions, CStr const &_Value, bool &o_bSuccess) const
 	{
 		// TODO
-		if (_Value == "BasePathRelativeProject")
+		if (_Value == gc_ConstString_BasePathRelativeProject.m_String)
 		{
-			_Result = m_RelativeBasePath;
-			return true;
+			if (_pStorePositions)
+				_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.BasePathRelativeProject")->f_AddValue(m_RelativeBasePath, m_BuildSystem.f_EnableValues());
+			o_bSuccess = true;
+			return &m_RelativeBasePath;
 		}
-		else if (_Value == "BasePath")
+		else if (_Value == gc_ConstString_BasePath.m_String)
 		{
-			_Result = m_RelativeBasePathAbsolute;
-			return true;
+			if (_pStorePositions)
+				_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.BasePath")->f_AddValue(m_RelativeBasePathAbsolute, m_BuildSystem.f_EnableValues());
+			o_bSuccess = true;
+			return &m_RelativeBasePathAbsolute;
 		}
-		else if (_Value == "GeneratedBuildSystemDir")
+		else if (_Value == gc_ConstString_GeneratedBuildSystemDir.m_String)
 		{
-			_Result = m_OutputDir;
-			return true;
+			if (_pStorePositions)
+				_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.GeneratedBuildSystemDir")->f_AddValue(m_OutputDir, m_BuildSystem.f_EnableValues());
+			o_bSuccess = true;
+			return &m_OutputDir;
 		}
-		else if (_Value == "ProjectPath")
+		else if (_Value == gc_ConstString_ProjectPath.m_String)
 		{
-			_Result = ".";
-			return true;
+			if (_pStorePositions)
+				_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.ProjectPath")->f_AddValue(m_Builtin_ProjectPath, m_BuildSystem.f_EnableValues());
+			o_bSuccess = true;
+			return &m_Builtin_ProjectPath;
 		}
-		else if (_Value == "Inherit")
+		else if (_Value == gc_ConstString_Inherit.m_String)
 		{
-			_Result = "";
-			return true;
+			if (_pStorePositions)
+				_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.Inherit")->f_AddValue(m_Builtin_Inherit, m_BuildSystem.f_EnableValues());
+			o_bSuccess = true;
+			return &m_Builtin_Inherit;
 		}
-		else if (_Value == "IntermediateDirectory")
-		{
-			_Result = "$CONFIGURATION_TEMP_DIR/";
-			return true;
-		}
-		else if (_Value == "OutputDirectory")
-		{
-			_Result = "$CONFIGURATION_BUILD_DIR/";
-			return true;
-		}
-		else if (_Value == "SourceFileName")
-		{
-			_Result = "$(InputFileBase)";
-			return true;
-		}
-		return false;
-	}
 
-	COrdering_Weak CGeneratorInstance::CConfigValue::operator <=> (CConfigValue const &_Right) const
-	{
-		return fg_TupleReferences(m_Parent, m_Entity, m_Property, m_Value, m_Values)
-			<=> fg_TupleReferences(_Right.m_Parent, _Right.m_Entity, _Right.m_Property, _Right.m_Value, _Right.m_Values)
-		;
+		return CEJSONSorted();
 	}
 	
-	void CGeneratorInstance::CThreadLocal::f_CreateDirectory(CStr const &_Path)
+	void CGeneratorInstance::CSharedState::f_CreateDirectory(CStr const &_Path)
 	{
 		auto Mapped = m_CreateDirectoryCache(_Path);
 		if (Mapped.f_WasCreated())
