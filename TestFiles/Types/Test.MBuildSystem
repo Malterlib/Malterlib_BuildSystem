@@ -17,11 +17,11 @@
 
 Type
 {
-	CTest define {
+	CTest: {
 		Test: string
 		, TestOptional?: string
 	}
-	CTestOneOf define one_of(string, {
+	CTestOneOf: one_of(string, {
 		Test: string
 		, TestOptional?: string
 	})
@@ -31,9 +31,9 @@ Type
 {
 	Property
 	{
-		CalcValue define string
-		CalcValueUserType define type(CTest)
-		CalcValueUserTypeOneOf define type(CTestOneOf)
+		CalcValue: string
+		CalcValueUserType: type(CTest)
+		CalcValueUserTypeOneOf: type(CTestOneOf)
 
 		CalcValue "Testing"
 		CalcValueUserType {Test: "Testing 1", TestOptional: "Testing 2"}

@@ -6,35 +6,35 @@
 
 namespace NMib::NBuildSystem
 {
-	void CBuildSystem::fp_UsedExternal(CStr const &_Name) const
+	void CBuildSystem::fp_UsedExternal(CPropertyKeyReference const &_PropertyKey) const
 	{
 		bool bRecorded;
 		{
 			DLockReadLocked(mp_UsedExternalsLock);
-			bRecorded = mp_UsedExternals.f_FindEqual(_Name);
+			bRecorded = mp_UsedExternals.f_FindEqual(_PropertyKey);
 		}
 
 		if (!bRecorded)
 		{
 			DMibLock(mp_UsedExternalsLock);
-			mp_UsedExternals[_Name];
+			mp_UsedExternals[_PropertyKey];
 		}
 	}
 
-	void CBuildSystem::fp_TracePropertyEval(bool _bSuccess, CEntity const &_Entity, CProperty const &_Property, CEJSON const &_Value) const
+	void CBuildSystem::fp_TracePropertyEval(bool _bSuccess, CEntity const &_Entity, CPropertyKey const &_PropertyKey, CProperty const &_Property, CEJSONSorted const &_Value) const
 	{
-		if (_Property.m_Debug.f_Find("TraceEval") >= 0)
+		if (_Property.m_Flags & EPropertyFlag_TraceEval)
 		{
 			if (!_bSuccess)
 			{
-				if (_Property.m_Debug.f_Find("TraceEvalSuccess") < 0)
+				if (_Property.m_Flags & EPropertyFlag_TraceEvalSuccess)
 				{
 					f_OutputConsole
 						(
 							"{} !!!!!! {} {} = {}{\n}"_f
 							<< _Property.m_Position.f_Location()
 							<< _Entity.f_GetPath()
-							<< _Property.m_Key
+							<< _PropertyKey
 							<< _Property.m_Value
 						)
 					;
@@ -47,7 +47,7 @@ namespace NMib::NBuildSystem
 						"{}        {} {} = {}{\n}"_f
 						<< _Property.m_Position.f_Location()
 						<< _Entity.f_GetPath()
-						<< _Property.m_Key
+						<< _PropertyKey
 						<< _Value
 					)
 				;

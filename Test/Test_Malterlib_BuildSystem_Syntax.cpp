@@ -8,13 +8,13 @@
 #include <Mib/Encoding/JSONShortcuts>
 
 #ifdef DPlatformFamily_Windows
-#define DPrefixLocation_1_7 "(1,7):"
-#define DPrefixLocation_1_12 "(1,12):"
-#define DPrefixLocation_1_14 "(1,14):"
+#define DPrefixLocation_1_7 "Test.MHeader(1,7):"
+#define DPrefixLocation_1_12 "Test.MHeader(1,12):"
+#define DPrefixLocation_1_14 "Test.MHeader(1,14):"
 #else
-#define DPrefixLocation_1_7 ":1:7:"
-#define DPrefixLocation_1_12 ":1:12:"
-#define DPrefixLocation_1_14 ":1:14:"
+#define DPrefixLocation_1_7 "Test.MHeader:1:7:"
+#define DPrefixLocation_1_12 "Test.MHeader:1:12:"
+#define DPrefixLocation_1_14 "Test.MHeader:1:14:"
 #endif
 
 namespace
@@ -38,7 +38,11 @@ namespace
 		{
 			CBuildSystemSyntax::CIdentifier Identifier;
 			CBuildSystemRegistry RegistryTest;
-			RegistryTest.f_ParseStr("Value " + _String);
+
+			CStringCache StringCache;
+			CBuildSystemRegistryParseContext ParseContext(StringCache);
+
+			RegistryTest.f_ParseStrWithContext(ParseContext, "Value " + _String, "Test.MHeader");
 			return RegistryTest.f_GetChildren().f_GetRoot()->f_GetThisValue();
 		}
 
@@ -47,60 +51,60 @@ namespace
 			DMibTestSuite("String")
 			{
 				auto const &Value = fs_ParseString("\"String\"").m_Value.m_Value;
-				DMibAssertTrue(Value.f_IsOfType<CEJSON>());
-				DMibAssertTrue(Value.f_GetAsType<CEJSON>().f_IsString());
-				DMibExpect(Value.f_GetAsType<CEJSON>().f_String(), ==, "String");
-				DMibExpect(Value.f_GetAsType<CEJSON>().f_String().f_GetUserData(), ==, EJSONStringType_DoubleQuote);
+				DMibAssertTrue(Value.f_IsOfType<CEJSONSorted>());
+				DMibAssertTrue(Value.f_GetAsType<CEJSONSorted>().f_IsString());
+				DMibExpect(Value.f_GetAsType<CEJSONSorted>().f_String(), ==, "String");
+				DMibExpect(Value.f_GetAsType<CEJSONSorted>().f_String().f_GetUserData(), ==, EJSONStringType_DoubleQuote);
 			};
 			DMibTestSuite("SingleQuoteString")
 			{
 				auto const &Value = fs_ParseString("'String'").m_Value.m_Value;
-				DMibAssertTrue(Value.f_IsOfType<CEJSON>());
-				DMibAssertTrue(Value.f_GetAsType<CEJSON>().f_IsString());
-				DMibExpect(Value.f_GetAsType<CEJSON>().f_String(), ==, "String");
-				DMibExpect(Value.f_GetAsType<CEJSON>().f_String().f_GetUserData(), ==, EJSONStringType_SingleQuote);
+				DMibAssertTrue(Value.f_IsOfType<CEJSONSorted>());
+				DMibAssertTrue(Value.f_GetAsType<CEJSONSorted>().f_IsString());
+				DMibExpect(Value.f_GetAsType<CEJSONSorted>().f_String(), ==, "String");
+				DMibExpect(Value.f_GetAsType<CEJSONSorted>().f_String().f_GetUserData(), ==, EJSONStringType_SingleQuote);
 			};
 			DMibTestSuite("Integer")
 			{
 				auto const &Value = fs_ParseString("55").m_Value.m_Value;
-				DMibAssertTrue(Value.f_IsOfType<CEJSON>());
-				DMibAssertTrue(Value.f_GetAsType<CEJSON>().f_IsInteger());
-				DMibExpect(Value.f_GetAsType<CEJSON>().f_Integer(), ==, 55);
+				DMibAssertTrue(Value.f_IsOfType<CEJSONSorted>());
+				DMibAssertTrue(Value.f_GetAsType<CEJSONSorted>().f_IsInteger());
+				DMibExpect(Value.f_GetAsType<CEJSONSorted>().f_Integer(), ==, 55);
 			};
 			DMibTestSuite("Float")
 			{
 				auto const &Value = fs_ParseString("55.5").m_Value.m_Value;
-				DMibAssertTrue(Value.f_IsOfType<CEJSON>());
-				DMibAssertTrue(Value.f_GetAsType<CEJSON>().f_IsFloat());
-				DMibExpect(Value.f_GetAsType<CEJSON>().f_Float(), ==, 55.5);
+				DMibAssertTrue(Value.f_IsOfType<CEJSONSorted>());
+				DMibAssertTrue(Value.f_GetAsType<CEJSONSorted>().f_IsFloat());
+				DMibExpect(Value.f_GetAsType<CEJSONSorted>().f_Float(), ==, 55.5);
 			};
 			DMibTestSuite("Null")
 			{
 				auto const &Value = fs_ParseString("null").m_Value.m_Value;
-				DMibAssertTrue(Value.f_IsOfType<CEJSON>());
-				DMibAssertTrue(Value.f_GetAsType<CEJSON>().f_IsNull());
+				DMibAssertTrue(Value.f_IsOfType<CEJSONSorted>());
+				DMibAssertTrue(Value.f_GetAsType<CEJSONSorted>().f_IsNull());
 			};
 			DMibTestSuite("Boolean")
 			{
 				auto const &Value = fs_ParseString("true").m_Value.m_Value;
-				DMibAssertTrue(Value.f_IsOfType<CEJSON>());
-				DMibAssertTrue(Value.f_GetAsType<CEJSON>().f_IsBoolean());
-				DMibExpect(Value.f_GetAsType<CEJSON>().f_Boolean(), ==, true);
+				DMibAssertTrue(Value.f_IsOfType<CEJSONSorted>());
+				DMibAssertTrue(Value.f_GetAsType<CEJSONSorted>().f_IsBoolean());
+				DMibExpect(Value.f_GetAsType<CEJSONSorted>().f_Boolean(), ==, true);
 			};
 		}
 
 		void f_TestDate()
 		{
 			auto const &Value = fs_ParseString("date(2019-05-29)").m_Value.m_Value;
-			DMibAssertTrue(Value.f_IsOfType<CEJSON>());
-			DMibAssertTrue(Value.f_GetAsType<CEJSON>().f_IsDate());
-			DMibExpect(Value.f_GetAsType<CEJSON>().f_Date(), ==, CTimeConvert::fs_CreateTime(2019, 05, 29));
+			DMibAssertTrue(Value.f_IsOfType<CEJSONSorted>());
+			DMibAssertTrue(Value.f_GetAsType<CEJSONSorted>().f_IsDate());
+			DMibExpect(Value.f_GetAsType<CEJSONSorted>().f_Date(), ==, CTimeConvert::fs_CreateTime(2019, 05, 29));
 			DMibExpectException
 				(
 					fs_ParseString("date(-1900-11-15)")
 					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_12 " Failed to parse \"-\" as a date: Failed to parse \"-\" as a integer. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]{\n}"_f
+						DPrefixLocation_1_12 " Failed to parse \"-\" as a date: Failed to parse \"-\" as a integer. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]"_f
 						, {}
 					)
 				)
@@ -111,7 +115,7 @@ namespace
 					fs_ParseString("date()")
 					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_12 " Failed to parse \"\" as a date: Missing year. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]{\n}"_f
+						DPrefixLocation_1_12 " Failed to parse \"\" as a date: Missing year. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]"_f
 						, {}
 					)
 				)
@@ -121,7 +125,7 @@ namespace
 					fs_ParseString("date(2019)")
 					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_12 " Failed to parse \"2019\" as a date: Missing month. ""Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]{\n}"_f
+						DPrefixLocation_1_12 " Failed to parse \"2019\" as a date: Missing month. ""Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]"_f
 						, {}
 					)
 				)
@@ -131,7 +135,7 @@ namespace
 					fs_ParseString("date(2019-11)")
 					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_12 " Failed to parse \"2019-11\" as a date: Missing day. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]{\n}"_f
+						DPrefixLocation_1_12 " Failed to parse \"2019-11\" as a date: Missing day. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]"_f
 						, {}
 					)
 				)
@@ -141,7 +145,7 @@ namespace
 					fs_ParseString("date(2019-13-15)")
 					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_12 " Failed to parse \"2019-13-15\" as a date: Invalid month. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]{\n}"_f
+						DPrefixLocation_1_12 " Failed to parse \"2019-13-15\" as a date: Invalid month. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]"_f
 						, {}
 					)
 				)
@@ -151,7 +155,7 @@ namespace
 					fs_ParseString("date(2019-11-33)")
 					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_12 " Failed to parse \"2019-11-33\" as a date: Invalid day. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]{\n}"_f
+						DPrefixLocation_1_12 " Failed to parse \"2019-11-33\" as a date: Invalid day. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]"_f
 						, {}
 					)
 				)
@@ -161,16 +165,16 @@ namespace
 		void f_TestDateMinute()
 		{
 			auto const &Value = fs_ParseString("date(2019-05-29 11:11)").m_Value.m_Value;
-			DMibAssertTrue(Value.f_IsOfType<CEJSON>());
-			DMibAssertTrue(Value.f_GetAsType<CEJSON>().f_IsDate());
-			DMibExpect(Value.f_GetAsType<CEJSON>().f_Date(), ==, CTimeConvert::fs_CreateTime(2019, 05, 29, 11, 11));
+			DMibAssertTrue(Value.f_IsOfType<CEJSONSorted>());
+			DMibAssertTrue(Value.f_GetAsType<CEJSONSorted>().f_IsDate());
+			DMibExpect(Value.f_GetAsType<CEJSONSorted>().f_Date(), ==, CTimeConvert::fs_CreateTime(2019, 05, 29, 11, 11));
 
 			DMibExpectException
 				(
 					fs_ParseString("date(2019-11-15 33)")
 					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_12 " Failed to parse \"2019-11-15 33\" as a date: Invalid hour. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]{\n}"_f
+						DPrefixLocation_1_12 " Failed to parse \"2019-11-15 33\" as a date: Invalid hour. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]"_f
 						, {}
 					)
 				)
@@ -180,7 +184,7 @@ namespace
 					fs_ParseString("date(2019-11-15 13:61)")
 					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_12 " Failed to parse \"2019-11-15 13:61\" as a date: Invalid minute. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]{\n}"_f
+						DPrefixLocation_1_12 " Failed to parse \"2019-11-15 13:61\" as a date: Invalid minute. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]"_f
 						, {}
 					)
 				)
@@ -190,15 +194,15 @@ namespace
 		void f_TestDateSecond()
 		{
 			auto const &Value = fs_ParseString("date(2019-05-29 11:11:06)").m_Value.m_Value;
-			DMibAssertTrue(Value.f_IsOfType<CEJSON>());
-			DMibAssertTrue(Value.f_GetAsType<CEJSON>().f_IsDate());
-			DMibExpect(Value.f_GetAsType<CEJSON>().f_Date(), ==, CTimeConvert::fs_CreateTime(2019, 05, 29, 11, 11, 06));
+			DMibAssertTrue(Value.f_IsOfType<CEJSONSorted>());
+			DMibAssertTrue(Value.f_GetAsType<CEJSONSorted>().f_IsDate());
+			DMibExpect(Value.f_GetAsType<CEJSONSorted>().f_Date(), ==, CTimeConvert::fs_CreateTime(2019, 05, 29, 11, 11, 06));
 			DMibExpectException
 				(
 					fs_ParseString("date(2019-11-15 13:50:62)")
 					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_12 " Failed to parse \"2019-11-15 13:50:62\" as a date: Invalid second. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]{\n}"_f
+						DPrefixLocation_1_12 " Failed to parse \"2019-11-15 13:50:62\" as a date: Invalid second. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]"_f
 						, {}
 					)
 				)
@@ -208,15 +212,15 @@ namespace
 		void f_TestDateSecondFraction()
 		{
 			auto const &Value = fs_ParseString("date(2019-05-29 11:00:05.545)").m_Value.m_Value;
-			DMibAssertTrue(Value.f_IsOfType<CEJSON>());
-			DMibAssertTrue(Value.f_GetAsType<CEJSON>().f_IsDate());
-			DMibExpect(Value.f_GetAsType<CEJSON>().f_Date(), ==, CTimeConvert::fs_CreateTime(2019, 05, 29, 11, 00, 05, 0.545));
+			DMibAssertTrue(Value.f_IsOfType<CEJSONSorted>());
+			DMibAssertTrue(Value.f_GetAsType<CEJSONSorted>().f_IsDate());
+			DMibExpect(Value.f_GetAsType<CEJSONSorted>().f_Date(), ==, CTimeConvert::fs_CreateTime(2019, 05, 29, 11, 00, 05, 0.545));
 			DMibExpectException
 				(
 					fs_ParseString("date(2019-11-15 13:50:50.o56)")
 					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_12 " Failed to parse \"2019-11-15 13:50:50.\" as a date: Failed to parse \".\" as a float. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]{\n}"_f
+						DPrefixLocation_1_12 " Failed to parse \"2019-11-15 13:50:50.\" as a date: Failed to parse \".\" as a float. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]"_f
 						, {}
 					)
 				)
@@ -226,7 +230,7 @@ namespace
 					fs_ParseString("date(2019-11-15 13:50:50.1.647)")
 					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_12 " Failed to parse \"2019-11-15 13:50:50.\" as a date: Failed to parse \".\" as a float. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]{\n}"_f
+						DPrefixLocation_1_12 " Failed to parse \"2019-11-15 13:50:50.\" as a date: Failed to parse \".\" as a float. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]"_f
 						, {}
 					)
 				)
@@ -236,22 +240,22 @@ namespace
 		void f_TestBinary()
 		{
 			auto const &Value = fs_ParseString("binary(VGhpcyBpcyBpdAo=)").m_Value.m_Value;
-			DMibAssertTrue(Value.f_IsOfType<CEJSON>());
-			DMibAssertTrue(Value.f_GetAsType<CEJSON>().f_IsBinary());
-			DMibExpect(Value.f_GetAsType<CEJSON>().f_Binary(), ==, (CByteVector{'T', 'h', 'i', 's', ' ', 'i', 's', ' ', 'i', 't', '\n'}));
+			DMibAssertTrue(Value.f_IsOfType<CEJSONSorted>());
+			DMibAssertTrue(Value.f_GetAsType<CEJSONSorted>().f_IsBinary());
+			DMibExpect(Value.f_GetAsType<CEJSONSorted>().f_Binary(), ==, (CByteVector{'T', 'h', 'i', 's', ' ', 'i', 's', ' ', 'i', 't', '\n'}));
 			DMibExpectException
 				(
 					fs_ParseString("binary(156..6)")
 					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_14 " Unexpected character in Base64 string: .{\n}"_f
+						DPrefixLocation_1_14 " Unexpected character in Base64 string: ."_f
 						, {}
 					)
 				)
 			;
 		}
 
-		void f_TestObject()
+		void f_TestObjectDynamic()
 		{
 			auto const &Value = fs_ParseString
 				(
@@ -283,7 +287,7 @@ namespace
 			auto &AppendArray = AppendArrayValue.m_Value.f_GetAsType<CBuildSystemSyntax::CArray>();
 			DMibAssert(AppendArray.m_Array.f_GetLen(), ==, 3);
 
-			DMibExpectTrue(AppendArray.m_Array[0].f_Get().m_Value.f_IsOfType<CBuildSystemSyntax::CObject>());
+			DMibExpectTrue(AppendArray.m_Array[0].f_Get().m_Value.f_IsOfType<NEncoding::CEJSONSorted>());
 			DMibExpectTrue(AppendArray.m_Array[1].f_Get().m_Value.f_IsOfType<CBuildSystemSyntax::CExpression>());
 			DMibExpectTrue(AppendArray.m_Array[2].f_Get().m_Value.f_IsOfType<CBuildSystemSyntax::CExpressionAppend>());
 
@@ -295,22 +299,44 @@ namespace
 			;
 		}
 
-		void f_TestArray()
+		void f_TestArrayStatic()
 		{
 			auto const &Value = fs_ParseString("[1, 2, 3]").m_Value.m_Value;
+			DMibAssertTrue(Value.f_IsOfType<NEncoding::CEJSONSorted>());
+			auto &Array = Value.f_GetAsType<NEncoding::CEJSONSorted>();
+
+			DMibExpect(Array, ==, NEncoding::CEJSONSorted({1, 2, 3}));
+		}
+
+		void f_TestObjectStatic()
+		{
+			auto const &Value = fs_ParseString
+				(
+					"{ \"doubleQuote\": 1, 'singleQuote': 2, noQuote: 3}"
+				)
+				.m_Value.m_Value
+			;
+			DMibAssertTrue(Value.f_IsOfType<NEncoding::CEJSONSorted>());
+
+			auto &Object = Value.f_GetAsType<NEncoding::CEJSONSorted>();
+
+			DMibExpect(Object, ==, NEncoding::CEJSONSorted({"doubleQuote"_s= 1, "singleQuote"_s= 2, "noQuote"_s= 3}));
+		}
+
+		void f_TestArrayDynamic()
+		{
+			auto const &Value = fs_ParseString("[1, 2, Exprission]").m_Value.m_Value;
 			DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CArray>());
 			auto &Object = Value.f_GetAsType<CBuildSystemSyntax::CArray>();
 
 			DMibAssert(Object.m_Array.f_GetLen(), ==, 3);
-			DMibAssertTrue(Object.m_Array[0].f_Get().m_Value.f_IsOfType<CEJSON>());
-			DMibAssertTrue(Object.m_Array[1].f_Get().m_Value.f_IsOfType<CEJSON>());
-			DMibAssertTrue(Object.m_Array[2].f_Get().m_Value.f_IsOfType<CEJSON>());
-			DMibAssertTrue(Object.m_Array[0].f_Get().m_Value.f_GetAsType<CEJSON>().f_IsInteger());
-			DMibAssertTrue(Object.m_Array[1].f_Get().m_Value.f_GetAsType<CEJSON>().f_IsInteger());
-			DMibAssertTrue(Object.m_Array[2].f_Get().m_Value.f_GetAsType<CEJSON>().f_IsInteger());
-			DMibAssert(Object.m_Array[0].f_Get().m_Value.f_GetAsType<CEJSON>().f_Integer(), ==, 1);
-			DMibAssert(Object.m_Array[1].f_Get().m_Value.f_GetAsType<CEJSON>().f_Integer(), ==, 2);
-			DMibAssert(Object.m_Array[2].f_Get().m_Value.f_GetAsType<CEJSON>().f_Integer(), ==, 3);
+			DMibAssertTrue(Object.m_Array[0].f_Get().m_Value.f_IsOfType<CEJSONSorted>());
+			DMibAssertTrue(Object.m_Array[1].f_Get().m_Value.f_IsOfType<CEJSONSorted>());
+			DMibAssertTrue(Object.m_Array[2].f_Get().m_Value.f_IsOfType<CBuildSystemSyntax::CExpression>());
+			DMibAssertTrue(Object.m_Array[0].f_Get().m_Value.f_GetAsType<CEJSONSorted>().f_IsInteger());
+			DMibAssertTrue(Object.m_Array[1].f_Get().m_Value.f_GetAsType<CEJSONSorted>().f_IsInteger());
+			DMibAssert(Object.m_Array[0].f_Get().m_Value.f_GetAsType<CEJSONSorted>().f_Integer(), ==, 1);
+			DMibAssert(Object.m_Array[1].f_Get().m_Value.f_GetAsType<CEJSONSorted>().f_Integer(), ==, 2);
 		}
 
 		void f_TestEvalString()
@@ -483,12 +509,12 @@ namespace
 				auto &Function = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
 				DMibAssertTrue(Function.f_IsOfType<CBuildSystemSyntax::CFunctionCall>());
 				auto &FunctionCall = Function.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
-				DMibExpect(FunctionCall.m_Name, ==, "Func");
-				DMibExpect(FunctionCall.m_PropertyType, ==, EPropertyType_Property);
+				DMibExpect(FunctionCall.m_PropertyKey.m_Name, ==, "Func");
+				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
-				DMibAssertTrue(Param.f_IsOfType<CEJSON>());
-				auto &String = Param.f_GetAsType<CEJSON>();
+				DMibAssertTrue(Param.f_IsOfType<CEJSONSorted>());
+				auto &String = Param.f_GetAsType<CEJSONSorted>();
 				DMibAssertTrue(String.f_IsString());
 				DMibExpect(String.f_String(), ==, "Test");
 			}
@@ -499,12 +525,12 @@ namespace
 				auto &Function = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
 				DMibAssertTrue(Function.f_IsOfType<CBuildSystemSyntax::CFunctionCall>());
 				auto &FunctionCall = Function.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
-				DMibExpect(FunctionCall.m_Name, ==, "Func");
-				DMibExpect(FunctionCall.m_PropertyType, ==, EPropertyType_Property);
+				DMibExpect(FunctionCall.m_PropertyKey.m_Name, ==, "Func");
+				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
-				DMibAssertTrue(Param.f_IsOfType<CEJSON>());
-				auto &String = Param.f_GetAsType<CEJSON>();
+				DMibAssertTrue(Param.f_IsOfType<CEJSONSorted>());
+				auto &String = Param.f_GetAsType<CEJSONSorted>();
 				DMibAssertTrue(String.f_IsString());
 				DMibExpect(String.f_String(), ==, "Test");
 			}
@@ -515,12 +541,12 @@ namespace
 				auto &Function = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
 				DMibAssertTrue(Function.f_IsOfType<CBuildSystemSyntax::CFunctionCall>());
 				auto &FunctionCall = Function.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
-				DMibExpect(FunctionCall.m_Name, ==, "Func");
-				DMibExpect(FunctionCall.m_PropertyType, ==, EPropertyType_Property);
+				DMibExpect(FunctionCall.m_PropertyKey.m_Name, ==, "Func");
+				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
-				DMibAssertTrue(Param.f_IsOfType<CEJSON>());
-				auto &String = Param.f_GetAsType<CEJSON>();
+				DMibAssertTrue(Param.f_IsOfType<CEJSONSorted>());
+				auto &String = Param.f_GetAsType<CEJSONSorted>();
 				DMibAssertTrue(String.f_IsInteger());
 				DMibExpect(String.f_Integer(), ==, 5);
 			}
@@ -531,12 +557,12 @@ namespace
 				auto &Function = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
 				DMibAssertTrue(Function.f_IsOfType<CBuildSystemSyntax::CFunctionCall>());
 				auto &FunctionCall = Function.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
-				DMibExpect(FunctionCall.m_Name, ==, "Func");
-				DMibExpect(FunctionCall.m_PropertyType, ==, EPropertyType_Property);
+				DMibExpect(FunctionCall.m_PropertyKey.m_Name, ==, "Func");
+				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
-				DMibAssertTrue(Param.f_IsOfType<CEJSON>());
-				auto &String = Param.f_GetAsType<CEJSON>();
+				DMibAssertTrue(Param.f_IsOfType<CEJSONSorted>());
+				auto &String = Param.f_GetAsType<CEJSONSorted>();
 				DMibAssertTrue(String.f_IsFloat());
 				DMibExpect(String.f_Float(), ==, 5.5);
 			}
@@ -547,12 +573,12 @@ namespace
 				auto &Function = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
 				DMibAssertTrue(Function.f_IsOfType<CBuildSystemSyntax::CFunctionCall>());
 				auto &FunctionCall = Function.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
-				DMibExpect(FunctionCall.m_Name, ==, "Func");
-				DMibExpect(FunctionCall.m_PropertyType, ==, EPropertyType_Property);
+				DMibExpect(FunctionCall.m_PropertyKey.m_Name, ==, "Func");
+				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
-				DMibAssertTrue(Param.f_IsOfType<CEJSON>());
-				auto &String = Param.f_GetAsType<CEJSON>();
+				DMibAssertTrue(Param.f_IsOfType<CEJSONSorted>());
+				auto &String = Param.f_GetAsType<CEJSONSorted>();
 				DMibAssertTrue(String.f_IsNull());
 			}
 			{
@@ -562,12 +588,12 @@ namespace
 				auto &Function = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
 				DMibAssertTrue(Function.f_IsOfType<CBuildSystemSyntax::CFunctionCall>());
 				auto &FunctionCall = Function.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
-				DMibExpect(FunctionCall.m_Name, ==, "Func");
-				DMibExpect(FunctionCall.m_PropertyType, ==, EPropertyType_Property);
+				DMibExpect(FunctionCall.m_PropertyKey.m_Name, ==, "Func");
+				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
-				DMibAssertTrue(Param.f_IsOfType<CEJSON>());
-				auto &String = Param.f_GetAsType<CEJSON>();
+				DMibAssertTrue(Param.f_IsOfType<CEJSONSorted>());
+				auto &String = Param.f_GetAsType<CEJSONSorted>();
 				DMibAssertTrue(String.f_IsBoolean());
 				DMibExpect(String.f_Boolean(), ==, true);
 			}
@@ -578,8 +604,8 @@ namespace
 				auto &Function = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
 				DMibAssertTrue(Function.f_IsOfType<CBuildSystemSyntax::CFunctionCall>());
 				auto &FunctionCall = Function.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
-				DMibExpect(FunctionCall.m_Name, ==, "Func");
-				DMibExpect(FunctionCall.m_PropertyType, ==, EPropertyType_Property);
+				DMibExpect(FunctionCall.m_PropertyKey.m_Name, ==, "Func");
+				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
 				DMibAssertTrue(Param.f_IsOfType<CBuildSystemSyntax::CEvalString>());
@@ -595,13 +621,13 @@ namespace
 				auto &Function = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
 				DMibAssertTrue(Function.f_IsOfType<CBuildSystemSyntax::CFunctionCall>());
 				auto &FunctionCall = Function.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
-				DMibExpect(FunctionCall.m_Name, ==, "Func");
-				DMibExpect(FunctionCall.m_PropertyType, ==, EPropertyType_Property);
+				DMibExpect(FunctionCall.m_PropertyKey.m_Name, ==, "Func");
+				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
 				DMibAssertTrue(Param.f_IsOfType<TCIndirection<CBuildSystemSyntax::CIdentifier>>());
 				auto &Identifier = Param.f_GetAsType<TCIndirection<CBuildSystemSyntax::CIdentifier>>().f_Get();
-				DMibExpect(Identifier.m_Name, ==, "Test");
+				DMibExpect(Identifier.f_NameConstantString(), ==, "Test");
 			}
  			{
 				DMibTestPath("IdentifierSpecific");
@@ -610,13 +636,13 @@ namespace
 				auto &Function = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
 				DMibAssertTrue(Function.f_IsOfType<CBuildSystemSyntax::CFunctionCall>());
 				auto &FunctionCall = Function.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
-				DMibExpect(FunctionCall.m_Name, ==, "Func");
-				DMibExpect(FunctionCall.m_PropertyType, ==, EPropertyType_Property);
+				DMibExpect(FunctionCall.m_PropertyKey.m_Name, ==, "Func");
+				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
 				DMibAssertTrue(Param.f_IsOfType<TCIndirection<CBuildSystemSyntax::CIdentifier>>());
 				auto &Identifier = Param.f_GetAsType<TCIndirection<CBuildSystemSyntax::CIdentifier>>().f_Get();
-				DMibExpect(Identifier.m_Name, ==, "Test");
+				DMibExpect(Identifier.f_NameConstantString(), ==, "Test");
 				DMibExpect(Identifier.m_EntityType, ==, EEntityType_Workspace);
 				DMibExpect(Identifier.m_PropertyType, ==, EPropertyType_Target);
 			}
@@ -627,8 +653,8 @@ namespace
 				auto &Function = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
 				DMibAssertTrue(Function.f_IsOfType<CBuildSystemSyntax::CFunctionCall>());
 				auto &FunctionCall = Function.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
-				DMibExpect(FunctionCall.m_Name, ==, "Func");
-				DMibExpect(FunctionCall.m_PropertyType, ==, EPropertyType_Property);
+				DMibExpect(FunctionCall.m_PropertyKey.m_Name, ==, "Func");
+				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &FunctionParam = FunctionCall.m_Params[0].m_Param;
 
@@ -641,7 +667,7 @@ namespace
 
 				DMibAssertTrue(Param.f_IsOfType<TCIndirection<CBuildSystemSyntax::CIdentifier>>());
 				auto &Identifier = Param.f_GetAsType<TCIndirection<CBuildSystemSyntax::CIdentifier>>().f_Get();
-				DMibExpect(Identifier.m_Name, ==, "Test");
+				DMibExpect(Identifier.f_NameConstantString(), ==, "Test");
 				DMibExpect(Identifier.m_EntityType, ==, EEntityType_Workspace);
 				DMibExpect(Identifier.m_PropertyType, ==, EPropertyType_Target);
 
@@ -670,15 +696,15 @@ namespace
 				DMibAssertTrue(Function.f_IsOfType<CBuildSystemSyntax::CFunctionCall>());
 
 				auto &FunctionCall = Function.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
-				DMibExpect(FunctionCall.m_Name, ==, "Func");
-				DMibExpect(FunctionCall.m_PropertyType, ==, EPropertyType_Property);
+				DMibExpect(FunctionCall.m_PropertyKey.m_Name, ==, "Func");
+				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 
 				auto &Param = FunctionCall.m_Params[0].m_Param;
 
 				DMibAssertTrue(Param.f_IsOfType<TCIndirection<CBuildSystemSyntax::CIdentifier>>());
 				auto &Identifier = Param.f_GetAsType<TCIndirection<CBuildSystemSyntax::CIdentifier>>().f_Get();
-				DMibExpect(Identifier.m_Name, ==, "Test");
+				DMibExpect(Identifier.f_NameConstantString(), ==, "Test");
 				DMibExpect(Identifier.m_EntityType, ==, EEntityType_Workspace);
 				DMibExpect(Identifier.m_PropertyType, ==, EPropertyType_Target);
 
@@ -707,15 +733,15 @@ namespace
 				DMibAssertTrue(Function.f_IsOfType<CBuildSystemSyntax::CFunctionCall>());
 
 				auto &FunctionCall = Function.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
-				DMibExpect(FunctionCall.m_Name, ==, "Func");
-				DMibExpect(FunctionCall.m_PropertyType, ==, EPropertyType_Property);
+				DMibExpect(FunctionCall.m_PropertyKey.m_Name, ==, "Func");
+				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 
 				auto &Param = FunctionCall.m_Params[0].m_Param;
 
- 				DMibAssertTrue(Param.f_IsOfType<CEJSON>());
-				auto &Constant = Param.f_GetAsType<CEJSON>();
-				DMibExpect(Constant, ==, CEJSON(5));
+ 				DMibAssertTrue(Param.f_IsOfType<CEJSONSorted>());
+				auto &Constant = Param.f_GetAsType<CEJSONSorted>();
+				DMibExpect(Constant, ==, CEJSONSorted(5));
 
 				DMibExpect(JSONAccessor.m_Accessors.f_GetLen(), ==, 5);
 				DMibExpectTrue(JSONAccessor.m_Accessors[0].m_Accessor.f_IsOfType<CBuildSystemSyntax::CExpression>());
@@ -734,20 +760,13 @@ namespace
 				auto &Function = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
 				DMibAssertTrue(Function.f_IsOfType<CBuildSystemSyntax::CFunctionCall>());
 				auto &FunctionCall = Function.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
-				DMibExpect(FunctionCall.m_Name, ==, "Func");
-				DMibExpect(FunctionCall.m_PropertyType, ==, EPropertyType_Property);
+				DMibExpect(FunctionCall.m_PropertyKey.m_Name, ==, "Func");
+				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
-				DMibAssertTrue(Param.f_IsOfType<CBuildSystemSyntax::CObject>());
-				auto &Object = Param.f_GetAsType<CBuildSystemSyntax::CObject>().m_Object;
-				CBuildSystemSyntax::CObjectKey Key{"Test"};
-				auto pValue = Object.f_FindEqual(Key);
-				DMibAssertTrue(pValue != nullptr);
-				auto &ParamValue = pValue->m_Value.f_Get().m_Value;
-				DMibAssertTrue(ParamValue.f_IsOfType<CEJSON>());
-				auto &Number = ParamValue.f_GetAsType<CEJSON>();
-				DMibAssertTrue(Number.f_IsInteger());
-				DMibExpect(Number.f_Integer(), ==, 5);
+				DMibAssertTrue(Param.f_IsOfType<NEncoding::CEJSONSorted>());
+				auto &Object = Param.f_GetAsType<NEncoding::CEJSONSorted>();
+				DMibExpect(Object, ==, NEncoding::CEJSONSorted({"Test"_s= 5}));
 			}
 			{
 				DMibTestPath("Array");
@@ -756,18 +775,13 @@ namespace
 				auto &Function = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
 				DMibAssertTrue(Function.f_IsOfType<CBuildSystemSyntax::CFunctionCall>());
 				auto &FunctionCall = Function.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
-				DMibExpect(FunctionCall.m_Name, ==, "Func");
-				DMibExpect(FunctionCall.m_PropertyType, ==, EPropertyType_Property);
+				DMibExpect(FunctionCall.m_PropertyKey.m_Name, ==, "Func");
+				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
-				DMibAssertTrue(Param.f_IsOfType<CBuildSystemSyntax::CArray>());
-				auto &Array = Param.f_GetAsType<CBuildSystemSyntax::CArray>().m_Array;
-				DMibAssert(Array.f_GetLen(), ==, 1);
-				auto &ArrayValue = Array[0].f_Get().m_Value;
-				DMibAssertTrue(ArrayValue.f_IsOfType<CEJSON>());
-				auto &Number = ArrayValue.f_GetAsType<CEJSON>();
-				DMibAssertTrue(Number.f_IsInteger());
-				DMibExpect(Number.f_Integer(), ==, 5);
+				DMibAssertTrue(Param.f_IsOfType<NEncoding::CEJSONSorted>());
+				auto &Array = Param.f_GetAsType<NEncoding::CEJSONSorted>();
+				DMibExpect(Array, ==, NEncoding::CEJSONSorted({5}));
 			}
 			{
 				DMibTestPath("WildcardString");
@@ -776,8 +790,8 @@ namespace
 				auto &Function = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
 				DMibAssertTrue(Function.f_IsOfType<CBuildSystemSyntax::CFunctionCall>());
 				auto &FunctionCall = Function.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
-				DMibExpect(FunctionCall.m_Name, ==, "Func");
-				DMibExpect(FunctionCall.m_PropertyType, ==, EPropertyType_Property);
+				DMibExpect(FunctionCall.m_PropertyKey.m_Name, ==, "Func");
+				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
 				DMibAssertTrue(Param.f_IsOfType<CBuildSystemSyntax::CWildcardString>());
@@ -792,8 +806,8 @@ namespace
 				auto &Function = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
 				DMibAssertTrue(Function.f_IsOfType<CBuildSystemSyntax::CFunctionCall>());
 				auto &FunctionCall = Function.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
-				DMibExpect(FunctionCall.m_Name, ==, "Func");
-				DMibExpect(FunctionCall.m_PropertyType, ==, EPropertyType_Property);
+				DMibExpect(FunctionCall.m_PropertyKey.m_Name, ==, "Func");
+				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
 				DMibAssertTrue(Param.f_IsOfType<CBuildSystemSyntax::CWildcardString>());
@@ -812,8 +826,8 @@ namespace
 				auto &Function = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
 				DMibAssertTrue(Function.f_IsOfType<CBuildSystemSyntax::CFunctionCall>());
 				auto &FunctionCall = Function.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
-				DMibExpect(FunctionCall.m_Name, ==, "Func");
-				DMibExpect(FunctionCall.m_PropertyType, ==, EPropertyType_Property);
+				DMibExpect(FunctionCall.m_PropertyKey.m_Name, ==, "Func");
+				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
 
@@ -832,8 +846,8 @@ namespace
 				auto &Function = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
 				DMibAssertTrue(Function.f_IsOfType<CBuildSystemSyntax::CFunctionCall>());
 				auto &FunctionCall = Function.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
-				DMibExpect(FunctionCall.m_Name, ==, "Func");
-				DMibExpect(FunctionCall.m_PropertyType, ==, EPropertyType_Property);
+				DMibExpect(FunctionCall.m_PropertyKey.m_Name, ==, "Func");
+				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
 
@@ -854,8 +868,8 @@ namespace
 				auto &Function = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
 				DMibAssertTrue(Function.f_IsOfType<CBuildSystemSyntax::CFunctionCall>());
 				auto &FunctionCall = Function.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
-				DMibExpect(FunctionCall.m_Name, ==, "Func");
-				DMibExpect(FunctionCall.m_PropertyType, ==, EPropertyType_Property);
+				DMibExpect(FunctionCall.m_PropertyKey.m_Name, ==, "Func");
+				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
 
@@ -876,8 +890,8 @@ namespace
 				auto &Function = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
 				DMibAssertTrue(Function.f_IsOfType<CBuildSystemSyntax::CFunctionCall>());
 				auto &FunctionCall = Function.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
-				DMibExpect(FunctionCall.m_Name, ==, "Func");
-				DMibExpect(FunctionCall.m_PropertyType, ==, EPropertyType_Property);
+				DMibExpect(FunctionCall.m_PropertyKey.m_Name, ==, "Func");
+				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
 
@@ -889,7 +903,7 @@ namespace
 
 				DMibAssertTrue(ExpressionParam.f_IsOfType<NStorage::TCIndirection<CBuildSystemSyntax::CIdentifier>>());
 				auto &Identifier = ExpressionParam.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CIdentifier>>().f_Get();
-				DMibExpect(Identifier.m_Name, ==, "ValueArray");
+				DMibExpect(Identifier.f_NameConstantString(), ==, "ValueArray");
 				DMibExpect(Identifier.m_EntityType, ==, EEntityType_Invalid);
 				DMibExpect(Identifier.m_PropertyType, ==, EPropertyType_Property);
 			}
@@ -900,8 +914,8 @@ namespace
 				auto &Function = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
 				DMibAssertTrue(Function.f_IsOfType<CBuildSystemSyntax::CFunctionCall>());
 				auto &FunctionCall = Function.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
-				DMibExpect(FunctionCall.m_Name, ==, "Func");
-				DMibExpect(FunctionCall.m_PropertyType, ==, EPropertyType_Compile);
+				DMibExpect(FunctionCall.m_PropertyKey.m_Name, ==, "Func");
+				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Compile);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
 
@@ -913,7 +927,7 @@ namespace
 
 				DMibAssertTrue(ExpressionParam.f_IsOfType<NStorage::TCIndirection<CBuildSystemSyntax::CIdentifier>>());
 				auto &Identifier = ExpressionParam.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CIdentifier>>().f_Get();
-				DMibExpect(Identifier.m_Name, ==, "ValueArray");
+				DMibExpect(Identifier.f_NameConstantString(), ==, "ValueArray");
 				DMibExpect(Identifier.m_EntityType, ==, EEntityType_Invalid);
 				DMibExpect(Identifier.m_PropertyType, ==, EPropertyType_Compile);
 			}
@@ -924,12 +938,12 @@ namespace
 				auto &Function = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
 				DMibAssertTrue(Function.f_IsOfType<CBuildSystemSyntax::CFunctionCall>());
 				auto &FunctionCall = Function.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
-				DMibExpect(FunctionCall.m_Name, ==, "Func");
-				DMibExpect(FunctionCall.m_PropertyType, ==, EPropertyType_Compile);
+				DMibExpect(FunctionCall.m_PropertyKey.m_Name, ==, "Func");
+				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Compile);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
-				DMibAssertTrue(Param.f_IsOfType<CEJSON>());
-				auto &String = Param.f_GetAsType<CEJSON>();
+				DMibAssertTrue(Param.f_IsOfType<CEJSONSorted>());
+				auto &String = Param.f_GetAsType<CEJSONSorted>();
 				DMibAssertTrue(String.f_IsString());
 				DMibExpect(String.f_String(), ==, "Test");
 			}
@@ -952,7 +966,7 @@ namespace
 			DMibTestPath("DefaultType");
 			{
 				DMibTestPath("int");
-				auto const &Value = fs_ParseString("define int").m_Value.m_Value;
+				auto const &Value = fs_ParseString(": int").m_Value.m_Value;
 				DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CDefine>());
 				auto &Define = Value.f_GetAsType<CBuildSystemSyntax::CDefine>().m_Type.m_Type;
 				DMibAssertTrue(Define.f_IsOfType<CBuildSystemSyntax::CDefaultType>());
@@ -961,7 +975,7 @@ namespace
 			}
 			{
 				DMibTestPath("float");
-				auto const &Value = fs_ParseString("define float").m_Value.m_Value;
+				auto const &Value = fs_ParseString(": float").m_Value.m_Value;
 				DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CDefine>());
 				auto &Define = Value.f_GetAsType<CBuildSystemSyntax::CDefine>().m_Type.m_Type;
 				DMibAssertTrue(Define.f_IsOfType<CBuildSystemSyntax::CDefaultType>());
@@ -970,7 +984,7 @@ namespace
 			}
 			{
 				DMibTestPath("bool");
-				auto const &Value = fs_ParseString("define bool").m_Value.m_Value;
+				auto const &Value = fs_ParseString(": bool").m_Value.m_Value;
 				DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CDefine>());
 				auto &Define = Value.f_GetAsType<CBuildSystemSyntax::CDefine>().m_Type.m_Type;
 				DMibAssertTrue(Define.f_IsOfType<CBuildSystemSyntax::CDefaultType>());
@@ -979,7 +993,7 @@ namespace
 			}
 			{
 				DMibTestPath("string");
-				auto const &Value = fs_ParseString("define string").m_Value.m_Value;
+				auto const &Value = fs_ParseString(": string").m_Value.m_Value;
 				DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CDefine>());
 				auto &Define = Value.f_GetAsType<CBuildSystemSyntax::CDefine>().m_Type.m_Type;
 				DMibAssertTrue(Define.f_IsOfType<CBuildSystemSyntax::CDefaultType>());
@@ -988,7 +1002,7 @@ namespace
 			}
 			{
 				DMibTestPath("binary");
-				auto const &Value = fs_ParseString("define binary").m_Value.m_Value;
+				auto const &Value = fs_ParseString(": binary").m_Value.m_Value;
 				DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CDefine>());
 				auto &Define = Value.f_GetAsType<CBuildSystemSyntax::CDefine>().m_Type.m_Type;
 				DMibAssertTrue(Define.f_IsOfType<CBuildSystemSyntax::CDefaultType>());
@@ -997,7 +1011,7 @@ namespace
 			}
 			{
 				DMibTestPath("date");
-				auto const &Value = fs_ParseString("define date").m_Value.m_Value;
+				auto const &Value = fs_ParseString(": date").m_Value.m_Value;
 				DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CDefine>());
 				auto &Define = Value.f_GetAsType<CBuildSystemSyntax::CDefine>().m_Type.m_Type;
 				DMibAssertTrue(Define.f_IsOfType<CBuildSystemSyntax::CDefaultType>());
@@ -1006,7 +1020,7 @@ namespace
 			}
 			{
 				DMibTestPath("any");
-				auto const &Value = fs_ParseString("define any").m_Value.m_Value;
+				auto const &Value = fs_ParseString(": any").m_Value.m_Value;
 				DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CDefine>());
 				auto &Define = Value.f_GetAsType<CBuildSystemSyntax::CDefine>().m_Type.m_Type;
 				DMibAssertTrue(Define.f_IsOfType<CBuildSystemSyntax::CDefaultType>());
@@ -1015,7 +1029,7 @@ namespace
 			}
 			{
 				DMibTestPath("void");
-				auto const &Value = fs_ParseString("define void").m_Value.m_Value;
+				auto const &Value = fs_ParseString(": void").m_Value.m_Value;
 				DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CDefine>());
 				auto &Define = Value.f_GetAsType<CBuildSystemSyntax::CDefine>().m_Type.m_Type;
 				DMibAssertTrue(Define.f_IsOfType<CBuildSystemSyntax::CDefaultType>());
@@ -1025,7 +1039,7 @@ namespace
 			DMibExpectException
 				(
 					fs_ParseString("any")
-					, DMibExceptionInstanceParse(DPrefixLocation_1_7 " Type 'any' can only be used inside define statements{\n}"_f, {})
+					, DMibExceptionInstanceParse(DPrefixLocation_1_7 " Type 'any' can only be used inside define statements"_f, {})
 				)
 			;
 		}
@@ -1035,7 +1049,7 @@ namespace
 			DMibTestPath("Defaulted");
 			{
 				DMibTestPath("int");
-				auto const &Value = fs_ParseString("define int = 5").m_Value.m_Value;
+				auto const &Value = fs_ParseString(": int = 5").m_Value.m_Value;
 				DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CDefine>());
 				auto &Define = Value.f_GetAsType<CBuildSystemSyntax::CDefine>().m_Type.m_Type;
 
@@ -1046,15 +1060,15 @@ namespace
 				auto &DefaultType = Defaulted.m_Type.f_Get().m_Type.f_GetAsType<CBuildSystemSyntax::CDefaultType>().m_Type;
 				DMibExpect(DefaultType, ==, CBuildSystemSyntax::CDefaultType::EType_Integer);
 
-				DMibAssertTrue(Defaulted.m_DefaultValue.m_Param.f_IsOfType<NEncoding::CEJSON>());
-				DMibExpect(Defaulted.m_DefaultValue.m_Param.f_GetAsType<NEncoding::CEJSON>(), ==, CEJSON(5));
+				DMibAssertTrue(Defaulted.m_DefaultValue.m_Param.f_IsOfType<NEncoding::CEJSONSorted>());
+				DMibExpect(Defaulted.m_DefaultValue.m_Param.f_GetAsType<NEncoding::CEJSONSorted>(), ==, CEJSONSorted(5));
 			}
 		}
 
 		void f_TestDefineArray()
 		{
 			DMibTestPath("Array");
-			auto const &Value = fs_ParseString("define [int]").m_Value.m_Value;
+			auto const &Value = fs_ParseString(": [int]").m_Value.m_Value;
 			DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CDefine>());
 			auto &Define = Value.f_GetAsType<CBuildSystemSyntax::CDefine>().m_Type.m_Type;
 			DMibAssertTrue(Define.f_IsOfType<CBuildSystemSyntax::CArrayType>());
@@ -1062,14 +1076,14 @@ namespace
 			DMibAssertTrue(ArrayType.f_IsOfType<CBuildSystemSyntax::CDefaultType>());
 			auto &ArrayInnerType = ArrayType.f_GetAsType<CBuildSystemSyntax::CDefaultType>().m_Type;
 			DMibExpect(ArrayInnerType, ==, CBuildSystemSyntax::CDefaultType::EType_Integer);
-			DMibExpectException(fs_ParseString("define [55]"), DMibExceptionInstanceParse(DPrefixLocation_1_7 " error: Invalid type: 55", {}));
-			DMibExpectException(fs_ParseString("define [int, float]"), DMibExceptionInstanceParse(DPrefixLocation_1_7 " error: Array definitions should have one entry", {}));
+			DMibExpectException(fs_ParseString(": [55]"), DMibExceptionInstanceParse(DPrefixLocation_1_7 " error: Invalid type: 55", {}));
+			DMibExpectException(fs_ParseString(": [int, float]"), DMibExceptionInstanceParse(DPrefixLocation_1_7 " error: Array definitions should have one entry", {}));
 		}
 
 		void f_TestDefineUserType()
 		{
 			DMibTestPath("UserType");
-			auto const &Value = fs_ParseString("define type(CTest)").m_Value.m_Value;
+			auto const &Value = fs_ParseString(": type(CTest)").m_Value.m_Value;
 			DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CDefine>());
 			auto &Define = Value.f_GetAsType<CBuildSystemSyntax::CDefine>().m_Type.m_Type;
 			DMibAssertTrue(Define.f_IsOfType<CBuildSystemSyntax::CUserType>());
@@ -1080,7 +1094,7 @@ namespace
 		void f_TestDefineOneOf()
 		{
 			DMibTestPath("OneOf");
-			auto const &Value = fs_ParseString("define one_of(int, float, 5)").m_Value.m_Value;
+			auto const &Value = fs_ParseString(": one_of(int, float, 5)").m_Value.m_Value;
 			DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CDefine>());
 			auto &Define = Value.f_GetAsType<CBuildSystemSyntax::CDefine>().m_Type.m_Type;
 			DMibAssertTrue(Define.f_IsOfType<CBuildSystemSyntax::COneOf>());
@@ -1097,8 +1111,8 @@ namespace
 			DMibAssertTrue(Type1.f_IsOfType<CBuildSystemSyntax::CDefaultType>());
 			DMibExpect(Type1.f_GetAsType<CBuildSystemSyntax::CDefaultType>().m_Type, ==, CBuildSystemSyntax::CDefaultType::EType_FloatingPoint);
 
-			DMibAssertTrue(OneOf[2].f_IsOfType<CEJSON>());
-			auto &Type2 = OneOf[2].f_GetAsType<CEJSON>();
+			DMibAssertTrue(OneOf[2].f_IsOfType<CEJSONSorted>());
+			auto &Type2 = OneOf[2].f_GetAsType<CEJSONSorted>();
 			DMibAssertTrue(Type2.f_IsInteger());
 			DMibExpect(Type2.f_Integer(), ==, 5);
 		}
@@ -1106,7 +1120,7 @@ namespace
 		void f_TestDefineObject()
 		{
 			DMibTestPath("Object");
-			auto const &Value = fs_ParseString("define {mem1: int, \"mem2\": float, 'mem3': any, mem4: [any], mem5: one_of(int, float), mem6: {...: any}, 'mem7?': any}").m_Value.m_Value;
+			auto const &Value = fs_ParseString(": {mem1: int, \"mem2\": float, 'mem3': any, mem4: [any], mem5: one_of(int, float), mem6: {...: any}, 'mem7?': any}").m_Value.m_Value;
 			DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CDefine>());
 			auto &Define = Value.f_GetAsType<CBuildSystemSyntax::CDefine>().m_Type.m_Type;
 			DMibAssertTrue(Define.f_IsOfType<CBuildSystemSyntax::CClassType>());
@@ -1201,9 +1215,9 @@ namespace
 			DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::COperator>());
 			auto &Operator = Value.f_GetAsType<CBuildSystemSyntax::COperator>();
 			DMibAssert(Operator.m_Operator, ==, CBuildSystemSyntax::COperator::EOperator_LessThan);
-			DMibAssertTrue(Operator.m_Right.f_Get().m_Value.f_IsOfType<CEJSON>());
-			DMibAssertTrue(Operator.m_Right.f_Get().m_Value.f_GetAsType<CEJSON>().f_IsInteger());
-			DMibExpect(Operator.m_Right.f_Get().m_Value.f_GetAsType<CEJSON>().f_Integer(), ==, 5);
+			DMibAssertTrue(Operator.m_Right.f_Get().m_Value.f_IsOfType<CEJSONSorted>());
+			DMibAssertTrue(Operator.m_Right.f_Get().m_Value.f_GetAsType<CEJSONSorted>().f_IsInteger());
+			DMibExpect(Operator.m_Right.f_Get().m_Value.f_GetAsType<CEJSONSorted>().f_Integer(), ==, 5);
 		}
 
 		void f_TestOperatorAppend()
@@ -1212,9 +1226,9 @@ namespace
 			DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::COperator>());
 			auto &Operator = Value.f_GetAsType<CBuildSystemSyntax::COperator>();
 			DMibAssert(Operator.m_Operator, ==, CBuildSystemSyntax::COperator::EOperator_Append);
-			DMibAssertTrue(Operator.m_Right.f_Get().m_Value.f_IsOfType<CEJSON>());
-			DMibAssertTrue(Operator.m_Right.f_Get().m_Value.f_GetAsType<CEJSON>().f_IsInteger());
-			DMibExpect(Operator.m_Right.f_Get().m_Value.f_GetAsType<CEJSON>().f_Integer(), ==, 5);
+			DMibAssertTrue(Operator.m_Right.f_Get().m_Value.f_IsOfType<CEJSONSorted>());
+			DMibAssertTrue(Operator.m_Right.f_Get().m_Value.f_GetAsType<CEJSONSorted>().f_IsInteger());
+			DMibExpect(Operator.m_Right.f_Get().m_Value.f_GetAsType<CEJSONSorted>().f_Integer(), ==, 5);
 		}
 
 		void f_TestOperatorPrepend()
@@ -1223,9 +1237,9 @@ namespace
 			DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::COperator>());
 			auto &Operator = Value.f_GetAsType<CBuildSystemSyntax::COperator>();
 			DMibAssert(Operator.m_Operator, ==, CBuildSystemSyntax::COperator::EOperator_Prepend);
-			DMibAssertTrue(Operator.m_Right.f_Get().m_Value.f_IsOfType<CEJSON>());
-			DMibAssertTrue(Operator.m_Right.f_Get().m_Value.f_GetAsType<CEJSON>().f_IsInteger());
-			DMibExpect(Operator.m_Right.f_Get().m_Value.f_GetAsType<CEJSON>().f_Integer(), ==, 5);
+			DMibAssertTrue(Operator.m_Right.f_Get().m_Value.f_IsOfType<CEJSONSorted>());
+			DMibAssertTrue(Operator.m_Right.f_Get().m_Value.f_GetAsType<CEJSONSorted>().f_IsInteger());
+			DMibExpect(Operator.m_Right.f_Get().m_Value.f_GetAsType<CEJSONSorted>().f_Integer(), ==, 5);
 		}
 
 		void f_TestDefine()
@@ -1370,8 +1384,8 @@ namespace
 			DMibAssertTrue(ReturnTypeDefaulted.f_IsOfType<CBuildSystemSyntax::CTypeDefaulted>());
 
 			auto &Defaulted = ReturnTypeDefaulted.f_GetAsType<CBuildSystemSyntax::CTypeDefaulted>();
-			DMibAssertTrue(Defaulted.m_DefaultValue.m_Param.f_IsOfType<NEncoding::CEJSON>());
-			DMibExpect(Defaulted.m_DefaultValue.m_Param.f_GetAsType<NEncoding::CEJSON>(), ==, CEJSON(5));
+			DMibAssertTrue(Defaulted.m_DefaultValue.m_Param.f_IsOfType<NEncoding::CEJSONSorted>());
+			DMibExpect(Defaulted.m_DefaultValue.m_Param.f_GetAsType<NEncoding::CEJSONSorted>(), ==, CEJSONSorted(5));
 
 			auto &ReturnType = Defaulted.m_Type.f_Get().m_Type;
 			DMibAssertTrue(ReturnType.f_IsOfType<CBuildSystemSyntax::CDefaultType>());
@@ -1391,8 +1405,8 @@ namespace
 			DMibAssertTrue(OptionalParamType1.f_IsOfType<CBuildSystemSyntax::CTypeDefaulted>());
 
 			auto &DefaultedParam = OptionalParamType1.f_GetAsType<CBuildSystemSyntax::CTypeDefaulted>();
-			DMibAssertTrue(DefaultedParam.m_DefaultValue.m_Param.f_IsOfType<NEncoding::CEJSON>());
-			DMibExpect(DefaultedParam.m_DefaultValue.m_Param.f_GetAsType<NEncoding::CEJSON>(), ==, CEJSON(5.5));
+			DMibAssertTrue(DefaultedParam.m_DefaultValue.m_Param.f_IsOfType<NEncoding::CEJSONSorted>());
+			DMibExpect(DefaultedParam.m_DefaultValue.m_Param.f_GetAsType<NEncoding::CEJSONSorted>(), ==, CEJSONSorted(5.5));
 
 			auto &ParamType1 = DefaultedParam.m_Type.f_Get().m_Type;
 			DMibAssertTrue(ParamType1.f_IsOfType<CBuildSystemSyntax::CDefaultType>());
@@ -1484,7 +1498,10 @@ namespace
 				(
 					("{}"_f << fs_ParseString("[\"Test\", 5]")).f_GetStr()
 					, ==
-					, "[\"Test\", 5]"
+					, "[\n"
+					"	\"Test\",\n"
+					"	5\n"
+					"]"
 				)
 			;
 			DMibExpect
@@ -1552,6 +1569,13 @@ namespace
 			;
 			DMibExpect
 				(
+					("{}"_f << fs_ParseString(": {mem1: int, \"mem2\": float, 'mem3': any, mem4: [any], mem5: one_of(int, float), mem6: {...: any}, 'mem7?': any}")).f_GetStr()
+					, ==
+					, ": {mem1: int, \"mem2\": float, 'mem3': any, mem4: [any], mem5: one_of(int, float), mem6: {...: any}, 'mem7?': any}"
+				)
+			;
+			DMibExpect
+				(
 					("{}"_f << fs_ParseString("define {mem1: int, \"mem2\": float, 'mem3': any, mem4: [any], mem5: one_of(int, float), mem6: {...: any}, 'mem7?': any}")).f_GetStr()
 					, ==
 					, "define {mem1: int, \"mem2\": float, 'mem3': any, mem4: [any], mem5: one_of(int, float), mem6: {...: any}, 'mem7?': any}"
@@ -1563,16 +1587,16 @@ namespace
 		{
 			DMibExpect
 				(
-					fs_ParseString("define {mem1: int, \"mem2\": float, 'mem3': any, mem4: [any], mem5: one_of(int, float), mem6: {...: any}, 'mem7?': any}")
+					fs_ParseString(": {mem1: int, \"mem2\": float, 'mem3': any, mem4: [any], mem5: one_of(int, float), mem6: {...: any}, 'mem7?': any}")
 					, ==
-					, fs_ParseString("define {mem1: int, \"mem2\": float, 'mem3': any, mem4: [any], mem5: one_of(int, float), mem6: {...: any}, 'mem7?': any}")
+					, fs_ParseString(": {mem1: int, \"mem2\": float, 'mem3': any, mem4: [any], mem5: one_of(int, float), mem6: {...: any}, 'mem7?': any}")
 				)
 			;
 			DMibExpect
 				(
 					fs_ParseString("5")
 					, <
-					, fs_ParseString("define {mem1: int, \"mem2\": float, 'mem3': any, mem4: [any], mem5: one_of(int, float), mem6: {...: any}, 'mem7?': any}")
+					, fs_ParseString(": {mem1: int, \"mem2\": float, 'mem3': any, mem4: [any], mem5: one_of(int, float), mem6: {...: any}, 'mem7?': any}")
 				)
 			;
 			DMibExpect
@@ -1616,13 +1640,21 @@ namespace
 			{
 				f_TestEvalStringEscape();
 			};
-			DMibTestSuite("Object")
+			DMibTestSuite("ObjectDynamic")
 			{
-				f_TestObject();
+				f_TestObjectDynamic();
 			};
-			DMibTestSuite("Array")
+			DMibTestSuite("ArrayDynamic")
 			{
-				f_TestArray();
+				f_TestArrayDynamic();
+			};
+			DMibTestSuite("ObjectStatic")
+			{
+				f_TestObjectStatic();
+			};
+			DMibTestSuite("ArrayStatic")
+			{
+				f_TestArrayStatic();
 			};
 			DMibTestSuite("Expression")
 			{

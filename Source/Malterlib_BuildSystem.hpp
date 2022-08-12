@@ -35,15 +35,17 @@ namespace NMib::NBuildSystem
 	template <typename tf_CStr>
 	void CBuildSystem::CTypeConformError::f_Format(tf_CStr &o_Str) const
 	{
-		o_Str += m_Error;
 		if (!m_ErrorPath.f_IsEmpty())
 		{
-			o_Str += "\nType path:";
+			o_Str += "For type path:";
 			for (auto &PathComponent : m_ErrorPath)
 			{
 				o_Str += "\n    ";
 				o_Str += PathComponent;
 			}
+			o_Str += "\n\n    ";
 		}
+
+		o_Str += m_Error;
 	}
 }

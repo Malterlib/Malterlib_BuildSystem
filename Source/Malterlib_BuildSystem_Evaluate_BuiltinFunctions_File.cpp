@@ -6,10 +6,10 @@
 
 namespace NMib::NBuildSystem
 {
-	NEncoding::CEJSON CBuildSystem::fp_BuiltinFunction_FindFiles
+	NEncoding::CEJSONSorted CBuildSystem::fp_BuiltinFunction_FindFiles
 		(
 			CEvalPropertyValueContext &_Context
-			, NContainer::TCVector<NEncoding::CEJSON> &&_Params
+			, NContainer::TCVector<NEncoding::CEJSONSorted> &&_Params
 			, EFindFilesFunctionType _Function
 		) const
 	{
@@ -56,9 +56,9 @@ namespace NMib::NBuildSystem
 		auto FindFunctionType = fg_FunctionType
 			(
 				g_StringArray
-				, fg_FunctionParam(g_String, "_Path")
-				, fg_FunctionParam(g_String, "_Wildcard")
-				, fg_FunctionParam(fg_Optional(g_StringArray), "_ExcludeWildcards", g_Optional)
+				, fg_FunctionParam(g_String, gc_ConstString__Path)
+				, fg_FunctionParam(g_String, gc_ConstString__Wildcard)
+				, fg_FunctionParam(fg_Optional(g_StringArray), gc_ConstString__ExcludeWildcards, g_Optional)
 			)
 		;
 
@@ -66,15 +66,15 @@ namespace NMib::NBuildSystem
 			(
 				{
 					{
-						"GeneratedFiles"
+						gc_ConstString_GeneratedFiles
  						, CBuiltinFunction
 						{
-							fg_FunctionType(g_StringArray, fg_FunctionParam(g_String, "_Wildcard"))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							fg_FunctionType(g_StringArray, fg_FunctionParam(g_String, gc_ConstString__Wildcard))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
 							{
 								CStr Wildcard = _Params[0].f_String();
 
-								TCVector<CEJSON> Return;
+								TCVector<CEJSONSorted> Return;
 								{
 									DMibLock(_This.mp_GeneratedFilesLock);
 
@@ -90,19 +90,20 @@ namespace NMib::NBuildSystem
 
 								return fg_Move(Return);
 							}
+							, DMibBuildSystemFilePosition
 						}
 					}
 					,
 					{
-						"SourceFiles"
+						gc_ConstString_SourceFiles
 						, CBuiltinFunction
 						{
-							fg_FunctionType(g_StringArray, fg_FunctionParam(g_String, "_Wildcard"))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							fg_FunctionType(g_StringArray, fg_FunctionParam(g_String, gc_ConstString__Wildcard))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
 							{
 								CStr Wildcard = _Params[0].f_String();
 
-								TCVector<CEJSON> Return;
+								TCVector<CEJSONSorted> Return;
 								{
 									DMibLockRead(_This.mp_SourceFilesLock);
 
@@ -115,108 +116,116 @@ namespace NMib::NBuildSystem
 
 								return fg_Move(Return);
 							}
+							, DMibBuildSystemFilePosition
 						}
 					}
 					,
 					{
-						"ReadFile"
+						gc_ConstString_ReadFile
 						, CBuiltinFunction
 						{
-							fg_FunctionType(g_String, fg_FunctionParam(g_String, "_FileName"))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__FileName))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
 							{
 								CStr FileName = _Params[0].f_String();
 
-								CStr Ret = CFile::fs_ReadStringFromFile(FileName, true);
-
+								CStr Ret = _This.f_ReadFile(FileName);
 								_This.f_AddSourceFile(FileName);
 
 								return fg_Move(Ret);
 							}
+							, DMibBuildSystemFilePosition
 						}
 					}
 					,
 					{
-						"FileExists"
+						gc_ConstString_FileExists
 						, CBuiltinFunction
 						{
-							fg_FunctionType(g_Boolean, fg_FunctionParam(g_String, "_FileName"))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							fg_FunctionType(g_Boolean, fg_FunctionParam(g_String, gc_ConstString__FileName))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
 							{
-								return CFile::fs_FileExists(_Params[0].f_String(), EFileAttrib_File);
+								return _This.mp_FindCache.f_FileExists(_Params[0].f_String(), EFileAttrib_File);
 							}
+							, DMibBuildSystemFilePosition
 						}
 					}
 					,
 					{
-						"DirectoryExists"
+						gc_ConstString_DirectoryExists
 						, CBuiltinFunction
 						{
-							fg_FunctionType(g_Boolean, fg_FunctionParam(g_String, "_FileName"))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							fg_FunctionType(g_Boolean, fg_FunctionParam(g_String, gc_ConstString__FileName))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
 							{
-								return CFile::fs_FileExists(_Params[0].f_String(), EFileAttrib_Directory);
+								return _This.mp_FindCache.f_FileExists(_Params[0].f_String(), EFileAttrib_Directory);
 							}
+							, DMibBuildSystemFilePosition
 						}
 					}
 					,
 					{
-						"FileOrDirectoryExists"
+						gc_ConstString_FileOrDirectoryExists
 						, CBuiltinFunction
 						{
-							fg_FunctionType(g_Boolean, fg_FunctionParam(g_String, "_FileName"))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							fg_FunctionType(g_Boolean, fg_FunctionParam(g_String, gc_ConstString__FileName))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
 							{
-								return CFile::fs_FileExists(_Params[0].f_String());
+								return _This.mp_FindCache.f_FileExists(_Params[0].f_String(), EFileAttrib_Directory | EFileAttrib_File);
 							}
+							, DMibBuildSystemFilePosition
 						}
 					}
 					,
 					{
-						"FindFilesIn"
+						gc_ConstString_FindFilesIn
 						, CBuiltinFunction
 						{
 							FindFunctionType
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
  							{
 								return _This.fp_BuiltinFunction_FindFiles(_Context, fg_Move(_Params), EFindFilesFunctionType_File);
 							}
+							, DMibBuildSystemFilePosition
 						}
 					}
 					,
 					{
-						"FindDirectoriesIn"
+						gc_ConstString_FindDirectoriesIn
 						, CBuiltinFunction
 						{
 							FindFunctionType
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
 							{
 								return _This.fp_BuiltinFunction_FindFiles(_Context, fg_Move(_Params), EFindFilesFunctionType_Directory);
 							}
+							, DMibBuildSystemFilePosition
 						}
 					}
 					,
 					{
-						"FindFilesRecursiveIn"
+						gc_ConstString_FindFilesRecursiveIn
 						, CBuiltinFunction
 						{
 							FindFunctionType
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
 							{
 								return _This.fp_BuiltinFunction_FindFiles(_Context, fg_Move(_Params), EFindFilesFunctionType_RecursiveFile);
 							}
+							, DMibBuildSystemFilePosition
 						}
 					}
 					,
 					{
-						"FindDirectoriesRecursiveIn"
+						gc_ConstString_FindDirectoriesRecursiveIn
 						, CBuiltinFunction
 						{
 							FindFunctionType
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
 							{
 								return _This.fp_BuiltinFunction_FindFiles(_Context, fg_Move(_Params), EFindFilesFunctionType_RecursiveDirectory);
 							}
+							, DMibBuildSystemFilePosition
 						}
 					}
 				}

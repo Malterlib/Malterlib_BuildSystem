@@ -5,37 +5,37 @@
 
 namespace NMib::NBuildSystem
 {
-	bool CBuildSystem::f_EvalCondition(CEntity &_Context, CCondition const &_Condition, bool _bTrace) const
+	bool CBuildSystem::f_EvalCondition(CEntity &_Context, CCondition const &_Condition, bool _bTrace, CEvaluatedProperties *_pEvaluatedProperties) const
 	{
 		DMibRequire(_Condition.m_Type == EConditionType_Root);
-		CEvaluationContext EvalContext(&_Context.m_EvaluatedProperties);
-		return fpr_EvalCondition(_Context, _Context, _Condition, EvalContext, _bTrace, nullptr);
+		CEvaluationContext EvalContext(_pEvaluatedProperties ? _pEvaluatedProperties : &_Context.m_EvaluatedProperties);
+		return fpr_EvalCondition(_Context, _Context, _Condition, EvalContext, _bTrace, nullptr, nullptr);
 	}
 
-	ch8 const *CCondition::fs_ConditionTypeToStr(EConditionType _Type)
+	NStr::CStr const &CCondition::fs_ConditionTypeToStr(EConditionType _Type)
 	{
 		switch (_Type)
 		{
-		case EConditionType_Root: return "";
-		case EConditionType_MatchEqual: return "<==>";
-		case EConditionType_MatchNotEqual: return "<!=>";
-		case EConditionType_CompareEqual: return "==";
-		case EConditionType_CompareNotEqual: return "!=";
-		case EConditionType_CompareLessThan: return "<";
-		case EConditionType_CompareLessThanEqual: return "<=";
-		case EConditionType_CompareGreaterThan: return ">";
-		case EConditionType_CompareGreaterThanEqual: return ">=";
-		case EConditionType_Or: return "|";
-		case EConditionType_And: return "&";
-		case EConditionType_Not: return "!";
+		case EConditionType_Root: return gc_ConstString_Empty;
+		case EConditionType_MatchEqual: return gc_ConstString_Symbol_OperatorMatchEqual;
+		case EConditionType_MatchNotEqual: return gc_ConstString_Symbol_OperatorMatchNotEqual;
+		case EConditionType_CompareEqual: return gc_ConstString_Symbol_OperatorEqual;
+		case EConditionType_CompareNotEqual: return gc_ConstString_Symbol_OperatorNotEqual;
+		case EConditionType_CompareLessThan: return gc_ConstString_Symbol_OperatorLessThan;
+		case EConditionType_CompareLessThanEqual: return gc_ConstString_Symbol_OperatorLessThanEqual;
+		case EConditionType_CompareGreaterThan: return gc_ConstString_Symbol_OperatorGreaterThan;
+		case EConditionType_CompareGreaterThanEqual: return gc_ConstString_Symbol_OperatorGreaterThanEqual;
+		case EConditionType_Or: return gc_ConstString_Symbol_OperatorBitwiseOr;
+		case EConditionType_And: return gc_ConstString_Symbol_OperatorBitwiseAnd;
+		case EConditionType_Not: return gc_ConstString_Symbol_LogicalNot;
 		}
-		return "";
+		return gc_ConstString_Empty;
 	}
 
 	bool CBuildSystem::fsp_CompareValueRecursive
 		(
-			CEJSON const &_Left
-			, CEJSON const &_Right
+			CEJSONSorted const &_Left
+			, CEJSONSorted const &_Right
 			, EConditionType _ConditionType
 			, NFunction::TCFunctionNoAlloc<void (NStr::CStr const &_Error)> const &_fOnError
 		) const
@@ -94,8 +94,8 @@ namespace NMib::NBuildSystem
 					bool bReturnTrue = _ConditionType == EConditionType_CompareEqual || _ConditionType == EConditionType_MatchEqual;
 					bool bReturnFalse = !bReturnTrue;
 
-					auto iLeft = _Left.f_Object().f_SortedIterator();
-					auto iRight = _Right.f_Object().f_SortedIterator();
+					auto iLeft = _Left.f_Object().f_OrderedIterator();
+					auto iRight = _Right.f_Object().f_OrderedIterator();
 					for (; iLeft && iRight; ++iLeft, ++iRight)
 					{
 						if (iLeft->f_Name() != iRight->f_Name())
@@ -116,18 +116,18 @@ namespace NMib::NBuildSystem
 				{
 					bool bResult = false;
 					{
-						decltype(_Left.f_Object().f_SortedIterator()) iLeft;
-						decltype(_Left.f_Object().f_SortedIterator()) iRight;
+						decltype(_Left.f_Object().f_OrderedIterator()) iLeft;
+						decltype(_Left.f_Object().f_OrderedIterator()) iRight;
 
 						if (_ConditionType == EConditionType_CompareLessThanEqual || _ConditionType == EConditionType_CompareGreaterThan)
 						{
-							iLeft = _Right.f_Object().f_SortedIterator();
-							iRight = _Left.f_Object().f_SortedIterator();
+							iLeft = _Right.f_Object().f_OrderedIterator();
+							iRight = _Left.f_Object().f_OrderedIterator();
 						}
 						else
 						{
-							iLeft = _Left.f_Object().f_SortedIterator();
-							iRight = _Right.f_Object().f_SortedIterator();
+							iLeft = _Left.f_Object().f_OrderedIterator();
+							iRight = _Right.f_Object().f_OrderedIterator();
 						}
 
 						for (; iLeft && iRight; ++iLeft, ++iRight)
@@ -258,18 +258,23 @@ namespace NMib::NBuildSystem
 			, mint _TraceDepth
 			, EConditionType _ConditionType
 			, CEvalPropertyValueContext const *_pParentContext
+			, CBuildSystemUniquePositions *o_pPositions
 		) const
 	{
-		CEvalPropertyValueContext Context{_Context, _OriginalContext, _Condition.m_Position, _EvalContext, _pParentContext};
-		CEJSON LeftValue;
-		CEJSON RightValue;
+		CEvalPropertyValueContext Context{_Context, _OriginalContext, _Condition.m_Position, _EvalContext, _pParentContext, o_pPositions};
 
-		LeftValue = fp_EvaluatePropertyValue(Context, _Condition.m_Left, nullptr);
-		RightValue = fp_EvaluatePropertyValue(Context, _Condition.m_Right, nullptr);
+		CBuildSystemUniquePositions::CPosition *pAddedPosition = nullptr;
+		if (o_pPositions)
+			pAddedPosition = o_pPositions->f_AddPosition(_Condition.m_Position, "Condition");
+
+		auto LeftValue = fp_EvaluatePropertyValue(Context, _Condition.m_Left, nullptr);
+		auto RightValue = fp_EvaluatePropertyValue(Context, _Condition.m_Right, nullptr);
+		auto &LeftValueRef = LeftValue.f_Get();
+		auto &RightValueRef = RightValue.f_Get();
 		bool bRet = fsp_CompareValueRecursive
 			(
-				LeftValue
-				, RightValue
+				LeftValueRef
+				, RightValueRef
 				, _ConditionType
 				, [&](CStr const &_Error)
 				{
@@ -277,6 +282,9 @@ namespace NMib::NBuildSystem
 				}
 			)
 		;
+
+		if (pAddedPosition)
+			pAddedPosition->f_AddValue(bRet, f_EnableValues());
 
 		if (_TraceDepth)
 		{
@@ -290,9 +298,9 @@ namespace NMib::NBuildSystem
 						"{sj*}         {} {} {}{\n}"_f
 						<< ""
 						<< _TraceDepth * 3
-						<< LeftValue.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat)
+						<< LeftValueRef.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat)
 						<< CCondition::fs_ConditionTypeToStr(_ConditionType)
-						<< RightValue.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat)
+						<< RightValueRef.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat)
 					)
 				;
 			}
@@ -303,9 +311,9 @@ namespace NMib::NBuildSystem
 						"{sj*}       ! {} {} {}{\n}"_f
 						<< ""
 						<< _TraceDepth * 3
-						<< LeftValue.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat)
+						<< LeftValueRef.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat)
 						<< CCondition::fs_ConditionTypeToStr(_ConditionType)
-						<< RightValue.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat)
+						<< RightValueRef.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat)
 					)
 				;
 			}
@@ -322,6 +330,7 @@ namespace NMib::NBuildSystem
 			, CEvaluationContext &_EvalContext
 			, mint _TraceDepth
 			, CEvalPropertyValueContext const *_pParentContext
+			, CBuildSystemUniquePositions *o_pPositions
 		) const
 	{
 		switch (_Condition.m_Type)
@@ -339,7 +348,7 @@ namespace NMib::NBuildSystem
 				for (auto iCondition = _Condition.m_Children.f_GetIterator(); iCondition; ++iCondition)
 				{
 					auto &Condition = *iCondition;
-					if (fpr_EvalCondition(_Context, _OriginalContext, Condition, _EvalContext, _TraceDepth ? _TraceDepth + 1 : 0, _pParentContext))
+					if (fpr_EvalCondition(_Context, _OriginalContext, Condition, _EvalContext, _TraceDepth ? _TraceDepth + 1 : 0, _pParentContext, o_pPositions))
 					{
 						if (_TraceDepth)
 						{
@@ -383,7 +392,7 @@ namespace NMib::NBuildSystem
 				for (auto iCondition = _Condition.m_Children.f_GetIterator(); iCondition; ++iCondition)
 				{
 					auto &Condition = (*iCondition);
-					if (!fpr_EvalCondition(_Context, _OriginalContext, Condition, _EvalContext, _TraceDepth ? _TraceDepth + 1 : 0, _pParentContext))
+					if (!fpr_EvalCondition(_Context, _OriginalContext, Condition, _EvalContext, _TraceDepth ? _TraceDepth + 1 : 0, _pParentContext, o_pPositions))
 					{
 						if (_TraceDepth)
 							f_OutputConsole("{sj*}Failure{\n}"_f << "" << (_TraceDepth * 3));
@@ -403,7 +412,7 @@ namespace NMib::NBuildSystem
 				for (auto iCondition = _Condition.m_Children.f_GetIterator(); iCondition; ++iCondition)
 				{
 					auto &Condition = (*iCondition);
-					bool bRet = !fpr_EvalCondition(_Context, _OriginalContext, Condition, _EvalContext, _TraceDepth ? _TraceDepth + 1 : 0, _pParentContext);
+					bool bRet = !fpr_EvalCondition(_Context, _OriginalContext, Condition, _EvalContext, _TraceDepth ? _TraceDepth + 1 : 0, _pParentContext, o_pPositions);
 					if (_TraceDepth)
 					{
 						if (bRet)
@@ -427,7 +436,7 @@ namespace NMib::NBuildSystem
 		case EConditionType_CompareGreaterThan:
 		case EConditionType_CompareGreaterThanEqual:
 			{
-				bool bRet = fp_EvalConditionSubject(_Context, _OriginalContext, _Condition, _EvalContext, _TraceDepth, _Condition.m_Type, _pParentContext);
+				bool bRet = fp_EvalConditionSubject(_Context, _OriginalContext, _Condition, _EvalContext, _TraceDepth, _Condition.m_Type, _pParentContext, o_pPositions);
 				if (_TraceDepth)
 				{
 					if (bRet)

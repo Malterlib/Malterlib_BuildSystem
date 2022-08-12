@@ -19,8 +19,8 @@
 {
 	Property
 	{
-		CalcValue_Suffixed define string = "CalcValue_Suffixed"
-		Prefixed_CalcValue define string = "Prefixed_CalcValue"
+		CalcValue_Suffixed: string = "CalcValue_Suffixed"
+		Prefixed_CalcValue: string = "Prefixed_CalcValue"
 
 		GetCalcValuePrefixed function(string _Value) string
 		GetCalcValuePrefixed Prefixed_@(_Value)

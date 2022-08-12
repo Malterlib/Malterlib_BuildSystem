@@ -40,6 +40,7 @@ namespace NMib::NBuildSystem
 	CBuildSystemSyntax::CType g_Boolean{CBuildSystemSyntax::CDefaultType{CBuildSystemSyntax::CDefaultType::EType_Boolean}};
 	CBuildSystemSyntax::CType g_Date{CBuildSystemSyntax::CDefaultType{CBuildSystemSyntax::CDefaultType::EType_Date}};
 	CBuildSystemSyntax::CType g_Binary{CBuildSystemSyntax::CDefaultType{CBuildSystemSyntax::CDefaultType::EType_Binary}};
+	CBuildSystemSyntax::CType g_Identifier{CBuildSystemSyntax::CDefaultType{CBuildSystemSyntax::CDefaultType::EType_Identifier}};
 
 	CBuildSystemSyntax::CType g_StringArray{CBuildSystemSyntax::CArrayType{CBuildSystemSyntax::CType{g_String}}};
 	CBuildSystemSyntax::CType g_AnyArray{CBuildSystemSyntax::CArrayType{CBuildSystemSyntax::CType{g_Any}}};
@@ -47,6 +48,22 @@ namespace NMib::NBuildSystem
 
 	CBuildSystemSyntax::CType g_StringArrayDefaultedEmpty = fg_Defaulted(g_StringArray, _[_]);
 	CBuildSystemSyntax::CType g_AnyArrayDefaultedEmpty = fg_Defaulted(g_AnyArray, _[_]);
+
+	CBuildSystemSyntax::CType g_Position
+		{
+			CBuildSystemSyntax::CClassType
+			(
+				{
+					{gc_ConstString_File, g_String}
+					, {gc_ConstString_Line, g_Integer}
+					, {gc_ConstString_Column, g_Integer}
+					, {gc_ConstString_Identifier, g_String}
+					, {gc_ConstString_Message, g_String}
+				}
+				, {}
+			)
+		}
+	;
 
 	CBuildSystemSyntax::CType fg_Array(CBuildSystemSyntax::CType::CVariant &&_Type)
 	{
@@ -58,7 +75,7 @@ namespace NMib::NBuildSystem
 		return CBuildSystemSyntax::CType{CBuildSystemSyntax::CArrayType{fg_Move(_Type)}};
 	}
 
-	CBuildSystemSyntax::CType fg_Defaulted(CBuildSystemSyntax::CType const &_Type, CEJSON &&_Default)
+	CBuildSystemSyntax::CType fg_Defaulted(CBuildSystemSyntax::CType const &_Type, CEJSONSorted &&_Default)
 	{
 		return CBuildSystemSyntax::CType{CBuildSystemSyntax::CBuildSystemSyntax::CTypeDefaulted{{_Type}, fg_Move(_Default)}};
 	}

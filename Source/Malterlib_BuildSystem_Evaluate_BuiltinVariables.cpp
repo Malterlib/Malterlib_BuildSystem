@@ -8,10 +8,38 @@
 
 namespace NMib::NBuildSystem
 {
-	void CBuildSystem::f_RegisterBuiltinVariables(NContainer::TCMap<CPropertyKey, CBuildSystemSyntax::CType> &&_Variables) const
+	void CBuildSystem::f_RegisterBuiltinVariables(NContainer::TCMap<CPropertyKey, CTypeWithPosition> &&_Variables) const
 	{
 		for (auto &Type : _Variables)
-			mp_BuiltinVariablesDefinitions[_Variables.fs_GetKey(Type)] = CTypeWithPosition{fg_Move(Type)};
+		{
+			auto &Key = _Variables.fs_GetKey(Type);
+			auto &NewType = (mp_BuiltinVariablesDefinitions[Key] = fg_Move(Type));
+
+			auto KeyType = Key.f_GetType();
+			if (KeyType == EPropertyType_Compile)
+			{
+				if (Key.m_Name == gc_ConstString_Disabled.m_String)
+					continue;
+			}
+			else if (KeyType == EPropertyType_Target)
+			{
+				if (Key.m_Name == gc_ConstString_Disabled.m_String)
+					continue;
+			}
+
+			if (NewType.m_Type.f_IsDefaulted())
+				mp_DefaultedBuiltinVariablesDefinitions[KeyType][&NewType];
+		}
+	}
+
+	void CBuildSystem::f_ForEachDefaultedBuiltinVariableDefinition
+		(
+			EPropertyType _Type
+			, TCFunction<void (CPropertyKey const &_Key, CTypeWithPosition const &_Type)> const &_fOnDefinition
+		) const
+	{
+		for (auto &pType : mp_DefaultedBuiltinVariablesDefinitions[_Type])
+			_fOnDefinition(mp_BuiltinVariablesDefinitions.fs_GetKey(*pType), *pType);
 	}
 
 	void CBuildSystem::fp_RegisterBuiltinVariables()
@@ -21,273 +49,309 @@ namespace NMib::NBuildSystem
 		f_RegisterBuiltinVariables
 			(
 				{
-					{CPropertyKey("MToolVersion"), fg_Defaulted(g_Integer, CBuildSystem::mc_MToolVersion)}
-					, {CPropertyKey("Generator"), g_String}
-					, {CPropertyKey("GeneratorFamily"), g_String}
-					, {CPropertyKey("BuildSystemBasePath"), g_String}
-					, {CPropertyKey("BuildSystemOutputDir"), g_String}
-					, {CPropertyKey("BuildSystemFile"), g_String}
-					, {CPropertyKey("BuildSystemName"), g_String}
-					, {CPropertyKey("HostPlatform"), g_String}
-					, {CPropertyKey("HostPlatformFamily"), g_String}
-					, {CPropertyKey("HostArchitecture"), g_String}
-					, {CPropertyKey("HiddenGroup"), g_Boolean}
-					, {CPropertyKey("ExcludeFiles"), fg_Defaulted(g_StringArray, EJSONType_Array)}
-					, {CPropertyKey("FullConfiguration"), g_String}
+					{CPropertyKey(mp_StringCache, gc_ConstString_MToolVersion), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Integer, CBuildSystem::mc_MToolVersion))}
+					, {CPropertyKey(mp_StringCache, gc_ConstString_Generator), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, gc_ConstString_GeneratorFamily), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, gc_ConstString_BuildSystemBasePath), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, gc_ConstString_BuildSystemOutputDir), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, gc_ConstString_BuildSystemFile), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, gc_ConstString_BuildSystemName), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, gc_ConstString_HostPlatform), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, gc_ConstString_HostPlatformFamily), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, gc_ConstString_HostArchitecture), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(gc_ConstKey_HiddenGroup), DMibBuildSystemTypeWithPosition(g_Boolean)}
+					, {CPropertyKey(mp_StringCache, gc_ConstString_ExcludeFiles), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, EJSONType_Array))}
+					, {CPropertyKey(mp_StringCache, gc_ConstString_FullConfiguration), DMibBuildSystemTypeWithPosition(g_String)}
 
-					, {CPropertyKey("Platform"), fg_Optional(g_String)}
-					, {CPropertyKey("Architecture"), fg_Optional(g_String)}
-					, {CPropertyKey("Configuration"), fg_Optional(g_String)}
+					, {CPropertyKey(mp_StringCache, gc_ConstString_Platform), DMibBuildSystemTypeWithPosition(fg_Optional(g_String))}
+					, {CPropertyKey(mp_StringCache, gc_ConstString_Architecture), DMibBuildSystemTypeWithPosition(fg_Optional(g_String))}
+					, {CPropertyKey(mp_StringCache, gc_ConstString_Configuration), DMibBuildSystemTypeWithPosition(fg_Optional(g_String))}
 
-					, {CPropertyKey("MalterlibRepositoryEditor"), g_String}
-					, {CPropertyKey("MalterlibRepositoryEditorSequential"),  fg_Defaulted(g_Boolean, false)}
-					, {CPropertyKey("MalterlibRepositoryEditorSleep"), fg_Defaulted(g_FloatingPoint, 0.0)}
-					, {CPropertyKey("MalterlibRepositoryEditorWorkingDir"), fg_Defaulted(g_String, "")}
+					, {CPropertyKey(mp_StringCache, gc_ConstString_MalterlibRepositoryEditor), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, gc_ConstString_MalterlibRepositoryEditorSequential),  DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(mp_StringCache, gc_ConstString_MalterlibRepositoryEditorSleep), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_FloatingPoint, 0.0))}
+					, {CPropertyKey(mp_StringCache, gc_ConstString_MalterlibRepositoryEditorWorkingDir), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
 
-					, {CPropertyKey(EPropertyType_Compile, "Type"), fg_Defaulted(g_String, "")}
-					, {CPropertyKey(EPropertyType_Compile, "Disabled"), fg_Defaulted(g_Boolean, false)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Compile, gc_ConstString_Type), DMibBuildSystemTypeWithPosition(fg_Optional(g_String))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Compile, gc_ConstString_Disabled), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					,
 					{
-						CPropertyKey(EPropertyType_Compile, "PrecompilePrefixHeader")
-						, fg_Defaulted(CBuildSystemSyntax::CType{CBuildSystemSyntax::COneOf{{g_Boolean, "XInternalCreate"}}}, false)
+						CPropertyKey(mp_StringCache, EPropertyType_Compile, gc_ConstString_PrecompilePrefixHeader)
+						, DMibBuildSystemTypeWithPosition(fg_Defaulted(CBuildSystemSyntax::CType{CBuildSystemSyntax::COneOf{{g_Boolean, gc_ConstString_XInternalCreate}}}, false))
 					}
-					, {CPropertyKey(EPropertyType_Compile, "PrefixHeader"), fg_Optional(g_String)}
-					, {CPropertyKey(EPropertyType_Compile, "AllowNonExisting"), fg_Defaulted(g_Boolean, false)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Compile, gc_ConstString_PrefixHeader), DMibBuildSystemTypeWithPosition(fg_Optional(g_String))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Compile, gc_ConstString_AllowNonExisting), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 
-					, {CPropertyKey(EPropertyType_Workspace, "Name"), g_String}
-					, {CPropertyKey(EPropertyType_Workspace, "AllTargets"), fg_Defaulted(g_StringArray, EJSONType_Array)}
-					, {CPropertyKey(EPropertyType_Workspace, "ExtraGroups"), g_StringArrayDefaultedEmpty}
-					, {CPropertyKey(EPropertyType_Workspace, "Enabled"), fg_Defaulted(g_Boolean, true)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Workspace, gc_ConstString_Name), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Workspace, gc_ConstString_AllTargets), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, EJSONType_Array))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Workspace, gc_ConstString_ExtraGroups), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Workspace, gc_ConstString_Enabled), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, true))}
 
-					, {CPropertyKey(EPropertyType_Target, "Type"), g_String}
-					, {CPropertyKey(EPropertyType_Target, "Language"), fg_Optional(g_String)}
-					, {CPropertyKey(EPropertyType_Target, "Name"), g_String}
-					, {CPropertyKey(EPropertyType_Target, "IntermediateDirectory"), g_String}
-					, {CPropertyKey(EPropertyType_Target, "OutputDirectory"), g_String}
-					, {CPropertyKey(EPropertyType_Target, "Disabled"), fg_Defaulted(g_Boolean, false)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_Type), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_Language), DMibBuildSystemTypeWithPosition(fg_Optional(g_String))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_Name), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_IntermediateDirectory), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_OutputDirectory), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_Disabled), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 
-					, {CPropertyKey(EPropertyType_Target, "FileExtension"), fg_Defaulted(g_String, "")}
-					, {CPropertyKey(EPropertyType_Target, "FileName"), g_String}
-					, {CPropertyKey(EPropertyType_Target, "EnableLinkerGroups"), fg_Optional(g_Boolean)}
-					, {CPropertyKey(EPropertyType_Target, "LinkerGroup"), fg_Defaulted(g_String, "")}
-					, {CPropertyKey(EPropertyType_Target, "ExtraGroups"), g_StringArrayDefaultedEmpty}
-					, {CPropertyKey(EPropertyType_Target, "Group"), fg_Defaulted(g_String, "")}
-					, {CPropertyKey(EPropertyType_Target, "FollowIndirectDependencies"), fg_Defaulted(g_Boolean, false)}
-					, {CPropertyKey(EPropertyType_Target, "DependencyFile"), fg_Optional(g_String)}
-					, {CPropertyKey(EPropertyType_Target, "Dependencies"), g_StringArray}
-					, {CPropertyKey(EPropertyType_Target, "DependenciesNames"), g_StringArray}
-					, {CPropertyKey(EPropertyType_Target, "LinkWithLibraries"), fg_Defaulted(fg_Array(fg_OneOf(g_StringArray, g_String)), _[_])}
-					, {CPropertyKey(EPropertyType_Target, "PostBuildScriptOutputs"), fg_Defaulted(g_StringArray, _[_])}
-					, {CPropertyKey(EPropertyType_Target, "PostBuildScriptInputs"), fg_Defaulted(g_StringArray, _[_])}
-					, {CPropertyKey(EPropertyType_Target, "PreBuildScriptOutputs"), fg_Defaulted(g_StringArray, _[_])}
-					, {CPropertyKey(EPropertyType_Target, "PreBuildScriptInputs"), fg_Defaulted(g_StringArray, _[_])}
-
-					, {CPropertyKey(EPropertyType_Dependency, "Indirect"), fg_Defaulted(g_Boolean, false)}
-					, {CPropertyKey(EPropertyType_Dependency, "IndirectOrdered"), fg_Defaulted(g_Boolean, false)}
-					, {CPropertyKey(EPropertyType_Dependency, "Link"), fg_Defaulted(g_Boolean, true)}
-					, {CPropertyKey(EPropertyType_Dependency, "Target"), fg_Optional(g_String)}
-					, {CPropertyKey(EPropertyType_Dependency, "TargetProperties"), fg_Defaulted(g_ObjectWithAny, EJSONType_Object)}
-
-					, {CPropertyKey(EPropertyType_Compile, "SearchPath"), g_StringArrayDefaultedEmpty}
-					, {CPropertyKey(EPropertyType_Compile, "SystemSearchPath"), g_StringArrayDefaultedEmpty}
-					, {CPropertyKey(EPropertyType_Compile, "PreprocessorDefines"), g_StringArrayDefaultedEmpty}
-					, {CPropertyKey(EPropertyType_Compile, "Custom_Message"), fg_Optional(g_String)}
-					, {CPropertyKey(EPropertyType_Compile, "Custom_CommandLine"), fg_Optional(g_String)}
-					, {CPropertyKey(EPropertyType_Compile, "Custom_Inputs"), fg_Optional(g_StringArray)}
-					, {CPropertyKey(EPropertyType_Compile, "Custom_WorkingDirectory"), fg_Optional(g_String)}
-					, {CPropertyKey(EPropertyType_Compile, "Custom_Outputs"), fg_Optional(g_StringArray)}
-					, {CPropertyKey(EPropertyType_Compile, "InitEarly"), fg_Optional(g_Boolean)}
-
-					, {CPropertyKey(EPropertyType_Compile, "TabWidth"), fg_Optional(g_Integer)}
-					, {CPropertyKey(EPropertyType_Compile, "IndentWidth"), fg_Optional(g_Integer)}
-					, {CPropertyKey(EPropertyType_Compile, "UsesTabs"), fg_Optional(g_Boolean)}
-
-					, {CPropertyKey(EPropertyType_CreateTemplate, "Name"), g_String}
-
-					, {CPropertyKey(EPropertyType_Builtin, "GeneratedFiles"), g_StringArray}
-					, {CPropertyKey(EPropertyType_Builtin, "SourceFiles"), g_StringArray}
-					, {CPropertyKey(EPropertyType_Builtin, "BuildSystemSourceAbsolute"), g_String}
-					, {CPropertyKey(EPropertyType_Builtin, "BuildSystemSource"), g_String}
-					, {CPropertyKey(EPropertyType_Builtin, "GeneratorStateFile"), g_String}
-					, {CPropertyKey(EPropertyType_Builtin, "BasePathAbsolute"), g_String}
-					, {CPropertyKey(EPropertyType_Builtin, "MToolExe"), g_String}
-					, {CPropertyKey(EPropertyType_Builtin, "MalterlibExe"), g_String}
-					, {CPropertyKey(EPropertyType_Builtin, "BasePathRelativeProject"), g_String}
-					, {CPropertyKey(EPropertyType_Builtin, "GeneratedBuildSystemDir"), g_String}
-					, {CPropertyKey(EPropertyType_Builtin, "BasePath"), g_String}
-					, {CPropertyKey(EPropertyType_Builtin, "IntermediateDirectory"), g_String}
-					, {CPropertyKey(EPropertyType_Builtin, "OutputDirectory"), g_String}
-					, {CPropertyKey(EPropertyType_Builtin, "ProjectPath"), g_String}
-					, {CPropertyKey(EPropertyType_Builtin, "Inherit"), g_String}
-					, {CPropertyKey(EPropertyType_Builtin, "SourceFileName"), g_String}
-
-					, {CPropertyKey(EPropertyType_This, "Identity"), g_String}
-					, {CPropertyKey(EPropertyType_This, "IdentityAsAbsolutePath"), g_String}
-					, {CPropertyKey(EPropertyType_This, "IdentityPath"), g_String}
-					, {CPropertyKey(EPropertyType_This, "Type"), g_String}
-
-					, {CPropertyKey(EPropertyType_Group, "HideTargets"), fg_Defaulted(g_Boolean, false)}
-
-					, {CPropertyKey(EPropertyType_Import, "CMake_Projects"), g_StringArrayDefaultedEmpty}
-					, {CPropertyKey(EPropertyType_Import, "CMake_CacheDirectory"), g_String}
-					, {CPropertyKey(EPropertyType_Import, "TempDirectory"), g_String}
-					, {CPropertyKey(EPropertyType_Import, "CMake_UpdateCache"), fg_Defaulted(g_Boolean, false)}
-					, {CPropertyKey(EPropertyType_Import, "CMake_Verbose"), fg_Defaulted(g_Boolean, false)}
-					, {CPropertyKey(EPropertyType_Import, "CMake_VerboseHash"), fg_Defaulted(g_Boolean, false)}
-					, {CPropertyKey(EPropertyType_Import, "CMake_FullRebuildVersion"), fg_Defaulted(g_String, "0")}
-					, {CPropertyKey(EPropertyType_Import, "CMake_CacheExcludePatterns"), g_StringArrayDefaultedEmpty}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_FileExtension), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_FileName), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_EnableLinkerGroups), DMibBuildSystemTypeWithPosition(fg_Optional(g_Boolean))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_LinkerGroup), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_ExtraGroups), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
+					, {CPropertyKey(gc_ConstKey_Target_DependencyInjectionGroups), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
+					, {CPropertyKey(gc_ConstKey_Target_InjectedExtraGroups), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_Group), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_FollowIndirectDependencies), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_DependencyFile), DMibBuildSystemTypeWithPosition(fg_Optional(g_String))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_Dependencies), DMibBuildSystemTypeWithPosition(g_StringArray)}
+					, {CPropertyKey(gc_ConstKey_Target_ExternalDependencies), DMibBuildSystemTypeWithPosition(g_StringArray)}
+					, {CPropertyKey(gc_ConstKey_Target_DependenciesNames), DMibBuildSystemTypeWithPosition(g_StringArray)}
 					,
 					{
-						CPropertyKey(EPropertyType_Import, "CMake_CacheReplaceContents")
-						, fg_Defaulted
+						CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_LinkWithLibraries)
+						, DMibBuildSystemTypeWithPosition(fg_Defaulted(fg_Array(fg_OneOf(g_StringArray, g_String)), _[_]))
+					}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_PostBuildScriptOutputs), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, _[_]))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_PostBuildScriptInputs), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, _[_]))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_PreBuildScriptOutputs), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, _[_]))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_PreBuildScriptInputs), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, _[_]))}
+
+					, {CPropertyKey(mp_StringCache, EPropertyType_Dependency, gc_ConstString_Indirect), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Dependency, gc_ConstString_IndirectOrdered), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Dependency, gc_ConstString_Link), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, true))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Dependency, gc_ConstString_Target), DMibBuildSystemTypeWithPosition(fg_Optional(g_String))}
+					, {CPropertyKey(gc_ConstKey_Dependency_Type), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
+					, {CPropertyKey(gc_ConstKey_Dependency_Name), DMibBuildSystemTypeWithPosition(g_String)}
+					,
+					{
+						CPropertyKey(mp_StringCache, EPropertyType_Dependency, gc_ConstString_TargetProperties)
+						, DMibBuildSystemTypeWithPosition(fg_Defaulted(g_ObjectWithAny, EJSONType_Object))
+					}
+
+					, {CPropertyKey(mp_StringCache, EPropertyType_Compile, gc_ConstString_SearchPath), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Compile, gc_ConstString_SystemSearchPath), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Compile, gc_ConstString_PreprocessorDefines), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Compile, gc_ConstString_Custom_Message), DMibBuildSystemTypeWithPosition(fg_Optional(g_String))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Compile, gc_ConstString_Custom_CommandLine), DMibBuildSystemTypeWithPosition(fg_Optional(g_String))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Compile, gc_ConstString_Custom_Inputs), DMibBuildSystemTypeWithPosition(fg_Optional(g_StringArray))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Compile, gc_ConstString_Custom_WorkingDirectory), DMibBuildSystemTypeWithPosition(fg_Optional(g_String))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Compile, gc_ConstString_Custom_Outputs), DMibBuildSystemTypeWithPosition(fg_Optional(g_StringArray))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Compile, gc_ConstString_InitEarly), DMibBuildSystemTypeWithPosition(fg_Optional(g_Boolean))}
+
+					, {CPropertyKey(mp_StringCache, EPropertyType_Compile, gc_ConstString_TabWidth), DMibBuildSystemTypeWithPosition(fg_Optional(g_Integer))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Compile, gc_ConstString_IndentWidth), DMibBuildSystemTypeWithPosition(fg_Optional(g_Integer))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Compile, gc_ConstString_UsesTabs), DMibBuildSystemTypeWithPosition(fg_Optional(g_Boolean))}
+
+					, {CPropertyKey(mp_StringCache, EPropertyType_CreateTemplate, gc_ConstString_Name), DMibBuildSystemTypeWithPosition(g_String)}
+
+					, {CPropertyKey(mp_StringCache, EPropertyType_Builtin, gc_ConstString_GeneratedFiles), DMibBuildSystemTypeWithPosition(g_StringArray)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Builtin, gc_ConstString_SourceFiles), DMibBuildSystemTypeWithPosition(g_StringArray)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Builtin, gc_ConstString_BuildSystemSourceAbsolute), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Builtin, gc_ConstString_BuildSystemSource), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Builtin, gc_ConstString_GeneratorStateFile), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Builtin, gc_ConstString_BasePathAbsolute), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Builtin, gc_ConstString_MToolExe), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Builtin, gc_ConstString_MalterlibExe), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Builtin, gc_ConstString_BasePathRelativeProject), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Builtin, gc_ConstString_GeneratedBuildSystemDir), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Builtin, gc_ConstString_BasePath), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Builtin, gc_ConstString_IntermediateDirectory), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Builtin, gc_ConstString_OutputDirectory), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Builtin, gc_ConstString_ProjectPath), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Builtin, gc_ConstString_Inherit), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Builtin, gc_ConstString_SourceFileName), DMibBuildSystemTypeWithPosition(g_String)}
+
+					, {CPropertyKey(mp_StringCache, EPropertyType_This, gc_ConstString_Identity), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_This, gc_ConstString_IdentityAsAbsolutePath), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_This, gc_ConstString_IdentityPath), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_This, gc_ConstString_Type), DMibBuildSystemTypeWithPosition(g_String)}
+
+					, {CPropertyKey(mp_StringCache, EPropertyType_Group, gc_ConstString_HideTargets), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+
+					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_Projects), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_CacheDirectory), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_TempDirectory), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_UpdateCache), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_Verbose), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_VerboseHash), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_FullRebuildVersion), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, "0"))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_CacheExcludePatterns), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
+					,
+					{
+						CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_CacheReplaceContents)
+						, DMibBuildSystemTypeWithPosition
 						(
-							fg_Array
+							fg_Defaulted
 							(
-								CBuildSystemSyntax::CClassType
-								{
+								fg_Array
+								(
+									CBuildSystemSyntax::CClassType
 									{
-										{"Find", CBuildSystemSyntax::CClassType::CMember{g_String}}
-										, {"Replace", CBuildSystemSyntax::CClassType::CMember{g_String}}
-										, {"FilePatterns", CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_StringArray, EJSONType_Array)}}
-										, {"ExcludeFilePatterns", CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_StringArray, EJSONType_Array)}}
-										, {"ApplyToPaths", CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_Boolean, false)}}
+										{
+											{gc_ConstString_Find, CBuildSystemSyntax::CClassType::CMember{g_String}}
+											, {gc_ConstString_Replace, CBuildSystemSyntax::CClassType::CMember{g_String}}
+											, {gc_ConstString_FilePatterns, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_StringArray, EJSONType_Array)}}
+											, {gc_ConstString_ExcludeFilePatterns, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_StringArray, EJSONType_Array)}}
+											, {gc_ConstString_ApplyToPaths, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_Boolean, false)}}
+										}
+										, {}
 									}
-									, {}
-								}
+								)
+								, _[_]
 							)
-							, _[_]
 						)
 					}
 					,
 					{
-						CPropertyKey(EPropertyType_Import, "CMake_CacheDuplicateLines")
-						, fg_Defaulted
+						CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_CacheDuplicateLines)
+						, DMibBuildSystemTypeWithPosition
 						(
-							fg_Array
+							fg_Defaulted
 							(
-								CBuildSystemSyntax::CClassType
-								{
+								fg_Array
+								(
+									CBuildSystemSyntax::CClassType
 									{
-										{"Match", CBuildSystemSyntax::CClassType::CMember{g_String}}
-										, {"Find", CBuildSystemSyntax::CClassType::CMember{g_String}}
-										, {"Replace", CBuildSystemSyntax::CClassType::CMember{g_String}}
-										, {"FilePatterns", CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_StringArray, EJSONType_Array)}}
-										, {"ExcludeFilePatterns", CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_StringArray, EJSONType_Array)}}
+										{
+											{gc_ConstString_Match, CBuildSystemSyntax::CClassType::CMember{g_String}}
+											, {gc_ConstString_Find, CBuildSystemSyntax::CClassType::CMember{g_String}}
+											, {gc_ConstString_Replace, CBuildSystemSyntax::CClassType::CMember{g_String}}
+											, {gc_ConstString_FilePatterns, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_StringArray, EJSONType_Array)}}
+											, {gc_ConstString_ExcludeFilePatterns, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_StringArray, EJSONType_Array)}}
+										}
+										, {}
 									}
-									, {}
-								}
+								)
+								, _[_]
 							)
-							, _[_]
 						)
 					}
-					, {CPropertyKey(EPropertyType_Import, "CMake_Environment"), fg_Defaulted(CBuildSystemSyntax::CType{CBuildSystemSyntax::CClassType({}, g_String)}, EJSONType_Object)}
-					, {CPropertyKey(EPropertyType_Import, "CMake_CacheIgnoreInputs"), fg_Defaulted(g_StringArray, EJSONType_Array)}
-					, {CPropertyKey(EPropertyType_Import, "CMake_IncludeInHash"), fg_Defaulted(g_StringArray, EJSONType_Array)}
 					,
 					{
-						CPropertyKey(EPropertyType_Import, "CMake_Languages")
-						, fg_Defaulted
-						(
-							fg_Array
-							(
-								CBuildSystemSyntax::CClassType
-								{
-									{
-										{"CMakeLanguage", CBuildSystemSyntax::CClassType::CMember{g_String}}
-										, {"MalterlibLanguage", CBuildSystemSyntax::CClassType::CMember{g_String}}
-									}
-									, {}
-								}
-							)
-							, _[_]
-						)
+						CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_Environment)
+						, DMibBuildSystemTypeWithPosition(fg_Defaulted(CBuildSystemSyntax::CType{CBuildSystemSyntax::CClassType({}, g_String)}, EJSONType_Object))
 					}
-					, {CPropertyKey(EPropertyType_Import, "CMake_Config"), g_String}
-					, {CPropertyKey(EPropertyType_Import, "CMake_IntermediateName"), g_String}
-					, {CPropertyKey(EPropertyType_Import, "CMake_Variables"), g_StringArrayDefaultedEmpty}
-					, {CPropertyKey(EPropertyType_Import, "CMake_ExcludeFromHash"), g_StringArrayDefaultedEmpty}
-					, {CPropertyKey(EPropertyType_Import, "SharedTempDirectory"), fg_Defaulted(g_String, "")}
-					, {CPropertyKey(EPropertyType_Import, "CMake_Path"), g_StringArrayDefaultedEmpty}
-					, {CPropertyKey(EPropertyType_Import, "CMake_VariablesWithPaths"), g_StringArrayDefaultedEmpty}
-					, {CPropertyKey(EPropertyType_Import, "CMake_SystemName"), fg_Defaulted(g_String, "")}
-					, {CPropertyKey(EPropertyType_Import, "CMake_SystemProcessor"), fg_Defaulted(g_String, "")}
-					, {CPropertyKey(EPropertyType_Import, "CMake_CCompiler"), fg_Defaulted(g_String, "")}
-					, {CPropertyKey(EPropertyType_Import, "CMake_CCompilerTarget"), fg_Defaulted(g_String, "")}
-					, {CPropertyKey(EPropertyType_Import, "CMake_CxxCompiler"), fg_Defaulted(g_String, "")}
-					, {CPropertyKey(EPropertyType_Import, "CMake_CxxCompilerTarget"), fg_Defaulted(g_String, "")}
 					,
 					{
-						CPropertyKey(EPropertyType_Import, "CMake_ReplacePrefixes")
-						, fg_Defaulted
+						CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_CacheIgnoreInputs)
+						, DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, EJSONType_Array))
+					}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_IncludeInHash), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, EJSONType_Array))}
+					,
+					{
+						CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_Languages)
+						, DMibBuildSystemTypeWithPosition
 						(
-							fg_Array
+							fg_Defaulted
 							(
-								CBuildSystemSyntax::CClassType
-								{
+								fg_Array
+								(
+									CBuildSystemSyntax::CClassType
 									{
-										{"Find", CBuildSystemSyntax::CClassType::CMember{g_String}}
-										, {"Replace", CBuildSystemSyntax::CClassType::CMember{g_String}}
+										{
+											{gc_ConstString_CMakeLanguage, CBuildSystemSyntax::CClassType::CMember{g_String}}
+											, {gc_ConstString_MalterlibLanguage, CBuildSystemSyntax::CClassType::CMember{g_String}}
+										}
+										, {}
 									}
-									, {}
-								}
+								)
+								, _[_]
 							)
-							, _[_]
 						)
 					}
-					, {CPropertyKey(EPropertyType_Import, "CMake_SysRoot"), fg_Defaulted(g_String, "")}
-					, {CPropertyKey(EPropertyType_Import, "CMake_CExternalToolChain"), fg_Defaulted(g_String, "")}
-					, {CPropertyKey(EPropertyType_Import, "CMake_CxxExternalToolChain"), fg_Defaulted(g_String, "")}
-					, {CPropertyKey(EPropertyType_Import, "CMake_AlwaysFullRebuild"), fg_Defaulted(g_Boolean, true)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_Config), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_IntermediateName), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_Variables), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_ExcludeFromHash), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_SharedTempDirectory), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_Path), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_VariablesWithPaths), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_SystemName), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_SystemProcessor), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_CCompiler), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_CCompilerTarget), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_CxxCompiler), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_CxxCompilerTarget), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
+					,
+					{
+						CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_ReplacePrefixes)
+						, DMibBuildSystemTypeWithPosition
+						(
+							fg_Defaulted
+							(
+								fg_Array
+								(
+									CBuildSystemSyntax::CClassType
+									{
+										{
+											{gc_ConstString_Find, CBuildSystemSyntax::CClassType::CMember{g_String}}
+											, {gc_ConstString_Replace, CBuildSystemSyntax::CClassType::CMember{g_String}}
+										}
+										, {}
+									}
+								)
+								, _[_]
+							)
+						)
+					}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_SysRoot), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_CExternalToolChain), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_CxxExternalToolChain), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_AlwaysFullRebuild), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, true))}
 
-					, {CPropertyKey(EPropertyType_GenerateFile, "Name"), g_String}
-					, {CPropertyKey(EPropertyType_GenerateFile, "Contents"), g_String}
-					, {CPropertyKey(EPropertyType_GenerateFile, "UnicodeBOM"), fg_Defaulted(g_Boolean, true)}
-					, {CPropertyKey(EPropertyType_GenerateFile, "BeforeImports"), fg_Defaulted(g_Boolean, false)}
-					, {CPropertyKey(EPropertyType_GenerateFile, "UTF16"),  fg_Defaulted(g_Boolean, false)}
-					, {CPropertyKey(EPropertyType_GenerateFile, "Executable"), fg_Defaulted(g_Boolean, false)}
-					, {CPropertyKey(EPropertyType_GenerateFile, "UnixLineEnds"), fg_Defaulted(g_Boolean, false)}
-					, {CPropertyKey(EPropertyType_GenerateFile, "Symlink"), fg_Defaulted(g_Boolean, false)}
-					, {CPropertyKey(EPropertyType_GenerateFile, "SymlinkDirectory"), fg_Defaulted(g_Boolean, false)}
-					, {CPropertyKey(EPropertyType_GenerateFile, "NoDateCheck"), fg_Defaulted(g_Boolean, false)}
-					, {CPropertyKey(EPropertyType_GenerateFile, "KeepGeneratedFile"), fg_Defaulted(g_Boolean, false)}
-					, {CPropertyKey(EPropertyType_GenerateFile, "SymlinkBasePath"), fg_Defaulted(g_String, "")}
-					, {CPropertyKey(EPropertyType_GenerateFile, "Group"), fg_Defaulted(g_String, "")}
+					, {CPropertyKey(mp_StringCache, EPropertyType_GenerateFile, gc_ConstString_Name), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_GenerateFile, gc_ConstString_Contents), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_GenerateFile, gc_ConstString_UnicodeBOM), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, true))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_GenerateFile, gc_ConstString_BeforeImports), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_GenerateFile, gc_ConstString_UTF16),  DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_GenerateFile, gc_ConstString_Executable), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_GenerateFile, gc_ConstString_UnixLineEnds), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_GenerateFile, gc_ConstString_Symlink), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_GenerateFile, gc_ConstString_SymlinkDirectory), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_GenerateFile, gc_ConstString_NoDateCheck), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_GenerateFile, gc_ConstString_KeepGeneratedFile), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_GenerateFile, gc_ConstString_SymlinkBasePath), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_GenerateFile, gc_ConstString_Group), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
 
-					, {CPropertyKey(EPropertyType_Repository, "Location"), g_String}
-					, {CPropertyKey(EPropertyType_Repository, "ConfigFile"), fg_Defaulted(g_String, "")}
-					, {CPropertyKey(EPropertyType_Repository, "StateFile"), fg_Defaulted(g_String, "")}
-					, {CPropertyKey(EPropertyType_Repository, "URL"), fg_Defaulted(g_String, "")}
-					, {CPropertyKey(EPropertyType_Repository, "DefaultBranch"), fg_Defaulted(g_String, "")}
-					, {CPropertyKey(EPropertyType_Repository, "DefaultUpstreamBranch"), fg_Defaulted(g_String, "")}
-					, {CPropertyKey(EPropertyType_Repository, "Tags"), g_StringArrayDefaultedEmpty}
-					, {CPropertyKey(EPropertyType_Repository, "Submodule"), fg_Defaulted(g_Boolean, false)}
-					, {CPropertyKey(EPropertyType_Repository, "ExcludeFromSeen"), fg_Defaulted(g_Boolean, false)}
-					, {CPropertyKey(EPropertyType_Repository, "SubmoduleName"), fg_Defaulted(g_String, "")}
-					, {CPropertyKey(EPropertyType_Repository, "Type"), fg_Defaulted(g_String, "")}
-					, {CPropertyKey(EPropertyType_Repository, "UserName"), fg_Defaulted(g_String, "")}
-					, {CPropertyKey(EPropertyType_Repository, "UserEmail"), fg_Defaulted(g_String, "")}
-					, {CPropertyKey(EPropertyType_Repository, "ProtectedBranches"), g_StringArrayDefaultedEmpty}
-					, {CPropertyKey(EPropertyType_Repository, "ProtectedTags"), g_StringArrayDefaultedEmpty}
-					, {CPropertyKey(EPropertyType_Repository, "UpdateSubmodules"), fg_Defaulted(g_Boolean, false)}
-					, {CPropertyKey(EPropertyType_Repository, "NoPushRemotes"), g_StringArrayDefaultedEmpty}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Repository, gc_ConstString_Location), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Repository, gc_ConstString_ConfigFile), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Repository, gc_ConstString_StateFile), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Repository, gc_ConstString_URL), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Repository, gc_ConstString_DefaultBranch), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Repository, gc_ConstString_DefaultUpstreamBranch), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Repository, gc_ConstString_Tags), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Repository, gc_ConstString_Submodule), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Repository, gc_ConstString_ExcludeFromSeen), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Repository, gc_ConstString_SubmoduleName), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Repository, gc_ConstString_Type), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Repository, gc_ConstString_UserName), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Repository, gc_ConstString_UserEmail), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Repository, gc_ConstString_ProtectedBranches), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Repository, gc_ConstString_ProtectedTags), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Repository, gc_ConstString_UpdateSubmodules), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(mp_StringCache, EPropertyType_Repository, gc_ConstString_NoPushRemotes), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
 					,
 					{
-						CPropertyKey(EPropertyType_Repository, "Remotes")
-						, fg_Defaulted
+						CPropertyKey(mp_StringCache, EPropertyType_Repository, gc_ConstString_Remotes)
+						, DMibBuildSystemTypeWithPosition
 						(
-							fg_Array
+							fg_Defaulted
 							(
-								CBuildSystemSyntax::CClassType
-								{
+								fg_Array
+								(
+									CBuildSystemSyntax::CClassType
 									{
-										{"Name", CBuildSystemSyntax::CClassType::CMember{g_String}}
-										, {"URL", CBuildSystemSyntax::CClassType::CMember{g_String}}
-										, {"Write", CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_Boolean, false)}}
+										{
+											{gc_ConstString_Name, CBuildSystemSyntax::CClassType::CMember{g_String}}
+											, {gc_ConstString_URL, CBuildSystemSyntax::CClassType::CMember{g_String}}
+											, {gc_ConstString_Write, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_Boolean, false)}}
+										}
+										, {}
 									}
-									, {}
-								}
+								)
+								, _[_]
 							)
-							, _[_]
 						)
 					}
 				}
@@ -295,6 +359,6 @@ namespace NMib::NBuildSystem
 		;
 
 		for (EPropertyType PropertyType = EPropertyType_Property; PropertyType < EPropertyType_Max; PropertyType = (EPropertyType)(PropertyType + 1))
-			mp_BuiltinVariablesDefinitions[CPropertyKey(PropertyType, "FullEval")] = CTypeWithPosition{fg_Defaulted(g_Boolean, false)};
+			mp_BuiltinVariablesDefinitions[CPropertyKey(mp_StringCache, PropertyType, gc_ConstString_FullEval)] = DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false));
 	}
 }

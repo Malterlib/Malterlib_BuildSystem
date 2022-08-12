@@ -28,10 +28,10 @@ namespace NMib::NBuildSystem
 
 				auto &ChildEntityData = ChildEntity.f_Data();
 
-				if (!_BuildSystem.f_EvalCondition(ChildEntity, ChildEntityData.m_Condition, ChildEntityData.m_Debug.f_Find("TraceCondition") >= 0))
+				if (!_BuildSystem.f_EvalCondition(ChildEntity, ChildEntityData.m_Condition, ChildEntityData.m_DebugFlags & EPropertyFlag_TraceCondition))
 					continue;
 
-				CStr Name = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_CreateTemplate, "Name", CStr());
+				CStr Name = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, gc_ConstKey_CreateTemplate_Name, CStr());
 
 				if (Name.f_IsEmpty())
 					_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, "You have to specify CreateTemplate.Name");
@@ -47,7 +47,7 @@ namespace NMib::NBuildSystem
 						 	{
 								CBuildSystemError
 								{
-									(*Mapped).m_Position
+									CBuildSystemUniquePositions((*Mapped).m_Position, "Create template")
 									, "Previous version"
 								}
 							}
@@ -65,11 +65,13 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	CBuildSystem::ERetry CBuildSystem::f_Action_Create(CGenerateOptions const &_GenerateOptions)
+	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Create(CGenerateOptions const &_GenerateOptions)
 	{
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		
 		CGenerateEphemeralState GenerateState;
-		if (ERetry Retry = fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
-			return Retry;
+		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
+			co_return Retry;
 
 		f_InitEntityForEvaluation(mp_Data.m_RootEntity, GenerateState.m_GeneratorValues);
 		f_ExpandCreateTemplateEntities(mp_Data);
@@ -80,6 +82,6 @@ namespace NMib::NBuildSystem
 		{
 
 		}*/
-		return ERetry_None;
+		co_return ERetry_None;
 	}
 }

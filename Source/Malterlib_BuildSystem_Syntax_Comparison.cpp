@@ -88,15 +88,15 @@ namespace NMib::NBuildSystem
 
 	COrdering_Partial CBuildSystemSyntax::CFunctionCall::operator <=> (CFunctionCall const &_Right) const
 	{
-		return fg_TupleReferences(m_Name, m_PropertyType, m_bEmptyPropertyType, m_Params, m_bPostFunction)
-			<=> fg_TupleReferences(_Right.m_Name, _Right.m_PropertyType, _Right.m_bEmptyPropertyType, _Right.m_Params, _Right.m_bPostFunction)
+		return fg_TupleReferences(m_PropertyKey, m_bEmptyPropertyType, m_Params, m_bPostFunction)
+			<=> fg_TupleReferences(_Right.m_PropertyKey, _Right.m_bEmptyPropertyType, _Right.m_Params, _Right.m_bPostFunction)
 		;
 	}
 
 	bool CBuildSystemSyntax::CFunctionCall::operator == (CFunctionCall const &_Right) const
 	{
-		return fg_TupleReferences(m_Name, m_PropertyType, m_bEmptyPropertyType, m_Params, m_bPostFunction)
-			== fg_TupleReferences(_Right.m_Name, _Right.m_PropertyType, _Right.m_bEmptyPropertyType, _Right.m_Params, _Right.m_bPostFunction)
+		return fg_TupleReferences(m_PropertyKey, m_bEmptyPropertyType, m_Params, m_bPostFunction)
+			== fg_TupleReferences(_Right.m_PropertyKey, _Right.m_bEmptyPropertyType, _Right.m_Params, _Right.m_bPostFunction)
 		;
 	}
 
@@ -188,6 +188,16 @@ namespace NMib::NBuildSystem
 	bool CBuildSystemSyntax::CIdentifier::operator == (CIdentifier const &_Right) const
 	{
 		return fg_TupleReferences(m_Name, m_EntityType, m_PropertyType) == fg_TupleReferences(_Right.m_Name, _Right.m_EntityType, _Right.m_PropertyType);
+	}
+
+	COrdering_Partial CBuildSystemSyntax::CIdentifierReference::operator <=> (CIdentifierReference const &_Right) const
+	{
+		return m_Identifier <=> _Right.m_Identifier;
+	}
+
+	bool CBuildSystemSyntax::CIdentifierReference::operator == (CIdentifierReference const &_Right) const
+	{
+		return m_Identifier == _Right.m_Identifier;
 	}
 
 	COrdering_Partial CBuildSystemSyntax::CDefaultType::operator <=> (CDefaultType const &_Right) const

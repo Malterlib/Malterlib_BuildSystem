@@ -19,14 +19,14 @@ namespace NMib::NBuildSystem
 		;
 	}
 
-	void CBuildSystem::f_EvaluateTargetsInWorkspace
+	TCMap<CEntity *, TCSet<CStr>> CBuildSystem::f_EvaluateTargetsInWorkspace
 		(
 			CBuildSystemData &_Destination
 			, TCMap<CStr, CEntityMutablePointer> const &_Targets
 			, CEntity &_Workspace
 		) const
 	{
-		fp_EvaluateTargetsInWorkspace
+		return fp_EvaluateTargetsInWorkspace
 			(
 				_Destination
 				, _Targets
@@ -46,8 +46,9 @@ namespace NMib::NBuildSystem
 		while (bAdded)
 		{
 			bAdded = false;
-			CProperty const *pFromProp = nullptr;
-			auto ExtraGroups = f_EvaluateEntityPropertyUncachedStringArray(_Entity, EPropertyType_Workspace, "ExtraGroups", pFromProp, nullptr, TCVector<CStr>());
+			CBuildSystemPropertyInfo PropertyInfo;
+
+			auto ExtraGroups = f_EvaluateEntityPropertyUncachedStringArray(_Entity, gc_ConstKey_Workspace_ExtraGroups, PropertyInfo, nullptr, TCVector<CStr>());
 
 			for (auto &Group : ExtraGroups)
 			{
@@ -71,6 +72,8 @@ namespace NMib::NBuildSystem
 					Key.m_Name.m_Value = ParentGroup;
 					Key.m_Type = EEntityType_Group;
 					auto Child = pParentGroup->m_ChildEntitiesMap(Key, pParentGroup);
+					(*Child).f_DataWritable().m_Position = pParentGroup->f_Data().m_Position;
+
 					pParentGroup = &*Child;
 				}
 
@@ -80,7 +83,7 @@ namespace NMib::NBuildSystem
 
 				auto pGroup = fg_Const(_Destination).m_RootEntity.m_ChildEntitiesMap.f_FindEqual(EntityKey);
 				if (!pGroup)
-					fsp_ThrowError(pFromProp ? pFromProp->m_Position : _Entity.f_Data().m_Position, CStr::CFormat("Extra group '{}' not found") << Group);
+					fs_ThrowError(PropertyInfo, _Entity.f_Data().m_Position, CStr::CFormat("Extra group '{}' not found") << Group);
 
 				auto &GroupEntity = *pGroup;
 				if (Group.f_StartsWith("{"))
@@ -94,7 +97,7 @@ namespace NMib::NBuildSystem
 					Key.m_Name.m_Value = Group;
 
 					if (pParentGroup->m_ChildEntitiesMap.f_FindEqual(Key))
-						fsp_ThrowError(pFromProp ? pFromProp->m_Position : _Entity.f_Data().m_Position, CStr::CFormat("Duplicate extra group '{}'") << Group);
+						fs_ThrowError(PropertyInfo, _Entity.f_Data().m_Position, CStr::CFormat("Duplicate extra group '{}'") << Group);
 
 					pParentGroup->m_ChildEntitiesMap(Key, GroupEntity, pParentGroup, EEntityCopyFlag_CopyChildren);
 				}
@@ -125,7 +128,7 @@ namespace NMib::NBuildSystem
 							break;
 						case EEntityType_Group:
 							{
-								if (!f_EvaluateEntityPropertyBool(ChildEntity, EPropertyType_Group, "HideTargets", false))
+								if (!f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Group_HideTargets, false))
 									fFindTargetsRecursive(ChildEntity);
 							}
 							break;
@@ -156,13 +159,13 @@ namespace NMib::NBuildSystem
 					fFindTargets(ChildEntity);
 				else if (Key.m_Type == EEntityType_Group)
 				{
-					if (!f_EvaluateEntityPropertyBool(ChildEntity, EPropertyType_Group, "HideTargets", false))
+					if (!f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Group_HideTargets, false))
 						fFindTargets(ChildEntity);
 				}
 				else if (Key.m_Type == EEntityType_Workspace)
 				{
 					auto &ChildEntityData = ChildEntity.f_Data();
-					if (!f_EvalCondition(ChildEntity, ChildEntityData.m_Condition, ChildEntityData.m_Debug.f_Find("TraceCondition") >= 0))
+					if (!f_EvalCondition(ChildEntity, ChildEntityData.m_Condition, ChildEntityData.m_DebugFlags & EPropertyFlag_TraceCondition))
 					{
 						_Destination.m_RootEntity.m_ChildEntitiesMap.f_Remove(&ChildEntity);
 						continue;
@@ -170,7 +173,7 @@ namespace NMib::NBuildSystem
 
 					if (!mp_GenerateWorkspace.f_IsEmpty())
 					{
-						CStr Name = f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Workspace, "Name");
+						CStr Name = f_EvaluateEntityPropertyString(ChildEntity, gc_ConstKey_Workspace_Name);
 						if (mp_GenerateWorkspace != Name)
 						{
 							_Destination.m_RootEntity.m_ChildEntitiesMap.f_Remove(&ChildEntity);
@@ -196,7 +199,7 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	void CBuildSystem::fp_EvaluateTargetsInWorkspace
+	TCMap<CEntity *, TCSet<CStr>> CBuildSystem::fp_EvaluateTargetsInWorkspace
 		(
 			CBuildSystemData &_Destination
 			, TCMap<CStr, CEntityMutablePointer> const &_Targets
@@ -205,9 +208,11 @@ namespace NMib::NBuildSystem
 	{
 		TCLinkedList<CEntity *> ToEval;
 
+		TCMap<CEntity *, TCSet<CStr>> AlreadyCreatedGroups;
+
 		TCFunction<void (CEntity &_Entity)> fFindTargetsRecursive;
 		auto fFindTargets
-			= [this, &fFindTargetsRecursive, &_Targets, &ToEval, &_Destination](CEntity &_Entity)
+			= [&](CEntity &_Entity)
 			{
 				for (auto iEntity = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iEntity;)
 				{
@@ -215,7 +220,7 @@ namespace NMib::NBuildSystem
 					auto &ChildEntityData = ChildEntity.f_Data();
 					++iEntity;
 
-					if (!f_EvalCondition(ChildEntity, ChildEntityData.m_Condition, ChildEntityData.m_Debug.f_Find("TraceCondition") >= 0))
+					if (!f_EvalCondition(ChildEntity, ChildEntityData.m_Condition, ChildEntityData.m_DebugFlags & EPropertyFlag_TraceCondition))
 					{
 						_Entity.m_ChildEntitiesMap.f_Remove(&ChildEntity);
 						continue;
@@ -231,7 +236,7 @@ namespace NMib::NBuildSystem
 						break;
 					case EEntityType_Target:
 						{
-							fp_EvaluateTarget(_Destination, _Targets, ToEval, ChildEntity);
+							fp_EvaluateTarget(_Destination, _Targets, ToEval, ChildEntity, AlreadyCreatedGroups[&ChildEntity]);
 						}
 						break;
 					default:
@@ -250,5 +255,7 @@ namespace NMib::NBuildSystem
 			fpr_EvaluateData(**iChild);
 			++iChild;
 		}
+
+		return AlreadyCreatedGroups;
 	}
 }

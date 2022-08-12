@@ -6,6 +6,7 @@
 #include <Mib/Process/ProcessLaunch>
 #include <Mib/Process/ProcessLaunchActor>
 #include <Mib/Encoding/EJSON>
+#include <Mib/Concurrency/AsyncDestroy>
 
 CStr fg_ReconcileHelp(EAnsiEncodingFlag _AnsiFlags)
 {
@@ -284,7 +285,7 @@ namespace NMib::NBuildSystem
 			if (!CFile::fs_FileExists(RepositoryStateFile))
 				return {};
 
-			CEJSON StateFile = CEJSON::fs_FromString(CFile::fs_ReadStringFromFile(RepositoryStateFile, true), RepositoryStateFile);
+			CEJSONSorted StateFile = CEJSONSorted::fs_FromString(CFile::fs_ReadStringFromFile(RepositoryStateFile, true), RepositoryStateFile);
 
 			TCSet<CStr> SeenRepositories;
 
@@ -327,9 +328,10 @@ namespace NMib::NBuildSystem
 			}
 		}
 
-		bool fg_HandleRepository
+		TCFuture<bool> DMibWorkaroundUBSanSectionErrors fg_HandleRepository
 			(
-			 	CStr const &_ReposDirectory
+				CGitLaunches &_Launches
+			 	, CStr const &_ReposDirectory
 			 	, CRepository const &_Repo
 			 	, CStateHandler &o_StateHandler
 			 	, CBuildSystem const &_BuildSystem
@@ -338,85 +340,72 @@ namespace NMib::NBuildSystem
 			 	, mint _MaxRepoWidth
 			)
 		{
+			co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+
 			CColors Colors(o_StateHandler.f_AnsiFlags());
 
 			CStr Location = _ReposDirectory + "/" + _Repo.f_GetName();
 			CStr BaseDir = _BuildSystem.f_GetBaseDir();
 			CStr RepositoryIdentifier = _Repo.f_GetIdentifierName(BaseDir, BaseDir);
 
-			bool bIsRoot = _Repo.m_Type == "Root";
+			bool bIsRoot = _Repo.m_Type == gc_ConstString_Root.m_String;
 
 			CDisableExceptionTraceScope DisableTrace;
 
 			bool bChanged = false;
 
-			auto fLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir, TCMap<CStr, CStr> const &_Environment = {})
+			auto fLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir, TCMap<CStr, CStr> const &_Environment = {}) -> TCFuture<CStr>
 				{
-					CProcessLaunchParams Params;
+					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+
 					TCVector<CStr> CommandLineParams{"-C", _WorkingDir};
 					CommandLineParams.f_Insert(_Params);
 
-					Params.m_Environment += _Environment;
-					Params.m_bShowLaunched = false;
-					return CProcessLaunch::fs_LaunchTool("git", CommandLineParams, Params);
+					auto Return = co_await _Launches.f_Launch(_WorkingDir, _Params, _Environment, CProcessLaunchActor::ESimpleLaunchFlag_GenerateExceptionOnNonZeroExitCode);
+					co_return Return.f_GetStdOut();
 				}
 			;
-			auto fLaunchGitQuestion = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir, bool _bErrorOnStdErr)
+			auto fLaunchGitQuestion = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir, bool _bErrorOnStdErr) -> TCFuture<bool>
 				{
-					CProcessLaunchParams Params;
-					TCVector<CStr> CommandLineParams{"-C", _WorkingDir};
-					CommandLineParams.f_Insert(_Params);
+					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
 
-					Params.m_bShowLaunched = false;
-					uint32 ExitCode = 1;
-					CStr StdErr;
-					CStr StdOut;
-					CProcessLaunch::fs_LaunchBlock("git", CommandLineParams, StdOut, StdErr, ExitCode, Params);
+					auto Return = co_await _Launches.f_Launch(_WorkingDir, _Params);
+
+					CStr StdErr = Return.f_GetErrorOut().f_Trim();
 					if (_bErrorOnStdErr && !StdErr.f_IsEmpty())
-						DMibError("Failed to ask git question {vs}: {}{}"_f << _Params << StdErr << StdOut);
-					return ExitCode == 0;
+						DMibError("Failed to ask git question {vs}: {}"_f << _Params << Return.f_GetCombinedOut());
+
+					co_return Return.m_ExitCode == 0;
 				}
 			;
-			auto fLaunchGitNonEmpty = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir)
+			auto fLaunchGitNonEmpty = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir) -> TCFuture<bool>
 				{
-					CProcessLaunchParams Params;
+					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
 
-					TCVector<CStr> CommandLineParams{"-C", _WorkingDir};
-					CommandLineParams.f_Insert(_Params);
+					auto Return = co_await _Launches.f_Launch(_WorkingDir, _Params);
 
-					Params.m_bShowLaunched = false;
-					uint32 ExitCode = 1;
-					CStr StdErr;
-					CStr StdOut;
-					CProcessLaunch::fs_LaunchBlock("git", CommandLineParams, StdOut, StdErr, ExitCode, Params);
-					if (ExitCode)
-						return false;
+					if (Return.m_ExitCode)
+						co_return false;
 
-					return !StdOut.f_IsEmpty();
+					co_return !Return.f_GetStdOut().f_IsEmpty();
 				}
 			;
-			auto fTryLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir) -> CStr
+			auto fTryLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir) -> TCFuture<CStr>
 				{
-					CProcessLaunchParams Params;
-					TCVector<CStr> CommandLineParams{"-C", _WorkingDir};
-					CommandLineParams.f_Insert(_Params);
+					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
 
-					Params.m_bShowLaunched = false;
-					uint32 ExitCode = 1;
-					CStr StdOut;
-					CStr StdErr;
-					CProcessLaunch::fs_LaunchBlock("git", CommandLineParams, StdOut, StdErr, ExitCode, Params);
+					auto Return = co_await _Launches.f_Launch(_WorkingDir, _Params);
 
-					if (ExitCode == 0)
-						return {};
 
-					if (!StdErr.f_IsEmpty())
-						return StdErr;
+					if (Return.m_ExitCode == 0)
+						co_return {};
 
-					if (!StdOut.f_IsEmpty())
-						return StdOut;
+					auto Output = Return.f_GetCombinedOut();
 
-					return "Unknown error";
+					if (!Output.f_IsEmpty())
+						co_return Output;
+
+					co_return "Unknown error";
 				}
 			;
 
@@ -472,21 +461,25 @@ namespace NMib::NBuildSystem
 				{
 					try
 					{
-						fLaunchGit({"clone", "-n", _Repo.m_URL, Location}, "");
+						co_await fLaunchGit({"clone", "-n", _Repo.m_URL, Location}, "");
 
 						TCVector<CStr> Params = {"checkout", "-B", _Repo.m_DefaultBranch};
 
 						if (!ConfigHash.f_IsEmpty())
 							Params.f_Insert(ConfigHash);
 
-						fLaunchGit(Params, Location);
+						co_await fLaunchGit(Params, Location);
 
 						bChanged = true;
 
-						fLaunchGit({"branch", "-u", "origin/{}"_f << _Repo.m_DefaultBranch}, Location);
+						co_await fLaunchGit({"branch", "-u", "origin/{}"_f << _Repo.m_DefaultBranch}, Location);
 
 						if (_Repo.m_bUpdateSubmodules)
-							fLaunchGit({"submodule", "update", "--init"}, Location);
+							co_await fLaunchGit({"submodule", "update", "--init"}, Location);
+					}
+					catch (CExceptionCoroutineWrapper const &_Exception)
+					{
+						CBuildSystem::fs_ThrowError(_Repo.m_Position, fg_Format("Failed to clone repository: {}", fg_ExceptionString(_Exception.f_GetSpecific().m_pException)));
 					}
 					catch (CException const &_Exception)
 					{
@@ -499,9 +492,13 @@ namespace NMib::NBuildSystem
 					try
 					{
 						DLock(*g_SubmoduleAddLock); // Currently git has race issues with submodule adds
-						fLaunchGit({"submodule", "add", "-b", _Repo.m_DefaultBranch, "--name", _Repo.m_SubmoduleName, _Repo.m_URL, RelativeLocation}, GitRoot);
-						fLaunchGit({"config", "-f", ".gitmodules", fg_Format("submodule.{}.fetchRecurseSubmodules", _Repo.m_SubmoduleName), "on-demand"}, GitRoot);
+						co_await fLaunchGit({"submodule", "add", "-b", _Repo.m_DefaultBranch, "--name", _Repo.m_SubmoduleName, _Repo.m_URL, RelativeLocation}, GitRoot);
+						co_await fLaunchGit({"config", "-f", ".gitmodules", fg_Format("submodule.{}.fetchRecurseSubmodules", _Repo.m_SubmoduleName), "on-demand"}, GitRoot);
 						bChanged = true;
+					}
+					catch (CExceptionCoroutineWrapper const &_Exception)
+					{
+						CBuildSystem::fs_ThrowError(_Repo.m_Position, fg_Format("Failed to add submodule repository: {}", fg_ExceptionString(_Exception.f_GetSpecific().m_pException)));
 					}
 					catch (CException const &_Exception)
 					{
@@ -516,7 +513,7 @@ namespace NMib::NBuildSystem
 					o_StateHandler.f_AddGitIgnore(Location, _BuildSystem);
 			}
 
-			bool bForceReset = fg_GetSys()->f_GetEnvironmentVariable("MalterlibRepositoryHardReset", "") == "true";
+			bool bForceReset = fg_GetSys()->f_GetEnvironmentVariable("MalterlibRepositoryHardReset", "") == gc_ConstString_true.m_String;
 
 			auto GitConfig = fg_GetGitConfig(Location, _Repo.m_Position);
 			auto &CurrentRemotes = GitConfig.m_Remotes;
@@ -526,13 +523,13 @@ namespace NMib::NBuildSystem
 			if (_Repo.m_UserName && GitConfig.m_UserName != _Repo.m_UserName)
 			{
 				fOutputInfo(EOutputType_Normal, "Changing user name '{}' -> '{}'"_f << GitConfig.m_UserName << _Repo.m_UserName);
-				fLaunchGit({"config", "--local", "user.name", _Repo.m_UserName}, Location);
+				co_await fLaunchGit({"config", "--local", "user.name", _Repo.m_UserName}, Location);
 			}
 
 			if (_Repo.m_UserEmail && GitConfig.m_UserEmail != _Repo.m_UserEmail)
 			{
 				fOutputInfo(EOutputType_Normal, "Changing user email '{}' -> '{}'"_f << GitConfig.m_UserEmail << _Repo.m_UserEmail);
-				fLaunchGit({"config", "--local", "user.email", _Repo.m_UserEmail}, Location);
+				co_await fLaunchGit({"config", "--local", "user.email", _Repo.m_UserEmail}, Location);
 			}
 
 			if (!WantedRemotes.f_IsEmpty())
@@ -547,16 +544,16 @@ namespace NMib::NBuildSystem
 						if (*pCurrentRemote == Remote.m_URL)
 							continue;
 						fOutputInfo(EOutputType_Normal, "Changing remote URL '{}={}'"_f << RemoteName << Remote.m_URL);
-						fLaunchGit({"remote", "set-url", RemoteName, Remote.m_URL}, Location);
+						co_await fLaunchGit({"remote", "set-url", RemoteName, Remote.m_URL}, Location);
 						continue;
 					}
 					fOutputInfo(EOutputType_Normal, "Adding remote '{}={}'"_f << RemoteName << Remote.m_URL);
-					fLaunchGit({"remote", "add", RemoteName, Remote.m_URL}, Location);
+					co_await fLaunchGit({"remote", "add", RemoteName, Remote.m_URL}, Location);
 
 					if (_BuildSystem.f_GetGenerateOptions().m_bForceUpdateRemotes)
-						fLaunchGit({"fetch", "--tags", "--force", RemoteName}, Location);
+						co_await fLaunchGit({"fetch", "--tags", "--force", RemoteName}, Location);
 					else
-						fLaunchGit({"fetch", "--tags", RemoteName}, Location);
+						co_await fLaunchGit({"fetch", "--tags", RemoteName}, Location);
 				}
 				if (bForceReset)
 				{
@@ -566,13 +563,13 @@ namespace NMib::NBuildSystem
 						if (WantedRemotes.f_FindEqual(RemoteName))
 							continue;
 						fOutputInfo(EOutputType_Normal, "Removing remote '{}'"_f << RemoteName);
-						fLaunchGit({"remote", "remove", RemoteName}, Location);
+						co_await fLaunchGit({"remote", "remove", RemoteName}, Location);
 					}
 				}
 			}
 
 			if (bIsRoot)
-				return false;
+				co_return false;
 
 			CStr CurrentHash = o_StateHandler.f_GetHash(_Repo.m_StateFile, Location, _Repo.m_Identity);
 			CStr HeadHash = fg_GetGitHeadHash(Location, _Repo.m_Position);
@@ -593,38 +590,53 @@ namespace NMib::NBuildSystem
 				{
 					if (HeadHash != ConfigHash)
 					{
-						if (!fLaunchGitQuestion({"cat-file", "-e", "{}^{{commit}"_f << ConfigHash}, Location, false))
+						if (!(co_await fLaunchGitQuestion({"cat-file", "-e", "{}^{{commit}"_f << ConfigHash}, Location, false)))
 						{
 							TCVector<CStr> FetchParams = {"fetch", "--all", "--prune", "--tags"};
 							if (_BuildSystem.f_GetGenerateOptions().m_bForceUpdateRemotes)
 								FetchParams.f_Insert("--force");
 
-							if (bForceReset && fg_GetGitVersion() >= CGitVersion{2, 17})
+							auto GitVersion = co_await fg_GetGitVersion(_Launches);
+							if (bForceReset && GitVersion >= CGitVersion{2, 17})
 								FetchParams.f_Insert("--prune-tags");
 
+							CExceptionPointer pException;
+							CStr ExceptionString;
 							try
 							{
-								fLaunchGit(FetchParams, Location, fg_FetchEnvironment(_BuildSystem));
+								co_await fLaunchGit(FetchParams, Location, fg_FetchEnvironment(_BuildSystem));
+							}
+							catch (CExceptionCoroutineWrapper const &_Exception)
+							{
+								ExceptionString = fg_ExceptionString(_Exception.f_GetSpecific().m_pException);
+								pException = _Exception.f_GetSpecific().m_pException;
 							}
 							catch (CException const &_Exception)
 							{
-								if (!fLaunchGitQuestion({"cat-file", "-e", "{}^{{commit}"_f << ConfigHash}, Location, false))
-									throw;
-								fOutputInfo(EOutputType_Error, "Not all remotes were fetched: {}"_f << _Exception);
+								ExceptionString = _Exception.f_GetErrorStr();
+								pException = _Exception.f_ExceptionPointer();
+							}
+
+							if (pException)
+							{
+								if (!co_await fLaunchGitQuestion({"cat-file", "-e", "{}^{{commit}"_f << ConfigHash}, Location, false))
+									std::rethrow_exception(pException);
+
+								fOutputInfo(EOutputType_Error, "Not all remotes were fetched: {}"_f << ExceptionString);
 							}
 						}
 					}
 
 					if (bForceReset)
 					{
-						if (HeadHash != ConfigHash || fLaunchGitNonEmpty({"status", "--porcelain"}, Location))
+						if (HeadHash != ConfigHash || co_await fLaunchGitNonEmpty({"status", "--porcelain"}, Location))
 						{
 							fOutputInfo(EOutputType_Warning, "Force Resetting to '{}'"_f << ConfigHash);
-							fLaunchGit({"checkout", "-f", "-B", _Repo.m_DefaultBranch, ConfigHash}, Location);
-							fLaunchGit({"branch", "-u", "origin/{}"_f << _Repo.m_DefaultBranch}, Location);
-							fLaunchGit({"clean", "-fd"}, Location);
+							co_await fLaunchGit({"checkout", "-f", "-B", _Repo.m_DefaultBranch, ConfigHash}, Location);
+							co_await fLaunchGit({"branch", "-u", "origin/{}"_f << _Repo.m_DefaultBranch}, Location);
+							co_await fLaunchGit({"clean", "-fd"}, Location);
 							if (_Repo.m_bUpdateSubmodules)
-								fLaunchGit({"submodule", "update", "--init"}, Location);
+								co_await fLaunchGit({"submodule", "update", "--init"}, Location);
 
 							// git remote set-head origin master
 							bChanged = true;
@@ -636,22 +648,22 @@ namespace NMib::NBuildSystem
 
 						do
 						{
-							if (fLaunchGitQuestion({"merge-base", "--is-ancestor", HeadHash, ConfigHash}, Location, true))
+							if (co_await fLaunchGitQuestion({"merge-base", "--is-ancestor", HeadHash, ConfigHash}, Location, true))
 							{
-								if (!fLaunchGit({"status", "--porcelain"}, Location).f_IsEmpty())
+								if (!(co_await fLaunchGit({"status", "--porcelain"}, Location)).f_IsEmpty())
 									RecommendedAction = EHandleRepositoryAction_Rebase;
 								else
 									RecommendedAction = EHandleRepositoryAction_Reset;
 								break;
 							}
 
-							if (fLaunchGitQuestion({"merge-base", "--is-ancestor", ConfigHash, HeadHash}, Location, true))
+							if (co_await fLaunchGitQuestion({"merge-base", "--is-ancestor", ConfigHash, HeadHash}, Location, true))
 							{
 								RecommendedAction = EHandleRepositoryAction_None;
 								break;
 							}
 
-							if (!fLaunchGit({"status", "--porcelain"}, Location).f_IsEmpty())
+							if (!(co_await fLaunchGit({"status", "--porcelain"}, Location)).f_IsEmpty())
 							{
 								RecommendedAction = EHandleRepositoryAction_ManualResolve;
 								break;
@@ -659,7 +671,7 @@ namespace NMib::NBuildSystem
 
 							bool bIsOnRemote = false;
 
-							if (fLaunchGitNonEmpty({"branch", "-r", "--contains", HeadHash}, Location) || fLaunchGitNonEmpty({"tag", "--contains", HeadHash}, Location))
+							if (co_await fLaunchGitNonEmpty({"branch", "-r", "--contains", HeadHash}, Location) || co_await fLaunchGitNonEmpty({"tag", "--contains", HeadHash}, Location))
 								bIsOnRemote = true;
 
 							if (bIsOnRemote)
@@ -680,7 +692,7 @@ namespace NMib::NBuildSystem
 
 							CStr RepoIdentifier = _Repo.f_GetIdentifierName(ConfigDir, BaseDir);
 
-							CStr History = fLaunchGit({"log", "-p", "origin/{}"_f << Repo.m_DefaultBranch, "--", _Repo.m_ConfigFile}, Repo.m_Location);
+							CStr History = co_await fLaunchGit({"log", "-p", "origin/{}"_f << Repo.m_DefaultBranch, "--", _Repo.m_ConfigFile}, Repo.m_Location);
 							CStr FilteredHistory;
 							CStr LookFor = "+{} "_f << RepoIdentifier;
 
@@ -724,18 +736,18 @@ namespace NMib::NBuildSystem
 
 						if (Action == EHandleRepositoryAction_Reset)
 						{
-							if (fLaunchGit({"rev-parse", "--abbrev-ref", "HEAD"}, Location).f_Trim() == "HEAD")
+							if ((co_await fLaunchGit({"rev-parse", "--abbrev-ref", "HEAD"}, Location)).f_Trim() == "HEAD")
 							{
 								fOutputInfo(EOutputType_Warning, "Resetting to {} and recovering from detached head"_f << ConfigHash);
-								fLaunchGit({"checkout", "-f", "-B", _Repo.m_DefaultBranch, ConfigHash}, Location); // Recover from detached head
+								co_await fLaunchGit({"checkout", "-f", "-B", _Repo.m_DefaultBranch, ConfigHash}, Location); // Recover from detached head
 							}
 							else
 							{
 								fOutputInfo(EOutputType_Warning, "Resetting to {}"_f << ConfigHash);
-								fLaunchGit({"reset", "--hard", ConfigHash}, Location);
+								co_await fLaunchGit({"reset", "--hard", ConfigHash}, Location);
 							}
 							if (_Repo.m_bUpdateSubmodules)
-								fLaunchGit({"submodule", "update", "--init"}, Location);
+								co_await fLaunchGit({"submodule", "update", "--init"}, Location);
 						}
 						else if (Action == EHandleRepositoryAction_Rebase)
 						{
@@ -745,8 +757,10 @@ namespace NMib::NBuildSystem
 							for (auto &pRepository : _AllRepositories)
 								AllConfigFiles[pRepository->m_ConfigFile];
 
-							auto fResolveConflicts = [&](CStr const &_ConflictingFiles) -> bool
+							auto fResolveConflicts = [&](CStr const &_ConflictingFiles) -> TCFuture<bool>
 								{
+									co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+
 									bool bAllResolved = true;
 									for (auto &File : _ConflictingFiles.f_SplitLine<true>())
 									{
@@ -755,41 +769,41 @@ namespace NMib::NBuildSystem
 										if (AllConfigFiles.f_FindEqual(FullPath))
 										{
 											fOutputInfo(EOutputType_Warning, "Ignoring conflict in config file '{}'"_f << File);
-											fLaunchGit({"checkout", "--ours", "--", File}, Location);
-											fLaunchGit({"add", File}, Location);
+											co_await fLaunchGit({"checkout", "--ours", "--", File}, Location);
+											co_await fLaunchGit({"add", File}, Location);
 										}
 										else
 											bAllResolved = false;
 									}
-									return bAllResolved;
+									co_return bAllResolved;
 								}
 							;
 
 							bool bAllResolved = true;
-							if (auto RebaseError = fTryLaunchGit({"rebase", "--autostash", ConfigHash}, Location))
+							if (auto RebaseError = co_await fTryLaunchGit({"rebase", "--autostash", ConfigHash}, Location))
 							{
 								while (bAllResolved)
 								{
-									CStr ConflictingFiles = fLaunchGit({"diff", "--name-only", "--diff-filter=U"}, Location);
+									CStr ConflictingFiles = co_await fLaunchGit({"diff", "--name-only", "--diff-filter=U"}, Location);
 									if (ConflictingFiles.f_IsEmpty())
 									{
 										bAllResolved = false;
 										break;
 									}
 
-									if (!fResolveConflicts(ConflictingFiles))
+									if (!(co_await fResolveConflicts(ConflictingFiles)))
 										bAllResolved = false;
 
 									if (bAllResolved)
 									{
-										if (fLaunchGit({"status", "--porcelain"}, Location).f_IsEmpty())
+										if ((co_await fLaunchGit({"status", "--porcelain"}, Location)).f_IsEmpty())
 										{
-											if (!fTryLaunchGit({"rebase", "--skip"}, Location))
+											if (!(co_await fTryLaunchGit({"rebase", "--skip"}, Location)))
 												break;
 										}
 										else
 										{
-											if (!fTryLaunchGit({"rebase", "--continue"}, Location))
+											if (!(co_await fTryLaunchGit({"rebase", "--continue"}, Location)))
 												break;
 										}
 									}
@@ -804,11 +818,11 @@ namespace NMib::NBuildSystem
 
 							if (bAllResolved)
 							{
-								CStr ConflictingFiles = fLaunchGit({"diff", "--name-only", "--diff-filter=U"}, Location);
+								CStr ConflictingFiles = co_await fLaunchGit({"diff", "--name-only", "--diff-filter=U"}, Location);
 								if (!ConflictingFiles.f_IsEmpty())
-									fResolveConflicts(ConflictingFiles);
+									co_await fResolveConflicts(ConflictingFiles);
 								if (_Repo.m_bUpdateSubmodules)
-									fLaunchGit({"submodule", "update", "--init"}, Location);
+									co_await fLaunchGit({"submodule", "update", "--init"}, Location);
 							}
 						}
 						else if (Action == EHandleRepositoryAction_ManualResolve)
@@ -858,10 +872,21 @@ namespace NMib::NBuildSystem
 						bChanged = true;
 					}
 				}
+				catch (CExceptionCoroutineWrapper const &_Exception)
+				{
+					auto ExceptionString = fg_ExceptionString(_Exception.f_GetSpecific().m_pException);
+					auto pException = _Exception.f_GetSpecific().m_pException;
+					if (bPassException)
+						co_return pException;
+
+					fOutputInfo(EOutputType_Error, "Reconcile error: {}"_f << ExceptionString.f_Trim());
+					CBuildSystem::fs_ThrowError(_Repo.m_Position, "Failed to reconcile hash '{}': {}"_f << ConfigHash << ExceptionString.f_Trim());
+				}
 				catch (CException const &_Exception)
 				{
 					if (bPassException)
-						throw;
+						co_return _Exception.f_ExceptionPointer();
+
 					fOutputInfo(EOutputType_Error, "Reconcile error: {}"_f << _Exception.f_GetErrorStr().f_Trim());
 					CBuildSystem::fs_ThrowError(_Repo.m_Position, "Failed to reconcile hash '{}': {}"_f << ConfigHash << _Exception.f_GetErrorStr().f_Trim());
 				}
@@ -872,17 +897,19 @@ namespace NMib::NBuildSystem
 			o_StateHandler.f_SetHash(_Repo.m_ConfigFile, Location, GitHeadHash, _Repo.m_Identity);
 			o_StateHandler.f_AddGitIgnore(_Repo.m_StateFile, _BuildSystem);
 
-			return bChanged;
+			co_return bChanged;
 		}
 
 		CRepoEditor fg_GetRepoEditor(CBuildSystem &_BuildSystem, CBuildSystemData &_Data)
 		{
-			CStr EditorString = _BuildSystem.f_EvaluateEntityPropertyString(_Data.m_RootEntity, EPropertyType_Property, "MalterlibRepositoryEditor");
+			CStr EditorString = _BuildSystem.f_EvaluateEntityPropertyString(_Data.m_RootEntity, gc_ConstKey_MalterlibRepositoryEditor);
 
 			CRepoEditor Editor;
-			Editor.m_bOpenSequential = _BuildSystem.f_EvaluateEntityPropertyBool(_Data.m_RootEntity, EPropertyType_Property, "MalterlibRepositoryEditorSequential", false);
-			Editor.m_Sleep = _BuildSystem.f_EvaluateEntityPropertyFloat(_Data.m_RootEntity, EPropertyType_Property, "MalterlibRepositoryEditorSleep", fp64(0.0));
-			Editor.m_WorkingDir = _BuildSystem.f_EvaluateEntityPropertyString(_Data.m_RootEntity, EPropertyType_Property, "MalterlibRepositoryEditorWorkingDir", CStr());
+			Editor.m_bOpenSequential = _BuildSystem.f_EvaluateEntityPropertyBool(_Data.m_RootEntity, gc_ConstKey_MalterlibRepositoryEditorSequential, false);
+
+			Editor.m_Sleep = _BuildSystem.f_EvaluateEntityPropertyFloat(_Data.m_RootEntity, gc_ConstKey_MalterlibRepositoryEditorSleep, fp64(0.0));
+
+			Editor.m_WorkingDir = _BuildSystem.f_EvaluateEntityPropertyString(_Data.m_RootEntity, gc_ConstKey_MalterlibRepositoryEditorWorkingDir, CStr());
 			Editor.m_Application = fg_GetStrSepEscaped(EditorString, " ");
 
 			while (!EditorString.f_IsEmpty())
@@ -906,38 +933,47 @@ namespace NMib::NBuildSystem
 
 				auto &ChildEntityData = ChildEntity.f_Data();
 
+				bool bFatalError = false;
+
 				try
 				{
-					if (!_BuildSystem.f_EvalCondition(ChildEntity, ChildEntityData.m_Condition, ChildEntityData.m_Debug.f_Find("TraceCondition") >= 0))
+					if (!_BuildSystem.f_EvalCondition(ChildEntity, ChildEntityData.m_Condition, ChildEntityData.m_DebugFlags & EPropertyFlag_TraceCondition))
 						continue;
 
-					CStr Location = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "Location", CStr());
+					CBuildSystemPropertyInfo PropertyInfoLocation;
+					CStr Location = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, gc_ConstKey_Repository_Location, PropertyInfoLocation, CStr());
 
 					if (Location.f_IsEmpty())
-						_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, "You have to specify Repository.Location");
+						_BuildSystem.fs_ThrowError(PropertyInfoLocation, ChildEntityData.m_Position, "You have to specify Repository.Location");
 
 					CStr ReposDirectory = CFile::fs_GetPath(Location);
 
-					auto ConfigFile = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "ConfigFile", CStr());
-					auto StateFile = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "StateFile", CStr());
-					auto URL = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "URL", CStr());
-					auto DefaultBranch = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "DefaultBranch", CStr());
-					auto DefaultUpstreamBranch = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "DefaultUpstreamBranch", CStr());
-					auto Tags = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, EPropertyType_Repository, "Tags", TCVector<CStr>());
-					auto bSubmodule = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, EPropertyType_Repository, "Submodule", false);
-					auto SubmoduleName = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "SubmoduleName", CStr());
-					auto Type = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "Type", CStr());
-					auto UserName = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "UserName", CStr());
-					auto UserEmail = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Repository, "UserEmail", CStr());
-					auto ProtectedBranches = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, EPropertyType_Repository, "ProtectedBranches", TCVector<CStr>());
-					auto ProtectedTags = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, EPropertyType_Repository, "ProtectedTags", TCVector<CStr>());
-					auto bUpdateSubmodules = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, EPropertyType_Repository, "UpdateSubmodules", false);
-					auto bExcludeFromSeen = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, EPropertyType_Repository, "ExcludeFromSeen", false);
+					CBuildSystemPropertyInfo PropertyInfoConfigFile;
 
-					TCVector<CStr> NoPushRemotes = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, EPropertyType_Repository, "NoPushRemotes", TCVector<CStr>());
+					auto ConfigFile = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, gc_ConstKey_Repository_ConfigFile, PropertyInfoConfigFile, CStr());
+					CBuildSystemPropertyInfo PropertyInfoStateFile;
+					auto StateFile = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, gc_ConstKey_Repository_StateFile, PropertyInfoStateFile, CStr());
+					CBuildSystemPropertyInfo PropertyInfoURL;
+					auto URL = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, gc_ConstKey_Repository_URL, PropertyInfoURL, CStr());
+					CBuildSystemPropertyInfo PropertyInfoDefaultBranch;
+					auto DefaultBranch = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, gc_ConstKey_Repository_DefaultBranch, PropertyInfoDefaultBranch, CStr());
+					auto DefaultUpstreamBranch = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, gc_ConstKey_Repository_DefaultUpstreamBranch, CStr());
+					auto Tags = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, gc_ConstKey_Repository_Tags, TCVector<CStr>());
+					auto bSubmodule = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_Submodule, false);
+					CBuildSystemPropertyInfo PropertyInfoSubmoduleName;
+					auto SubmoduleName = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, gc_ConstKey_Repository_SubmoduleName, PropertyInfoSubmoduleName, CStr());
+					auto Type = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, gc_ConstKey_Repository_Type, CStr());
+					auto UserName = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, gc_ConstKey_Repository_UserName, CStr());
+					auto UserEmail = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, gc_ConstKey_Repository_UserEmail, CStr());
+					auto ProtectedBranches = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, gc_ConstKey_Repository_ProtectedBranches, TCVector<CStr>());
+					auto ProtectedTags = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, gc_ConstKey_Repository_ProtectedTags, TCVector<CStr>());
+					auto bUpdateSubmodules = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_UpdateSubmodules, false);
+					auto bExcludeFromSeen = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_ExcludeFromSeen, false);
+					TCVector<CStr> NoPushRemotes = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, gc_ConstKey_Repository_NoPushRemotes, TCVector<CStr>());
 
-					auto Remotes = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, EPropertyType_Repository, "Remotes");
+					CBuildSystemPropertyInfo PropertyInfoRemotes;
 
+					auto Remotes = _BuildSystem.f_EvaluateEntityProperty(ChildEntity, gc_ConstKey_Repository_Remotes, PropertyInfoRemotes);
 
 					auto &ReposLocation = Repos[ReposDirectory];
 
@@ -946,15 +982,21 @@ namespace NMib::NBuildSystem
 					auto RepoMap = ReposLocation.m_Repositories(RepoName, RepoName);
 
 					if (!RepoMap.f_WasCreated())
-						_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, fg_Format("Duplicate repository location: {}", Location));
+						_BuildSystem.fs_ThrowError(PropertyInfoLocation, ChildEntityData.m_Position, fg_Format("Duplicate repository location: {}", Location));
 
 					if (!RepoRoots(Location, ChildEntityData.m_Position).f_WasCreated())
 					{
 						CBuildSystemError Error;
 						Error.m_Error = "Other specification";
-						Error.m_Position = RepoRoots[Location];
+						Error.m_Positions = CBuildSystemUniquePositions(RepoRoots[Location], "Repository root");
 
-						_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, "Repository location already specified specified previously", fg_CreateVector(Error));
+						CBuildSystemUniquePositions Positions;
+						Positions.f_AddPosition(ChildEntityData.m_Position, gc_ConstString_Entity);
+
+						if (PropertyInfoLocation.m_pPositions)
+							Positions.f_AddPositions(*PropertyInfoLocation.m_pPositions);
+
+						_BuildSystem.fs_ThrowError(Positions, "Repository location already specified specified previously", fg_CreateVector(Error));
 					}
 
 					auto &Repo = *RepoMap;
@@ -976,18 +1018,18 @@ namespace NMib::NBuildSystem
 					Repo.m_bUpdateSubmodules = bUpdateSubmodules;
 					Repo.m_bExcludeFromSeen = bExcludeFromSeen;
 
-					for (auto &Remote : Remotes.f_Array())
+					for (auto &Remote : Remotes.f_Get().f_Array())
 					{
-						CStr Name = Remote["Name"].f_String();
+						CStr Name = Remote[gc_ConstString_Name].f_String();
 						if (Repo.m_Remotes.f_FindEqual(Name))
-							_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, fg_Format("Same remote '{}' specified multiple times", Name));
+							_BuildSystem.fs_ThrowError(PropertyInfoRemotes, ChildEntityData.m_Position, fg_Format("Same remote '{}' specified multiple times", Name));
 
-						CStr URL = Remote["URL"].f_String();
+						CStr URL = Remote[gc_ConstString_URL].f_String();
 
 						auto &OutRemote = Repo.m_Remotes[Name];
 						OutRemote.m_URL = URL;
 
-						if (auto pValue = Remote.f_GetMember("Write"))
+						if (auto pValue = Remote.f_GetMember(gc_ConstString_Write))
 							OutRemote.m_bCanPush = pValue->f_Boolean();
 
 						for (auto &Wildcard : NoPushRemotes)
@@ -1002,20 +1044,40 @@ namespace NMib::NBuildSystem
 					Repo.m_Position = ChildEntityData.m_Position;
 
 					if (Repo.m_URL.f_IsEmpty())
-						_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, "You have to specify Repository.URL");
-					if (Repo.m_ConfigFile.f_IsEmpty() && Repo.m_Type != "Root")
-						_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, "You have to specify Repository.ConfigFile");
-					if (Repo.m_StateFile.f_IsEmpty() && Repo.m_Type != "Root")
-						_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, "You have to specify Repository.StateFile");
-					if (Repo.m_ConfigFile == Repo.m_StateFile && Repo.m_Type != "Root")
-						_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, "You have to specify Repository.ConfigFile and Repository.StateFile must not be same file");
+						_BuildSystem.fs_ThrowError(PropertyInfoURL, ChildEntityData.m_Position, "You have to specify Repository.URL");
+					if (Repo.m_ConfigFile.f_IsEmpty() && Repo.m_Type != gc_ConstString_Root.m_String)
+					{
+						bFatalError = true;
+						_BuildSystem.fs_ThrowError(PropertyInfoConfigFile, ChildEntityData.m_Position, "You have to specify Repository.ConfigFile");
+					}
+					if (Repo.m_StateFile.f_IsEmpty() && Repo.m_Type != gc_ConstString_Root.m_String)
+					{
+						bFatalError = true;
+						_BuildSystem.fs_ThrowError(PropertyInfoStateFile, ChildEntityData.m_Position, "You have to specify Repository.StateFile");
+					}
+					if (Repo.m_ConfigFile == Repo.m_StateFile && Repo.m_Type != gc_ConstString_Root.m_String)
+					{
+						bFatalError = true;
+
+						CBuildSystemUniquePositions Positions;
+						Positions.f_AddPosition(ChildEntityData.m_Position, gc_ConstString_Entity);
+						if (PropertyInfoConfigFile.m_pPositions)
+							Positions.f_AddPositions(*PropertyInfoConfigFile.m_pPositions);
+						if (PropertyInfoStateFile.m_pPositions)
+							Positions.f_AddPositions(*PropertyInfoStateFile.m_pPositions);
+
+						_BuildSystem.fs_ThrowError(Positions, "You have to specify Repository.ConfigFile and Repository.StateFile must not be same file");
+					}
 					if (Repo.m_DefaultBranch.f_IsEmpty())
-						_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, "You have to specify Repository.DefaultBranch");
+						_BuildSystem.fs_ThrowError(PropertyInfoDefaultBranch, ChildEntityData.m_Position, "You have to specify Repository.DefaultBranch");
 					if (Repo.m_bSubmodule && Repo.m_SubmoduleName.f_IsEmpty())
-						_BuildSystem.fs_ThrowError(ChildEntityData.m_Position, "You have to specify Repository.SubmoduleName");
+						_BuildSystem.fs_ThrowError(PropertyInfoSubmoduleName, ChildEntityData.m_Position, "You have to specify Repository.SubmoduleName");
 				}
 				catch (CException const &_Exception)
 				{
+					if (bFatalError)
+						throw;
+
 					_BuildSystem.f_OutputConsole
 						(
 							"{}Ignored exception trying to get repository {}{}:\n{}\n\n"_f
@@ -1076,7 +1138,7 @@ namespace NMib::NBuildSystem
 				{
 					for (auto &Repo : RepoLocation.m_Repositories)
 					{
-						if (Repo.m_Type != "Root")
+						if (Repo.m_Type != gc_ConstString_Root.m_String)
 							continue;
 						fAddRepo(RepoLocation, Repo);
 					}
@@ -1088,7 +1150,7 @@ namespace NMib::NBuildSystem
 					{
 						for (auto &Repo : RepoLocation.m_Repositories)
 						{
-							if (Repo.m_Type == "Root")
+							if (Repo.m_Type == gc_ConstString_Root.m_String)
 								continue;
 							fAddRepo(RepoLocation, Repo);
 						}
@@ -1110,13 +1172,15 @@ namespace NMib::NBuildSystem
 
 	using namespace NRepository;
 
-	CBuildSystem::ERetry CBuildSystem::fp_HandleRepositories(TCMap<CPropertyKey, CEJSON> const &_Values)
+	TCFuture<CBuildSystem::ERetry> CBuildSystem::fp_HandleRepositories(TCMap<CPropertyKey, CEJSONSorted> const &_Values)
 	{
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+
 		f_InitEntityForEvaluation(mp_Data.m_RootEntity, _Values);
 		f_ExpandRepositoryEntities(mp_Data);
 
 		if (mp_GenerateOptions.m_bSkipUpdate)
-			return ERetry_None;
+			co_return ERetry_None;
 
 		TCVector<TCMap<CStr, CReposLocation>> ReposOrdered = fg_GetRepos(*this, mp_Data);
 
@@ -1134,7 +1198,7 @@ namespace NMib::NBuildSystem
 		TCAtomic<bool> bChanged;
 		TCAtomic<bool> bBinariesChange;
 
-		CStateHandler StateHandler{mp_BaseDir, mp_OutputDir, mp_AnsiFlags, mp_fOutputConsole};
+		CStateHandler StateHandler{f_GetBaseDir(), mp_OutputDir, mp_AnsiFlags, mp_fOutputConsole};
 
 		CColors Colors(mp_AnsiFlags);
 
@@ -1172,7 +1236,7 @@ namespace NMib::NBuildSystem
 
 		auto fGetReconcileAction = [&](CRepository const &_Repo)
 			{
-				return fGetReconcileActionByName(_Repo.f_GetIdentifierName(mp_BaseDir, mp_BaseDir));
+				return fGetReconcileActionByName(_Repo.f_GetIdentifierName(f_GetBaseDir(), f_GetBaseDir()));
 			}
 		;
 
@@ -1192,9 +1256,9 @@ namespace NMib::NBuildSystem
 				for (auto &Repo : Repos.m_Repositories)
 				{
 					CStr RepoName;
-					if (Repo.m_Location.f_StartsWith(mp_BaseDir))
+					if (Repo.m_Location.f_StartsWith(f_GetBaseDir()))
 					{
-						RepoName = CFile::fs_MakePathRelative(Repo.m_Location, mp_BaseDir);
+						RepoName = CFile::fs_MakePathRelative(Repo.m_Location, f_GetBaseDir());
 						if (!Repo.m_bExcludeFromSeen)
 							SeenRepositories[RepoName];
 						else
@@ -1208,58 +1272,115 @@ namespace NMib::NBuildSystem
 			}
 		}
 
-		CThreadPool ThreadPool{fg_Clamp(NSys::fg_Thread_GetVirtualCores() * 2u, 16u, CGitLaunches::fs_MaxProcesses()/2)};
+		CGitLaunches Launches{f_GetBaseDir(), "Check repository status", mp_AnsiFlags, mp_fOutputConsole, f_GetCancelledPointer()};
+		auto DestroyLaunchs = co_await co_await Launches.f_Init();
+
+		if (!mp_FileActors.f_IsConstructed())
+		{
+			mp_FileActors.f_ConstructFunctor
+				(
+					[]
+					{
+						return fg_Construct(fg_Construct(), "File actor");
+					}
+				)
+			;
+		}
 
 		for (auto &Repos : ReposOrdered)
 		{
-			fg_ParallellForEach
+			auto FileActor = *mp_FileActors;
+			co_await fg_ParallelForEach
 				(
 					Repos
-					, [&](auto &_Repos)
+					, [&, FileActor](auto &_Repos) mutable -> TCFuture<void>
 					{
+						co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+						co_await f_CheckCancelled();
+
 						CStr ReposDirectory = _Repos.f_GetPath();
-						CFile::fs_CreateDirectory(ReposDirectory);
-
-						StateHandler.f_AddGitIgnore(ReposDirectory + "/RepoLock.MRepoState", *this);
-
 						CStr LockFileName = ReposDirectory + "/RepoLock.MRepoState";
-						CLockFile LockFile{LockFileName};
+
+						auto pLockFile = co_await
+							(
+								g_Dispatch(FileActor) / [&]()
+								{
+									CFile::fs_CreateDirectory(ReposDirectory);
+									StateHandler.f_AddGitIgnore(ReposDirectory + "/RepoLock.MRepoState", *this);
+									TCUniquePointer<CLockFile> pLockFile = fg_Construct(LockFileName);
+
+									if (mp_bDebugFileLocks)
+										f_OutputConsole("{} File lock: {}\n"_f << pLockFile.f_Get() << LockFileName, true);
+
+									pLockFile->f_LockWithException(5.0*60.0);
+
+									return fg_Move(pLockFile);
+								}
+							)
+						;
 
 						if (mp_bDebugFileLocks)
-							f_OutputConsole("{} File lock: {}\n"_f << &LockFile << LockFileName, true);
+							f_OutputConsole("{} File locked: {}\n"_f << pLockFile.f_Get() << LockFileName, true);
 
-						LockFile.f_LockWithException(5.0*60.0);
-
-						if (mp_bDebugFileLocks)
-							f_OutputConsole("{} File locked: {}\n"_f << &LockFile << LockFileName, true);
-
-						auto CleanupLock = g_OnScopeExit / [&]
+						auto CleanupLock = g_OnScopeExitActor(FileActor) / [&, pLockFile = fg_Move(pLockFile), fOutputConsole = mp_fOutputConsole]() mutable -> TCFuture<void>
 							{
-								if (mp_bDebugFileLocks)
-									f_OutputConsole("{} File lock released: {}\n"_f << &LockFile << LockFileName, true);
+								try
+								{
+									pLockFile.f_Clear();
+									if (mp_bDebugFileLocks && fOutputConsole)
+										fOutputConsole("{} File lock released: {}\n"_f << pLockFile.f_Get() << LockFileName, true);
+								}
+								catch (CExceptionFile const &)
+								{
+								}
+
+								co_return {};
 							}
 						;
 
-						fg_ParallellForEach
+						co_await fg_ParallelForEach
 							(
 								_Repos.m_Repositories
-								, [&](auto &_Repo)
+								, [&](auto &_Repo) -> TCFuture<void>
 								{
-									if (fg_HandleRepository(ReposDirectory, _Repo, StateHandler, *this, AllRepositories, fGetReconcileAction(_Repo), MaxRepoWidth))
+									co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+									co_await f_CheckCancelled();
+
+									if
+										(
+											co_await fg_HandleRepository
+											(
+												Launches
+												, ReposDirectory
+												, _Repo
+												, StateHandler
+												, *this
+												, AllRepositories
+												, fGetReconcileAction(_Repo)
+												, MaxRepoWidth
+											)
+										)
 									{
 										bChanged.f_Exchange(true);
 										CStr RelativePath = CFile::fs_MakePathRelative(_Repo.m_Location, f_GetBaseDir());
 										if (RelativePath.f_StartsWith("Binaries/Malterlib/"))
 											bBinariesChange.f_Exchange(true);
 									}
+
+									co_return {};
 								}
-							 	, ThreadPool
+								, mp_bSingleThreaded
 							)
 						;
+						co_await f_CheckCancelled();
+
+						co_return {};
 					}
-				 	, ThreadPool
+					, mp_bSingleThreaded
 				)
 			;
+
+			co_await f_CheckCancelled();
 
 			if (bChanged.f_Load())
 				break;
@@ -1297,12 +1418,12 @@ namespace NMib::NBuildSystem
 		}
 
 		{
-			bool bForceReset = fg_GetSys()->f_GetEnvironmentVariable("MalterlibRepositoryHardReset", "") == "true";
+			bool bForceReset = fg_GetSys()->f_GetEnvironmentVariable("MalterlibRepositoryHardReset", "") == gc_ConstString_true.m_String;
 			bool bLastSeenActionNeeded = false;
 
 			for (auto &LastSeen : LastSeenRepositories)
 			{
-				CStr FullRepoPath = mp_BaseDir / LastSeen;
+				CStr FullRepoPath = f_GetBaseDir() / LastSeen;
 				if (!SeenRepositories.f_FindEqual(LastSeen) && !ExcludeFromSeenRepositories.f_FindEqual(LastSeen) && CFile::fs_FileExists(FullRepoPath, EFileAttrib_Directory))
 				{
 					EHandleRepositoryRemovedAction Action = fGetReconcileRemovedActionByName(LastSeen);
@@ -1314,19 +1435,23 @@ namespace NMib::NBuildSystem
 					}
 					else if (Action != EHandleRepositoryRemovedAction_Leave)
 					{
-						fg_OutputRepositoryInfo(EOutputType_Warning, "Repository has been {}removed{}"_f<< Colors.f_ToPush() << Colors.f_Default(), StateHandler, LastSeen, MaxRepoWidth);
+						if (!SeenRepositories.f_IsEmpty())
+							fg_OutputRepositoryInfo(EOutputType_Warning, "Repository has been {}removed{}"_f<< Colors.f_ToPush() << Colors.f_Default(), StateHandler, LastSeen, MaxRepoWidth);
 						bLastSeenActionNeeded = true;
 					}
 				}
 			}
 
 			if (bLastSeenActionNeeded)
-				DMibError(fg_ReconcileRemovedHelp(mp_AnsiFlags));
+			{
+				if (!SeenRepositories.f_IsEmpty())
+					co_return DMibErrorInstance(fg_ReconcileRemovedHelp(mp_AnsiFlags));
+			}
 			else
 			{
 				CStr RepositoryStateFile = mp_OutputDir / "RepositoryState.json";
 
-				CEJSON StateFile;
+				CEJSONSorted StateFile;
 
 				auto &SeenRepositoriesJSON = StateFile["SeenRepositories"];
 				SeenRepositoriesJSON = EJSONType_Object;
@@ -1354,19 +1479,19 @@ namespace NMib::NBuildSystem
 			if (mp_GenerateOptions.m_bReconcileForce)
 			{
 				if (bBinariesChange.f_Load())
-					return ERetry_Relaunch;
+					co_return ERetry_Relaunch;
 				else
-					return ERetry_Again;
+					co_return ERetry_Again;
 			}
 			else
 			{
 				if (bBinariesChange.f_Load())
-					return ERetry_Relaunch_NoReconcileOptions;
+					co_return ERetry_Relaunch_NoReconcileOptions;
 				else
-					return ERetry_Again_NoReconcileOptions;
+					co_return ERetry_Again_NoReconcileOptions;
 			}
 		}
 
-		return ERetry_None;
+		co_return ERetry_None;
 	}
 }

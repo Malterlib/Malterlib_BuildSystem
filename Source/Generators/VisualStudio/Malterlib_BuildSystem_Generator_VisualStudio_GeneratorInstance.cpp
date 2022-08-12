@@ -160,8 +160,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 		_BuildSystem.f_RegisterBuiltinVariables
 			(
 				{
-					{CPropertyKey(EPropertyType_Compile, "XInternalPrecompiledHeaderOutputFile"), g_String}
- 					, {CPropertyKey(EPropertyType_Builtin, "VisualStudioRoot"), g_String}
+					{CPropertyKey(EPropertyType_Compile, "XInternalPrecompiledHeaderOutputFile"), DMibBuildSystemTypeWithPosition(g_String)}
+ 					, {CPropertyKey(EPropertyType_Builtin, "VisualStudioRoot"), DMibBuildSystemTypeWithPosition(g_String)}
 				}
 			)
 		;

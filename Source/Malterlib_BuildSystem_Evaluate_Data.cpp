@@ -8,7 +8,7 @@ namespace NMib::NBuildSystem
 	CEntity const *CBuildSystem::f_EvaluateData
 		(
 			CBuildSystemData &_Destination
-			, TCMap<CPropertyKey, CEJSON> const &_InitialValues
+			, TCMap<CPropertyKey, CEJSONSorted> const &_InitialValues
 			, CEntity const *_pStartEntity
 			, bool _bCopyTree
 		) const
@@ -28,7 +28,7 @@ namespace NMib::NBuildSystem
 	CEntity const *CBuildSystem::f_EvaluateDataMain
 		(
 			CBuildSystemData &_Destination
-			, TCMap<CPropertyKey, CEJSON> const &_InitialValues
+			, TCMap<CPropertyKey, CEJSONSorted> const &_InitialValues
 		) const
 	{
 		auto pRet = fp_EvaluateData
@@ -47,7 +47,7 @@ namespace NMib::NBuildSystem
 	void CBuildSystem::fpr_EvaluateData(CEntity &_Entity, TCSet<CEntity *> &o_Deleted) const
 	{
 		auto &EntityData = _Entity.f_Data();
-		if (!f_EvalCondition(_Entity, EntityData.m_Condition, EntityData.m_Debug.f_Find("TraceCondition") >= 0))
+		if (!f_EvalCondition(_Entity, EntityData.m_Condition, EntityData.m_DebugFlags & EPropertyFlag_TraceCondition))
 		{
 			o_Deleted[&_Entity];
 			_Entity.f_ForEachChild
@@ -76,7 +76,7 @@ namespace NMib::NBuildSystem
 		{
 			auto &Child = *iChild;
 			auto &ChildEntityData = Child.f_Data();
-			if (!f_EvalCondition(Child, ChildEntityData.m_Condition, ChildEntityData.m_Debug.f_Find("TraceCondition") >= 0))
+			if (!f_EvalCondition(Child, ChildEntityData.m_Condition, ChildEntityData.m_DebugFlags & EPropertyFlag_TraceCondition))
 			{
 				auto *pToRemove = &*iChild;
 				++iChild;
@@ -91,7 +91,7 @@ namespace NMib::NBuildSystem
 	CEntity const *CBuildSystem::fp_EvaluateData
 		(
 			CBuildSystemData &_Destination
-			, TCMap<CPropertyKey, CEJSON> const &_InitialValues
+			, TCMap<CPropertyKey, CEJSONSorted> const &_InitialValues
 			, CEntity const *_pStartEntity
 			, bool _bCopyTree
 			, bool _bAllChildren
@@ -159,7 +159,7 @@ namespace NMib::NBuildSystem
 
 			auto &ChildEntityData = ChildEntity.f_Data();
 
-			if (!f_EvalCondition(ChildEntity, ChildEntityData.m_Condition, ChildEntityData.m_Debug.f_Find("TraceCondition") >= 0))
+			if (!f_EvalCondition(ChildEntity, ChildEntityData.m_Condition, ChildEntityData.m_DebugFlags & EPropertyFlag_TraceCondition))
 			{
 				_Destination.m_RootEntity.m_ChildEntitiesMap.f_Remove(&ChildEntity);
 				continue;

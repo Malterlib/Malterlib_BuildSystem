@@ -12,11 +12,13 @@ namespace NMib::NBuildSystem
 			, TCSet<CStr> &_SourceFiles
 			, CFindCache const &_FindCache
 			, TCMap<CStr, CStr> const &_Environment
+			, CStringCache &_StringCache
 		)
 		: mp_ResultRegistry(_ResultRegistry)
 		, mp_SourceFiles(_SourceFiles)
 		, mp_FindCache(_FindCache)
 		, mp_Environment(_Environment)
+		, mp_StringCache(_StringCache)
 	{
 	}
 
@@ -94,8 +96,10 @@ namespace NMib::NBuildSystem
 					if (Identifier.m_EntityType != EEntityType_Invalid || !Identifier.m_bEmptyPropertyType)
 						return;
 
-					bool bInclude = Identifier.f_NameConstantString() == "Include";
-					bool bImport = Identifier.f_NameConstantString() == "Import" && _Registry.f_GetThisValue().m_Value.f_IsValid();
+					auto &IdentifierName = Identifier.f_NameConstantString();
+
+					bool bInclude = IdentifierName == gc_ConstString_Include.m_String;
+					bool bImport = IdentifierName == gc_ConstString_Import.m_String && _Registry.f_GetThisValue().m_Value.f_IsValid();
 					if (!bInclude && !bImport)
 						return;
 
@@ -164,7 +168,8 @@ namespace NMib::NBuildSystem
 								CStr FileData = CFile::fs_ReadStringFromFile(CStr(_File), true);
 								CStr Path = CFile::fs_GetPath(_File);
 								CBuildSystemRegistry IncludedRegistry;
-								IncludedRegistry.f_ParseStr(FileData, _File);
+								CBuildSystemRegistryParseContext Context(mp_StringCache);
+								IncludedRegistry.f_ParseStrWithContext(Context, FileData, _File);
 
 								fpr_HandleIncludes(IncludedRegistry, Path, o_Errors);
 
@@ -199,7 +204,8 @@ namespace NMib::NBuildSystem
 		CStr Path = CFile::fs_GetPath(mp_FileLocation);
 
 		CBuildSystemRegistry TempRegistry;
-		TempRegistry.f_ParseStr(FileData, mp_FileLocation);
+		CBuildSystemRegistryParseContext Context(mp_StringCache);
+		TempRegistry.f_ParseStrWithContext(Context, FileData, mp_FileLocation);
 
 		CBuildSystemRegistry *pPrevious = nullptr;
 		for (auto iChild = mp_ResultRegistry.f_GetChildIterator(); iChild; ++iChild)

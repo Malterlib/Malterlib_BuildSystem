@@ -30,6 +30,13 @@ namespace NMib::NBuildSystem
 		, EHandleRepositoryRemovedAction_Delete
 	};
 
+	enum EDetailedPositions
+	{
+		EDetailedPositions_Enable
+		, EDetailedPositions_Disable
+		, EDetailedPositions_OnDemand
+	};
+
 	struct CGenerateSettings
 	{
 		bool operator == (CGenerateSettings const &_Right) const;
@@ -50,10 +57,13 @@ namespace NMib::NBuildSystem
 		CGenerateSettings m_Settings;
 		NContainer::TCMap<NStr::CStr, EHandleRepositoryAction> m_ReconcileActions;
 		NContainer::TCMap<NStr::CStr, EHandleRepositoryRemovedAction> m_ReconcileRemovedActions;
+		EDetailedPositions m_DetailedPositions = EDetailedPositions_OnDemand;
 		uint32 m_GitFetchTimeout = 5;
 		bool m_bReconcileForce = false;
 		bool m_bReconcileNoOptions = false;
 		bool m_bSkipUpdate = false;
 		bool m_bForceUpdateRemotes = true;
+		bool m_bDetailedValues = false;
+
 	};
 }

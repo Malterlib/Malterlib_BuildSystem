@@ -7,7 +7,7 @@ namespace NMib::NBuildSystem
 {
 	struct CBuildSystemError
 	{
-		CFilePosition m_Position;
+		CBuildSystemUniquePositions m_Positions;
 		NStr::CStr m_Error;
 	};
 }

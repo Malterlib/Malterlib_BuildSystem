@@ -17,11 +17,30 @@
 
 Type
 {
-	CTest define {
+	CTest: {
 		Test: string
 		, TestOptional?: string
 	}
 	{
-		 !!Platform "TestPlatform"
+		 !!Platform "Invalid"
+	}
+}
+
+%GenerateFile "TestFile"
+{
+	Property
+	{
+		Test: bool = false
+
+		TestFunction function(any _Value, any _Default) type(CTest) = {Test: "Test"}
+	}
+	GenerateFile
+	{
+		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
+		Contents 	`Generate File Contents:\n`\
+					`@(TestFunction(1, 2)<Test>)\n`
+		Executable false
+		UnixLineEnds true
+		UnicodeBOM false
 	}
 }

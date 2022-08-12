@@ -34,3 +34,13 @@ false
 true
 false
 {"Value":"Path0/Path1","Value2":"Test"}
+""
+true
+false
+"Null"
+"Undefined"
+""
+true
+false
+"Null"
+"Undefined"

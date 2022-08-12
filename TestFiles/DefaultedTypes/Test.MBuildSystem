@@ -19,19 +19,19 @@
 {
 	Type
 	{
-		CHalfDefaultedObject define {
+		CHalfDefaultedObject: {
 			Defaulted: string = "Defaulted",
 			NotDefaulted: string
 		}
-		CDefaultedObject define {
+		CDefaultedObject: {
 			Defaulted: string = "Defaulted",
 			Defaulted2: string = "Defaulted2"
 		}
 	}
 	Property
 	{
-		TestArrayHalf define [type(CHalfDefaultedObject)] = []
-		TestArray define [type(CDefaultedObject)] = []
+		TestArrayHalf: [type(CHalfDefaultedObject)] = []
+		TestArray: [type(CDefaultedObject)] = []
 
 		TestArrayHalf =+ [{NotDefaulted: "NotDefaulted"}]
 		TestArrayHalf += [{Defaulted: "Defined", NotDefaulted: "NotDefaulted"}]

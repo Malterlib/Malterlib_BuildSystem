@@ -17,26 +17,26 @@
 
 Property
 {
-	TestString define string
-	TestBoolTRUE define bool
-	TestBoolFALSE define bool
-	TestBool1 define bool
-	TestBool0 define bool
-	TestBooltrue define bool
-	TestBoolfalse define bool
-	TestInt0 define int
-	TestInt50 define int
-	TestIntNeg50 define int
-	TestFloat0 define float
-	TestFloat55_5 define float
-	TestFloatNeg55_5 define float
-	TestFloatInf define float
-	TestDate define date
-	TestBinary define binary
-	TestArrayString define [string]
-	TestArrayInt define [int]
-	TestObject define {TestString: string, TestInt: int, TestArrayString: [string], TestArrayInt: [int]}
-	TestOneOf define one_of("Option1", 5)
+	TestString: string
+	TestBoolTRUE: bool
+	TestBoolFALSE: bool
+	TestBool1: bool
+	TestBool0: bool
+	TestBool_true: bool
+	TestBool_false: bool
+	TestInt0: int
+	TestInt50: int
+	TestIntNeg50: int
+	TestFloat0: float
+	TestFloat55_5: float
+	TestFloatNeg55_5: float
+	TestFloatInf: float
+	TestDate: date
+	TestBinary: binary
+	TestArrayString: [string]
+	TestArrayInt: [int]
+	TestObject: {TestString: string, TestInt: int, TestArrayString: [string], TestArrayInt: [int]}
+	TestOneOf: one_of("Option1", 5)
 }
 
 %GenerateFile "TestFile"
@@ -50,8 +50,8 @@ Property
 					`@(TestBoolFALSE->EJSONToString()->Trim())\n`\
 					`@(TestBool1->EJSONToString()->Trim())\n`\
 					`@(TestBool0->EJSONToString()->Trim())\n`\
-					`@(TestBooltrue->EJSONToString()->Trim())\n`\
-					`@(TestBoolfalse->EJSONToString()->Trim())\n`\
+					`@(TestBool_true->EJSONToString()->Trim())\n`\
+					`@(TestBool_false->EJSONToString()->Trim())\n`\
 					`@(TestInt0->EJSONToString()->Trim())\n`\
 					`@(TestInt50->EJSONToString()->Trim())\n`\
 					`@(TestIntNeg50->EJSONToString()->Trim())\n`\

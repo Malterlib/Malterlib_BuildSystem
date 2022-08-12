@@ -35,7 +35,15 @@ namespace NMib::NBuildSystem
 		}
 		return Ret;
 	}
-	
+
+	bool CFindCache::f_FileExists(NStr::CStr const &_File, EFileAttrib _Attributes) const
+	{
+		CFindOptions Options(_File, _Attributes);
+		Options.m_bExists = true;
+
+		return !f_FindFiles(Options, true).f_IsEmpty();
+	}
+
 	TCVector<CFile::CFoundFile> const &CFindCache::f_FindFiles(CFindOptions const &_Options, bool _bTag) const
 	{
 		CEntry *pEntry;
@@ -49,18 +57,26 @@ namespace NMib::NBuildSystem
 			DLock(pEntry->m_Lock);
 			if (!pEntry->m_bFinished.f_Load())
 			{
-				CFile::CFindFilesOptions Options(_Options.m_Path, _Options.m_bRecursive);
-				Options.m_AttribMask = _Options.m_Attribs;
-				Options.m_bFollowLinks = _Options.m_bFollowLinks;
-				Options.m_ExcludePatterns.f_Insert("*/.DS_Store");
-				for (auto &Exclude : _Options.m_Exclude)
-					Options.m_ExcludePatterns.f_Insert(Exclude);
-				pEntry->m_FoundFiles = CFile::fs_FindFiles(Options);
+				if (_Options.m_bExists)
+				{
+					if (CFile::fs_FileExists(_Options.m_Path, _Options.m_Attribs))
+						pEntry->m_FoundFiles = {{_Options.m_Path, _Options.m_Attribs}};
+				}
+				else
+				{
+					CFile::CFindFilesOptions Options(_Options.m_Path, _Options.m_bRecursive);
+					Options.m_AttribMask = _Options.m_Attribs;
+					Options.m_bFollowLinks = _Options.m_bFollowLinks;
+					Options.m_ExcludePatterns.f_Insert(gc_ConstString____DS_Store);
+					for (auto &Exclude : _Options.m_Exclude)
+						Options.m_ExcludePatterns.f_Insert(Exclude);
+					pEntry->m_FoundFiles = CFile::fs_FindFiles(Options);
+				}
 				pEntry->m_bFinished = true;
 			}
 		}
 		if (_bTag)
-			pEntry->m_bTagged = true;
+			pEntry->m_bTagged.f_Exchange(true);
 		return pEntry->m_FoundFiles;
 	}
 	

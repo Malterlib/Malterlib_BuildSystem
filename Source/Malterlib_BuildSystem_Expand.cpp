@@ -509,7 +509,7 @@ namespace NMib::NBuildSystem
 		auto &Key = _Entity.f_GetKey();
 		auto &EntityData = _Entity.f_Data();
 
-		TCVector<CEJSON> Entities;
+		TCVector<CEJSONSorted> Entities;
 
 		if (Key.m_Name.f_IsConstantString())
 		{
@@ -521,29 +521,29 @@ namespace NMib::NBuildSystem
 		else
 		{
 			CEvaluationContext EvalContext(&_Entity.m_EvaluatedProperties);
-			CEvalPropertyValueContext Context{_Entity, _Entity, EntityData.m_Position, EvalContext, nullptr};
-			CEJSON Data = fp_EvaluatePropertyValue(Context, Key.m_Name, nullptr);
+			CBuildSystemUniquePositions StorePositions;
+			CEvalPropertyValueContext Context{_Entity, _Entity, EntityData.m_Position, EvalContext, nullptr, f_EnablePositions(&StorePositions)};
+			auto Data = fp_EvaluatePropertyValue(Context, Key.m_Name, nullptr);
 
-			if (Data.f_IsArray())
-				Entities = fg_Move(Data.f_Array());
+			if (Data.f_Get().f_IsArray())
+				Entities = Data.f_MoveArray();
 			else
-				Entities.f_Insert(fg_Move(Data));
+				Entities.f_Insert(Data.f_Move());
 		}
 
 		bool bAllowNonExisting = false;
 		if (Key.m_Type == EEntityType_File)
 		{
 			CEvaluationContext EvalContext(&_Entity.m_EvaluatedProperties);
-			CPropertyKey Key;
-			Key.m_Type = EPropertyType_Compile;
-			Key.m_Name = "AllowNonExisting";
-			CProperty const *pFromProperty = nullptr;
-			auto Data = fp_EvaluateEntityProperty(_Entity, _Entity, Key, EvalContext, pFromProperty, EntityData.m_Position, nullptr);
-			if (Data.f_IsValid())
+
+			CBuildSystemPropertyInfo PropertyInfo;
+			auto Data = fp_EvaluateEntityProperty(_Entity, _Entity, gc_ConstKey_Compile_AllowNonExisting, EvalContext, PropertyInfo, EntityData.m_Position, nullptr, false);
+			auto &DataRef = Data.f_Get();
+			if (DataRef.f_IsValid())
 			{
-				if (!Data.f_IsBoolean())
-					fs_ThrowError(EntityData.m_Position, "Expected a boolean value");
-				bAllowNonExisting = Data.f_Boolean();
+				if (!DataRef.f_IsBoolean())
+					fs_ThrowError(PropertyInfo, EntityData.m_Position, "Expected a boolean value");
+				bAllowNonExisting = DataRef.f_Boolean();
 			}
 		}
 
@@ -555,21 +555,11 @@ namespace NMib::NBuildSystem
 		{
 			CStr EntityName;
 
-			CEntityKey NewEntityKey{Key.m_Type, fg_RandomID()};
-
-			auto NewEntityMap = _Entity.m_ChildEntitiesMap(NewEntityKey, &_Entity);
-			auto &TempEntity = *NewEntityMap;
-
-			auto Cleanup = g_OnScopeExit / [&]
-				{
-					if (NewEntityMap.f_WasCreated())
-						_Entity.m_ChildEntitiesMap.f_Remove(NewEntityKey);
-				}
-			;
+			NContainer::TCMap<CPropertyKey, CEvaluatedProperty> TempProperties;
 
 			if (SourceEntity.f_IsObject())
 			{
-				auto *pName = SourceEntity.f_GetMember("Name", EJSONType_String);
+				auto *pName = SourceEntity.f_GetMember(gc_ConstString_Name, EJSONType_String);
 				if (!pName)
 					fs_ThrowError(EntityData.m_Position, "Expected a 'Name' for string type in entity object");
 
@@ -581,12 +571,12 @@ namespace NMib::NBuildSystem
 
 				for (auto &SourceProperty : pProperties->f_Object())
 				{
-					CPropertyKey Key = CPropertyKey::fs_FromString(SourceProperty.f_Name(), EntityData.m_Position);
+					CPropertyKey Key = CPropertyKey::fs_FromString(mp_StringCache, SourceProperty.f_Name(), EntityData.m_Position);
 
-					auto &Property = TempEntity.m_EvaluatedProperties.m_Properties[Key];
+					auto &Property = TempProperties[Key];
 					Property.m_Value = SourceProperty.f_Value();
 					Property.m_Type = EEvaluatedPropertyType_External;
-					Property.m_pProperty = &mp_ExternalProperty[Key.m_Type];
+					Property.m_pProperty = &mp_ExternalProperty[Key.f_GetType()];
 				}
 			}
 			else if (SourceEntity.f_IsString())
@@ -628,11 +618,11 @@ namespace NMib::NBuildSystem
 						if (bWildcardSearch)
 						{
 							TCSet<CStr> Exclude;
- 							TCVector<CStr> ExcludedFiles = f_EvaluateEntityPropertyStringArray(_Entity, EPropertyType_Property, "ExcludeFiles", TCVector<CStr>());
+ 							TCVector<CStr> ExcludedFiles = f_EvaluateEntityPropertyStringArray(_Entity, gc_ConstKey_ExcludeFiles, TCVector<CStr>());
 
 							for (auto &Exclude : ExcludedFiles)
 							{
-								if (Exclude == ">")
+								if (Exclude == gc_ConstString_Symbol_OperatorGreaterThan.m_String)
 									FindOptions.m_bFollowLinks = false;
 								else if (!Exclude.f_IsEmpty())
 									FindOptions.m_Exclude[Exclude];
@@ -676,6 +666,7 @@ namespace NMib::NBuildSystem
 							Key.m_Type = EEntityType_Group;
 							Key.m_Name.m_Value = ThisPath;
 							auto Child = pParent->m_ChildEntitiesMap(Key, pParent);
+							(*Child).f_DataWritable().m_Position = EntityData.m_Position;
 
 							if (Child.f_WasCreated())
 							{
@@ -709,7 +700,7 @@ namespace NMib::NBuildSystem
 						//fsp_ThrowError(_Registry, CStr::CFormat("Entity {} already declared (when adding pattern {})") << FullFileName << SearchPath);
 					}
 
-					auto pNewEntity = fp_AddEntity(_Entity, *pParent, NewKey, pInsertAfterLocal ? pInsertAfter : nullptr, &TempEntity.m_EvaluatedProperties.m_Properties);
+					auto pNewEntity = fp_AddEntity(_Entity, *pParent, NewKey, pInsertAfterLocal ? pInsertAfter : nullptr, &TempProperties);
 
 					if (pInsertAfterLocal)
 						pInsertAfter = pNewEntity;
@@ -741,7 +732,7 @@ namespace NMib::NBuildSystem
 					//fsp_ThrowError(_Registry, CStr::CFormat("Entity {} already declared (when adding pattern {})") << EntityName << SearchPath);
 				}
 
-				auto pNewEntity = fp_AddEntity(_Entity, _ParentEntity, NewKey, pInsertAfter, &TempEntity.m_EvaluatedProperties.m_Properties);
+				auto pNewEntity = fp_AddEntity(_Entity, _ParentEntity, NewKey, pInsertAfter, &TempProperties);
 
 				pInsertAfter = pNewEntity;
 

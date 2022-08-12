@@ -50,27 +50,58 @@ namespace NMib::NBuildSystem
 			(
 				{
 					{
-						"ExecuteCommand"
+						gc_ConstString_ExecuteCommand
 						, CBuiltinFunction
 						{
 							fg_FunctionType
 							(
 								g_Void
-								, fg_FunctionParam(g_String, "_StateFile")
-								, fg_FunctionParam(g_StringArray, "_Inputs")
-								, fg_FunctionParam(g_String, "_Executable")
-								, fg_FunctionParam(g_String, "p_Params", g_Ellipsis)
+								, fg_FunctionParam(g_String, gc_ConstString__StateFile)
+								, fg_FunctionParam(g_StringArray, gc_ConstString__Inputs)
+								, fg_FunctionParam(g_String, gc_ConstString__Executable)
+								, fg_FunctionParam(g_String, gc_ConstString_p_Params, g_Ellipsis)
 							)
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
 							{
 								auto const &GenerateStateFile = _Params[0].f_String();
+
+								if (GenerateStateFile.f_IsEmpty())
+									fs_ThrowError(_Context, "You need to specify states file");
+
 								auto const &Executable = _Params[2].f_String();
 
 								TCVector<CStr> FunctionParams = _Params[3].f_StringArray();
 								TCVector<CStr> Inputs = _Params[1].f_StringArray();
 
-								if (GenerateStateFile.f_IsEmpty())
-									fs_ThrowError(_Context, "You need to specify states file");
+								CExecuteCommand *pExecuteCommand = nullptr;
+								{
+									DMibLock(_This.mp_ExecuteCommandsLock);
+									pExecuteCommand = &_This.mp_ExecuteCommands[GenerateStateFile];
+								}
+
+								DMibLock(pExecuteCommand->m_Lock);
+
+								if (pExecuteCommand->m_bInitialized)
+								{
+									if (Executable != pExecuteCommand->m_Executable)
+										fs_ThrowError(_Context, "Executable differs from previous invocation: {} != {}"_f << Executable << pExecuteCommand->m_Executable);
+
+									if (FunctionParams != pExecuteCommand->m_FunctionParams)
+										fs_ThrowError(_Context, "Function params differs from previous invocation: {vs} != {vs}"_f << FunctionParams << pExecuteCommand->m_FunctionParams);
+
+									if (Inputs != pExecuteCommand->m_Inputs)
+										fs_ThrowError(_Context, "Inputs params differs from previous invocation: {vs} != {vs}"_f << Inputs << pExecuteCommand->m_Inputs);
+
+									if (pExecuteCommand->m_Error)
+										fs_ThrowError(_Context, pExecuteCommand->m_Error);
+
+									return pExecuteCommand->m_Result;
+								}
+
+								pExecuteCommand->m_bInitialized = true;
+								pExecuteCommand->m_Executable = Executable;
+								pExecuteCommand->m_FunctionParams = FunctionParams;
+								pExecuteCommand->m_Inputs = Inputs;
 
 								CStr Ret;
 
@@ -92,6 +123,7 @@ namespace NMib::NBuildSystem
 												bAllValid = false;
 												break;
 											}
+
 											if (pState->m_WriteTime != CFile::fs_GetWriteTime(Input))
 											{
 												bAllValid = false;
@@ -105,6 +137,9 @@ namespace NMib::NBuildSystem
 												_This.f_AddSourceFile(Input);
 
 											Stream >> Ret;
+
+											pExecuteCommand->m_Result = Ret;
+
 											return fg_Move(Ret);
 										}
 									}
@@ -123,7 +158,8 @@ namespace NMib::NBuildSystem
 								}
 								catch (CException const &_Exception)
 								{
-									fs_ThrowError(_Context, fg_Format("ExecuteCommand({vs,vb}) failed: {}", FunctionParams, _Exception));
+									pExecuteCommand->m_Error = fg_Format("ExecuteCommand({vs,vb}) failed: {}", FunctionParams, _Exception);
+									fs_ThrowError(_Context, pExecuteCommand->m_Error);
 								}
 
 								CExecuteCommandState State;
@@ -142,8 +178,11 @@ namespace NMib::NBuildSystem
 								CFile::fs_CreateDirectory(CFile::fs_GetPath(GenerateStateFile));
 								_This.f_WriteFile(Stream.f_MoveVector(), GenerateStateFile);
 
+								pExecuteCommand->m_Result = Ret;
+
 								return Ret;
 							}
+							, DMibBuildSystemFilePosition
 						}
 					}
 				}

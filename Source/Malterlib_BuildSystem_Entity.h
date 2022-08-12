@@ -42,7 +42,14 @@ namespace NMib::NBuildSystem
 		NStr::CStr m_Whitespace;
 	};
 
-	struct CVariableDefinition;
+	#define DMibBuildSystemTypeWithPosition(...) CTypeWithPosition{.m_Type = CBuildSystemSyntax::CType{__VA_ARGS__}, .m_Position = CFilePosition(NStr::CParseLocation{.m_File = DMibPFile, .m_Line = DMibPLine})}
+
+	struct CTypeWithConditions
+	{
+		CTypeWithPosition m_Type;
+		NStorage::TCSharedPointer<CCondition> m_pConditions;
+		EPropertyFlag m_DebugFlags = EPropertyFlag_None;
+	};
 
 	struct CEntityData
 	{
@@ -56,19 +63,13 @@ namespace NMib::NBuildSystem
 
 		CCondition m_Condition;
 
-		NContainer::TCMap<CPropertyKey, CVariableDefinition> m_VariableDefinitions;
-		NContainer::TCMap<NStr::CStr, CTypeWithPosition> m_UserTypes;
+		NContainer::TCMap<CPropertyKey, NContainer::TCLinkedList<CTypeWithConditions>> m_VariableDefinitions;
+		NContainer::TCMap<NStr::CStr, NContainer::TCLinkedList<CTypeWithConditions>> m_UserTypes;
 		NContainer::TCMap<CPropertyKey, CPropertyContainer> m_Properties;
 
 		CFilePosition m_Position;
-		NStr::CStr m_Debug;
+		EPropertyFlag m_DebugFlags = EPropertyFlag_None;
 		uint32 m_HasFullEval = 0;
-	};
-
-	struct CVariableDefinition
-	{
-		CTypeWithPosition m_Type;
-		NStorage::TCSharedPointer<CCondition> m_pConditions;
 	};
 
 	struct CEntityChildDependantData
@@ -108,11 +109,12 @@ namespace NMib::NBuildSystem
 		void f_CopyEntities(CEntity const &_Other, EEntityCopyFlag _Flags);
 		void f_CopyExternal(CEntity const &_Other);
 		void f_CopyAll(CEntity const &_Other, bool _bCopyChildren);
-		CProperty &f_AddProperty(CPropertyKey const &_Key, CBuildSystemSyntax::CRootValue const &_Value, CFilePosition const &_Position);
+		CProperty &f_AddProperty(CPropertyKeyReference const &_Key, CBuildSystemSyntax::CRootValue const &_Value, CFilePosition const &_Position);
 		void f_ForEachChild(NFunction::TCFunction<void (CEntity *_pChild)> const &_fChild);
 		NStr::CStr const &f_GetKeyName() const;
 		CFilePosition const &f_GetFirstValidPosition() const;
 		bool f_HasFullEval(EPropertyType _PropertyType)const ;
+		bool f_HasParent(CEntity const *_pEntity) const;
 
 		CEntityData const &f_Data() const;
 		CEntityData &f_DataWritable();

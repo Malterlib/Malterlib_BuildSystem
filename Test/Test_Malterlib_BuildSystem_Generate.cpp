@@ -17,10 +17,74 @@ namespace
 	using namespace NMib::NContainer;
 	using namespace NMib::NBuildSystem;
 	using namespace NMib::NStorage;
+	using namespace NMib::NConcurrency;
+
+	struct CCommandLineControlActorTest : public ICCommandLineControl
+	{
+		TCFuture<TCActorSubscriptionWithID<>> f_RegisterForStdInBinary(FOnBinaryInput &&_fOnInput, NProcess::EStdInReaderFlag _Flags) override
+		{
+			co_return {};
+		}
+
+		TCFuture<TCActorSubscriptionWithID<>> f_RegisterForStdIn(FOnInput &&_fOnInput, NProcess::EStdInReaderFlag _Flags) override
+		{
+			co_return {};
+		}
+
+		TCFuture<TCActorSubscriptionWithID<>> f_RegisterForCancellation(FOnCancel &&_fOnCancel) override
+		{
+			co_return {};
+		}
+
+		TCFuture<NContainer::CSecureByteVector> f_ReadBinary() override
+		{
+			co_return {};
+		}
+
+		TCFuture<NStr::CStrSecure> f_ReadLine() override
+		{
+			co_return {};
+		}
+
+		TCFuture<NStr::CStrSecure> f_ReadPrompt(NProcess::CStdInReaderPromptParams const &_Params) override
+		{
+			co_return {};
+		}
+
+		TCFuture<void> f_AbortReads() override
+		{
+			co_return {};
+		}
+
+		TCFuture<void> f_StdOut(NStr::CStrSecure const &_Output) override
+		{
+			co_return {};
+		}
+
+		TCFuture<void> f_StdOutBinary(NContainer::CSecureByteVector const &_Output) override
+		{
+			co_return {};
+		}
+
+		TCFuture<void> f_StdErr(NStr::CStrSecure const &_Output) override
+		{
+			co_return {};
+		}
+
+		void f_Clear()
+		{
+		}
+
+	private:
+		TCFuture<void> fp_Destroy() override
+		{
+			co_return {};
+		}
+	};
 
 	class CGenerate_Tests : public NMib::NTest::CTest
 	{
-		CEJSON fp_Generate(CStr const &_TestName, TCOptional<TCMap<CStr, CStr>> const &_Environment)
+		CEJSONSorted fp_Generate(CStr const &_TestName, TCOptional<TCMap<CStr, CStr>> const &_Environment)
 		{
 			CExeFS SourceFS;
 			if (!fg_OpenExeFS(SourceFS))
@@ -53,29 +117,67 @@ namespace
 
 			GenerateSettings.m_GenerationFlags |= EGenerationFlag_AbsoluteFilePaths | EGenerationFlag_SingleThreaded | EGenerationFlag_DisableUserSettings;
 
-			bool bChanged = false;
+			GenerateOptions.m_DetailedPositions = EDetailedPositions_Enable;
+			GenerateOptions.m_bDetailedValues = true;
 
-			auto Retry = CBuildSystem::fs_RunBuildSystem
-				(
-					[&](NBuildSystem::CBuildSystem &_BuildSystem)
+			bool bChanged = false;
+			CBuildSystem::ERetry Retry;
+
+			{
+				TCSharedPointer<CDefaultRunLoop> pRunLoop = fg_Construct();
+				auto CleanupRunLoop = g_OnScopeExit / [&]
 					{
-						CBuildSystem::ERetry Retry = CBuildSystem::ERetry_None;
-						if (_BuildSystem.f_Action_Generate(GenerateOptions, Retry))
-							bChanged = true;
-						return Retry;
+						while (pRunLoop->m_RefCount.f_Get() > 0)
+							pRunLoop->f_WaitOnceTimeout(0.1);
 					}
-					, NCommandLine::EAnsiEncodingFlag_None
-					, [](CStr const &_Output, bool _bError)
+				;
+				TCActor<CDispatchingActor> HelperActor(fg_Construct(), pRunLoop->f_Dispatcher());
+				auto CleanupHelperActor = g_OnScopeExit / [&]
 					{
+						HelperActor->f_BlockDestroy(pRunLoop->f_ActorDestroyLoop());
+					}
+				;
+				CCurrentlyProcessingActorScope CurrentActor{HelperActor};
+
+				TCDistributedActor<CCommandLineControlActorTest> pCommandLineControlActor = fg_Construct();
+				TCSharedPointer<CCommandLineControl> pCommandLineControl = fg_Construct();
+				pCommandLineControl->m_ControlActor = pCommandLineControlActor->f_ShareInterface<ICCommandLineControl>();
+
+				(
+					g_Dispatch / [&]() -> TCFuture<void>
+					{
+						co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+
+						Retry = co_await CBuildSystem::fs_RunBuildSystem
+						(
+							[&](NBuildSystem::CBuildSystem &_BuildSystem) -> TCFuture<CBuildSystem::ERetry>
+							{
+								co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+
+								CBuildSystem::ERetry Retry = CBuildSystem::ERetry_None;
+								if (co_await _BuildSystem.f_Action_Generate(GenerateOptions, Retry))
+									bChanged = true;
+								co_return Retry;
+							}
+							, pCommandLineControl
+							, [](CStr const &_Output, bool _bError)
+							{
+							}
+							, GenerateOptions
+						)
+					;
+
+						co_return {};
 					}
 				)
-			;
+				.f_CallSync(pRunLoop);
+			}
 
 			DMibExpect(Retry, ==, CBuildSystem::ERetry_None)(ETestFlag_Aggregated);
 
 			auto GeneratorFile = OutputDirectory / "BuildSystemData.json";
 
-			return CEJSON::fs_FromString(CFile::fs_ReadStringFromFile(GeneratorFile), GeneratorFile);
+			return CEJSONSorted::fs_FromString(CFile::fs_ReadStringFromFile(GeneratorFile), GeneratorFile);
 		}
 
 		struct CTestGenerate
@@ -83,7 +185,7 @@ namespace
 			CStr m_OutputDirectory;
 			CStr m_SourceDirectory;
 			CStr m_ExpectedContents;
-			CEJSON m_BuildSystemData;
+			CEJSONSorted m_BuildSystemData;
 		};
 
 		CTestGenerate fp_TestGenerate(CStr const &_TestName, TCOptional<TCMap<CStr, CStr>> const &_Environment = {})
@@ -102,7 +204,7 @@ namespace
 			StringContents = StringContents.f_Replace(("/Deploy/Tests/BuildSystemTests/{}/"_f << _TestName).f_GetStr(), ("{}/"_f << TestGenerate.m_SourceDirectory).f_GetStr());
 			StringContents = StringContents.f_Replace(("/Deploy/Tests/BuildSystemTestsOutput/{}/"_f << _TestName).f_GetStr(), ("{}/"_f << TestGenerate.m_OutputDirectory).f_GetStr());
 
-			CEJSON ExpectedBuildSystemData = CEJSON::fs_FromString(StringContents, BuildSystemDataFile);
+			CEJSONSorted ExpectedBuildSystemData = CEJSONSorted::fs_FromString(StringContents, BuildSystemDataFile);
 			DMibAssert(BuildSystemData, ==, ExpectedBuildSystemData)(ETestFlag_Aggregated);
 			TestGenerate.m_BuildSystemData = fg_Move(ExpectedBuildSystemData);
 			CStr ExpectedContentsFile = TestGenerate.m_SourceDirectory / "ExpectedContents.txt";
@@ -111,6 +213,31 @@ namespace
 				TestGenerate.m_ExpectedContents = CFile::fs_ReadStringFromFile(ExpectedContentsFile, true);
 
 			return TestGenerate;
+		}
+
+		CParseLocation fp_GetLocationInFile(CStr const &_FileName, CStr const &_String)
+		{
+			CExeFS SourceFS;
+			if (!fg_OpenExeFS(SourceFS))
+				DMibError("Could not open ExeFS");
+
+			CStr BuildSystemSourceDir = CFile::fs_GetExpandedPath(CStr(DMibPFile) + "/../../Source");
+#ifdef DPlatformFamily_Windows
+			BuildSystemSourceDir = BuildSystemSourceDir.f_ReplaceChar('\\', '/');
+#endif
+
+			CFileSystemInterface_VirtualFS SourceVirtualFS(SourceFS.m_FileSystem);
+
+			auto FileContents = SourceVirtualFS.f_ReadStringFromFile(CStr("Source") / _FileName, true);
+			uint32 iLine = 0;
+			for (auto &Line : FileContents.f_SplitLine())
+			{
+				++iLine;
+				if (auto iFound = Line.f_Find(_String); iFound >= 0)
+					return CParseLocation{BuildSystemSourceDir / _FileName, 0, iLine, 0};
+			}
+
+			DMibError("String '{}' not found in file '{}'"_f << _String << _FileName);
 		}
 
 	public:
@@ -176,21 +303,59 @@ namespace
 			DMibTestSuite("FunctionCallAsVariable")
 			{
 				CStr TempDirectory = CFile::fs_GetProgramDirectory() / "BuildSystemTests/FunctionCallAsVariable";
-				DMibExpectException
-					(
-						fp_TestGenerate("FunctionCallAsVariable")
-						, DMibExceptionInstanceParse
-						(
-							"{}/Test.MBuildSystem" DMibPFileLineColumnFormat " error: Trying to access a function as a variable, you need to call it{\n}"
-							DMibPFileLineFormatIndent "{}/Test.MBuildSystem" DMibPFileLineColumnFormat " See definition of function type{\n}"
-							DMibPFileLineFormatIndent "{}/Test.MBuildSystem" DMibPFileLineColumnFormat " --- \"TestFile\""_f
-							<< TempDirectory << "" << 44 << 13
-							<< TempDirectory << "" << 26 << 13
-							<< TempDirectory << "" << 60 << 13
-							, {}
-						)
-					)
+				CStr BuildSystemFile = TempDirectory / "Test.MBuildSystem";
+				TCVector<CParseError> ExpectedParseErrors =
+					{
+						{"error: Trying to access a function as a variable, you need to call it", {BuildSystemFile, 1, 44, 13}, 0}
+						, {"Contributing values", {}, 1, true}
+						, {"Contributing to value", {BuildSystemFile, 1, 44, 13}, 2}
+						, {"Context contributing values", {}, 1, true}
+						, 
+						{
+							"Property.CalcValue\n"
+							"    {\n"
+							"        \"Test\": undefined,\n"
+							"        \"TestOptional\": {\n"
+							"            \"InnerValue\": \"Default\"\n"
+							"        },\n"
+							"        \"TestOptional.InnerValue\": \"Not inner\"\n"
+							"    }"
+							, {BuildSystemFile, 1, 44, 13}
+							, 2
+						}
+						, 
+						{
+							"Property.GetDefaulted\n"
+							"    \"Default\""
+							, {BuildSystemFile, 1, 35, 16}
+							, 2
+						}
+						, 
+						{
+							"Condition\n"
+							"    true"
+							, {BuildSystemFile, 1, 37, 13}
+							, 2
+						}
+						, {"Other messages", {}, 1, true}
+						, {"See definition of function type", {BuildSystemFile, 1, 26, 13}, 2}
+						, {"Other message contributing values", {}, 2, true}
+						, {"Type", {BuildSystemFile, 1, 26, 13}, 3}
+						, {"Parent contexts", {}, 1, true}
+						, {"Context", {BuildSystemFile, 1, 60, 13}, 2}
+						, {"Parent context contributing values", {}, 2, true}
+						, 
+						{
+							"Call builtin 'ToString'"
+							, fp_GetLocationInFile("Malterlib_BuildSystem_Evaluate_BuiltinFunctions_String.cpp", "DMibBuildSystemFilePosition // ToString")
+							, 3
+						}
+						, {"Entity and parents", {}, 2, true}
+						, {"Path=Root->GenerateFile:TestFile", {BuildSystemFile, 1, 18, 15}, 3}
+					}
 				;
+
+				DMibExpectException(fp_TestGenerate("FunctionCallAsVariable"), DMibExceptionInstanceParse(CParseError::fs_ToString(ExpectedParseErrors), {}));
 			};
 			DMibTestSuite("ForEach")
 			{
@@ -198,7 +363,7 @@ namespace
 				DMibAssertTrue(CFile::fs_FileExists(TestGenerate.m_OutputDirectory / "TestGenerateFile.txt"));
 				DMibExpect(CFile::fs_ReadStringFromFile(TestGenerate.m_OutputDirectory / "TestGenerateFile.txt"), ==, TestGenerate.m_ExpectedContents);
 			};
-			DMibTestSuite("l")
+			DMibTestSuite("ForEachRecursive")
 			{
 				auto TestGenerate = fp_TestGenerate("ForEachRecursive");
 				DMibAssertTrue(CFile::fs_FileExists(TestGenerate.m_OutputDirectory / "TestGenerateFile.txt"));
@@ -219,29 +384,80 @@ namespace
 			DMibTestSuite("FunctionCallWithCondition")
 			{
 				CStr TempDirectory = CFile::fs_GetProgramDirectory() / "BuildSystemTests/FunctionCallWithCondition";
-				DMibExpectException
-					(
-						fp_TestGenerate("FunctionCallWithCondition")
-						, DMibExceptionInstanceParse
-						(
-							"{}/Test.MBuildSystem" DMibPFileLineColumnFormat " error: Define does not support conditions or debug"_f << TempDirectory << "" << 26 << 11, {}
-						)
-					)
+				CStr BuildSystemFile = TempDirectory / "Test.MBuildSystem";
+				TCVector<CParseError> ExpectedParseErrors = 
+					{
+						{"error: No such function: Property.TestFunction", {BuildSystemFile, 1, 32, 13}, 0}
+						, {"Contributing values", {}, 1, true}
+						, {"Contributing to value", {BuildSystemFile, 1, 32, 13}, 2}
+						, {"Context contributing values", {}, 1, true}
+						, 
+						{
+							"Condition\n"
+							"    false"
+							, {BuildSystemFile, 1, 26, 11}
+							, 2
+						}
+						, 
+						{
+							"Apply default\n"
+							"    false"
+							, {BuildSystemFile, 1, 22, 7}
+							, 2
+						}
+					}
 				;
+
+				DMibExpectException(fp_TestGenerate("FunctionCallWithCondition"), DMibExceptionInstanceParse(CParseError::fs_ToString(ExpectedParseErrors), {}));
 			};
+
 			DMibTestSuite("TypeWithCondition")
 			{
 				CStr TempDirectory = CFile::fs_GetProgramDirectory() / "BuildSystemTests/TypeWithCondition";
-				DMibExpectException
-					(
-						fp_TestGenerate("TypeWithCondition")
-						, DMibExceptionInstanceParse
-						(
-							"{}/Test.MBuildSystem" DMibPFileLineColumnFormat " error: Type does not support conditions or debug"_f << TempDirectory << "" << 25 << 15, {}
-						)
-					)
+				CStr BuildSystemFile = TempDirectory / "Test.MBuildSystem";
+				CStr BuildSystemSourceDir = CFile::fs_GetExpandedPath(CStr(DMibPFile) + "/../../Source") + "/";
+#ifdef DPlatformFamily_Windows
+				BuildSystemSourceDir = BuildSystemSourceDir.f_ReplaceChar('/', '\\');
+#endif
+				TCVector<CParseError> ExpectedParseErrors = 
+					{
+						{"error: Could not find user type of name 'CTest'", {BuildSystemFile, 1, 40, 13}, 0}
+						, {"Contributing values", {}, 1, true}
+						, {"Contributing to value", {BuildSystemFile, 1, 40, 13}, 2}
+						, {"Context contributing values", {}, 1, true}
+						, 
+						{
+							"Apply default\n"
+							"    {\n"
+							"        \"Test\": \"Test\"\n"
+							"    }"
+							, {BuildSystemFile, 1, 35, 16}
+							, 2
+						}
+						, 
+						{
+							"Condition\n"
+							"    false"
+							, {BuildSystemFile, 1, 25, 15}
+							, 2
+						}
+						, 
+						{
+							"Initial value: Property.Platform\n"
+							"    \"TestPlatform\""
+							, fp_GetLocationInFile("Malterlib_BuildSystem.cpp", "DMibBuildSystemFilePosition, \"Initial value")
+							, 2
+						}
+						, {"Parent contexts", {}, 1, true}
+						, {"Context", {BuildSystemFile, 1, 40, 13}, 2}
+						, {"Entity and parents", {}, 2, true}
+						, {"Path=Root->GenerateFile:TestFile", {BuildSystemFile, 1, 29, 15}, 3}
+					}
 				;
+
+				DMibExpectException(fp_TestGenerate("TypeWithCondition"), DMibExceptionInstanceParse(CParseError::fs_ToString(ExpectedParseErrors), {}));
 			};
+
 			DMibTestSuite("Environment")
 			{
 				TCMap<CStr, CStr> Environment =
@@ -251,8 +467,8 @@ namespace
 						, {"TestBoolFALSE", "FALSE"}
 						, {"TestBool1", "1"}
 						, {"TestBool0", "0"}
-						, {"TestBooltrue", "true"}
-						, {"TestBoolfalse", "false"}
+						, {"TestBool_true", "true"}
+						, {"TestBool_false", "false"}
 						, {"TestInt0", "0"}
 						, {"TestInt50", "50"}
 						, {"TestIntNeg50", "-50"}

@@ -22,6 +22,16 @@ namespace NMib::NBuildSystem
 		>
 	;
 
+	struct CBuildSystemRegistryParseContext : public CBuildSystemRegistry::CParseContext
+	{
+		CBuildSystemRegistryParseContext(CStringCache &_StringCache)
+			: m_StringCache(_StringCache)
+		{
+		}
+
+		CStringCache &m_StringCache;
+	};
+
 	using CCustomRegistryKeyValue = NContainer::TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>;
 
 	NStr::CStr const &fg_RegistryNameStringForPath(CBuildSystemSyntax::CRootKey const &_Key);

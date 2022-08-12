@@ -10,22 +10,41 @@
 
 namespace NMib::NBuildSystem
 {
-	struct CPropertyKey
+	enum EPropertyFlag : uint32
 	{
-		inline_always CPropertyKey();
-		inline_always CPropertyKey(NStr::CStr const &_Name);
-		inline_always CPropertyKey(EPropertyType _Type, NStr::CStr const &_Name);
+		EPropertyFlag_None = 0
+		, EPropertyFlag_TraceEval = DMibBit(0)
+		, EPropertyFlag_TraceEvalSuccess = DMibBit(1)
+		, EPropertyFlag_TraceCondition = DMibBit(2)
+ 		, EPropertyFlag_NeedPerFile = DMibBit(3)
+	};
 
-		inline_always auto operator <=> (CPropertyKey const &_Right) const = default;
+	struct CPropertyKey;
+	struct CAssertAddedToStringCache;
+	struct CStringAndHash;
 
-		template <typename tf_CContext>
-		static CPropertyKey fs_FromString(NStr::CStr const &_String, tf_CContext &&_Context);
+	struct CPropertyKeyReference
+	{
+		CPropertyKeyReference(CAssertAddedToStringCache _Dummy, EPropertyType _Type, NStr::CStr const &_Name, uint32 _NameHash);
+
+		template <mint t_nChars>
+		constexpr CPropertyKeyReference(EPropertyType _Type, NStr::TCStrConstDataAndStr<t_nChars> const &_Name);
+		constexpr CPropertyKeyReference(EPropertyType _Type, CStringAndHash const &_Name);
+		
+		inline_always COrdering_Strong operator <=> (CPropertyKey const &_Right) const;
 
 		template <typename tf_CStr>
 		void f_Format(tf_CStr &o_Str) const;
 
-		EPropertyType m_Type;
-		NStr::CStr m_Name;
+		constexpr inline_always EPropertyType f_GetType() const;
+		constexpr inline_always uint32 f_GetNameHash() const;
+
+		CPropertyKeyTypeAndHash m_TypeAndHash;
+		NStr::CStr const &m_Name;
+
+	private:
+		friend struct CPropertyKey;
+		CPropertyKeyReference(CPropertyKeyTypeAndHash const &_TypeAndHash, NStr::CStr const &_Name);
 	};
 
 	struct CProperty
@@ -33,19 +52,16 @@ namespace NMib::NBuildSystem
 		CProperty();
 		~CProperty();
 
-		inline_always EPropertyType f_GetType() const;
-		inline_always NStr::CStr const &f_GetName() const;
-
 		CProperty(CProperty const &_Other);
 		CProperty &operator = (CProperty const &_Other);
 
-		CPropertyKey m_Key;
-		CCondition m_Condition;
+		constexpr inline_always bool f_NeedPerFile() const;
+
+		NStorage::TCSharedPointer<CCondition> m_pCondition;
 		CBuildSystemSyntax::CRootValue m_Value;
 		CFilePosition m_Position;
 		CBuildSystemRegistry const *m_pRegistry = nullptr;
-		NStr::CStr m_Debug;
-		bool m_bNeedPerFile = false;
+		EPropertyFlag m_Flags = EPropertyFlag_None;
 	};
 
 	enum EEvaluatedPropertyType
@@ -60,10 +76,16 @@ namespace NMib::NBuildSystem
 	{
 		inline_always CEvaluatedProperty();
 		bool f_IsExternal() const;
+		template <typename tf_CStr>
+		void f_Format(tf_CStr &o_Str) const
+		{
+			o_Str += typename tf_CStr::CFormat("{}") << m_Value;
+		}
 
-		NEncoding::CEJSON m_Value;
+		NEncoding::CEJSONSorted m_Value;
 		EEvaluatedPropertyType m_Type;
 		NStorage::TCPointer<CProperty const> m_pProperty;
+		NStorage::TCSharedPointer<CBuildSystemUniquePositions> m_pPositions;
 	};
 
 	struct CEvaluatedProperties
@@ -72,3 +94,5 @@ namespace NMib::NBuildSystem
 		CEvaluatedProperties *m_pParentProperties = nullptr;
 	};
 }
+
+#include "Malterlib_BuildSystem_ConstantKeys.h"

@@ -73,6 +73,19 @@ namespace NMib::NBuildSystem
 		}
 		m_ChildEntitiesMap.f_Clear();
 		mint RefCount = this->m_RefCount.f_Decrease(DMibRefCountDebuggingOnly(m_DebugSelfRef));
+#if DMibConfig_RefCountDebugging
+		if (RefCount != 1)
+		{
+			DMibLock(this->m_RefCount.m_Debug->m_Lock);
+			mint iCallstack = 0;
+			for (auto &Callstack : this->m_RefCount.m_Debug->m_Callstacks)
+			{
+				DMibTrace2("        Reference callstack {}\n", iCallstack);
+				Callstack.f_Trace(12);
+				++iCallstack;
+			}
+		}
+#endif
 #ifdef DMibBuildSystem_DebugReferencesAdvanced
 		if (RefCount > 1)
 		{
@@ -86,19 +99,6 @@ namespace NMib::NBuildSystem
 		{
 			DLock(mp_DebugSetLock);
 			mp_DebugSet.f_Remove(this);
-		}
-#endif
-#if DMibConfig_RefCountDebugging
-		if (RefCount != 1)
-		{
-			DMibLock(this->m_Debug->m_Lock);
-			mint iCallstack = 0;
-			for (auto &Callstack : this->m_Debug->m_Callstacks)
-			{
-				DMibTrace2("        Reference callstack {}\n", iCallstack);
-				Callstack.f_Trace(12);
-				++iCallstack;
-			}
 		}
 #endif
 		DCheck(RefCount == 1)(RefCount)(f_GetPath());
@@ -212,36 +212,64 @@ namespace NMib::NBuildSystem
 	{
 		auto &ThisData = f_Data();
 
-		for (auto &Definition : ThisData.m_VariableDefinitions)
+		for (auto &Definitions : ThisData.m_VariableDefinitions)
 		{
-			auto &Key = ThisData.m_VariableDefinitions.fs_GetKey(Definition);
-			for (auto *pParent = m_pParent; pParent; pParent = pParent->m_pParent)
+			auto &Key = ThisData.m_VariableDefinitions.fs_GetKey(Definitions);
+			for (auto &Definition : Definitions)
 			{
-				if (auto pExistingType = pParent->f_Data().m_VariableDefinitions.f_FindEqual(Key))
-					CBuildSystem::fs_ThrowError(Definition.m_Type.m_Position, "User type name collision with parent entity", TCVector<CBuildSystemError>{{pExistingType->m_Type.m_Position, "Defined here"}});
+				for (auto *pParent = m_pParent; pParent; pParent = pParent->m_pParent)
+				{
+					if (auto pExistingType = pParent->f_Data().m_VariableDefinitions.f_FindEqual(Key))
+					{
+						CBuildSystem::fs_ThrowError
+							(
+								Definition.m_Type.m_Position
+								, "User type name collision with parent entity"
+								, TCVector<CBuildSystemError>{{CBuildSystemUniquePositions(pExistingType->f_GetFirst().m_Type.m_Position, gc_ConstString_Type), "Defined here"}}
+							)
+						;
+					}
 
-				if (auto *pDefinition = pParent->f_ChildDependentData().m_ChildrenVariableDefinitions.f_FindEqual(Key); pDefinition && pDefinition->f_FindEqual(Definition.m_Type.m_Position))
-					continue;
+					if
+						(
+							auto *pDefinition = pParent->f_ChildDependentData().m_ChildrenVariableDefinitions.f_FindEqual(Key);
+							pDefinition && pDefinition->f_FindEqual(Definition.m_Type.m_Position)
+						)
+					{
+						continue;
+					}
 
-				auto &ChildDependentData = pParent->f_ChildDependentDataWritable();
-				ChildDependentData.m_ChildrenVariableDefinitions[Key].f_Insert(Definition.m_Type.m_Position);
+					auto &ChildDependentData = pParent->f_ChildDependentDataWritable();
+					ChildDependentData.m_ChildrenVariableDefinitions[Key].f_Insert(Definition.m_Type.m_Position);
+				}
 			}
 		}
 
-		for (auto &UserType : ThisData.m_UserTypes)
+		for (auto &UserTypes : ThisData.m_UserTypes)
 		{
-			auto &Key = ThisData.m_UserTypes.fs_GetKey(UserType);
+			auto &Key = ThisData.m_UserTypes.fs_GetKey(UserTypes);
 
-			for (auto *pParent = m_pParent; pParent; pParent = pParent->m_pParent)
+			for (auto &UserType : UserTypes)
 			{
-				if (auto pExistingType = pParent->f_Data().m_UserTypes.f_FindEqual(Key))
-					CBuildSystem::fs_ThrowError(UserType.m_Position, "User type name collision with parent entity", TCVector<CBuildSystemError>{{pExistingType->m_Position, "Defined here"}});
+				for (auto *pParent = m_pParent; pParent; pParent = pParent->m_pParent)
+				{
+					if (auto pExistingType = pParent->f_Data().m_UserTypes.f_FindEqual(Key))
+					{
+						CBuildSystem::fs_ThrowError
+							(
+								UserType.m_Type.m_Position
+								, "User type name collision with parent entity"
+								, TCVector<CBuildSystemError>{{CBuildSystemUniquePositions(pExistingType->f_GetFirst().m_Type.m_Position, gc_ConstString_Type), "Defined here"}}
+							)
+						;
+					}
 
-				if (auto *pUserType = pParent->f_ChildDependentData().m_ChildrenUserTypes.f_FindEqual(Key); pUserType && pUserType->f_FindEqual(UserType.m_Position))
-					continue;
+					if (auto *pUserType = pParent->f_ChildDependentData().m_ChildrenUserTypes.f_FindEqual(Key); pUserType && pUserType->f_FindEqual(UserType.m_Type.m_Position))
+						continue;
 
-				auto &ChildDependentData = pParent->f_ChildDependentDataWritable();
-				ChildDependentData.m_ChildrenUserTypes[Key][UserType.m_Position];
+					auto &ChildDependentData = pParent->f_ChildDependentDataWritable();
+					ChildDependentData.m_ChildrenUserTypes[Key][UserType.m_Type.m_Position];
+				}
 			}
 		}
 	}
@@ -251,36 +279,63 @@ namespace NMib::NBuildSystem
 		auto &OtherData = _Other.f_Data();
 		auto &ThisData = f_Data();
 
-		for (auto &Definition : OtherData.m_VariableDefinitions)
+		for (auto &Definitions : OtherData.m_VariableDefinitions)
 		{
-			auto &Key = OtherData.m_VariableDefinitions.fs_GetKey(Definition);
-			if (auto pOld = ThisData.m_VariableDefinitions.f_FindEqual(Key))
+			auto &Key = OtherData.m_VariableDefinitions.fs_GetKey(Definitions);
+			for (auto &Definition : Definitions)
 			{
-				if (pOld->m_Type.m_Type == Definition.m_Type.m_Type)
-					continue;
+				if (auto pOlds = ThisData.m_VariableDefinitions.f_FindEqual(Key))
+				{
+					bool bFound = false;
+
+					for (auto &Old : *pOlds)
+					{
+						if (Old.m_Type.m_Type == Definition.m_Type.m_Type)
+						{
+							bFound = true;
+							break;
+						}
+					}
+
+					if (bFound)
+						continue;
+				}
+				CBuildSystem::fs_AddEntityVariableDefinition
+					(
+						nullptr
+						, *this
+						, Key.f_Reference()
+						, Definition.m_Type.m_Type
+						, Definition.m_Type.m_Position
+						, Definition.m_Type.m_Whitespace
+						, Definition.m_pConditions
+						, Definition.m_DebugFlags
+					)
+				;
 			}
-			CBuildSystem::fs_AddEntityVariableDefinition
-				(
-					nullptr
-					, *this
-					, Key
-					, Definition.m_Type.m_Type
-					, Definition.m_Type.m_Position
-					, Definition.m_Type.m_Whitespace
-					, Definition.m_pConditions
-				)
-			;
 		}
 
-		for (auto &UserType : OtherData.m_UserTypes)
+		for (auto &UserTypes : OtherData.m_UserTypes)
 		{
-			auto &Key = OtherData.m_UserTypes.fs_GetKey(UserType);
-			if (auto pOld = ThisData.m_UserTypes.f_FindEqual(Key))
+			auto &Key = OtherData.m_UserTypes.fs_GetKey(UserTypes);
+			for (auto &UserType : UserTypes)
 			{
-				if (pOld->m_Type == UserType.m_Type)
-					continue;
+				if (auto pOlds = ThisData.m_UserTypes.f_FindEqual(Key))
+				{
+					bool bFound = false;
+					for (auto &Old : *pOlds)
+					{
+						if (Old.m_Type.m_Type == UserType.m_Type.m_Type)
+						{
+							bFound = true;
+							break;
+						}
+					}
+					if (bFound)
+						continue;
+				}
+				CBuildSystem::fs_AddEntityUserType(*this, Key, UserType.m_Type.m_Type, UserType.m_Type.m_Position, UserType.m_pConditions, UserType.m_DebugFlags);
 			}
-			CBuildSystem::fs_AddEntityUserType(*this, Key, UserType.m_Type, UserType.m_Position);
 		}
 	}
 
@@ -316,7 +371,7 @@ namespace NMib::NBuildSystem
 			m_pParent->fr_GetPath(_Destination);
 
 		if (!_Destination.f_IsEmpty())
-			_Destination += "->";
+			_Destination += gc_ConstString_Symbol_AccessObject.m_String;
 
 		auto &Key = f_GetKey();
 
@@ -376,6 +431,17 @@ namespace NMib::NBuildSystem
 	bool CEntity::f_HasFullEval(EPropertyType _PropertyType) const
 	{
 		return (f_Data().m_HasFullEval & (1 << _PropertyType)) != 0;
+	}
+
+	bool CEntity::f_HasParent(CEntity const *_pEntity) const
+	{
+		if (this == _pEntity)
+			return true;
+
+		if (!m_pParent)
+			return false;
+
+		return m_pParent->f_HasParent(_pEntity);
 	}
 
 	CStr CEntity::f_GetPath() const
@@ -484,17 +550,16 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	CProperty &CEntity::f_AddProperty(CPropertyKey const &_Key, CBuildSystemSyntax::CRootValue const &_Value, CFilePosition const &_Position)
+	CProperty &CEntity::f_AddProperty(CPropertyKeyReference const &_Key, CBuildSystemSyntax::CRootValue const &_Value, CFilePosition const &_Position)
 	{
 		auto &ThisData = f_DataWritable();
 		auto &NewProperty = ThisData.m_Properties[_Key].f_Insert();
-		NewProperty.m_Key = _Key;
 		NewProperty.m_Value = _Value;
 		NewProperty.m_Position = _Position;
-		DMibCheck(NewProperty.m_Key.m_Type != EPropertyType_Type);
+		DMibCheck(_Key.f_GetType() != EPropertyType_Type);
 
-		if (_Key.m_Name == "FullEval")
-			ThisData.m_HasFullEval |= 1 << _Key.m_Type;
+		if (_Key.m_Name == gc_ConstString_FullEval.m_String)
+			ThisData.m_HasFullEval |= 1 << _Key.f_GetType();
 
 		return NewProperty;
 	}
@@ -570,7 +635,7 @@ namespace NMib::NBuildSystem
 		, m_VariableDefinitions(_Other.m_VariableDefinitions)
 		, m_UserTypes(_Other.m_UserTypes)
 		, m_Position(_Other.m_Position)
-		, m_Debug(_Other.m_Debug)
+		, m_DebugFlags(_Other.m_DebugFlags)
 		, m_HasFullEval(_Other.m_HasFullEval)
 	{
 	}
@@ -616,36 +681,36 @@ namespace NMib::NBuildSystem
 
 	EEntityType fg_EntityTypeFromStr(CStr const &_String)
 	{
-		if (_String == "Root") return EEntityType_Root;
-		else if (_String == "Target") return EEntityType_Target;
-		else if (_String == "Group") return EEntityType_Group;
-		else if (_String == "Workspace") return EEntityType_Workspace;
-		else if (_String == "File") return EEntityType_File;
-		else if (_String == "Dependency") return EEntityType_Dependency;
-		else if (_String == "GeneratorSetting") return EEntityType_GeneratorSetting;
-		else if (_String == "GenerateFile") return EEntityType_GenerateFile;
-		else if (_String == "Import") return EEntityType_Import;
-		else if (_String == "Repository") return EEntityType_Repository;
-		else if (_String == "CreateTemplate") return EEntityType_CreateTemplate;
+		if (_String == gc_ConstString_Root.m_String) return EEntityType_Root;
+		else if (_String == gc_ConstString_Target.m_String) return EEntityType_Target;
+		else if (_String == gc_ConstString_Group.m_String) return EEntityType_Group;
+		else if (_String == gc_ConstString_Workspace.m_String) return EEntityType_Workspace;
+		else if (_String == gc_ConstString_File.m_String) return EEntityType_File;
+		else if (_String == gc_ConstString_Dependency.m_String) return EEntityType_Dependency;
+		else if (_String == gc_ConstString_GeneratorSetting.m_String) return EEntityType_GeneratorSetting;
+		else if (_String == gc_ConstString_GenerateFile.m_String) return EEntityType_GenerateFile;
+		else if (_String == gc_ConstString_Import.m_String) return EEntityType_Import;
+		else if (_String == gc_ConstString_Repository.m_String) return EEntityType_Repository;
+		else if (_String == gc_ConstString_CreateTemplate.m_String) return EEntityType_CreateTemplate;
 		else return EEntityType_Invalid;
 	}
 
-	CStr fg_EntityTypeToStr(EEntityType _Type)
+	CStr const &fg_EntityTypeToStr(EEntityType _Type)
 	{
 		switch (_Type)
 		{
-		case EEntityType_Root: return "Root";
-		case EEntityType_Target: return "Target";
-		case EEntityType_Group: return "Group";
-		case EEntityType_Workspace: return "Workspace";
-		case EEntityType_File: return "File";
-		case EEntityType_Dependency: return "Dependency";
-		case EEntityType_GeneratorSetting: return "GeneratorSetting";
-		case EEntityType_GenerateFile: return "GenerateFile";
-		case EEntityType_Import: return "Import";
-		case EEntityType_Repository: return "Repository";
-		case EEntityType_CreateTemplate: return "CreateTemplate";
-		default: DMibNeverGetHere; return CStr();
+		case EEntityType_Root: return gc_ConstString_Root;
+		case EEntityType_Target: return gc_ConstString_Target;
+		case EEntityType_Group: return gc_ConstString_Group;
+		case EEntityType_Workspace: return gc_ConstString_Workspace;
+		case EEntityType_File: return gc_ConstString_File;
+		case EEntityType_Dependency: return gc_ConstString_Dependency;
+		case EEntityType_GeneratorSetting: return gc_ConstString_GeneratorSetting;
+		case EEntityType_GenerateFile: return gc_ConstString_GenerateFile;
+		case EEntityType_Import: return gc_ConstString_Import;
+		case EEntityType_Repository: return gc_ConstString_Repository;
+		case EEntityType_CreateTemplate: return gc_ConstString_CreateTemplate;
+		default: DMibNeverGetHere; return gc_ConstString_Empty;
 		}
 	}
 }

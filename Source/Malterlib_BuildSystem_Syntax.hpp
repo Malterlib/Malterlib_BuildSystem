@@ -57,8 +57,8 @@ namespace NMib::NBuildSystem
 			(
 				[&](auto const &_Value)
 				{
-					if constexpr (NTraits::TCIsSameDereferencedUnqualified<decltype(_Value), NEncoding::CEJSON>::mc_Value)
-						o_Str += typename tf_CStr::CFormat("{}") << _Value.f_ToString(nullptr, gc_BuildSystemJSONParseFlags);
+					if constexpr (NTraits::TCIsSameDereferencedUnqualified<decltype(_Value), NEncoding::CEJSONSorted>::mc_Value)
+						o_Str += typename tf_CStr::CFormat("{}") << _Value.f_ToString("\t", gc_BuildSystemJSONParseFlags);
 					else
 						o_Str += typename tf_CStr::CFormat("{}") << _Value;
 				}
@@ -79,15 +79,15 @@ namespace NMib::NBuildSystem
 				o_Str += typename tf_CStr::CFormat("{}") << *iParam;
 				++iParam;
 			}
-			o_Str += "->";
+			o_Str += gc_ConstString_Symbol_AccessObject.m_String;
 		}
 
 		if (!m_bEmptyPropertyType)
 		{
-			o_Str += fg_PropertyTypeToStr(m_PropertyType);
+			o_Str += fg_PropertyTypeToStr(m_PropertyKey.f_GetType());
 			o_Str += ".";
 		}
-		o_Str += m_Name;
+		o_Str += m_PropertyKey.m_Name;
 		o_Str += "(";
 
 		bool bFirst = true;
@@ -141,6 +141,7 @@ namespace NMib::NBuildSystem
 		case EOperator_BitwiseOr: o_Str += " | "; break;
 		case EOperator_And: o_Str += " && "; break;
 		case EOperator_Or: o_Str += " || "; break;
+		case EOperator_NullishCoalescing: o_Str += " ?? "; break;			
 		}
 		o_Str += typename tf_CStr::CFormat("{})") << m_Right;
 	}
@@ -150,10 +151,10 @@ namespace NMib::NBuildSystem
 	{
 		switch (m_Operator)
 		{
-		case EOperator_LogicalNot: o_Str += "!"; break;
-		case EOperator_BitwiseNot: o_Str += "~"; break;
-		case EOperator_UnaryPlus: o_Str += "+"; break;
-		case EOperator_UnaryMinus: o_Str += "-"; break;
+		case EOperator_LogicalNot: o_Str += gc_ConstString_Symbol_LogicalNot.m_String; break;
+		case EOperator_BitwiseNot: o_Str += gc_ConstString_Symbol_BitwiseNot.m_String; break;
+		case EOperator_UnaryPlus: o_Str += gc_ConstString_Symbol_OperatorAdd.m_String; break;
+		case EOperator_UnaryMinus: o_Str += gc_ConstString_Symbol_OperatorSubtract.m_String; break;
 		}
 		o_Str += typename tf_CStr::CFormat("{}") << m_Right;
 	}
@@ -179,7 +180,7 @@ namespace NMib::NBuildSystem
 	void CBuildSystemSyntax::CExpressionAppend::f_Format(tf_CStr &o_Str) const
 	{
 		CExpression::f_Format(o_Str);
-		o_Str += "...";
+		o_Str += gc_ConstString_Symbol_Ellipsis.m_String;
 	}
 
 	template <typename tf_CStr>
@@ -239,6 +240,12 @@ namespace NMib::NBuildSystem
 	}
 
 	template <typename tf_CStr>
+	void CBuildSystemSyntax::CIdentifierReference::f_Format(tf_CStr &o_Str) const
+	{
+		o_Str += typename tf_CStr::CFormat("&{}") << m_Identifier;
+	}
+
+	template <typename tf_CStr>
 	void CBuildSystemSyntax::CIdentifier::f_Format(tf_CStr &o_Str) const
 	{
 		if (m_EntityType != EEntityType_Invalid)
@@ -249,7 +256,37 @@ namespace NMib::NBuildSystem
 
 		if (!m_bEmptyPropertyType)
 		{
-			o_Str += fg_PropertyTypeToStr(m_PropertyType);
+			m_PropertyType.f_Visit
+				(
+					[&](auto const &_Value)
+					{
+						using CValueType = typename NTraits::TCRemoveReferenceAndQualifiers<decltype(_Value)>::CType;
+						typename tf_CStr::CAppender Appender(o_Str);
+
+						if constexpr (NTraits::TCIsSame<CValueType, EPropertyType>::mc_Value)
+							Appender += fg_PropertyTypeToStr(_Value);
+						else
+						{
+							for (auto &Token : _Value.m_Tokens)
+							{
+								Token.m_Token.f_Visit
+									(
+										[&](auto const &_Value)
+										{
+											using CValueType = typename NTraits::TCRemoveReferenceAndQualifiers<decltype(_Value)>::CType;
+											if constexpr (NTraits::TCIsSame<CValueType, NStr::CStr>::mc_Value)
+												NContainer::TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_GenerateIdentifier(Appender, _Value);
+											else
+												o_Str += typename tf_CStr::CFormat("@{}") << _Value;
+										}
+									)
+								;
+							}
+						}
+					}
+				)
+			;
+
 			o_Str += ".";
 		}
 
@@ -260,8 +297,8 @@ namespace NMib::NBuildSystem
 					using CValueType = typename NTraits::TCRemoveReferenceAndQualifiers<decltype(_Value)>::CType;
 					typename tf_CStr::CAppender Appender(o_Str);
 
-					if constexpr (NTraits::TCIsSame<CValueType, NStr::CStr>::mc_Value)
-						NContainer::TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_GenerateIdentifier(Appender, _Value);
+					if constexpr (NTraits::TCIsSame<CValueType, CStringAndHash>::mc_Value)
+						NContainer::TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_GenerateIdentifier(Appender, _Value.m_String);
 					else
 					{
 						for (auto &Token : _Value.m_Tokens)
@@ -294,7 +331,7 @@ namespace NMib::NBuildSystem
 	template <typename tf_CStr>
 	void CBuildSystemSyntax::CAppendObject::f_Format(tf_CStr &o_Str) const
 	{
-		o_Str += "<<";
+		o_Str += gc_ConstString_Symbol_AppendObject.m_String;
 	}
 
 	template <typename tf_CStr>
@@ -336,28 +373,31 @@ namespace NMib::NBuildSystem
 		switch (m_Type)
 		{
 		case EType_Any:
-			o_Str += "any";
+			o_Str += gc_ConstString_any.m_String;
 			return;
 		case EType_Void:
-			o_Str += "void";
+			o_Str += gc_ConstString_void.m_String;
 			return;
 		case EType_String:
-			o_Str += "string";
+			o_Str += gc_ConstString_string.m_String;
 			return;
 		case EType_Integer:
-			o_Str += "int";
+			o_Str += gc_ConstString_int.m_String;
 			return;
 		case EType_FloatingPoint:
-			o_Str += "float";
+			o_Str += gc_ConstString_float.m_String;
 			return;
 		case EType_Boolean:
-			o_Str += "bool";
+			o_Str += gc_ConstString_bool.m_String;
 			return;
 		case EType_Date:
-			o_Str += "date";
+			o_Str += gc_ConstString_date.m_String;
 			return;
 		case EType_Binary:
-			o_Str += "binary";
+			o_Str += gc_ConstString_binary.m_String;
+			return;
+		case EType_Identifier:
+			o_Str += gc_ConstString_identifier.m_String;
 			return;
 		}
 		DMibNeverGetHere;
@@ -391,7 +431,7 @@ namespace NMib::NBuildSystem
 			if (Member.m_bOptional)
 			{
 				auto UserData = Key.f_GetUserData();
-				Key += "?";
+				Key += gc_ConstString_Symbol_Optional.m_String;
 				Key.f_SetUserData(UserData);
 			}
 
@@ -449,10 +489,10 @@ namespace NMib::NBuildSystem
 				(
 					[&](auto const &_Value)
 					{
-						if constexpr (NTraits::TCIsSameDereferencedUnqualified<decltype(_Value), NEncoding::CEJSON>::mc_Value)
+						if constexpr (NTraits::TCIsSameDereferencedUnqualified<decltype(_Value), NEncoding::CEJSONSorted>::mc_Value)
 						{
 							typename tf_CStr::CAppender Appender(o_Str);
-							NEncoding::NJSON::fg_GenerateJSONValue<CBuildSystemParseContext>(Appender, _Value.f_ToJSON(), 0, nullptr, gc_BuildSystemJSONParseFlags);
+							NEncoding::NJSON::fg_GenerateJSONValue<CBuildSystemParseContext>(Appender, _Value.f_ToJSON(), 0, "\t", gc_BuildSystemJSONParseFlags);
 						}
 						else
 							o_Str += typename tf_CStr::CFormat("{}") << _Value;
@@ -471,8 +511,8 @@ namespace NMib::NBuildSystem
 		switch (m_ParamType)
 		{
 		case EParamType_None: break;
-		case EParamType_Optional: o_Str += "?"; break;
-		case EParamType_Ellipsis: o_Str += "..."; break;
+		case EParamType_Optional: o_Str += gc_ConstString_Symbol_Optional.m_String; break;
+		case EParamType_Ellipsis: o_Str += gc_ConstString_Symbol_Ellipsis.m_String; break;
 		}
 
 		o_Str += typename tf_CStr::CFormat(" {}") << m_Name;
@@ -502,7 +542,11 @@ namespace NMib::NBuildSystem
 	template <typename tf_CStr>
 	void CBuildSystemSyntax::CDefine::f_Format(tf_CStr &o_Str) const
 	{
-		o_Str += "define ";
+		if (m_bLegacy)
+			o_Str += "define ";
+		else
+			o_Str += ": ";
+
 		o_Str += typename tf_CStr::CFormat("{}") << m_Type;
 	}
 
@@ -532,10 +576,10 @@ namespace NMib::NBuildSystem
 			(
 				[&](auto const &_Value)
 				{
-					if constexpr (NTraits::TCIsSameDereferencedUnqualified<decltype(_Value), NEncoding::CEJSON>::mc_Value)
+					if constexpr (NTraits::TCIsSameDereferencedUnqualified<decltype(_Value), NEncoding::CEJSONSorted>::mc_Value)
 					{
 						typename tf_CStr::CAppender Appender(o_Str);
-						NEncoding::NJSON::fg_GenerateJSONValue<CBuildSystemParseContext>(Appender, _Value.f_ToJSON(), 0, nullptr, gc_BuildSystemJSONParseFlags);
+						NEncoding::NJSON::fg_GenerateJSONValue<CBuildSystemParseContext>(Appender, _Value.f_ToJSON(), 0, "\t", gc_BuildSystemJSONParseFlags);
 					}
 					else
 						o_Str += typename tf_CStr::CFormat("{}") << _Value;
@@ -568,9 +612,9 @@ namespace NMib::NBuildSystem
 	{
 		switch (m_Operator)
 		{
-		case EOperator_And: o_Str += "&"; break;
-		case EOperator_Or: o_Str += "|"; break;
-		case EOperator_Not: o_Str += "!"; break;
+		case EOperator_And: o_Str += gc_ConstString_Symbol_OperatorBitwiseAnd.m_String; break;
+		case EOperator_Or: o_Str += gc_ConstString_Symbol_LogicalOr.m_String; break;
+		case EOperator_Not: o_Str += gc_ConstString_Symbol_LogicalNot.m_String; break;
 		}
 	}
 
@@ -579,11 +623,11 @@ namespace NMib::NBuildSystem
 	{
 		switch (m_Operator)
 		{
-		case EOperator_Entity: o_Str += "%"; break;
-		case EOperator_ConfigurationTuple: o_Str += "*"; break;
-		case EOperator_Equal: o_Str += "!!"; break;
-		case EOperator_NotEqual: o_Str += "!"; break;
-		case EOperator_Pragma: o_Str += "#"; break;
+		case EOperator_Entity: o_Str += gc_ConstString_Symbol_EntityPrefix.m_String; break;
+		case EOperator_ConfigurationTuple: o_Str += gc_ConstString_Symbol_ConfigurationPrefix.m_String; break;
+		case EOperator_Equal: o_Str += gc_ConstString_Symbol_LogicalNotNot.m_String; break;
+		case EOperator_NotEqual: o_Str += gc_ConstString_Symbol_LogicalNot.m_String; break;
+		case EOperator_Pragma: o_Str += gc_ConstString_Symbol_PragmaPrefix.m_String; break;
 		}
 		o_Str += typename tf_CStr::CFormat("{}") << m_Right;
 	}

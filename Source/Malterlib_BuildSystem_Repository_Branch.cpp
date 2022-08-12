@@ -3,21 +3,25 @@
 
 #include "Malterlib_BuildSystem_Repository.h"
 
+#include <Mib/Concurrency/AsyncDestroy>
+#include <Mib/Concurrency/ActorSequencer>
+
 namespace NMib::NBuildSystem
 {
 	using namespace NRepository;
 
-	CBuildSystem::ERetry CBuildSystem::f_Action_Repository_Branch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, CStr const &_Branch, ERepoBranchFlag _Flags)
+	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Branch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, CStr const &_Branch, ERepoBranchFlag _Flags)
 	{
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+
 		CGenerateEphemeralState GenerateState;
-		if (ERetry Retry = fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
-			return Retry;
+		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
+			co_return Retry;
 
-		CFilteredRepos FilteredRepositories = fg_GetFilteredRepos(_Filter, *this, mp_Data);
+		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(_Filter, *this, mp_Data);
 
-		CGitLaunches Launches{mp_BaseDir, "Branching repos", mp_AnsiFlags, mp_fOutputConsole};
-
-		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
+		CGitLaunches Launches{f_GetBaseDir(), "Branching repos", mp_AnsiFlags, mp_fOutputConsole, f_GetCancelledPointer()};
+		auto DestroyLaunchs = co_await co_await Launches.f_Init();
 
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
 
@@ -57,26 +61,30 @@ namespace NMib::NBuildSystem
 				}
 			}
 
-			LaunchResults.f_Insert(Results.f_GetResults().f_CallSync());
+			LaunchResults.f_Insert(co_await Results.f_GetResults());
+			if (*mp_pCancelled)
+				break;
 		}
 
-		for (auto &Result : LaunchResults)
-			Result.f_Access();
+		fg_Move(LaunchResults) | g_Unwrap;
 
-		return ERetry_None;
+		co_await f_CheckCancelled();
+
+		co_return ERetry_None;
 	}
 
-	CBuildSystem::ERetry CBuildSystem::f_Action_Repository_Unbranch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoBranchFlag _Flags)
+	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Unbranch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoBranchFlag _Flags)
 	{
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+
 		CGenerateEphemeralState GenerateState;
-		if (ERetry Retry = fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
-			return Retry;
+		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
+			co_return Retry;
 
-		CFilteredRepos FilteredRepositories = fg_GetFilteredRepos(_Filter, *this, mp_Data);
+		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(_Filter, *this, mp_Data);
 
-		CGitLaunches Launches{mp_BaseDir, "Unbranching repos", mp_AnsiFlags, mp_fOutputConsole};
-
-		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
+		CGitLaunches Launches{f_GetBaseDir(), "Unbranching repos", mp_AnsiFlags, mp_fOutputConsole, f_GetCancelledPointer()};
+		auto DestroyLaunchs = co_await co_await Launches.f_Init();
 
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
 
@@ -118,17 +126,18 @@ namespace NMib::NBuildSystem
 
 			}
 
-			LaunchResults.f_Insert(Results.f_GetResults().f_CallSync());
-
+			LaunchResults.f_Insert(co_await Results.f_GetResults());
+			if (*mp_pCancelled)
+				break;
 		}
 
-		for (auto &Result : LaunchResults)
-			Result.f_Access();
+		fg_Move(LaunchResults) | g_Unwrap;
+		co_await f_CheckCancelled();
 
-		return ERetry_None;
+		co_return ERetry_None;
 	}
 
-	CBuildSystem::ERetry CBuildSystem::f_Action_Repository_CleanupBranches
+	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_CleanupBranches
 		(
 		 	CGenerateOptions const &_GenerateOptions
 		 	, CRepoFilter const &_Filter
@@ -136,20 +145,21 @@ namespace NMib::NBuildSystem
 		 	, TCVector<CStr> const &_Branches
 		)
 	{
-		CGenerateEphemeralState GenerateState;
-		if (ERetry Retry = fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
-			return Retry;
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
 
-		CFilteredRepos FilteredRepositories = fg_GetFilteredRepos(_Filter, *this, mp_Data);
+		CGenerateEphemeralState GenerateState;
+		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
+			co_return Retry;
+
+		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(_Filter, *this, mp_Data);
 
 		if (_Flags & ERepoCleanupBranchesFlag_UpdateRemotes)
-			fg_UpdateRemotes(*this, FilteredRepositories);
+			co_await fg_UpdateRemotes(*this, FilteredRepositories);
 
-		CGitLaunches Launches{mp_BaseDir, "Cleaning up branches", mp_AnsiFlags, mp_fOutputConsole};
+		CGitLaunches Launches{f_GetBaseDir(), "Cleaning up branches", mp_AnsiFlags, mp_fOutputConsole, f_GetCancelledPointer()};
+		auto DestroyLaunchs = co_await co_await Launches.f_Init();
 
 		CColors Colors(mp_AnsiFlags);
-
-		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
 
@@ -372,13 +382,13 @@ namespace NMib::NBuildSystem
 			Promise.f_MoveFuture() > LaunchResults.f_AddResult();
 		}
 
-		for (auto &Result : LaunchResults.f_GetResults().f_CallSync())
-			Result.f_Access();
+		co_await LaunchResults.f_GetResults() | g_Unwrap;
+		co_await f_CheckCancelled();
 
-		return ERetry_None;
+		co_return ERetry_None;
 	}
 
-	CBuildSystem::ERetry CBuildSystem::f_Action_Repository_CleanupTags
+	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_CleanupTags
 		(
 		 	CGenerateOptions const &_GenerateOptions
 		 	, CRepoFilter const &_Filter
@@ -386,20 +396,21 @@ namespace NMib::NBuildSystem
 		 	, TCVector<CStr> const &_Tags
 		)
 	{
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		
 		CGenerateEphemeralState GenerateState;
-		if (ERetry Retry = fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
-			return Retry;
+		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
+			co_return Retry;
 
-		CFilteredRepos FilteredRepositories = fg_GetFilteredRepos(_Filter, *this, mp_Data);
+		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(_Filter, *this, mp_Data);
 
 		if (_Flags & ERepoCleanupTagsFlag_UpdateRemotes)
-			fg_UpdateRemotes(*this, FilteredRepositories);
+			co_await fg_UpdateRemotes(*this, FilteredRepositories);
 
-		CGitLaunches Launches{mp_BaseDir, "Cleaning up tags", mp_AnsiFlags, mp_fOutputConsole};
+		CGitLaunches Launches{f_GetBaseDir(), "Cleaning up tags", mp_AnsiFlags, mp_fOutputConsole, f_GetCancelledPointer()};
+		auto DestroyLaunchs = co_await co_await Launches.f_Init();
 
 		CColors Colors(mp_AnsiFlags);
-
-		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
 
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
 
@@ -644,9 +655,9 @@ namespace NMib::NBuildSystem
 			Promise.f_MoveFuture() > LaunchResults.f_AddResult();
 		}
 
-		for (auto &Result : LaunchResults.f_GetResults().f_CallSync())
-			Result.f_Access();
+		co_await LaunchResults.f_GetResults() | g_Unwrap;
+		co_await f_CheckCancelled();
 
-		return ERetry_None;
+		co_return ERetry_None;
 	}
 }

@@ -3,6 +3,8 @@
 
 #include "Malterlib_BuildSystem_Repository.h"
 
+#include <Mib/Concurrency/AsyncDestroy>
+
 namespace NMib::NBuildSystem::NRepository
 {
 	CStr fg_GetGitRoot(CStr const &_Directory)
@@ -175,7 +177,7 @@ namespace NMib::NBuildSystem::NRepository
 					return Promise.f_SetResult(true); // Detached head
 				else if (BranchLine.f_StartsWith("## "))
 				{
-					if (BranchLine.f_Find("...") < 0)
+					if (BranchLine.f_Find(gc_ConstString_Symbol_Ellipsis.m_String) < 0)
 						return Promise.f_SetResult(true); // Non-pushed branch
 
 					CStr LocalRef;
@@ -209,7 +211,7 @@ namespace NMib::NBuildSystem::NRepository
 			{
 				if (_Result.m_ExitCode)
 				{
-					Promise.f_SetException(DMibErrorInstance(_Result.f_GetErrorOut()));
+					Promise.f_SetException(DMibErrorInstance(_Result.f_GetErrorOut().f_Trim()));
 					return;
 				}
 
@@ -243,7 +245,7 @@ namespace NMib::NBuildSystem::NRepository
 			{
 				if (_Result.m_ExitCode)
 				{
-					Promise.f_SetException(DMibErrorInstance(_Result.f_GetErrorOut()));
+					Promise.f_SetException(DMibErrorInstance(_Result.f_GetErrorOut().f_Trim()));
 					return;
 				}
 
@@ -279,7 +281,7 @@ namespace NMib::NBuildSystem::NRepository
 			{
 				if (_Result.m_ExitCode)
 				{
-					Promise.f_SetException(DMibErrorInstance(_Result.f_GetErrorOut()));
+					Promise.f_SetException(DMibErrorInstance(_Result.f_GetErrorOut().f_Trim()));
 					return;
 				}
 
@@ -303,7 +305,7 @@ namespace NMib::NBuildSystem::NRepository
 			{
 				if (_Result.m_ExitCode)
 				{
-					Promise.f_SetException(DMibErrorInstance(_Result.f_GetErrorOut()));
+					Promise.f_SetException(DMibErrorInstance(_Result.f_GetErrorOut().f_Trim()));
 					return;
 				}
 
@@ -327,7 +329,7 @@ namespace NMib::NBuildSystem::NRepository
 										if (_LaunchResult.m_ExitCode)
 										{
 											if (!Promise.f_IsSet())
-												Promise.f_SetException(DMibErrorInstance(_LaunchResult.f_GetErrorOut()));
+												Promise.f_SetException(DMibErrorInstance(_LaunchResult.f_GetErrorOut().f_Trim()));
 											return;
 										}
 										Remotes[_Remote] = CRemote{_LaunchResult.f_GetStdOut().f_Trim()};
@@ -574,31 +576,22 @@ namespace NMib::NBuildSystem::NRepository
 		return {{"GIT_HTTP_CONNECT_TIMEOUT", CStr::fs_ToStr(Options.m_GitFetchTimeout)}};
 	}
 
-	void fg_UpdateRemotes(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage)
+	TCFuture<void> DMibWorkaroundUBSanSectionErrors fg_UpdateRemotes(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage)
 	{
-		TCSharedPointer<CDefaultRunLoop> pRunLoop = fg_Construct();
-		auto CleanupRunLoop = g_OnScopeExit / [&]
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+
+		CGitLaunches Launches
 			{
-				while (pRunLoop->m_RefCount.f_Get() > 0)
-					pRunLoop->f_WaitOnceTimeout(0.1);
+				_BuildSystem.f_GetBaseDir()
+				, "Fetching remotes" + _ExtraMessage
+				, _BuildSystem.f_AnsiFlags()
+				, _BuildSystem.f_OutputConsoleFunctor()
+				, _BuildSystem.f_GetCancelledPointer()
 			}
 		;
-		TCActor<CDispatchingActor> HelperActor(fg_Construct(), pRunLoop->f_Dispatcher());
-		auto CleanupHelperActor = g_OnScopeExit / [&]
-			{
-				HelperActor->f_BlockDestroy(pRunLoop->f_ActorDestroyLoop());
-			}
-		;
-		CCurrentlyProcessingActorScope CurrentActor{HelperActor};
 
-		fg_UpdateRemotesAsync(_BuildSystem, _FilteredRepositories, _ExtraMessage).f_CallSync(pRunLoop);
-	}
-
-	TCFuture<void> DMibWorkaroundUBSanSectionErrors fg_UpdateRemotesAsync(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage)
-	{
-		co_await ECoroutineFlag_AllowReferences;
-
-		CGitLaunches Launches{_BuildSystem.f_GetBaseDir(), "Fetching remotes" + _ExtraMessage, _BuildSystem.f_AnsiFlags(), _BuildSystem.f_OutputConsoleFunctor()};
+		auto DestroyLaunchs = co_await co_await Launches.f_Init();
+		
 		Launches.f_MeasureRepos(_FilteredRepositories.m_FilteredRepositories);
 
 		TCActorResultVector<void> Results;
@@ -610,6 +603,8 @@ namespace NMib::NBuildSystem::NRepository
 		for (auto &[RepoBound, iSequence] : AllRepos)
 		{
 			auto &Repo = RepoBound;
+
+			co_await _BuildSystem.f_CheckCancelled();
 
 			struct CBranchState
 			{
@@ -675,6 +670,8 @@ namespace NMib::NBuildSystem::NRepository
 						).f_Wrap()
 					;
 
+					co_await _BuildSystem.f_CheckCancelled();
+
 					fg_Move(FetchResult) | g_Unwrap;
 					(fg_Move(RemoteHeadResults) | g_Unwrap) | g_Unwrap;
 
@@ -711,47 +708,42 @@ namespace NMib::NBuildSystem::NRepository
 		co_return {};
 	}
 
-	CGitVersion fg_GetGitVersion()
+	TCFuture<CGitVersion> DMibWorkaroundUBSanSectionErrors fg_GetGitVersion(CGitLaunches &_Launches)
 	{
-		auto fLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir)
-			{
-				CProcessLaunchParams Params;
-
-				TCVector<CStr> CommandLineParams{"-C", _WorkingDir};
-				CommandLineParams.f_Insert(_Params);
-
-				Params.m_bShowLaunched = false;
-				return CProcessLaunch::fs_LaunchTool("git", CommandLineParams, Params);
-			}
-		;
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
 
 		static CGitVersion GitVersion;
-		static CMutualSpin Lock;
+		static constinit CLowLevelLockAggregate Lock;
 
-		DMibLock(Lock);
+		{
+			DMibLock(Lock);
 
-		if (GitVersion.m_Major)
-			return GitVersion;
+			if (GitVersion.m_Major)
+				co_return GitVersion;
+		}
 
-		CStr VersionStr = fLaunchGit({"--version"}, "").f_Trim();
+		CStr VersionStr = (co_await _Launches.f_Launch(CStr(""), {"--version"})).f_GetStdOut().f_Trim();
 
 		CGitVersion Version;
 
 		aint nParsed = 0;
 		(CStr::CParse("git version {}.{}.{}") >> Version.m_Major >> Version.m_Minor >> Version.m_Patch).f_Parse(VersionStr, nParsed);
 		if (nParsed != 3)
-			DMibError("Failed to parse git version");
+			co_return DMibErrorInstance("Failed to parse git version");
 
-		GitVersion = Version;
+		{
+			DMibLock(Lock);
+			GitVersion = Version;
+		}
 
-		return GitVersion;
+		co_return Version;
 	}
 
 	TCFunctionMovable<CStr (CProcessLaunchActor::CSimpleLaunchResult const &_Result)> fg_LogAllFunctor()
 	{
 		return [](CProcessLaunchActor::CSimpleLaunchResult const &_Result)
 			{
-				return _Result.f_GetCombinedOut();
+				return _Result.f_GetCombinedOut().f_Trim();
 			}
 		;
 	}

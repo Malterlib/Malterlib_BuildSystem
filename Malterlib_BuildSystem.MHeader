@@ -102,6 +102,8 @@ Property
 	{
 		MalterlibDoExeFS true
 		MalterlibExeFSExtraFiles =+ {Pattern: "TestFiles"->MakeAbsolute() / "*", Recursive: true, Destination: "TestFiles"}
+		MalterlibExeFSExtraFiles =+ {Pattern: "Source/Malterlib_BuildSystem.cpp"->MakeAbsolute(), Destination: "Source"}
+		MalterlibExeFSExtraFiles =+ {Pattern: "Source/Malterlib_BuildSystem_Evaluate_BuiltinFunctions_String.cpp"->MakeAbsolute(), Destination: "Source"}
 	}
 
 	%Group "TestFiles"

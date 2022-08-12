@@ -17,7 +17,7 @@
 
 Type
 {
-	CTest define {
+	CTest: {
 		Test: string
 		, TestOptional?: {
 			InnerValue: string

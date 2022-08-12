@@ -19,45 +19,55 @@
 {
 	Property
 	{
-		Value1 define float = 5.0
-		Value2 define float = 2.5
-		Value3 define float = 6.0
-		Value4 define [string]?
-		TestValueString define string = `@((Value1 / Value2)->EJSONToString(""))`
- 		TestValue define float = Value1 / Value2 + Value3
-		TestValue2 define float = Value1 / Value2 + 7.0
-		TestValue3 define string = "Path0" / "Path1"
-		TestValue4 define float = Value1 + 5.0 / Value2
-		TestValue5 define float = Value1 + (5.0 / Value2)
-		TestValue6 define float = (Value1 + 5.0) / Value2
-		TestValue7 define float = 10.0 / 5.0 + 20.0 / 10.0 + 1.0
-		TestValue8 define float = Value1 / (5.0 + Value2)
-		TestValue9 define float = (Value1 / 5.0) + Value2
-		TestValue10 define float = Value1 / 5.0 + Value2
-		TestValue11 define float = 1.0 + 10.0 / 5.0 + 20.0 / 10.0 + 1.0
-		TestValue12 define bool = 1.0 < 2.0
-		TestValue13 define bool = 1.0 + 3.0 * 5.0 < 2.0 * 3.0
-		TestValue14 define float = 1.0 + 3.0 * 5.0
-		TestValue15 define int = 1 | 2
-		TestValue16 define int = 3 & 1
-		TestValue17 define int = 3 ^ 1
-		TestValue18 define int = 1 << 2
-		TestValue19 define int = 8 >> 2
-		TestValue20 define bool = 1.0 < 2.0 && 1.0 < 3.0
-		TestValue21 define bool = 3.0 < 2.0 || 1.0 < 3.0
-		TestValue22 define bool = !true
-		TestValue23 define int = ~3
-		TestValue24 define int = +3
-		TestValue25 define int = -3
-		TestValue26 define float = +3.0
-		TestValue27 define float = -3.0
-		TestValue28 define bool = !5 < !!6
-		TestValue29 define bool = !(5 < 6)
-		TestValue30 define [string] = (Value4 || ["Test"])
-		TestValue31 define [string] = (["Test"] && ["Test2"])
-		TestValue32 define bool = (true || Error("Should Not Eval"))
-		TestValue33 define bool = (false && Error("Should Not Eval"))
-		TestValue34 define {...: string} = {Value: "Path0"->Trim() / "Path1", Value2: "Test"}
+		Value1: float = 5.0
+		Value2: float = 2.5
+		Value3: float = 6.0
+		Value4: [string]?
+		TestValueString: string = `@((Value1 / Value2)->EJSONToString(""))`
+ 		TestValue: float = Value1 / Value2 + Value3
+		TestValue2: float = Value1 / Value2 + 7.0
+		TestValue3: string = "Path0" / "Path1"
+		TestValue4: float = Value1 + 5.0 / Value2
+		TestValue5: float = Value1 + (5.0 / Value2)
+		TestValue6: float = (Value1 + 5.0) / Value2
+		TestValue7: float = 10.0 / 5.0 + 20.0 / 10.0 + 1.0
+		TestValue8: float = Value1 / (5.0 + Value2)
+		TestValue9: float = (Value1 / 5.0) + Value2
+		TestValue10: float = Value1 / 5.0 + Value2
+		TestValue11: float = 1.0 + 10.0 / 5.0 + 20.0 / 10.0 + 1.0
+		TestValue12: bool = 1.0 < 2.0
+		TestValue13: bool = 1.0 + 3.0 * 5.0 < 2.0 * 3.0
+		TestValue14: float = 1.0 + 3.0 * 5.0
+		TestValue15: int = 1 | 2
+		TestValue16: int = 3 & 1
+		TestValue17: int = 3 ^ 1
+		TestValue18: int = 1 << 2
+		TestValue19: int = 8 >> 2
+		TestValue20: bool = 1.0 < 2.0 && 1.0 < 3.0
+		TestValue21: bool = 3.0 < 2.0 || 1.0 < 3.0
+		TestValue22: bool = !true
+		TestValue23: int = ~3
+		TestValue24: int = +3
+		TestValue25: int = -3
+		TestValue26: float = +3.0
+		TestValue27: float = -3.0
+		TestValue28: bool = !5 < !!6
+		TestValue29: bool = !(5 < 6)
+		TestValue30: [string] = (Value4 || ["Test"])
+		TestValue31: [string] = (["Test"] && ["Test2"])
+		TestValue32: bool = (true || Error("Should Not Eval"))
+		TestValue33: bool = (false && Error("Should Not Eval"))
+		TestValue34: {...: string} = {Value: "Path0"->Trim() / "Path1", Value2: "Test"}
+		TestValue35: string = "" ?? Error("Should Not Eval")
+		TestValue36: bool = true ?? Error("Should Not Eval")
+		TestValue37: bool = false ?? Error("Should Not Eval")
+ 		TestValue38: string = null ?? "Null"
+		TestValue39: string = undefined ?? "Undefined"
+		TestValue40: string = ("" ?? Error("Should Not Eval"))
+		TestValue41: bool = (true ?? Error("Should Not Eval"))
+		TestValue42: bool = (false ?? Error("Should Not Eval"))
+ 		TestValue43: string = (null ?? "Null")
+		TestValue44: string = (undefined ?? "Undefined")
 	}
 	GenerateFile
 	{
@@ -97,7 +107,17 @@
 					`@(TestValue31->EJSONToString(""))\n`\
 					`@(TestValue32->EJSONToString(""))\n`\
 					`@(TestValue33->EJSONToString(""))\n`\
-					`@(TestValue34->EJSONToString(""))\n`
+					`@(TestValue34->EJSONToString(""))\n`\
+					`@(TestValue35->EJSONToString(""))\n`\
+					`@(TestValue36->EJSONToString(""))\n`\
+					`@(TestValue37->EJSONToString(""))\n`\
+					`@(TestValue38->EJSONToString(""))\n`\
+					`@(TestValue39->EJSONToString(""))\n`\
+					`@(TestValue40->EJSONToString(""))\n`\
+					`@(TestValue41->EJSONToString(""))\n`\
+					`@(TestValue42->EJSONToString(""))\n`\
+					`@(TestValue43->EJSONToString(""))\n`\
+					`@(TestValue44->EJSONToString(""))\n`
 
 		Executable false
 		UnixLineEnds true

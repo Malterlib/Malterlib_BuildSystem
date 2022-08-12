@@ -1,0 +1,154 @@
+// Copyright © 2022 Favro Holding AB
+// Distributed under the MIT license, see license text in LICENSE.Malterlib
+
+#pragma once
+
+namespace NMib::NBuildSystem
+{
+	extern CPropertyKeyReference const gc_ConstKey_Architecture;
+	extern CPropertyKeyReference const gc_ConstKey_ExcludeFiles;
+	extern CPropertyKeyReference const gc_ConstKey_FullConfiguration;
+	extern CPropertyKeyReference const gc_ConstKey_MalterlibRepositoryEditor;
+	extern CPropertyKeyReference const gc_ConstKey_MalterlibRepositoryEditorSequential;
+	extern CPropertyKeyReference const gc_ConstKey_MalterlibRepositoryEditorSleep;
+	extern CPropertyKeyReference const gc_ConstKey_MalterlibRepositoryEditorWorkingDir;
+	extern CPropertyKeyReference const gc_ConstKey_Platform;
+	extern CPropertyKeyReference const gc_ConstKey_Disabled;
+	extern CPropertyKeyReference const gc_ConstKey_HiddenGroup;
+
+	extern CPropertyKeyReference const gc_ConstKey_Compile_AllowNonExisting;
+	extern CPropertyKeyReference const gc_ConstKey_Compile_Custom_CommandLine;
+	extern CPropertyKeyReference const gc_ConstKey_Compile_Custom_Inputs;
+	extern CPropertyKeyReference const gc_ConstKey_Compile_Custom_Outputs;
+	extern CPropertyKeyReference const gc_ConstKey_Compile_Custom_WorkingDirectory;
+	extern CPropertyKeyReference const gc_ConstKey_Compile_Disabled;
+	extern CPropertyKeyReference const gc_ConstKey_Compile_GenericCompileType;
+	extern CPropertyKeyReference const gc_ConstKey_Compile_InitEarly;
+	extern CPropertyKeyReference const gc_ConstKey_Compile_PrecompilePrefixHeader;
+	extern CPropertyKeyReference const gc_ConstKey_Compile_XInternalPrecompiledHeaderOutputFile;
+	extern CPropertyKeyReference const gc_ConstKey_Compile_PrefixHeader;
+	extern CPropertyKeyReference const gc_ConstKey_Compile_Type;
+
+	extern CPropertyKeyReference const gc_ConstKey_CreateTemplate_Name;
+
+	extern CPropertyKeyReference const gc_ConstKey_Dependency_Indirect;
+	extern CPropertyKeyReference const gc_ConstKey_Dependency_IndirectOrdered;
+	extern CPropertyKeyReference const gc_ConstKey_Dependency_Link;
+	extern CPropertyKeyReference const gc_ConstKey_Dependency_Type;	
+	extern CPropertyKeyReference const gc_ConstKey_Dependency_Name;	
+	extern CPropertyKeyReference const gc_ConstKey_Dependency_Target;
+	extern CPropertyKeyReference const gc_ConstKey_Dependency_TargetProperties;
+
+	extern CPropertyKeyReference const gc_ConstKey_GenerateFile_BeforeImports;
+	extern CPropertyKeyReference const gc_ConstKey_GenerateFile_Contents;
+	extern CPropertyKeyReference const gc_ConstKey_GenerateFile_Executable;
+	extern CPropertyKeyReference const gc_ConstKey_GenerateFile_Group;
+	extern CPropertyKeyReference const gc_ConstKey_GenerateFile_KeepGeneratedFile;
+	extern CPropertyKeyReference const gc_ConstKey_GenerateFile_Name;
+	extern CPropertyKeyReference const gc_ConstKey_GenerateFile_NoDateCheck;
+	extern CPropertyKeyReference const gc_ConstKey_GenerateFile_Symlink;
+	extern CPropertyKeyReference const gc_ConstKey_GenerateFile_SymlinkBasePath;
+	extern CPropertyKeyReference const gc_ConstKey_GenerateFile_SymlinkDirectory;
+	extern CPropertyKeyReference const gc_ConstKey_GenerateFile_UnicodeBOM;
+	extern CPropertyKeyReference const gc_ConstKey_GenerateFile_UnixLineEnds;
+	extern CPropertyKeyReference const gc_ConstKey_GenerateFile_UTF16;
+
+	extern CPropertyKeyReference const gc_ConstKey_GeneratorSetting_Target;
+	extern CPropertyKeyReference const gc_ConstKey_GeneratorSetting_Dependency;
+	extern CPropertyKeyReference const gc_ConstKey_GeneratorSetting_Compile;
+
+	extern CPropertyKeyReference const gc_ConstKey_GeneratorSetting_DefinedProperties;
+	extern CPropertyKeyReference const gc_ConstKey_GeneratorSetting_IsFile;	
+	extern CPropertyKeyReference const gc_ConstKey_GeneratorSetting_Xcode_TargetType;
+
+	extern CPropertyKeyReference const gc_ConstKey_Group_HideTargets;;
+
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_AlwaysFullRebuild;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_CacheDirectory;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_CacheDuplicateLines;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_CacheExcludePatterns;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_CacheIgnoreInputs;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_CacheReplaceContents;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_CCompiler;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_CCompilerTarget;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_CExternalToolChain;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_Config;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_CxxCompiler;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_CxxCompilerTarget;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_CxxExternalToolChain;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_DiffHash;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_Environment;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_ExcludeFromHash;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_FullRebuildVersion;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_IncludeInHash;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_IntermediateName;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_Languages;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_Path;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_Projects;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_ReplacePrefixes;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_SysRoot;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_SystemName;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_SystemProcessor;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_UpdateCache;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_Variables;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_VariablesWithPaths;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_Verbose;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_VerboseHash;
+	extern CPropertyKeyReference const gc_ConstKey_Import_SharedTempDirectory;
+	extern CPropertyKeyReference const gc_ConstKey_Import_TempDirectory;
+
+	extern CPropertyKeyReference const gc_ConstKey_Repository_ConfigFile;
+	extern CPropertyKeyReference const gc_ConstKey_Repository_DefaultBranch;
+	extern CPropertyKeyReference const gc_ConstKey_Repository_DefaultUpstreamBranch;
+	extern CPropertyKeyReference const gc_ConstKey_Repository_ExcludeFromSeen;
+	extern CPropertyKeyReference const gc_ConstKey_Repository_Location;
+	extern CPropertyKeyReference const gc_ConstKey_Repository_NoPushRemotes;
+	extern CPropertyKeyReference const gc_ConstKey_Repository_ProtectedBranches;
+	extern CPropertyKeyReference const gc_ConstKey_Repository_ProtectedTags;
+	extern CPropertyKeyReference const gc_ConstKey_Repository_Remotes;
+	extern CPropertyKeyReference const gc_ConstKey_Repository_StateFile;
+	extern CPropertyKeyReference const gc_ConstKey_Repository_Submodule;
+	extern CPropertyKeyReference const gc_ConstKey_Repository_SubmoduleName;
+	extern CPropertyKeyReference const gc_ConstKey_Repository_Tags;
+	extern CPropertyKeyReference const gc_ConstKey_Repository_Type;
+	extern CPropertyKeyReference const gc_ConstKey_Repository_UpdateSubmodules;
+	extern CPropertyKeyReference const gc_ConstKey_Repository_URL;
+	extern CPropertyKeyReference const gc_ConstKey_Repository_UserEmail;
+	extern CPropertyKeyReference const gc_ConstKey_Repository_UserName;
+
+	extern CPropertyKeyReference const gc_ConstKey_Target_ClCompileSuffix;
+	extern CPropertyKeyReference const gc_ConstKey_Target_DependencyFile;
+	extern CPropertyKeyReference const gc_ConstKey_Target_DependencyInjectionGroups;
+	extern CPropertyKeyReference const gc_ConstKey_Target_Disabled;
+	extern CPropertyKeyReference const gc_ConstKey_Target_EnableLinkerGroups;
+	extern CPropertyKeyReference const gc_ConstKey_Target_ExportScriptEnvironmentContents;
+	extern CPropertyKeyReference const gc_ConstKey_Target_ExternalDependencies;
+	extern CPropertyKeyReference const gc_ConstKey_Target_ExtraGroups;
+	extern CPropertyKeyReference const gc_ConstKey_Target_InjectedExtraGroups;
+	extern CPropertyKeyReference const gc_ConstKey_Target_FileExtension;
+	extern CPropertyKeyReference const gc_ConstKey_Target_FileName;
+	extern CPropertyKeyReference const gc_ConstKey_Target_FollowIndirectDependencies;
+	extern CPropertyKeyReference const gc_ConstKey_Target_GenerateScheme;
+	extern CPropertyKeyReference const gc_ConstKey_Target_Group;
+	extern CPropertyKeyReference const gc_ConstKey_Target_LinkerGroup;
+	extern CPropertyKeyReference const gc_ConstKey_Target_Name;
+	extern CPropertyKeyReference const gc_ConstKey_Target_OutputDirectory;
+	extern CPropertyKeyReference const gc_ConstKey_Target_PlatformVersion;
+	extern CPropertyKeyReference const gc_ConstKey_Target_TargetFrameworkVersion;
+	extern CPropertyKeyReference const gc_ConstKey_Target_VisualStudioPlatform;
+	extern CPropertyKeyReference const gc_ConstKey_Target_DependenciesNames;
+	extern CPropertyKeyReference const gc_ConstKey_Target_Dependencies;
+
+	extern CPropertyKeyReference const gc_ConstKey_Workspace_Enabled;
+	extern CPropertyKeyReference const gc_ConstKey_Workspace_ExtraGroups;
+	extern CPropertyKeyReference const gc_ConstKey_Workspace_Name;
+	extern CPropertyKeyReference const gc_ConstKey_Workspace_XcodeNewBuildSystem;
+	extern CPropertyKeyReference const gc_ConstKey_Workspace_IntermediateDirectory;
+	extern CPropertyKeyReference const gc_ConstKey_Workspace_OutputDirectory;
+	extern CPropertyKeyReference const gc_ConstKey_Workspace_AllTargets;
+
+	extern CPropertyKeyReference const gc_ConstKeys_FullEval[EPropertyType_Max];
+
+	void fg_CacheConstantKeys(CStringCache &o_StringCache);
+}
+

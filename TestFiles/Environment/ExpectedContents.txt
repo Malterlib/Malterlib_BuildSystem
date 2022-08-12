@@ -30,13 +30,13 @@ Inf
 	3
 ]
 {
-	"TestString": "Test",
-	"TestInt": 5,
+	"TestArrayInt": [
+		5
+	],
 	"TestArrayString": [
 		"Test"
 	],
-	"TestArrayInt": [
-		5
-	]
+	"TestInt": 5,
+	"TestString": "Test"
 }
 "5"

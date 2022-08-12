@@ -3,21 +3,30 @@
 
 #include "Malterlib_BuildSystem_Repository.h"
 
+#include <Mib/Concurrency/AsyncDestroy>
+
 namespace NMib::NBuildSystem
 {
 	using namespace NRepository;
 
-	CBuildSystem::ERetry CBuildSystem::f_Action_Repository_ForEachRepo(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, bool _bParallel, TCVector<CStr> const &_Params)
+	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_ForEachRepo
+		(
+			CGenerateOptions const &_GenerateOptions
+			, CRepoFilter const &_Filter
+			, bool _bParallel
+			, TCVector<CStr> const &_Params
+		)
 	{
-		CGenerateEphemeralState GenerateState;
-		if (ERetry Retry = fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
-			return Retry;
-
-		CFilteredRepos FilteredRepositories = fg_GetFilteredRepos(_Filter, *this, mp_Data);
-
-		CGitLaunches Launches{mp_BaseDir, "Running for each repo", mp_AnsiFlags, mp_fOutputConsole};
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
 		
-		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
+		CGenerateEphemeralState GenerateState;
+		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
+			co_return Retry;
+
+		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(_Filter, *this, mp_Data);
+
+		CGitLaunches Launches{f_GetBaseDir(), "Running for each repo", mp_AnsiFlags, mp_fOutputConsole, f_GetCancelledPointer()};
+		auto DestroyLaunchs = co_await co_await Launches.f_Init();
 
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
 
@@ -41,15 +50,14 @@ namespace NMib::NBuildSystem
 				if (_bParallel)
 					Result.f_MoveFuture() > Results.f_AddResult();
 				else
-					Result.f_MoveFuture().f_CallSync();
+					co_await Result.f_MoveFuture();
 			}
 
-			LaunchResults.f_Insert(Results.f_GetResults().f_CallSync());
+			LaunchResults.f_Insert(co_await Results.f_GetResults());
 		}
 
-		for (auto &Result : LaunchResults)
-			Result.f_Access();
+		fg_Move(LaunchResults) | g_Unwrap;
 
-		return ERetry_None;
+		co_return ERetry_None;
 	}
 }

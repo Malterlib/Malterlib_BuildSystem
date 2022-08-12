@@ -19,6 +19,19 @@ namespace NMib::NBuildSystem
 		;
 	}
 
+	namespace
+	{
+		auto fg_ConditionTuple(CCondition const &_Condition)
+		{
+			return fg_TupleReferences(_Condition.m_Children, _Condition.m_Left, _Condition.m_Right, _Condition.m_Type);
+		}
+	}
+
+	COrdering_Partial CCondition::operator <=> (CCondition const &_Right) const
+	{
+		return fg_ConditionTuple(*this) <=> fg_ConditionTuple(_Right);
+	}
+
 	bool CCondition::f_NeedPerFile() const
 	{
 		for (auto iChild = m_Children.f_GetIterator(); iChild; ++iChild)
@@ -30,9 +43,9 @@ namespace NMib::NBuildSystem
 				if
 					(
 						LeftIdentifier.m_PropertyType == EPropertyType_This
-						&& LeftIdentifier.m_Name == "Type"
+						&& LeftIdentifier.m_Name == gc_ConstString_Type
 						&& Child.m_Right.f_IsConstantString()
-						&& Child.m_Right.f_ConstantString() == "File"
+						&& Child.m_Right.f_ConstantString() == gc_ConstString_File.m_String
 					)
 				{
 					return true;

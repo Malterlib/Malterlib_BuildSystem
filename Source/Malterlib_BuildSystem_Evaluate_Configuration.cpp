@@ -31,17 +31,23 @@ namespace NMib::NBuildSystem
 		auto &pNewSection = m_Sections[_Section];
 
 		CBuildSystemRegistry TempRegistry;
-		TempRegistry.f_ParseStr("{} false"_f << fg_PropertyTypeToStr(_Section.m_Type));
+		CStringCache StringCache;
+		CBuildSystemRegistryParseContext Context(StringCache);
+
+		TempRegistry.f_ParseStrWithContext(Context, "{} false"_f << fg_PropertyTypeToStr(_Section.f_GetType()));
 
 		auto pChild = m_Registry.f_CreateChildNoPath(TempRegistry.f_GetChildren().f_GetRoot()->f_GetName(), true);
 		pChild->f_SetThisValue({});
 		pChild->f_SetWhiteSpace(ERegistryWhiteSpaceLocation_After, " // {}{\n}"_f << _Section.m_Name);
 
 		pNewSection = pChild;
+
+		m_bChanged = true;
+
 		return pChild;
 	}
 
-	void CBuildSystem::CUserSettingsState::f_Parse()
+	void CBuildSystem::CUserSettingsState::f_Parse(CStringCache &o_StringCache)
 	{
 		CStr AllWhitespace;
 
@@ -102,10 +108,10 @@ namespace NMib::NBuildSystem
 					{
 						CStr PropertyType = PropertyName.f_Left(iDot);
 						CStr Name = PropertyName.f_Extract(iDot + 1);
-						m_Defined[CPropertyKey{fg_PropertyTypeFromStr(PropertyType), Name}];
+						m_Defined[CPropertyKey(o_StringCache, fg_PropertyTypeFromStr(PropertyType), Name)];
 					}
 					else
-						m_Defined[CPropertyKey{_Section.m_Type, PropertyName}];
+						m_Defined[CPropertyKey(o_StringCache, _Section.f_GetType(), PropertyName)];
 				}
 			}
 		;
@@ -140,7 +146,7 @@ namespace NMib::NBuildSystem
 				CStr String;
 
 				if (!fStringFromIdentifier(_Registry, String))
-					return CPropertyKey{"General"};
+					return CPropertyKey{o_StringCache, "General"};
 
 				auto pGetFrom = &_Registry;
 				auto pParent = _Registry.f_GetParent();
@@ -149,15 +155,15 @@ namespace NMib::NBuildSystem
 
 				CStr GetFromNameString;
 				if (!fStringFromIdentifier(*pGetFrom, GetFromNameString))
-					return CPropertyKey{"General"};
+					return CPropertyKey{o_StringCache, "General"};
 
 				auto WhiteSpace = pGetFrom->f_GetWhiteSpace(ERegistryWhiteSpaceLocation_After).f_Trim();
 				if (!WhiteSpace.f_StartsWith("// "))
-					return CPropertyKey{"General"};
+					return CPropertyKey{o_StringCache, "General"};
 
 				WhiteSpace = WhiteSpace.f_Extract(3);
 
-				CPropertyKey Section{fg_PropertyTypeFromStr(GetFromNameString), WhiteSpace};
+				CPropertyKey Section{o_StringCache, fg_PropertyTypeFromStr(GetFromNameString), WhiteSpace};
 				if (auto Mapped = m_Sections(Section); Mapped.f_WasCreated())
 					*Mapped = pGetFrom;
 
@@ -171,7 +177,7 @@ namespace NMib::NBuildSystem
 			 	{
 					if (fIsRoot(_Registry))
 					{
-						fCheckWhitespace(CPropertyKey{"General"}, _Registry);
+						fCheckWhitespace(CPropertyKey{o_StringCache, "General"}, _Registry);
 						return;
 					}
 
@@ -184,11 +190,9 @@ namespace NMib::NBuildSystem
 				}
 			)
 		;
-
-
 	}
 
-	TCVector<TCVector<CConfigurationTuple>> CBuildSystem::fp_EvaluateConfigurationTuples(TCMap<CPropertyKey, CEJSON> const &_InitialValues) const
+	TCVector<TCVector<CConfigurationTuple>> CBuildSystem::fp_EvaluateConfigurationTuples(TCMap<CPropertyKey, CEJSONSorted> const &_InitialValues) const
 	{
 		TCSet<CConfigTuple> Tuples;
 
@@ -233,163 +237,192 @@ namespace NMib::NBuildSystem
 
 		for (auto &Properties : RootEntityData.m_Properties)
 		{
+			auto &PropertyKey = RootEntityData.m_Properties.fs_GetKey(Properties);
 			for (auto &Property : Properties)
 			{
 				if (Property.m_pRegistry->f_GetLocation().m_File == mp_UserSettingsFileLocal)
 				{
-					auto Mapped = mp_UserSettingsLocal.m_Properties(Property.m_Key);
+					auto Mapped = mp_UserSettingsLocal.m_Properties(PropertyKey);
 					*Mapped = Property.m_pRegistry;
 				}
 
 				if (Property.m_pRegistry->f_GetLocation().m_File == mp_UserSettingsFileGlobal)
 				{
-					auto Mapped = mp_UserSettingsGlobal.m_Properties(Property.m_Key);
+					auto Mapped = mp_UserSettingsGlobal.m_Properties(PropertyKey);
 					*Mapped = Property.m_pRegistry;
 				}
 			}
 		}
 
-		mp_UserSettingsLocal.f_Parse();
-		mp_UserSettingsGlobal.f_Parse();
+		mp_UserSettingsLocal.f_Parse(mp_StringCache);
+		mp_UserSettingsGlobal.f_Parse(mp_StringCache);
 
-		for (auto &Definition : RootEntityData.m_VariableDefinitions)
+		struct CUserVariable
 		{
-			auto &VariableKey = RootEntityData.m_VariableDefinitions.fs_GetKey(Definition);
+			CStr m_Description;
+			CStr m_DefaultValue;
+		};
 
-			auto iWhiteStart = Definition.m_Type.m_Whitespace.f_Find("// User");
-			if (iWhiteStart < 0)
-				continue;
+		TCMap<CPropertyKey, TCMap<CPropertyKey, CUserVariable, CPropertyKey::CCompareByString>, CPropertyKey::CCompareByString> UserVariablesBySection;
 
-			auto fAddSettings = [&](CUserSettingsState &o_State, CStr const &_Description, CPropertyKey const &_Section, CStr const &_DefaultValue)
+		for (auto &Definitions : RootEntityData.m_VariableDefinitions)
+		{
+			auto &VariableKey = RootEntityData.m_VariableDefinitions.fs_GetKey(Definitions);
+
+			for (auto &Definition : Definitions)
+			{
+				auto iWhiteStart = Definition.m_Type.m_Whitespace.f_Find("// User");
+				if (iWhiteStart < 0)
+					continue;
+
+				CStr Section = "General";
+				CStr DefaultValue;
+
+				CStr LineCandidate = Definition.m_Type.m_Whitespace.f_GetStr() + iWhiteStart;
+				CStr Line = fg_GetStrLineSep(LineCandidate);
+				CStr ToParse = Line.f_Extract(7);
+
+				auto pParse = ToParse.f_GetStr();
+				fg_ParseWhiteSpace(pParse);
+				if (*pParse == '(')
 				{
-					auto Mapped = o_State.m_Defined(VariableKey);
+					++pParse;
+					auto pStart = pParse;
+					while (*pParse && *pParse != ')')
+						++pParse;
 
-					if (Mapped.f_WasCreated())
+					if (*pParse != ')')
+						continue;
+					Section = CStr(pStart, pParse - pStart);
+					++pParse;
+				}
+
+				fg_ParseWhiteSpace(pParse);
+
+				if (*pParse == '=')
+				{
+					++pParse;
+					fg_ParseWhiteSpace(pParse);
+					if (fg_StrStartsWith(pParse, "---("))
 					{
-						auto pSection = o_State.f_GetSection(_Section);
-						auto pCommentReg = pSection;
-						auto CommentType = ERegistryWhiteSpaceLocation_AfterChildScopeStart;
-						if (pCommentReg->f_HasChildren())
-						{
-							pCommentReg = pCommentReg->f_GetChildren().f_FindLargest();
-							if (pCommentReg->f_HasScope())
-								CommentType = ERegistryWhiteSpaceLocation_AfterChildScopeEnd;
-							else
-								CommentType = ERegistryWhiteSpaceLocation_After;
-						}
+						pParse += 4;
+						auto pStart = pParse;
+						while (*pParse && !fg_StrStartsWith(pParse, ")---"))
+							++pParse;
 
-						CStr Comments = pCommentReg->f_GetWhiteSpace(CommentType).f_TrimRight("\r\n");
-						CBuildSystemRegistry TempRegistry;
-						TempRegistry.f_ParseStr("{} false"_f << VariableKey.m_Name);
+						DefaultValue = CStr(pStart, pParse - pStart).f_Trim();
 
-						CStr ToAdd = "{\n}\t//{} {} // {}{\n}"_f
-							<< TempRegistry.f_GenerateStr().f_Trim().f_RemoveSuffix(" false")
-							<< (_DefaultValue.f_IsEmpty() ? CStr("\"\"") : _DefaultValue)
-							<< _Description
-						;
+						if (fg_StrStartsWith(pParse, ")---"))
+							pParse += 4;
 
-						Comments += ToAdd;
+						fg_ParseWhiteSpace(pParse);
+					}
+					else if (*pParse == '\"')
+					{
+						auto pStart = pParse;
+						fg_ParseEscape<'\"'>(pParse, '\"');
 
-						pCommentReg->f_SetWhiteSpace(CommentType, Comments);
+						DefaultValue = CStr(pStart, pParse - pStart);
+
+						fg_ParseWhiteSpace(pParse);
+					}
+					else
+					{
+						auto pStart = pParse;
+						while (*pParse && *pParse != ':' && !fg_CharIsNewLine(*pParse))
+							++pParse;
+
+						DefaultValue = CStr(pStart, pParse - pStart).f_Trim();
+
+						fg_ParseWhiteSpace(pParse);
 					}
 				}
-			;
 
-			CStr Section = "General";
-			CStr DefaultValue;
-
-			CStr LineCandidate = Definition.m_Type.m_Whitespace.f_GetStr() + iWhiteStart;
-			CStr Line = fg_GetStrLineSep(LineCandidate);
-			CStr ToParse = Line.f_Extract(7);
-
-			auto pParse = ToParse.f_GetStr();
-			fg_ParseWhiteSpace(pParse);
-			if (*pParse == '(')
-			{
-				++pParse;
-				auto pStart = pParse;
-				while (*pParse && *pParse != ')')
-					++pParse;
-
-				if (*pParse != ')')
+				if (*pParse != ':')
 					continue;
-				Section = CStr(pStart, pParse - pStart);
-				++pParse;
-			}
 
-			fg_ParseWhiteSpace(pParse);
-
-			if (*pParse == '=')
-			{
 				++pParse;
 				fg_ParseWhiteSpace(pParse);
-				if (fg_StrStartsWith(pParse, "---("))
+
+				CStr Description = pParse;
+
+				UserVariablesBySection[CPropertyKey{mp_StringCache, VariableKey.f_GetType(), Section}][VariableKey] 
+					= {.m_Description = fg_Move(Description), .m_DefaultValue = fg_Move(DefaultValue)}
+				;
+			}
+		}
+
+		auto fAddSettings = [&](CUserSettingsState &o_State, CPropertyKey const &_VariableKey, CStr const &_Description, CPropertyKey const &_Section, CStr const &_DefaultValue)
+			{
+				auto Mapped = o_State.m_Defined(_VariableKey);
+
+				if (Mapped.f_WasCreated())
 				{
-					pParse += 4;
-					auto pStart = pParse;
-					while (*pParse && !fg_StrStartsWith(pParse, ")---"))
-						++pParse;
+					o_State.m_bChanged = true;
 
-					DefaultValue = CStr(pStart, pParse - pStart).f_Trim();
+					auto pSection = o_State.f_GetSection(_Section);
+					auto pCommentReg = pSection;
+					auto CommentType = ERegistryWhiteSpaceLocation_AfterChildScopeStart;
+					if (pCommentReg->f_HasChildren())
+					{
+						pCommentReg = pCommentReg->f_GetChildren().f_FindLargest();
+						if (pCommentReg->f_HasScope())
+							CommentType = ERegistryWhiteSpaceLocation_AfterChildScopeEnd;
+						else
+							CommentType = ERegistryWhiteSpaceLocation_After;
+					}
 
-					if (fg_StrStartsWith(pParse, ")---"))
-						pParse += 4;
+					CStr Comments = pCommentReg->f_GetWhiteSpace(CommentType).f_TrimRight("\r\n");
+					CBuildSystemRegistry TempRegistry;
+					CStringCache StringCache;
+					CBuildSystemRegistryParseContext Context(StringCache);
+					TempRegistry.f_ParseStrWithContext(Context, "{} false"_f << _VariableKey.m_Name);
 
-					fg_ParseWhiteSpace(pParse);
-				}
-				else if (*pParse == '\"')
-				{
-					auto pStart = pParse;
-					fg_ParseEscape<'\"'>(pParse, '\"');
+					CStr ToAdd = "{\n}\t//{} {} // {}{\n}"_f
+						<< TempRegistry.f_GenerateStr().f_Trim().f_RemoveSuffix(" false")
+						<< (_DefaultValue.f_IsEmpty() ? CStr("\"\"") : _DefaultValue)
+						<< _Description
+					;
 
-					DefaultValue = CStr(pStart, pParse - pStart);
+					Comments += ToAdd;
 
-					fg_ParseWhiteSpace(pParse);
-				}
-				else
-				{
-					auto pStart = pParse;
-					while (*pParse && *pParse != ':' && !fg_CharIsNewLine(*pParse))
-						++pParse;
-
-					DefaultValue = CStr(pStart, pParse - pStart).f_Trim();
-
-					fg_ParseWhiteSpace(pParse);
+					pCommentReg->f_SetWhiteSpace(CommentType, Comments);
 				}
 			}
+		;
 
-			if (*pParse != ':')
-				continue;
 
-			++pParse;
-			fg_ParseWhiteSpace(pParse);
+		for (auto &UserVariables : UserVariablesBySection)
+		{
+			auto &Section = UserVariablesBySection.fs_GetKey(UserVariables);
+			for (auto &UserVariable : UserVariables)
+			{
+				auto &VariableKey = UserVariables.fs_GetKey(UserVariable);
 
-			CStr Description = pParse;
-
-			fAddSettings(mp_UserSettingsLocal, Description, {VariableKey.m_Type, Section}, DefaultValue);
-			fAddSettings(mp_UserSettingsGlobal, Description, {VariableKey.m_Type, Section}, DefaultValue);
+				fAddSettings(mp_UserSettingsLocal, VariableKey, UserVariable.m_Description, Section, UserVariable.m_DefaultValue);
+				fAddSettings(mp_UserSettingsGlobal, VariableKey, UserVariable.m_Description, Section, UserVariable.m_DefaultValue);
+			}
 		}
 
 		CEntityKey EntityKey;
 		EntityKey.m_Type = EEntityType_Root;
 		EntityKey.m_Name.m_Value = "Temp Configuration Child";
 		auto &TupleEntity = Entity.m_ChildEntitiesMap(EntityKey, &Entity).f_GetResult();
+		TupleEntity.f_DataWritable().m_Position = DMibBuildSystemFilePosition;
 
 		for (auto iTuple = Tuples.f_GetIterator(); iTuple; ++iTuple)
 		{
 			TupleEntity.m_EvaluatedProperties.m_Properties.f_Clear();
-			CPropertyKey Key;
 			for (auto iKey = iTuple->m_Keys.f_GetIterator(); iKey; ++iKey)
 			{
-				Key.m_Type = EPropertyType_Property;
-				Key.m_Name = iKey.f_GetKey().m_ConfigType;
+				CPropertyKey Key(mp_StringCache, EPropertyType_Property, iKey.f_GetKey().m_ConfigType);
 				auto &Evaluated = TupleEntity.m_EvaluatedProperties.m_Properties[Key];
 				if ((*iKey)->f_GetName().f_IsEmpty())
-					Evaluated.m_Value = CEJSON{};
+					Evaluated.m_Value = CEJSONSorted{};
 				else
 					Evaluated.m_Value = (*iKey)->f_GetName();
 				Evaluated.m_Type = EEvaluatedPropertyType_External;
-				Evaluated.m_pProperty = &mp_ExternalProperty[Key.m_Type];
+				Evaluated.m_pProperty = &mp_ExternalProperty[Key.f_GetType()];
 			}
 
 			bool bFailed = false;

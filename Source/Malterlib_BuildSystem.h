@@ -29,13 +29,31 @@ namespace NMib::NBuildSystem
 #include "Malterlib_BuildSystem_GenerateSettings.h"
 #include "Malterlib_BuildSystem_GeneratorState.h"
 #include "Malterlib_BuildSystem_Syntax.h"
+#include "Malterlib_BuildSystem_ParallelForEach.h"
+#include "Malterlib_BuildSystem_ValuePotentiallyByRef.h"
 
 namespace NMib::NBuildSystem
 {
-	class CBuildSystem
+	struct CBuildSystemPropertyInfo
+	{
+		CFilePosition const &f_FallbackPosition() const;
+		CBuildSystemUniquePositions f_GetPositions() const;
+
+		CProperty const *m_pProperty = nullptr;
+		NStorage::TCSharedPointer<CBuildSystemUniquePositions> m_pPositions;
+		CFilePosition const *m_pFallbackPosition = nullptr;
+	};
+
+	class CBuildSystem : public NConcurrency::CAllowUnsafeThis
 	{
 	public:
-		CBuildSystem(NCommandLine::EAnsiEncodingFlag _AnsiFlags, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole);
+		CBuildSystem
+			(
+				NCommandLine::EAnsiEncodingFlag _AnsiFlags
+				, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
+				, NStorage::TCSharedPointer<NAtomic::TCAtomic<bool>> const &_pCancelled
+			)
+		;
 		CBuildSystem(CBuildSystem const &) = delete;
 		CBuildSystem(CBuildSystem &&) = delete;
 
@@ -44,6 +62,7 @@ namespace NMib::NBuildSystem
 			ERetry_None
 			, ERetry_Again
 			, ERetry_Again_NoReconcileOptions
+			, ERetry_Again_EnablePositions
 			, ERetry_Relaunch
 			, ERetry_Relaunch_NoReconcileOptions
 		};
@@ -127,8 +146,8 @@ namespace NMib::NBuildSystem
 
 		struct CExplodeStackEntry
 		{
-			NEncoding::CEJSON const *m_pExplodedValue;
-			NEncoding::CEJSON m_Value;
+			NEncoding::CEJSONSorted const *m_pExplodedValue;
+			NEncoding::CEJSONSorted m_Value;
 		};
 
 		struct CEvaluationContext
@@ -140,6 +159,7 @@ namespace NMib::NBuildSystem
 			NContainer::TCLinkedList<CExplodeStackEntry> m_ExplodeListStack;
 			CBuildSystemSyntax::CFunctionType const *m_pCallingFunction = nullptr;
 			NContainer::TCMap<CPropertyKey, CTypeWithPosition> m_OverriddenTypes;
+			bool m_bFailUndefinedTypeCheck = true;
 		};
 
 		struct CEvalPropertyValueContext
@@ -149,11 +169,12 @@ namespace NMib::NBuildSystem
 			CFilePosition const &m_Position;
 			CEvaluationContext &m_EvalContext;
 			CEvalPropertyValueContext const *m_pParentContext;
+			CBuildSystemUniquePositions *m_pStorePositions = nullptr;
 		};
 
 		using FEvalPropertyFunction = NFunction::TCFunction
 			<
-				NEncoding::CEJSON (CBuildSystem const &_This, CEvalPropertyValueContext &_Context, NContainer::TCVector<NEncoding::CEJSON> &&_Params)
+				NEncoding::CEJSONSorted (CBuildSystem const &_This, CEvalPropertyValueContext &_Context, NContainer::TCVector<NEncoding::CEJSONSorted> &&_Params)
 			>
 		;
 
@@ -161,13 +182,14 @@ namespace NMib::NBuildSystem
 		{
 			CBuildSystemSyntax::CFunctionType m_Type;
 			FEvalPropertyFunction m_fFunction;
+			CFilePosition m_Position;
 		};
 
 		void f_SetGeneratorInterface(ICGeneratorInterface *_pInterface) const;
-		void f_GenerateBuildSystem
+		NConcurrency::TCFuture<void> f_GenerateBuildSystem
 			(
-				NContainer::TCMap<CConfiguration, NStorage::TCUniquePointer<CConfiguraitonData>> &o_Configurations
-				, NContainer::TCMap<CPropertyKey, NEncoding::CEJSON> const &_Values
+				NContainer::TCMap<CConfiguration, NStorage::TCUniquePointer<CConfiguraitonData>> *o_pConfigurations
+				, NContainer::TCMap<CPropertyKey, NEncoding::CEJSONSorted> const *_pValues
 			) const
 		;
 		void f_GenerateBuildSystem_Workspace
@@ -182,7 +204,7 @@ namespace NMib::NBuildSystem
 
 		inline_always CGenerateSettings const &f_GetGenerateSettings() const;
 		inline_always CGenerateOptions const &f_GetGenerateOptions() const;
-		NStr::CStr f_GetBaseDir() const;
+		NStr::CStr const &f_GetBaseDir() const;
 		bool f_AddGeneratedFile(NStr::CStr const &_File, NStr::CStr const &_Data, NStr::CStr const &_Workspace, bool &_bWasCreated, EGeneratedFileFlag _Flags = EGeneratedFileFlag_None) const;
 		void f_GenerateGlobalFiles(CBuildSystemData &_BuildSystemData, bool _bBeforeImports) const;
 		void f_GenerateWorkspaceFiles(CBuildSystemData &_BuildSystemData, CEntity &_Target) const;
@@ -204,7 +226,7 @@ namespace NMib::NBuildSystem
 		CEntity const *f_EvaluateData
 			(
 				CBuildSystemData &_Destination
-				, NContainer::TCMap<CPropertyKey, NEncoding::CEJSON> const &_InitialValues
+				, NContainer::TCMap<CPropertyKey, NEncoding::CEJSONSorted> const &_InitialValues
 				, CEntity const *_pStartEntity // = nullptr
 				, bool _bCopyTree // = true
 			) const
@@ -212,17 +234,16 @@ namespace NMib::NBuildSystem
 		CEntity const *f_EvaluateDataMain
 			(
 				CBuildSystemData &_Destination
-				, NContainer::TCMap<CPropertyKey, NEncoding::CEJSON> const &_InitialValues
+				, NContainer::TCMap<CPropertyKey, NEncoding::CEJSONSorted> const &_InitialValues
 			) const
 		;
-		void f_EvaluateAllGeneratorSettings(CEntity &_Entity) const;
 		void f_EvalGlobalWorkspaces
 			(
 				CBuildSystemData &_Destination
 				, NContainer::TCMap<NStr::CStr, CEntityMutablePointer> &_Targets
 			) const
 		;
-		void f_EvaluateTargetsInWorkspace
+		NContainer::TCMap<CEntity *, NContainer::TCSet<NStr::CStr>> f_EvaluateTargetsInWorkspace
 			(
 				CBuildSystemData &_Destination
 				, NContainer::TCMap<NStr::CStr, CEntityMutablePointer> const &_Targets
@@ -234,72 +255,77 @@ namespace NMib::NBuildSystem
 				CBuildSystemData &_Destination
 				, NContainer::TCMap<NStr::CStr, CEntityMutablePointer> const &_Targets
 				, CEntity &_Entity
+				, NContainer::TCSet<NStr::CStr> &_AlreadyAddedGroups
 			) const
 		;
-		NContainer::TCMap<CPropertyKey, NEncoding::CEJSON> f_GetExternalValues(CEntity const &_Entity) const;
-		NEncoding::CEJSON f_EvaluateEntityProperty(CEntity &_Entity, EPropertyType _Type, NStr::CStr const &_Property) const;
-		NEncoding::CEJSON f_EvaluateEntityPropertyObject
+		NContainer::TCMap<CPropertyKey, NEncoding::CEJSONSorted> f_GetExternalValues(CEntity const &_Entity) const;
+		CValuePotentiallyByRef f_EvaluateEntityProperty(CEntity &_Entity, CPropertyKeyReference const &_PropertyKey) const;
+		CValuePotentiallyByRef f_EvaluateEntityPropertyObject
 			(
 				CEntity &_Entity
-				, EPropertyType _Type
-				, NStr::CStr const &_Property
-				, NStorage::TCOptional<NEncoding::CEJSON> const &_Default = {}
+				, CPropertyKeyReference const &_PropertyKey
+				, NStorage::TCOptional<NEncoding::CEJSONSorted> &&_Default = {}
 			) const
 		;
-		NStr::CStr f_EvaluateEntityPropertyString(CEntity &_Entity, EPropertyType _Type, NStr::CStr const &_Property, NStorage::TCOptional<NStr::CStr> const &_Default = {}) const;
+		NStr::CStr f_EvaluateEntityPropertyString(CEntity &_Entity, CPropertyKeyReference const &_PropertyKey, NStorage::TCOptional<NStr::CStr> &&_Default = {}) const;
 		NStr::CStr f_EvaluateEntityPropertyString
 			(
 				CEntity &_Entity
-				, EPropertyType _Type
-				, NStr::CStr const &_Property
-				, CProperty const *&_pFromProperty
-				, NStorage::TCOptional<NStr::CStr> const &_Default = {}
+				, CPropertyKeyReference const &_PropertyKey
+				, CBuildSystemPropertyInfo &o_PropertyInfo
+				, NStorage::TCOptional<NStr::CStr> &&_Default = {}
 			) const
 		;
-		bool f_EvaluateEntityPropertyTryBool(CEntity &_Entity, EPropertyType _Type, NStr::CStr const &_Property, NStorage::TCOptional<bool> const &_Default = {}) const;
-		bool f_EvaluateEntityPropertyBool(CEntity &_Entity, EPropertyType _Type, NStr::CStr const &_Property, NStorage::TCOptional<bool> const &_Default = {}) const;
+		bool f_EvaluateEntityPropertyTryBool(CEntity &_Entity, CPropertyKeyReference const &_PropertyKey, NStorage::TCOptional<bool> const &_Default = {}) const;
+		bool f_EvaluateEntityPropertyBool(CEntity &_Entity, CPropertyKeyReference const &_PropertyKey, NStorage::TCOptional<bool> const &_Default = {}) const;
 		bool f_EvaluateEntityPropertyBool
 			(
 				CEntity &_Entity
-				, EPropertyType _Type
-				, NStr::CStr const &_Property
-				, CProperty const *&_pFromProperty
+				, CPropertyKeyReference const &_PropertyKey
+				, CBuildSystemPropertyInfo &o_PropertyInfo
 				, NStorage::TCOptional<bool> const &_Default = {}
+				, CEvaluatedProperties *_pEvaluatedProperties = nullptr
 			) const
 		;
-		fp64 f_EvaluateEntityPropertyFloat(CEntity &_Entity, EPropertyType _Type, NStr::CStr const &_Property, NStorage::TCOptional<fp64> const &_Default = {}) const;
-		int64 f_EvaluateEntityPropertyInteger(CEntity &_Entity, EPropertyType _Type, NStr::CStr const &_Property, NStorage::TCOptional<int64> const &_Default = {}) const;
+		fp64 f_EvaluateEntityPropertyFloat(CEntity &_Entity, CPropertyKeyReference const &_PropertyKey, NStorage::TCOptional<fp64> const &_Default = {}) const;
+		int64 f_EvaluateEntityPropertyInteger(CEntity &_Entity, CPropertyKeyReference const &_PropertyKey, NStorage::TCOptional<int64> const &_Default = {}) const;
 		NContainer::TCVector<NStr::CStr> f_EvaluateEntityPropertyStringArray
 			(
 				CEntity &_Entity
-				, EPropertyType _Type
-				, NStr::CStr const &_Property
-				, NStorage::TCOptional<NContainer::TCVector<NStr::CStr>> const &_Default = {}
+				, CPropertyKeyReference const &_PropertyKey
+				, NStorage::TCOptional<NContainer::TCVector<NStr::CStr>> &&_Default = {}
 			) const
 		;
-		NEncoding::CEJSON f_EvaluateEntityProperty
+		CValuePotentiallyByRef f_EvaluateEntityProperty
 			(
 				CEntity &_Entity
-				, EPropertyType _Type
-				, NStr::CStr const &_Property
-				, CProperty const *&_pFromProperty
+				, CPropertyKeyReference const &_PropertyKey
+				, CBuildSystemPropertyInfo &o_PropertyInfo
+				, CEvaluatedProperties *_pEvaluatedProperties = nullptr
 			) const
 		;
-		NEncoding::CEJSON f_EvaluateEntityPropertyUncached
+		CValuePotentiallyByRef f_EvaluateEntityPropertyNoDefault
 			(
 				CEntity &_Entity
-				, EPropertyType _Type
-				, NStr::CStr const &_Property
-				, CProperty const *&_pFromProperty
+				, CPropertyKeyReference const &_PropertyKey
+				, CBuildSystemPropertyInfo &o_PropertyInfo
+				, CEvaluatedProperties *_pEvaluatedProperties = nullptr
+			) const
+		;
+		NEncoding::CEJSONSorted f_EvaluateEntityPropertyUncached
+			(
+				CEntity &_Entity
+				, CPropertyKeyReference const &_PropertyKey
+				, CBuildSystemPropertyInfo &o_PropertyInfo
 				, NContainer::TCMap<CPropertyKey, CEvaluatedProperty> const *_pInitialProperties = nullptr
+				, CEvaluatedProperties *_pEvaluatedProperties = nullptr
 			) const
 		;
-		NStr::CStr  f_EvaluateEntityPropertyUncachedString
+		NStr::CStr f_EvaluateEntityPropertyUncachedString
 			(
 				CEntity &_Entity
-				, EPropertyType _Type
-				, NStr::CStr const &_Property
-				, CProperty const *&_pFromProperty
+				, CPropertyKeyReference const &_PropertyKey
+				, CBuildSystemPropertyInfo &o_PropertyInfo
 				, NContainer::TCMap<CPropertyKey, CEvaluatedProperty> const *_pInitialProperties = nullptr
 				, NStorage::TCOptional<NStr::CStr> const &_Default = {}
 			) const
@@ -307,22 +333,34 @@ namespace NMib::NBuildSystem
 		NContainer::TCVector<NStr::CStr> f_EvaluateEntityPropertyUncachedStringArray
 			(
 				CEntity &_Entity
-				, EPropertyType _Type
-				, NStr::CStr const &_Property
-				, CProperty const *&_pFromProperty
+				, CPropertyKeyReference const &_PropertyKey
+				, CBuildSystemPropertyInfo &o_PropertyInfo
 				, NContainer::TCMap<CPropertyKey, CEvaluatedProperty> const *_pInitialProperties = nullptr
 				, NStorage::TCOptional<NContainer::TCVector<NStr::CStr>> const &_Default = {}
 			) const
 		;
-		void f_InitEntityForEvaluation(CEntity &_Entity, NContainer::TCMap<CPropertyKey, NEncoding::CEJSON> const &_InitialValues) const;
-		void f_InitEntityForEvaluationNoEnv(CEntity &_Entity, NContainer::TCMap<CPropertyKey, NEncoding::CEJSON> const &_InitialValues, EEvaluatedPropertyType _Type) const;
-		NEncoding::CEJSON f_GetExternalProperty(CEntity &_Entity, CPropertyKey const &_Key) const;
-		bool f_AddExternalProperty(CEntity &_Entity, CPropertyKey const &_Key, NEncoding::CEJSON &&_Value) const;
-		NContainer::TCVector<NContainer::TCVector<CConfigurationTuple>> f_EvaluateConfigurationTuples(NContainer::TCMap<CPropertyKey, NEncoding::CEJSON> const &_InitialValues) const;
-		bool f_EvalCondition(CEntity &_Context, CCondition const &_Condition, bool _bTrace = false) const;
+		void f_InitEntityForEvaluation(CEntity &_Entity, NContainer::TCMap<CPropertyKey, NEncoding::CEJSONSorted> const &_InitialValues) const;
+		void f_InitEntityForEvaluationNoEnv(CEntity &_Entity, NContainer::TCMap<CPropertyKey, NEncoding::CEJSONSorted> const &_InitialValues, EEvaluatedPropertyType _Type) const;
+		NEncoding::CEJSONSorted f_GetExternalProperty(CEntity &_Entity, CPropertyKeyReference const &_Key) const;
+		bool f_AddExternalProperty(CEntity &_Entity, CPropertyKeyReference const &_Key, NEncoding::CEJSONSorted &&_Value) const;
+		NContainer::TCVector<NContainer::TCVector<CConfigurationTuple>> f_EvaluateConfigurationTuples(NContainer::TCMap<CPropertyKey, NEncoding::CEJSONSorted> const &_InitialValues) const;
+		bool f_EvalCondition(CEntity &_Context, CCondition const &_Condition, bool _bTrace = false, CEvaluatedProperties *_pEvaluatedProperties = nullptr) const;
 		[[noreturn]] static void fs_ThrowError(CFilePosition const &_Position, NStr::CStr const &_Error);
+		[[noreturn]] static void fs_ThrowError(CBuildSystemPropertyInfo const &_PropertyInfo, NStr::CStr const &_Error);
+		[[noreturn]] static void fs_ThrowError(CBuildSystemUniquePositions const &_Positions, NStr::CStr const &_Error);
+		[[noreturn]] static void fs_ThrowError(CBuildSystemPropertyInfo const &_PropertyInfo, CFilePosition const &_Position, NStr::CStr const &_Error);
+		[[noreturn]] static void fs_ThrowError(CBuildSystemPropertyInfo const &_PropertyInfo, CBuildSystemUniquePositions const &_Positions, NStr::CStr const &_Error);
 		[[noreturn]] static void fs_ThrowError(CFilePosition const &_Position, NStr::CStr const &_Error, NContainer::TCVector<CBuildSystemError> const &_Errors);
+		[[noreturn]] static void fs_ThrowError(CBuildSystemUniquePositions const &_Positions, NStr::CStr const &_Error, NContainer::TCVector<CBuildSystemError> const &_Errors);
 		[[noreturn]] static void fs_ThrowError(CBuildSystemRegistry const &_Registry, NStr::CStr const &_Error);
+		[[noreturn]] static void fs_ThrowError
+			(
+				CEvalPropertyValueContext &_Context
+				, CBuildSystemUniquePositions const &_Positions
+				, NStr::CStr const &_Error
+				, NContainer::TCVector<CBuildSystemError> const &_Errors = {}
+			)
+		;
 		[[noreturn]] static void fs_ThrowError
 			(
 				CEvalPropertyValueContext &_Context
@@ -340,13 +378,13 @@ namespace NMib::NBuildSystem
 		;
 		static NStr::CStr fs_GetNameIdentifierString(CBuildSystemRegistry const &_Registry);
 		void f_AddSourceFile(NStr::CStr const &_File) const;
+		NStr::CStr f_ReadFile(NStr::CStr const &_File) const;
 		void f_CheckPropertyTypeValue
 			(
-				EPropertyType _PropType
-				, NStr::CStr const &_Property
-				, NEncoding::CEJSON const &_Value
+				CPropertyKeyReference const &_PropertyKey
+				, NEncoding::CEJSONSorted const &_Value
 				, NEncoding::EEJSONType _ExpectedType
-				, CFilePosition const &_Position
+				, CBuildSystemUniquePositions const &_Positions
 				, bool _bOptional
 			) const
 		;
@@ -355,26 +393,28 @@ namespace NMib::NBuildSystem
 
 		void f_NoReconcileOptions();
 
-		static ERetry fs_RunBuildSystem
+		bool f_SingleThreaded() const;
+
+		static NConcurrency::TCFuture<ERetry> fs_RunBuildSystem
 			(
-				NFunction::TCFunction<CBuildSystem::ERetry (CBuildSystem &_BuildSystem)> &&_fCommand
-				, NCommandLine::EAnsiEncodingFlag _AnsiFlags
+				NFunction::TCFunctionMovable<NConcurrency::TCFuture<CBuildSystem::ERetry> (CBuildSystem &_BuildSystem)> _fCommand
+				, NStorage::TCSharedPointer<NConcurrency::CCommandLineControl> const &_pCommandLine
 				, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
+				, CGenerateOptions const &_GenerateOptions
 			)
 		;
 
-		bool f_Action_Generate(CGenerateOptions const &_GenerateOptions, ERetry &o_Retry);
-		ERetry f_Action_Create(CGenerateOptions const &_GenerateOptions);
+		NConcurrency::TCFuture<bool> f_Action_Generate(CGenerateOptions const &_GenerateOptions, ERetry &o_Retry);
+		NConcurrency::TCFuture<ERetry> f_Action_Create(CGenerateOptions const &_GenerateOptions);
 
-		ERetry f_Action_Repository_Update(CGenerateOptions const &_GenerateOptions);
-		ERetry f_Action_Repository_Status(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoStatusFlag _Flags);
-		NConcurrency::TCFuture<ERetry> f_Action_Repository_Status_Async(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoStatusFlag _Flags);
-		ERetry f_Action_Repository_ForEachRepo(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, bool _bParallell, NContainer::TCVector<NStr::CStr> const &_Params);
+		NConcurrency::TCFuture<ERetry> f_Action_Repository_Update(CGenerateOptions const &_GenerateOptions);
+		NConcurrency::TCFuture<ERetry> f_Action_Repository_Status(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoStatusFlag _Flags);
+		NConcurrency::TCFuture<ERetry> f_Action_Repository_ForEachRepo(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, bool _bParallell, NContainer::TCVector<NStr::CStr> const &_Params);
 
-		ERetry f_Action_Repository_Branch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, NStr::CStr const &_Branch, ERepoBranchFlag _Flags);
-		ERetry f_Action_Repository_Unbranch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoBranchFlag _Flags);
+		NConcurrency::TCFuture<ERetry> f_Action_Repository_Branch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, NStr::CStr const &_Branch, ERepoBranchFlag _Flags);
+		NConcurrency::TCFuture<ERetry> f_Action_Repository_Unbranch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoBranchFlag _Flags);
 
-		ERetry f_Action_Repository_CleanupBranches
+		NConcurrency::TCFuture<ERetry> f_Action_Repository_CleanupBranches
 			(
 				CGenerateOptions const &_GenerateOptions
 				, CRepoFilter const &_Filter
@@ -382,7 +422,7 @@ namespace NMib::NBuildSystem
 				, NContainer::TCVector<NStr::CStr> const &_Branches
 			)
 		;
-		ERetry f_Action_Repository_CleanupTags
+		NConcurrency::TCFuture<ERetry> f_Action_Repository_CleanupTags
 			(
 				CGenerateOptions const &_GenerateOptions
 				, CRepoFilter const &_Filter
@@ -390,10 +430,9 @@ namespace NMib::NBuildSystem
 				, NContainer::TCVector<NStr::CStr> const &_Tags
 			)
 		;
-		ERetry f_Action_Repository_Push(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, NContainer::TCVector<NStr::CStr> const &_Remotes, ERepoPushFlag _PushFlags);
-		NConcurrency::TCFuture<ERetry> f_Action_Repository_Push_Async(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, NContainer::TCVector<NStr::CStr> const &_Remotes, ERepoPushFlag _PushFlags);
+		NConcurrency::TCFuture<ERetry> f_Action_Repository_Push(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, NContainer::TCVector<NStr::CStr> const &_Remotes, ERepoPushFlag _PushFlags);
 
-		ERetry f_Action_Repository_ListCommits
+		NConcurrency::TCFuture<ERetry> f_Action_Repository_ListCommits
 			(
 			 	CGenerateOptions const &_GenerateOptions
 			 	, CRepoFilter const &_Filter
@@ -405,14 +444,14 @@ namespace NMib::NBuildSystem
 			 	, uint32 _MaxCommitsMainRepo
 			 	, uint32 _MaxCommits
 			 	, uint32 _MaxMessageWidth
-				, NConcurrency::CDistributedAppCommandLineClient const &_CommandLineClient
+				, NStorage::TCSharedPointer<NConcurrency::CCommandLineControl> const &_pCommandLine
 			)
 		;
 
 		NCommandLine::EAnsiEncodingFlag f_AnsiFlags() const;
 
 		void f_RegisterFunctions(NContainer::TCMap<NStr::CStr, CBuiltinFunction> &&_Functions);
-		void f_RegisterBuiltinVariables(NContainer::TCMap<CPropertyKey, CBuildSystemSyntax::CType> &&_Variables) const;
+		void f_RegisterBuiltinVariables(NContainer::TCMap<CPropertyKey, CTypeWithPosition> &&_Variables) const;
 		void f_OutputConsole(NStr::CStr const &_Output, bool _bError = false) const;
 		NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &f_OutputConsoleFunctor() const;
 
@@ -420,11 +459,12 @@ namespace NMib::NBuildSystem
 			(
 				CBuildSystem const *_pBuildSystem
 				, CEntity &_DestinationEntity
-				, CPropertyKey const &_VariableName
+				, CPropertyKeyReference const &_VariableName
 				, CBuildSystemSyntax::CType const &_Type
 				, CFilePosition const &_Position
 				, NStr::CStr const &_Whitespace
 				, NStorage::TCSharedPointer<CCondition> const &_pConditions
+				, EPropertyFlag _Flags
 			)
 		;
 		static void fs_AddEntityUserType
@@ -433,16 +473,42 @@ namespace NMib::NBuildSystem
 				, NStr::CStr const &_TypeName
 				, CBuildSystemSyntax::CType const &_Type
 				, CFilePosition const &_Position
+				, NStorage::TCSharedPointer<CCondition> const &_pConditions
+				, EPropertyFlag _Flags
 			)
 		;
 		CBuildSystemSyntax::CType const *f_GetCanonicalDefaultedType
 			(
-				CEntity const &_Entity
+				CEntity &_Entity
 				, CBuildSystemSyntax::CType const *_pType
 				, CFilePosition &o_TypePosition
 			) const
 		;
 
+		CProperty const &f_ExternalProperty(EPropertyType _Type) const;
+		void f_ForEachDefaultedBuiltinVariableDefinition
+			(
+				EPropertyType _Type
+				, NFunction::TCFunction<void (CPropertyKey const &_Key, CTypeWithPosition const &_Type)> const &_fOnDefinition
+			) const
+		;
+
+		bool f_EnablePositions() const;
+		CBuildSystemUniquePositions *f_EnablePositions(NStorage::TCSharedPointer<CBuildSystemUniquePositions> &o_pPositions) const;
+		CBuildSystemUniquePositions *f_EnablePositions(CBuildSystemUniquePositions *_pPositions) const;
+		void f_SetEnablePositions();
+
+		bool f_EnableValues() const;
+		void f_SetEnableValues();
+
+		CStringCache &f_StringCache() const;
+
+		template <bool tf_bFile>
+		NEncoding::CEJSONSorted f_GetDefinedProperties(CEntity &_Entity, EPropertyType _PropertyType) const;
+
+		NConcurrency::TCFuture<void> f_CheckCancelled() const;
+		NStorage::TCSharedPointer<NAtomic::TCAtomic<bool>> f_GetCancelledPointer() const;
+		
 		constexpr static uint32 mc_MToolVersion = 2;
 
 	private:
@@ -466,13 +532,14 @@ namespace NMib::NBuildSystem
 
 		struct CUserSettingsState
 		{
+			void f_Parse(CStringCache &o_StringCache);
+			CBuildSystemRegistry *f_GetSection(CPropertyKey const &_Section);
+
 			CBuildSystemRegistry m_Registry;
 			NContainer::TCSet<CPropertyKey> m_Defined;
 			NContainer::TCMap<CPropertyKey, CBuildSystemRegistry *> m_Sections;
 			NContainer::TCMap<CPropertyKey, CBuildSystemRegistry const *> m_Properties;
-
-			void f_Parse();
-			CBuildSystemRegistry *f_GetSection(CPropertyKey const &_Section);
+			bool m_bChanged = false;
 		};
 
 		struct CGenerateEphemeralState
@@ -487,7 +554,7 @@ namespace NMib::NBuildSystem
 			NStr::CStr m_EnvironmentStateFile;
 			CGeneratorArchiveState m_GlobalState;
 			CGeneratorArchiveState m_BeforeGlobalState;
-			NContainer::TCMap<CPropertyKey, NEncoding::CEJSON> m_GeneratorValues;
+			NContainer::TCMap<CPropertyKey, NEncoding::CEJSONSorted> m_GeneratorValues;
 			NStorage::TCUniquePointer<ICGeneratorInterface> m_pLocalGeneratorInterface;
 			COnScopeExitShared m_LocalGeneratorInterfaceCleanup;
 			bool m_bUseCachedEnvironment = false;
@@ -507,7 +574,6 @@ namespace NMib::NBuildSystem
 			EBuiltinFunctionGetProperty_GetProperty
 			, EBuiltinFunctionGetProperty_HasProperty
 			, EBuiltinFunctionGetProperty_HasEntity
-			, EBuiltinFunctionGetProperty_GetWithType
 		};
 
 		enum EFindFilesFunctionType
@@ -530,30 +596,42 @@ namespace NMib::NBuildSystem
 		struct CApplyAccessorsHelper;
 
 	private:
-		ERetry fp_GeneratePrepare(CGenerateOptions const &_GenerateOptions, CGenerateEphemeralState &_GenerateState, NFunction::TCFunction<bool ()> &&_fPreParse);
+		NConcurrency::TCFuture<ERetry> fp_GeneratePrepare
+			(
+				CGenerateOptions const &_GenerateOptions
+				, CGenerateEphemeralState &_GenerateState
+				, NFunction::TCFunction<NConcurrency::TCFuture<bool> ()> &&_fPreParse
+			)
+		;
 
 		void fp_ParseConfigurationConditions(CBuildSystemRegistry &_Registry, CBuildSystemConfiguration &_Configuration) const;
 		void fp_ParseConfigurationType(NStr::CStr const &_Name, CBuildSystemRegistry &_Registry, NContainer::TCMap<NStr::CStr, CConfigurationType> &o_Configurations) const;
-		void fp_ParsePropertyValue
+		void fp_ParseConditionsAndDebug
 			(
-				EPropertyType _Type
-				, NStr::CStr const &_PropertyName
-				, CEntity *o_pEntity
-				, CBuildSystemRegistry &_Registry
-				, CCondition const *_pParentConditions
+				CBuildSystemRegistry &_Registry
+				, NStorage::TCSharedPointer<CCondition> const &_pConditions
+				, EPropertyFlag &o_Flags
+				, NStorage::TCSharedPointer<CCondition> &o_pConditions
 			) const
 		;
-		void fp_ParsePropertyValueDefines
+		void fp_ParsePropertyValue
 			(
-				EPropertyType _Type
-				, NStr::CStr const &_PropertyName
-				, CEntity *o_pEntity
+				CPropertyKeyReference const &_PropertyKey
+				, CEntity &o_Entity
 				, CBuildSystemRegistry &_Registry
 				, NStorage::TCSharedPointer<CCondition> const &_pConditions
 			) const
 		;
-		CTypeWithPosition const *fp_GetTypeForProperty(CBuildSystem::CEvalPropertyValueContext &_Context, CPropertyKey const &_VariableName) const;
-		CTypeWithPosition const *fp_GetUserTypeWithPositionForProperty(CEntity const &_Entity, NStr::CStr const &_UserType) const;
+		void fp_ParsePropertyValueDefines
+			(
+				CPropertyKeyReference const &_PropertyKey
+				, CEntity &o_Entity
+				, CBuildSystemRegistry &_Registry
+				, NStorage::TCSharedPointer<CCondition> const &_pConditions
+			) const
+		;
+		CTypeWithPosition const *fp_GetTypeForProperty(CEvalPropertyValueContext &_Context, CPropertyKeyReference const &_VariableName) const;
+		CTypeWithPosition const *fp_GetUserTypeWithPositionForProperty(CEvalPropertyValueContext &_Context, NStr::CStr const &_UserType) const;
 
 		enum EDoesValueConformToTypeFlag
 		{
@@ -566,16 +644,17 @@ namespace NMib::NBuildSystem
 				CEvalPropertyValueContext &_Context
 				, CBuildSystemSyntax::CType const &_Type
 				, CFilePosition const &_TypePosition
-				, NEncoding::CEJSON &o_Value
+				, NEncoding::CEJSONSorted &o_Value
 				, EDoesValueConformToTypeFlag _Flags
 				, CTypeConformError *o_pError = nullptr
+				, NFunction::TCFunctionNoAlloc<NStr::CStr ()> const *_pGetErrorContext = nullptr
 			) const
 		;
 		void fp_CheckValueConformToPropertyType
 			(
 				CEvalPropertyValueContext &_Context
-				, CPropertyKey const &_Property
-				, NEncoding::CEJSON &o_Value
+				, CPropertyKeyReference const &_Property
+				, NEncoding::CEJSONSorted &o_Value
 				, CFilePosition const &_Position
 				, EDoesValueConformToTypeFlag _Flags
 			) const
@@ -584,7 +663,7 @@ namespace NMib::NBuildSystem
 			(
 				CEvalPropertyValueContext &_Context
 				, CBuildSystemSyntax::CType const &_Type
-				, NEncoding::CEJSON &o_Value
+				, NEncoding::CEJSONSorted &o_Value
 				, CFilePosition const &_Position
 				, CFilePosition const &_TypePosition
 				, NFunction::TCFunctionNoAlloc<NStr::CStr ()> const &_fGetErrorContext
@@ -595,7 +674,7 @@ namespace NMib::NBuildSystem
 			(
 				CEvalPropertyValueContext &_Context
 				, CBuildSystemSyntax::CType const *_pType
-				, CFilePosition &o_TypePosition
+				, CFilePosition const *&o_pTypePosition
 			) const
 		;
 		CBuildSystemSyntax::CType const *fp_ApplyAccessorsToType
@@ -603,7 +682,7 @@ namespace NMib::NBuildSystem
 				CEvalPropertyValueContext &_Context
 				, CBuildSystemSyntax::CType const *_pType
 				, NContainer::TCVector<CBuildSystemSyntax::CJSONAccessorEntry> const &_Accessors
-				, CFilePosition &o_TypePosition
+				, CFilePosition const *o_pTypePosition
 			) const
 		;
 		void fp_ApplyAccessors
@@ -616,7 +695,7 @@ namespace NMib::NBuildSystem
 		;
 		void fp_ParseProperty
 			(
-				CEntity *o_pEntitiy
+				CEntity &o_Entity
 				, CBuildSystemSyntax::CIdentifier const &_Identifier
 				, CBuildSystemRegistry &_Registry
 				, NStorage::TCSharedPointer<CCondition> const &_pConditions
@@ -629,6 +708,8 @@ namespace NMib::NBuildSystem
 		[[noreturn]] static void fsp_ThrowError(CEntity const &_Entity, CFilePosition const &_Position, NStr::CStr const &_Error);
 		[[noreturn]] static void fsp_ThrowError(CEntity const &_Entity, CFilePosition const &_Position, NStr::CStr const &_Error, NContainer::TCVector<CBuildSystemError> const &_Errors);
 		[[noreturn]] static void fsp_ThrowError(CBuildSystemRegistry const &_Registry, NStr::CStr const &_Error);
+
+		static EPropertyFlag fsp_ParseDebugFlags(CFilePosition const &_Position, NStr::CStr const &_String);
 
 		enum EHandleKeyFlag
 		{
@@ -654,6 +735,7 @@ namespace NMib::NBuildSystem
 				, CEvaluationContext &_EvalContext
 				, mint _TraceDepth
 				, CEvalPropertyValueContext const *_pParentContext
+				, CBuildSystemUniquePositions *o_pPositions
 			) const;
 		bool fp_EvalConditionSubject
 			(
@@ -664,41 +746,52 @@ namespace NMib::NBuildSystem
 				, mint _TraceDepth
 				, EConditionType _ConditionType
 				, CEvalPropertyValueContext const *_pParentContext
+				, CBuildSystemUniquePositions *o_pPositions
 			) const
 		;
-		NEncoding::CEJSON fp_EvaluateEntityProperty
+		CValuePotentiallyByRef fp_EvaluateEntityProperty
 			(
 				CEntity &_Entity
 				, CEntity &_OriginalEntity
-				, CPropertyKey const &_Key
+				, CPropertyKeyReference const &_Key
 				, CEvaluationContext &_EvalContext
-				, CProperty const *&_pFromProperty
+				, CBuildSystemPropertyInfo &o_PropertyInfo
 				, CFilePosition const &_FallbackPosition
 				, CEvalPropertyValueContext const *_pParentContext
+				, bool _bMoveCache
 			) const
 		;
-		NEncoding::CEJSON fp_EvaluatePropertyValue(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CRootValue const &_Value, CPropertyKey const *_pProperty) const;
+		CValuePotentiallyByRef fp_EvaluateRootValue
+			(
+				CEvalPropertyValueContext &_Context
+				, CBuildSystemSyntax::CRootValue const &_Value
+				, CPropertyKey const *_pProperty
+				, bool &o_bTypeAlreadyChecked
+			 ) const
+		;
 
 		struct CWritePropertyContext
 		{
 			CPropertyKey const &m_Property;
-			NEncoding::CEJSON *m_pWriteDestination = nullptr;
+			bool &m_bTypeAlreadyChecked;
+			NEncoding::CEJSONSorted *m_pWriteDestination = nullptr;
 			NContainer::TCVector<CBuildSystemSyntax::CJSONAccessorEntry> const *m_pAccessors = nullptr;
 		};
-		NEncoding::CEJSON fp_EvaluatePropertyValue(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CValue const &_Value, CWritePropertyContext *_pWriteContext) const;
-		NEncoding::CEJSON fp_EvaluatePropertyValueObject(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CObject const &_Value) const;
-		NEncoding::CEJSON fp_EvaluatePropertyValueArray(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CArray const &_Value) const;
-		NEncoding::CEJSON fp_EvaluatePropertyValueWildcardString(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CWildcardString const &_Value) const;
+
+		CValuePotentiallyByRef fp_EvaluatePropertyValue(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CValue const &_Value, CWritePropertyContext *_pWriteContext) const;
+		NEncoding::CEJSONSorted fp_EvaluatePropertyValueObject(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CObject const &_Value) const;
+		NEncoding::CEJSONSorted fp_EvaluatePropertyValueArray(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CArray const &_Value) const;
+		NEncoding::CEJSONSorted fp_EvaluatePropertyValueWildcardString(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CWildcardString const &_Value) const;
 		NStr::CStr fp_EvaluatePropertyValueEvalString(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CEvalString const &_Value) const;
-		NEncoding::CEJSON fp_EvaluatePropertyValueExpression(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CExpression const &_Value) const;
-		NEncoding::CEJSON fp_EvaluatePropertyValueExpressionAppend(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CExpressionAppend const &_Value) const;
-		NEncoding::CEJSON fp_EvaluatePropertyValueTernary(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CTernary const &_Value) const;
-		NEncoding::CEJSON fp_EvaluatePropertyValuePrefixOperator(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CPrefixOperator const &_Value) const;
-		NEncoding::CEJSON fp_EvaluatePropertyValueBinaryOperator(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CBinaryOperator const &_Value) const;
+		CValuePotentiallyByRef fp_EvaluatePropertyValueExpression(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CExpression const &_Value) const;
+		NEncoding::CEJSONSorted fp_EvaluatePropertyValueExpressionAppend(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CExpressionAppend const &_Value) const;
+		CValuePotentiallyByRef fp_EvaluatePropertyValueTernary(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CTernary const &_Value) const;
+		NEncoding::CEJSONSorted fp_EvaluatePropertyValuePrefixOperator(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CPrefixOperator const &_Value) const;
+		CValuePotentiallyByRef fp_EvaluatePropertyValueBinaryOperator(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CBinaryOperator const &_Value) const;
 		bool fsp_CompareValueRecursive
 			(
-				NEncoding::CEJSON const &_Left
-				, NEncoding::CEJSON const &_Right
+				NEncoding::CEJSONSorted const &_Left
+				, NEncoding::CEJSONSorted const &_Right
 				, EConditionType _ConditionType
 				, NFunction::TCFunctionNoAlloc<void (NStr::CStr const &_Error)> const &_fOnError
 			) const
@@ -709,40 +802,43 @@ namespace NMib::NBuildSystem
 				CEvalPropertyValueContext &_Context
 				, CBuildSystemSyntax::CFunctionCall const &_Value
 				, CBuildSystemSyntax::CFunctionType const &_FunctionType
-				, NFunction::TCFunctionNoAlloc<void (NEncoding::CEJSON &&_Param, CBuildSystemSyntax::CFunctionParameter const &_FunctionParam, bool _bEllipsis)> const &_fConsumeParam
+				, NFunction::TCFunctionNoAlloc
+				<
+					void (NEncoding::CEJSONSorted &&_Param, CBuildSystemSyntax::CFunctionParameter const &_FunctionParam, bool _bEllipsis, bool _bAddDefault)
+				> const &_fConsumeParam
 				, CFilePosition const &_TypePosition
 			) const
 		;
-		NEncoding::CEJSON fp_EvaluatePropertyValueFunctionCallBuiltin
+		NEncoding::CEJSONSorted fp_EvaluatePropertyValueFunctionCallBuiltin
 			(
 				CEvalPropertyValueContext &_Context
 				, CBuildSystemSyntax::CFunctionCall const &_Value
 				, CBuiltinFunction const *_pFunction
 			) const
 		;
-		NEncoding::CEJSON fp_EvaluatePropertyValueFunctionCall(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CFunctionCall const &_Value) const;
-		NEncoding::CEJSON fp_EvaluatePropertyValueParam(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CParam const &_Value) const;
-		NEncoding::CEJSON fp_EvaluatePropertyValueIdentifier(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CIdentifier const &_Value) const;
-		NEncoding::CEJSON fp_EvaluatePropertyValueJSONAccessor(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CJSONAccessor const &_Value) const;
-		NEncoding::CEJSON fp_EvaluatePropertyValueOperator(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::COperator const &_Value, CWritePropertyContext *_pWriteContext) const;
-		NEncoding::CEJSON fp_EvaluatePropertyValueDefine(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CDefine const &_Value) const;
-		NEncoding::CEJSON fp_EvaluatePropertyValueAccessors
+		NEncoding::CEJSONSorted fp_EvaluatePropertyValueFunctionCall(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CFunctionCall const &_Value, bool _bMoveCache) const;
+		CValuePotentiallyByRef fp_EvaluatePropertyValueParam(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CParam const &_Value) const;
+		NEncoding::CEJSONSorted fp_EvaluatePropertyValueIdentifierReference(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CIdentifierReference const &_Value) const;
+		CValuePotentiallyByRef fp_EvaluatePropertyValueIdentifier(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CIdentifier const &_Value, bool _bMoveCache) const;
+		CValuePotentiallyByRef fp_EvaluatePropertyValueJSONAccessor(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CJSONAccessor const &_Value) const;
+		NEncoding::CEJSONSorted fp_EvaluatePropertyValueOperator(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::COperator const &_Value, CWritePropertyContext *_pWriteContext) const;
+		NEncoding::CEJSONSorted fp_EvaluatePropertyValueDefine(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CDefine const &_Value) const;
+		CValuePotentiallyByRef fp_EvaluatePropertyValueAccessors
 			(
 				CEvalPropertyValueContext &_Context
-				, NEncoding::CEJSON &&_Value
+				, CValuePotentiallyByRef &&_Value
 				, NContainer::TCVector<CBuildSystemSyntax::CJSONAccessorEntry> const &_Accessors
 			) const
 		;
 
 		void fpr_EvaluateData(CEntity &_Entity) const;
 		void fpr_EvaluateData(CEntity &_Entity, NContainer::TCSet<CEntity *> &o_Deleted) const;
-		void fpr_EvaluateAllGeneratorSettings(CEntity &_Entity) const;
 		void fp_EvaluateAllProperties(CEntity &_Entity, bool _bDoTypeChecks) const;
-		NContainer::TCVector<NContainer::TCVector<CConfigurationTuple>> fp_EvaluateConfigurationTuples(NContainer::TCMap<CPropertyKey, NEncoding::CEJSON> const &_InitialValues) const;
+		NContainer::TCVector<NContainer::TCVector<CConfigurationTuple>> fp_EvaluateConfigurationTuples(NContainer::TCMap<CPropertyKey, NEncoding::CEJSONSorted> const &_InitialValues) const;
 		CEntity const *fp_EvaluateData
 			(
 				CBuildSystemData &_Destination
-				, NContainer::TCMap<CPropertyKey, NEncoding::CEJSON> const &_InitialValues
+				, NContainer::TCMap<CPropertyKey, NEncoding::CEJSONSorted> const &_InitialValues
 				, CEntity const *_pStartEntity
 				, bool _bCopyTree
 				, bool _bAllChildren
@@ -754,7 +850,7 @@ namespace NMib::NBuildSystem
 				, NContainer::TCMap<NStr::CStr, CEntityMutablePointer> &_Targets
 			) const
 		;
-		void fp_EvaluateTargetsInWorkspace
+		NContainer::TCMap<CEntity *, NContainer::TCSet<NStr::CStr>> fp_EvaluateTargetsInWorkspace
 			(
 				CBuildSystemData &_Destination
 				, NContainer::TCMap<NStr::CStr, CEntityMutablePointer> const &_Targets
@@ -768,11 +864,12 @@ namespace NMib::NBuildSystem
 				, NContainer::TCMap<NStr::CStr, CEntityMutablePointer> const &_Targets
 				, NContainer::TCLinkedList<CEntity *> &_ToEval
 				, CEntity &_Entity
+				, NContainer::TCSet<NStr::CStr> &_AlreadyAddedGroups
 			) const
 		;
 		void fp_UpdateDependenciesNames(CEntity *_pTargetOuterEntity) const;
 		void fp_EvaluateWorkspace(CBuildSystemData &_Destination, CEntity &_Entity) const;
-		void fp_UsedExternal(NStr::CStr const &_Name) const;
+		void fp_UsedExternal(CPropertyKeyReference const &_PropertyKey) const;
 		void fp_GenerateFiles(CBuildSystemData &_BuildSystemData, CEntity &_Entity, bool _bRecursive, EEntityType _Type, bool _bBeforeImports) const;
 		CEntity *fp_AddEntity
 			(
@@ -793,9 +890,9 @@ namespace NMib::NBuildSystem
 				, NStr::CStr const &_Directory
 			) const
 		;
-		void fp_TracePropertyEval(bool _bSuccess, CEntity const &_Entity, CProperty const &_Property, NEncoding::CEJSON const &_Value) const;
+		void fp_TracePropertyEval(bool _bSuccess, CEntity const &_Entity, CPropertyKey const &_PropertyKey, CProperty const &_Property, NEncoding::CEJSONSorted const &_Value) const;
 
-		ERetry fp_HandleRepositories(NContainer::TCMap<CPropertyKey, NEncoding::CEJSON> const &_Values);
+		NConcurrency::TCFuture<ERetry> fp_HandleRepositories(NContainer::TCMap<CPropertyKey, NEncoding::CEJSONSorted> const &_Values);
 
 		void fp_SaveEnvironment();
 
@@ -812,24 +909,60 @@ namespace NMib::NBuildSystem
 
 		void fp_RegisterBuiltinVariables();
 
-		NEncoding::CEJSON fp_BuiltinFunction_FindFiles(CEvalPropertyValueContext &_Context, NContainer::TCVector<NEncoding::CEJSON> &&_Params, EFindFilesFunctionType _Function) const;
-		NEncoding::CEJSON fp_BuiltinFunction_GetProperty
+		NEncoding::CEJSONSorted fp_BuiltinFunction_FindFiles(CEvalPropertyValueContext &_Context, NContainer::TCVector<NEncoding::CEJSONSorted> &&_Params, EFindFilesFunctionType _Function) const;
+		NEncoding::CEJSONSorted fp_BuiltinFunction_GetProperty
 			(
 				CEvalPropertyValueContext &_Context
-				, NContainer::TCVector<NEncoding::CEJSON> &&_Params
+				, NContainer::TCVector<NEncoding::CEJSONSorted> &&_Params
 				, EBuiltinFunctionGetProperty _Function
 				, CEvalPropertyValueContext const *_pParentContext
 			) const
 		;
 
+		CBuildSystemSyntax::CIdentifier fp_IdentifierFromJson(CBuildSystem::CEvalPropertyValueContext &_Context, NEncoding::CEJSONSorted const &_Value, bool _bSupportEntityType) const;
+		NEncoding::CEJSONSorted fp_BuiltinFunction_OverridingType
+			(
+				CBuildSystem::CEvalPropertyValueContext &_Context
+				, NContainer::TCVector<NEncoding::CEJSONSorted> &&_Params
+				, bool _bPositions
+				, bool _bType
+			) const
+		;
+
+		struct CCachedFile
+		{
+			NThread::CLowLevelLock m_Lock;
+			NStr::CStr m_Contents;
+			bool m_bRead = false;
+		};
+
+		mutable NThread::CLowLevelLock mp_CachedFilesLock;
+		mutable NContainer::TCMap<NStr::CStr, CCachedFile> mp_CachedFiles;
+
+		struct CExecuteCommand
+		{
+			NThread::CLowLevelLock m_Lock;
+			NStr::CStr m_Executable;
+			NContainer::TCVector<NStr::CStr> m_FunctionParams;
+			NContainer::TCVector<NStr::CStr> m_Inputs;
+			NStr::CStr m_Result;
+			NStr::CStr m_Error;
+			bool m_bInitialized = false;
+		};
+
+		mutable NThread::CLowLevelLock mp_ExecuteCommandsLock;
+		mutable NContainer::TCMap<NStr::CStr, CExecuteCommand> mp_ExecuteCommands;
+
 		NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> mp_fOutputConsole;
 
 		NContainer::TCMap<NStr::CStr, CBuiltinFunction> mp_BuiltinFunctions;
 		mutable NContainer::TCMap<CPropertyKey, CTypeWithPosition> mp_BuiltinVariablesDefinitions;
+		mutable NContainer::TCSet<CTypeWithPosition const *> mp_DefaultedBuiltinVariablesDefinitions[EPropertyType_Max];
 		CTypeWithPosition mp_TypeForPropertyAny;
 
 		CGenerateOptions mp_GenerateOptions;
 		bool mp_bNoReconcileOptions = false;
+		bool mp_bSingleThreaded = false;
 
 		align_cacheline mutable NThread::CMutualManyRead mp_SourceFilesLock;
 		mutable NContainer::TCSet<NStr::CStr> mp_SourceFiles;
@@ -839,16 +972,18 @@ namespace NMib::NBuildSystem
 		CBuildSystemData mp_Data;
 		CProperty mp_ExternalProperty[EPropertyType_Max];
 
+		mutable CStringCache mp_StringCache;
+
 		mutable NStorage::TCPointer<ICGeneratorInterface> mp_GeneratorInterface;
 
 		mutable CUserSettingsState mp_UserSettingsLocal;
 		mutable CUserSettingsState mp_UserSettingsGlobal;
 
 		align_cacheline mutable NThread::CMutualManyRead mp_UsedExternalsLock;
-		mutable NContainer::TCSet<NStr::CStr> mp_UsedExternals;
+		mutable NContainer::TCSet<CPropertyKey> mp_UsedExternals;
 
-		NStr::CStr mp_FileLocation;
-		NStr::CStr mp_BaseDir;
+		NEncoding::CEJSONSorted mp_FileLocation;
+		NEncoding::CEJSONSorted mp_BaseDir;
 		NStr::CStr mp_OutputDir;
 
 		NTime::CTime mp_Now;
@@ -856,10 +991,14 @@ namespace NMib::NBuildSystem
 
 		NStr::CStr mp_UserSettingsFileLocal;
 		NStr::CStr mp_UserSettingsFileGlobal;
-		NStr::CStr mp_FileLocationFile;
-		NStr::CStr mp_GeneratorStateFileName;
-		NContainer::TCMap<NStr::CStr, NStr::CStr> mp_SaveEnvironment;
-		NContainer::TCMap<NStr::CStr, NStr::CStr> mp_Environment;
+		NEncoding::CEJSONSorted mp_FileLocationFile;
+		NEncoding::CEJSONSorted mp_GeneratorStateFileName;
+		NEncoding::CEJSONSorted mp_MToolExe;
+		NEncoding::CEJSONSorted mp_CMakeRoot;
+		NEncoding::CEJSONSorted mp_MalterlibExe;
+
+		CSystemEnvironment mp_SaveEnvironment;
+		CSystemEnvironment mp_Environment;
 		NStr::CStr mp_GenerateWorkspace;
 		mutable NAtomic::TCAtomic<bool> mp_FileChanged;
 
@@ -875,11 +1014,18 @@ namespace NMib::NBuildSystem
 		mutable NContainer::TCMap<NStr::CStr, CCMakeGenerateState> mp_CMakeGenerateState;
 		mutable NContainer::TCMap<NStr::CStr, NStr::CStr> mp_CMakeGenerated;
 		mutable NContainer::TCMap<NStr::CStr, NStr::CStr> mp_CMakeGeneratedContents;
+		mutable NAtomic::TCAtomic<mint> mp_LogSequence;
 
 		NFile::EFileAttrib mp_SupportedAttributes = NFile::CFile::fs_GetSupportedAttributes();
 		NFile::EFileAttrib mp_ValidAttributes = NFile::CFile::fs_GetValidAttributes();
-		bool mp_bDebugFileLocks = fg_GetSys()->f_GetEnvironmentVariable("MalterlibBuildSystemDebugFileLocks", "false") == "true";
+		bool mp_bDebugFileLocks = fg_GetSys()->f_GetEnvironmentVariable("MalterlibBuildSystemDebugFileLocks", "false") == gc_ConstString_true.m_String;
 		NCommandLine::EAnsiEncodingFlag mp_AnsiFlags = NCommandLine::EAnsiEncodingFlag_None;
+		bool mp_bEnablePositions = false;
+		bool mp_bEnableValues = false;
+
+		NStorage::TCSharedPointer<NAtomic::TCAtomic<bool>> mp_pCancelled;
+
+		NConcurrency::TCRoundRobinActors<NConcurrency::CSeparateThreadActor> mp_FileActors{4};
 	};
 }
 
@@ -891,3 +1037,6 @@ namespace NMib::NBuildSystem
 #endif
 
 #endif
+
+#include "Malterlib_BuildSystem_ValuePotentiallyByRef.hpp"
+#include "Malterlib_BuildSystem_FilePosition.hpp"

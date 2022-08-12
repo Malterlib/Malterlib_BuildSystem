@@ -20,6 +20,8 @@ namespace NMib::NBuildSystem
 		CEntityMutablePointer m_pEntity;
 		CFilePosition m_Position;
 		bool m_bLink = false;
+		bool m_bExternal = false;
+		bool m_bIndirect = false;
 	};
 
 	struct CTargetFileInfo : public CGroupMember
@@ -64,6 +66,8 @@ namespace NMib::NBuildSystem
 		NContainer::TCMap<CFileKey, CTargetFileInfo> m_Files;
 
 		CDependenciesBackup m_DependenciesBackup;
+
+		NContainer::TCSet<NStr::CStr> m_AlreadyAddedGroups;
 
 		bool m_bIsExpanded = false;
 	};

@@ -14,6 +14,9 @@ namespace NMib::NBuildSystem
 			, CStr const &_DependencyFilesName
 		) const
 	{
+		DMibFastCheck(_DependencyFilesName.f_IsEmpty() || _DependencyFilesName.f_IsConstant());
+		CPropertyKeyReference DependencyFileNamePropertyKey(CAssertAddedToStringCache(), EPropertyType_Property, _DependencyFilesName, _DependencyFilesName.f_Hash());
+
 		auto &Workspace = *_pWorkspace;
 		auto &ConfigData = _ConfigData;
 		auto &Config = _Config;
@@ -53,13 +56,12 @@ namespace NMib::NBuildSystem
 		}
 
 		f_ExpandWorkspaceTargets(Evaluated, *Workspace.m_pEntity);
-		f_EvaluateTargetsInWorkspace(Evaluated, WorkspaceTargets, *Workspace.m_pEntity);
+		auto AlreadyCreatedGroupsPerEntity = f_EvaluateTargetsInWorkspace(Evaluated, WorkspaceTargets, *Workspace.m_pEntity);
 
 		TCVector<CStr> AllTargets;
 		TCSet<CStr> TargetEntities;
 		TCFunction<void (CEntity &_Entity, CGroupInfo *_pParentGroup)> fFindTargetsRecursive;
-		auto fAddTarget
-			= [&](CEntity &_Entity, CGroupInfo *_pParentGroup) -> CTargetInfo *
+		auto fAddTarget = [&](CEntity &_Entity, CGroupInfo *_pParentGroup) -> CTargetInfo *
 			{
 				auto &EntityName = _Entity.f_GetKeyName();
 				auto &EntityKey = _Entity.f_GetKey();
@@ -95,7 +97,7 @@ namespace NMib::NBuildSystem
 
 				auto &TargetEntity = *pTarget;
 
-				CStr Name = f_EvaluateEntityPropertyString(TargetEntity, EPropertyType_Target, "Name");
+				CStr Name = f_EvaluateEntityPropertyString(TargetEntity, gc_ConstKey_Target_Name);
 
 				CTargetInfo *pTargetInfo;
 				TargetEntities[Name];
@@ -167,7 +169,15 @@ namespace NMib::NBuildSystem
 						break;
 					case EEntityType_Target:
 						{
-							fAddTarget(ChildEntity, _pParentGroup);
+							auto *pTargetInfo = fAddTarget(ChildEntity, _pParentGroup);
+							auto pCreatedGroups = AlreadyCreatedGroupsPerEntity.f_FindEqual(&ChildEntity);
+
+							if (!pCreatedGroups)
+								fs_ThrowError(ChildEntity.f_Data().m_Position, "Internal error: No created group info");
+
+							pTargetInfo->m_AlreadyAddedGroups = fg_Move(*pCreatedGroups);
+
+							AlreadyCreatedGroupsPerEntity.f_Remove(pCreatedGroups);
 						}
 						break;
 					default:
@@ -190,12 +200,16 @@ namespace NMib::NBuildSystem
 			for (auto &TargetInfo : Workspace.m_Targets)
 				TargetsToProcess[&TargetInfo];
 
+			TCSet<CTargetInfo *> TargetsAlreadyProcessed;
+
 			while (!TargetsToProcess.f_IsEmpty())
 			{
+				TargetsAlreadyProcessed += TargetsToProcess;
+
 				TCSet<CTargetInfo *> NewTargetsToProcess;
 
 				auto fGetTarget
-					= [&](CStr const &_EntityName, CStr const &_TargetName, CFilePosition const &_Position, CEJSON const &_Properties) -> CTargetInfo *
+					= [&](CStr const &_EntityName, CStr const &_TargetName, CFilePosition const &_Position, CEJSONSorted &&_Properties) -> CTargetInfo *
 					{
 						CTargetInfo *pDependentTarget;
 						bool bTargetEntity;
@@ -235,12 +249,12 @@ namespace NMib::NBuildSystem
 						TCMap<CPropertyKey, CEvaluatedProperty> EvaluatedProperties;
 						for (auto &Property : _Properties.f_Object())
 						{
-							CPropertyKey Key = CPropertyKey::fs_FromString(Property.f_Name(), _Position);
+							CPropertyKey Key = CPropertyKey::fs_FromString(mp_StringCache, Property.f_Name(), _Position);
 
 							auto &EvalProperty = EvaluatedProperties[Key];
-							EvalProperty.m_Value = Property.f_Value();
+							EvalProperty.m_Value = fg_Move(Property.f_Value());
 							EvalProperty.m_Type = EEvaluatedPropertyType_External;
-							EvalProperty.m_pProperty = &mp_ExternalProperty[Key.m_Type];
+							EvalProperty.m_pProperty = &mp_ExternalProperty[Key.f_GetType()];
 						}
 
 						CEntity *pNewTarget;
@@ -248,13 +262,12 @@ namespace NMib::NBuildSystem
 						{
 							CStr Group;
 							{
-								CProperty const *pFromProperty = nullptr;
+								CBuildSystemPropertyInfo PropertyInfo;
 								Group = f_EvaluateEntityPropertyUncachedString
 									(
 										**pSourceTarget
-										, EPropertyType_Target
-										, "Group"
-										, pFromProperty
+										, gc_ConstKey_Target_Group
+										, PropertyInfo
 										, &EvaluatedProperties
 										, CStr()
 									)
@@ -273,6 +286,7 @@ namespace NMib::NBuildSystem
 								Key.m_Type = EEntityType_Group;
 								Key.m_Name.m_Value = ParentGroup;
 								auto Child = pParentGroup->m_ChildEntitiesMap(Key, pParentGroup);
+								(*Child).f_DataWritable().m_Position = pParentGroup->f_Data().m_Position;
 
 								pParentGroup = &*Child;
 
@@ -310,12 +324,15 @@ namespace NMib::NBuildSystem
 
 						pNewTarget->m_EvaluatedProperties.m_Properties += EvaluatedProperties;
 
+						TCSet<CStr> AlreadyAddedGroups;
 						fp_ExpandEntity(*pNewTarget, *pNewTarget->m_pParent, nullptr);
-						f_EvaluateTarget(Evaluated, WorkspaceTargets, *pNewTarget);
+						f_EvaluateTarget(Evaluated, WorkspaceTargets, *pNewTarget, AlreadyAddedGroups);
+
+						CTargetInfo *pTargetInfo = fAddTarget(*pNewTarget, pParentGroupInfo);
+						pTargetInfo->m_AlreadyAddedGroups = fg_Move(AlreadyAddedGroups);
 
 						bDependencyAdded = true;
 
-						CTargetInfo *pTargetInfo = fAddTarget(*pNewTarget, pParentGroupInfo);
 						CStr ResultingName = pTargetInfo->f_GetName();
 						if (ResultingName != _TargetName)
 						{
@@ -337,7 +354,8 @@ namespace NMib::NBuildSystem
 
 						f_ExpandTargetDependenciesBackup(Evaluated, *pTargetInfo->m_pOuterEntity, pTargetInfo->m_DependenciesBackup);
 
-						NewTargetsToProcess[pTargetInfo];
+						if (!TargetsAlreadyProcessed.f_FindEqual(pTargetInfo))
+							NewTargetsToProcess[pTargetInfo];
 
 						return pTargetInfo;
 					}
@@ -354,11 +372,11 @@ namespace NMib::NBuildSystem
 
 							_pTarget->m_bIsExpanded = true;
 
-							TCSet<CTargetInfo *> ToProcess;
+							TCMap<CTargetInfo *, zbool> ToProcess;
 							TCSet<CEntity *> CreatedThisTime;
 							CEntity *pDistinguisher = nullptr;
-							TCFunction<void (CEntity &_Entity, bool _bRecursive)> fFindDependencies
-								= [&](CEntity &_Entity, bool _bRecursive)
+							TCFunction<void (CEntity &_Entity, bool _bRecursive, bool _bIndirect)> fFindDependencies
+								= [&](CEntity &_Entity, bool _bRecursive, bool _bIndirect)
 								{
 									TCLinkedList<TCTuple<CEntity *, zbool>> Dependencies;
 									for (auto iEntity = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iEntity; ++iEntity)
@@ -373,7 +391,7 @@ namespace NMib::NBuildSystem
 											{
 												auto const *pToProcess = &ChildEntity;
 
-												fFindDependencies(fg_RemoveQualifiers(*pToProcess), _bRecursive);
+												fFindDependencies(fg_RemoveQualifiers(*pToProcess), _bRecursive, _bIndirect);
 											}
 											break;
 										case EEntityType_Dependency:
@@ -386,16 +404,31 @@ namespace NMib::NBuildSystem
 											break;
 										}
 									}
+
 									while (!Dependencies.f_IsEmpty())
 									{
 										auto Dependency = Dependencies.f_Pop();
 										auto &ChildEntity = *fg_Get<0>(Dependency);
 										bool bExpandedDependency = fg_Get<1>(Dependency);
 
+										if (!f_EvaluateEntityPropertyString(ChildEntity, gc_ConstKey_Dependency_Type, CStr()).f_IsEmpty())
+										{
+											// External dependency
+
+											auto Name = f_EvaluateEntityPropertyString(ChildEntity, gc_ConstKey_Dependency_Name);
+											auto &Dep = _pTarget->m_DependenciesMap(Name).f_GetResult();
+											Dep.m_bExternal = true;
+											_pTarget->m_DependenciesOrdered.f_Insert(Dep);
+											Dep.m_pEntity = fg_Explicit(&ChildEntity);
+											Dep.m_Position = ChildEntity.f_Data().m_Position;
+											continue;
+										}
+
 										CStr TargetName = ChildEntity.f_GetKeyName();
-										CStr EntityName = f_EvaluateEntityPropertyString(ChildEntity, EPropertyType_Dependency, "Target", ChildEntity.f_GetKeyName());
+										CStr EntityName = f_EvaluateEntityPropertyString(ChildEntity, gc_ConstKey_Dependency_Target, ChildEntity.f_GetKeyName());
 
 										auto pEntity = &ChildEntity;
+										bool bIndirect = true;
 										if (_bRecursive)
 										{
 											if (_pTarget->m_DependenciesMap.f_FindEqual(TargetName))
@@ -504,11 +537,10 @@ namespace NMib::NBuildSystem
 												fpr_EvaluateData(*pRootCreated, Deleted);
 												pEntity = pParent;
 
-
 												if
 												(
 													Deleted.f_FindEqual(pEntity)
-													|| !f_EvaluateEntityPropertyBool(*pEntity, EPropertyType_Dependency, "Indirect", false)
+													|| !f_EvaluateEntityPropertyBool(*pEntity, gc_ConstKey_Dependency_Indirect, false)
 												)
 												{
 													ToDelete = ToDelete.f_Reverse();
@@ -527,7 +559,7 @@ namespace NMib::NBuildSystem
 											{
 												pEntity = &ChildEntity;
 
-												if (!f_EvaluateEntityPropertyBool(*pEntity, EPropertyType_Dependency, "Indirect", false))
+												if (!f_EvaluateEntityPropertyBool(*pEntity, gc_ConstKey_Dependency_Indirect, false))
 												{
 													CreatedThisTime.f_Remove(pEntity);
 													pEntity->m_pParent->m_ChildEntitiesMap.f_Remove(pEntity);
@@ -536,28 +568,19 @@ namespace NMib::NBuildSystem
 											}
 										}
 										else
-										{
-											bool bIndirect = f_EvaluateEntityPropertyBool(ChildEntity, EPropertyType_Dependency, "Indirect", false);
+											bIndirect = f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Dependency_Indirect, false);
 
-											if (bIndirect)
-											{
-												bool bIndirectOrdered = f_EvaluateEntityPropertyBool(ChildEntity, EPropertyType_Dependency, "IndirectOrdered", false);
-
-												if (!bIndirectOrdered)
-													continue;
-											}
-										}
-
-										CEJSON Properties = f_EvaluateEntityPropertyObject
+										DMibFastCheck(bIndirect == f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Dependency_Indirect, false));
+										
+										auto Properties = f_EvaluateEntityPropertyObject
 											(
 												ChildEntity
-												, EPropertyType_Dependency
-												, "TargetProperties"
-												, CEJSON(EJSONType_Object)
+												, gc_ConstKey_Dependency_TargetProperties
+												, CEJSONSorted(EJSONType_Object)
 											)
 										;
 
-										CTargetInfo *pDependentTarget = fGetTarget(EntityName, TargetName, pEntity->f_Data().m_Position, Properties);
+										CTargetInfo *pDependentTarget = fGetTarget(EntityName, TargetName, pEntity->f_Data().m_Position, Properties.f_Move());
 
 										if (pDependentTarget->m_TriedDependenciesMap(pDependentTarget->f_GetName()).f_WasCreated())
 											bDependencyAdded = true;
@@ -566,38 +589,33 @@ namespace NMib::NBuildSystem
 										_pTarget->m_DependenciesOrdered.f_Insert(Dep);
 										Dep.m_pEntity = fg_Explicit(pEntity);
 										Dep.m_Position = pEntity->f_Data().m_Position;
+										Dep.m_bIndirect = (bIndirect && !_bRecursive) || _bIndirect;
 
-										bool bFollowIndirectDependencies = f_EvaluateEntityPropertyBool
-											(
-												*pDependentTarget->m_pInnerEntity
-												, EPropertyType_Target
-												, "FollowIndirectDependencies"
-												, false
-											)
-										;
+										bool bFollowIndirectDependencies = f_EvaluateEntityPropertyBool(*pDependentTarget->m_pInnerEntity, gc_ConstKey_Target_FollowIndirectDependencies, false);
 
 										if (!bFollowIndirectDependencies)
 											continue;
 
-										ToProcess[pDependentTarget];
+										if (!TargetsAlreadyProcessed.f_FindEqual(pDependentTarget))
+											NewTargetsToProcess[pDependentTarget];
 
-										NewTargetsToProcess[pDependentTarget];
+										ToProcess[pDependentTarget] = Dep.m_bIndirect;
 									}
 								}
 							;
 
-							fFindDependencies(*_pTarget->m_pOuterEntity, false);
+							fFindDependencies(*_pTarget->m_pOuterEntity, false, false);
 
 							while (!ToProcess.f_IsEmpty())
 							{
 								auto ThisTime = fg_Move(ToProcess);
-								for (auto iDependency = ThisTime.f_GetIterator(); iDependency; ++iDependency)
+								for (auto &bIndirect : ThisTime)
 								{
-									auto &Depenency = **iDependency;
+									auto &Depenency = *ThisTime.fs_GetKey(bIndirect);
 									if (!Depenency.m_bIsExpanded)
-										break;
+										continue;
 
-									fFindDependencies(*Depenency.m_pOuterEntity, true);
+									fFindDependencies(*Depenency.m_pOuterEntity, true, bIndirect);
 									pDistinguisher = nullptr;
 									CreatedThisTime.f_Clear();
 								}
@@ -605,100 +623,91 @@ namespace NMib::NBuildSystem
 
 							TCVector<CStr> DependencyFiles;
 							TCVector<CStr> Dependencies;
+							TCVector<CStr> ExternalDependencies;
+							TCVector<CStr> DependencyInjectionGroups;
 
-							for (auto iDependency = _pTarget->m_DependenciesOrdered.f_GetIterator(); iDependency; ++iDependency)
+							for (auto &Dependency : _pTarget->m_DependenciesOrdered)
 							{
-								bool bDoLink = f_EvaluateEntityPropertyBool
+								if (Dependency.m_bExternal)
+								{
+									ExternalDependencies.f_Insert(Dependency.m_pEntity->f_GetPathForGetProperty());
+									continue;
+								}
+
+								auto &TargetName = Dependency.f_GetName();
+
+								CTargetInfo *pDependentTarget = Workspace.m_Targets.f_FindEqual(TargetName);
+								if (!pDependentTarget)
+									fs_ThrowError(Dependency.m_pEntity->f_Data().m_Position, "Internal error dependency not found: '{}'"_f << TargetName);
+
+								DependencyInjectionGroups.f_Insert
 									(
-										*iDependency->m_pEntity
-										, EPropertyType_Dependency
-										, "Link"
-										, true
+										f_EvaluateEntityPropertyStringArray(*pDependentTarget->m_pInnerEntity, gc_ConstKey_Target_DependencyInjectionGroups, TCVector<CStr>())
 									)
 								;
 
-								auto &TargetName = iDependency->f_GetName();
+								if (Dependency.m_bIndirect)
+									continue;
 
-								CTargetInfo *pDependentTarget;
-								{
-									pDependentTarget = Workspace.m_Targets.f_FindEqual(TargetName);
-								}
-								if (!pDependentTarget)
-									fs_ThrowError(iDependency->m_pEntity->f_Data().m_Position, "Internal error dependency not found: '{}'"_f << TargetName);
+								bool bDoLink = f_EvaluateEntityPropertyBool(*Dependency.m_pEntity, gc_ConstKey_Dependency_Link, true);
 
 								if (bDoLink)
 								{
-									iDependency->m_bLink = true;
+									Dependency.m_bLink = true;
 
 									if (!_DependencyFilesName.f_IsEmpty())
 									{
-										CStr FileToAdd = f_EvaluateEntityPropertyString
-											(
-												*pDependentTarget->m_pInnerEntity
-												, EPropertyType_Target
-												, "DependencyFile"
-												, CStr()
-											)
-										;
+										CStr FileToAdd = f_EvaluateEntityPropertyString(*pDependentTarget->m_pInnerEntity, gc_ConstKey_Target_DependencyFile, CStr());
 										if (!FileToAdd.f_IsEmpty())
 											DependencyFiles.f_Insert(FileToAdd);
 									}
 
 								}
-								CStr Dependency = pDependentTarget->m_pInnerEntity->f_GetPathForGetProperty();
-								Dependencies.f_Insert(Dependency);
+								Dependencies.f_Insert(pDependentTarget->m_pInnerEntity->f_GetPathForGetProperty());
 							}
+
+							auto fAddNameList = [&](CPropertyKeyReference const &_Key, TCVector<CStr> &&_Names) -> bool
+								{
+									CEJSONSorted NameListArray = EJSONType_Array;
+
+									for (auto &Name : _Names)
+										NameListArray.f_Insert(fg_Move(Name));
+									
+									return f_AddExternalProperty
+										(
+											fg_RemoveQualifiers(*_pTarget->m_pOuterEntity)
+											, _Key
+											, fg_Move(NameListArray)
+										)
+									;
+								}
+							;
+
+							bool bChanged = false;
 
 							if (!_DependencyFilesName.f_IsEmpty())
 							{
-								CPropertyKey PropertyKey;
-								PropertyKey.m_Type = EPropertyType_Property;
-								PropertyKey.m_Name = _DependencyFilesName;
-
 								DependencyFiles.f_Sort();
-								CEJSON DependencyFilesArray = EJSONType_Array;
-								for (auto &File : DependencyFiles)
-									DependencyFilesArray.f_Insert(File);
-
-								if
-									(
-										f_AddExternalProperty
-										(
-											fg_RemoveQualifiers(*_pTarget->m_pOuterEntity)
-											, PropertyKey
-											, fg_Move(DependencyFilesArray)
-										)
-									)
-								{
-									bDependencyAdded = true;
-								}
+								if (fAddNameList(DependencyFileNamePropertyKey, fg_Move(DependencyFiles)))
+									bChanged = true;
 							}
 
+							Dependencies.f_Sort();
+							bChanged = fAddNameList(gc_ConstKey_Target_Dependencies, fg_Move(Dependencies)) || bChanged;
+
+							ExternalDependencies.f_Sort();
+							bChanged = fAddNameList(gc_ConstKey_Target_ExternalDependencies, fg_Move(ExternalDependencies)) || bChanged;
+
+							DependencyInjectionGroups.f_Sort();
+							bChanged = fAddNameList(gc_ConstKey_Target_InjectedExtraGroups, fg_Move(DependencyInjectionGroups)) || bChanged;
+
+							fp_UpdateDependenciesNames(_pTarget->m_pInnerEntity.f_Get());
+
+							if (bChanged)
 							{
-								CPropertyKey PropertyKey;
-								PropertyKey.m_Type = EPropertyType_Target;
-								PropertyKey.m_Name = "Dependencies";
-
-								Dependencies.f_Sort();
-								CEJSON DependenciesJSON = EJSONType_Array;
-								for (auto &Dependency : Dependencies)
-									DependenciesJSON.f_Insert(Dependency);
-
-								if
-									(
-										f_AddExternalProperty
-										(
-											fg_RemoveQualifiers(*_pTarget->m_pOuterEntity)
-											, PropertyKey
-											, fg_Move(DependenciesJSON)
-										)
-									)
-								{
-									bDependencyAdded = true;
-								}
+								f_EvaluateTarget(Evaluated, WorkspaceTargets, *_pTarget->m_pOuterEntity.f_Get(), _pTarget->m_AlreadyAddedGroups);
+								bDependencyAdded = true;
 							}
-
-							fp_UpdateDependenciesNames(_pTarget->m_pOuterEntity.f_Get());
 						}
 					)
 				;
@@ -707,16 +716,12 @@ namespace NMib::NBuildSystem
 
 
 			{
-				CPropertyKey Key;
-				Key.m_Type = EPropertyType_Workspace;
-				Key.m_Name = "AllTargets";
-
 				AllTargets.f_Sort();
-				CEJSON AllTargetsArray;
+				CEJSONSorted AllTargetsArray;
 				for (auto &Target : AllTargets)
 					AllTargetsArray.f_Insert(Target);
 
-				f_AddExternalProperty(*Workspace.m_pEntity, Key, fg_Move(AllTargetsArray));
+				f_AddExternalProperty(*Workspace.m_pEntity, gc_ConstKey_Workspace_AllTargets, fg_Move(AllTargetsArray));
 			}
 		}
 
@@ -748,11 +753,10 @@ namespace NMib::NBuildSystem
 									break;
 								case EEntityType_Group:
 									{
-										CPropertyKey Key(EPropertyType_Property, "HiddenGroup");
-										CEJSON Hidden = f_GetExternalProperty
+										CEJSONSorted Hidden = f_GetExternalProperty
 											(
 												ChildEntity
-												, Key
+												, gc_ConstKey_HiddenGroup
 											)
 										;
 										if (Hidden.f_IsBoolean() && Hidden.f_Boolean())
@@ -800,8 +804,8 @@ namespace NMib::NBuildSystem
 											if (File.m_pGroup != _pParentGroup)
 											{
 												TCVector<CBuildSystemError> Errors;
-												Errors.f_Insert({File.m_pEntity->f_Data().m_Position, "Previous entity"});
-												Errors.f_Insert({ChildEntity.f_Data().m_Position, "Current entity"});
+												Errors.f_Insert({CBuildSystemUniquePositions(File.m_pEntity->f_Data().m_Position, "File entity"), "Previous entity"});
+												Errors.f_Insert({CBuildSystemUniquePositions(ChildEntity.f_Data().m_Position, gc_ConstString_Entity), "Current entity"});
 
 												fs_ThrowError
 													(
@@ -859,48 +863,57 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	void CBuildSystem::f_GenerateBuildSystem
+	TCFuture<void> CBuildSystem::f_GenerateBuildSystem
 		(
-			TCMap<CConfiguration, TCUniquePointer<CConfiguraitonData>> &o_Configurations
-			, TCMap<CPropertyKey, CEJSON> const &_Values
+			TCMap<CConfiguration, TCUniquePointer<CConfiguraitonData>> *o_pConfigurations
+			, TCMap<CPropertyKey, CEJSONSorted> const *_pValues
 		) const
 	{
 		{
-			DMibLockRead(mp_SourceFilesLock);
-			fg_ParallellForEach
+			NContainer::TCSet<NStr::CStr> SourceFiles;
+			{
+				DMibLockRead(mp_SourceFilesLock);
+				SourceFiles = mp_SourceFiles;
+			}
+
+			co_await fg_ParallelForEach
 				(
-					o_Configurations
-					, [&](TCUniquePointer<CConfiguraitonData> &_pConfig)
+					*o_pConfigurations
+					, [&](TCUniquePointer<CConfiguraitonData> &o_pConfig) -> TCFuture<void>
 					{
-						_pConfig->m_Evaluated.m_SourceFiles = mp_SourceFiles;
+						o_pConfig->m_Evaluated.m_MutableSourceFiles = SourceFiles;
+						co_return {};
 					}
+					, mp_bSingleThreaded
 				)
 			;
 		}
 
-		fg_ParallellForEach
+		co_await fg_ParallelForEach
 			(
-				o_Configurations
-				, [&](TCUniquePointer<CConfiguraitonData> &_pConfig)
+				*o_pConfigurations
+				, [&](TCUniquePointer<CConfiguraitonData> &o_pConfig) -> TCFuture<void>
 				{
-					TCMap<CPropertyKey, CEJSON> ConfigValues = _Values;
-					for (auto iTuple = _pConfig->m_Tuples.f_GetIterator(); iTuple; ++iTuple)
+					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+					co_await f_CheckCancelled();
+
+					auto &ConfigData = *o_pConfig;
+					TCMap<CPropertyKey, CEJSONSorted> ConfigValues = *_pValues;
+					for (auto iTuple = ConfigData.m_Tuples.f_GetIterator(); iTuple; ++iTuple)
 					{
 						if (iTuple->m_Name)
-							ConfigValues[CPropertyKey(iTuple->m_Type)] = iTuple->m_Name;
+							ConfigValues[CPropertyKey(mp_StringCache, iTuple->m_Type)] = iTuple->m_Name;
 						else
-							ConfigValues[CPropertyKey(iTuple->m_Type)] = CEJSON{};
+							ConfigValues[CPropertyKey(mp_StringCache, iTuple->m_Type)] = CEJSONSorted{};
 					}
 
-					f_EvaluateDataMain(_pConfig->m_Evaluated, ConfigValues);
-					f_GenerateGlobalFiles(_pConfig->m_Evaluated, true);
-					f_ExpandDynamicImports(_pConfig->m_Evaluated);
-					f_ExpandGlobalTargetsAndWorkspaces(_pConfig->m_Evaluated);
-					f_EvalGlobalWorkspaces(_pConfig->m_Evaluated, _pConfig->m_Targets);
-					f_ExpandGlobalEntities(_pConfig->m_Evaluated);
-					f_GenerateGlobalFiles(_pConfig->m_Evaluated, false);
-
-					auto &ConfigData = *_pConfig;
+					f_EvaluateDataMain(ConfigData.m_Evaluated, ConfigValues);
+					f_GenerateGlobalFiles(ConfigData.m_Evaluated, true);
+					f_ExpandDynamicImports(ConfigData.m_Evaluated);
+					f_ExpandGlobalTargetsAndWorkspaces(ConfigData.m_Evaluated);
+					f_EvalGlobalWorkspaces(ConfigData.m_Evaluated, ConfigData.m_Targets);
+					f_ExpandGlobalEntities(ConfigData.m_Evaluated);
+					f_GenerateGlobalFiles(ConfigData.m_Evaluated, false);
 
 					// Find workspaces
 					for (auto iEntity = ConfigData.m_Evaluated.m_RootEntity.m_ChildEntitiesOrdered.f_GetIterator(); iEntity; ++iEntity)
@@ -911,10 +924,10 @@ namespace NMib::NBuildSystem
 						if (Key.m_Type != EEntityType_Workspace)
 							continue;
 
-						if (!f_EvaluateEntityPropertyBool(Entity, EPropertyType_Workspace, "Enabled", true))
+						if (!f_EvaluateEntityPropertyBool(Entity, gc_ConstKey_Workspace_Enabled, true))
 							continue;
 
-						CStr Name = f_EvaluateEntityPropertyString(Entity, EPropertyType_Workspace, "Name");
+						CStr Name = f_EvaluateEntityPropertyString(Entity, gc_ConstKey_Workspace_Name);
 
 						auto &Workspace = **ConfigData.m_Workspaces(Name, fg_Construct());
  						auto &EntityName = Entity.f_GetKeyName();
@@ -933,8 +946,14 @@ namespace NMib::NBuildSystem
 							;
 						}
 					}
+					
+					co_return {};
 				}
+				, mp_bSingleThreaded
 			)
 		;
+		co_await f_CheckCancelled();
+
+		co_return {};
 	}
 }

@@ -19,7 +19,7 @@
 {
 	Property
 	{
-		Test define bool = false
+		Test: bool = false
 
 		TestFunction function(any _Value, any _Default) any = "Test"
 		{

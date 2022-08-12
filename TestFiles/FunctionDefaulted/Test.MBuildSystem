@@ -19,12 +19,12 @@
 {
 	Type
 	{
-		CTestOptional define {
+		CTestOptional: {
 			InnerValue: string = "Inner class default",
 			InnerValue2: string = "Inner class default 2"
 		} = {InnerValue: undefined, InnerValue2: undefined}
 
-		CTestOptional2 define {
+		CTestOptional2: {
 			InnerValue: string = "Inner class default",
 			InnerValue2: {
 				Test: string,
@@ -34,7 +34,7 @@
 	}
 	Property
 	{
-		TestValue define bool = true
+		TestValue: bool = true
 		CalcValue function(string _Test, string? _Inner = "Inner default", bool? _bAppend = true) {
 			Test: string
 			, TestOptional?: {

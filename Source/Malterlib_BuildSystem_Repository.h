@@ -7,8 +7,9 @@
 #include <Mib/Process/ProcessLaunch>
 #include <Mib/Process/ProcessLaunchActor>
 #include <Mib/Encoding/EJSON>
-#include <Mib/Concurrency/ActorSequencer>
+#include <Mib/Concurrency/ActorSequencerActor>
 #include <Mib/CommandLine/AnsiEncoding>
+#include <Mib/Concurrency/AsyncDestroy>
 
 namespace NMib::NBuildSystem::NRepository
 {
@@ -161,13 +162,27 @@ namespace NMib::NBuildSystem::NRepository
 				, CStr const &_ProgressDescription
 				, EAnsiEncodingFlag _AnsiFlags
 				, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
+				, NStorage::TCSharedPointer<TCAtomic<bool>> const &_pCancelled
 			)
 		;
+		CGitLaunches(CGitLaunches const &_Other);
+		CGitLaunches(CGitLaunches &&_Other) = default;
 
+		TCFuture<CAsyncDestroyAwaiter> f_Init();
+
+		void f_CheckInit() const;
 		void f_SetNumRepos(mint _nRepos, bool _bReport = true);
 		void f_MeasureRepos(TCVector<TCVector<CRepository *>> const &_FilteredRepositories, bool _bReport = true);
 
 		TCFuture<CProcessLaunchActor::CSimpleLaunchResult> f_Launch(CRepository const &_Repo, TCVector<CStr> const &_Params, TCMap<CStr, CStr> const &_Environment = {}) const;
+		TCFuture<CProcessLaunchActor::CSimpleLaunchResult> f_Launch
+			(
+				CStr const &_Directory
+				, TCVector<CStr> const &_Params
+				, TCMap<CStr, CStr> const &_Environment = {}
+				, CProcessLaunchActor::ESimpleLaunchFlag _Flags = CProcessLaunchActor::ESimpleLaunchFlag_None
+			) const
+		;
 		TCFuture<void> f_Launch
 			(
 			 	CRepository const &_Repo
@@ -187,6 +202,9 @@ namespace NMib::NBuildSystem::NRepository
 
 		static uint32 fs_MaxProcesses();
 
+		using CLaunchSequencer = TCActorSequencerActor<CProcessLaunchActor::CSimpleLaunchResult>;
+
+		struct COwner;
 		struct CState
 		{
 			CState
@@ -195,6 +213,7 @@ namespace NMib::NBuildSystem::NRepository
 					, CStr const &_ProgressDescription
 					, EAnsiEncodingFlag _AnsiFlags
 					, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
+					, NStorage::TCSharedPointer<TCAtomic<bool>> const &_pCancelled
 				)
 			;
 			~CState();
@@ -202,10 +221,14 @@ namespace NMib::NBuildSystem::NRepository
 			void f_OutputState() const;
 			void f_ConsoleOutput(CStr const &_Output, bool _bError = false) const;
 
+
+			CIntrusiveRefCount m_RefCount;
+
 			CMutual m_Lock;
 			CStr m_BaseDir;
 			TCActor<> m_OutputActor = fg_ConcurrentActor();
 			TCMap<mint, TCActor<CProcessLaunchActor>> m_Launches;
+			TCMap<mint, zbool> m_LaunchesAborted;
 			TCMap<CStr, CStr> m_RepoNames;
 			TCAtomic<mint> m_nDoneRepos = 0;
 			CStr m_ProgressDescription;
@@ -214,13 +237,29 @@ namespace NMib::NBuildSystem::NRepository
 			TCMap<CStr, TCVector<CDeferredOutput>> m_DeferredOutput;
 			TCVector<TCSet<CStr>> m_OutputOrder;
 
-			TCActorSequencer<CProcessLaunchActor::CSimpleLaunchResult> m_LaunchSequencer{fg_Clamp(NSys::fg_Thread_GetVirtualCores()*2u, 32u, fs_MaxProcesses())};
+			TCActor<CLaunchSequencer> m_LaunchSequencer{fg_Construct(fg_Clamp(NSys::fg_Thread_GetVirtualCores()*2u, 32u, fs_MaxProcesses()))};
+
+			mutable CMutual m_ConsoleOutputLock;
 
 			mint m_LaunchID = 0;
 			mint m_LongestRepo = 0;
 			TCAtomic<mint> m_nRepos = 0;
 			EAnsiEncodingFlag m_AnsiFlags;
 			NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> m_fOutputConsole;
+
+			NStorage::TCSharedPointer<TCAtomic<bool>> m_pCancelled;
+
+			CActorSubscription m_CheckAbortTimer;
+
+			bool m_bInited = false;
+		};
+
+		struct COwner
+		{
+			COwner(TCSharedPointer<CState> const&_pState);
+			~COwner();
+
+			TCSharedPointer<CState> m_pState;
 		};
 
 		CStr f_GetRepoName(CRepository const &_Repo) const;
@@ -231,6 +270,7 @@ namespace NMib::NBuildSystem::NRepository
 		void f_SetOutputOrder(TCVector<TCSet<CStr>> const &_OutputOrder) const;
 
 		TCSharedPointer<CState> m_pState;
+		TCSharedPointer<COwner> m_pOwner;
 
 	private:
 		TCFuture<CProcessLaunchActor::CSimpleLaunchResult> fp_Launch(CProcessLaunchActor::CSimpleLaunch &&_Launch) const;
@@ -325,20 +365,12 @@ namespace NMib::NBuildSystem::NRepository
 		uint32 m_Patch = 0;
 	};
 
-	CGitVersion fg_GetGitVersion();
+	TCFuture<CGitVersion> fg_GetGitVersion(CGitLaunches &_Launches);
 	CStr fg_GetGitRoot(CStr const &_Directory);
 	CStr fg_GetGitDataDir(CStr const &_GitRoot, CFilePosition const &_Position);
 	CStr fg_GetGitHeadHash(CStr const &_GitRoot, CFilePosition const &_Position);
 	CGitConfig fg_GetGitConfig(CStr const &_GitRoot, CFilePosition const &_Position);
 	bool fg_IsSubmodule(CStr const &_GitRoot);
-	bool fg_HandleRepository
-		(
-		 	CStr const &_ReposDirectory
-		 	, CRepository const &_Repo
-		 	, CStateHandler &o_StateHandler
-		 	, CBuildSystem const &_BuildSystem
-		)
-	;
 	TCVector<TCMap<CStr, CReposLocation>> fg_GetRepos(CBuildSystem &_BuildSystem, CBuildSystemData &_Data);
 	CRepoEditor fg_GetRepoEditor(CBuildSystem &_BuildSystem, CBuildSystemData &_Data);
 
@@ -356,10 +388,8 @@ namespace NMib::NBuildSystem::NRepository
 	CStr fg_GetBranch(CRepository const &_Repo);
 	CStr fg_GetRemoteHead(CRepository const &_Repo, CStr const &_Remote);
 
-	void fg_UpdateRemotes(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage = {});
-	TCFuture<void> fg_UpdateRemotesAsync(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage = {});
+	TCFuture<void> fg_UpdateRemotes(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage = {});
 	TCMap<CStr, CStr> fg_FetchEnvironment(CBuildSystem const &_BuildSystem);
 
-	TCFuture<CFilteredRepos> fg_GetFilteredReposAsync(CBuildSystem::CRepoFilter const &_Filter, CBuildSystem &_BuildSystem, CBuildSystemData &_Data, EFilterRepoFlag _Flags = EFilterRepoFlag_None);
-	CFilteredRepos fg_GetFilteredRepos(CBuildSystem::CRepoFilter const &_Filter, CBuildSystem &_BuildSystem, CBuildSystemData &_Data, EFilterRepoFlag _Flags = EFilterRepoFlag_None);
+	TCFuture<CFilteredRepos> fg_GetFilteredRepos(CBuildSystem::CRepoFilter const &_Filter, CBuildSystem &_BuildSystem, CBuildSystemData &_Data, EFilterRepoFlag _Flags = EFilterRepoFlag_None);
 }

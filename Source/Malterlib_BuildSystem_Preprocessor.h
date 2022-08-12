@@ -11,7 +11,15 @@ namespace NMib::NBuildSystem
 	class CBuildSystemPreprocessor
 	{
 	public:
-		CBuildSystemPreprocessor(CBuildSystemRegistry &_ResultRegistry, TCSet<CStr> &_SourceFiles, CFindCache const &_FindCache, TCMap<CStr, CStr> const &_Environment);
+		CBuildSystemPreprocessor
+			(
+				CBuildSystemRegistry &_ResultRegistry
+				, TCSet<CStr> &_SourceFiles
+				, CFindCache const &_FindCache
+				, TCMap<CStr, CStr> const &_Environment
+				, CStringCache &_StringCache
+			)
+		;
 
 		void f_ReadFile(CStr const &_Path);
 		CStr const &f_GetFileLocation();
@@ -30,6 +38,7 @@ namespace NMib::NBuildSystem
 		CBuildSystemRegistry &mp_ResultRegistry;
 		TCSet<CStr> &mp_SourceFiles;
 		CFindCache const &mp_FindCache;
+		CStringCache &mp_StringCache;
 		TCMap<CStr, CStr> const &mp_Environment;
 		CStr mp_FileLocation;
 	};

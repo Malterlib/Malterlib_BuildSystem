@@ -16,17 +16,17 @@ namespace NMib::NBuildSystem
 			(
 				{
 					{
-						"ReadWindowsRegistry"
+						gc_ConstString_ReadWindowsRegistry
 						, CBuiltinFunction
 						{
 							fg_FunctionType
 							(
 								g_String
-								, fg_FunctionParam(g_String, "_Root")
-								, fg_FunctionParam(g_String, "_Key")
-								, fg_FunctionParam(g_String, "_ValueName")
+								, fg_FunctionParam(g_String, gc_ConstString__Root)
+								, fg_FunctionParam(g_String, gc_ConstString__Key)
+								, fg_FunctionParam(g_String, gc_ConstString__ValueName)
 							)
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
 							{
 		#ifdef DPlatformFamily_Windows
 								if (_Params.f_GetLen() != 3 || !_Params[0].f_IsString() || !_Params[1].f_IsString() || !_Params[2].f_IsString())
@@ -37,17 +37,17 @@ namespace NMib::NBuildSystem
 
 								auto const &Root = _Params[0].f_String();
 
-								if (Root == "LocalMachine")
+								if (Root == gc_ConstString_LocalMachine.m_String)
 									RegRoot = ERegRoot::ERegRoot_LocalMachine;
-								else if (Root == "CurrentUser")
+								else if (Root == gc_ConstString_CurrentUser.m_String)
 									RegRoot = ERegRoot::ERegRoot_CurrentUser;
-								else if (Root == "Classes")
+								else if (Root == gc_ConstString_Classes.m_String)
 									RegRoot = ERegRoot::ERegRoot_Classes;
-								else if (Root == "Win64_LocalMachine")
+								else if (Root == gc_ConstString_Win64_LocalMachine.m_String)
 									RegRoot = ERegRoot::ERegRoot_Win64_LocalMachine;
-								else if (Root == "Win64_CurrentUser")
+								else if (Root == gc_ConstString_Win64_CurrentUser.m_String)
 									RegRoot = ERegRoot::ERegRoot_Win64_CurrentUser;
-								else if (Root == "Win64_Classes")
+								else if (Root == gc_ConstString_Win64_Classes.m_String)
 									RegRoot = ERegRoot::ERegRoot_Win64_Classes;
 
 								NMib::NPlatform::CWin32_Registry Registry{RegRoot};
@@ -59,6 +59,7 @@ namespace NMib::NBuildSystem
 								return {};
 		#endif
 							}
+							, DMibBuildSystemFilePosition
 						}
 					}
 				}

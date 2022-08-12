@@ -22,11 +22,12 @@ namespace NMib::NBuildSystem
 		NFile::EFileAttrib m_Attribs;
 		uint8 m_bRecursive;
 		uint8 m_bFollowLinks;
+		uint8 m_bExists = false;
 		NContainer::TCSet<NStr::CStr> m_Exclude;
 		
 	private:
 		template <typename t_CKey2, typename t_CData2>
-		friend class NMib::NContainer::TCMapTreeMember;
+		friend struct NMib::NContainer::TCMapNode;
 
 		CFindOptions();
 	};
@@ -40,6 +41,7 @@ namespace NMib::NBuildSystem
 		NContainer::TCVector<NFile::CFile::CFoundFile> const &f_FindFiles(CFindOptions const &_Options, bool _bTag) const;
 		void f_AddSourceFile(NStr::CStr const &_FileName) const;		
 		NContainer::TCSet<NStr::CStr> f_GetSourceFiles() const;
+		bool f_FileExists(NStr::CStr const &_File, NFile::EFileAttrib _Attributes) const;
 		
 	private:
 		struct CEntry

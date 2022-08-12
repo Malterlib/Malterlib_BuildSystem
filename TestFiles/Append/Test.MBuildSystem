@@ -17,7 +17,7 @@
 
 Type
 {
-	CTest define {
+	CTest: {
 		Test: string
 		, TestOptional?: {
 			InnerValue: string
@@ -28,7 +28,7 @@ Type
 
 Property
 {
-	CalcValueArray define [string]
+	CalcValueArray: [string]
 	CalcValueArray =+ "TestFile"
 }
 
@@ -36,8 +36,8 @@ Property
 {
 	Property
 	{
-		CalcValue define string
-		CalcValueUserType define type(CTest)
+		CalcValue: string
+		CalcValueUserType: type(CTest)
 
 		CalcValue "Testing"
 		CalcValueUserType {Test: "Testing 1"}
@@ -60,7 +60,7 @@ Property
 			!!true false
 		}
 
-		Array define [{...: any}] = [
+		Array: [{...: any}] = [
 			{
 				Test1: "Test1"
 			}
@@ -70,11 +70,11 @@ Property
 			}
 		]
 
-		CalcObjectRoot define {...: any} = {
+		CalcObjectRoot: {...: any} = {
 			Test2: "Test2"
 			, <<: Array
 		}
-		CalcObjectSub define {...: any} = {
+		CalcObjectSub: {...: any} = {
 			Test2: "Test2"
 			, Sub:
 			{
@@ -100,9 +100,9 @@ Property
 					`@(CalcValueUserType->ToString())\n`\
 					`@(CalcObjectRoot->ToString())\n`\
 					`@(CalcObjectSub->ToString())\n`\
-					`@(["Test", "Test2", "Test3"]->ForEach("CalcValueArrayValue")->ToString())\n`\
-					`@([]->ForEach("CalcValueArrayValue")->ToString())\n`\
-					`@(["Test", "Test2", "Test3"]->ForEach("CalcValueArrayValueEmpty")->ToString())\n`
+					`@(["Test", "Test2", "Test3"]->ForEach(&CalcValueArrayValue)->ToString())\n`\
+					`@([]->ForEach(&CalcValueArrayValue)->ToString())\n`\
+					`@(["Test", "Test2", "Test3"]->ForEach(&CalcValueArrayValueEmpty)->ToString())\n`
 
 		Executable false
 		UnixLineEnds true

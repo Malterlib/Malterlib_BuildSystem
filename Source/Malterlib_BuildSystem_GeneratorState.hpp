@@ -36,6 +36,7 @@ namespace NMib::NBuildSystem
 		_Stream << m_GeneratedFiles;
 		_Stream << m_SourceSearches;
 		_Stream << m_Environment;
+		_Stream << m_NumWorkspaceTargets;
 		_Stream << m_GenerationFlags;
 	}
 
@@ -52,6 +53,7 @@ namespace NMib::NBuildSystem
 		_Stream >> m_GeneratedFiles;
 		_Stream >> m_SourceSearches;
 		_Stream >> m_Environment;
+		_Stream >> m_NumWorkspaceTargets;
 		_Stream >> m_GenerationFlags;
 	}
 }

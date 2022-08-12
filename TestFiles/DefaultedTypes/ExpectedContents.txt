@@ -9,12 +9,12 @@ Generate File Contents:
 		"NotDefaulted": "NotDefaulted"
 	},
 	{
-		"NotDefaulted": "NotDefaulted",
-		"Defaulted": "Defaulted"
+		"Defaulted": "Defaulted",
+		"NotDefaulted": "NotDefaulted"
 	},
 	{
-		"NotDefaulted": "NotDefaulted",
-		"Defaulted": "Defaulted"
+		"Defaulted": "Defaulted",
+		"NotDefaulted": "NotDefaulted"
 	}
 ]
 [
@@ -36,8 +36,8 @@ Generate File Contents:
 	}
 ]
 {
-	"NotDefaulted": "Defined",
-	"Defaulted": "Defaulted"
+	"Defaulted": "Defaulted",
+	"NotDefaulted": "Defined"
 }{
 	"Defaulted": "Defaulted",
 	"Defaulted2": "Defaulted2"

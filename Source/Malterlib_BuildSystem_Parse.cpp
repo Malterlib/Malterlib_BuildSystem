@@ -101,7 +101,7 @@ namespace NMib::NBuildSystem
 							auto &Identifier = _PrefixOperator.m_Right.f_Identifier();
 							auto &EntityType = Identifier.f_NameConstantString();
 
-							if (EntityType != "Workspace")
+							if (EntityType != gc_ConstString_Workspace.m_String)
 								return;
 
 							auto &Value = Registry.f_GetThisValue();
@@ -145,7 +145,7 @@ namespace NMib::NBuildSystem
 
 							if (bFilterWorkspace)
 							{
-								if (EntityType == "Workspace")
+								if (EntityType == gc_ConstString_Workspace.m_String)
 									return;
 							}
 							fp_ParseEntity(_RootEntity, Identifier, Registry);
@@ -174,14 +174,14 @@ namespace NMib::NBuildSystem
 								_Identifier.m_PropertyType == EPropertyType_Property
 								&& _Identifier.m_EntityType == EEntityType_Invalid
 								&& _Identifier.f_IsNameConstantString()
-								&& (_Identifier.f_NameConstantString() == "Import" || _Identifier.f_NameConstantString() == "Include")
+								&& (_Identifier.f_NameConstantString() == gc_ConstString_Import.m_String || _Identifier.f_NameConstantString() == gc_ConstString_Include.m_String)
 								&& Value.m_Value.f_IsValid()
 							)
 						{
 							return; // Error recovery to allow repositories to be handled
 						}
 
-						fp_ParseProperty(&_RootEntity, _Identifier, Registry, pConditions, true);
+						fp_ParseProperty(_RootEntity, _Identifier, Registry, pConditions, true);
 					}
 					, "Expected a prefix operator or an property identifier"
 					, EHandleKeyFlag_None
@@ -208,14 +208,14 @@ namespace NMib::NBuildSystem
 								_Identifier.m_PropertyType == EPropertyType_Property
 								&& _Identifier.m_EntityType == EEntityType_Invalid
 								&& _Identifier.f_IsNameConstantString()
-								&& (_Identifier.f_NameConstantString() == "Import" || _Identifier.f_NameConstantString() == "Include")
+								&& (_Identifier.f_NameConstantString() == gc_ConstString_Import.m_String || _Identifier.f_NameConstantString() == gc_ConstString_Include.m_String)
 								&& Value.m_Value.f_IsValid()
 							)
 						{
 							return; // Error recovery to allow repositories to be handled
 						}
 
-						fp_ParseProperty(&_RootEntity, _Identifier, Registry, pConditions, false);
+						fp_ParseProperty(_RootEntity, _Identifier, Registry, pConditions, false);
 					}
 					, "Expected a prefix operator or an property identifier"
 					, EHandleKeyFlag_None
@@ -259,23 +259,47 @@ namespace NMib::NBuildSystem
 			, CStr const &_TypeName
 			, CBuildSystemSyntax::CType const &_Type
 			, CFilePosition const &_Position
+			, TCSharedPointer<CCondition> const &_pConditions
+			, EPropertyFlag _PropertyFlags
 		)
 	{
 		if (auto *pChildPositions = _DestinationEntity.f_ChildDependentData().m_ChildrenUserTypes.f_FindEqual(_TypeName))
 		{
 			TCVector<CBuildSystemError> ChildErrors;
 			for (auto &Position : *pChildPositions)
-				ChildErrors.f_Insert(CBuildSystemError{Position, "Defined here"});
+				ChildErrors.f_Insert(CBuildSystemError{CBuildSystemUniquePositions(Position, "Child type"), "Defined here"});
 			fsp_ThrowError(_Position, "User type name collision with child entities", ChildErrors);
 		}
 
-		if (auto pExistingType = _DestinationEntity.f_Data().m_UserTypes.f_FindEqual(_TypeName))
-			fsp_ThrowError(_Position, "User type name collision with previous type", TCVector<CBuildSystemError>{{pExistingType->m_Position, "Defined here"}});
+		if (auto pExistingTypes = _DestinationEntity.f_Data().m_UserTypes.f_FindEqual(_TypeName))
+		{
+			for (auto &ExistingType : *pExistingTypes)
+			{
+				if ((!ExistingType.m_pConditions && !_pConditions) || (( !!ExistingType.m_pConditions && !!_pConditions) && *ExistingType.m_pConditions == *_pConditions))
+				{
+					fs_ThrowError
+						(
+							CBuildSystemUniquePositions(_Position, "User Type")
+							, "User type name collision with previous type"
+							, TCVector<CBuildSystemError>{{CBuildSystemUniquePositions(ExistingType.m_Type.m_Position, "User Type"), "Defined here"}}
+						)
+					;
+				}
+			}
+		}
 
 		for (auto *pParent = _DestinationEntity.m_pParent; pParent; pParent = pParent->m_pParent)
 		{
 			if (auto pExistingType = pParent->f_Data().m_UserTypes.f_FindEqual(_TypeName))
-				fsp_ThrowError(_Position, "User type name collision with parent entity", TCVector<CBuildSystemError>{{pExistingType->m_Position, "Defined here"}});
+			{
+				fs_ThrowError
+					(
+						CBuildSystemUniquePositions(_Position, "User Type")
+						, "User type name collision with parent entity"
+						, TCVector<CBuildSystemError>{{CBuildSystemUniquePositions(pExistingType->f_GetFirst().m_Type.m_Position, "User Type"), "Defined here"}}
+					)
+				;
+			}
 
 			if (auto *pUserType = pParent->f_ChildDependentData().m_ChildrenUserTypes.f_FindEqual(_TypeName); pUserType && pUserType->f_FindEqual(_Position))
 				continue;
@@ -283,18 +307,19 @@ namespace NMib::NBuildSystem
 			pParent->f_ChildDependentDataWritable().m_ChildrenUserTypes[_TypeName][_Position];
 		}
 
-		_DestinationEntity.f_DataWritable().m_UserTypes[_TypeName] = {_Type, _Position};
+		_DestinationEntity.f_DataWritable().m_UserTypes[_TypeName].f_Insert({{_Type, _Position}, _pConditions, _PropertyFlags});
 	}
 
 	void CBuildSystem::fs_AddEntityVariableDefinition
 		(
 			CBuildSystem const *_pBuildSystem
 			, CEntity &_DestinationEntity
-			, CPropertyKey const &_VariableName
+			, CPropertyKeyReference const &_VariableName
 			, CBuildSystemSyntax::CType const &_Type
 			, CFilePosition const &_Position
 			, CStr const &_Whitespace
 			, TCSharedPointer<CCondition> const &_pConditions
+			, EPropertyFlag _PropertyFlags
 		)
 	{
 		if (_pBuildSystem)
@@ -313,7 +338,7 @@ namespace NMib::NBuildSystem
 				}
 			}
 
-			if (_VariableName.m_Type == EPropertyType_Property && _pBuildSystem->mp_BuiltinFunctions.f_FindEqual(_VariableName.m_Name))
+			if (_VariableName.f_GetType() == EPropertyType_Property && _pBuildSystem->mp_BuiltinFunctions.f_FindEqual(_VariableName.m_Name))
 				fsp_ThrowError(_Position, "This name '{}' is reserved for a builtin function"_f << _VariableName);
 		}
 
@@ -321,17 +346,39 @@ namespace NMib::NBuildSystem
 		{
 			TCVector<CBuildSystemError> ChildErrors;
 			for (auto &Position : *pChildPositions)
-				ChildErrors.f_Insert(CBuildSystemError{Position, "Defined here"});
-			fsp_ThrowError(_Position, "User type name collision with child entities", ChildErrors);
+				ChildErrors.f_Insert(CBuildSystemError{CBuildSystemUniquePositions(Position, "Variable definition"), "Defined here"});
+			fsp_ThrowError(_Position, "Variable definition collision with child entities", ChildErrors);
 		}
 
-		if (auto pExistingType = _DestinationEntity.f_Data().m_VariableDefinitions.f_FindEqual(_VariableName))
-			fsp_ThrowError(_Position, "User type name collision with previous type", TCVector<CBuildSystemError>{{pExistingType->m_Type.m_Position, "Defined here"}});
+		if (auto pExistingTypes = _DestinationEntity.f_Data().m_VariableDefinitions.f_FindEqual(_VariableName))
+		{
+			for (auto &ExistingType : *pExistingTypes)
+			{
+				if ((!ExistingType.m_pConditions && !_pConditions) || (( !!ExistingType.m_pConditions && !!_pConditions) && *ExistingType.m_pConditions == *_pConditions))
+				{
+					fs_ThrowError
+						(
+							CBuildSystemUniquePositions(_Position, "Variable definition")
+							, "Variable definition collision with previous variable"
+							, TCVector<CBuildSystemError>{{CBuildSystemUniquePositions(ExistingType.m_Type.m_Position, "Variable definition"), "Defined here"}}
+						)
+					;
+				}
+			}
+		}
 
  		for (auto *pParent = _DestinationEntity.m_pParent; pParent; pParent = pParent->m_pParent)
 		{
 			if (auto pExistingType = pParent->f_Data().m_VariableDefinitions.f_FindEqual(_VariableName))
-				fsp_ThrowError(_Position, "User type name collision with parent entity", TCVector<CBuildSystemError>{{pExistingType->m_Type.m_Position, "Defined here"}});
+			{
+				fs_ThrowError
+					(
+						CBuildSystemUniquePositions(_Position, "Variable definition")
+						, "Variable definition with parent entity"
+						, TCVector<CBuildSystemError>{{CBuildSystemUniquePositions(pExistingType->f_GetFirst().m_Type.m_Position, "Variable definition"), "Defined here"}}
+					)
+				;
+			}
 
 			if (auto *pDefinition = pParent->f_ChildDependentData().m_ChildrenVariableDefinitions.f_FindEqual(_VariableName); pDefinition && pDefinition->f_FindEqual(_Position))
 				continue;
@@ -339,144 +386,189 @@ namespace NMib::NBuildSystem
 			pParent->f_ChildDependentDataWritable().m_ChildrenVariableDefinitions[_VariableName][_Position];
 		}
 
-		_DestinationEntity.f_DataWritable().m_VariableDefinitions[_VariableName] = {{_Type, _Position, _Whitespace}, _pConditions};
+		_DestinationEntity.f_DataWritable().m_VariableDefinitions[_VariableName].f_Insert({{_Type, _Position, _Whitespace}, _pConditions, _PropertyFlags});
 	}
 
 	void CBuildSystem::fp_ParsePropertyValueDefines
 		(
-			EPropertyType _Type
-			, CStr const &_PropertyName
-			, CEntity *o_pEntity
+			CPropertyKeyReference const &_VariableName
+			, CEntity &o_Entity
 			, CBuildSystemRegistry &_Registry
 			, TCSharedPointer<CCondition> const &_pConditions
 		) const
 	{
-		CProperty Property;
-		Property.m_Key.m_Type = _Type;
-		Property.m_Key.m_Name = _PropertyName;
-		Property.m_Value = _Registry.f_GetThisValue();
-		Property.m_Position = _Registry;
-
-		if (Property.m_Key.m_Type == EPropertyType_Type)
+		auto &Value = _Registry.f_GetThisValue();
+		if (_VariableName.f_GetType() == EPropertyType_Type)
 		{
-			if (!_Registry.f_GetChildren().f_IsEmpty())
-				fsp_ThrowError(*_Registry.f_GetChildren().f_GetIterator(), "Type does not support conditions or debug");
+			TCSharedPointer<CCondition> pConditions;
+			EPropertyFlag DebugFlags = EPropertyFlag_None;
 
-			if (!Property.m_Value.m_Accessors.f_IsEmpty())
-				fsp_ThrowError(Property.m_Position, "Type does not support accessors");
+			fp_ParseConditionsAndDebug(_Registry, _pConditions, DebugFlags, pConditions);
 
-			if (!Property.m_Value.m_Value.m_Value.f_IsOfType<CBuildSystemSyntax::CDefine>())
-				fsp_ThrowError(Property.m_Position, "Type only supports define values");
+			if (!Value.m_Accessors.f_IsEmpty())
+				fsp_ThrowError(_Registry, "Type does not support accessors");
 
-			auto &Type = Property.m_Value.m_Value.m_Value.f_GetAsType<CBuildSystemSyntax::CDefine>().m_Type;
+			if (!Value.m_Value.m_Value.f_IsOfType<CBuildSystemSyntax::CDefine>())
+				fsp_ThrowError(_Registry, "Type only supports define values");
 
-			if (o_pEntity)
-				fs_AddEntityUserType(*o_pEntity, Property.m_Key.m_Name, Type, Property.m_Position);
+			auto &Type = Value.m_Value.m_Value.f_GetAsType<CBuildSystemSyntax::CDefine>().m_Type;
+
+			fs_AddEntityUserType(o_Entity, _VariableName.m_Name, Type, _Registry, pConditions, DebugFlags);
  		}
-		else if (Property.m_Value.m_Value.m_Value.f_IsOfType<CBuildSystemSyntax::CDefine>())
+		else if (Value.m_Value.m_Value.f_IsOfType<CBuildSystemSyntax::CDefine>())
 		{
-			if (!_Registry.f_GetChildren().f_IsEmpty())
-				fsp_ThrowError(*_Registry.f_GetChildren().f_GetIterator(), "Define does not support conditions or debug");
+			TCSharedPointer<CCondition> pConditions;
+			EPropertyFlag DebugFlags = EPropertyFlag_None;
 
-			if (!Property.m_Value.m_Accessors.f_IsEmpty())
-				fsp_ThrowError(Property.m_Position, "Define does not support accessors");
+			fp_ParseConditionsAndDebug(_Registry, _pConditions, DebugFlags, pConditions);
 
-			auto &Type = Property.m_Value.m_Value.m_Value.f_GetAsType<CBuildSystemSyntax::CDefine>().m_Type;
-			if (o_pEntity)
-				fs_AddEntityVariableDefinition(this, *o_pEntity, Property.m_Key, Type, Property.m_Position, _Registry.f_GetWhiteSpace(ERegistryWhiteSpaceLocation_After), _pConditions);
+			if (!Value.m_Accessors.f_IsEmpty())
+				fsp_ThrowError(_Registry, "Define does not support accessors");
+
+			auto &Type = Value.m_Value.m_Value.f_GetAsType<CBuildSystemSyntax::CDefine>().m_Type;
+			fs_AddEntityVariableDefinition
+				(
+					this
+					, o_Entity
+					, _VariableName
+					, Type
+					, _Registry.f_GetLocation()
+					, _Registry.f_GetWhiteSpace(ERegistryWhiteSpaceLocation_After)
+					, pConditions
+					, DebugFlags
+				)
+			;
 		}
+	}
+
+	EPropertyFlag CBuildSystem::fsp_ParseDebugFlags(CFilePosition const &_Position, CStr const &_String)
+	{
+		EPropertyFlag Flags = EPropertyFlag_None;
+		for (auto Value : _String.f_Split(","))
+		{
+			Value = Value.f_Trim();
+			if (Value == gc_ConstString_TraceEval.m_String)
+				Flags |= EPropertyFlag_TraceEval;
+			else if (Value == gc_ConstString_TraceEvalSuccess.m_String)
+				Flags |= EPropertyFlag_TraceEvalSuccess;
+			else if (Value == gc_ConstString_TraceCondition.m_String)
+				Flags |= EPropertyFlag_TraceCondition;
+			else
+				fsp_ThrowError(_Position, "Unknown debug flag: {}"_f << Value);
+		}
+
+		return Flags;
+	}
+
+	void CBuildSystem::fp_ParseConditionsAndDebug
+		(
+			CBuildSystemRegistry &_Registry
+			, NStorage::TCSharedPointer<CCondition> const &_pConditions
+			, EPropertyFlag &o_DebugFlags
+			, NStorage::TCSharedPointer<CCondition> &o_pConditions
+		) const
+	{
+		CCondition TempCondition;
+		CCondition *pDestinationCondition = &TempCondition;
+
+		for (auto iReg = _Registry.f_GetChildIterator(); iReg; ++iReg)
+		{
+ 			CBuildSystemRegistry &Registry = *iReg;
+			if (CCondition::fs_TryParseCondition(Registry, *pDestinationCondition))
+			{
+				if (!o_pConditions)
+				{
+					o_pConditions = fg_Construct();
+					if (_pConditions && !_pConditions->m_Children.f_IsEmpty())
+					{
+						auto &Condition = o_pConditions->m_Children.f_Insert();
+						Condition.m_Type = EConditionType_And;
+						Condition.m_Position = _pConditions->m_Position;
+
+						Condition.m_Children.f_Insert(*_pConditions);
+						pDestinationCondition = &Condition.m_Children.f_Insert();
+					}
+					else
+						pDestinationCondition = o_pConditions.f_Get();
+
+					pDestinationCondition->m_Children.f_Insert(fg_Move(TempCondition.m_Children));
+				}
+				continue;
+			}
+
+			fp_HandleKey
+				(
+					Registry
+					, [&](CBuildSystemSyntax::CKeyPrefixOperator const &_PrefixOperator)
+					{
+						if (_PrefixOperator.m_Operator != CBuildSystemSyntax::CKeyPrefixOperator::EOperator_Pragma)
+							fsp_ThrowError(Registry, "Only conditions and debug pragmas statements can be specified here");
+
+						if (!_PrefixOperator.m_Right.f_IsIdentifier())
+							fsp_ThrowError(Registry, "Only identifiers are supported for pragma statements");
+
+						auto &Identifier = _PrefixOperator.m_Right.f_Identifier();
+						if (!Identifier.f_IsNameConstantString())
+							fsp_ThrowError(Registry, "Only constant string identifiers are supported for pragma statements");
+
+						if (Identifier.f_NameConstantString() != "Debug")
+							fsp_ThrowError(Registry, "Only conditions and debug pragmas statements can be specified here");
+
+						auto &Value = Registry.f_GetThisValue();
+						if (!Value.m_Value.f_IsConstantString())
+							fsp_ThrowError(Registry, "Only strings are supported for debug pragma statements");
+
+						o_DebugFlags = fsp_ParseDebugFlags(Registry.f_GetLocation(), Value.m_Value.f_ConstantString());
+					}
+					, [&](CBuildSystemSyntax::CIdentifier const &_Identifier)
+					{
+						fsp_ThrowError(Registry, "Only conditions and debug statements can be specified here");
+					}
+					, "Only conditions and debug statements can be specified here"
+					, EHandleKeyFlag_AllowPropertyType
+				)
+			;
+		}
+
+		if (!o_pConditions)
+			o_pConditions = _pConditions;
 	}
 
 	void CBuildSystem::fp_ParsePropertyValue
 		(
-			EPropertyType _Type
-			, CStr const &_PropertyName
-			, CEntity *o_pEntity
+			CPropertyKeyReference const &_PropertyKey
+			, CEntity &o_Entity
 			, CBuildSystemRegistry &_Registry
-			, CCondition const *_pParentConditions
+			, TCSharedPointer<CCondition> const &_pConditions
 		) const
 	{
+		if (_PropertyKey.f_GetType() == EPropertyType_Type)
+			return;
+		else if (_Registry.f_GetThisValue().m_Value.m_Value.f_IsOfType<CBuildSystemSyntax::CDefine>())
+			return;
+
 		CProperty Property;
-		Property.m_Key.m_Type = _Type;
-		Property.m_Key.m_Name = _PropertyName;
+		//Property.m_Key = CPropertyKey(_PropertyKey);
 		Property.m_Value = _Registry.f_GetThisValue();
 		Property.m_Position = _Registry;
 		Property.m_pRegistry = &_Registry;
 
-		if (Property.m_Key.m_Type == EPropertyType_Type)
-			;
-		else if (Property.m_Value.m_Value.m_Value.f_IsOfType<CBuildSystemSyntax::CDefine>())
-			;
-		else
-		{
-			CCondition *pDestinationCondition = &Property.m_Condition;
-			if (_pParentConditions && !_pParentConditions->m_Children.f_IsEmpty())
-			{
-				auto &Condition = Property.m_Condition.m_Children.f_Insert();
-				Condition.m_Type = EConditionType_And;
-				Condition.m_Position = _pParentConditions->m_Position;
+		fp_ParseConditionsAndDebug(_Registry, _pConditions, Property.m_Flags, Property.m_pCondition);
 
-				Condition.m_Children.f_Insert(*_pParentConditions);
-				pDestinationCondition = &Condition.m_Children.f_Insert();
-			}
+		if (Property.m_pCondition && Property.m_pCondition->f_NeedPerFile())
+			Property.m_Flags |= EPropertyFlag_NeedPerFile;
 
-			for (auto iReg = _Registry.f_GetChildIterator(); iReg; ++iReg)
-			{
-				CBuildSystemRegistry &Registry = *iReg;
-				if (CCondition::fs_TryParseCondition(Registry, *pDestinationCondition))
-					continue;
+		auto &EntityData = o_Entity.f_DataWritable();
+		[[maybe_unused]] auto &NewProperty = EntityData.m_Properties[_PropertyKey].f_Insert(fg_Move(Property));
+		DMibCheck(_PropertyKey.f_GetType() != EPropertyType_Type);
 
-				fp_HandleKey
-					(
-						Registry
-						, [&](CBuildSystemSyntax::CKeyPrefixOperator const &_PrefixOperator)
-						{
-							if (_PrefixOperator.m_Operator != CBuildSystemSyntax::CKeyPrefixOperator::EOperator_Pragma)
-								fsp_ThrowError(Registry, "Only conditions and debug pragmas statements can be specified for a property");
-
-							if (!_PrefixOperator.m_Right.f_IsIdentifier())
-								fsp_ThrowError(Registry, "Only identifiers are supported for pragma statements");
-
-							auto &Identifier = _PrefixOperator.m_Right.f_Identifier();
-							if (!Identifier.f_IsNameConstantString())
-								fsp_ThrowError(Registry, "Only constant string identifiers are supported for pragma statements");
-
-							if (Identifier.f_NameConstantString() != "Debug")
-								fsp_ThrowError(Registry, "Only conditions and debug pragmas statements can be specified for a property");
-
-							auto &Value = Registry.f_GetThisValue();
-							if (!Value.m_Value.f_IsConstantString())
-								fsp_ThrowError(Registry, "Only strings are supported for debug pragma statements");
-
-							Property.m_Debug = Value.m_Value.f_ConstantString();
-						}
-						, [&](CBuildSystemSyntax::CIdentifier const &_Identifier)
-						{
-							fsp_ThrowError(Registry, "Only conditions and debug statements can be specified for a property");
-						}
-						, "Only conditions and debug statements can be specified for a property"
-						, EHandleKeyFlag_AllowPropertyType
-					)
-				;
-			}
-
-			Property.m_bNeedPerFile = Property.m_Condition.f_NeedPerFile();
-
-			if (o_pEntity)
-			{
-				auto &EntityData = o_pEntity->f_DataWritable();
-				[[maybe_unused]] auto &NewProperty = EntityData.m_Properties[Property.m_Key].f_Insert(fg_Move(Property));
-				DMibCheck(NewProperty.m_Key.m_Type != EPropertyType_Type);
-
-				if (Property.m_Key.m_Name == "FullEval")
-					EntityData.m_HasFullEval |= 1 << Property.m_Key.m_Type;
-			}
-		}
+		if (_PropertyKey.m_Name == gc_ConstString_FullEval.m_String)
+			EntityData.m_HasFullEval |= 1 << _PropertyKey.f_GetType();
 	}
 
  	void CBuildSystem::fp_ParseProperty
 		(
-			CEntity *o_pEntitiy
+			CEntity &o_Entity
 			, CBuildSystemSyntax::CIdentifier const &_Identifier
 			, CBuildSystemRegistry &_Registry
 			, TCSharedPointer<CCondition> const &_pConditions
@@ -489,20 +581,23 @@ namespace NMib::NBuildSystem
 		if (!_Identifier.f_IsNameConstantString())
 			fsp_ThrowError(_Registry, "You cannot use dynamic naming for a property expression");
 
-		auto &Identifier = _Identifier.f_NameConstantString();
+		if (!_Identifier.f_IsPropertyTypeConstant())
+			fsp_ThrowError(_Registry, "You cannot use dynamic property type for a property expression");
 
 		if (!_Identifier.m_bEmptyPropertyType)
 		{
 			if (_bDefines)
-				fp_ParsePropertyValueDefines(_Identifier.m_PropertyType, Identifier, o_pEntitiy, _Registry, _pConditions);
+				fp_ParsePropertyValueDefines(_Identifier.f_PropertyKeyReferenceConstant(), o_Entity, _Registry, _pConditions);
 			else
-				fp_ParsePropertyValue(_Identifier.m_PropertyType, Identifier, o_pEntitiy, _Registry, nullptr);
+				fp_ParsePropertyValue(_Identifier.f_PropertyKeyReferenceConstant(), o_Entity, _Registry, nullptr);
 			return;
 		}
 
 		if (_Registry.f_GetThisValue().m_Value.f_IsValid())
 			fsp_ThrowError(_Registry, "Property groups cannot have a value");
 
+		auto &Identifier = _Identifier.f_NameConstantString();
+		
 		EPropertyType Type = fg_PropertyTypeFromStr(Identifier);
 		if (Identifier.f_IsEmpty() || Type == EPropertyType_Invalid)
 			fsp_ThrowError(_Registry, "Unrecognized property type '{}'"_f << _Identifier.m_Name);
@@ -511,16 +606,15 @@ namespace NMib::NBuildSystem
 
 		TCSharedPointer<CCondition> pConditions;
 
+		bool bWasCondition = true;
 		auto fGetConditions = [&]
 			{
-				if (!pConditions)
+				if (!pConditions && !Conditions.m_Children.f_IsEmpty())
 					pConditions = fg_Construct(Conditions);
 
 				return pConditions;
 			}
 		;
-
-		bool bWasCondition = true;
 
 		for (auto iReg = _Registry.f_GetChildIterator(); iReg; ++iReg)
 		{
@@ -552,15 +646,15 @@ namespace NMib::NBuildSystem
 							fsp_ThrowError(Registry, "You cannot specify an entity type for a property expression");
 
 						if (!_Identifier.m_bEmptyPropertyType)
-							fsp_ThrowError(Registry, "You cannot specify an property type for propertsie in a property group");
+							fsp_ThrowError(Registry, "You cannot specify an property type for properties in a property group");
 
 						if (!_Identifier.f_IsNameConstantString())
 							fsp_ThrowError(Registry, "You cannot use dynamic naming for a property expression");
 
 						if (_bDefines)
-							fp_ParsePropertyValueDefines(Type, _Identifier.f_NameConstantString(), o_pEntitiy, Registry, fGetConditions());
+							fp_ParsePropertyValueDefines(_Identifier.f_PropertyKeyReferenceConstant(Type), o_Entity, Registry, fGetConditions());
 						else
-							fp_ParsePropertyValue(Type, _Identifier.f_NameConstantString(), o_pEntitiy, Registry, &Conditions);
+							fp_ParsePropertyValue(_Identifier.f_PropertyKeyReferenceConstant(Type), o_Entity, Registry, fGetConditions());
 					}
 					, "Only conditions and properties are supported here"
 					, EHandleKeyFlag_AllowPropertyType
@@ -743,6 +837,8 @@ namespace NMib::NBuildSystem
 			break;
 		}
 
+		DMibCheck(pEntity);
+
 		bool bWasCondition = true;
 
 		auto &Conditions = pEntity->f_DataWritable().m_Condition;
@@ -801,14 +897,14 @@ namespace NMib::NBuildSystem
 							if (!Value.m_Value.f_IsConstantString())
 								fsp_ThrowError(Registry, "Only strings are supported for debug pragma statements");
 
-							pEntity->f_DataWritable().m_Debug = Value.m_Value.f_ConstantString();
+							pEntity->f_DataWritable().m_DebugFlags = fsp_ParseDebugFlags(Registry.f_GetLocation(), Value.m_Value.f_ConstantString());
 						}
 						else
 							fsp_ThrowError(Registry, "Unexpected prefix operator: {}"_f << _PrefixOperator.m_Operator);
 					}
 					, [&](CBuildSystemSyntax::CIdentifier const &_Identifier)
 					{
-						fp_ParseProperty(pEntity, _Identifier, Registry, fGetConditions(), true);
+						fp_ParseProperty(*pEntity, _Identifier, Registry, fGetConditions(), true);
 					}
 					, "Expected a prefix operator or an property identifier"
 					, EHandleKeyFlag_None
@@ -831,7 +927,7 @@ namespace NMib::NBuildSystem
 					}
 					, [&](CBuildSystemSyntax::CIdentifier const &_Identifier)
 					{
-						fp_ParseProperty(pEntity, _Identifier, Registry, fGetConditions(), false);
+						fp_ParseProperty(*pEntity, _Identifier, Registry, fGetConditions(), false);
 					}
 					, "Expected a prefix operator or an property identifier"
 					, EHandleKeyFlag_None

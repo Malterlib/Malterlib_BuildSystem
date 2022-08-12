@@ -42,7 +42,7 @@ namespace NMib::NBuildSystem
 	CStr CTargetInfo::f_GetPath() const
 	{
 		if (m_pGroup)
-			return m_pGroup->f_GetPath() + "/" + f_GetName();
+			return m_pGroup->f_GetPath() / f_GetName();
 		return f_GetName();
 	}
 }

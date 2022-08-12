@@ -5,62 +5,112 @@
 
 namespace NMib::NBuildSystem
 {
-	CEJSON CBuildSystem::f_EvaluateEntityProperty
-		(
-			CEntity &_Entity
-			, EPropertyType _Type
-			, CStr const &_Property
-			, CProperty const *&_pFromProperty
- 		) const
+	void CBuildSystem::f_SetEnablePositions()
 	{
-		CPropertyKey Key;
-		Key.m_Type = _Type;
-		Key.m_Name = _Property;
-
-		CEvaluationContext EvalContext(&_Entity.m_EvaluatedProperties);
-		return fp_EvaluateEntityProperty(_Entity, _Entity, Key, EvalContext, _pFromProperty, {}, nullptr);
+		mp_bEnablePositions = true;
 	}
 
-	CEJSON CBuildSystem::f_EvaluateEntityPropertyUncached
+	bool CBuildSystem::f_EnablePositions() const
+	{
+		return mp_bEnablePositions;
+	}
+
+	bool CBuildSystem::f_EnableValues() const
+	{
+		return mp_bEnableValues;
+	}
+
+	void CBuildSystem::f_SetEnableValues()
+	{
+		mp_bEnableValues = true;
+	}
+
+	CStringCache &CBuildSystem::f_StringCache() const
+	{
+		return mp_StringCache;
+	}
+
+	CBuildSystemUniquePositions *CBuildSystem::f_EnablePositions(NStorage::TCSharedPointer<CBuildSystemUniquePositions> &o_pPositions) const
+	{
+		if (mp_bEnablePositions)
+		{
+			if (!o_pPositions)
+				o_pPositions = fg_Construct();
+			return o_pPositions.f_Get();
+		}
+
+		return nullptr;
+	}
+
+	CBuildSystemUniquePositions *CBuildSystem::f_EnablePositions(CBuildSystemUniquePositions *_pPositions) const
+	{
+		if (mp_bEnablePositions)
+			return _pPositions;
+
+		return nullptr;
+	}
+
+	CValuePotentiallyByRef CBuildSystem::f_EvaluateEntityProperty
 		(
 			CEntity &_Entity
-			, EPropertyType _Type
-			, CStr const &_Property
-			, CProperty const *&_pFromProperty
-			, TCMap<CPropertyKey, CEvaluatedProperty> const *_pInitialProperties
+			, CPropertyKeyReference const &_PropertyKey
+			, CBuildSystemPropertyInfo &o_PropertyInfo
+			, CEvaluatedProperties *_pEvaluatedProperties
+ 		) const
+	{
+		CEvaluationContext EvalContext(_pEvaluatedProperties ? _pEvaluatedProperties : &_Entity.m_EvaluatedProperties);
+		return fp_EvaluateEntityProperty(_Entity, _Entity, _PropertyKey, EvalContext, o_PropertyInfo, o_PropertyInfo.f_FallbackPosition(), nullptr, false);
+	}
+
+	CValuePotentiallyByRef CBuildSystem::f_EvaluateEntityPropertyNoDefault
+		(
+			CEntity &_Entity
+			, CPropertyKeyReference const &_PropertyKey
+			, CBuildSystemPropertyInfo &o_PropertyInfo
+			, CEvaluatedProperties *_pEvaluatedProperties
 		) const
 	{
-		CPropertyKey Key;
-		Key.m_Type = _Type;
-		Key.m_Name = _Property;
+		CEvaluationContext EvalContext(_pEvaluatedProperties ? _pEvaluatedProperties : &_Entity.m_EvaluatedProperties);
+		EvalContext.m_bFailUndefinedTypeCheck = false;
+		return fp_EvaluateEntityProperty(_Entity, _Entity, _PropertyKey, EvalContext, o_PropertyInfo, o_PropertyInfo.f_FallbackPosition(), nullptr, false);
+	}
+
+	NEncoding::CEJSONSorted CBuildSystem::f_EvaluateEntityPropertyUncached
+		(
+			CEntity &_Entity
+			, CPropertyKeyReference const &_PropertyKey
+			, CBuildSystemPropertyInfo &o_PropertyInfo
+			, TCMap<CPropertyKey, CEvaluatedProperty> const *_pInitialProperties
+			, CEvaluatedProperties *_pEvaluatedProperties
+		) const
+	{
 		CEvaluatedProperties EvaluatedProperties;
 		if (_pInitialProperties)
 			EvaluatedProperties.m_Properties = *_pInitialProperties;
 		CEvaluationContext EvalContext(&EvaluatedProperties);
-		return fp_EvaluateEntityProperty(_Entity, _Entity, Key, EvalContext, _pFromProperty, {}, nullptr);
+		return fp_EvaluateEntityProperty(_Entity, _Entity, _PropertyKey, EvalContext, o_PropertyInfo, o_PropertyInfo.f_FallbackPosition(), nullptr, false).f_Move();
 	}
 
 	NContainer::TCVector<NStr::CStr> CBuildSystem::f_EvaluateEntityPropertyUncachedStringArray
 		(
 			CEntity &_Entity
-			, EPropertyType _Type
-			, NStr::CStr const &_Property
-			, CProperty const *&_pFromProperty
+			, CPropertyKeyReference const &_PropertyKey
+			, CBuildSystemPropertyInfo &o_PropertyInfo
 			, NContainer::TCMap<CPropertyKey, CEvaluatedProperty> const *_pInitialProperties
 			, NStorage::TCOptional<NContainer::TCVector<NStr::CStr>> const &_Default
 		) const
 	{
-		auto Value = f_EvaluateEntityPropertyUncached(_Entity, _Type, _Property, _pFromProperty, _pInitialProperties);
+		auto Value = f_EvaluateEntityPropertyUncached(_Entity, _PropertyKey, o_PropertyInfo, _pInitialProperties);
 
 		if (!Value.f_IsValid())
 		{
 			if (_Default)
 				return *_Default;
 			else
-				fs_ThrowError(_Entity.f_Data().m_Position, "No value found for {} {}"_f << fg_PropertyTypeToStr(_Type) << _Property);
+				fs_ThrowError(_Entity.f_Data().m_Position, "No value found for {}"_f << _PropertyKey);
 		}
 		else if (!Value.f_IsStringArray())
-			fs_ThrowError(_pFromProperty ? _pFromProperty->m_Position : _Entity.f_Data().m_Position, "Expected a string array value");
+			fs_ThrowError(o_PropertyInfo, _Entity.f_Data().m_Position, "Expected a string array value");
 
 		return fg_Move(Value).f_StringArray();
 	}
@@ -68,218 +118,224 @@ namespace NMib::NBuildSystem
 	NStr::CStr CBuildSystem::f_EvaluateEntityPropertyUncachedString
 		(
 			CEntity &_Entity
-			, EPropertyType _Type
-			, NStr::CStr const &_Property
-			, CProperty const *&_pFromProperty
+			, CPropertyKeyReference const &_PropertyKey
+			, CBuildSystemPropertyInfo &o_PropertyInfo
 			, NContainer::TCMap<CPropertyKey, CEvaluatedProperty> const *_pInitialProperties
 			, NStorage::TCOptional<NStr::CStr> const &_Default
 		) const
 	{
-		auto Value = f_EvaluateEntityPropertyUncached(_Entity, _Type, _Property, _pFromProperty, _pInitialProperties);
+		auto Value = f_EvaluateEntityPropertyUncached(_Entity, _PropertyKey, o_PropertyInfo, _pInitialProperties);
 
 		if (!Value.f_IsValid())
 		{
 			if (_Default)
 				return *_Default;
 			else
-				fs_ThrowError(_Entity.f_Data().m_Position, "No value found for {} {}"_f << fg_PropertyTypeToStr(_Type) << _Property);
+				fs_ThrowError(_Entity.f_Data().m_Position, "No value found for {}"_f << _PropertyKey);
 		}
 		else if (!Value.f_IsString())
-			fs_ThrowError(_pFromProperty ? _pFromProperty->m_Position : _Entity.f_Data().m_Position, "Expected a string value");
+			fs_ThrowError(o_PropertyInfo, _Entity.f_Data().m_Position, "Expected a string value");
 
 		return fg_Move(Value.f_String());
 	}
 
 
-	CEJSON CBuildSystem::f_EvaluateEntityProperty(CEntity &_Entity, EPropertyType _Type, CStr const &_Property) const
+	CValuePotentiallyByRef CBuildSystem::f_EvaluateEntityProperty(CEntity &_Entity, CPropertyKeyReference const &_PropertyKey) const
 	{
-		CProperty const *pFromProperty = nullptr;
-		return f_EvaluateEntityProperty(_Entity, _Type, _Property, pFromProperty);
+		CBuildSystemPropertyInfo PropertyInfo;
+		return f_EvaluateEntityProperty(_Entity, _PropertyKey, PropertyInfo);
 	}
 
-	CEJSON CBuildSystem::f_EvaluateEntityPropertyObject(CEntity &_Entity, EPropertyType _Type, NStr::CStr const &_Property, NStorage::TCOptional<CEJSON> const &_Default) const
+	CValuePotentiallyByRef CBuildSystem::f_EvaluateEntityPropertyObject(CEntity &_Entity, CPropertyKeyReference const &_PropertyKey, NStorage::TCOptional<CEJSONSorted> &&_Default) const
 	{
-		CProperty const *pFromProperty = nullptr;
-		auto Value = f_EvaluateEntityProperty(_Entity, _Type, _Property, pFromProperty);
+		CBuildSystemPropertyInfo PropertyInfo;
+		auto Value = f_EvaluateEntityProperty(_Entity, _PropertyKey, PropertyInfo);
+		auto &ValueRef = Value.f_Get();
 
-		if (!Value.f_IsValid())
+		if (!ValueRef.f_IsValid())
 		{
 			if (_Default)
-				return *_Default;
+				return CEJSONSorted(fg_Move(*_Default));
 			else
-				fs_ThrowError(_Entity.f_Data().m_Position, "No value found for {} {}"_f << fg_PropertyTypeToStr(_Type) << _Property);
+				fs_ThrowError(_Entity.f_Data().m_Position, "No value found for {}"_f << _PropertyKey);
 		}
-		else if (!Value.f_IsObject())
-			fs_ThrowError(pFromProperty ? pFromProperty->m_Position : _Entity.f_Data().m_Position, "Expected an object value");
+		else if (!ValueRef.f_IsObject())
+			fs_ThrowError(PropertyInfo, _Entity.f_Data().m_Position, "Expected an object value");
 
-		return fg_Move(Value);
+		return Value;
 	}
 
-	CStr CBuildSystem::f_EvaluateEntityPropertyString(CEntity &_Entity, EPropertyType _Type, NStr::CStr const &_Property, NStorage::TCOptional<NStr::CStr> const &_Default) const
+	CStr CBuildSystem::f_EvaluateEntityPropertyString(CEntity &_Entity, CPropertyKeyReference const &_PropertyKey, NStorage::TCOptional<NStr::CStr> &&_Default) const
 	{
-		CProperty const *pFromProperty = nullptr;
-		auto Value = f_EvaluateEntityProperty(_Entity, _Type, _Property, pFromProperty);
+		CBuildSystemPropertyInfo PropertyInfo;
+		auto Value = f_EvaluateEntityProperty(_Entity, _PropertyKey, PropertyInfo);
+		auto &ValueRef = Value.f_Get();
 
-		if (!Value.f_IsValid())
+		if (!ValueRef.f_IsValid())
 		{
 			if (_Default)
-				return *_Default;
+				return fg_Move(*_Default);
 			else
-				fs_ThrowError(_Entity.f_Data().m_Position, "No value found for {} {}"_f << fg_PropertyTypeToStr(_Type) << _Property);
+				fs_ThrowError(_Entity.f_Data().m_Position, "No value found for {}"_f << _PropertyKey);
 		}
-		else if (!Value.f_IsString())
-			fs_ThrowError(pFromProperty ? pFromProperty->m_Position : _Entity.f_Data().m_Position, "Expected a string value");
+		else if (!ValueRef.f_IsString())
+			fs_ThrowError(PropertyInfo, _Entity.f_Data().m_Position, "Expected a string value");
 
-		return fg_Move(Value.f_String());
+		return Value.f_MoveString();
 	}
 
 	CStr CBuildSystem::f_EvaluateEntityPropertyString
 		(
 			CEntity &_Entity
-			, EPropertyType _Type
-			, NStr::CStr const &_Property
-			, CProperty const *&_pFromProperty
-			, NStorage::TCOptional<NStr::CStr> const &_Default
+			, CPropertyKeyReference const &_PropertyKey
+			, CBuildSystemPropertyInfo &o_PropertyInfo
+			, NStorage::TCOptional<NStr::CStr> &&_Default
 		) const
 	{
-		auto Value = f_EvaluateEntityProperty(_Entity, _Type, _Property, _pFromProperty);
+		auto Value = f_EvaluateEntityProperty(_Entity, _PropertyKey, o_PropertyInfo);
+		auto &ValueRef = Value.f_Get();
 
-		if (!Value.f_IsValid())
+		if (!ValueRef.f_IsValid())
 		{
 			if (_Default)
-				return *_Default;
+				return fg_Move(*_Default);
 			else
-				fs_ThrowError(_Entity.f_Data().m_Position, "No value found for {} {}"_f << fg_PropertyTypeToStr(_Type) << _Property);
+				fs_ThrowError(_Entity.f_Data().m_Position, "No value found for {}"_f << _PropertyKey);
 		}
-		else if (!Value.f_IsString())
-			fs_ThrowError(_pFromProperty ? _pFromProperty->m_Position : _Entity.f_Data().m_Position, "Expected a string value");
+		else if (!ValueRef.f_IsString())
+			fs_ThrowError(o_PropertyInfo, _Entity.f_Data().m_Position, "Expected a string value");
 
-		return fg_Move(Value.f_String());
+		return Value.f_MoveString();
 	}
 
-	bool CBuildSystem::f_EvaluateEntityPropertyTryBool(CEntity &_Entity, EPropertyType _Type, NStr::CStr const &_Property, NStorage::TCOptional<bool> const &_Default) const
+	bool CBuildSystem::f_EvaluateEntityPropertyTryBool(CEntity &_Entity, CPropertyKeyReference const &_PropertyKey, NStorage::TCOptional<bool> const &_Default) const
 	{
-		CProperty const *pFromProperty = nullptr;
-		auto Value = f_EvaluateEntityProperty(_Entity, _Type, _Property, pFromProperty);
+		CBuildSystemPropertyInfo PropertyInfo;
+		auto Value = f_EvaluateEntityProperty(_Entity, _PropertyKey, PropertyInfo);
+		auto &ValueRef = Value.f_Get();
 
-		if (!Value.f_IsValid())
+		if (!ValueRef.f_IsValid())
 		{
 			if (_Default)
 				return *_Default;
 			else
-				fs_ThrowError(_Entity.f_Data().m_Position, "No value found for {} {}"_f << fg_PropertyTypeToStr(_Type) << _Property);
+				fs_ThrowError(_Entity.f_Data().m_Position, "No value found for {}"_f << _PropertyKey);
 		}
-		else if (!Value.f_IsBoolean())
+		else if (!ValueRef.f_IsBoolean())
 		{
 			if (_Default)
 				return *_Default;
 			else
-				fs_ThrowError(pFromProperty ? pFromProperty->m_Position : _Entity.f_Data().m_Position, "Expected a boolean value");
+				fs_ThrowError(PropertyInfo, _Entity.f_Data().m_Position, "Expected a boolean value");
 		}
 
-		return Value.f_Boolean();
+		return ValueRef.f_Boolean();
 	}
 
-	bool CBuildSystem::f_EvaluateEntityPropertyBool(CEntity &_Entity, EPropertyType _Type, NStr::CStr const &_Property, NStorage::TCOptional<bool> const &_Default) const
+	bool CBuildSystem::f_EvaluateEntityPropertyBool(CEntity &_Entity, CPropertyKeyReference const &_PropertyKey, NStorage::TCOptional<bool> const &_Default) const
 	{
-		CProperty const *pFromProperty = nullptr;
-		auto Value = f_EvaluateEntityProperty(_Entity, _Type, _Property, pFromProperty);
+		CBuildSystemPropertyInfo PropertyInfo;
+		auto Value = f_EvaluateEntityProperty(_Entity, _PropertyKey, PropertyInfo);
+		auto &ValueRef = Value.f_Get();
 
-		if (!Value.f_IsValid())
+		if (!ValueRef.f_IsValid())
 		{
 			if (_Default)
 				return *_Default;
 			else
-				fs_ThrowError(_Entity.f_Data().m_Position, "No value found for {} {}"_f << fg_PropertyTypeToStr(_Type) << _Property);
+				fs_ThrowError(_Entity.f_Data().m_Position, "No value found for {}"_f << _PropertyKey);
 		}
-		else if (!Value.f_IsBoolean())
-			fs_ThrowError(pFromProperty ? pFromProperty->m_Position : _Entity.f_Data().m_Position, "Expected a boolean value");
+		else if (!ValueRef.f_IsBoolean())
+			fs_ThrowError(PropertyInfo, _Entity.f_Data().m_Position, "Expected a boolean value");
 
-		return Value.f_Boolean();
+		return ValueRef.f_Boolean();
 	}
 
 	bool CBuildSystem::f_EvaluateEntityPropertyBool
 		(
 			CEntity &_Entity
-			, EPropertyType _Type
-			, NStr::CStr const &_Property
-			, CProperty const *&_pFromProperty
+			, CPropertyKeyReference const &_PropertyKey
+			, CBuildSystemPropertyInfo &o_PropertyInfo
 			, NStorage::TCOptional<bool> const &_Default
+			, CEvaluatedProperties *_pEvaluatedProperties
 		) const
 	{
-		auto Value = f_EvaluateEntityProperty(_Entity, _Type, _Property, _pFromProperty);
+		auto Value = f_EvaluateEntityProperty(_Entity, _PropertyKey, o_PropertyInfo, _pEvaluatedProperties);
+		auto &ValueRef = Value.f_Get();
 
-		if (!Value.f_IsValid())
+		if (!ValueRef.f_IsValid())
 		{
 			if (_Default)
 				return *_Default;
 			else
-				fs_ThrowError(_Entity.f_Data().m_Position, "No value found for {} {}"_f << fg_PropertyTypeToStr(_Type) << _Property);
+				fs_ThrowError(_Entity.f_Data().m_Position, "No value found for {}"_f << _PropertyKey);
 		}
-		else if (!Value.f_IsBoolean())
-			fs_ThrowError(_pFromProperty ? _pFromProperty->m_Position : _Entity.f_Data().m_Position, "Expected a boolean value");
+		else if (!ValueRef.f_IsBoolean())
+			fs_ThrowError(o_PropertyInfo, _Entity.f_Data().m_Position, "Expected a boolean value");
 
-		return Value.f_Boolean();
+		return ValueRef.f_Boolean();
 	}
 
-	int64 CBuildSystem::f_EvaluateEntityPropertyInteger(CEntity &_Entity, EPropertyType _Type, NStr::CStr const &_Property, NStorage::TCOptional<int64> const &_Default) const
+	int64 CBuildSystem::f_EvaluateEntityPropertyInteger(CEntity &_Entity, CPropertyKeyReference const &_PropertyKey, NStorage::TCOptional<int64> const &_Default) const
 	{
-		CProperty const *pFromProperty = nullptr;
-		auto Value = f_EvaluateEntityProperty(_Entity, _Type, _Property, pFromProperty);
+		CBuildSystemPropertyInfo PropertyInfo;
+		auto Value = f_EvaluateEntityProperty(_Entity, _PropertyKey, PropertyInfo);
+		auto &ValueRef = Value.f_Get();
 
-		if (!Value.f_IsValid())
+		if (!ValueRef.f_IsValid())
 		{
 			if (_Default)
 				return *_Default;
 			else
-				fs_ThrowError(_Entity.f_Data().m_Position, "No value found for {} {}"_f << fg_PropertyTypeToStr(_Type) << _Property);
+				fs_ThrowError(_Entity.f_Data().m_Position, "No value found for {}"_f << _PropertyKey);
 		}
-		else if (!Value.f_IsInteger())
-			fs_ThrowError(pFromProperty ? pFromProperty->m_Position : _Entity.f_Data().m_Position, "Expected an integer value");
+		else if (!ValueRef.f_IsInteger())
+			fs_ThrowError(PropertyInfo, _Entity.f_Data().m_Position, "Expected an integer value");
 
-		return Value.f_Integer();
+		return ValueRef.f_Integer();
 	}
 
-	fp64 CBuildSystem::f_EvaluateEntityPropertyFloat(CEntity &_Entity, EPropertyType _Type, NStr::CStr const &_Property, NStorage::TCOptional<fp64> const &_Default) const
+	fp64 CBuildSystem::f_EvaluateEntityPropertyFloat(CEntity &_Entity, CPropertyKeyReference const &_PropertyKey, NStorage::TCOptional<fp64> const &_Default) const
 	{
-		CProperty const *pFromProperty = nullptr;
-		auto Value = f_EvaluateEntityProperty(_Entity, _Type, _Property, pFromProperty);
+		CBuildSystemPropertyInfo PropertyInfo;
+		auto Value = f_EvaluateEntityProperty(_Entity, _PropertyKey, PropertyInfo);
+		auto &ValueRef = Value.f_Get();
 
-		if (!Value.f_IsValid())
+		if (!ValueRef.f_IsValid())
 		{
 			if (_Default)
 				return *_Default;
 			else
-				fs_ThrowError(_Entity.f_Data().m_Position, "No value found for {} {}"_f << fg_PropertyTypeToStr(_Type) << _Property);
+				fs_ThrowError(_Entity.f_Data().m_Position, "No value found for {}"_f << _PropertyKey);
 		}
-		else if (!Value.f_IsFloat())
-			fs_ThrowError(pFromProperty ? pFromProperty->m_Position : _Entity.f_Data().m_Position, "Expected a float value");
+		else if (!ValueRef.f_IsFloat())
+			fs_ThrowError(PropertyInfo, _Entity.f_Data().m_Position, "Expected a float value");
 
-		return Value.f_Float();
+		return ValueRef.f_Float();
 	}
 
 	TCVector<CStr> CBuildSystem::f_EvaluateEntityPropertyStringArray
 		(
 			CEntity &_Entity
-			, EPropertyType _Type
-			, CStr const &_Property
-			, TCOptional<TCVector<NStr::CStr>> const &_Default
+			, CPropertyKeyReference const &_PropertyKey
+			, TCOptional<TCVector<NStr::CStr>> &&_Default
 		) const
 	{
-		CProperty const *pFromProperty = nullptr;
-		auto Value = f_EvaluateEntityProperty(_Entity, _Type, _Property, pFromProperty);
+		CBuildSystemPropertyInfo PropertyInfo;
+		auto Value = f_EvaluateEntityProperty(_Entity, _PropertyKey, PropertyInfo);
+		auto &ValueRef = Value.f_Get();
 
-		if (!Value.f_IsValid())
+		if (!ValueRef.f_IsValid())
 		{
 			if (_Default)
-				return *_Default;
+				return fg_Move(*_Default);
 			else
-				fs_ThrowError(_Entity.f_Data().m_Position, "No value found for {} {}"_f << fg_PropertyTypeToStr(_Type) << _Property);
+				fs_ThrowError(_Entity.f_Data().m_Position, "No value found for {}"_f << _PropertyKey);
 		}
-		else if (!Value.f_IsStringArray())
-			fs_ThrowError(pFromProperty ? pFromProperty->m_Position : _Entity.f_Data().m_Position, "Expected a string array value");
+		else if (!ValueRef.f_IsStringArray())
+			fs_ThrowError(PropertyInfo, _Entity.f_Data().m_Position, "Expected a string array value");
 
-		return Value.f_StringArray();
+		return Value.f_MoveStringArray();
 	}
 
 	void CBuildSystem::fp_EvaluateAllProperties(CEntity &_Entity, bool _bDoTypeChecks) const
@@ -288,46 +344,63 @@ namespace NMib::NBuildSystem
 		{
 			CEvaluatedProperty *pEvaluated = nullptr;
 			CFilePosition LastPropertyPosition;
+			auto &PropertyKey = _Entity.f_Data().m_Properties.fs_GetKey(Properties);
 			for (auto &Property : Properties)
 			{
 				CEvaluationContext EvalContext(&_Entity.m_EvaluatedProperties);
-				EvalContext.m_EvalStack[Property.m_Key][&_Entity];
+				EvalContext.m_EvalStack[PropertyKey][&_Entity];
 
-				if (fpr_EvalCondition(_Entity, _Entity, Property.m_Condition, EvalContext, Property.m_Debug.f_Find("TraceCondition") >= 0, nullptr))
+				bool bTypeAlreadyChecked = false;
+
+				CBuildSystemUniquePositions Positions;
+				if
+					(
+						!Property.m_pCondition
+						|| fpr_EvalCondition(_Entity, _Entity, *Property.m_pCondition, EvalContext, Property.m_Flags & EPropertyFlag_TraceCondition, nullptr, f_EnablePositions(&Positions))
+					)
 				{
-					CEvalPropertyValueContext Context{_Entity, _Entity, Property.m_Position, EvalContext, nullptr};
-					CEJSON Value = fp_EvaluatePropertyValue(Context, Property.m_Value, &Property.m_Key);
-					fp_TracePropertyEval(true, _Entity, Property, Value);
+					CEvalPropertyValueContext Context{_Entity, _Entity, Property.m_Position, EvalContext, nullptr, f_EnablePositions(&Positions)};
+					auto Value = fp_EvaluateRootValue(Context, Property.m_Value, &PropertyKey, bTypeAlreadyChecked);
+					auto &ValueRef = Value.f_Get();
+					fp_TracePropertyEval(true, _Entity, PropertyKey, Property, ValueRef);
 
 					LastPropertyPosition = Property.m_Position;
 
 					if (!pEvaluated)
-						pEvaluated = &_Entity.m_EvaluatedProperties.m_Properties[Property.m_Key];
-					pEvaluated->m_Value = fg_Move(Value);
+						pEvaluated = &_Entity.m_EvaluatedProperties.m_Properties[PropertyKey];
+
+					pEvaluated->m_Value = Value.f_Move();
 					pEvaluated->m_pProperty = &Property;
 					pEvaluated->m_Type = EEvaluatedPropertyType_Explicit;
+					if (f_EnablePositions())
+					{
+						if (!pEvaluated->m_pPositions)
+							pEvaluated->m_pPositions = fg_Construct();
+						pEvaluated->m_pPositions->f_AddPositions(Positions);
+					}
 				}
 				else
-					fp_TracePropertyEval(false, _Entity, Property, {});
+					fp_TracePropertyEval(false, _Entity, PropertyKey, Property, {});
 			}
 			if (pEvaluated && _bDoTypeChecks)
 			{
 				CEvaluationContext EvalContext(&_Entity.m_EvaluatedProperties);
-				CEvalPropertyValueContext Context{_Entity, _Entity, LastPropertyPosition, EvalContext, nullptr};
-				fp_CheckValueConformToPropertyType(Context, _Entity.f_Data().m_Properties.fs_GetKey(Properties), pEvaluated->m_Value, LastPropertyPosition, EDoesValueConformToTypeFlag_None);
+				CEvalPropertyValueContext Context{_Entity, _Entity, LastPropertyPosition, EvalContext, nullptr, f_EnablePositions(pEvaluated->m_pPositions.f_Get())};
+				fp_CheckValueConformToPropertyType(Context, _Entity.f_Data().m_Properties.fs_GetKey(Properties).f_Reference(), pEvaluated->m_Value, LastPropertyPosition, EDoesValueConformToTypeFlag_None);
 			}
 		}
 	}
 
-	CEJSON CBuildSystem::fp_EvaluateEntityProperty
+	CValuePotentiallyByRef CBuildSystem::fp_EvaluateEntityProperty
 		(
 			CEntity &_Entity
 			, CEntity &_OriginalEntity
-			, CPropertyKey const &_Key
+			, CPropertyKeyReference const &_Key
 			, CEvaluationContext &_EvalContext
-			, CProperty const *&_pFromProperty
+			, CBuildSystemPropertyInfo &o_PropertyInfo
 			, CFilePosition const &_FallbackPosition
 			, CEvalPropertyValueContext const *_pParentContext
+			, bool _bMoveCache
 		) const
 	{
 		auto &Stack = _EvalContext.m_EvalStack[_Key];
@@ -351,27 +424,29 @@ namespace NMib::NBuildSystem
 				}
 				if (pParent)
 				{
-					CEJSON Ret;
-					CEvaluatedProperties Properties;
-					{
-						CChangePropertiesScope ChangeProperties(_EvalContext, &Properties);
-						Ret = fp_EvaluateEntityProperty(*pParent, _OriginalEntity, _Key, _EvalContext, _pFromProperty, _FallbackPosition, _pParentContext);
-					}
-					return Ret;
+					CBuildSystemPropertyInfo PropertyInfo;
+
+					DMibFastCheck(!_EvalContext.m_pEvaluatedProperties->m_Properties.f_FindEqual(_Key));
+					auto Cleanup = g_OnScopeExit / [&]
+						{
+							_EvalContext.m_pEvaluatedProperties->m_Properties.f_Remove(_Key);
+						}
+					;
+					return fp_EvaluateEntityProperty(*pParent, _OriginalEntity, _Key, _EvalContext, PropertyInfo, _FallbackPosition, _pParentContext, false).f_Move();
 				}
-				if (_Key.m_Type == EPropertyType_Property)
-					fp_UsedExternal(_Key.m_Name);
+				if (_Key.f_GetType() == EPropertyType_Property)
+					fp_UsedExternal(_Key);
 			}
 			else
 			{
-				if (_Key.m_Type == EPropertyType_Property)
-					fp_UsedExternal(_Key.m_Name);
+				if (_Key.f_GetType() == EPropertyType_Property)
+					fp_UsedExternal(_Key);
 				auto *pValue = _Entity.m_EvaluatedProperties.m_Properties.f_FindEqual(_Key);
 				if (pValue && pValue->f_IsExternal())
-					return pValue->m_Value;
+					return &pValue->m_Value;
 			}
 
-			return {};
+			return CEJSONSorted();
 		}
 
 		auto Cleanup
@@ -388,8 +463,10 @@ namespace NMib::NBuildSystem
 		auto *pValue = _EvalContext.m_pEvaluatedProperties->m_Properties.f_FindEqual(_Key);
 		if (pValue)
 		{
-			_pFromProperty = pValue->m_pProperty;
-			return pValue->m_Value;
+			o_PropertyInfo.m_pProperty = pValue->m_pProperty;
+			if (pValue->m_pPositions)
+				o_PropertyInfo.m_pPositions = pValue->m_pPositions;
+			return &pValue->m_Value;
 		}
 
 		CEntity *pContext = &_Entity;
@@ -399,31 +476,69 @@ namespace NMib::NBuildSystem
 			auto pToEval = _Entity.f_Data().m_Properties.f_FindEqual(_Key);
 			if (pToEval)
 			{
+				auto &PropertyKey = _Entity.f_Data().m_Properties.fs_GetKey(*pToEval);
 				//DMibCheck(pContext != &_Entity);
-				CEJSON Value;
-				CFilePosition LastPropertyPosition;
-				for (auto iProp = pToEval->f_GetIterator(); iProp; ++iProp)
+				CEJSONSorted Value;
+				CFilePosition const *pLastPropertyPosition = nullptr;
+				bool bTypeAlreadyChecked = false;
+				for (auto &Prop : *pToEval)
 				{
-					if (fpr_EvalCondition(*pContext, _OriginalEntity, iProp->m_Condition, _EvalContext, iProp->m_Debug.f_Find("TraceCondition") >= 0, _pParentContext))
+					CBuildSystemUniquePositions Positions;
+					if
+						(
+							!Prop.m_pCondition
+							|| fpr_EvalCondition
+							(
+								*pContext
+								, _OriginalEntity
+								, *Prop.m_pCondition
+								, _EvalContext
+								, Prop.m_Flags & EPropertyFlag_TraceCondition
+								, _pParentContext
+								, f_EnablePositions(&Positions)
+							)
+						)
 					{
-						CEvalPropertyValueContext Context{*pContext, _OriginalEntity, iProp->m_Position, _EvalContext, _pParentContext};
-						LastPropertyPosition = iProp->m_Position;
-						Value = fp_EvaluatePropertyValue(Context, iProp->m_Value, &iProp->m_Key);
-						fp_TracePropertyEval(true, _OriginalEntity, *iProp, Value);
-						_pFromProperty = iProp;
+						CEvalPropertyValueContext Context{*pContext, _OriginalEntity, Prop.m_Position, _EvalContext, _pParentContext, f_EnablePositions(&Positions)};
+
+						pLastPropertyPosition = &Prop.m_Position;
+						auto Value = fp_EvaluateRootValue(Context, Prop.m_Value, &PropertyKey, bTypeAlreadyChecked);
+						auto &ValueRef = Value.f_Get();
+						fp_TracePropertyEval(true, _OriginalEntity, PropertyKey, Prop, ValueRef);
+						o_PropertyInfo.m_pProperty = &Prop;
+
 						if (!pEvaluated)
 							pEvaluated = &_EvalContext.m_pEvaluatedProperties->m_Properties[_Key];
-						pEvaluated->m_Value = fg_Move(Value);
-						pEvaluated->m_pProperty = iProp;
+
+						pEvaluated->m_Value = Value.f_Move();
+						if (f_EnablePositions())
+						{
+							if (!pEvaluated->m_pPositions)
+								pEvaluated->m_pPositions = fg_Construct();
+							auto pAdded = pEvaluated->m_pPositions->f_AddPosition(Prop.m_Position, "{}"_f << _Key);
+							if (pAdded)
+								pAdded->f_AddValue(pEvaluated->m_Value, f_EnableValues());
+							pEvaluated->m_pPositions->f_AddPositions(Positions);
+						}
+						pEvaluated->m_pProperty = &Prop;
 						pEvaluated->m_Type = EEvaluatedPropertyType_Explicit;
 					}
 					else
-						fp_TracePropertyEval(false, _OriginalEntity, *iProp, {});
+						fp_TracePropertyEval(false, _OriginalEntity, PropertyKey, Prop, {});
 				}
-				if (pEvaluated)
+				if (pEvaluated && !bTypeAlreadyChecked)
 				{
-					CEvalPropertyValueContext Context{*pContext, _OriginalEntity, LastPropertyPosition, _EvalContext, _pParentContext};
-					fp_CheckValueConformToPropertyType(Context, _Key, pEvaluated->m_Value, LastPropertyPosition, EDoesValueConformToTypeFlag_None);
+					CEvalPropertyValueContext Context
+						{
+							*pContext
+							, _OriginalEntity
+							, pLastPropertyPosition ? *pLastPropertyPosition : CFilePosition::fs_Default()
+							, _EvalContext
+							, _pParentContext
+							, f_EnablePositions(pEvaluated->m_pPositions.f_Get())
+						}
+					;
+					fp_CheckValueConformToPropertyType(Context, _Key, pEvaluated->m_Value, *pLastPropertyPosition, EDoesValueConformToTypeFlag_None);
 				}
 			}
 		}
@@ -435,17 +550,26 @@ namespace NMib::NBuildSystem
 				auto *pValue = _Entity.m_EvaluatedProperties.m_Properties.f_FindEqual(_Key);
 				if (pValue && pValue->f_IsExternal())
 				{
-					_pFromProperty = pValue->m_pProperty;
+					o_PropertyInfo.m_pProperty = pValue->m_pProperty;
 
 					pEvaluated = &_EvalContext.m_pEvaluatedProperties->m_Properties[_Key];
 					pEvaluated->m_Value = pValue->m_Value;
 					pEvaluated->m_pProperty = pValue->m_pProperty;
+					if (f_EnablePositions())
+					{
+						if (!pEvaluated->m_pPositions)
+							pEvaluated->m_pPositions = fg_Construct();
+						pEvaluated->m_pPositions->f_AddPositions(pValue->m_pPositions);
+					}
 
 					CFilePosition Position = _FallbackPosition.f_IsValid() ? _FallbackPosition : _Entity.f_GetFirstValidPosition();
-					CEvalPropertyValueContext Context{*pContext, _OriginalEntity, Position, _EvalContext, _pParentContext};
+					CEvalPropertyValueContext Context{*pContext, _OriginalEntity, Position, _EvalContext, _pParentContext, f_EnablePositions(pEvaluated->m_pPositions)};
 					fp_CheckValueConformToPropertyType(Context, _Key, pEvaluated->m_Value, Position, EDoesValueConformToTypeFlag_ConvertFromString);
 
-					return pEvaluated->m_Value;
+					if (pValue->m_pPositions)
+						o_PropertyInfo.m_pPositions = pValue->m_pPositions;
+
+					return &pEvaluated->m_Value;
 				}
 			}
 
@@ -462,9 +586,9 @@ namespace NMib::NBuildSystem
 			}
 
 			if (pParent)
-				return fp_EvaluateEntityProperty(*pParent, _OriginalEntity, _Key, _EvalContext, _pFromProperty, _FallbackPosition, _pParentContext);
-			else if (_Key.m_Type == EPropertyType_Property)
-				fp_UsedExternal(_Key.m_Name);
+				return fp_EvaluateEntityProperty(*pParent, _OriginalEntity, _Key, _EvalContext, o_PropertyInfo, _FallbackPosition, _pParentContext, _bMoveCache);
+			else if (_Key.f_GetType() == EPropertyType_Property)
+				fp_UsedExternal(_Key);
 		}
 
 		if (!pEvaluated)
@@ -479,8 +603,10 @@ namespace NMib::NBuildSystem
 			{
 				if (auto pValue = pEvaluatedProperties->m_Properties.f_FindEqual(_Key))
 				{
-					_pFromProperty = pValue->m_pProperty;
-					return pValue->m_Value;
+					o_PropertyInfo.m_pProperty = pValue->m_pProperty;
+					if (pValue->m_pPositions)
+						o_PropertyInfo.m_pPositions = pValue->m_pPositions;
+					return &pValue->m_Value;
 				}
 			}
 
@@ -492,12 +618,18 @@ namespace NMib::NBuildSystem
 				CFilePosition Position = _FallbackPosition.f_IsValid() ? _FallbackPosition : _Entity.f_GetFirstValidPosition();
 				if (!Position.f_IsValid())
 					Position = _OriginalEntity.f_Data().m_Position;
-				CEvalPropertyValueContext Context{*pContext, _OriginalEntity, Position, _EvalContext, _pParentContext};
+				CEvalPropertyValueContext Context{*pContext, _OriginalEntity, Position, _EvalContext, _pParentContext, f_EnablePositions(pEvaluated->m_pPositions)};
 				fp_CheckValueConformToPropertyType(Context, _Key, pEvaluated->m_Value, Position, EDoesValueConformToTypeFlag_None);
 			}
 		}
 
-		_pFromProperty = pEvaluated->m_pProperty;
-		return pEvaluated->m_Value;
+		o_PropertyInfo.m_pProperty = pEvaluated->m_pProperty;
+		if (pEvaluated->m_pPositions)
+			o_PropertyInfo.m_pPositions = pEvaluated->m_pPositions;
+
+		if (_bMoveCache)
+			return CValuePotentiallyByRef(&pEvaluated->m_Value, true);
+		else
+			return &pEvaluated->m_Value;
 	}
 }

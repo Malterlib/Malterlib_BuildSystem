@@ -46,7 +46,7 @@ namespace NMib::NBuildSystem::NXcode
 		_BuildSystem.f_RegisterBuiltinVariables
 			(
 				{
-					{CPropertyKey("XcodeGeneratorDependencyFiles"), g_StringArray}
+					{CPropertyKey("XcodeGeneratorDependencyFiles"), DMibBuildSystemTypeWithPosition(g_StringArray)}
 				}
 			)
 		;

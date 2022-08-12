@@ -150,7 +150,7 @@ namespace NMib::NContainer
 	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_ParseKey
 		(
 			ch8 const * &o_pParse
-			, CBuildSystemRegistry::CParseContext &o_ParseContext
+			, CBuildSystemRegistryParseContext &o_ParseContext
 			, bool &o_bWasEscaped
 			, NBuildSystem::CBuildSystemSyntax::CRootKey &o_Key
 			, CBuildSystemRegistry::CLocation const &_Location
@@ -160,9 +160,9 @@ namespace NMib::NContainer
 
 		uch8 const *pParse = (uch8 const *)(o_pParse);
 
-		auto fParseValue = [&]() -> NEncoding::CJSON
+		auto fParseValue = [&]() -> NEncoding::CJSONSorted
 			{
-				NEncoding::CJSON Value;
+				NEncoding::CJSONSorted Value;
 
 				CJSONParseContext Context;
 				Context.m_pStartParse = (uch8 const *)o_ParseContext.f_GetStartParse();
@@ -177,24 +177,22 @@ namespace NMib::NContainer
 			}
 		;
 
-		auto fParsePrefixOperator = [&](CStr _Operator)
+		auto fParsePrefixOperator = [&](CStr const &_Operator)
 			{
-				CEJSON Temp;
+				CEJSONSorted Temp;
 				auto &UserType = Temp.f_UserType();
-				UserType.m_Type = "BuildSystemToken";
-				UserType.m_Value =
-					{
-						"Type"__= "KeyPrefixOperator"
-						, "Operator"__= fg_Move(_Operator)
-						, "Right"__= fParseValue()
-					}
-				;
+				UserType.m_Type = gc_ConstString_BuildSystemToken;
 
-				o_Key = NBuildSystem::CBuildSystemSyntax::CRootKey::fs_FromJSON(Temp, _Location);
+				auto &Object = UserType.m_Value.f_Object();
+				Object[gc_ConstString_Type] = gc_ConstString_KeyPrefixOperator;
+				Object[gc_ConstString_Operator] = _Operator;
+				Object[gc_ConstString_Right] = fParseValue();
+
+				o_Key = NBuildSystem::CBuildSystemSyntax::CRootKey::fs_FromJSON(o_ParseContext.m_StringCache, Temp, _Location);
 			}
 		;
 
-		auto fParseLogicalOperator = [&](CStr _Operator)
+		auto fParseLogicalOperator = [&](CStr const &_Operator)
 			{
 				if (!fg_CharIsWhiteSpace(*pParse) && *pParse != '{')
 				{
@@ -202,75 +200,73 @@ namespace NMib::NContainer
 					DMibError(NStr::CStr::CFormat("{}Didn't expect anything after {} operator") << o_ParseContext.f_FormatLocation(ParseLocation) << _Operator);
 				}
 
-				CEJSON Temp;
+				CEJSONSorted Temp;
 				auto &UserType = Temp.f_UserType();
-				UserType.m_Type = "BuildSystemToken";
-				UserType.m_Value =
-					{
-						"Type"__= "KeyLogicalOperator"
-						, "Operator"__= fg_Move(_Operator)
-					}
-				;
+				UserType.m_Type = gc_ConstString_BuildSystemToken;
 
-				o_Key = NBuildSystem::CBuildSystemSyntax::CRootKey::fs_FromJSON(Temp, _Location);
+				auto &Object = UserType.m_Value.f_Object();
+				Object[gc_ConstString_Type] = gc_ConstString_KeyLogicalOperator;
+				Object[gc_ConstString_Operator] = _Operator;
+
+				o_Key = NBuildSystem::CBuildSystemSyntax::CRootKey::fs_FromJSON(o_ParseContext.m_StringCache, Temp, _Location);
 			}
 		;
 
 		if (pParse[0] == '!' && pParse[1] == '!')
 		{
 			pParse += 2;
-			fParsePrefixOperator("!!");
+			fParsePrefixOperator(gc_ConstString_Symbol_LogicalNotNot);
 		}
 		else if (pParse[0] == '!')
 		{
 			pParse += 1;
 			if (*pParse == '{' || fg_CharIsWhiteSpace(*pParse))
-				fParseLogicalOperator("!");
+				fParseLogicalOperator(gc_ConstString_Symbol_LogicalNot);
 			else
-				fParsePrefixOperator("!");
+				fParsePrefixOperator(gc_ConstString_Symbol_LogicalNot);
 		}
 		else if (pParse[0] == '&')
 		{
 			pParse += 1;
-			fParseLogicalOperator("&");
+			fParseLogicalOperator(gc_ConstString_Symbol_LogicalAnd);
 		}
 		else if (pParse[0] == '|')
 		{
 			pParse += 1;
-			fParseLogicalOperator("|");
+			fParseLogicalOperator(gc_ConstString_Symbol_LogicalOr);
 		}
 		else if (pParse[0] == '*')
 		{
 			pParse += 1;
-			fParsePrefixOperator("*");
+			fParsePrefixOperator(gc_ConstString_Symbol_ConfigurationPrefix);
 		}
 		else if (pParse[0] == '%')
 		{
 			pParse += 1;
-			fParsePrefixOperator("%");
+			fParsePrefixOperator(gc_ConstString_Symbol_EntityPrefix);
 		}
 		else if (pParse[0] == '#')
 		{
 			pParse += 1;
- 			fParsePrefixOperator("#");
+ 			fParsePrefixOperator(gc_ConstString_Symbol_PragmaPrefix);
 		}
 		else
-			o_Key = NBuildSystem::CBuildSystemSyntax::CRootKey::fs_FromJSON(CEJSON::fs_FromJSON(fParseValue()), _Location);
+			o_Key = NBuildSystem::CBuildSystemSyntax::CRootKey::fs_FromJSON(o_ParseContext.m_StringCache, CEJSONSorted::fs_FromJSON(fParseValue()), _Location);
 
 		o_pParse = (ch8 const *)(pParse);
 	}
 
 	template <>
-	NBuildSystem::CBuildSystemSyntax::CRootValue TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_Parse<CBuildSystemRegistry::CParseContext>
+	NBuildSystem::CBuildSystemSyntax::CRootValue TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_Parse<CBuildSystemRegistryParseContext>
 		(
 		 	ch8 const * &o_pParse
-		 	, CBuildSystemRegistry::CParseContext &o_ParseContext
+		 	, CBuildSystemRegistryParseContext &o_ParseContext
 		 	, bool &o_bWasEscaped
 		)
 	{
 		o_bWasEscaped = false;
 
-		NEncoding::CJSON Output;
+		NEncoding::CJSONSorted Output;
 
 		uch8 const *pParse = (uch8 const *)(o_pParse);
 
@@ -286,7 +282,7 @@ namespace NMib::NContainer
 
 		o_pParse = (ch8 const *)(pParse);
 
-		return NBuildSystem::CBuildSystemSyntax::CRootValue::fs_FromJSON(NEncoding::CEJSON::fs_FromJSON(fg_Move(Output)), ParseLocation, true);
+		return NBuildSystem::CBuildSystemSyntax::CRootValue::fs_FromJSON(o_ParseContext.m_StringCache, NEncoding::CEJSONSorted::fs_FromJSON(fg_Move(Output)), ParseLocation, true);
 	}
 
 	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_ValueIsEmpty(NBuildSystem::CBuildSystemSyntax::CRootValue const &_Value, bool _bForceEscape)

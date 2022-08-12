@@ -13,20 +13,53 @@ namespace NMib::NBuildSystem
 	void fg_Malterlib_BuildSystem_MakeActive_VisualStudio();
 	void fg_Malterlib_BuildSystem_MakeActive_Xcode();
 
-	CBuildSystem::CBuildSystem(NCommandLine::EAnsiEncodingFlag _AnsiFlags, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole)
+	CBuildSystem::CBuildSystem
+		(
+			NCommandLine::EAnsiEncodingFlag _AnsiFlags
+			, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
+			, NStorage::TCSharedPointer<TCAtomic<bool>> const &_pCancelled
+		)
 		: mp_NowUTC(NTime::CTime::fs_NowUTC())
 		, mp_AnsiFlags(_AnsiFlags)
+		, mp_pCancelled(_pCancelled)
 		, mp_fOutputConsole(_fOutputConsole)
 	{
+		fg_CacheConstantStrings(mp_StringCache);
+		fg_CacheConstantKeys(mp_StringCache);
+
 		fp_RegisterBuiltinFunctions();
 		fp_RegisterBuiltinVariables();
 
 		mp_Now = mp_NowUTC.f_ToLocal();
 		fg_Malterlib_BuildSystem_MakeActive_VisualStudio();
 		fg_Malterlib_BuildSystem_MakeActive_Xcode();
+	}
 
-		for (mint i = 0; i < EPropertyType_Max; ++i)
-			mp_ExternalProperty[i].m_Key.m_Type = (EPropertyType)i;
+	CFilePosition const &CBuildSystemPropertyInfo::f_FallbackPosition() const
+	{
+		if (m_pFallbackPosition)
+			return *m_pFallbackPosition;
+
+		static constinit CFilePosition s_DummyPosition;
+
+		return s_DummyPosition;
+	}
+
+	CBuildSystemUniquePositions CBuildSystemPropertyInfo::f_GetPositions() const
+	{
+		CBuildSystemUniquePositions Positions;
+
+		if (m_pPositions && !m_pPositions->f_IsEmpty())
+			Positions = *m_pPositions;
+		else if (m_pProperty)
+			Positions.f_AddPosition(m_pProperty->m_Position, "Property");
+
+		return Positions;
+	}
+
+	CProperty const &CBuildSystem::f_ExternalProperty(EPropertyType _Type) const
+	{
+		return mp_ExternalProperty[_Type];
 	}
 
 	void CBuildSystem::f_OutputConsole(CStr const &_Output, bool _bError) const
@@ -49,6 +82,24 @@ namespace NMib::NBuildSystem
 	{
 		DMibLockRead(mp_SourceFilesLock);
 		return mp_SourceFiles;
+	}
+
+	NStr::CStr CBuildSystem::f_ReadFile(NStr::CStr const &_File) const
+	{
+		CCachedFile *pCachedFile;
+		{
+			DMibLock(mp_CachedFilesLock);
+			pCachedFile = &mp_CachedFiles[_File];
+		}		
+
+		DMibLock(pCachedFile->m_Lock);
+		if (!pCachedFile->m_bRead)
+		{
+			pCachedFile->m_Contents = CFile::fs_ReadStringFromFile(_File, true);
+			pCachedFile->m_bRead = true;
+		}
+
+		return pCachedFile->m_Contents;
 	}
 
 	void CBuildSystem::f_AddSourceFile(CStr const &_File) const
@@ -83,9 +134,22 @@ namespace NMib::NBuildSystem
 		return true;
 	}
 
-	CStr CBuildSystem::f_GetBaseDir() const
+	TCFuture<void> CBuildSystem::f_CheckCancelled() const
 	{
-		return mp_BaseDir;
+		if (!mp_pCancelled || !mp_pCancelled->f_Load())
+			co_return {};
+
+		co_return DMibErrorInstance("Aborted");
+	}
+
+	TCSharedPointer<TCAtomic<bool>> CBuildSystem::f_GetCancelledPointer() const
+	{
+		return mp_pCancelled;
+	}
+
+	CStr const &CBuildSystem::f_GetBaseDir() const
+	{
+		return mp_BaseDir.f_String();
 	}
 
 	void CBuildSystem::f_SetGeneratorInterface(ICGeneratorInterface *_pInterface) const
@@ -95,20 +159,20 @@ namespace NMib::NBuildSystem
 
 	bool CBuildSystem::f_WriteFile(CByteVector const &_FileData, CStr const &_File, EFileAttrib _AddAttribs) const
 	{
-#			if 0
-			CStr FileExtension = CFile::fs_GetExtension(_File);
-			CStr FileName = CFile::fs_GetFile(_File);
+#if 0
+		CStr FileExtension = CFile::fs_GetExtension(_File);
+		CStr FileName = CFile::fs_GetFile(_File);
 
-			if (FileName != "VersionInfo.cpp" && FileExtension != "plist" && CFile::fs_FileExists(_File))
-			{
-				CByteVector OldFileContents = CFile::fs_ReadFile(_File);
+		if (FileName != "VersionInfo.cpp" && FileExtension != "plist" && CFile::fs_FileExists(_File))
+		{
+			CByteVector OldFileContents = CFile::fs_ReadFile(_File);
 
-				CStr Hash = NMib::NCryptography::fg_GetHashedUuidString(_File, NMib::NCryptography::CUniversallyUniqueIdentifier("{72048B5E-1F9C-4385-AF16-997FDC21F215}"));
-				CStr UniqueName = fg_Format("{}-{}", CFile::fs_GetFile(_File), Hash);
-				if (OldFileContents != _FileData)
-					NSys::fg_Debug_DiffStrings(CFile::fs_ReadStringFromVector(OldFileContents), CFile::fs_ReadStringFromVector(_FileData), UniqueName, UniqueName);
-			}
-#			endif
+			CStr Hash = NMib::NCryptography::fg_GetHashedUuidString(_File, NMib::NCryptography::CUniversallyUniqueIdentifier("{72048B5E-1F9C-4385-AF16-997FDC21F215}"));
+			CStr UniqueName = fg_Format("{}-{}", CFile::fs_GetFile(_File), Hash);
+			if (OldFileContents != _FileData)
+				NSys::fg_Debug_DiffStrings(CFile::fs_ReadStringFromVector(OldFileContents), CFile::fs_ReadStringFromVector(_FileData), UniqueName, UniqueName);
+		}
+#endif
 		if
 		(
 			CFile::fs_CopyFileDiff
@@ -167,9 +231,9 @@ namespace NMib::NBuildSystem
 		mp_FileChanged = true;
 	}
 
-	TCMap<CPropertyKey, NEncoding::CEJSON> CBuildSystem::f_GetExternalValues(CEntity const &_Entity) const
+	TCMap<CPropertyKey, NEncoding::CEJSONSorted> CBuildSystem::f_GetExternalValues(CEntity const &_Entity) const
 	{
-		TCMap<CPropertyKey, NEncoding::CEJSON> Ret;
+		TCMap<CPropertyKey, NEncoding::CEJSONSorted> Ret;
 
 		for (auto &Property : _Entity.m_EvaluatedProperties.m_Properties)
 		{
@@ -179,7 +243,7 @@ namespace NMib::NBuildSystem
 		return Ret;
 	}
 
-	NEncoding::CEJSON CBuildSystem::f_GetExternalProperty(CEntity &_Entity, CPropertyKey const &_Key) const
+	NEncoding::CEJSONSorted CBuildSystem::f_GetExternalProperty(CEntity &_Entity, CPropertyKeyReference const &_Key) const
 	{
 		auto pEvaluated = _Entity.m_EvaluatedProperties.m_Properties.f_FindEqual(_Key);
 		if (pEvaluated)
@@ -187,7 +251,7 @@ namespace NMib::NBuildSystem
 		return {};
 	}
 
-	bool CBuildSystem::f_AddExternalProperty(CEntity &_Entity, CPropertyKey const &_Key, NEncoding::CEJSON &&_Value) const
+	bool CBuildSystem::f_AddExternalProperty(CEntity &_Entity, CPropertyKeyReference const &_Key, NEncoding::CEJSONSorted &&_Value) const
 	{
 		auto Mapped = _Entity.m_EvaluatedProperties.m_Properties(_Key);
 		auto &Evaluated = *Mapped;
@@ -197,12 +261,12 @@ namespace NMib::NBuildSystem
 		if (bChanged)
 			Evaluated.m_Value = fg_Move(_Value);
 		Evaluated.m_Type = EEvaluatedPropertyType_External;
-		Evaluated.m_pProperty = &mp_ExternalProperty[_Key.m_Type];
+		Evaluated.m_pProperty = &mp_ExternalProperty[_Key.f_GetType()];
 
 		return bChanged;
 	}
 
-	void CBuildSystem::f_InitEntityForEvaluationNoEnv(CEntity &_Entity, TCMap<CPropertyKey, CEJSON> const &_InitialValues, EEvaluatedPropertyType _Type) const
+	void CBuildSystem::f_InitEntityForEvaluationNoEnv(CEntity &_Entity, TCMap<CPropertyKey, CEJSONSorted> const &_InitialValues, EEvaluatedPropertyType _Type) const
 	{
 		for (auto iValue = _InitialValues.f_GetIterator(); iValue; ++iValue)
 		{
@@ -210,7 +274,7 @@ namespace NMib::NBuildSystem
 				(
 					_Type == EEvaluatedPropertyType_ExternalEnvironment
 					&& iValue->f_IsString()
-					&& iValue->f_String() == "undefined"
+					&& iValue->f_String() == gc_ConstString_undefined.m_String
 				)
 			{
 				continue;
@@ -219,28 +283,38 @@ namespace NMib::NBuildSystem
 			auto &Evaluated = _Entity.m_EvaluatedProperties.m_Properties[iValue.f_GetKey()];
 			Evaluated.m_Value = *iValue;
 			Evaluated.m_Type = _Type;
-			Evaluated.m_pProperty = &mp_ExternalProperty[iValue.f_GetKey().m_Type];
+			Evaluated.m_pProperty = &mp_ExternalProperty[iValue.f_GetKey().f_GetType()];
 
 			if
 				(
 					_Type == EEvaluatedPropertyType_ExternalEnvironment
 					&& iValue->f_IsString()
-					&& iValue->f_String() == "3FFADB4E-9D9D-4CD7-8FA8-539C6ABF79BA"
+					&& iValue->f_String() == gc_ConstString_3FFADB4E_9D9D_4CD7_8FA8_539C6ABF79BA.m_String
 				)
 			{
-				Evaluated.m_Value = "undefined";
+				Evaluated.m_Value = gc_ConstString_undefined;
+			}
+
+			if (f_EnablePositions())
+			{
+				if (!Evaluated.m_pPositions)
+					Evaluated.m_pPositions = fg_Construct();
+
+				if (_Type == EEvaluatedPropertyType_ExternalEnvironment)
+					Evaluated.m_pPositions->f_AddPosition(DMibBuildSystemFilePosition, "Environment variable: {}"_f << iValue.f_GetKey())->f_AddValue(Evaluated.m_Value, f_EnableValues());
+				else
+					Evaluated.m_pPositions->f_AddPosition(DMibBuildSystemFilePosition, "Initial value: {}"_f << iValue.f_GetKey())->f_AddValue(Evaluated.m_Value, f_EnableValues());
 			}
 		}
 	}
 
-	void CBuildSystem::f_InitEntityForEvaluation(CEntity &_Entity, TCMap<CPropertyKey, CEJSON> const &_InitialValues) const
+	void CBuildSystem::f_InitEntityForEvaluation(CEntity &_Entity, TCMap<CPropertyKey, CEJSONSorted> const &_InitialValues) const
 	{
-		TCMap<CPropertyKey, CEJSON> EnvironmentValues;
+		TCMap<CPropertyKey, CEJSONSorted> EnvironmentValues;
 
 		for (auto iEnv = mp_Environment.f_GetIterator(); iEnv; ++iEnv)
 		{
-			CPropertyKey Key;
-			Key.m_Name = iEnv.f_GetKey();
+			CPropertyKey Key(mp_StringCache, iEnv.f_GetKey());
 
 			if (!_InitialValues.f_FindEqual(Key))
 				EnvironmentValues(Key, *iEnv);
@@ -250,7 +324,7 @@ namespace NMib::NBuildSystem
 		f_InitEntityForEvaluationNoEnv(_Entity, EnvironmentValues, EEvaluatedPropertyType_ExternalEnvironment);
 	}
 
-	TCVector<TCVector<CConfigurationTuple>> CBuildSystem::f_EvaluateConfigurationTuples(TCMap<CPropertyKey, CEJSON> const &_InitialValues) const
+	TCVector<TCVector<CConfigurationTuple>> CBuildSystem::f_EvaluateConfigurationTuples(TCMap<CPropertyKey, CEJSONSorted> const &_InitialValues) const
 	{
 		return fp_EvaluateConfigurationTuples(_InitialValues);
 	}

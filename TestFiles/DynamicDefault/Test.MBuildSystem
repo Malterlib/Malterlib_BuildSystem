@@ -19,15 +19,15 @@
 {
 	Property
 	{
-		TestValue define string = "Test"
+		TestValue: string = "Test"
 
-		TestDefaulted define string = TestValue
-		TestDefaultedObject define {Test: string} = {
+		TestDefaulted: string = TestValue
+		TestDefaultedObject: {Test: string} = {
 			Test: TestValue
 		}
-		TestDefaultedString define string = `@(TestValue) suffix`
+		TestDefaultedString: string = `@(TestValue) suffix`
 		TestDefaultedFunction function(string _Value) string = `@(TestValue) @(_Value)`
-		TestDefaultDynamicString define string
+		TestDefaultDynamicString: string
 		TestDefaultDynamicString "Start"
 		TestDefaultDynamicString `@(TestDefaultDynamicString).End`
 	}

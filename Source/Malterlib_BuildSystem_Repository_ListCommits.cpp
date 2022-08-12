@@ -5,6 +5,7 @@
 
 #include <Mib/CommandLine/AnsiEncodingParse>
 #include <Mib/CommandLine/TableRenderer>
+#include <Mib/Concurrency/AsyncDestroy>
 
 namespace NMib::NBuildSystem
 {
@@ -34,7 +35,7 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	CBuildSystem::ERetry CBuildSystem::f_Action_Repository_ListCommits
+	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_ListCommits
 		(
 		 	CGenerateOptions const &_GenerateOptions
 		 	, CRepoFilter const &_Filter
@@ -46,21 +47,23 @@ namespace NMib::NBuildSystem
 		 	, uint32 _MaxCommitsMainRepo
 		 	, uint32 _MaxCommits
 		 	, uint32 _MaxMessageWidth
-			, CDistributedAppCommandLineClient const &_CommandLineClient
+			, NStorage::TCSharedPointer<CCommandLineControl> const &_pCommandLine
 		)
 	{
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		
 		CGenerateEphemeralState GenerateState;
-		if (ERetry Retry = fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
-			return Retry;
+		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
+			co_return Retry;
 
 		TCSet<CStr> ShowRepos;
 		{
-			auto Repos = fg_GetFilteredRepos(_Filter, *this, mp_Data).f_GetAllRepos();
+			auto Repos = (co_await fg_GetFilteredRepos(_Filter, *this, mp_Data)).f_GetAllRepos();
 			for (auto Repo : Repos)
 				ShowRepos[fg_Get<0>(Repo).m_Location];
 		}
 
-		TCSharedPointer<CFilteredRepos> pFilteredRepositories = fg_Construct(fg_GetFilteredRepos(CRepoFilter(), *this, mp_Data));
+		TCSharedPointer<CFilteredRepos> pFilteredRepositories = fg_Construct(co_await fg_GetFilteredRepos(CRepoFilter(), *this, mp_Data));
 		auto &FilteredRepositories = *pFilteredRepositories;
 
 		TCLinkedList<CRepository> AllRepos;
@@ -70,7 +73,7 @@ namespace NMib::NBuildSystem
 			for (auto *pRepo : Repos)
 			{
 				auto &Repo = AllRepos.f_Insert(*pRepo);
-				CStr RelativePath = CFile::fs_MakePathRelative(pRepo->m_Location, mp_BaseDir);
+				CStr RelativePath = CFile::fs_MakePathRelative(pRepo->m_Location, f_GetBaseDir());
 				if (RelativePath == "")
 					RelativePath = ".";
 
@@ -79,13 +82,12 @@ namespace NMib::NBuildSystem
 		}
 
 		if (_Flags & ERepoListCommitsFlag_UpdateRemotes)
-			fg_UpdateRemotes(*this, FilteredRepositories, " (Disable with --local) ");
+			co_await fg_UpdateRemotes(*this, FilteredRepositories, " (Disable with --local) ");
 
-		CGitLaunches Launches{mp_BaseDir, "Listing Commits", mp_AnsiFlags, mp_fOutputConsole};
+		CGitLaunches Launches{f_GetBaseDir(), "Listing Commits", mp_AnsiFlags, mp_fOutputConsole, f_GetCancelledPointer()};
+		auto DestroyLaunchs = co_await co_await Launches.f_Init();
 
-		CCurrentActorScope CurrentActorScope{Launches.m_pState->m_OutputActor};
-
-		CStateHandler StateHandler{mp_BaseDir, mp_OutputDir, mp_AnsiFlags, mp_fOutputConsole};
+		CStateHandler StateHandler{f_GetBaseDir(), mp_OutputDir, mp_AnsiFlags, mp_fOutputConsole};
 
 		CColors Colors(mp_AnsiFlags);
 
@@ -113,149 +115,135 @@ namespace NMib::NBuildSystem
 
 		TCSharedPointer<CState> pState = fg_Construct();
 
-		pState->m_StartCommits[mp_BaseDir] = _From;
-		pState->m_EndCommits[mp_BaseDir] = _To;
+		pState->m_StartCommits[f_GetBaseDir()] = _From;
+		pState->m_EndCommits[f_GetBaseDir()] = _To;
 
-		(
-		 	g_Dispatch(Launches.m_pState->m_OutputActor) / [=, pFilteredRepositories = pFilteredRepositories]() -> TCFuture<void>
+		while (true)
+		{
+			auto &State = *pState;
+			bool bDoneSomething = false;
+			bool bAllFinished = true;
+			bool bResolved = true;
+			static int iResolve = 0;
+			++iResolve;
+			while (bResolved)
 			{
-				while (true)
+				bResolved = false;
+				bAllFinished = true;
+				for (auto &pRepository : RepositoryByLocation)
 				{
-					auto &State = *pState;
-					bool bDoneSomething = false;
-					bool bAllFinished = true;
-					bool bResolved = true;
-					static int iResolve = 0;
-					++iResolve;
-					while (bResolved)
+					auto &Repo = *pRepository;
+
+					if (State.m_StartCommits.f_FindEqual(Repo.m_Location))
 					{
-						bResolved = false;
-						bAllFinished = true;
-						for (auto &pRepository : RepositoryByLocation)
-						{
-							auto &Repo = *pRepository;
+						DCheck(State.m_EndCommits.f_FindEqual(Repo.m_Location));
+						continue;
+					}
+					else
+						bAllFinished = false;
 
-							if (State.m_StartCommits.f_FindEqual(Repo.m_Location))
-							{
-								DCheck(State.m_EndCommits.f_FindEqual(Repo.m_Location));
-								continue;
-							}
-							else
-								bAllFinished = false;
+					CStr ConfigDirectory = CFile::fs_GetPath(Repo.m_ConfigFile);
+					auto *pOwner = RepositoryByLocation.f_FindLargestLessThanEqual(ConfigDirectory);
+					if (!pOwner)
+						continue;
 
-							CStr ConfigDirectory = CFile::fs_GetPath(Repo.m_ConfigFile);
-							auto *pOwner = RepositoryByLocation.f_FindLargestLessThanEqual(ConfigDirectory);
-							if (!pOwner)
-								continue;
+					auto &RepositoryPath = RepositoryByLocation.fs_GetKey(pOwner);
 
-							auto &RepositoryPath = RepositoryByLocation.fs_GetKey(pOwner);
-
-							if (!ConfigDirectory.f_StartsWith(RepositoryPath))
-							{
-								State.m_EndCommits[Repo.m_Location];
-								State.m_StartCommits[Repo.m_Location];
-								bResolved = true;
-								bDoneSomething = true;
-								continue;
-							}
-
-							auto &Owner = **pOwner;
-
-							auto *pStartCommit = State.m_StartCommits.f_FindEqual(Owner.m_Location);
-							if (!pStartCommit)
-								continue;
-
-							auto *pEndCommit = State.m_EndCommits.f_FindEqual(Owner.m_Location);
-							if (!pEndCommit)
-								continue;
-
-							auto ConfigFile = Repo.m_ConfigFile;
-
-							if (!State.m_StartedGitShow(ConfigFile).f_WasCreated())
-							{
-								if (State.m_PendingGitShow.f_FindEqual(ConfigFile))
-									continue;
-
-								auto pStartConfigFile = State.m_StartConfigFiles.f_FindEqual(ConfigFile);
-
-								CStr RelativePath = CFile::fs_MakePathRelative(ConfigFile, Owner.m_Location);
-
-								if (pStartConfigFile)
-								{
-									auto pStartHash = pStartConfigFile->f_GetConfig(Repo, mp_BaseDir);
-									if (pStartHash)
-										State.m_StartCommits[Repo.m_Location] = pStartHash->m_Hash;
-									else
-										State.m_StartCommits[Repo.m_Location];
-								}
-								else
-									State.m_StartCommits[Repo.m_Location];
-
-								auto pEndConfigFile = State.m_EndConfigFiles.f_FindEqual(ConfigFile);
-								if (pEndConfigFile)
-								{
-									auto pEndHash = pEndConfigFile->f_GetConfig(Repo, mp_BaseDir);
-									if (pEndHash)
-										State.m_EndCommits[Repo.m_Location] = pEndHash->m_Hash;
-									else
-										State.m_EndCommits[Repo.m_Location];
-								}
-								else
-									State.m_EndCommits[Repo.m_Location];
-
-								bResolved = true;
-
-								continue;
-							}
-
-							CStr RelativePath = CFile::fs_MakePathRelative(ConfigFile, Owner.m_Location);
-
-							bDoneSomething = true;
-
-							State.m_PendingGitShow[ConfigFile];
-
-							auto [StartResult, EndResult] = co_await 
-								(
-									Launches.f_Launch(Owner, {"show", "{}:{}"_f << *pStartCommit << RelativePath})
-									+ Launches.f_Launch(Owner, {"show", "{}:{}"_f << *pEndCommit << RelativePath})
-								)
-								.f_Wrap()
-							;
-							auto &State = *pState;
-
-							State.m_PendingGitShow.f_Remove(ConfigFile);
-
-							if (!StartResult)
-								co_return StartResult.f_GetException();
-
-							if (!EndResult)
-								co_return EndResult.f_GetException();
-
-							try
-							{
-								if (StartResult->m_ExitCode == 0)
-									State.m_StartConfigFiles[ConfigFile] = CStateHandler::fs_ParseConfigFile(StartResult->f_GetStdOut(), ConfigFile);
-								if (EndResult->m_ExitCode == 0)
-									State.m_EndConfigFiles[ConfigFile] = CStateHandler::fs_ParseConfigFile(EndResult->f_GetStdOut(), ConfigFile);
-							}
-							catch (NException::CException const &_Exception)
-							{
-								co_return DMibErrorInstance("Excption parsing config files: {}"_f << _Exception);
-							}
-						}
+					if (!ConfigDirectory.f_StartsWith(RepositoryPath))
+					{
+						State.m_EndCommits[Repo.m_Location];
+						State.m_StartCommits[Repo.m_Location];
+						bResolved = true;
+						bDoneSomething = true;
+						continue;
 					}
 
-					if (bAllFinished)
-						break;
-					else if (!bDoneSomething && State.m_PendingGitShow.f_IsEmpty())
+					auto &Owner = **pOwner;
+
+					auto *pStartCommit = State.m_StartCommits.f_FindEqual(Owner.m_Location);
+					if (!pStartCommit)
+						continue;
+
+					auto *pEndCommit = State.m_EndCommits.f_FindEqual(Owner.m_Location);
+					if (!pEndCommit)
+						continue;
+
+					auto ConfigFile = Repo.m_ConfigFile;
+
+					if (!State.m_StartedGitShow(ConfigFile).f_WasCreated())
 					{
-						co_return DMibErrorInstance("Failed to resolve dependency graph");
+						if (State.m_PendingGitShow.f_FindEqual(ConfigFile))
+							continue;
+
+						auto pStartConfigFile = State.m_StartConfigFiles.f_FindEqual(ConfigFile);
+
+						CStr RelativePath = CFile::fs_MakePathRelative(ConfigFile, Owner.m_Location);
+
+						if (pStartConfigFile)
+						{
+							auto pStartHash = pStartConfigFile->f_GetConfig(Repo, f_GetBaseDir());
+							if (pStartHash)
+								State.m_StartCommits[Repo.m_Location] = pStartHash->m_Hash;
+							else
+								State.m_StartCommits[Repo.m_Location];
+						}
+						else
+							State.m_StartCommits[Repo.m_Location];
+
+						auto pEndConfigFile = State.m_EndConfigFiles.f_FindEqual(ConfigFile);
+						if (pEndConfigFile)
+						{
+							auto pEndHash = pEndConfigFile->f_GetConfig(Repo, f_GetBaseDir());
+							if (pEndHash)
+								State.m_EndCommits[Repo.m_Location] = pEndHash->m_Hash;
+							else
+								State.m_EndCommits[Repo.m_Location];
+						}
+						else
+							State.m_EndCommits[Repo.m_Location];
+
+						bResolved = true;
+
+						continue;
+					}
+
+					CStr RelativePath = CFile::fs_MakePathRelative(ConfigFile, Owner.m_Location);
+
+					bDoneSomething = true;
+
+					State.m_PendingGitShow[ConfigFile];
+
+					auto [StartResult, EndResult] = co_await
+						(
+							Launches.f_Launch(Owner, {"show", "{}:{}"_f << *pStartCommit << RelativePath})
+							+ Launches.f_Launch(Owner, {"show", "{}:{}"_f << *pEndCommit << RelativePath})
+						)
+					;
+					auto &State = *pState;
+
+					State.m_PendingGitShow.f_Remove(ConfigFile);
+
+					try
+					{
+						if (StartResult.m_ExitCode == 0)
+							State.m_StartConfigFiles[ConfigFile] = CStateHandler::fs_ParseConfigFile(StartResult.f_GetStdOut(), ConfigFile);
+						if (EndResult.m_ExitCode == 0)
+							State.m_EndConfigFiles[ConfigFile] = CStateHandler::fs_ParseConfigFile(EndResult.f_GetStdOut(), ConfigFile);
+					}
+					catch (NException::CException const &_Exception)
+					{
+						co_return DMibErrorInstance("Excption parsing config files: {}"_f << _Exception);
 					}
 				}
-
-				co_return {};
 			}
-		).f_CallSync();
+
+			if (bAllFinished)
+				break;
+			else if (!bDoneSomething && State.m_PendingGitShow.f_IsEmpty())
+			{
+				co_return DMibErrorInstance("Failed to resolve dependency graph");
+			}
+		}
 
 		auto &State = *pState;
 
@@ -301,8 +289,8 @@ namespace NMib::NBuildSystem
 			fg_GetLogEntriesFull(Launches, *pRepository, *pEndCommit, *pStartCommit) > ReverseCommitsResults.f_AddResult(Location);
 		}
 
-		auto LogEntriesPerRepo = CommitsResults.f_GetResults().f_CallSync();
-		auto ReverseLogEntriesPerRepo = ReverseCommitsResults.f_GetResults().f_CallSync();
+		auto LogEntriesPerRepo = co_await CommitsResults.f_GetResults() | g_Unwrap;
+		auto ReverseLogEntriesPerRepo = co_await ReverseCommitsResults.f_GetResults() | g_Unwrap;
 
 		struct CWildcardColumn
 		{
@@ -346,7 +334,7 @@ namespace NMib::NBuildSystem
 		Columns.f_Insert("Author/Commit time");
 		for (auto &Wildcard : WildcardColumns)
 			Columns.f_Insert(Wildcard.m_Name);
-		Columns.f_Insert("Message");
+		Columns.f_Insert(gc_ConstString_Message.m_String);
 
 		TCMap<CStr, uint32> MaxColumnWidth;
 		MaxColumnWidth["Commit"] = 41;
@@ -355,7 +343,7 @@ namespace NMib::NBuildSystem
 		for (auto &Wildcard : WildcardColumns)
 			MaxColumnWidth[Wildcard.m_Name] = Wildcard.m_MaxWidth;
 		if (_MaxMessageWidth > 0)
-			MaxColumnWidth["Message"] = _MaxMessageWidth;
+			MaxColumnWidth[gc_ConstString_Message.m_String] = _MaxMessageWidth;
 
 		struct CLogEntry : public CLogEntryFull
 		{
@@ -402,17 +390,17 @@ namespace NMib::NBuildSystem
 		for (auto &LogEntriesResult : LogEntriesPerRepo)
 		{
 			CStr Repo = LogEntriesPerRepo.fs_GetKey(LogEntriesResult);
-			CStr RelativePath = CFile::fs_MakePathRelative(Repo, mp_BaseDir);
+			CStr RelativePath = CFile::fs_MakePathRelative(Repo, f_GetBaseDir());
 			if (!RelativePath.f_StartsWith("External/"))
-				LogEntriesPerRepoSorted.f_Insert({Repo, fGetLogEntries(*LogEntriesResult, *ReverseLogEntriesPerRepo[Repo], RelativePath)});
+				LogEntriesPerRepoSorted.f_Insert({Repo, fGetLogEntries(LogEntriesResult, ReverseLogEntriesPerRepo[Repo], RelativePath)});
 		}
 
 		for (auto &LogEntriesResult : LogEntriesPerRepo)
 		{
 			CStr Repo = LogEntriesPerRepo.fs_GetKey(LogEntriesResult);
-			CStr RelativePath = CFile::fs_MakePathRelative(Repo, mp_BaseDir);
+			CStr RelativePath = CFile::fs_MakePathRelative(Repo, f_GetBaseDir());
 			if (RelativePath.f_StartsWith("External/"))
-				LogEntriesPerRepoSorted.f_Insert({Repo, fGetLogEntries(*LogEntriesResult, *ReverseLogEntriesPerRepo[Repo], RelativePath)});
+				LogEntriesPerRepoSorted.f_Insert({Repo, fGetLogEntries(LogEntriesResult, ReverseLogEntriesPerRepo[Repo], RelativePath)});
 		}
 
 		TCMap<NTime::CTime, CStr> ChangelogEntries;
@@ -455,34 +443,34 @@ namespace NMib::NBuildSystem
 			{
 				auto &DummyLogEntry = LogEntries.f_Insert();
 				DummyLogEntry.m_Commit = "Could not resolve commits, config repo deleted?";
-				DummyLogEntry.m_Message = "Error";
+				DummyLogEntry.m_Message = gc_ConstString_Error;
 			}
 			else if (NoStartCommits.f_FindEqual(Repo))
 			{
 				auto &DummyLogEntry = LogEntries.f_Insert();
 				DummyLogEntry.m_Commit = "No start commit was found, new repo?";
-				DummyLogEntry.m_Message = "Error";
+				DummyLogEntry.m_Message = gc_ConstString_Error;
 			}
 			else if (NoEndCommits.f_FindEqual(Repo))
 			{
 				auto &DummyLogEntry = LogEntries.f_Insert();
 				DummyLogEntry.m_Commit = "No end commit was found, repo deleted?";
-				DummyLogEntry.m_Message = "Error";
+				DummyLogEntry.m_Message = gc_ConstString_Error;
 			}
 			else if (LogEntries.f_IsEmpty())
 				continue;
 
-			CStr RelativePath = CFile::fs_MakePathRelative(Repo, mp_BaseDir);
+			CStr RelativePath = CFile::fs_MakePathRelative(Repo, f_GetBaseDir());
 			if (RelativePath == "")
 				RelativePath = ".";
-			else if (!Repo.f_StartsWith(mp_BaseDir))
+			else if (!Repo.f_StartsWith(f_GetBaseDir()))
 			{
 				auto pRepository = RepositoryByLocation.f_FindEqual(Repo);
 				if (pRepository)
 					RelativePath = "~" + (*pRepository)->m_Identity;
 			}
 
-			CTableRenderHelper &TableRenderer = TableRenderers.f_Insert(_CommandLineClient.f_TableRenderer());
+			CTableRenderHelper &TableRenderer = TableRenderers.f_Insert(_pCommandLine->f_TableRenderer());
 			TableRenderer.f_SetPrefix(_Prefix);
 			{
 				TCVector<CStr> Headings;
@@ -537,7 +525,7 @@ namespace NMib::NBuildSystem
 				{
 					ChangelogEntries[LogEntry.m_AuthorDate] += "{}:\n{}\n"_f << Repo << LogEntry.m_Commit;
 
-					if (LogEntry.m_Message == "Error")
+					if (LogEntry.m_Message == gc_ConstString_Error.m_String)
 						RowValues.f_Insert("{1}{}{2}"_f << LogEntry.m_Commit << Colors.f_StatusError() << Colors.f_Default());
 					else
 						RowValues.f_Insert("{1}{}{2}"_f << LogEntry.m_Commit << CommitColorWarning << Colors.f_Default());
@@ -610,7 +598,12 @@ namespace NMib::NBuildSystem
 
 				if (pRepo)
 				{
-					auto [FromResult, ToResult] = (Launches.f_Launch(**pRepo, {"rev-parse", "{}^0"_f << _From}) + Launches.f_Launch(**pRepo, {"rev-parse", "{}^0"_f << _To})).f_CallSync();
+					auto [FromResult, ToResult] = co_await
+						(
+							Launches.f_Launch(**pRepo, {"rev-parse", "{}^0"_f << _From})
+							+ Launches.f_Launch(**pRepo, {"rev-parse", "{}^0"_f << _To})
+						)
+					;
 
 					if (FromResult.m_ExitCode == 0)
 						FromHash = FromResult.f_GetStdOut().f_Trim();
@@ -634,6 +627,8 @@ namespace NMib::NBuildSystem
 			else
 				TableRenderer.f_AddDescription("{1}{2}{}{1}"_f << RelativePath << Colors.f_Default() << Colors.f_Bold());
 		}
+
+		co_await fg_Move(DestroyLaunchs);
 
 		if (_Flags & ERepoListCommitsFlag_Changelog)
 		{
@@ -679,6 +674,6 @@ namespace NMib::NBuildSystem
 				TableRenderer.f_Output();
 		}
 
-		return ERetry_None;
+		co_return ERetry_None;
 	}
 }

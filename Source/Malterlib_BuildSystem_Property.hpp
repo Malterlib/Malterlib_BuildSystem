@@ -7,31 +7,17 @@
 
 namespace NMib::NBuildSystem
 {
-	CPropertyKey::CPropertyKey()
-		: m_Type(EPropertyType_Property)
-	{
-	}
-
-	CPropertyKey::CPropertyKey(NStr::CStr const &_Name)
-		: m_Type(EPropertyType_Property)
+	template <mint tf_nChars>
+	constexpr CPropertyKeyReference::CPropertyKeyReference(EPropertyType _Type, NStr::TCStrConstDataAndStr<tf_nChars> const &_Name)
+		: m_TypeAndHash(_Type, fg_StrHash(_Name.m_StrData.m_Data))
 		, m_Name(_Name)
 	{
 	}
 
-	CPropertyKey::CPropertyKey(EPropertyType _Type, NStr::CStr const &_Name)
-		: m_Type(_Type)
-		, m_Name(_Name)
+	constexpr CPropertyKeyReference::CPropertyKeyReference(EPropertyType _Type, CStringAndHash const &_Name)
+		: m_TypeAndHash(_Type, _Name.m_Hash)
+		, m_Name(_Name.m_String)
 	{
-	}
-
-	EPropertyType CProperty::f_GetType() const
-	{
-		return m_Key.m_Type;
-	}
-	
-	NStr::CStr const &CProperty::f_GetName() const
-	{
-		return m_Key.m_Name;
 	}
 
 	CEvaluatedProperty::CEvaluatedProperty()
@@ -47,11 +33,11 @@ namespace NMib::NBuildSystem
 	template <typename tf_CStr>
 	void CPropertyKey::f_Format(tf_CStr &o_Str) const
 	{
-		o_Str += typename tf_CStr::CFormat("{}.{}") << fg_PropertyTypeToStr(m_Type) << m_Name;
+		o_Str += typename tf_CStr::CFormat("{}.{}") << fg_PropertyTypeToStr(f_GetType()) << m_Name;
 	}
 
 	template <typename tf_CContext>
-	CPropertyKey CPropertyKey::fs_FromString(NStr::CStr const &_String, tf_CContext &&_Context)
+	CPropertyKey CPropertyKey::fs_FromString(CStringCache &o_StringCache, NStr::CStr const &_String, tf_CContext &&_Context)
 	{
 		if (auto iPoint = _String.f_FindChar('.'); iPoint >= 0)
 		{
@@ -61,9 +47,60 @@ namespace NMib::NBuildSystem
 			if (PropertyType.f_IsEmpty() || Type == EPropertyType_Invalid)
 				CBuildSystem::fs_ThrowError(_Context, NStr::CStr::CFormat("Unrecognized property '{}'") << PropertyType);
 
-			return {Type, _String.f_Extract(iPoint + 1)};
+			return {o_StringCache, Type, _String.f_Extract(iPoint + 1)};
 		}
 
-		return {EPropertyType_Property, _String};
+		return {o_StringCache, EPropertyType_Property, _String};
+	}
+
+	template <typename tf_CStr>
+	void CPropertyKeyReference::f_Format(tf_CStr &o_Str) const
+	{
+		o_Str += typename tf_CStr::CFormat("{}.{}") << fg_PropertyTypeToStr(f_GetType()) << m_Name;
+	}
+
+	inline_never COrdering_Strong fg_CompareStringNoInline(NStr::CStr const &_Left, NStr::CStr const &_Right);
+
+	constexpr EPropertyType CPropertyKeyReference::f_GetType() const
+	{
+		return m_TypeAndHash.f_GetType();
+	}
+
+	constexpr uint32 CPropertyKeyReference::f_GetNameHash() const
+	{
+		return m_TypeAndHash.f_GetNameHash();
+	}
+
+	COrdering_Strong CPropertyKeyReference::operator <=> (CPropertyKey const &_Right) const
+	{
+		return m_TypeAndHash.m_Data <=> _Right.m_TypeAndHash.m_Data;
+	}
+
+	COrdering_Strong CPropertyKey::operator <=> (CPropertyKey const &_Right) const
+	{
+		return m_TypeAndHash.m_Data <=> _Right.m_TypeAndHash.m_Data;
+	}
+
+	COrdering_Strong CPropertyKey::operator <=> (CPropertyKeyReference const &_Right) const
+	{
+		return m_TypeAndHash.m_Data <=> _Right.m_TypeAndHash.m_Data;
+	}
+
+	inline_always COrdering_Strong CPropertyKey::CCompareByString::operator() (CPropertyKey const &_Left, CPropertyKey const &_Right) const
+	{
+		if (auto Compare = _Left.m_Name <=> _Right.m_Name; Compare != 0)
+			return Compare;
+
+		return _Left.f_GetType() <=> _Right.f_GetType();
+	}	
+
+	bool CPropertyKey::operator == (CPropertyKey const &_Right) const
+	{
+		return m_TypeAndHash.m_Data == _Right.m_TypeAndHash.m_Data;
+	}
+
+	constexpr bool CProperty::f_NeedPerFile() const
+	{
+		return m_Flags & EPropertyFlag_NeedPerFile;
 	}
 }

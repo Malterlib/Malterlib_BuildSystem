@@ -14,6 +14,7 @@ namespace NMib::NBuildSystem
 		_Stream << m_Attribs;
 		_Stream << m_bRecursive;
 		_Stream << m_bFollowLinks;
+		_Stream << m_bExists;
 		_Stream << m_Exclude;
 	}
 
@@ -24,6 +25,7 @@ namespace NMib::NBuildSystem
 		_Stream >> m_Attribs;
 		_Stream >> m_bRecursive;
 		_Stream >> m_bFollowLinks;
+		_Stream >> m_bExists;
 		_Stream >> m_Exclude;
 	}
 }

@@ -19,9 +19,9 @@
 {
 	Property
 	{
-		_Test define one_of(string, undefined)
-		_Inner define one_of(string, undefined)
-		_bAppend define one_of(bool, undefined)
+		_Test: one_of(string, undefined)
+		_Inner: one_of(string, undefined)
+		_bAppend: one_of(bool, undefined)
 
 		CalcValue function(string _Test, string? _Inner, bool? _bAppend) {
 			Test: string

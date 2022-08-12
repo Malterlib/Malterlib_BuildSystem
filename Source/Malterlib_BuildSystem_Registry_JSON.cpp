@@ -72,26 +72,24 @@ namespace NMib::NContainer
 			f_ParseEvalStringString(o_Key, o_pParse);
 			return;
 		}
-		else if (fg_StrStartsWith(pParse, "<<"))
+		else if (fg_StrStartsWith(pParse, gc_ConstString_Symbol_AppendObject.m_String))
 		{
 			pParse += 2;
 			fg_ParseWhiteSpace(pParse);
 			if (*pParse == ':')
 			{
-				o_Key = "<<";
-				o_Key.f_SetUserData(EJSONStringType_NoQuote);
+				o_Key = gc_ConstString_Symbol_AppendObjectNoQuote.m_String;
 				o_pParse = pParse;
 				return;
 			}
 		}
-		else if (fg_StrStartsWith(pParse, "..."))
+		else if (fg_StrStartsWith(pParse, gc_ConstString_Symbol_Ellipsis.m_String))
 		{
 			pParse += 3;
 			fg_ParseWhiteSpace(pParse);
 			if (*pParse == ':')
 			{
-				o_Key = "...";
-				o_Key.f_SetUserData(EJSONStringType_NoQuote);
+				o_Key = gc_ConstString_Symbol_EllipsisNoQuote.m_String;
 				o_pParse = pParse;
 				return;
 			}
@@ -103,14 +101,14 @@ namespace NMib::NContainer
 	template <typename tf_CParseContext, typename tf_CStr, typename tf_CSourceStr>
 	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateKeyString(tf_CStr &o_String, tf_CSourceStr const &_Key)
 	{
-		if (_Key.f_GetUserData() == EJSONStringType_NoQuote && _Key == "<<")
+		if (_Key.f_GetUserData() == EJSONStringType_NoQuote && _Key == gc_ConstString_Symbol_AppendObject.m_String)
 		{
-			o_String += "<<";
+			o_String += gc_ConstString_Symbol_AppendObject.m_String;
 			return;
 		}
-		else if (_Key.f_GetUserData() == EJSONStringType_NoQuote && _Key == "...")
+		else if (_Key.f_GetUserData() == EJSONStringType_NoQuote && _Key == gc_ConstString_Symbol_Ellipsis.m_String)
 		{
-			o_String += "...";
+			o_String += gc_ConstString_Symbol_Ellipsis.m_String;
 			return;
 		}
 		CParseContext::fs_GenerateKeyString<CJSONParseContext>(o_String, _Key);
@@ -125,7 +123,7 @@ namespace NMib::NContainer
 			ParseContext.m_pStartParse = (uch8 const *)_Value.f_GetStr();
 			auto pParse = ParseContext.m_pStartParse;
 
-			auto Tokens = ParseContext.f_ParseEvalStringToken(pParse)["Value"];
+			auto Tokens = ParseContext.f_ParseEvalStringToken(pParse)[gc_ConstString_Value];
 
 			CJSONParseContext::fs_GenerateEvalString(o_String, Tokens, 0);
 			return;

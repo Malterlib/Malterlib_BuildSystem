@@ -11,7 +11,7 @@ namespace NMib::NBuildSystem
 	CBuildSystemSyntax::CFunctionParameter fg_FunctionParam
 		(
 			tf_CType &&_Type
-			, CStr &&_Name
+			, CStr const &_Name
 			, CBuildSystemSyntax::CFunctionParameter::EParamType _ParamType = CBuildSystemSyntax::CFunctionParameter::EParamType_None
 		)
 	;
@@ -27,9 +27,11 @@ namespace NMib::NBuildSystem
 	extern CBuildSystemSyntax::CType g_Boolean;
 	extern CBuildSystemSyntax::CType g_Date;
 	extern CBuildSystemSyntax::CType g_Binary;
+	extern CBuildSystemSyntax::CType g_Identifier;
 	extern CBuildSystemSyntax::CType g_StringArray;
 	extern CBuildSystemSyntax::CType g_AnyArray;
 	extern CBuildSystemSyntax::CType g_ObjectWithAny;
+	extern CBuildSystemSyntax::CType g_Position;
 
 	extern CBuildSystemSyntax::CType g_StringArrayDefaultedEmpty;
 	extern CBuildSystemSyntax::CType g_AnyArrayDefaultedEmpty;
@@ -39,7 +41,7 @@ namespace NMib::NBuildSystem
 
 	CBuildSystemSyntax::CType fg_Array(CBuildSystemSyntax::CType::CVariant &&_Type);
 	CBuildSystemSyntax::CType fg_Array(CBuildSystemSyntax::CType &&_Type);
-	CBuildSystemSyntax::CType fg_Defaulted(CBuildSystemSyntax::CType const &_Type, NEncoding::CEJSON &&_Default);
+	CBuildSystemSyntax::CType fg_Defaulted(CBuildSystemSyntax::CType const &_Type, NEncoding::CEJSONSorted &&_Default);
 	CBuildSystemSyntax::CType fg_Optional(CBuildSystemSyntax::CType const &_Type);
 	template <typename ...tfp_CParameter>
 	CBuildSystemSyntax::CType fg_OneOf(tfp_CParameter && ...p_Params);

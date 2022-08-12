@@ -12,7 +12,7 @@
 
 namespace NMib::NBuildSystem
 {
-	CUniversallyUniqueIdentifier g_GeneratorStateUUIDNamespace("{8220886E-63BD-4F4E-B32B-71D68D7346D4}");
+	constexpr CUniversallyUniqueIdentifier const g_GeneratorStateUUIDNamespace(0x8220886E, 0x63BD, 0x4F4E, 0xB32B, 0x71D68D7346D4_uint64);
 
 	namespace
 	{
@@ -23,14 +23,16 @@ namespace NMib::NBuildSystem
 			{
 			}
 
-			bool f_GetBuiltin(CStr const &_Value, CStr &_Result) const override
+			CValuePotentiallyByRef f_GetBuiltin(CBuildSystemUniquePositions *_pStorePositions, CStr const &_Value, bool &o_bSuccess) const override
 			{
-				if (_Value == "GeneratedBuildSystemDir")
+				if (_Value == gc_ConstString_GeneratedBuildSystemDir.m_String)
 				{
-					_Result = m_OutputDir;
-					return true;
+					if (_pStorePositions)
+						_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.GeneratedBuildSystemDir")->f_AddValue(m_OutputDir, false);
+					o_bSuccess = true;
+					return CEJSONSorted(m_OutputDir);
 				}
-				return false;
+				return CEJSONSorted();
 			}
 
 			CStr f_GetExpandedPath(CStr const &_Path, CStr const &_Base) const override
@@ -51,7 +53,7 @@ namespace NMib::NBuildSystem
 	{
 		try
 		{
-			CEJSON JSON;
+			CEJSONSorted JSON;
 			for (auto &EnvVar : mp_SaveEnvironment)
 				JSON[mp_SaveEnvironment.fs_GetKey(EnvVar)] = EnvVar;
 
@@ -75,8 +77,21 @@ namespace NMib::NBuildSystem
 		mp_bNoReconcileOptions = true;
 	}
 
-	CBuildSystem::ERetry CBuildSystem::fp_GeneratePrepare(CGenerateOptions const &_GenerateOptions, CGenerateEphemeralState &_GenerateState, TCFunction<bool ()> &&_fPreParse)
+
+	bool CBuildSystem::f_SingleThreaded() const
 	{
+		return mp_bSingleThreaded;
+	}
+
+	TCFuture<CBuildSystem::ERetry> CBuildSystem::fp_GeneratePrepare
+		(
+			CGenerateOptions const &_GenerateOptions
+			, CGenerateEphemeralState &_GenerateState
+			, TCFunction<TCFuture<bool> ()> &&_fPreParse
+		)
+	{
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+
 		auto &GenerateSettings = _GenerateOptions.m_Settings;
 
 		mp_GenerateOptions = _GenerateOptions;
@@ -84,10 +99,7 @@ namespace NMib::NBuildSystem
 		if (_GenerateOptions.m_bReconcileNoOptions)
 			f_NoReconcileOptions();
 
-		if (GenerateSettings.m_GenerationFlags & EGenerationFlag_SingleThreaded)
-			g_ThreadPool.f_Construct(0);
-		else
-			g_ThreadPool.f_Construct();
+		mp_bSingleThreaded = (GenerateSettings.m_GenerationFlags & EGenerationFlag_SingleThreaded) != 0;
 
 		_GenerateState.m_pGenerator = fg_CreateRuntimeType<CBuildSystemGenerator>(NMib::NStr::CStr("CBuildSystemGenerator_") + GenerateSettings.m_Generator);
 
@@ -149,7 +161,7 @@ namespace NMib::NBuildSystem
 			mp_Environment.f_Clear();
 			try
 			{
-				auto EnvironmentJSON = CEJSON::fs_FromString(CFile::fs_ReadStringFromFile(_GenerateState.m_EnvironmentStateFile, true), _GenerateState.m_EnvironmentStateFile);
+				auto EnvironmentJSON = CEJSONSorted::fs_FromString(CFile::fs_ReadStringFromFile(_GenerateState.m_EnvironmentStateFile, true), _GenerateState.m_EnvironmentStateFile);
 				for (auto &EnvVar : EnvironmentJSON.f_Object())
 					mp_Environment[EnvVar.f_Name()] = EnvVar.f_Value().f_String();
 			}
@@ -168,7 +180,7 @@ namespace NMib::NBuildSystem
 			{
 				try
 				{
-					auto EnvironmentJSON = CEJSON::fs_FromString(CFile::fs_ReadStringFromFile(OverrideEnvironmentFile, true), OverrideEnvironmentFile);
+					auto EnvironmentJSON = CEJSONSorted::fs_FromString(CFile::fs_ReadStringFromFile(OverrideEnvironmentFile, true), OverrideEnvironmentFile);
 					for (auto &EnvVar : EnvironmentJSON.f_Object())
 						mp_Environment[EnvVar.f_Name()] = EnvVar.f_Value().f_String();
 				}
@@ -179,8 +191,8 @@ namespace NMib::NBuildSystem
 			}
 		}
 
-		if (_fPreParse && _fPreParse())
-			return ERetry_None;
+		if (_fPreParse && co_await _fPreParse())
+			co_return ERetry_None;
 
 		if (CFile::fs_FileExists(_GenerateState.m_GlobalGeneratorStateFileName, EFileAttrib_File))
 		{
@@ -253,8 +265,64 @@ namespace NMib::NBuildSystem
 		CStr UserSettingsFileNameGlobal = CFile::fs_GetUserHomeDirectory() / "UserSettingGlobalV2.MSettings";
 		mp_UserSettingsFileLocal = UserSettingsFileNameLocal;
 		mp_UserSettingsFileGlobal = UserSettingsFileNameGlobal;
+		mp_FileLocation = CFile::fs_GetExpandedPath(GenerateSettings.m_SourceFile);
+		mp_BaseDir = CFile::fs_GetPath(mp_FileLocation.f_String());
+		mp_FileLocationFile = CFile::fs_GetFile(mp_FileLocation.f_String());
+		{
+			CStr Ret = CFile::fs_GetProgramDirectory() / "MTool";
+			#ifdef DPlatformFamily_Windows
+				Ret += ".exe";
+			#endif
+			mp_MToolExe = Ret;
+		}
+		{
+			CUniversallyUniqueIdentifier UUIDNamespace("{EF53758B-02E4-4DE4-88CC-43513C7F6E2E}");
+
+			CStr CmakeProgramPath = CFile::fs_GetProgramDirectory() / "MToolCMake";
+
+			#ifdef DPlatformFamily_Windows
+				CmakeProgramPath += ".exe";
+			#endif
+
+			CUniversallyUniqueIdentifier UUID{EUniversallyUniqueIdentifierGenerate_StringHash, UUIDNamespace, CmakeProgramPath.f_LowerCase()};
+
+			CStr CacheDirectory = CFile::fs_GetPath(CFile::fs_GetUserLocalProgramCacheDirectory()) / "MToolCMake";
+			CStr CmakeRoot = fg_Format("{}/{}/CMakeRoot", CacheDirectory, UUID.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum));
+
+			mp_CMakeRoot = CmakeRoot;
+		}
+		{
+			CStr Ret = CFile::fs_GetProgramDirectory() / "mib";
+			#ifdef DPlatformFamily_Windows
+				Ret += ".exe";
+			#endif
+
+			mp_MalterlibExe = Ret;
+		}
 
 		_GenerateState.m_GeneratorValues = _GenerateState.m_pGenerator->f_GetValues(*this, _GenerateState.m_OutputDir);
+				
+		TCMap<CStr, CStr> PreprocessorEnvironment = mp_Environment;
+		for (auto &Value : _GenerateState.m_GeneratorValues)
+		{
+			auto &Key = _GenerateState.m_GeneratorValues.fs_GetKey(Value);
+			if (Key.f_GetType() != EPropertyType_Property)
+				continue;
+
+			switch (Value.f_EType())
+			{
+			case EEJSONType_Null:
+			case EEJSONType_String:
+			case EEJSONType_Integer:
+			case EEJSONType_Float:
+			case EEJSONType_Boolean:
+			case EEJSONType_Object:
+			case EEJSONType_Array:
+				PreprocessorEnvironment(Key.m_Name, Value.f_AsString());
+			default:
+				continue;
+			}			
+		}
 
 		{
 			_GenerateState.m_pLocalGeneratorInterface = fg_Construct<CLocalGeneratorInteface>(_GenerateState.m_OutputDir);
@@ -267,17 +335,15 @@ namespace NMib::NBuildSystem
 			mp_GeneratorInterface = _GenerateState.m_pLocalGeneratorInterface.f_Get();
 
 			bool bTryParsed = false;
+
+			CExceptionPointer pFistError;
 			try
 			{
-				mp_FileLocation = CFile::fs_GetExpandedPath(GenerateSettings.m_SourceFile);
-				mp_BaseDir = CFile::fs_GetPath(mp_FileLocation);
-				mp_FileLocationFile = CFile::fs_GetFile(mp_FileLocation);
-
 				if (!_GenerateState.m_bDisableUserSettings)
 				{
 					if (CFile::fs_FileExists(UserSettingsFileNameGlobal))
 					{
-						CBuildSystemPreprocessor Preprocessor(mp_UserSettingsGlobal.m_Registry, mp_SourceFiles, mp_FindCache, mp_Environment);
+						CBuildSystemPreprocessor Preprocessor(mp_UserSettingsGlobal.m_Registry, mp_SourceFiles, mp_FindCache, PreprocessorEnvironment, mp_StringCache);
 						Preprocessor.f_ReadFile(UserSettingsFileNameGlobal);
 						mp_Registry = mp_UserSettingsGlobal.m_Registry;
 					}
@@ -285,18 +351,18 @@ namespace NMib::NBuildSystem
 					{
 						// Once to get only local registry
 						{
-							CBuildSystemPreprocessor Preprocessor(mp_UserSettingsLocal.m_Registry, mp_SourceFiles, mp_FindCache, mp_Environment);
+							CBuildSystemPreprocessor Preprocessor(mp_UserSettingsLocal.m_Registry, mp_SourceFiles, mp_FindCache, PreprocessorEnvironment, mp_StringCache);
 							Preprocessor.f_ReadFile(UserSettingsFileNameLocal);
 						}
 						// Once to merge with global settings
 						{
-							CBuildSystemPreprocessor Preprocessor(mp_Registry, mp_SourceFiles, mp_FindCache, mp_Environment);
+							CBuildSystemPreprocessor Preprocessor(mp_Registry, mp_SourceFiles, mp_FindCache, PreprocessorEnvironment, mp_StringCache);
 							Preprocessor.f_ReadFile(UserSettingsFileNameLocal);
 						}
 					}
 				}
 				{
-					CBuildSystemPreprocessor Preprocessor(mp_Registry, mp_SourceFiles, mp_FindCache, mp_Environment);
+					CBuildSystemPreprocessor Preprocessor(mp_Registry, mp_SourceFiles, mp_FindCache, PreprocessorEnvironment, mp_StringCache);
 					Preprocessor.f_ReadFile(GenerateSettings.m_SourceFile);
 				}
 				if (!_GenerateState.m_bDisableUserSettings)
@@ -312,6 +378,11 @@ namespace NMib::NBuildSystem
 				fp_ParseData(mp_Data.m_RootEntity, mp_Registry, &mp_Data.m_ConfigurationTypes);
 			}
 			catch ([[maybe_unused]] CException const &_Exception)
+			{
+				pFistError = _Exception.f_ExceptionPointer();
+			}
+
+			if (pFistError)
 			{
 				try
 				{
@@ -335,10 +406,10 @@ namespace NMib::NBuildSystem
 						}
 					}
 
-					if (auto Retry = fp_HandleRepositories(_GenerateState.m_GeneratorValues))
-						return Retry;
+					if (auto Retry = co_await fp_HandleRepositories(_GenerateState.m_GeneratorValues))
+						co_return Retry;
 					else
-						std::rethrow_exception(_Exception.f_ExceptionPointer());
+						co_return pFistError;
 				}
 				catch ([[maybe_unused]] CException const &_Exception2)
 				{
@@ -351,29 +422,38 @@ namespace NMib::NBuildSystem
 							, true
 						)
 					;
-					std::rethrow_exception(_Exception.f_ExceptionPointer());
+					co_return pFistError;
 				}
 			}
 
-			if (auto Retry = fp_HandleRepositories(_GenerateState.m_GeneratorValues))
-				return Retry;
+			if (auto Retry = co_await fp_HandleRepositories(_GenerateState.m_GeneratorValues))
+				co_return Retry;
 		}
-		return ERetry_None;
+
+		co_return ERetry_None;
 	}
 
-	bool CBuildSystem::f_Action_Generate(CGenerateOptions const &_GenerateOptions, ERetry &o_Retry)
+	TCFuture<bool> CBuildSystem::f_Action_Generate(CGenerateOptions const &_GenerateOptions, ERetry &o_Retry)
 	{
+		co_await (ECoroutineFlag_CaptureExceptions | ECoroutineFlag_AllowReferences);
+
 		if (_GenerateOptions.m_Settings.m_Action == "Clean")
-			return false; // For now we don't support clean
+			co_return false; // For now we don't support clean
 
 		CGenerateEphemeralState GenerateState;
 
-		o_Retry = CBuildSystem::fp_GeneratePrepare
+		NContainer::TCMap<NStr::CStr, uint32> NumWorkspaceTargets;
+
+		o_Retry = co_await CBuildSystem::fp_GeneratePrepare
 			(
 			 	_GenerateOptions
 			 	, GenerateState
-			 	, [&]() -> bool
+			 	, [&]() -> TCFuture<bool>
 				{
+					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+
+					co_await f_CheckCancelled();
+
 					if (CFile::fs_FileExists(GenerateState.m_WorkspaceGeneratorStateFileName, EFileAttrib_File))
 					{
 						CGeneratorArchiveState State;
@@ -383,6 +463,7 @@ namespace NMib::NBuildSystem
 							CBinaryStreamMemory<> Stream;
 							Stream.f_Open(FileData);
 							Stream >> State;
+							NumWorkspaceTargets = State.m_NumWorkspaceTargets;
 						}
 						catch (...)
 						{
@@ -495,13 +576,18 @@ namespace NMib::NBuildSystem
 									;
 								}
 
-								fg_ParallellForEach
+								co_await fg_ParallelForEach
 									(
 										ToProcess
-										, [&](auto &&_fToProcess)
+										, [&](auto &&_fToProcess) -> TCFuture<void>
 										{
+											co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+
 											_fToProcess();
+
+											co_return {};
 										}
+										, mp_bSingleThreaded
 									)
 								;
 							}
@@ -549,7 +635,7 @@ namespace NMib::NBuildSystem
 								fp64 Time1 = GenerateState.m_Clock.f_GetTime();
 								f_OutputConsole("No changes found {fe2} s{\n}"_f << Time1);
 
-								return true;
+								co_return true;
 							}
 						}
 						else
@@ -562,21 +648,23 @@ namespace NMib::NBuildSystem
 
 					GenerateState.m_bDependenciesChanged = true;
 					f_OutputConsole("Checked for changes {fe2} s{\n}"_f << Time1);
-					return false;
+					co_return false;
 				}
 			)
 		;
 
 		if (o_Retry != ERetry_None)
-			return false;
+			co_return false;
 
 		if (!GenerateState.m_bDependenciesChanged)
 		{
-			if (!CFile::fs_FileExists(mp_GeneratorStateFileName))
-				CFile::fs_Touch(mp_GeneratorStateFileName);
+			if (!CFile::fs_FileExists(mp_GeneratorStateFileName.f_String()))
+				CFile::fs_Touch(mp_GeneratorStateFileName.f_String());
 
-			return false;
+			co_return false;
 		}
+
+		co_await f_CheckCancelled();
 
 		GenerateState.m_LocalGeneratorInterfaceCleanup.f_Clear();
 
@@ -588,7 +676,7 @@ namespace NMib::NBuildSystem
 		fp64 Time2 = GenerateState.m_Clock.f_GetTime();
 		f_OutputConsole("Parsed data {fe2} s{\n}"_f << (Time2 - Time1));
 
-		GenerateState.m_pGenerator->f_Generate(*this, mp_Data, GenerateState.m_OutputDir);
+		co_await GenerateState.m_pGenerator->f_Generate(this, &mp_Data, GenerateState.m_OutputDir, NumWorkspaceTargets);
 
 		fp64 Time3 = GenerateState.m_Clock.f_GetTime();
 
@@ -605,8 +693,12 @@ namespace NMib::NBuildSystem
 					CFile::fs_CopyFileDiff(FileData, _FileName, CTime::fs_NowUTC());
 				}
 			;
-			fSaveFile(mp_UserSettingsLocal.m_Registry, mp_UserSettingsFileLocal);
-			fSaveFile(mp_UserSettingsGlobal.m_Registry, mp_UserSettingsFileGlobal);
+
+			if (mp_UserSettingsLocal.m_bChanged)
+				fSaveFile(mp_UserSettingsLocal.m_Registry, mp_UserSettingsFileLocal);
+
+			if (mp_UserSettingsGlobal.m_bChanged)
+				fSaveFile(mp_UserSettingsGlobal.m_Registry, mp_UserSettingsFileGlobal);
 		}
 
 		if (!GenerateState.m_bUseCachedEnvironment)
@@ -651,7 +743,6 @@ namespace NMib::NBuildSystem
 
 			mint nGeneratedFiles = 0;
 
-
 			TCMap<CStr, NTime::CTime> GeneratedWriteTimes;
 			{
 				struct CToEdit
@@ -659,34 +750,43 @@ namespace NMib::NBuildSystem
 					CStr const *m_pPath;
 					NTime::CTime *m_pWriteTime;
 				};
+				TCActorResultVector<void> Results;
+				TCVector<CToEdit> CurrentInsert;
 				TCVector<TCVector<CToEdit>> ToProcess;
-				auto *pCurrentInsert = &ToProcess.f_Insert();
+
 				for (auto iFile = mp_GeneratedFiles.f_GetIterator(); iFile; ++iFile)
 				{
 					++nGeneratedFiles;
-					auto &ToEdit = pCurrentInsert->f_Insert();
+					auto &ToEdit = CurrentInsert.f_Insert();
 					ToEdit.m_pPath = &iFile.f_GetKey();
 					ToEdit.m_pWriteTime = &GeneratedWriteTimes[iFile.f_GetKey()];
 
-					if (pCurrentInsert->f_GetLen() >= 1024)
-						pCurrentInsert = &ToProcess.f_Insert();
+					if (CurrentInsert.f_GetLen() >= 128)
+						ToProcess.f_Insert(fg_Move(CurrentInsert));
 				}
-				fg_ParallellForEach
+
+				if (!CurrentInsert.f_IsEmpty())
+					ToProcess.f_Insert(fg_Move(CurrentInsert));
+
+				co_await fg_ParallelForEach
 					(
 						ToProcess
-						, [&](TCVector<CToEdit> const &_Files)
+						, [&](auto &o_Files) -> TCFuture<void>
 						{
-							for (auto &ToEdit : _Files)
+							for (auto &File : o_Files)
 							{
 								try
 								{
-									*ToEdit.m_pWriteTime = CFile::fs_GetWriteTime(*ToEdit.m_pPath);
+									*File.m_pWriteTime = CFile::fs_GetWriteTime(*File.m_pPath);
 								}
 								catch (CExceptionFile const &)
 								{
 								}
 							}
+
+							co_return {};
 						}
+						, mp_bSingleThreaded
 					)
 				;
 			}
@@ -723,12 +823,14 @@ namespace NMib::NBuildSystem
 
 			for (auto iEnv = mp_UsedExternals.f_GetIterator(); iEnv; ++iEnv)
 			{
-				CStr Value = f_GetEnvironmentVariable(*iEnv);
-				State.m_Environment[*iEnv] = Value;
+				CStr Value = f_GetEnvironmentVariable(iEnv->m_Name);
+				State.m_Environment[iEnv->m_Name] = Value;
 			}
 
 			GenerateState.m_GlobalState.m_GenerationFlags = mp_GenerateOptions.m_Settings.m_GenerationFlags;
+
 			State.m_GenerationFlags = mp_GenerateOptions.m_Settings.m_GenerationFlags;
+			State.m_NumWorkspaceTargets = NumWorkspaceTargets;
 
 			{
 				CBinaryStreamMemory<> Stream;
@@ -744,7 +846,7 @@ namespace NMib::NBuildSystem
 				CFile::fs_CreateDirectory(CFile::fs_GetPath(GenerateState.m_GlobalGeneratorStateFileName));
 				CFile::fs_CopyFileDiff(Stream.f_MoveVector(), GenerateState.m_GlobalGeneratorStateFileName, CTime::fs_NowUTC());
 			}
-			CFile::fs_Touch(mp_GeneratorStateFileName);
+			CFile::fs_Touch(mp_GeneratorStateFileName.f_String());
 		}
 
 		TCVector<CStr> DeletedFiles;
@@ -812,6 +914,6 @@ namespace NMib::NBuildSystem
 		f_OutputConsole("Saved state {fe2} s{\n}"_f << (Time4 - Time3));
 		f_OutputConsole("Total time {fe2} s{\n}"_f << Time4);
 
-		return mp_FileChanged;
+		co_return mp_FileChanged;
 	}
 }

@@ -19,7 +19,7 @@
 {
 	Type
 	{
-		CTest define {
+		CTest: {
 			Value: string
 			, OptionalValue?: string
 		}
@@ -27,19 +27,19 @@
 	Property
 	{
 		fg_TestDynamicString function(bool _bFirst, string _Second) string = _bFirst ? "First" : _Second
-		TestValue1 define string
+		TestValue1: string
 		TestValue1 `Dynamic @(fg_TestDynamicString(true, "Second"))`
 
-		TestValue2 define string
+		TestValue2: string
 		TestValue2 `Dynamic @(fg_TestDynamicString(false, `Second @(fg_TestDynamicString(false, "Inner Second"))`))`
 
-		TestValue3 define string
+		TestValue3: string
 		TestValue3 "Should match"
 		{
 			!!`Dynamic @@ @(fg_TestDynamicString(false, `Second @(fg_TestDynamicString(false, "Inner Second"))`))` "Dynamic @ Second Inner Second"
 		}
 
-		TestValue4 define string
+		TestValue4: string
 		TestValue4 "Should match"
 		{
 			`Dynamic @@ @(fg_TestDynamicString(false, `Second @(fg_TestDynamicString(false, "Inner Second"))`))` == "Dynamic @ Second Inner Second"

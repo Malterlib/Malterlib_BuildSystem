@@ -7,9 +7,9 @@
 
 namespace NMib::NBuildSystem
 {
-	CEJSON CBuildSystem::fp_EvaluatePropertyValueObject(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CObject const &_Value) const
+	CEJSONSorted CBuildSystem::fp_EvaluatePropertyValueObject(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CObject const &_Value) const
 	{
-		CEJSON ObjectReturn;
+		CEJSONSorted ObjectReturn;
 		auto &Object = ObjectReturn.f_Object();
 
 		for (auto &Value : _Value.m_ObjectSorted)
@@ -20,25 +20,25 @@ namespace NMib::NBuildSystem
 			{
 			case 0:
 				{
-					Object[Key.m_Key.f_GetAsType<CStr>()] = fp_EvaluatePropertyValue(_Context, Value.m_Value.f_Get(), nullptr);
+					Object[Key.m_Key.f_GetAsType<CStr>()] = fp_EvaluatePropertyValue(_Context, Value.m_Value.f_Get(), nullptr).f_Move();
 				}
 				break;
 			case 1:
 				{
 					Object[fp_EvaluatePropertyValueEvalString(_Context, Key.m_Key.f_GetAsType<CBuildSystemSyntax::CEvalString>())]
-						= fp_EvaluatePropertyValue(_Context, Value.m_Value.f_Get(), nullptr)
+						= fp_EvaluatePropertyValue(_Context, Value.m_Value.f_Get(), nullptr).f_Move()
 					;
 				}
 				break;
 			case 2:
 				{
-					auto fApplyObject = [&](CEJSON const &_Object)
+					auto fApplyObject = [&](CEJSONSorted &&_Object)
 						{
 							if (!_Object.f_IsObject())
 								fs_ThrowError(_Context, "Append object expects object arguments");
 
-							for (auto iObject = _Object.f_Object().f_SortedIterator(); iObject; ++iObject)
-								Object[iObject->f_Name()] = iObject->f_Value();
+							for (auto iObject = _Object.f_Object().f_OrderedIterator(); iObject; ++iObject)
+								Object[iObject->f_Name()] = fg_Move(iObject->f_Value());
 						}
 					;
 
@@ -53,7 +53,7 @@ namespace NMib::NBuildSystem
 							if (!Entry.f_IsObject())
 								fs_ThrowError(_Context, "Append object array expected arrays members to evalutate to objects");
 
-							fApplyObject(Entry);
+							fApplyObject(fg_Move(Entry));
 						}
 					}
 					else if (ValueObject.f_IsOfType<CBuildSystemSyntax::CObject>())
@@ -61,19 +61,20 @@ namespace NMib::NBuildSystem
 					else if (ValueObject.f_IsOfType<CBuildSystemSyntax::CExpression>())
 					{
 						auto ExpressionResult = fp_EvaluatePropertyValueExpression(_Context, ValueObject.f_GetAsType<CBuildSystemSyntax::CExpression>());
+						auto &ExpressionResultRef = ExpressionResult.f_Get();
 
-						if (ExpressionResult.f_IsArray())
+						if (ExpressionResultRef.f_IsArray())
 						{
-							for (auto &Entry : ExpressionResult.f_Array())
+							for (auto &Entry : ExpressionResult.f_MoveArray())
 							{
 								if (!Entry.f_IsObject())
 									fs_ThrowError(_Context, "Append object expression array expected arrays members to evalutate to objects");
 
-								fApplyObject(Entry);
+								fApplyObject(fg_Move(Entry));
 							}
 						}
 						else
-							fApplyObject(ExpressionResult);
+							fApplyObject(ExpressionResult.f_Move());
 					}
 					else
 						fs_ThrowError(_Context, "Append object only supports objects, arrays or expressions evaluating to objects or arrays");
@@ -90,9 +91,9 @@ namespace NMib::NBuildSystem
 		return ObjectReturn;
 	}
 
-	CEJSON CBuildSystem::fp_EvaluatePropertyValueArray(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CArray const &_Value) const
+	CEJSONSorted CBuildSystem::fp_EvaluatePropertyValueArray(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CArray const &_Value) const
 	{
-		CEJSON Return;
+		CEJSONSorted Return;
 
 		auto &ReturnArray = Return.f_Array();
 
@@ -101,22 +102,24 @@ namespace NMib::NBuildSystem
 			if (Entry.f_Get().m_Value.f_IsOfType<CBuildSystemSyntax::CExpressionAppend>())
 			{
 				CBuildSystemSyntax::CExpression const &Expression = Entry.f_Get().m_Value.f_GetAsType<CBuildSystemSyntax::CExpressionAppend>();
-				CEJSON ToAppend = fp_EvaluatePropertyValueExpression(_Context, Expression);
-				if (ToAppend.f_IsArray())
-					ReturnArray.f_Insert(ToAppend.f_Array());
-				else if (!ToAppend.f_IsValid())
+				auto ToAppend = fp_EvaluatePropertyValueExpression(_Context, Expression);
+				auto &ToAppendRef = ToAppend.f_Get();
+
+				if (ToAppendRef.f_IsArray())
+					ReturnArray.f_Insert(ToAppend.f_MoveArray());
+				else if (!ToAppendRef.f_IsValid())
 					; // Undefined values are ignored
 				else
-					fs_ThrowError(_Context, "Append expressions expects an array to expand. {} resulted in : {}"_f << Expression << ToAppend);
+					fs_ThrowError(_Context, "Append expressions expects an array to expand. {} resulted in : {}"_f << Expression << ToAppendRef);
 			}
 			else
-				ReturnArray.f_Insert(fp_EvaluatePropertyValue(_Context, Entry.f_Get(), nullptr));
+				ReturnArray.f_Insert(fp_EvaluatePropertyValue(_Context, Entry.f_Get(), nullptr).f_Move());
 		}
 
 		return Return;
 	}
 
-	CEJSON CBuildSystem::fp_EvaluatePropertyValueWildcardString(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CWildcardString const &_Value) const
+	CEJSONSorted CBuildSystem::fp_EvaluatePropertyValueWildcardString(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CWildcardString const &_Value) const
 	{
 		CStr WildcardValue;
 		if (_Value.m_String.f_IsOfType<CStr>())
@@ -126,7 +129,7 @@ namespace NMib::NBuildSystem
 		else
 			DMibNeverGetHere;
 
-		return CEJSONUserType{"Wildcard", fg_Move(WildcardValue)};
+		return CEJSONUserTypeSorted{"Wildcard", fg_Move(WildcardValue)};
 	}
 
 	CStr CBuildSystem::fp_EvaluatePropertyValueEvalString(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CEvalString const &_Value) const
@@ -141,20 +144,21 @@ namespace NMib::NBuildSystem
 			{
 				auto &ExpressionToken = Token.m_Token.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CExpression>>();
 				auto Expression = fp_EvaluatePropertyValueExpression(_Context, ExpressionToken);
-				if (!Expression.f_IsString())
+				auto &ExpressionRef = Expression.f_Get();
+				if (!ExpressionRef.f_IsString())
 				{
 					fs_ThrowError
 						(
 							_Context
 							, "Expressions in eval strings needs to evaluate to strings.\n\tExpression: {}\n\tValue: {}\n\tEvaluated string: {}\n"_f
 							<< ExpressionToken
-							<< Expression.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined)
+							<< ExpressionRef.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined)
 							<< ReturnString
 						)
 					;
 				}
 
-				ReturnString += Expression.f_String();
+				ReturnString += ExpressionRef.f_String();
 			}
 			else
 				DMibNeverGetHere;
@@ -178,7 +182,8 @@ namespace NMib::NBuildSystem
 			else if (Accessor.m_Accessor.f_IsOfType<CBuildSystemSyntax::CExpression>())
 			{
 				auto ExpressionResult = fp_EvaluatePropertyValueExpression(_Context, Accessor.m_Accessor.f_GetAsType<CBuildSystemSyntax::CExpression>());
-				if (!ExpressionResult.f_IsString())
+				auto ExpressionResultRef = ExpressionResult.f_Get();
+				if (!ExpressionResultRef.f_IsString())
 				{
 					fs_ThrowError
 						(
@@ -187,7 +192,7 @@ namespace NMib::NBuildSystem
 						)
 					;
 				}
-				_fApplyMemberName(ExpressionResult.f_String());
+				_fApplyMemberName(ExpressionResultRef.f_String());
 			}
 			else if (Accessor.m_Accessor.f_IsOfType<CBuildSystemSyntax::CJSONSubscript>())
 			{
@@ -197,7 +202,8 @@ namespace NMib::NBuildSystem
 				else if (Subscript.m_Index.f_IsOfType<CBuildSystemSyntax::CExpression>())
 				{
 					auto ExpressionResult = fp_EvaluatePropertyValueExpression(_Context, Subscript.m_Index.f_GetAsType<CBuildSystemSyntax::CExpression>());
-					if (!ExpressionResult.f_IsInteger())
+					auto &ExpressionResultRef = ExpressionResult.f_Get();
+					if (!ExpressionResultRef.f_IsInteger())
 					{
 						fs_ThrowError
 							(
@@ -208,7 +214,7 @@ namespace NMib::NBuildSystem
 						;
 					}
 
-					_fApplyArrayIndex(ExpressionResult.f_Integer());
+					_fApplyArrayIndex(ExpressionResultRef.f_Integer());
 				}
 				else
 					DMibNeverGetHere;
@@ -220,18 +226,26 @@ namespace NMib::NBuildSystem
 
 	CBuildSystemSyntax::CType const *CBuildSystem::f_GetCanonicalDefaultedType
 		(
-			CEntity const &_Entity
+			CEntity &_Entity
 			, CBuildSystemSyntax::CType const *_pType
 			, CFilePosition &o_TypePosition
 		) const
 	{
+		auto &EntityData = _Entity.f_Data();
+		CEvaluationContext EvalContext(&_Entity.m_EvaluatedProperties);
+		CBuildSystemUniquePositions Positions;
+		CEvalPropertyValueContext Context{_Entity, _Entity, EntityData.m_Position, EvalContext, nullptr, f_EnablePositions(&Positions)};
+
 		auto pType = _pType;
 		while (pType->m_Type.f_IsOfType<CBuildSystemSyntax::CUserType>())
 		{
 			auto &UserTypeName = pType->m_Type.f_GetAsType<CBuildSystemSyntax::CUserType>().m_Name;
-			auto pUserType = fp_GetUserTypeWithPositionForProperty(_Entity, UserTypeName);
+			auto pUserType = fp_GetUserTypeWithPositionForProperty(Context, UserTypeName);
 			if (!pUserType)
-				fsp_ThrowError(o_TypePosition, "Could not find user type of name '{}'"_f << UserTypeName);
+			{
+				Positions.f_AddPositionFirst(o_TypePosition, gc_ConstString_Type, gc_ConstString_Type);
+				fs_ThrowError(Positions, "Could not find user type of name '{}'"_f << UserTypeName);
+			}
 			pType = &pUserType->m_Type;
 			o_TypePosition = pUserType->m_Position;
 		}
@@ -242,7 +256,7 @@ namespace NMib::NBuildSystem
 		(
 			CEvalPropertyValueContext &_Context
 			, CBuildSystemSyntax::CType const *_pType
-			, CFilePosition &o_TypePosition
+			, CFilePosition const *&o_pTypePosition
 		) const
 	{
 		auto pType = _pType;
@@ -251,13 +265,13 @@ namespace NMib::NBuildSystem
 			if (pType->m_Type.f_IsOfType<CBuildSystemSyntax::CUserType>())
 			{
 				auto &UserTypeName = pType->m_Type.f_GetAsType<CBuildSystemSyntax::CUserType>().m_Name;
-				auto pUserType = fp_GetUserTypeWithPositionForProperty(_Context.m_Context, UserTypeName);
+				auto pUserType = fp_GetUserTypeWithPositionForProperty(_Context, UserTypeName);
 
 				if (!pUserType)
-					fs_ThrowError(_Context, o_TypePosition, "Could not find user type of name '{}'"_f << UserTypeName);
+					fs_ThrowError(_Context, *o_pTypePosition, "Could not find user type of name '{}'"_f << UserTypeName);
 
 				pType = &pUserType->m_Type;
-				o_TypePosition = pUserType->m_Position;
+				o_pTypePosition = &pUserType->m_Position;
 			}
 			else
 				pType = &pType->m_Type.f_GetAsType<CBuildSystemSyntax::CTypeDefaulted>().m_Type.f_Get();
@@ -269,12 +283,12 @@ namespace NMib::NBuildSystem
 	{
 		CBuildSystem const *m_pThis;
 		CEvalPropertyValueContext &m_Context;
-		CFilePosition &m_TypePosition;
+		CFilePosition const *&m_pTypePosition;
 		CBuildSystemSyntax::CType const *m_pType;
 
 		CBuildSystemSyntax::CType const *f_GetCanonical(CBuildSystemSyntax::CType const *_pType) const
 		{
-			return m_pThis->fp_GetCanonicalType(m_Context, _pType, m_TypePosition);
+			return m_pThis->fp_GetCanonicalType(m_Context, _pType, m_pTypePosition);
 		}
 
 		template <typename tf_CType>
@@ -318,11 +332,11 @@ namespace NMib::NBuildSystem
 			CEvalPropertyValueContext &_Context
 			, CBuildSystemSyntax::CType const *_pType
 			, NContainer::TCVector<CBuildSystemSyntax::CJSONAccessorEntry> const &_Accessors
-			, CFilePosition &o_TypePosition
+			, CFilePosition const *o_pTypePosition
 		) const
 	{
 
-		CApplyAccessorsHelper Vars{this, _Context, o_TypePosition, _pType};
+		CApplyAccessorsHelper Vars{this, _Context, o_pTypePosition, _pType};
 
 		fp_ApplyAccessors
 			(
@@ -330,14 +344,14 @@ namespace NMib::NBuildSystem
 				, _Accessors
 				, [&Vars](CStr const &_MemberName)
 				{
-					auto SaveTypePosition = Vars.m_TypePosition;
+					auto pSaveTypePosition = Vars.m_pTypePosition;
 					//CDefaultType, CUserType, CClassType, CArrayType, COneOf, CFunctionType
 					if (Vars.m_pType->f_IsAny(Vars.f_GetCanonicalFunctor()))
 					{
 						Vars.m_pType = &CBuildSystemSyntax::CDefaultType::ms_Any;
 						return;
 					}
-					Vars.m_TypePosition = SaveTypePosition;
+					Vars.m_pTypePosition = pSaveTypePosition;
 
 					auto &ClassType = Vars.f_GetType<CBuildSystemSyntax::CClassType>(Vars.m_pType, "class type");
 
@@ -354,13 +368,13 @@ namespace NMib::NBuildSystem
 				}
 				, [&Vars](int64 _Index)
 				{
-					auto SaveTypePosition = Vars.m_TypePosition;
+					auto pSaveTypePosition = Vars.m_pTypePosition;
 					if (Vars.m_pType->f_IsAny(Vars.f_GetCanonicalFunctor()))
 					{
 						Vars.m_pType = &CBuildSystemSyntax::CDefaultType::ms_Any;
 						return;
 					}
-					Vars.m_TypePosition = SaveTypePosition;
+					Vars.m_pTypePosition = pSaveTypePosition;
 
 					auto &ArrayType = Vars.f_GetType<CBuildSystemSyntax::CArrayType>(Vars.m_pType, "array type");
 
@@ -372,7 +386,7 @@ namespace NMib::NBuildSystem
 		return Vars.m_pType;
 	}
 
-	CEJSON CBuildSystem::fp_EvaluatePropertyValueOperator(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::COperator const &_Value, CWritePropertyContext *_pWriteContext) const
+	CEJSONSorted CBuildSystem::fp_EvaluatePropertyValueOperator(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::COperator const &_Value, CWritePropertyContext *_pWriteContext) const
 	{
 		if (_Value.m_Operator != CBuildSystemSyntax::COperator::EOperator_Append && _Value.m_Operator != CBuildSystemSyntax::COperator::EOperator_Prepend)
 			fs_ThrowError(_Context, "Operator expressions can only be used in conditions");
@@ -386,44 +400,82 @@ namespace NMib::NBuildSystem
 		auto &Property = _pWriteContext->m_Property;
 
 		CBuildSystemSyntax::CIdentifier Identifier;
-		Identifier.m_PropertyType = Property.m_Type;
-		Identifier.m_Name = Property.m_Name;
+		Identifier.m_PropertyType = Property.f_GetType();
+		Identifier.m_Name = Property.f_GetStringAndHash();
 
- 		auto *pTypeWithPosition = fp_GetTypeForProperty(_Context, Property);
+ 		auto *pTypeWithPosition = fp_GetTypeForProperty(_Context, Property.f_Reference());
 
 		if (!pTypeWithPosition)
 			fs_ThrowError(_Context, "Found no type for {}"_f << Property);
 
-		auto TypePosition = pTypeWithPosition->m_Position;
+		auto *pTypePosition = &pTypeWithPosition->m_Position;
 
-		auto *pType = fp_GetCanonicalType(_Context, &pTypeWithPosition->m_Type, TypePosition);
+		auto *pType = fp_GetCanonicalType(_Context, &pTypeWithPosition->m_Type, pTypePosition);
 
-		if (pType->m_Type.f_IsOfType<CBuildSystemSyntax::CFunctionType>())
-			pType = fp_GetCanonicalType(_Context, &pType->m_Type.f_GetAsType<CBuildSystemSyntax::CFunctionType>().m_Return.f_Get(), TypePosition);
+		auto fGetCanonicalType = [&](CBuildSystemSyntax::CType const *_pType, auto &_fGetCanonicalType) -> CBuildSystemSyntax::CType const *
+			{
+				auto pType = fp_GetCanonicalType(_Context, _pType, pTypePosition);
 
-		if (!pType)
-			fs_ThrowError(_Context, "Could not resolve type for {}"_f << Property);
+				if (pType->m_Type.f_IsOfType<CBuildSystemSyntax::CFunctionType>())
+					pType = fp_GetCanonicalType(_Context, &pType->m_Type.f_GetAsType<CBuildSystemSyntax::CFunctionType>().m_Return.f_Get(), pTypePosition);
 
-		CEJSON OriginalValue;
+				if (pType && pType->m_Type.f_IsOfType<CBuildSystemSyntax::COneOf>())
+				{
+					for (auto &OneType : pType->m_Type.f_GetAsType<CBuildSystemSyntax::COneOf>().m_OneOf)
+					{
+						if (!OneType.f_IsOfType<NStorage::TCIndirection<CBuildSystemSyntax::CType>>())
+							continue;
+
+						auto &Type = OneType.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CType>>().f_Get();
+
+						auto *pCanonicalType = _fGetCanonicalType(&Type, _fGetCanonicalType);
+
+						if (pCanonicalType->m_Type.template f_IsOfType<CBuildSystemSyntax::CArrayType>())
+							return pCanonicalType;
+						else if (pCanonicalType->m_Type.template f_IsOfType<CBuildSystemSyntax::CClassType>())
+							return pCanonicalType;
+						else if (pCanonicalType->m_Type.template f_IsOfType<CBuildSystemSyntax::CDefaultType>())
+							return pCanonicalType;
+					}
+				}
+
+				if (!pType)
+					fs_ThrowError(_Context, "Could not resolve type for {}"_f << Property);
+
+				return pType;
+			}
+		;
+
+		pType = fGetCanonicalType(pType, fGetCanonicalType);
+
+		TCOptional<CValuePotentiallyByRef> OriginalEvaluatedValue;
+		CEJSONSorted *pOriginalValue;
+
 		if (_pWriteContext->m_pWriteDestination)
 		{
 			if (!_pWriteContext->m_pAccessors)
 				fs_ThrowError(_Context, "No accessors specified");
 
-			pType = fp_ApplyAccessorsToType(_Context, pType, *_pWriteContext->m_pAccessors, TypePosition);
+			pType = fp_ApplyAccessorsToType(_Context, pType, *_pWriteContext->m_pAccessors, pTypePosition);
 
-			OriginalValue = fg_Move(*_pWriteContext->m_pWriteDestination);
+			pOriginalValue = _pWriteContext->m_pWriteDestination;
 		}
 		else
-			OriginalValue = fp_EvaluatePropertyValueIdentifier(_Context, Identifier);
+		{
+			OriginalEvaluatedValue = fp_EvaluatePropertyValueIdentifier(_Context, Identifier, true);
+			pOriginalValue = OriginalEvaluatedValue->f_MakeMutable();
+		}
 
-		CEJSON Right = fp_EvaluatePropertyValue(_Context, _Value.m_Right, nullptr);
+		CEJSONSorted &OriginalValue = *pOriginalValue;
+
+		auto Right = fp_EvaluatePropertyValue(_Context, _Value.m_Right, nullptr);
+		auto &RightRef = Right.f_Get();
 
 		auto fApplyObject = [&]()
 			{
 				auto &OriginalObject = OriginalValue.f_Object();
 
-				for (auto &Member : Right.f_Object())
+				for (auto &Member : RightRef.f_Object())
 				{
 					if (Member.f_Name().f_GetUserData() == EJSONStringType_NoQuote)
 					{
@@ -451,10 +503,10 @@ namespace NMib::NBuildSystem
 			auto &OriginalArray = OriginalValue.f_Array();
 
 			bool bHandled = false;
-			if (Right.f_IsArray())
+			if (RightRef.f_IsArray())
 			{
-				auto TempRight = Right;
-				if (fp_DoesValueConformToType(_Context, *pType, TypePosition, TempRight, EDoesValueConformToTypeFlag_CanApplyDefault))
+				auto TempRight = RightRef;
+				if (fp_DoesValueConformToType(_Context, *pType, *pTypePosition, TempRight, EDoesValueConformToTypeFlag_CanApplyDefault))
 				{
 					bHandled = true;
 
@@ -470,8 +522,8 @@ namespace NMib::NBuildSystem
 
 			if (!bHandled)
 			{
-				auto TempRight = Right;
-				if (fp_DoesValueConformToType(_Context, pType->m_Type.f_GetAsType<CBuildSystemSyntax::CArrayType>().m_Type.f_Get(), TypePosition, TempRight, EDoesValueConformToTypeFlag_CanApplyDefault))
+				auto TempRight = RightRef;
+				if (fp_DoesValueConformToType(_Context, pType->m_Type.f_GetAsType<CBuildSystemSyntax::CArrayType>().m_Type.f_Get(), *pTypePosition, TempRight, EDoesValueConformToTypeFlag_CanApplyDefault))
 				{
 					bHandled = true;
 
@@ -486,8 +538,10 @@ namespace NMib::NBuildSystem
 			{
 				CTypeConformError ConformErrorArray;
 				CTypeConformError ConformErrorElement;
-				fp_DoesValueConformToType(_Context, *pType, TypePosition, Right, EDoesValueConformToTypeFlag_None, &ConformErrorArray);
-				fp_DoesValueConformToType(_Context, pType->m_Type.f_GetAsType<CBuildSystemSyntax::CArrayType>().m_Type.f_Get(), TypePosition, Right, EDoesValueConformToTypeFlag_None, &ConformErrorElement);
+				auto TempRight1 = RightRef;
+				auto TempRight2 = RightRef;
+				fp_DoesValueConformToType(_Context, *pType, *pTypePosition, TempRight1, EDoesValueConformToTypeFlag_None, &ConformErrorArray);
+				fp_DoesValueConformToType(_Context, pType->m_Type.f_GetAsType<CBuildSystemSyntax::CArrayType>().m_Type.f_Get(), *pTypePosition, TempRight2, EDoesValueConformToTypeFlag_None, &ConformErrorElement);
 
 				fs_ThrowError
 					(
@@ -500,14 +554,14 @@ namespace NMib::NBuildSystem
 						<< *pType
 						<< ConformErrorArray
 						<< ConformErrorElement
-						<< Right
+						<< RightRef
 					)
 				;
 			}
 		}
 		else if (pType->m_Type.f_IsOfType<CBuildSystemSyntax::CClassType>())
 		{
-			if (!Right.f_IsObject())
+			if (!RightRef.f_IsObject())
 				fs_ThrowError(_Context, "Can only append objects to objects with {}"_f << pOperatorName);
 
 			if (!OriginalValue.f_IsObject() && OriginalValue.f_IsValid())
@@ -523,38 +577,40 @@ namespace NMib::NBuildSystem
 			case CBuildSystemSyntax::CDefaultType::EType_Void:
 			case CBuildSystemSyntax::CDefaultType::EType_Boolean:
 			case CBuildSystemSyntax::CDefaultType::EType_Date:
+			case CBuildSystemSyntax::CDefaultType::EType_Identifier:
 				fs_ThrowError(_Context, "{cc} is not supported for this type. Type is: {}"_f << pOperatorName << *pType);
 				break;
 			case CBuildSystemSyntax::CDefaultType::EType_Any:
 				{
 					if (OriginalValue.f_EType() == NEncoding::EEJSONType_Array)
 					{
-						if (Right.f_EType() == NEncoding::EEJSONType_Array)
+						if (RightRef.f_EType() == NEncoding::EEJSONType_Array)
 						{
 							if (bPrepend)
 							{
-								Right.f_Array().f_Insert(fg_Move(OriginalValue.f_Array()));
-								OriginalValue = fg_Move(Right);
+								auto NewValue = Right.f_Move();
+								NewValue.f_Array().f_Insert(fg_Move(OriginalValue.f_Array()));
+								OriginalValue = fg_Move(NewValue);
 							}
 							else
-								OriginalValue.f_Array().f_Insert(fg_Move(Right.f_Array()));
+								OriginalValue.f_Array().f_Insert(Right.f_MoveArray());
 						}
 						else
 						{
 							if (bPrepend)
-								OriginalValue.f_Array().f_InsertFirst(fg_Move(Right));
+								OriginalValue.f_Array().f_InsertFirst(Right.f_Move());
 							else
-								OriginalValue.f_Array().f_Insert(fg_Move(Right));
+								OriginalValue.f_Array().f_Insert(Right.f_Move());
 						}
 						break;
 					}
 
-					if (OriginalValue.f_IsValid() == Right.f_IsValid())
+					if (OriginalValue.f_IsValid() == RightRef.f_IsValid())
 					{
-						if (!Right.f_IsValid())
+						if (!RightRef.f_IsValid())
 							break; // undefined and undefined don't do anything
 
-						if (OriginalValue.f_EType() != Right.f_EType())
+						if (OriginalValue.f_EType() != RightRef.f_EType())
 						{
 							fs_ThrowError
 								(
@@ -562,38 +618,40 @@ namespace NMib::NBuildSystem
 									, "{cc} on any type needs left and right to be of same type. Type is: {} != {}"_f
 									<< pOperatorName
 									<< fg_EJSONTypeToString(OriginalValue.f_EType())
-									<< fg_EJSONTypeToString(Right.f_EType())
+									<< fg_EJSONTypeToString(RightRef.f_EType())
 								)
 							;
 						}
 					}
 
-					switch (Right.f_EType())
+					switch (RightRef.f_EType())
 					{
 					case NEncoding::EEJSONType_String:
 						{
 							if (bPrepend)
 							{
-								Right.f_String() += OriginalValue.f_String();
-								OriginalValue = fg_Move(Right);
+								auto NewValue = Right.f_Move();
+								NewValue.f_String() += OriginalValue.f_String();
+								OriginalValue = fg_Move(NewValue);
 							}
 							else
-								OriginalValue.f_String() += Right.f_String();
+								OriginalValue.f_String() += RightRef.f_String();
 						}
 						break;
 					case NEncoding::EEJSONType_Binary:
 						{
 							if (bPrepend)
 							{
-								Right.f_Binary().f_Insert(fg_Move(OriginalValue.f_Binary()));
-								OriginalValue = fg_Move(Right);
+								auto NewValue = Right.f_Move();
+								NewValue.f_Binary().f_Insert(fg_Move(OriginalValue.f_Binary()));
+								OriginalValue = fg_Move(NewValue);
 							}
 							else
-								OriginalValue.f_Binary().f_Insert(fg_Move(Right.f_Binary()));
+								OriginalValue.f_Binary().f_Insert(fg_Move(Right.f_Move().f_Binary()));
 						}
 						break;
-					case NEncoding::EEJSONType_Integer: OriginalValue.f_Integer() += Right.f_Integer(); break;
-					case NEncoding::EEJSONType_Float: OriginalValue.f_Float() += Right.f_Float(); break;
+					case NEncoding::EEJSONType_Integer: OriginalValue.f_Integer() += RightRef.f_Integer(); break;
+					case NEncoding::EEJSONType_Float: OriginalValue.f_Float() += RightRef.f_Float(); break;
 					case NEncoding::EEJSONType_Object: fApplyObject(); break;
 
 					case NEncoding::EEJSONType_Array:
@@ -614,101 +672,126 @@ namespace NMib::NBuildSystem
 				break;
 			case CBuildSystemSyntax::CDefaultType::EType_String:
 				{
-					if (!Right.f_IsValid())
+					if (!RightRef.f_IsValid())
 						break;
 
 					if (OriginalValue.f_IsValid() && OriginalValue.f_EType() != NEncoding::EEJSONType_String)
 						fs_ThrowError(_Context, "Expected original value to be a string for {}"_f << pOperatorName);
-					if (Right.f_EType() != NEncoding::EEJSONType_String)
+					if (RightRef.f_EType() != NEncoding::EEJSONType_String)
 						fs_ThrowError(_Context, "Expected right value to be a string for {}"_f << pOperatorName);
 
 					if (bPrepend)
 					{
-						Right.f_String() += OriginalValue.f_String();
-						OriginalValue = fg_Move(Right);
+						auto NewValue = Right.f_Move();
+						NewValue.f_String() += OriginalValue.f_String();
+						OriginalValue = fg_Move(NewValue);
 					}
 					else
-						OriginalValue.f_String() += Right.f_String();
+						OriginalValue.f_String() += RightRef.f_String();
 				}
 				break;
 			case CBuildSystemSyntax::CDefaultType::EType_Integer:
 				{
-					if (!Right.f_IsValid())
+					if (!RightRef.f_IsValid())
 						break;
 
 					if (OriginalValue.f_IsValid() && OriginalValue.f_EType() != NEncoding::EEJSONType_Integer)
 						fs_ThrowError(_Context, "Expected original value to be an integer for {}"_f << pOperatorName);
-					if (Right.f_EType() != NEncoding::EEJSONType_Integer)
+					if (RightRef.f_EType() != NEncoding::EEJSONType_Integer)
 						fs_ThrowError(_Context, "Expected right value to be an integer for {}"_f << pOperatorName);
 
-					OriginalValue.f_Integer() += Right.f_Integer();
+					OriginalValue.f_Integer() += RightRef.f_Integer();
 				}
 				break;
 			case CBuildSystemSyntax::CDefaultType::EType_FloatingPoint:
 				{
-					if (!Right.f_IsValid())
+					if (!RightRef.f_IsValid())
 						break;
 
 					if (OriginalValue.f_IsValid() && OriginalValue.f_EType() != NEncoding::EEJSONType_Float)
 						fs_ThrowError(_Context, "Expected original value to be a float for {}"_f << pOperatorName);
-					if (Right.f_EType() != NEncoding::EEJSONType_Float)
+					if (RightRef.f_EType() != NEncoding::EEJSONType_Float)
 						fs_ThrowError(_Context, "Expected right value to be a float for {}"_f << pOperatorName);
 
-					OriginalValue.f_Float() += Right.f_Float();
+					OriginalValue.f_Float() += RightRef.f_Float();
 				}
 				break;
 			case CBuildSystemSyntax::CDefaultType::EType_Binary:
 				{
-					if (!Right.f_IsValid())
+					if (!RightRef.f_IsValid())
 						break;
 
 					if (OriginalValue.f_IsValid() && OriginalValue.f_EType() != NEncoding::EEJSONType_Binary)
 						fs_ThrowError(_Context, "Expected original value to be binary for {}"_f << pOperatorName);
-					if (Right.f_EType() != NEncoding::EEJSONType_Binary)
+					if (RightRef.f_EType() != NEncoding::EEJSONType_Binary)
 						fs_ThrowError(_Context, "Expected right value to be binary for {}"_f << pOperatorName);
 
 					if (bPrepend)
 					{
-						Right.f_Binary().f_Insert(fg_Move(OriginalValue.f_Binary()));
-						OriginalValue = fg_Move(Right);
+						auto NewValue = Right.f_Move();
+						NewValue.f_Binary().f_Insert(fg_Move(OriginalValue.f_Binary()));
+						OriginalValue = fg_Move(NewValue);
 					}
 					else
-						OriginalValue.f_Binary().f_Insert(fg_Move(Right.f_Binary()));
+						OriginalValue.f_Binary().f_Insert(fg_Move(Right.f_Move().f_Binary()));
 				}
 				break;
 			}
 		}
 		else
-			fs_ThrowError(_Context, "Append += operator is only supported for array and class types. Current type is: {}"_f << *pType);
+			fs_ThrowError(_Context, "Append += operator is only supported for array, class types and built in types. Current type is: {}"_f << *pType);
 
-		return OriginalValue;
+		_pWriteContext->m_bTypeAlreadyChecked = true;
+
+		return fg_Move(OriginalValue);
 	}
 
-	CEJSON CBuildSystem::fp_EvaluatePropertyValueDefine(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CDefine const &_Value) const
+	CEJSONSorted CBuildSystem::fp_EvaluatePropertyValueDefine(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CDefine const &_Value) const
 	{
 		fs_ThrowError(_Context, "Define expressions can only be used at root");
 		return {};
 	}
 
-	CEJSON CBuildSystem::fp_EvaluatePropertyValueExpressionAppend(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CExpressionAppend const &_Value) const
+	CEJSONSorted CBuildSystem::fp_EvaluatePropertyValueExpressionAppend(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CExpressionAppend const &_Value) const
 	{
 		fs_ThrowError(_Context, "Append expressions can only be used in arrays or as function parameters");
 		return {};
 	}
 
-	CTypeWithPosition const *CBuildSystem::fp_GetUserTypeWithPositionForProperty(CEntity const &_Entity, NStr::CStr const &_UserType) const
+	CTypeWithPosition const *CBuildSystem::fp_GetUserTypeWithPositionForProperty(CEvalPropertyValueContext &_Context, NStr::CStr const &_UserType) const
 	{
-		for (auto *pEntity = &_Entity; pEntity; pEntity = pEntity->m_pParent)
+		for (auto *pEntity = &_Context.m_Context; pEntity; pEntity = pEntity->m_pParent)
 		{
-			auto pType = pEntity->f_Data().m_UserTypes.f_FindEqual(_UserType);
-			if (pType)
-				return pType;
+			auto pTypes = pEntity->f_Data().m_UserTypes.f_FindEqual(_UserType);
+			if (pTypes)
+			{
+				for (auto &Type : *pTypes)
+				{
+					if
+						(
+							!Type.m_pConditions
+							|| fpr_EvalCondition
+							(
+								_Context.m_Context
+								, _Context.m_OriginalContext
+								, *Type.m_pConditions
+								, _Context.m_EvalContext
+								, Type.m_DebugFlags
+								, &_Context
+								, _Context.m_pStorePositions
+							)
+						)
+					{
+						return &Type.m_Type;
+					}
+				}
+			}
 		}
 
 		return nullptr;
 	}
 
-	CTypeWithPosition const *CBuildSystem::fp_GetTypeForProperty(CBuildSystem::CEvalPropertyValueContext &_Context, CPropertyKey const &_VariableName) const
+	CTypeWithPosition const *CBuildSystem::fp_GetTypeForProperty(CBuildSystem::CEvalPropertyValueContext &_Context, CPropertyKeyReference const &_VariableName) const
 	{
 		auto *pOverriddenType = _Context.m_EvalContext.m_OverriddenTypes.f_FindEqual(_VariableName);
 		if (pOverriddenType)
@@ -720,9 +803,30 @@ namespace NMib::NBuildSystem
 
 		for (auto *pEntity = &_Context.m_OriginalContext; pEntity; pEntity = pEntity->m_pParent)
 		{
-			auto pType = pEntity->f_Data().m_VariableDefinitions.f_FindEqual(_VariableName);
-			if (pType)
-				return &pType->m_Type;
+			auto pDefinitions = pEntity->f_Data().m_VariableDefinitions.f_FindEqual(_VariableName);
+			if (pDefinitions)
+			{
+				for (auto &Definition : *pDefinitions)
+				{
+					if
+						(
+							!Definition.m_pConditions
+							|| fpr_EvalCondition
+							(
+								_Context.m_Context
+								, _Context.m_OriginalContext
+								, *Definition.m_pConditions
+								, _Context.m_EvalContext
+								, Definition.m_DebugFlags
+								, &_Context
+								, _Context.m_pStorePositions
+							)
+						)
+					{
+						return &Definition.m_Type;
+					}
+				}
+			}
 		}
 
 		return nullptr;
@@ -738,15 +842,16 @@ namespace NMib::NBuildSystem
 			return Return;
 		}
 	}
-
+	
 	bool CBuildSystem::fp_DoesValueConformToType
 		(
 			CEvalPropertyValueContext &_Context
 			, CBuildSystemSyntax::CType const &_Type
 			, CFilePosition const &_TypePosition
-			, CEJSON &o_Value
+			, CEJSONSorted &o_Value
 			, EDoesValueConformToTypeFlag _Flags
 			, CTypeConformError *o_pError
+			, NFunction::TCFunctionNoAlloc<CStr ()> const *_pGetErrorContext
 		) const
 	{
 		auto fCheckType = [&]() -> bool
@@ -886,20 +991,88 @@ namespace NMib::NBuildSystem
 
 							return o_Value.f_IsBinary();
 						}
+					case CBuildSystemSyntax::CDefaultType::EType_Identifier:
+						{
+							if (!o_Value.f_IsObject())
+							{
+								if (o_pError)
+									o_pError->m_Error = "Expected an object for identifier";
+								return false;
+							}
+
+							bool bFoundType = false;
+							bool bFoundName = false;
+
+							auto &Object = o_Value.f_Object();
+							for (auto &Member : Object)
+							{
+								if (Member.f_Name() == gc_ConstString_Type.m_String)
+								{
+									bFoundType = true;
+									if (!Member.f_Value().f_IsString())
+									{
+										if (o_pError)
+											o_pError->m_Error = "Expected a string for Type";
+										return false;
+									}
+								}
+								else if (Member.f_Name() == gc_ConstString_Name.m_String)
+								{
+									bFoundName = true;
+									if (!Member.f_Value().f_IsString())
+									{
+										if (o_pError)
+											o_pError->m_Error = "Expected a string for Name";
+										return false;
+									}
+								}
+								else if (Member.f_Name() == gc_ConstString_EntityType.m_String)
+								{
+									if (!Member.f_Value().f_IsString())
+									{
+										if (o_pError)
+											o_pError->m_Error = "Expected a string for EntityType";
+										return false;
+									}
+								}
+								else
+								{
+									if (o_pError)
+										o_pError->m_Error = "Unexpected member '{}'"_f << Member.f_Name();
+									return false;
+								}
+							}
+
+							if (!bFoundType)
+							{
+								if (o_pError)
+									o_pError->m_Error = "Missing Type member for identifier";
+								return false;
+							}
+
+							if (!bFoundName)
+							{
+								if (o_pError)
+									o_pError->m_Error = "Missing Name member for identifier";
+								return false;
+							}
+
+							return true;
+						}
 					}
 				}
 				else if (_Type.m_Type.f_IsOfType<CBuildSystemSyntax::CUserType>())
 				{
 					auto &SpecificType = _Type.m_Type.f_GetAsType<CBuildSystemSyntax::CUserType>();
 
-					auto *pType = fp_GetUserTypeWithPositionForProperty(_Context.m_Context, SpecificType.m_Name);
+					auto *pType = fp_GetUserTypeWithPositionForProperty(_Context, SpecificType.m_Name);
 					if (!pType)
 						fs_ThrowError(_Context, "Could not find user type of name '{}'"_f << SpecificType.m_Name);
 
 					if (o_pError)
 						o_pError->m_ErrorPath.f_Insert("type({})"_f << SpecificType.m_Name);
 
-					if (!fp_DoesValueConformToType(_Context, pType->m_Type, pType->m_Position, o_Value, _Flags, o_pError))
+					if (!fp_DoesValueConformToType(_Context, pType->m_Type, pType->m_Position, o_Value, _Flags, o_pError, _pGetErrorContext))
 						return false;
 
 					if (o_pError)
@@ -915,14 +1088,21 @@ namespace NMib::NBuildSystem
 					{
 						if (!o_Value.f_IsValid())
 						{
-							CEvalPropertyValueContext Context{_Context.m_Context, _Context.m_OriginalContext, _TypePosition, _Context.m_EvalContext, &_Context};
-							o_Value = fp_EvaluatePropertyValueParam(Context, SpecificType.m_DefaultValue);
+							CBuildSystemUniquePositions::CPosition *pStoredPosition = nullptr;
+							if (_Context.m_pStorePositions && _TypePosition.f_IsValid())
+								pStoredPosition = _Context.m_pStorePositions->f_AddPosition(_TypePosition, "Apply default");
+
+							CEvalPropertyValueContext Context{_Context.m_Context, _Context.m_OriginalContext, _TypePosition, _Context.m_EvalContext, &_Context, _Context.m_pStorePositions};
+							o_Value = fp_EvaluatePropertyValueParam(Context, SpecificType.m_DefaultValue).f_Move();
+
+							if (pStoredPosition)
+								pStoredPosition->f_AddValue(o_Value, f_EnableValues());
 						}
 
 						if (o_pError)
 							o_pError->m_ErrorPath.f_Insert(" = {}"_f << SpecificType.m_DefaultValue);
 
-						if (!fp_DoesValueConformToType(_Context, SpecificType.m_Type.f_Get(), _TypePosition, o_Value, _Flags, o_pError))
+						if (!fp_DoesValueConformToType(_Context, SpecificType.m_Type.f_Get(), _TypePosition, o_Value, _Flags, o_pError, _pGetErrorContext))
 							return false;
 
 						if (o_pError)
@@ -931,7 +1111,7 @@ namespace NMib::NBuildSystem
 						return true;
 					}
 
-					return fp_DoesValueConformToType(_Context, SpecificType.m_Type.f_Get(), _TypePosition, o_Value, _Flags, o_pError);
+					return fp_DoesValueConformToType(_Context, SpecificType.m_Type.f_Get(), _TypePosition, o_Value, _Flags, o_pError, _pGetErrorContext);
 				}
 				else if (_Type.m_Type.f_IsOfType<CBuildSystemSyntax::CClassType>())
 				{
@@ -943,11 +1123,11 @@ namespace NMib::NBuildSystem
 							if (ToParse.f_StartsWith("{"))
 							{
 								_Flags &= EDoesValueConformToTypeFlag_ConvertFromString;
-								o_Value = CEJSON::fs_FromString(ToParse);
+								o_Value = CEJSONSorted::fs_FromString(ToParse);
 							}
 							else
 							{
-								CEJSON NewValue;
+								CEJSONSorted NewValue;
 
 								auto &NewValueObject = NewValue.f_Object();
 								for (auto &Element : o_Value.f_String().f_Split(";"))
@@ -994,8 +1174,8 @@ namespace NMib::NBuildSystem
 						{
 							if (_Flags & EDoesValueConformToTypeFlag_CanApplyDefault)
 							{
-								CEJSON MaybeDefaulted;
-								if (fp_DoesValueConformToType(_Context, Member.m_Type.f_Get(), _TypePosition, MaybeDefaulted, _Flags, o_pError))
+								CEJSONSorted MaybeDefaulted;
+								if (fp_DoesValueConformToType(_Context, Member.m_Type.f_Get(), _TypePosition, MaybeDefaulted, _Flags, o_pError, _pGetErrorContext))
 								{
 									Object[MemberName] = fg_Move(MaybeDefaulted);
 									CheckedMembers[MemberName];
@@ -1019,7 +1199,7 @@ namespace NMib::NBuildSystem
 							if (o_pError)
 								o_pError->m_ErrorPath.f_GetLast() = MemberName;
 
-							if (!fp_DoesValueConformToType(_Context, Member.m_Type.f_Get(), _TypePosition, *pObjectMember, _Flags, o_pError))
+							if (!fp_DoesValueConformToType(_Context, Member.m_Type.f_Get(), _TypePosition, *pObjectMember, _Flags, o_pError, _pGetErrorContext))
 								return false;
 						}
 
@@ -1033,9 +1213,9 @@ namespace NMib::NBuildSystem
 							if (!CheckedMembers.f_FindEqual(Member.f_Name()))
 							{
 								if (o_pError)
-									o_pError->m_ErrorPath.f_GetLast() = "...({})"_f << Member.f_Name();
+									o_pError->m_ErrorPath.f_GetLast() = "... = {}"_f << Member.f_Name();
 
-								if (!fp_DoesValueConformToType(_Context, SpecificType.m_OtherKeysType.f_Get().f_Get(), _TypePosition, Member.f_Value(), _Flags, o_pError))
+								if (!fp_DoesValueConformToType(_Context, SpecificType.m_OtherKeysType.f_Get().f_Get(), _TypePosition, Member.f_Value(), _Flags, o_pError, _pGetErrorContext))
 									return false;
 
 							}
@@ -1072,11 +1252,11 @@ namespace NMib::NBuildSystem
 							if (ToParse.f_StartsWith("["))
 							{
 								_Flags &= EDoesValueConformToTypeFlag_ConvertFromString;
-								o_Value = CEJSON::fs_FromString(ToParse);
+								o_Value = CEJSONSorted::fs_FromString(ToParse);
 							}
 							else
 							{
-								CEJSON NewValue;
+								CEJSONSorted NewValue;
 
 								auto &NewValueArray = NewValue.f_Array();
 								for (auto &Element : o_Value.f_String().f_Split(";"))
@@ -1112,7 +1292,7 @@ namespace NMib::NBuildSystem
 						if (o_pError)
 							o_pError->m_ErrorPath.f_GetLast() = "[{}]"_f << iElement;
 
-						if (!fp_DoesValueConformToType(_Context, SpecificType.m_Type.f_Get(), _TypePosition, ElementValue, _Flags, o_pError))
+						if (!fp_DoesValueConformToType(_Context, SpecificType.m_Type.f_Get(), _TypePosition, ElementValue, _Flags, o_pError, _pGetErrorContext))
 							return false;
 
 						++iElement;
@@ -1130,9 +1310,9 @@ namespace NMib::NBuildSystem
 					CStr NonMatchingValues;
 					for (auto &TypeOrValue : SpecificType.m_OneOf)
 					{
-						if (TypeOrValue.f_IsOfType<CEJSON>())
+						if (TypeOrValue.f_IsOfType<CEJSONSorted>())
 						{
-							auto &ExpectedValue = TypeOrValue.f_GetAsType<CEJSON>();
+							auto &ExpectedValue = TypeOrValue.f_GetAsType<CEJSONSorted>();
 
 							CStr ConversionError;
 
@@ -1144,21 +1324,21 @@ namespace NMib::NBuildSystem
 									{
 									case EEJSONType_Integer:
 										{
-											CEJSON ConvertedValue = o_Value.f_AsInteger();
+											CEJSONSorted ConvertedValue = o_Value.f_AsInteger();
 											if (ConvertedValue == ExpectedValue)
 												return true;
 										}
 										break;
 									case EEJSONType_Float:
 										{
-											CEJSON ConvertedValue = o_Value.f_AsFloat();
+											CEJSONSorted ConvertedValue = o_Value.f_AsFloat();
 											if (ConvertedValue == ExpectedValue)
 												return true;
 										}
 										break;
 									case EEJSONType_Boolean:
 										{
-											CEJSON ConvertedValue = o_Value.f_AsBoolean();
+											CEJSONSorted ConvertedValue = o_Value.f_AsBoolean();
 											if (ConvertedValue == ExpectedValue)
 												return true;
 										}
@@ -1171,7 +1351,7 @@ namespace NMib::NBuildSystem
 											NBuildSystem::CCustomRegistryKeyValue::CEJSONParseContext Context;
 											Context.m_pStartParse = pParse;
 
-											CEJSON ConvertedValue = Context.f_ParseDate(pParse, false);
+											CEJSONSorted ConvertedValue = Context.f_ParseDate(pParse, false);
 											if (ConvertedValue == ExpectedValue)
 												return true;
 										}
@@ -1184,7 +1364,7 @@ namespace NMib::NBuildSystem
 											NBuildSystem::CCustomRegistryKeyValue::CEJSONParseContext Context;
 											Context.m_pStartParse = pParse;
 
-											CEJSON ConvertedValue = Context.f_ParseBinary(pParse, false);
+											CEJSONSorted ConvertedValue = Context.f_ParseBinary(pParse, false);
 											if (ConvertedValue == ExpectedValue)
 												return true;
 										}
@@ -1226,14 +1406,14 @@ namespace NMib::NBuildSystem
 								if (o_pError)
 								{
 									CTypeConformError Error;
-									if (fp_DoesValueConformToType(_Context, Type, _TypePosition, Value, _Flags, &Error))
+									if (fp_DoesValueConformToType(_Context, Type, _TypePosition, Value, _Flags, &Error, _pGetErrorContext))
 									{
 										o_Value = fg_Move(Value);
 										return true;
 									}
 									ConformErrors.f_Insert(Error);
 								}
-								else if (fp_DoesValueConformToType(_Context, Type, _TypePosition, Value, _Flags))
+								else if (fp_DoesValueConformToType(_Context, Type, _TypePosition, Value, _Flags, nullptr, _pGetErrorContext))
 								{
 									o_Value = fg_Move(Value);
 									return true;
@@ -1245,11 +1425,11 @@ namespace NMib::NBuildSystem
 								if (o_pError)
 								{
 									CTypeConformError Error;
-									if (fp_DoesValueConformToType(_Context, Type, _TypePosition, o_Value, _Flags, &Error))
+									if (fp_DoesValueConformToType(_Context, Type, _TypePosition, o_Value, _Flags, &Error, _pGetErrorContext))
 										return true;
 									ConformErrors.f_Insert(Error);
 								}
-								else if (fp_DoesValueConformToType(_Context, Type, _TypePosition, o_Value, _Flags))
+								else if (fp_DoesValueConformToType(_Context, Type, _TypePosition, o_Value, _Flags, nullptr, _pGetErrorContext))
 									return true;
 							}
 						}
@@ -1257,15 +1437,16 @@ namespace NMib::NBuildSystem
 
 					if (o_pError)
 					{
-						CStr Error = "No match found in one_of";
+						CStr Error = "No match found in one_of:";
 						if (NonMatchingValues)
-							Error += "\n    None of values match: {}"_f << NonMatchingValues;
+							Error += "\n\n    None of values match: {}"_f << NonMatchingValues;
+
 						if (!ConformErrors.f_IsEmpty())
 						{
-							Error += "\n    Value does not conform to any of types: {}"_f << NonMatchingValues;
+							Error += "\n\n    Value does not conform to any of the types. See errors:";
 							for (auto &ConformError : ConformErrors)
 							{
-								Error += "\n";
+								Error += "\n\n";
 								Error += fg_IndentString("{}"_f << ConformError, "        ");
 							}
 						}
@@ -1282,7 +1463,7 @@ namespace NMib::NBuildSystem
 					if (o_pError)
 						o_pError->m_ErrorPath.f_Insert("{}"_f << SpecificType);
 
-					if (!fp_DoesValueConformToType(_Context, SpecificType.m_Return.f_Get(), _TypePosition, o_Value, _Flags, o_pError))
+					if (!fp_DoesValueConformToType(_Context, SpecificType.m_Return.f_Get(), _TypePosition, o_Value, _Flags, o_pError, _pGetErrorContext))
 						return false;
 
 					if (o_pError)
@@ -1303,7 +1484,16 @@ namespace NMib::NBuildSystem
 		if (!fCheckType())
 		{
 			if (_Type.f_IsOptional() && !o_Value.f_IsValid())
+			{
+				if (_Context.m_pStorePositions && _TypePosition.f_IsValid())
+				{
+					if (_pGetErrorContext && *_pGetErrorContext)
+						_Context.m_pStorePositions->f_AddPosition(_TypePosition, "Optional was not set for '{}'"_f << (*_pGetErrorContext)())->f_AddValue({}, f_EnableValues());
+					else
+						_Context.m_pStorePositions->f_AddPosition(_TypePosition, gc_ConstString_Optional)->f_AddValue({}, f_EnableValues());
+				}
 				return true;
+			}
 			
 			return false;
 		}
@@ -1313,17 +1503,38 @@ namespace NMib::NBuildSystem
 	void CBuildSystem::fp_CheckValueConformToPropertyType
 		(
 			CEvalPropertyValueContext &_Context
-			, CPropertyKey const &_Property
-			, CEJSON &o_Value
+			, CPropertyKeyReference const &_Property
+			, CEJSONSorted &o_Value
 			, CFilePosition const &_Position
 			, EDoesValueConformToTypeFlag _Flags
 		) const
 	{
-		auto *pType = fp_GetTypeForProperty(_Context, _Property);
+		CTypeWithPosition const *pType;
+		CBuildSystemUniquePositions TypePositions;
 
-		if (!pType)
-			fs_ThrowError(_Context, _Position, "Found no type for {}"_f << _Property);
+		TypePositions.m_pParentPositions = _Context.m_pStorePositions;
+		_Context.m_pStorePositions = f_EnablePositions(&TypePositions);
 
+		auto CleanupPositions = g_OnScopeExit / [&]
+			{
+				_Context.m_pStorePositions = TypePositions.m_pParentPositions;
+			}
+		;
+
+		{
+			pType = fp_GetTypeForProperty(_Context, _Property);
+
+			if (!pType)
+			{
+				if (!_Context.m_EvalContext.m_bFailUndefinedTypeCheck)
+					return;
+
+				TypePositions.f_AddPositionFirst(_Position, gc_ConstString_Context, gc_ConstString_Context);
+
+				fs_ThrowError(_Context, TypePositions, "Found no type for {}"_f << _Property);
+			}
+		}
+		
 		fp_CheckValueConformToType
 			(
 				_Context
@@ -1338,72 +1549,75 @@ namespace NMib::NBuildSystem
 				, _Flags
 			)
 		;
+
+		if (TypePositions.m_pParentPositions)
+			TypePositions.m_pParentPositions->f_AddPositions(TypePositions);
 	}
 
 	void CBuildSystem::fp_CheckValueConformToType
 		(
 			CEvalPropertyValueContext &_Context
 			, CBuildSystemSyntax::CType const &_Type
-			, CEJSON &o_Value
+			, CEJSONSorted &o_Value
 			, CFilePosition const &_Position
 			, CFilePosition const &_TypePosition
 			, NFunction::TCFunctionNoAlloc<CStr ()> const &_fGetErrorContext
 			, EDoesValueConformToTypeFlag _Flags
 		) const
 	{
-		CFilePosition TypePosition = _TypePosition;
-		auto pCanonicalType = fp_GetCanonicalType(_Context, &_Type, TypePosition);
+		CFilePosition const *pTypePosition = &_TypePosition;
+		auto pCanonicalType = fp_GetCanonicalType(_Context, &_Type, pTypePosition);
 		if (pCanonicalType->m_Type.f_IsOfType<CBuildSystemSyntax::CFunctionType>())
 		{
 			auto &FunctionType = pCanonicalType->m_Type.f_GetAsType<CBuildSystemSyntax::CFunctionType>();
 			if (_Context.m_EvalContext.m_pCallingFunction != &FunctionType)
 			{
 				TCVector<CBuildSystemError> Errors;
-				if (TypePosition.f_IsValid())
-					Errors.f_Insert({TypePosition, "See definition of function type"});
-				if (_TypePosition != TypePosition && _TypePosition.f_IsValid())
-					Errors.f_Insert({TypePosition, "See definition of function type (original)"});
+				if (pTypePosition->f_IsValid())
+					Errors.f_Insert({CBuildSystemUniquePositions(*pTypePosition, gc_ConstString_Type), "See definition of function type"});
+				if (_TypePosition != *pTypePosition && _TypePosition.f_IsValid())
+					Errors.f_Insert({CBuildSystemUniquePositions(*pTypePosition, gc_ConstString_Type), "See definition of function type (original)"});
 				fs_ThrowError(_Context, _Position, "Trying to access a function as a variable, you need to call it", Errors);
 			}
 		}
 
-		if (!fp_DoesValueConformToType(_Context, _Type, TypePosition, o_Value, _Flags | EDoesValueConformToTypeFlag_CanApplyDefault, nullptr))
+		if (!fp_DoesValueConformToType(_Context, _Type, *pTypePosition, o_Value, _Flags | EDoesValueConformToTypeFlag_CanApplyDefault, nullptr, &_fGetErrorContext))
 		{
 			CTypeConformError Error;
-			fp_DoesValueConformToType(_Context, _Type, TypePosition, o_Value, _Flags | EDoesValueConformToTypeFlag_CanApplyDefault, &Error);
+			fp_DoesValueConformToType(_Context, _Type, *pTypePosition, o_Value, _Flags | EDoesValueConformToTypeFlag_CanApplyDefault, &Error);
 
 			if (pCanonicalType->m_Type.f_IsOfType<CBuildSystemSyntax::CFunctionType>())
 			{
 				auto &FunctionType = pCanonicalType->m_Type.f_GetAsType<CBuildSystemSyntax::CFunctionType>();
-				pCanonicalType = fp_GetCanonicalType(_Context, &FunctionType.m_Return.f_Get(), TypePosition);
+				pCanonicalType = fp_GetCanonicalType(_Context, &FunctionType.m_Return.f_Get(), pTypePosition);
 			}
 
 			TCVector<CBuildSystemError> Errors;
 
-			if (TypePosition.f_IsValid())
-				Errors.f_Insert({TypePosition, "See definition of type"});
+			if (pTypePosition->f_IsValid())
+				Errors.f_Insert({CBuildSystemUniquePositions(*pTypePosition, gc_ConstString_Type), "See definition of type"});
 
-			if (_TypePosition != TypePosition && _TypePosition.f_IsValid())
-				Errors.f_Insert({_TypePosition, "See definition of type (original)"});
+			if (_TypePosition != *pTypePosition && _TypePosition.f_IsValid())
+				Errors.f_Insert({CBuildSystemUniquePositions(_TypePosition, gc_ConstString_Type), "See definition of type (original)"});
 
 			fs_ThrowError
 				(
 					_Context
 					, _Position
-					, "For {} value:\n{}\nDoes not conform to type:\n{}\nError: {}"_f
+					, "For {}\n    Value:\n\n{}\n\n    Does not conform to type:\n\n{}\n\n        {}\n"_f
 					<< _fGetErrorContext()
-					<< fg_IndentString(o_Value.f_ToString("\t", gc_BuildSystemJSONParseFlags).f_Trim(), "    ")
-					<< fg_IndentString("{}"_f << *pCanonicalType, "    ")
-					<< fg_IndentString("{}"_f << Error, "    ").f_Trim()
+					<< fg_IndentString(o_Value.f_ToString("\t", gc_BuildSystemJSONParseFlags).f_Trim(), "        ")
+					<< fg_IndentString("{}"_f << *pCanonicalType, "        ")
+					<< fg_IndentString("{}"_f << Error, "        ").f_Trim()
 					, Errors
 				)
 			;
 		}
 	}
 
-	CEJSON CBuildSystem::fp_EvaluatePropertyValueAccessors(CEvalPropertyValueContext &_Context, CEJSON &&_Value, TCVector<CBuildSystemSyntax::CJSONAccessorEntry> const &_Accessors) const
+	CValuePotentiallyByRef CBuildSystem::fp_EvaluatePropertyValueAccessors(CEvalPropertyValueContext &_Context, CValuePotentiallyByRef &&_Value, TCVector<CBuildSystemSyntax::CJSONAccessorEntry> const &_Accessors) const
 	{
-		CEJSON Return = fg_Move(_Value);
+		auto *pValue = &_Value.f_Get();
 
 		fp_ApplyAccessors
 			(
@@ -1411,54 +1625,105 @@ namespace NMib::NBuildSystem
 				, _Accessors
 				, [&](CStr const &_MemberName)
 				{
-					if (!Return.f_IsObject())
+					if (!pValue->f_IsObject())
 					{
 						fs_ThrowError
 							(
 								_Context
 								, "JSON value '{}' is not an object so cannot apply member name '{}'"_f
-								<< Return.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined)
+								<< pValue->f_ToString(nullptr, EJSONDialectFlag_AllowUndefined)
 								<< _MemberName
 							)
 						;
 					}
 
-					auto pMember = Return.f_GetMember(_MemberName);
-					if (!pMember)
-						Return = CEJSON();
-					else
-						Return = fg_Move(*pMember);
+					pValue = pValue->f_GetMember(_MemberName);
 				}
 				, [&](int64 _Index)
 				{
-					if (!Return.f_IsArray())
-						fs_ThrowError(_Context, "JSON value '{}' is not an array so cannot apply subscript index"_f << Return.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined));
+					if (!pValue->f_IsArray())
+						fs_ThrowError(_Context, "JSON value '{}' is not an array so cannot apply subscript index"_f << pValue->f_ToString(nullptr, EJSONDialectFlag_AllowUndefined));
 
-					auto &Array = Return.f_Array();
+					auto &Array = pValue->f_Array();
 
 					if (_Index >= int64(TCLimitsInt<smint>::mc_Max) || _Index < 0 || _Index >= int64(Array.f_GetLen()))
 						fs_ThrowError(_Context, "Index {} is out of range for array that has {} elements"_f << _Index << Array.f_GetLen());
 
-					Return = fg_Move(Array[_Index]);
+					pValue = &Array[_Index];
 				}
 			)
 		;
 
-		return Return;
+		if (pValue)
+			return _Value.f_GetSubObject(*pValue);
+
+		return CEJSONSorted{};
 	}
 
-	CEJSON CBuildSystem::fp_EvaluatePropertyValueJSONAccessor(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CJSONAccessor const &_Value) const
+	CValuePotentiallyByRef CBuildSystem::fp_EvaluatePropertyValueJSONAccessor(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CJSONAccessor const &_Value) const
 	{
 		return fp_EvaluatePropertyValueAccessors(_Context, fp_EvaluatePropertyValueParam(_Context, _Value.m_Param), _Value.m_Accessors);
 	}
 
-	CEJSON CBuildSystem::fp_EvaluatePropertyValueIdentifier(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CIdentifier const &_Value) const
+	NEncoding::CEJSONSorted CBuildSystem::fp_EvaluatePropertyValueIdentifierReference(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CIdentifierReference const &_Value) const
 	{
-		CStr PropertyName;
-		if (_Value.f_IsNameConstantString())
-			PropertyName = _Value.f_NameConstantString();
+		CStr const *pPropertyName;
+		CStr PropertyNameHolder;
+		if (_Value.m_Identifier.f_IsNameConstantString())
+			pPropertyName = &_Value.m_Identifier.f_NameConstantString();
 		else
-			PropertyName = fp_EvaluatePropertyValueEvalString(_Context, _Value.m_Name.f_GetAsType<CBuildSystemSyntax::CEvalString>());
+		{
+			PropertyNameHolder = fp_EvaluatePropertyValueEvalString(_Context, _Value.m_Identifier.m_Name.f_GetAsType<CBuildSystemSyntax::CEvalString>());
+			pPropertyName = &PropertyNameHolder;
+		}
+
+		CStr const &PropertyName = *pPropertyName;
+
+		EPropertyType PropertyType = EPropertyType_Invalid;
+		if (_Value.m_Identifier.f_IsPropertyTypeConstant())
+		{
+			PropertyType = _Value.m_Identifier.f_PropertyTypeConstant();
+			DMibCheck(PropertyType != EPropertyType_Invalid);
+		}
+		else
+		{
+			auto PropertyTypeString = fp_EvaluatePropertyValueEvalString(_Context, _Value.m_Identifier.m_PropertyType.f_GetAsType<CBuildSystemSyntax::CEvalString>());
+			PropertyType = fg_PropertyTypeFromStr(PropertyTypeString);
+			if (PropertyType == EPropertyType_Invalid)
+				fs_ThrowError(_Context, "Invalid property type '{}'"_f << PropertyTypeString);
+		}
+
+		NEncoding::CEJSONSorted Return;
+		auto &Object = Return.f_Object();
+		Object[gc_ConstString_Type] = fg_PropertyTypeToStr(PropertyType);
+		Object[gc_ConstString_Name] = PropertyName;
+
+		if (_Value.m_Identifier.m_EntityType != EEntityType_Invalid)
+			Object[gc_ConstString_EntityType] = fg_EntityTypeToStr(_Value.m_Identifier.m_EntityType);
+
+		return Return;
+	}
+
+	CValuePotentiallyByRef CBuildSystem::fp_EvaluatePropertyValueIdentifier(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CIdentifier const &_Value, bool _bMoveCache) const
+	{
+		CStr const *pPropertyName;
+		CStr PropertyNameHolder;
+		uint32 PropertyNameHash;
+		
+		if (_Value.f_IsNameConstantString())
+		{
+			pPropertyName = &_Value.f_NameConstantString();
+			PropertyNameHash = _Value.f_NameConstantStringHash();
+		}
+		else
+		{
+			PropertyNameHolder = fp_EvaluatePropertyValueEvalString(_Context, _Value.m_Name.f_GetAsType<CBuildSystemSyntax::CEvalString>());
+			PropertyNameHash = PropertyNameHolder.f_Hash();
+			PropertyNameHolder = mp_StringCache.f_AddString(PropertyNameHolder, PropertyNameHash);
+			pPropertyName = &PropertyNameHolder;
+		}
+
+		CStr const &PropertyName = *pPropertyName;
 
 		auto pOriginalContext = &_Context.m_OriginalContext;
 		if (_Value.m_EntityType != EEntityType_Invalid)
@@ -1477,17 +1742,25 @@ namespace NMib::NBuildSystem
 			}
 		}
 
-		DMibCheck(_Value.m_PropertyType != EPropertyType_Invalid);
-
-		CPropertyKey Key;
-		Key.m_Name = PropertyName;
-		Key.m_Type = _Value.m_PropertyType;
-
-		if (Key.m_Type == EPropertyType_Builtin)
+		EPropertyType PropertyType = EPropertyType_Invalid;
+		if (_Value.f_IsPropertyTypeConstant())
 		{
-			if (Key.m_Name == "GeneratedFiles")
+			PropertyType = _Value.f_PropertyTypeConstant();
+			DMibCheck(PropertyType != EPropertyType_Invalid);
+		}
+		else
+		{
+			auto PropertyTypeString = fp_EvaluatePropertyValueEvalString(_Context, _Value.m_PropertyType.f_GetAsType<CBuildSystemSyntax::CEvalString>());
+			PropertyType = fg_PropertyTypeFromStr(PropertyTypeString);
+			if (PropertyType == EPropertyType_Invalid)
+				fs_ThrowError(_Context, "Invalid property type '{}'"_f << PropertyTypeString);
+		}
+
+		if (PropertyType == EPropertyType_Builtin)
+		{
+			if (PropertyName == gc_ConstString_GeneratedFiles.m_String)
 			{
-				TCVector<CEJSON> Ret;
+				TCVector<CEJSONSorted> Ret;
 				{
 					DMibLock(mp_GeneratedFilesLock);
 					for (auto iFile = mp_GeneratedFiles.f_GetIterator(); iFile; ++iFile)
@@ -1496,151 +1769,205 @@ namespace NMib::NBuildSystem
 							Ret.f_Insert(iFile.f_GetKey());
 					}
 				}
-				return fg_Move(Ret);
+
+				if (_Context.m_pStorePositions)
+					_Context.m_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.GeneratedFiles")->f_AddValue(Ret, f_EnableValues());
+
+				return CEJSONSorted(fg_Move(Ret));
 			}
-			else if (Key.m_Name == "SourceFiles")
+			else if (PropertyName == gc_ConstString_SourceFiles.m_String)
 			{
-				TCVector<CEJSON> Ret;
+				TCVector<CEJSONSorted> Ret;
 				{
 					DMibLockRead(mp_SourceFilesLock);
 					for (auto iFile = mp_SourceFiles.f_GetIterator(); iFile; ++iFile)
 						Ret.f_Insert(*iFile);
 				}
-				return fg_Move(Ret);
+
+				if (_Context.m_pStorePositions)
+					_Context.m_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.SourceFiles")->f_AddValue(Ret, f_EnableValues());
+
+				return CEJSONSorted(fg_Move(Ret));
 			}
-			else if (Key.m_Name == "BuildSystemSourceAbsolute")
-				return mp_FileLocation;
-			else if (Key.m_Name == "BuildSystemSource")
-				return mp_FileLocationFile;
-			else if (Key.m_Name == "GeneratorStateFile")
-				return mp_GeneratorStateFileName;
-			else if (Key.m_Name == "BasePathAbsolute")
-				return f_GetBaseDir();
-			else if (Key.m_Name == "MToolExe")
+			else if (PropertyName == gc_ConstString_BuildSystemSourceAbsolute.m_String)
 			{
-				CStr Ret = CFile::fs_GetProgramDirectory() / "MTool";
-				#ifdef DPlatformFamily_Windows
-					Ret += ".exe";
-				#endif
-				return fg_Move(Ret);
+				if (_Context.m_pStorePositions)
+					_Context.m_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.BuildSystemSourceAbsolute")->f_AddValue(mp_FileLocation, f_EnableValues());
+
+				return &mp_FileLocation;
 			}
-			else if (Key.m_Name == "CMakeRoot")
+			else if (PropertyName == gc_ConstString_BuildSystemSource.m_String)
 			{
-				CUniversallyUniqueIdentifier UUIDNamespace("{EF53758B-02E4-4DE4-88CC-43513C7F6E2E}");
-
-				CStr CmakeProgramPath = CFile::fs_GetProgramDirectory() / "MToolCMake";
-
-#ifdef DPlatformFamily_Windows
-		        CmakeProgramPath += ".exe";
-#endif
-				CUniversallyUniqueIdentifier UUID{EUniversallyUniqueIdentifierGenerate_StringHash, UUIDNamespace, CmakeProgramPath.f_LowerCase()};
-
-				CStr CacheDirectory = CFile::fs_GetPath(CFile::fs_GetUserLocalProgramCacheDirectory()) / "MToolCMake";
-				CStr CmakeRoot = fg_Format("{}/{}/CMakeRoot", CacheDirectory, UUID.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum));
-
-				return fg_Move(CmakeRoot);
+				if (_Context.m_pStorePositions)
+					_Context.m_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.BuildSystemSource")->f_AddValue(mp_FileLocationFile, f_EnableValues());
+				
+				return &mp_FileLocationFile;
 			}
-			else if (Key.m_Name == "MalterlibExe")
+			else if (PropertyName == gc_ConstString_GeneratorStateFile.m_String)
 			{
-				CStr Ret = CFile::fs_GetProgramDirectory() / "mib";
-				#ifdef DPlatformFamily_Windows
-					Ret += ".exe";
-				#endif
-				return fg_Move(Ret);
+				if (_Context.m_pStorePositions)
+					_Context.m_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.GeneratorStateFile")->f_AddValue(mp_GeneratorStateFileName, f_EnableValues());
+				
+				return &mp_GeneratorStateFileName;
+			}
+			else if (PropertyName == gc_ConstString_BasePathAbsolute.m_String)
+			{
+				if (_Context.m_pStorePositions)
+					_Context.m_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.BasePathAbsolute")->f_AddValue(f_GetBaseDir(), f_EnableValues());
+				
+				return &mp_BaseDir;
+			}
+			else if (PropertyName == gc_ConstString_MToolExe.m_String)
+			{
+				if (_Context.m_pStorePositions)
+					_Context.m_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.MToolExe")->f_AddValue(mp_MToolExe, f_EnableValues());
+
+				return &mp_MToolExe;
+			}
+			else if (PropertyName == gc_ConstString_CMakeRoot.m_String)
+			{
+				if (_Context.m_pStorePositions)
+					_Context.m_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.CMakeRoot")->f_AddValue(mp_CMakeRoot, f_EnableValues());
+
+				return &mp_CMakeRoot;
+			}
+			else if (PropertyName == gc_ConstString_MalterlibExe.m_String)
+			{
+				if (_Context.m_pStorePositions)
+					_Context.m_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.MalterlibExe")->f_AddValue(mp_MalterlibExe, f_EnableValues());
+
+				return &mp_MalterlibExe;
 			}
 			else
 			{
-				CStr Ret;
-				if (!mp_GeneratorInterface->f_GetBuiltin(Key.m_Name, Ret))
-					fs_ThrowError(_Context, CStr::CFormat("Unrecognized builtin '{}'") << Key.m_Name);
-				return fg_Move(Ret);
+				bool bSuccess = false;
+				auto Return = mp_GeneratorInterface->f_GetBuiltin(_Context.m_pStorePositions, PropertyName, bSuccess);
+				if (!bSuccess)
+					fs_ThrowError(_Context, CStr::CFormat("Unrecognized builtin '{}'") << PropertyName);
+				return Return;
 			}
 		}
-		else if (Key.m_Type == EPropertyType_This)
+		else if (PropertyType == EPropertyType_This)
 		{
 			auto &ContextKey = pOriginalContext->f_GetKey();
 
 			if (ContextKey.m_Type == EEntityType_Root)
 				fs_ThrowError(_Context, "Cannot access this on root entity");
 
-			if (Key.m_Name == "Identity")
+			if (PropertyName == gc_ConstString_Identity.m_String)
 			{
 				if (!ContextKey.m_Name.f_IsConstantString())
 					fs_ThrowError(_Context, "Identity can only be gotten from entity with constant string name. Path: {}"_f << pOriginalContext->f_GetPath());
 
-				return pOriginalContext->f_GetKeyName();
+				return {pOriginalContext->f_GetKeyName()};
 			}
-			else if (Key.m_Name == "IdentityAsAbsolutePath")
+			else if (PropertyName == gc_ConstString_IdentityAsAbsolutePath.m_String)
 			{
 				if (!ContextKey.m_Name.f_IsConstantString())
 					fs_ThrowError(_Context, "Identity can only be gotten from entity with constant string name. Path: {}"_f << pOriginalContext->f_GetPath());
 
-				return CFile::fs_GetExpandedPath(pOriginalContext->f_GetKeyName(), CFile::fs_GetPath(pOriginalContext->f_Data().m_Position.m_File));
+				return {CFile::fs_GetExpandedPath(pOriginalContext->f_GetKeyName(), CFile::fs_GetPath(pOriginalContext->f_Data().m_Position.m_File))};
 			}
-			else if (Key.m_Name == "IdentityPath")
-				return pOriginalContext->f_Data().m_Position.m_File;
-			else if (Key.m_Name == "Type")
-				return fg_EntityTypeToStr(ContextKey.m_Type);
+			else if (PropertyName == gc_ConstString_IdentityPath.m_String)
+				return CEJSONSorted(pOriginalContext->f_Data().m_Position.m_File);
+			else if (PropertyName == gc_ConstString_Type.m_String)
+				return CEJSONSorted(fg_EntityTypeToStr(ContextKey.m_Type));
 			else
-				fs_ThrowError(_Context, CStr::CFormat("Unrecognized entity (this) accessor '{}'") << Key.m_Name);
+				fs_ThrowError(_Context, CStr::CFormat("Unrecognized entity (this) accessor '{}'") << PropertyName);
 		}
 		else if (pOriginalContext == &_Context.m_OriginalContext)
 		{
+			CPropertyKeyReference Key(CAssertAddedToStringCache(), PropertyType, PropertyName, PropertyNameHash);
+
 			for (auto *pEvaluatedProperties = _Context.m_EvalContext.m_pEvaluatedProperties; pEvaluatedProperties; pEvaluatedProperties = pEvaluatedProperties->m_pParentProperties)
 			{
 				auto pValue = pEvaluatedProperties->m_Properties.f_FindEqual(Key);
 				if (pValue)
-					return pValue->m_Value;
+				{
+					if (_Context.m_pStorePositions)
+						_Context.m_pStorePositions->f_AddPositions(pValue->m_pPositions);
+
+					if (_bMoveCache)
+						return CValuePotentiallyByRef(&pValue->m_Value, true);
+					else
+						return &pValue->m_Value;
+				}
 			}
 
-			CProperty const *pFromProperty = nullptr;
-			return fp_EvaluateEntityProperty(_Context.m_OriginalContext, _Context.m_OriginalContext, Key, _Context.m_EvalContext, pFromProperty, _Context.m_Position, &_Context);
+			CBuildSystemPropertyInfo PropertyInfo;
+			auto Return = fp_EvaluateEntityProperty
+				(
+					_Context.m_OriginalContext
+					, _Context.m_OriginalContext
+					, Key
+					, _Context.m_EvalContext
+					, PropertyInfo
+					, _Context.m_Position
+					, &_Context
+					, _bMoveCache
+				)
+			;
+
+			if (_Context.m_pStorePositions && PropertyInfo.m_pPositions)
+				_Context.m_pStorePositions->f_AddPositions(*PropertyInfo.m_pPositions);
+
+			return Return;
 		}
 		else
 		{
+			CPropertyKeyReference Key(CAssertAddedToStringCache(), PropertyType, PropertyName, PropertyNameHash);
+
 			CEvaluatedProperty * pValue;
 			{
 				pValue = pOriginalContext->m_EvaluatedProperties.m_Properties.f_FindEqual(Key);
 				if (pValue)
-					return pValue->m_Value;
+					return &pValue->m_Value;
 			}
 
 			pValue = pOriginalContext->m_EvaluatedProperties.m_Properties.f_FindEqual(Key);
 			if (!pValue)
 			{
-				CProperty const *pFromProperty = nullptr;
 				CChangePropertiesScope ChangeProperties(_Context.m_EvalContext, &pOriginalContext->m_EvaluatedProperties);
-				return fp_EvaluateEntityProperty(*pOriginalContext, *pOriginalContext, Key, _Context.m_EvalContext, pFromProperty, _Context.m_Position, &_Context);
+
+				CBuildSystemPropertyInfo PropertyInfo;
+
+				auto Return = fp_EvaluateEntityProperty(*pOriginalContext, *pOriginalContext, Key, _Context.m_EvalContext, PropertyInfo, _Context.m_Position, &_Context, false);
+
+				if (_Context.m_pStorePositions && PropertyInfo.m_pPositions)
+					_Context.m_pStorePositions->f_AddPositions(*PropertyInfo.m_pPositions);
+
+				return Return;
 			}
 			else
-				return pValue->m_Value;
+				return &pValue->m_Value;
 		}
 	}
 
-	CEJSON CBuildSystem::fp_EvaluatePropertyValueParam(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CParam const &_Value) const
+	CValuePotentiallyByRef CBuildSystem::fp_EvaluatePropertyValueParam(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CParam const &_Value) const
 	{
 		switch (_Value.m_Param.f_GetTypeID())
 		{
-			case 0: return _Value.m_Param.f_Get<0>();
+			case 0: return &_Value.m_Param.f_Get<0>();
 			case 1: return fp_EvaluatePropertyValueObject(_Context, _Value.m_Param.f_Get<1>());
 			case 2: return fp_EvaluatePropertyValueArray(_Context, _Value.m_Param.f_Get<2>());
-			case 3: return fp_EvaluatePropertyValueIdentifier(_Context, _Value.m_Param.f_Get<3>().f_Get());
-			case 4: return fp_EvaluatePropertyValueEvalString(_Context, _Value.m_Param.f_Get<4>());
-			case 5: return fp_EvaluatePropertyValueWildcardString(_Context, _Value.m_Param.f_Get<5>());
-			case 6: return fp_EvaluatePropertyValueExpression(_Context, _Value.m_Param.f_Get<6>().f_Get());
-			case 7: return fp_EvaluatePropertyValueExpressionAppend(_Context, _Value.m_Param.f_Get<7>().f_Get());
-			case 8: return fp_EvaluatePropertyValueTernary(_Context, _Value.m_Param.f_Get<8>().f_Get());
-			case 9: return fp_EvaluatePropertyValueBinaryOperator(_Context, _Value.m_Param.f_Get<9>().f_Get());
-			case 10: return fp_EvaluatePropertyValuePrefixOperator(_Context, _Value.m_Param.f_Get<10>().f_Get());
+			case 3: return fp_EvaluatePropertyValueIdentifier(_Context, _Value.m_Param.f_Get<3>().f_Get(), false);
+			case 4: return fp_EvaluatePropertyValueIdentifierReference(_Context, _Value.m_Param.f_Get<4>().f_Get());
+			case 5: return CEJSONSorted(fp_EvaluatePropertyValueEvalString(_Context, _Value.m_Param.f_Get<5>()));
+			case 6: return fp_EvaluatePropertyValueWildcardString(_Context, _Value.m_Param.f_Get<6>());
+			case 7: return fp_EvaluatePropertyValueExpression(_Context, _Value.m_Param.f_Get<7>().f_Get());
+			case 8: return fp_EvaluatePropertyValueExpressionAppend(_Context, _Value.m_Param.f_Get<8>().f_Get());
+			case 9: return fp_EvaluatePropertyValueTernary(_Context, _Value.m_Param.f_Get<9>().f_Get());
+			case 10: return fp_EvaluatePropertyValueBinaryOperator(_Context, _Value.m_Param.f_Get<10>().f_Get());
+			case 11: return fp_EvaluatePropertyValuePrefixOperator(_Context, _Value.m_Param.f_Get<11>().f_Get());
 			default: DNeverGetHere; break;
 		}
-		return {};
+		return CEJSONSorted();
 	}
 
-	CEJSON CBuildSystem::fp_EvaluatePropertyValueExpression(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CExpression const &_Value) const
+	CValuePotentiallyByRef CBuildSystem::fp_EvaluatePropertyValueExpression(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CExpression const &_Value) const
 	{
 		if (_Value.m_Expression.f_IsOfType<CBuildSystemSyntax::CFunctionCall>())
-			return fp_EvaluatePropertyValueFunctionCall(_Context, _Value.m_Expression.f_GetAsType<CBuildSystemSyntax::CFunctionCall>());
+			return fp_EvaluatePropertyValueFunctionCall(_Context, _Value.m_Expression.f_GetAsType<CBuildSystemSyntax::CFunctionCall>(), false);
 		else if (_Value.m_Expression.f_IsOfType<CBuildSystemSyntax::CParam>())
 			return fp_EvaluatePropertyValueParam(_Context, _Value.m_Expression.f_GetAsType<CBuildSystemSyntax::CParam>());
 		else if (_Value.m_Expression.f_IsOfType<TCIndirection<CBuildSystemSyntax::CJSONAccessor>>())
@@ -1648,22 +1975,29 @@ namespace NMib::NBuildSystem
  		else
 			DMibNeverGetHere;
 
-		return {};
+		return CEJSONSorted();
 	}
 
-	CEJSON CBuildSystem::fp_EvaluatePropertyValueTernary(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CTernary const &_Value) const
+	CValuePotentiallyByRef CBuildSystem::fp_EvaluatePropertyValueTernary(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CTernary const &_Value) const
 	{
-		CEJSON Conditional = fp_EvaluatePropertyValueParam(_Context, _Value.m_Conditional);
-		if (!Conditional.f_IsBoolean())
+		auto Conditional = fp_EvaluatePropertyValueParam(_Context, _Value.m_Conditional);
+		auto &ConditionalRef = Conditional.f_Get();
+		if (!ConditionalRef.f_IsBoolean())
 			fs_ThrowError(_Context, "Expected conditional to evalute to a boolean");
 
-		if (Conditional.f_Boolean())
+		if (ConditionalRef.f_Boolean())
 			return fp_EvaluatePropertyValueParam(_Context, _Value.m_Left);
 		else
 			return fp_EvaluatePropertyValueParam(_Context, _Value.m_Right);
 	}
 
-	CEJSON CBuildSystem::fp_EvaluatePropertyValue(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CRootValue const &_Value, CPropertyKey const *_pProperty) const
+	CValuePotentiallyByRef CBuildSystem::fp_EvaluateRootValue
+		(
+			CEvalPropertyValueContext &_Context
+			, CBuildSystemSyntax::CRootValue const &_Value
+			, CPropertyKey const *_pProperty
+			, bool &o_bTypeAlreadyChecked
+		) const
 	{
 		if (!_Value.m_Accessors.f_IsEmpty())
 		{
@@ -1671,11 +2005,11 @@ namespace NMib::NBuildSystem
 				fs_ThrowError(_Context, "Accessors are only supported at root");
 
 			CBuildSystemSyntax::CIdentifier Identifier;
-			Identifier.m_PropertyType = _pProperty->m_Type;
-			Identifier.m_Name = _pProperty->m_Name;
+			Identifier.m_PropertyType = _pProperty->f_GetType();
+			Identifier.m_Name = _pProperty->f_GetStringAndHash();
 
-			CEJSON Return = fp_EvaluatePropertyValueIdentifier(_Context, Identifier);
-			CEJSON *pWriteDestination = &Return;
+			auto Return = fp_EvaluatePropertyValueIdentifier(_Context, Identifier, true);
+			CEJSONSorted *pWriteDestination = Return.f_MakeMutable();
 
 			fp_ApplyAccessors
 				(
@@ -1683,16 +2017,17 @@ namespace NMib::NBuildSystem
 					, _Value.m_Accessors
 					, [&](CStr const &_MemberName)
 					{
-						auto pMember = pWriteDestination->f_GetMember(_MemberName);
-						if (!pMember)
-							fs_ThrowError(_Context, "No member named '{}' in JSON object"_f << _MemberName);
+						if (!pWriteDestination->f_IsObject() && pWriteDestination->f_IsValid())
+							fs_ThrowError(_Context, "Not an object so cannot apply member");
 
-						pWriteDestination = pMember;
+						auto &Member = (*pWriteDestination)[_MemberName];
+
+						pWriteDestination = &Member;
 					}
 					, [&](int64 _Index)
 					{
 						if (!pWriteDestination->f_IsArray())
-							fs_ThrowError(_Context, "JSON object is not an array so cannot apply subscript index");
+							fs_ThrowError(_Context, "Not an array so cannot apply subscript index");
 
 						auto &Array = pWriteDestination->f_Array();
 
@@ -1704,30 +2039,30 @@ namespace NMib::NBuildSystem
 				)
 			;
 
-			CWritePropertyContext WriteContext{*_pProperty, pWriteDestination, &_Value.m_Accessors};
-			*pWriteDestination = fp_EvaluatePropertyValue(_Context, _Value.m_Value, &WriteContext);
+			CWritePropertyContext WriteContext{*_pProperty, o_bTypeAlreadyChecked, pWriteDestination, &_Value.m_Accessors};
+			*pWriteDestination = fp_EvaluatePropertyValue(_Context, _Value.m_Value, &WriteContext).f_Move();
 
 			return Return;
 		}
 
-		CWritePropertyContext WriteContext{*_pProperty};
+		CWritePropertyContext WriteContext{*_pProperty, o_bTypeAlreadyChecked};
 		return fp_EvaluatePropertyValue(_Context, _Value.m_Value, &WriteContext);
 	}
 
-	CEJSON CBuildSystem::fp_EvaluatePropertyValue(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CValue const &_Value, CWritePropertyContext *_pWriteContext) const
+	CValuePotentiallyByRef CBuildSystem::fp_EvaluatePropertyValue(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CValue const &_Value, CWritePropertyContext *_pWriteContext) const
 	{
 		switch (_Value.m_Value.f_GetTypeID())
 		{
-		case 0: return _Value.m_Value.f_Get<0>();
+		case 0: return &_Value.m_Value.f_Get<0>();
 		case 1: return fp_EvaluatePropertyValueObject(_Context, _Value.m_Value.f_Get<1>());
 		case 2: return fp_EvaluatePropertyValueArray(_Context, _Value.m_Value.f_Get<2>());
 		case 3: return fp_EvaluatePropertyValueWildcardString(_Context, _Value.m_Value.f_Get<3>());
-		case 4: return fp_EvaluatePropertyValueEvalString(_Context, _Value.m_Value.f_Get<4>());
+		case 4: return CEJSONSorted(fp_EvaluatePropertyValueEvalString(_Context, _Value.m_Value.f_Get<4>()));
 		case 5: return fp_EvaluatePropertyValueExpression(_Context, _Value.m_Value.f_Get<5>());
 		case 6: return fp_EvaluatePropertyValueExpressionAppend(_Context, _Value.m_Value.f_Get<6>());
 		case 7: return fp_EvaluatePropertyValueOperator(_Context, _Value.m_Value.f_Get<7>(), _pWriteContext);
 		case 8: return fp_EvaluatePropertyValueDefine(_Context, _Value.m_Value.f_Get<8>());
-		default: DMibNeverGetHere; return {};
+		default: DMibNeverGetHere; return CEJSONSorted();
 		}
 	}
 
@@ -1736,26 +2071,27 @@ namespace NMib::NBuildSystem
 			CEvalPropertyValueContext &_Context
 			, CBuildSystemSyntax::CFunctionCall const &_FunctionCall
 			, CBuildSystemSyntax::CFunctionType const &_FunctionType
-			, TCFunctionNoAlloc<void (CEJSON &&_Param, CBuildSystemSyntax::CFunctionParameter const &_FunctionParam, bool _bEllipsis)> const &_fConsumeParam
+			, TCFunctionNoAlloc<void (CEJSONSorted &&_Param, CBuildSystemSyntax::CFunctionParameter const &_FunctionParam, bool _bEllipsis, bool _bAddDefault)> const &_fConsumeParam
 			, CFilePosition const &_TypePosition
 		) const
 	{
-		TCVector<CEJSON> EvalParams;
+		TCVector<CEJSONSorted> EvalParams;
 		for (auto &Param : _FunctionCall.m_Params)
 		{
 			if (Param.m_Param.f_IsOfType<TCIndirection<CBuildSystemSyntax::CExpressionAppend>>())
 			{
 				auto &Expression = Param.m_Param.f_GetAsType<TCIndirection<CBuildSystemSyntax::CExpressionAppend>>().f_Get();
-				CEJSON ToAppend = fp_EvaluatePropertyValueExpression(_Context, Expression);
-				if (ToAppend.f_IsArray())
-					EvalParams.f_Insert(ToAppend.f_Array());
-				else if (!ToAppend.f_IsValid())
+				auto ToAppend = fp_EvaluatePropertyValueExpression(_Context, Expression);
+				auto &ToAppendRef = ToAppend.f_Get();
+				if (ToAppendRef.f_IsArray())
+					EvalParams.f_Insert(ToAppend.f_MoveArray());
+				else if (!ToAppendRef.f_IsValid())
 					; // Undefined values are ignored
 				else
-					fs_ThrowError(_Context, "Append expressions expects an array to expand. {} resulted in : {}"_f << Expression << ToAppend);
+					fs_ThrowError(_Context, "Append expressions expects an array to expand. {} resulted in : {}"_f << Expression << ToAppendRef);
 			}
 			else
-				EvalParams.f_Insert(fp_EvaluatePropertyValueParam(_Context, Param));
+				EvalParams.f_Insert(fp_EvaluatePropertyValueParam(_Context, Param).f_Move());
 		}
 
 		{
@@ -1765,7 +2101,7 @@ namespace NMib::NBuildSystem
 			for (auto &EvalParam : EvalParams)
 			{
 				if (!iParamType)
-					fs_ThrowError(_Context, "Too many parameters for function '{}' with type: {}"_f << _FunctionCall.m_Name << _FunctionType);
+					fs_ThrowError(_Context, "Too many parameters for function '{}' with type: {}"_f << _FunctionCall.m_PropertyKey << _FunctionType);
 
 				fp_CheckValueConformToType
 					(
@@ -1776,17 +2112,17 @@ namespace NMib::NBuildSystem
 						, _TypePosition
 						, [&]() -> CStr
 						{
-							return "In call to function '{}' parameter {} ({})"_f << _FunctionCall.m_Name << iParamType->m_Name << iParam;
+							return "In call to function '{}' parameter {} ({})"_f << _FunctionCall.m_PropertyKey << iParamType->m_Name << iParam;
 						}
 						, EDoesValueConformToTypeFlag_None
 					)
 				;
 
 				if (iParamType->m_ParamType == CBuildSystemSyntax::CFunctionParameter::EParamType_Ellipsis)
-					_fConsumeParam(fg_Move(EvalParam), *iParamType, true);
+					_fConsumeParam(fg_Move(EvalParam), *iParamType, true, false);
 				else
 				{
-					_fConsumeParam(fg_Move(EvalParam), *iParamType, false);
+					_fConsumeParam(fg_Move(EvalParam), *iParamType, false, false);
 					++iParamType;
 				}
 
@@ -1796,10 +2132,13 @@ namespace NMib::NBuildSystem
 			for (; iParamType; ++iParamType)
 			{
 				if (iParamType->m_ParamType == CBuildSystemSyntax::CFunctionParameter::EParamType_Ellipsis)
+				{
+					_fConsumeParam({}, *iParamType, true, true);
 					break;
+				}
 				if (iParamType->m_ParamType == CBuildSystemSyntax::CFunctionParameter::EParamType_Optional)
 				{
-					CEJSON Param; // Undefined
+					CEJSONSorted Param; // Undefined
 
 					fp_CheckValueConformToType
 						(
@@ -1816,92 +2155,107 @@ namespace NMib::NBuildSystem
 						)
 					;
 
-					_fConsumeParam(fg_Move(Param), *iParamType, false);
+					_fConsumeParam(fg_Move(Param), *iParamType, false, false);
 				}
 				else
-					fs_ThrowError(_Context, "Missing parameters for function '{}' with type: {}"_f << _FunctionCall.m_Name << _FunctionType);
+					fs_ThrowError(_Context, "Missing parameters for function '{}' with type: {}"_f << _FunctionCall.m_PropertyKey << _FunctionType);
 				++iParam;
 			}
 		}
 	}
 
-	NEncoding::CEJSON CBuildSystem::fp_EvaluatePropertyValueFunctionCallBuiltin
+	NEncoding::CEJSONSorted CBuildSystem::fp_EvaluatePropertyValueFunctionCallBuiltin
 		(
 			CEvalPropertyValueContext &_Context
 			, CBuildSystemSyntax::CFunctionCall const &_FunctionCall
 			, CBuiltinFunction const *_pFunction
 		) const
 	{
-		TCVector<CEJSON> Params;
-		TCVector<CEJSON> *pEllipsis = nullptr;
+		CBuildSystemUniquePositions::CPosition *pPosition = nullptr;
+		if (_Context.m_pStorePositions)
+			pPosition = _Context.m_pStorePositions->f_AddPosition(_pFunction->m_Position, "Call builtin '{}'"_f << _FunctionCall.m_PropertyKey.m_Name);
+
+		TCVector<CEJSONSorted> Params;
+		TCVector<CEJSONSorted> *pEllipsis = nullptr;
 		fp_EvaluatePropertyValueFunctionCallCollectParams
 			(
 				_Context
 				, _FunctionCall
 				, _pFunction->m_Type
-				, [&](CEJSON &&_Param, CBuildSystemSyntax::CFunctionParameter const &_FunctionParam, bool _bEllipsis)
+				, [&](CEJSONSorted &&_Param, CBuildSystemSyntax::CFunctionParameter const &_FunctionParam, bool _bEllipsis, bool _bAddDefault)
 				{
 					if (_bEllipsis)
 					{
 						if (!pEllipsis)
 							pEllipsis = &Params.f_Insert(EJSONType_Array).f_Array();
-						pEllipsis->f_Insert(fg_Move(_Param));
+						if (!_bAddDefault)
+							pEllipsis->f_Insert(fg_Move(_Param));
 					}
 					else
 						Params.f_Insert(fg_Move(_Param));
 				}
-				, {}
+				, _pFunction->m_Position
 			)
 		;
 
-		return _pFunction->m_fFunction(*this, _Context, fg_Move(Params));
+		auto Return = _pFunction->m_fFunction(*this, _Context, fg_Move(Params));
+
+		if (pPosition)
+			pPosition->f_AddValue(Return, f_EnableValues());
+
+		return Return;
 	}
 
-	CEJSON CBuildSystem::fp_EvaluatePropertyValueFunctionCall(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CFunctionCall const &_FunctionCall) const
+	NEncoding::CEJSONSorted CBuildSystem::fp_EvaluatePropertyValueFunctionCall(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CFunctionCall const &_FunctionCall, bool _bMoveCache) const
 	{
-		if (_FunctionCall.m_PropertyType == EPropertyType_Property)
+		if (_FunctionCall.m_PropertyKey.f_GetType() == EPropertyType_Property)
 		{
-			auto pFunction = fg_RemoveQualifiers(mp_BuiltinFunctions).f_FindEqual(_FunctionCall.m_Name);
+			auto pFunction = fg_RemoveQualifiers(mp_BuiltinFunctions).f_FindEqual(_FunctionCall.m_PropertyKey.m_Name);
 			if (pFunction)
 				return fp_EvaluatePropertyValueFunctionCallBuiltin(_Context, _FunctionCall, pFunction);
 		}
 
-		CPropertyKey PropertyKey(_FunctionCall.m_PropertyType, _FunctionCall.m_Name);
+		auto KeyReference = _FunctionCall.m_PropertyKey.f_Reference();
 
-		auto *pTypeWithPosition = fp_GetTypeForProperty(_Context, PropertyKey);
+		auto *pTypeWithPosition = fp_GetTypeForProperty(_Context, KeyReference);
 		if (!pTypeWithPosition)
-			fs_ThrowError(_Context, "No such function: {}"_f << PropertyKey);
+			fs_ThrowError(_Context, "No such function: {}"_f << KeyReference);
 
-		auto TypePosition = pTypeWithPosition->m_Position;
+		auto pTypePosition = &pTypeWithPosition->m_Position;
 
-		CBuildSystemSyntax::CType const *pType = fp_GetCanonicalType(_Context, &pTypeWithPosition->m_Type, TypePosition);
+		CBuildSystemSyntax::CType const *pType = fp_GetCanonicalType(_Context, &pTypeWithPosition->m_Type, pTypePosition);
 
 		if (!pType->m_Type.f_IsOfType<CBuildSystemSyntax::CFunctionType>())
-			fs_ThrowError(_Context, "Type is a variable, not a fuction: {}"_f << PropertyKey);
+			fs_ThrowError(_Context, "Type is a variable, not a fuction: {}"_f << KeyReference);
 
 		auto &FunctionType = pType->m_Type.f_GetAsType<CBuildSystemSyntax::CFunctionType>();
 
 		CEvaluatedProperties TempProperties;
 		TempProperties.m_pParentProperties = _Context.m_EvalContext.m_pEvaluatedProperties;
 
-		TCVector<CEJSON> *pEllipsis = nullptr;
+		TCVector<CEJSONSorted> *pEllipsis = nullptr;
 		fp_EvaluatePropertyValueFunctionCallCollectParams
 			(
 				_Context
 				, _FunctionCall
 				, FunctionType
-				, [&](CEJSON &&_Param, CBuildSystemSyntax::CFunctionParameter const &_FunctionParam, bool _bEllipsis)
+				, [&](CEJSONSorted &&_Param, CBuildSystemSyntax::CFunctionParameter const &_FunctionParam, bool _bEllipsis, bool _bAddDefault)
 				{
 					if (_bEllipsis)
 					{
 						if (!pEllipsis)
-							pEllipsis = &(TempProperties.m_Properties[CPropertyKey(_FunctionParam.m_Name)].m_Value = EJSONType_Array).f_Array();
-						pEllipsis->f_Insert(fg_Move(_Param));
+						{
+							pEllipsis = &(TempProperties.m_Properties[CPropertyKey(mp_StringCache, _FunctionParam.m_Name)].m_Value = EJSONType_Array).f_Array();
+							pEllipsis->f_Clear();
+						}
+
+						if (!_bAddDefault)
+							pEllipsis->f_Insert(fg_Move(_Param));
 					}
 					else
-						TempProperties.m_Properties[CPropertyKey(_FunctionParam.m_Name)].m_Value = fg_Move(_Param);
+						TempProperties.m_Properties[CPropertyKey(mp_StringCache, _FunctionParam.m_Name)].m_Value = fg_Move(_Param);
 				}
-				, TypePosition
+				, *pTypePosition
 			)
 		;
 
@@ -1915,22 +2269,24 @@ namespace NMib::NBuildSystem
 			}
 		;
 
-		CPropertyKey TemplateKey;
-		TemplateKey.m_Name = _FunctionCall.m_Name;
-		TemplateKey.m_Type = _FunctionCall.m_PropertyType;
+		CBuildSystemPropertyInfo PropertyInfo;
 
-		CProperty const *pProperty;
-
-		return fp_EvaluateEntityProperty
+		auto Return = fp_EvaluateEntityProperty
 			(
 				_Context.m_OriginalContext
 				, _Context.m_OriginalContext
-				, TemplateKey
+				, KeyReference
 				, _Context.m_EvalContext
-				, pProperty
+				, PropertyInfo
 				, _Context.m_Position
 				, &_Context
+				, _bMoveCache
 			)
 		;
+
+		if (_Context.m_pStorePositions && PropertyInfo.m_pPositions)
+			_Context.m_pStorePositions->f_AddPositions(*PropertyInfo.m_pPositions);
+
+		return Return.f_Move();
 	}
 }

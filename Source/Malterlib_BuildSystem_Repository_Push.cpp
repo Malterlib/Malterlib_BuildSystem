@@ -3,6 +3,8 @@
 
 #include "Malterlib_BuildSystem_Repository.h"
 
+#include <Mib/Concurrency/AsyncDestroy>
+
 namespace NMib::NBuildSystem
 {
 	using namespace NRepository;
@@ -139,7 +141,7 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	CBuildSystem::ERetry CBuildSystem::f_Action_Repository_Push
+	TCFuture<CBuildSystem::ERetry> DMibWorkaroundUBSanSectionErrors CBuildSystem::f_Action_Repository_Push
 		(
 		 	CGenerateOptions const &_GenerateOptions
 		 	, CRepoFilter const &_Filter
@@ -147,46 +149,17 @@ namespace NMib::NBuildSystem
 		 	, ERepoPushFlag _PushFlags
 		)
 	{
-		TCSharedPointer<CDefaultRunLoop> pRunLoop = fg_Construct();
-		auto CleanupRunLoop = g_OnScopeExit / [&]
-			{
-				while (pRunLoop->m_RefCount.f_Get() > 0)
-					pRunLoop->f_WaitOnceTimeout(0.1);
-			}
-		;
-		TCActor<CDispatchingActor> HelperActor(fg_Construct(), pRunLoop->f_Dispatcher());
-		auto CleanupHelperActor = g_OnScopeExit / [&]
-			{
-				HelperActor->f_BlockDestroy(pRunLoop->f_ActorDestroyLoop());
-			}
-		;
-		CCurrentlyProcessingActorScope CurrentActor{HelperActor};
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
 
-		return fg_CallSafe(this, &CBuildSystem::f_Action_Repository_Push_Async, _GenerateOptions, _Filter, _Remotes, _PushFlags).f_CallSync(pRunLoop);
-	}
-
-	TCFuture<CBuildSystem::ERetry> DMibWorkaroundUBSanSectionErrors CBuildSystem::f_Action_Repository_Push_Async
-		(
-		 	CGenerateOptions const &_GenerateOptions
-		 	, CRepoFilter const &_Filter
-		 	, TCVector<CStr> const &_Remotes
-		 	, ERepoPushFlag _PushFlags
-		)
-	{
 		TCSharedPointer<CGenerateEphemeralState> pGenerateState = fg_Construct();
-		try
-		{
-			if (ERetry Retry = fp_GeneratePrepare(_GenerateOptions, *pGenerateState, nullptr); Retry != ERetry_None)
-				co_return Retry;
-		}
-		catch (CException const &_Exception)
-		{
-			co_return _Exception.f_ExceptionPointer();
-		}
 
-		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredReposAsync(_Filter, *this, mp_Data);
+		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, *pGenerateState, nullptr); Retry != ERetry_None)
+			co_return Retry;
 
-		CGitLaunches Launches{mp_BaseDir, (_PushFlags & ERepoPushFlag_Pretend) ? "Pretending to push repos" : "Pushing repos", mp_AnsiFlags, mp_fOutputConsole};
+		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(_Filter, *this, mp_Data);
+
+		CGitLaunches Launches{f_GetBaseDir(), (_PushFlags & ERepoPushFlag_Pretend) ? "Pretending to push repos" : "Pushing repos", mp_AnsiFlags, mp_fOutputConsole, f_GetCancelledPointer()};
+		auto DestroyLaunchs = co_await co_await Launches.f_Init();
 
 		CColors Colors(mp_AnsiFlags);
 

@@ -6,12 +6,12 @@
 namespace NMib::NBuildSystem
 {
 	template <typename tf_CType>
-	CBuildSystemSyntax::CFunctionParameter fg_FunctionParam(tf_CType &&_Type, CStr &&_Name, CBuildSystemSyntax::CFunctionParameter::EParamType _ParamType)
+	CBuildSystemSyntax::CFunctionParameter fg_FunctionParam(tf_CType &&_Type, CStr const &_Name, CBuildSystemSyntax::CFunctionParameter::EParamType _ParamType)
 	{
 		return CBuildSystemSyntax::CFunctionParameter
 			{
 				CBuildSystemSyntax::CType{fg_Forward<tf_CType>(_Type)}
-				, fg_Move(_Name)
+				, _Name
 				, _ParamType
 			}
 		;

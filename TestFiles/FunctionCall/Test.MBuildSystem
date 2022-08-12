@@ -51,7 +51,7 @@
 		}
 		TestEllipsis function(string _Test, any ...p_Inner) string
 		TestEllipsis `@(_Test) @(Format("{} {} {}", p_Inner...))`
-		TestValues define [any] = ["Test", 2, "6"]
+		TestValues: [any] = ["Test", 2, "6"]
 	}
 	GenerateFile
 	{

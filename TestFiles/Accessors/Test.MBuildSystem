@@ -19,7 +19,7 @@
 {
 	Property
 	{
-		CalcValue define {
+		CalcValue: {
 			Test: string
 			, TestOptional?: {
 				InnerValue: string
@@ -37,7 +37,7 @@
 		CalcValue #<Test> "Test 4"
 		CalcValue #<Test> =+ " Appended"
 
-		CalcValueAny define {
+		CalcValueAny: {
 			...: any
 		}
 
@@ -51,17 +51,17 @@
 		CalcValueAny #<Test> "Test 4"
 		CalcValueAny #<Test> =+ " Appended"
 
-		ArrayAccessIndex define int
+		ArrayAccessIndex: int
 		ArrayAccessIndex 1
 
-		TestValue define string
+		TestValue: string
 		TestValue "false"
 		TestValue "true"
 		{
 			!!CalcValue<Test> "Test 4 Appended"
 		}
 
-		TestValueAny define string
+		TestValueAny: string
 		TestValueAny "false"
 		TestValueAny "true"
 		{

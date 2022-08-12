@@ -12,7 +12,7 @@ namespace NMib::NBuildSystem
 	CBuildSystemData::CBuildSystemData(CBuildSystemData const &_Right)
 		: m_ConfigurationTypes(_Right.m_ConfigurationTypes)
 		, m_RootEntity(_Right.m_RootEntity, nullptr, EEntityCopyFlag_CopyChildren | EEntityCopyFlag_CopyExternal)
-		, m_SourceFiles(_Right.m_SourceFiles)
+		, m_MutableSourceFiles(_Right.m_MutableSourceFiles)
 	{
 		DMibRequire(_Right.m_RootEntity.m_pParent == nullptr);
 		DMibRequire(_Right.m_RootEntity.f_GetKey() == CEntityKey{});
@@ -32,6 +32,6 @@ namespace NMib::NBuildSystem
 	{
 		m_ConfigurationTypes = _Other.m_ConfigurationTypes;
 		m_RootEntity.f_Assign(_Other.m_RootEntity);
-		m_SourceFiles = _Other.m_SourceFiles;
+		m_MutableSourceFiles = _Other.m_MutableSourceFiles;
 	}
 }

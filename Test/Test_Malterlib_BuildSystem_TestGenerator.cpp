@@ -13,53 +13,90 @@ namespace
 	using namespace NMib::NContainer;
 	using namespace NMib::NBuildSystem;
 	using namespace NMib::NStorage;
+	using namespace NMib::NConcurrency;
+
+	constexpr CStr gc_TestGeneratorDependencyFiles = gc_Str<"TestGeneratorDependencyFiles">;
 
 	class CBuildSystemGenerator_Test : public CBuildSystemGenerator, public ICGeneratorInterface
 	{
 		// CGeneratorInterface
-		bool f_GetBuiltin(NStr::CStr const &_Value, NStr::CStr &_Result) const override
+		CValuePotentiallyByRef f_GetBuiltin(CBuildSystemUniquePositions *_pStorePositions, CStr const &_Value, bool &o_bSuccess) const override
 		{
+			CStr Result;
 			if (_Value == "BasePathRelativeProject")
 			{
-				_Result = ".";
-				return true;
+				Result = ".";
+				if (_pStorePositions)
+					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.BasePathRelativeProject")->f_AddValue(Result, false);
+
+				o_bSuccess = true;
+				return CEJSONSorted(Result);
 			}
 			else if (_Value == "BasePath")
 			{
-				_Result = mp_BaseDir;
-				return true;
+				Result = mp_BaseDir;
+				if (_pStorePositions)
+					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.BasePath")->f_AddValue(Result, false);
+
+				o_bSuccess = true;
+				return CEJSONSorted(Result);
 			}
 			else if (_Value == "GeneratedBuildSystemDir")
 			{
-				_Result = mp_OutputDir;
-				return true;
+				Result = mp_OutputDir;
+				if (_pStorePositions)
+					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.GeneratedBuildSystemDir")->f_AddValue(Result, false);
+
+				o_bSuccess = true;
+				return CEJSONSorted(Result);
 			}
 			else if (_Value == "ProjectPath")
 			{
-				_Result = ".";
-				return true;
+				Result = ".";
+				if (_pStorePositions)
+					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.ProjectPath")->f_AddValue(Result, false);
+
+				o_bSuccess = true;
+				return CEJSONSorted(Result);
 			}
 			else if (_Value == "Inherit")
 			{
-				_Result = "";
-				return true;
+				Result = "";
+				if (_pStorePositions)
+					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.Inherit")->f_AddValue(Result, false);
+
+				o_bSuccess = true;
+				return CEJSONSorted(Result);
 			}
 			else if (_Value == "IntermediateDirectory")
 			{
-				_Result = mp_OutputDir / "Intermediate";
-				return true;
+				Result = mp_OutputDir / "Intermediate";
+				if (_pStorePositions)
+					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.IntermediateDirectory")->f_AddValue(Result, false);
+
+				o_bSuccess = true;
+				return CEJSONSorted(Result);
 			}
 			else if (_Value == "OutputDirectory")
 			{
-				_Result = mp_OutputDir / "Output";
-				return true;
+				Result = mp_OutputDir / "Output";
+				if (_pStorePositions)
+					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.OutputDirectory")->f_AddValue(Result, false);
+
+				o_bSuccess = true;
+				return CEJSONSorted(Result);
 			}
 			else if (_Value == "SourceFileName")
 			{
-				_Result = "";
-				return true;
+				Result = "";
+				if (_pStorePositions)
+					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.SourceFileName")->f_AddValue(Result, false);
+
+				o_bSuccess = true;
+				return CEJSONSorted(Result);
 			}
-			return false;
+			
+			return CEJSONSorted();
 		}
 
 		NStr::CStr f_GetExpandedPath(NStr::CStr const &_Path, NStr::CStr const &_Base) const override
@@ -76,46 +113,53 @@ namespace
 		CStr mp_BaseDir;
 
 	public:
-		TCMap<CPropertyKey, CEJSON> f_GetValues(CBuildSystem const &_BuildSystem, CStr const &_OutputDir) override
+		TCMap<CPropertyKey, CEJSONSorted> f_GetValues(CBuildSystem const &_BuildSystem, CStr const &_OutputDir) override
 		{
-			TCMap<CPropertyKey, CEJSON> Values;
+			TCMap<CPropertyKey, CEJSONSorted> Values;
 
-			Values[CPropertyKey("MToolVersion")] = CBuildSystem::mc_MToolVersion;
-			Values[CPropertyKey("Generator")] = _BuildSystem.f_GetGenerateSettings().m_Generator;
-			Values[CPropertyKey("GeneratorFamily")] = "Test";
-			Values[CPropertyKey("BuildSystemBasePath")] = _BuildSystem.f_GetBaseDir();
-			Values[CPropertyKey("BuildSystemOutputDir")] = _OutputDir;
-			Values[CPropertyKey("BuildSystemPlatform")] = "Test";
-			Values[CPropertyKey("BuildSystemFile")] = _BuildSystem.f_GetGenerateSettings().m_SourceFile;
-			Values[CPropertyKey("BuildSystemName")] = CFile::fs_GetFileNoExt(_BuildSystem.f_GetGenerateSettings().m_SourceFile);
+			Values[CPropertyKey(_BuildSystem.f_StringCache(), "MToolVersion")] = CBuildSystem::mc_MToolVersion;
+			Values[CPropertyKey(_BuildSystem.f_StringCache(), "Generator")] = _BuildSystem.f_GetGenerateSettings().m_Generator;
+			Values[CPropertyKey(_BuildSystem.f_StringCache(), "GeneratorFamily")] = "Test";
+			Values[CPropertyKey(_BuildSystem.f_StringCache(), "BuildSystemBasePath")] = _BuildSystem.f_GetBaseDir();
+			Values[CPropertyKey(_BuildSystem.f_StringCache(), "BuildSystemOutputDir")] = _OutputDir;
+			Values[CPropertyKey(_BuildSystem.f_StringCache(), "BuildSystemPlatform")] = "Test";
+			Values[CPropertyKey(_BuildSystem.f_StringCache(), "BuildSystemFile")] = _BuildSystem.f_GetGenerateSettings().m_SourceFile;
+			Values[CPropertyKey(_BuildSystem.f_StringCache(), "BuildSystemName")] = CFile::fs_GetFileNoExt(_BuildSystem.f_GetGenerateSettings().m_SourceFile);
 
-			Values[CPropertyKey("HostPlatform")] = "Test1.0";
-			Values[CPropertyKey("HostPlatformFamily")] = "Test";
-			Values[CPropertyKey("HostArchitecture")] = "NoArch";
+			Values[CPropertyKey(_BuildSystem.f_StringCache(), "HostPlatform")] = "Test1.0";
+			Values[CPropertyKey(_BuildSystem.f_StringCache(), "HostPlatformFamily")] = "Test";
+			Values[CPropertyKey(_BuildSystem.f_StringCache(), "HostArchitecture")] = "NoArch";
 
 			return Values;
 		}
 
-		virtual void f_Generate(CBuildSystem const &_BuildSystem, CBuildSystemData const &_BuildSystemData, CStr const &_OutputDir) override
+		TCFuture<void> f_Generate(CBuildSystem const *_pBuildSystem, CBuildSystemData const *_pBuildSystemData, CStr _OutputDir, TCMap<CStr, uint32> &o_NumWorkspaceTargets) override
 		{
-			mp_OutputDir = _OutputDir;
-			mp_BaseDir = _BuildSystem.f_GetBaseDir();
+			co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
 
-			_BuildSystem.f_SetGeneratorInterface(this);
+			_pBuildSystem->f_StringCache().f_AddString(gc_TestGeneratorDependencyFiles, gc_TestGeneratorDependencyFiles.f_Hash());
+
+			auto &BuildSystem = *_pBuildSystem;
+			auto &BuildSystemDataIn = *_pBuildSystemData;
+
+			mp_OutputDir = _OutputDir;
+			mp_BaseDir = BuildSystem.f_GetBaseDir();
+
+			BuildSystem.f_SetGeneratorInterface(this);
 			auto Cleanup = g_OnScopeExit / [&]
 				{
-					_BuildSystem.f_SetGeneratorInterface(nullptr);
+					BuildSystem.f_SetGeneratorInterface(nullptr);
 				}
 			;
 
 			CStr SolutionDir = _OutputDir;
-			CStr BuildSystemBase = _BuildSystem.f_GetBaseDir();
+			CStr BuildSystemBase = BuildSystem.f_GetBaseDir();
 
-			TCMap<CPropertyKey, CEJSON> Values = f_GetValues(_BuildSystem, _OutputDir);
+			TCMap<CPropertyKey, CEJSONSorted> Values = f_GetValues(BuildSystem, _OutputDir);
 
 			TCMap<CConfiguration, TCUniquePointer<CConfiguraitonData>> Configurations;
 
-			TCVector<TCVector<CConfigurationTuple>> Tuples = _BuildSystem.f_EvaluateConfigurationTuples(Values);
+			TCVector<TCVector<CConfigurationTuple>> Tuples = BuildSystem.f_EvaluateConfigurationTuples(Values);
 
 			for (auto iTuple = Tuples.f_GetIterator(); iTuple; ++iTuple)
 			{
@@ -162,13 +206,13 @@ namespace
 
 			TCSet<CStr> ReservedGroups;
 
-			_BuildSystem.f_GenerateBuildSystem(Configurations, Values);
+			co_await BuildSystem.f_GenerateBuildSystem(&Configurations, &Values);
 
-			CEJSON BuildSystemData;
+			CEJSONSorted BuildSystemData;
 
 			auto &OutWorkspace = BuildSystemData["Workspaces"].f_Object();
 
-			auto fCopyGroups = [&](CEJSON::CObject &o_Groups, TCMap<CStr, CGroupInfo> const &_Groups, TCMap<CGroupInfo const *, CEJSON::CObject *> &o_Mapping)
+			auto fCopyGroups = [&](CEJSONSorted::CObject &o_Groups, TCMap<CStr, CGroupInfo> const &_Groups, TCMap<CGroupInfo const *, CEJSONSorted::CObject *> &o_Mapping)
 				{
 					for (auto iGroup = _Groups.f_GetIterator(); iGroup; ++iGroup)
 					{
@@ -191,7 +235,7 @@ namespace
 				}
 			;
 
-			auto fStorePosition = [&](CEJSON &o_Position, CFilePosition const &_Position)
+			auto fStorePosition = [&](CEJSONSorted &o_Position, CFilePosition const &_Position)
 				{
 					o_Position["File"] = _Position.m_File;
 					o_Position["Character"] = _Position.m_Character;
@@ -210,14 +254,14 @@ namespace
 					auto &WorkspaceName = iWorkspace.f_GetKey();
 					auto &WorkspaceInfo = **iWorkspace;
 
-					_BuildSystem.f_GenerateBuildSystem_Workspace(Config, ConfigData, &WorkspaceInfo, ReservedGroups, "TestGeneratorDependencyFiles");
+					BuildSystem.f_GenerateBuildSystem_Workspace(Config, ConfigData, &WorkspaceInfo, ReservedGroups, gc_TestGeneratorDependencyFiles);
 
 					auto &Workspace = OutWorkspace[WorkspaceName];
 					fStorePosition(Workspace["Position"], WorkspaceInfo.m_pEntity->f_Data().m_Position);
 					Workspace["Name"] = WorkspaceInfo.m_EntityName;
 					Workspace["EnabledConfigs"][Config.f_GetFullName()] = true;
 
-					TCMap<CGroupInfo const *, CEJSON::CObject *> WorkspaceGroupMapping;
+					TCMap<CGroupInfo const *, CEJSONSorted::CObject *> WorkspaceGroupMapping;
 					fCopyGroups(Workspace["Groups"].f_Object(), WorkspaceInfo.m_Groups, WorkspaceGroupMapping);
 
 					for (auto iTarget = WorkspaceInfo.m_Targets.f_GetIterator(); iTarget; ++iTarget)
@@ -250,7 +294,7 @@ namespace
 							Dependency["PerConfig"][Config.f_GetFullName()]["Link"] = DependencyInfo.m_bLink;
 						}
 
-						TCMap<CGroupInfo const *, CEJSON::CObject *> TargetGroupMapping;
+						TCMap<CGroupInfo const *, CEJSONSorted::CObject *> TargetGroupMapping;
 						fCopyGroups(Target["Groups"].f_Object(), TargetInfo.m_Groups, TargetGroupMapping);
 
 						for (auto iFile = TargetInfo.m_Files.f_GetIterator(); iFile; ++iFile)
@@ -274,6 +318,8 @@ namespace
 			}
 
 			CFile::fs_WriteStringToFile(_OutputDir / "BuildSystemData.json", BuildSystemData.f_ToString());
+
+			co_return {};
 		}
 	};
 

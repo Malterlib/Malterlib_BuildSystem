@@ -3,6 +3,9 @@
 
 #include "Malterlib_BuildSystem_Repository.h"
 
+#include <Mib/Concurrency/AsyncDestroy>
+#include <Mib/Concurrency/ActorSequencer>
+
 namespace NMib::NBuildSystem
 {
 	using namespace NRepository;
@@ -27,19 +30,14 @@ namespace NMib::NBuildSystem
 		};
 	}
 
-	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Status_Async(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoStatusFlag _Flags)
+	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Status(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoStatusFlag _Flags)
 	{
-		TCSharedPointer<CGenerateEphemeralState> pGenerateState = fg_Construct();
-		try
-		{
-			if (ERetry Retry = fp_GeneratePrepare(_GenerateOptions, *pGenerateState, nullptr); Retry != ERetry_None)
-				co_return Retry;
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
 
-		}
-		catch (CException const &_Exception)
-		{
-			co_return _Exception.f_ExceptionPointer();
-		}
+		TCSharedPointer<CGenerateEphemeralState> pGenerateState = fg_Construct();
+
+		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, *pGenerateState, nullptr); Retry != ERetry_None)
+			co_return Retry;
 
 		CRepoFilter Filter = _Filter;
 
@@ -48,12 +46,13 @@ namespace NMib::NBuildSystem
 		if (_Flags & CBuildSystem::ERepoStatusFlag_OnlyTracked)
 			FilterFlags |= EFilterRepoFlag_OnlyTracked;
 
-		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredReposAsync(Filter, *this, mp_Data, FilterFlags);
+		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(Filter, *this, mp_Data, FilterFlags);
 
 		if (_Flags & ERepoStatusFlag_UpdateRemotes)
-			co_await fg_UpdateRemotesAsync(*this, FilteredRepositories);
+			co_await fg_UpdateRemotes(*this, FilteredRepositories);
 
-		CGitLaunches Launches{mp_BaseDir, "Getting repo status", mp_AnsiFlags, mp_fOutputConsole};
+		CGitLaunches Launches{f_GetBaseDir(), "Getting repo status", mp_AnsiFlags, mp_fOutputConsole, f_GetCancelledPointer()};
+		auto DestroyLaunchs = co_await co_await Launches.f_Init();
 
 		CColors Colors(mp_AnsiFlags);
 
@@ -681,7 +680,7 @@ namespace NMib::NBuildSystem
 										EOutputType_Error
 										, Repo
 										, "Failed to launch repository editor: {}"_f
-										<< Result.f_GetCombinedOut()
+										<< Result.f_GetCombinedOut().f_Trim()
 									)
 								;
 							}
@@ -696,29 +695,11 @@ namespace NMib::NBuildSystem
 			}
 		}
 
+		co_await fg_Move(DestroyLaunchs);
+
 		if (bActionNeeded)
 			f_OutputConsole("\a", true);
 
 		co_return ERetry_None;
-	}
-
-	CBuildSystem::ERetry CBuildSystem::f_Action_Repository_Status(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoStatusFlag _Flags)
-	{
-		TCSharedPointer<CDefaultRunLoop> pRunLoop = fg_Construct();
-		auto CleanupRunLoop = g_OnScopeExit / [&]
-			{
-				while (pRunLoop->m_RefCount.f_Get() > 0)
-					pRunLoop->f_WaitOnceTimeout(0.1);
-			}
-		;
-		TCActor<CDispatchingActor> HelperActor(fg_Construct(), pRunLoop->f_Dispatcher());
-		auto CleanupHelperActor = g_OnScopeExit / [&]
-			{
-				HelperActor->f_BlockDestroy(pRunLoop->f_ActorDestroyLoop());
-			}
-		;
-		CCurrentlyProcessingActorScope CurrentActor{HelperActor};
-
-		return fg_CallSafe(this, &CBuildSystem::f_Action_Repository_Status_Async, _GenerateOptions, _Filter, _Flags).f_CallSync(pRunLoop);
 	}
 }

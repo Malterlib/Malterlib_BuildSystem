@@ -37,18 +37,18 @@
 			!_Value ""
 		}
 
-		List define [string]
+		List: [string]
 		List ["Element0", "Element1", "Element2", "Element3"]
 	}
 	GenerateFile
 	{
 		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
 		Contents 	`Generate File Contents:\n`\
-					`@(List->ForEach("fg_ForEachFunctor")->ToString())\n`\
+					`@(List->ForEach(&fg_ForEachFunctor)->ToString())\n`\
 					`---\n`\
-					`@(List->ForEach("fg_ForEachFunctorAppend")->ToString())\n`\
+					`@(List->ForEach(&fg_ForEachFunctorAppend)->ToString())\n`\
 					`---\n`\
-					`@([]->ForEach("fg_ForEachFunctorAppendDefaulted")->ToString())\n`
+					`@([]->ForEach(&fg_ForEachFunctorAppendDefaulted)->ToString())\n`
 		Executable false
 		UnixLineEnds true
 		UnicodeBOM false

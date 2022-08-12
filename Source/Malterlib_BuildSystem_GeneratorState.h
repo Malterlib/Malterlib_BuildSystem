@@ -20,7 +20,7 @@ namespace NMib::NBuildSystem
 	{
 		enum 
 		{
-			EFileVersion = 0x119
+			EFileVersion = 0x121
 		};
 
 		struct CProcessedFile
@@ -53,6 +53,7 @@ namespace NMib::NBuildSystem
 		NContainer::TCMap<NStr::CStr, CProcessedFile> m_GeneratedFiles;
 		NContainer::TCMap<CFindOptions, NContainer::TCVector<NFile::CFile::CFoundFile>> m_SourceSearches;
 		NContainer::TCMap<NStr::CStr, NStr::CStr> m_Environment;
+		NContainer::TCMap<NStr::CStr, uint32> m_NumWorkspaceTargets;
 		EGenerationFlag m_GenerationFlags = EGenerationFlag_None;
 	};
 }

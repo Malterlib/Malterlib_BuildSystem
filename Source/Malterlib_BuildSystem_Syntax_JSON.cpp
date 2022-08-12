@@ -8,20 +8,37 @@
 
 namespace NMib::NBuildSystem
 {
-	NEncoding::CEJSON CBuildSystemSyntax::CArray::f_ToJSON() const
+	NEncoding::CEJSONSorted CBuildSystemSyntax::CArray::f_ToJSON() const
 	{
-		CEJSON Return;
+		CEJSONSorted Return;
 		auto &Array = Return.f_Array();
 		for (auto &Value : m_Array)
 			Array.f_Insert(Value.f_Get().f_ToJSON());
 		return Return;
 	}
 
-	auto CBuildSystemSyntax::CArray::fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position, bool _bAppendAllowed) -> CArray
+	auto CBuildSystemSyntax::CArray::fs_FromJSON(CStringCache &o_StringCache, NEncoding::CEJSONSorted const &_JSON, CFilePosition const &_Position, bool _bAppendAllowed)
+		-> NStorage::TCVariant<NEncoding::CEJSONSorted, CArray>
 	{
 		CArray Array;
+		bool bAllConstant = true;
 		for (auto &Element : _JSON.f_Array())
-			Array.m_Array.f_Insert(CValue::fs_FromJSON(Element, _Position, _bAppendAllowed));
+		{
+			auto &Value = Array.m_Array.f_Insert(CValue::fs_FromJSON(o_StringCache, Element, _Position, _bAppendAllowed));
+			if (!Value.f_Get().f_IsConstant())
+				bAllConstant = false;
+		}
+
+		if (bAllConstant)
+		{
+			NEncoding::CEJSONSorted Return;
+			auto &ReturnArray = Return.f_Array();
+
+			for (auto &Entry : Array.m_Array)
+				ReturnArray.f_Insert(fg_Move(Entry.f_Get().m_Value.f_GetAsType<NEncoding::CEJSONSorted>()));
+
+			return Return;
+		}
 
 		return Array;
 	}
@@ -40,9 +57,9 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	NEncoding::CEJSON CBuildSystemSyntax::CObject::f_ToJSON() const
+	NEncoding::CEJSONSorted CBuildSystemSyntax::CObject::f_ToJSON() const
 	{
-		CEJSON Return;
+		CEJSONSorted Return;
 		auto &Object = Return.f_Object();
 		for (auto &Value : m_ObjectSorted)
 		{
@@ -64,8 +81,7 @@ namespace NMib::NBuildSystem
 				break;
 			case 2:
 				{
-					OutKey = "<<";
-					OutKey.f_SetUserData(EJSONStringType_NoQuote);
+					OutKey = gc_ConstString_Symbol_AppendObjectNoQuote;
 				}
 				break;
 			}
@@ -75,9 +91,11 @@ namespace NMib::NBuildSystem
 		return Return;
 	}
 	
-	auto CBuildSystemSyntax::CObject::fs_FromJSON(NEncoding::CEJSON const &_JSON, CFilePosition const &_Position, bool _bAppendAllowed) -> CObject
+	auto CBuildSystemSyntax::CObject::fs_FromJSON(CStringCache &o_StringCache, NEncoding::CEJSONSorted const &_JSON, CFilePosition const &_Position, bool _bAppendAllowed)
+		-> NStorage::TCVariant<NEncoding::CEJSONSorted, CObject>
 	{
 		CObject Object;
+		bool bAllConstant = true;
 		for (auto &Member : _JSON.f_Object())
 		{
 			CObjectKey Key;
@@ -93,13 +111,15 @@ namespace NMib::NBuildSystem
 				break;
 			case EJSONStringType_NoQuote:
 				{
-					if (Name == "<<")
+					if (Name == gc_ConstString_Symbol_AppendObject.m_String)
 					{
 						Key.m_Key = CAppendObject();
 
+						bAllConstant = false;
+
 						bVerifyAppendObject = true;
 					}
-					else if (Name == "...")
+					else if (Name == gc_ConstString_Symbol_Ellipsis.m_String)
 						CBuildSystem::fs_ThrowError(_Position, "Ellipsis object keys are only supported in types");
 					else
 						Key.m_Key = Name;
@@ -107,6 +127,8 @@ namespace NMib::NBuildSystem
 				break;
 			case EJSONStringType_Custom:
 				{
+					bAllConstant = false;
+
 					TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext ParseContext;
 					ParseContext.m_FileName = _Position.m_File;
 					ParseContext.m_StartLine = _Position.m_Line;
@@ -116,7 +138,7 @@ namespace NMib::NBuildSystem
 					ParseContext.m_pStartParse = (uch8 const *)Name.f_GetStr();
 					auto pParse = ParseContext.m_pStartParse;
 
-					Key.m_Key = CEvalString::fs_FromJSON(CEJSON::fs_FromJSON(ParseContext.f_ParseEvalStringToken(pParse))["Value"], _Position);
+					Key.m_Key = CEvalString::fs_FromJSON(o_StringCache, CEJSONSorted::fs_FromJSON(ParseContext.f_ParseEvalStringToken(pParse))[gc_ConstString_Value], _Position);
 				}
 				break;
 			}
@@ -126,7 +148,10 @@ namespace NMib::NBuildSystem
 			auto &ObjectValue = Object.m_Object[Key];
 			Object.m_ObjectSorted.f_Insert(ObjectValue);
 
-			CValue &Value = ObjectValue.m_Value = CValue::fs_FromJSON(Member.f_Value(), _Position, _bAppendAllowed);
+			CValue &Value = ObjectValue.m_Value = CValue::fs_FromJSON(o_StringCache, Member.f_Value(), _Position, _bAppendAllowed);
+
+			if (!Value.f_IsConstant())
+				bAllConstant = false;
 
 			if (bVerifyAppendObject)
 			{
@@ -138,7 +163,25 @@ namespace NMib::NBuildSystem
 					for (auto &Object : Array.m_Array)
 					{
 						CValue &ArrayValue = Object;
-						if (ArrayValue.m_Value.f_IsOfType<CObject>() || ArrayValue.m_Value.f_IsOfType<CExpression>() || ArrayValue.m_Value.f_IsOfType<CExpressionAppend>())
+						if
+							(
+								ArrayValue.m_Value.f_IsOfType<CObject>()
+								|| ArrayValue.m_Value.f_IsOfType<CExpression>()
+								|| ArrayValue.m_Value.f_IsOfType<CExpressionAppend>()
+								|| (ArrayValue.f_IsConstant() && ArrayValue.f_Constant().f_IsObject())
+							)
+						{
+						}
+						else
+							CBuildSystem::fs_ThrowError(_Position, "Append object array only supports objects expressions or append expressions");
+					}
+				}
+				else if (Value.f_IsConstant() && Value.f_Constant().f_IsArray())
+				{
+					auto &Array = Value.f_Constant().f_Array();
+					for (auto &Object : Array)
+					{
+						if (Object.f_IsObject())
 							;
 						else
 							CBuildSystem::fs_ThrowError(_Position, "Append object array only supports objects expressions or append expressions");
@@ -147,6 +190,20 @@ namespace NMib::NBuildSystem
 				else
 					CBuildSystem::fs_ThrowError(_Position, "Append object only supports objects, arrays or expressions");
 			}
+		}
+
+		if (bAllConstant)
+		{
+			NEncoding::CEJSONSorted Return;
+			auto &ReturnObject = Return.f_Object();
+
+			for (auto &Entry : Object.m_Object)
+			{
+				auto &Key = Object.m_Object.fs_GetKey(Entry);
+				ReturnObject[Key.m_Key.f_GetAsType<NStr::CStr>()] = fg_Move(Entry.m_Value.f_Get().m_Value.f_GetAsType<NEncoding::CEJSONSorted>());
+			}
+
+			return Return;
 		}
 
 		return Object;

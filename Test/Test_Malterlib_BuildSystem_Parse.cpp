@@ -29,7 +29,11 @@ namespace
 
 						CBuildSystemRegistry RegistryTest;
 						NFile::CFile::fs_WriteStringToFile(DebugFile, _Source);
-						RegistryTest.f_ParseStr(_Source, DebugFile);
+
+						CStringCache StringCache;
+						CBuildSystemRegistryParseContext ParseContext(StringCache);
+
+						RegistryTest.f_ParseStrWithContext(ParseContext, _Source, DebugFile);
 						return RegistryTest.f_GenerateStr();
 					}
 				;
@@ -44,27 +48,27 @@ namespace
 	TestInt 65 // Comment
 	Type
 	{
-		CTest define {
+		CTest: {
 			"int": one_of(int, float)
 		}
 	} // Comment
-	TestDefine define {
-		"test": type(CTest)?,
-		"string": string,
-		"int": one_of(int, float),
-		"float": float,
-		"binary": binary,
-		"date": date,
-		"bool": bool? = false ? true : false,
-		"object": {
-			"test": string
-		},
+	TestDefine: {
+		...: any,
 		"array": [
 			one_of("Value1", "Value2", {
 				"int": one_of(int, float)
 			})
 		],
-		...: any
+		"binary": binary,
+		"bool": bool? = false ? true : false,
+		"date": date,
+		"float": float,
+		"int": one_of(int, float),
+		"object": {
+			"test": string
+		},
+		"string": string,
+		"test": type(CTest)?
 	} // Comment
 	TestFunction function(int _Param0, float _Param1) float // Comment
 	TestFunctionDefaulted function(int _Param0, float _Param1 = 5.05) float = 10.0 // Comment
@@ -82,10 +86,10 @@ namespace
 	TestFunctionOptional function(int _Param0, float? _Param1) float // Comment
 	TestFunctionEllipsis function(int _Param0, float _Param0, any... p_Params) string // Comment
 	TestFunctionEllipsisComplex function(int _Param0, float _Param0, one_of(type(CTest), int, "5")... p_Params) string // Comment
-	TestDefineOneOf define one_of("Test", "Test2", int) // Comment
-	TestDefineDefault define one_of("Test", "Test2", int, bool) = true // Comment
-	TestDefineOptionalString define string? = true ? true : false // Comment
-	TestDefineOptionalClass define {
+	TestDefineOneOf: one_of("Test", "Test2", int) // Comment
+	TestDefineDefault: one_of("Test", "Test2", int, bool) = true // Comment
+	TestDefineOptionalString: string? = true ? true : false // Comment
+	TestDefineOptionalClass: {
 		one: one_of("One"),
 		two: one_of("Two")
 	}? = true // Comment
@@ -137,7 +141,9 @@ namespace
 	TestArrayReference Other<[0]> // Comment
 	TestTernary Other ? Other1 : Other2 // Comment
 	TestTernaryFunction function() string = Other ? Other1 : Other2 // Comment
-	TestTernaryDefine define string = Other ? Other1 : Other2 // Comment
+	TestTernaryDefine: string = Other ? Other1 : Other2 // Comment
+	TestTernaryWildcard (Other <==> ~"Test") ? Other1 : Other2 // Comment
+	TestTernaryNotWildcard (Other <!=> ~"Test") ? Other1 : Other2 // Comment
 	TestDynamicReferenceSuffix Prefix_@(Suffix) // Comment
 	TestDynamicReferenceMiddle Prefix_@(Other)_Suffix // Comment
 	TestDynamicReferencePrefix @(Other)_Suffix // Comment
@@ -151,6 +157,15 @@ namespace
 		"Test",
 		"Test2"
 	]...) // Comment
+	TestFunctionIdentifierReference0 Function(&Test) // Comment
+	TestFunctionIdentifierReference1 Function(&Property.Test) // Comment
+	TestFunctionIdentifierReference2 Function(&Workspace:Property.Test) // Comment
+	TestFunctionIdentifierReferenceDynamic0 Function(&Test_@(Test)) // Comment
+	TestFunctionIdentifierReferenceDynamic1 Function(&Property.Test_@(Test)) // Comment
+	TestFunctionIdentifierReferenceDynamic2 Function(&Workspace:Property.Test_@(Test)) // Comment
+	TestFunctionIdentifierReferenceDynamicProp0 Function(&Test_@(Test)) // Comment
+	TestFunctionIdentifierReferenceDynamicProp1 Function(&@(Test).Test_@(Test)) // Comment
+	TestFunctionIdentifierReferenceDynamicProp2 Function(&Workspace:@(Test).Test_@(Test)) // Comment
 	Children // Comment
 	{
 		"Test Test" "Test Test 2" // Comment
@@ -161,8 +176,8 @@ namespace
 	TestFraction date(2019-05-29 11:00:05.545) // Comment
 	TestBinary binary(VGhpcyBpcyBpdAo=) // Comment
 	TestInObject {
-		"Date": date(2019-05-29),
-		"Binary": binary(VGhpcyBpcyBpdAo=)
+		"Binary": binary(VGhpcyBpcyBpdAo=),
+		"Date": date(2019-05-29)
 	} // Comment
 	TestArray [
 		"Test",
@@ -171,36 +186,18 @@ namespace
 		AppendArray...
 	] // Comment
 	TestObject {
+		'': 'Test',
+		`@(Test(`Other @(Test)`)) Test`: "Evaluated",
+		`@(Test) Test`: "Evaluated",
 		"Test2": "Test",
 		"Test4\n"\
 		"TestLine": "Test\n"\
 		            "TestLine",
 		'Test5': 'Test',
-		'': 'Test',
-		Test6: "Without quotes",
-		`@(Test) Test`: "Evaluated",
-		`@(Test(`Other @(Test)`)) Test`: "Evaluated"
+		Test6: "Without quotes"
 	} // Comment
 	TestObjectReference {
-		"Test2": "Test",
-		"Test4": Other->Function('Str', "Str2", Other3, `@(Other4) Test`, true, [
-			"Array",
-			false
-		], {
-			Object: "Value"
-		}, "TestLine\n"\
-		   "TestLine2\n"\
-		   "TestLine3"),
-		'Test5': 'Test',
 		'': 'Test',
-		Test6: "Without quotes",
-		`@(Test) Test`: "Evaluated",
-		`@(DynamicValue)`: Other->Function('Str', "Str2", Other3, `@(Other4) Test`, {
-			"JSON": "Value"
-		}, [
-			"JSON",
-			"Array"
-		]),
 		<<: [
 			{
 				"Test5": "Value"
@@ -211,7 +208,25 @@ namespace
 			Compile.AppendObject3<Test>,
 			Target:Compile.AppendObject4<Test>,
 			Target:Compile.AppendObjectArray...
-		]
+		],
+		`@(DynamicValue)`: Other->Function('Str', "Str2", Other3, `@(Other4) Test`, {
+			"JSON": "Value"
+		}, [
+			"JSON",
+			"Array"
+		]),
+		`@(Test) Test`: "Evaluated",
+		"Test2": "Test",
+		"Test4": Other->Function('Str', "Str2", Other3, `@(Other4) Test`, true, [
+			"Array",
+			false
+		], {
+			Object: "Value"
+		}, "TestLine\n"\
+		   "TestLine2\n"\
+		   "TestLine3"),
+		'Test5': 'Test',
+		Test6: "Without quotes"
 	}  // Comment
 	{
 		!!Condition true // Comment
@@ -243,10 +258,10 @@ namespace
 	WildcardInsideObject "Value" // Comment
 	{
 		!!Value {
-			"Key": ~"*CompareTo*",
 			"Array": [
 				~"*CompareTo*"
-			]
+			],
+			"Key": ~"*CompareTo*"
 		} // Comment
 	}
 	Condition "Value"
@@ -254,16 +269,16 @@ namespace
 		!!Compile.Value<Test> true // Comment
 		!!Target:Compile.Value<Test> true // Comment
 		!!Value<Property.ArrayProp[0].Prop2> {
-			"Key": ~"*CompareTo*",
 			"Array": [
 				~'*CompareTo*'
-			]
+			],
+			"Key": ~"*CompareTo*"
 		} // Comment
 		!!Value<@(DynamicProp).ArrayProp[0].Prop2> {
-			"Key": ~`*CompareTo*`,
 			"Array": [
 				~"*CompareTo*"
-			]
+			],
+			"Key": ~`*CompareTo*`
 		} // Comment
 		&
 		{
@@ -288,6 +303,7 @@ namespace
 	TestBinaryOperator6 (Value1 / Value2 * Value3) // Comment
 	TestBinaryOperator7 (Value1 / Value2 % Value3) // Comment
 	TestBinaryOperator8 (Value1 / (Value2 % Value3)) // Comment
+	TestBinaryOperator9 (Value1 ?? "Value") // Comment
 }
 )---";
 				DMibExpect(fParseGenerate(RegistryStr), ==, RegistryStr);

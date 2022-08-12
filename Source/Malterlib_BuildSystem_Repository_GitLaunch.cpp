@@ -15,11 +15,13 @@ namespace NMib::NBuildSystem::NRepository
 			, CStr const &_ProgressDescription
 			, EAnsiEncodingFlag _AnsiFlags
 			, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
+			, NStorage::TCSharedPointer<TCAtomic<bool>> const &_pCancelled
 		)
 		: m_BaseDir(_BaseDir)
 		, m_ProgressDescription(_ProgressDescription)
 		, m_AnsiFlags(_AnsiFlags)
 		, m_fOutputConsole(_fOutputConsole)
+		, m_pCancelled(_pCancelled)
 	{
 	}
 
@@ -29,8 +31,27 @@ namespace NMib::NBuildSystem::NRepository
 			, CStr const &_ProgressDescription
 			, EAnsiEncodingFlag _AnsiFlags
 			, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
+			, NStorage::TCSharedPointer<TCAtomic<bool>> const &_pCancelled
 		)
-		: m_pState(fg_Construct(_BaseDir, _ProgressDescription, _AnsiFlags, _fOutputConsole))
+		: m_pState(fg_Construct(_BaseDir, _ProgressDescription, _AnsiFlags, _fOutputConsole, _pCancelled))
+	{
+		m_pOwner = fg_Construct(m_pState);
+	}
+
+	CGitLaunches::COwner::COwner(TCSharedPointer<CState> const &_pState)
+		: m_pState(_pState)
+	{
+	}
+
+	CGitLaunches::COwner::~COwner()
+	{
+ 		auto &State = *m_pState;
+		if (State.m_CheckAbortTimer)
+			fg_Exchange(State.m_CheckAbortTimer, nullptr)->f_Destroy() > fg_DiscardResult();
+	}
+
+	CGitLaunches::CGitLaunches(CGitLaunches const &_Other)
+		: m_pState(_Other.m_pState)
 	{
 	}
 
@@ -156,6 +177,8 @@ namespace NMib::NBuildSystem::NRepository
 
 	void CGitLaunches::CState::f_OutputState() const
 	{
+		DMibLock(m_ConsoleOutputLock);
+
 		CUStr ToOutput = CStr{"  {}: {}/{} repos done"_f << m_ProgressDescription << m_nDoneRepos.f_Load() << m_nRepos.f_Load()};
 		if (m_nDoneRepos == m_nRepos.f_Load())
 			ToOutput = CStr{"{sj*}"_f << "" << ToOutput.f_GetLen()}; // Clear previous output
@@ -171,7 +194,7 @@ namespace NMib::NBuildSystem::NRepository
 
 	COnScopeExitShared CGitLaunches::f_RepoDoneScope() const
 	{
-		return g_OnScopeExitActor > [pState = m_pState]
+		return g_OnScopeExitActor / [pState = m_pState]
 			{
 				auto &State = *pState;
 
@@ -197,6 +220,136 @@ namespace NMib::NBuildSystem::NRepository
 
 		if (_bReport)
 			f_RepoDone(0);
+	}
+
+	void CGitLaunches::f_CheckInit() const
+	{
+		auto &State = *m_pState;
+		DMibFastCheck(State.m_bInited);
+		if (!State.m_bInited)
+			DMibError("Internal error: CGitLaunches have not been initialized");
+	}
+
+#if DMibConfig_RefCountDebugging
+	constinit static CLowLevelLockAggregate g_TimerDestructionTrackerLock;
+	constinit static NException::CCallstack g_TimerDestructionTrackerCallstack = {0};
+
+	struct CTrackTimerDestruction
+	{
+		CTrackTimerDestruction() = default;
+		CTrackTimerDestruction(CTrackTimerDestruction const &) = delete;
+
+		CTrackTimerDestruction(CTrackTimerDestruction &&_Other)
+			: m_bLastAlive(fg_Exchange(_Other.m_bLastAlive, false))
+		{
+		}
+
+		~CTrackTimerDestruction()
+		{
+			if (m_bLastAlive)
+			{
+				DMibLock(g_TimerDestructionTrackerLock);
+				g_TimerDestructionTrackerCallstack.m_CallstackLen = NSys::fg_System_GetStackTrace
+					(
+						g_TimerDestructionTrackerCallstack.m_Callstack
+						, sizeof(g_TimerDestructionTrackerCallstack.m_Callstack) / sizeof(g_TimerDestructionTrackerCallstack.m_Callstack[0])
+					)
+				;
+			}
+		}
+		bool m_bLastAlive = true;
+	};
+#endif
+
+	TCFuture<CAsyncDestroyAwaiter> CGitLaunches::f_Init()
+	{
+		co_await ECoroutineFlag_AllowReferences;
+
+		auto pState = m_pState;
+		auto &State = *pState;
+
+		State.m_CheckAbortTimer = co_await fg_RegisterTimer
+			(
+				0.1
+				,
+				[
+					pState = m_pState
+#if DMibConfig_RefCountDebugging
+					, DestructionTracker = CTrackTimerDestruction()
+#endif
+				]
+				() -> TCFuture<void>
+				{
+					auto &State = *pState;
+
+					if (State.m_pCancelled->f_Load())
+					{
+						DLock(State.m_Lock);
+						for (auto &Launch : State.m_Launches)
+						{
+							auto &LaunchID = State.m_Launches.fs_GetKey(Launch);
+							auto &bAborted = State.m_LaunchesAborted[LaunchID];
+							if (!bAborted)
+							{
+								bAborted = true;
+								Launch(&CProcessLaunchActor::f_StopProcess) > fg_DiscardResult();
+							}
+						}
+					}
+
+					co_return {};
+				}
+			)
+		;
+
+		State.m_bInited = true;
+
+		co_return fg_AsyncDestroyGeneric
+			(
+				[this]() -> TCFuture<void>
+				{
+					auto This = fg_Move(*this);
+
+					DMibFastCheck(This.m_pOwner);
+					DMibFastCheck(This.m_pState);
+
+					auto &State = *This.m_pState;
+					if (State.m_CheckAbortTimer)
+						co_await fg_Exchange(State.m_CheckAbortTimer, nullptr)->f_Destroy();
+
+					This.m_pOwner.f_Clear();
+
+#if DMibConfig_RefCountDebugging
+					{
+						DMibLock(This.m_pState->m_RefCount.m_Debug->m_Lock);
+
+						if (This.m_pState.f_GetRefCount() != 0)
+						{
+							{
+								DMibLock(g_TimerDestructionTrackerLock);
+								DMibTrace2("    Destruction callstack\n");
+								g_TimerDestructionTrackerCallstack.f_Trace(8);
+							}
+
+							mint iCallstack = 0;
+							for (auto &Callstack : This.m_pState->m_RefCount.m_Debug->m_Callstacks)
+							{
+								DMibTrace2("    Reference callstack {}\n", iCallstack);
+								Callstack.f_Trace(8);
+								++iCallstack;
+							}
+							DMibFastCheck(false);
+						}
+					}
+#else
+					DMibFastCheck(This.m_pState.f_GetRefCount() == 0);
+#endif
+					This.m_pState.f_Clear();
+
+					co_return {};
+				}
+			)
+		;
 	}
 
 	void CGitLaunches::f_MeasureRepos(TCVector<TCVector<CRepository *>> const &_FilteredRepositories, bool _bReport)
@@ -252,6 +405,7 @@ namespace NMib::NBuildSystem::NRepository
 
 	CStr CGitLaunches::f_GetRepoName(CRepository const &_Repo) const
 	{
+		DMibFastCheck(!!m_pState);
 		auto &State = *m_pState;
 		return fg_Const(State.m_RepoNames)[_Repo.m_Location];
 	}
@@ -274,48 +428,88 @@ namespace NMib::NBuildSystem::NRepository
 
 	TCFuture<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::fp_Launch(CProcessLaunchActor::CSimpleLaunch &&_Launch) const
 	{
-		auto &State = *m_pState;
-		return State.m_LaunchSequencer / [=, pState = m_pState, Launch = fg_Move(_Launch)]() mutable -> TCFuture<CProcessLaunchActor::CSimpleLaunchResult>
-			{
-				auto &State = *pState;
-				TCActor<CProcessLaunchActor> LaunchActor = fg_Construct();
-				mint LaunchID;
-				{
-					DLock(State.m_Lock);
-					LaunchID = State.m_LaunchID++;
-					State.m_Launches[LaunchID] = LaunchActor;
-				}
-				TCPromise<CProcessLaunchActor::CSimpleLaunchResult> Promise;
-				LaunchActor(&CProcessLaunchActor::f_LaunchSimple, fg_Move(Launch)) > [=](TCAsyncResult<CProcessLaunchActor::CSimpleLaunchResult> &&_Result)
-					{
-						auto &State = *pState;
-						TCActor<CProcessLaunchActor> LaunchActor;
-						{
-							DLock(State.m_Lock);
-							auto pLaunchActor = State.m_Launches.f_FindEqual(LaunchID);
-							if (pLaunchActor)
-							{
-								LaunchActor = *pLaunchActor;
-								State.m_Launches.f_Remove(LaunchID);
-							}
-						}
-						if (!LaunchActor)
-						{
-							Promise.f_SetResult(fg_Move(_Result));
-							return;
-						}
+		TCPromise<CProcessLaunchActor::CSimpleLaunchResult> Promise;
+		f_CheckInit();
+		_Launch.m_Params.m_bCreateNewProcessGroup = true;
 
-						LaunchActor.f_Destroy() > [=, Result = fg_Move(_Result)](auto &&) mutable
+		auto &State = *m_pState;
+
+		if (*State.m_pCancelled)
+			return Promise <<= DMibErrorInstance("Aborted");
+
+		State.m_LaunchSequencer
+			(
+				&CLaunchSequencer::f_RunSequenced
+				, g_ActorFunctorWeak / [=, pState = m_pState, Launch = fg_Move(_Launch)](CActorSubscription &&_DoneSubscription) mutable -> TCFuture<CProcessLaunchActor::CSimpleLaunchResult>
+				{
+					auto &State = *pState;
+					TCPromise<CProcessLaunchActor::CSimpleLaunchResult> Promise;
+
+					if (*State.m_pCancelled)
+						return Promise <<= DMibErrorInstance("Aborted");
+
+					TCActor<CProcessLaunchActor> LaunchActor = fg_Construct();
+					mint LaunchID;
+					{
+						DLock(State.m_Lock);
+						LaunchID = State.m_LaunchID++;
+						State.m_Launches[LaunchID] = LaunchActor;
+					}
+					LaunchActor(&CProcessLaunchActor::f_LaunchSimple, fg_Move(Launch))
+						> [=, pState = fg_Move(pState), DoneSubscription = fg_Move(_DoneSubscription)](TCAsyncResult<CProcessLaunchActor::CSimpleLaunchResult> &&_Result) mutable
+						{
+							auto &State = *pState;
+							TCActor<CProcessLaunchActor> LaunchActor;
 							{
-								Promise.f_SetResult(fg_Move(Result));
+								DLock(State.m_Lock);
+								auto pLaunchActor = State.m_Launches.f_FindEqual(LaunchID);
+								if (pLaunchActor)
+								{
+									LaunchActor = *pLaunchActor;
+									State.m_Launches.f_Remove(LaunchID);
+								}
+							}
+							if (!LaunchActor)
+							{
+								pState.f_Clear();
+								Promise.f_SetResult(fg_Move(_Result));
 								return;
 							}
-						;
-					}
-				;
-				return Promise.f_MoveFuture();
-			}
+
+							LaunchActor.f_Destroy() > [=, Result = fg_Move(_Result), pState = fg_Move(pState), DoneSubscription = fg_Move(DoneSubscription)](auto &&) mutable
+								{
+									pState.f_Clear();
+									Promise.f_SetResult(fg_Move(Result));
+									return;
+								}
+							;
+						}
+					;
+					return Promise.f_MoveFuture();
+				}
+			)
+			> Promise
 		;
+
+		return Promise.f_MoveFuture();
+	}
+
+	TCFuture<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::f_Launch
+		(
+			CStr const &_Directory
+			, TCVector<CStr> const &_Params
+			, TCMap<CStr, CStr> const &_Environment
+			, CProcessLaunchActor::ESimpleLaunchFlag _Flags
+		) const
+	{
+		TCVector<CStr> CommandLineParams{"-C", _Directory};
+		CommandLineParams.f_Insert(_Params);
+
+		CProcessLaunchActor::CSimpleLaunch LaunchParams{"git", CommandLineParams};
+		LaunchParams.m_SimpleFlags = _Flags;
+
+		LaunchParams.m_Params.m_Environment += _Environment;
+		return fp_Launch(fg_Move(LaunchParams));
 	}
 
 	TCFuture<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::f_Launch(CRepository const &_Repo, TCVector<CStr> const &_Params, TCMap<CStr, CStr> const &_Environment) const

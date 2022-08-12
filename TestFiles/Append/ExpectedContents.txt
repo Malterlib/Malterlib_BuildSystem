@@ -8,17 +8,17 @@ Prepended Testing Appended
 	"TestOptional.InnerValue": "Testing 4"
 }
 {
-	"Test2": "Test2",
 	"Test1": "Test1",
+	"Test2": "Test2",
 	"Test3": "Test3"
 }
 {
-	"Test2": "Test2",
 	"Sub": {
 		"Test1": "Test1",
 		"Test3": "Test3",
 		"Test4": "Test4"
-	}
+	},
+	"Test2": "Test2"
 }
 [
 	"Test",

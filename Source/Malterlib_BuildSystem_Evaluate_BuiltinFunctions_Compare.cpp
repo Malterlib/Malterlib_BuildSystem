@@ -12,154 +12,163 @@ namespace NMib::NBuildSystem
 			(
 				{
 					{
-						"GreaterThan"
+						gc_ConstString_GreaterThan
 						, CBuiltinFunction
 						{
 							fg_FunctionType
 							(
 								g_Boolean
-								, fg_FunctionParam(g_Any, "_Left")
-								, fg_FunctionParam(g_Any, "_Right")
+								, fg_FunctionParam(g_Any, gc_ConstString__Left)
+								, fg_FunctionParam(g_Any, gc_ConstString__Right)
 							)
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
 							{
 								return _Params[0] > _Params[1];
 							}
+							, DMibBuildSystemFilePosition
 						}
 					}
 					,
 					{
-						"GreaterThanEqual"
+						gc_ConstString_GreaterThanEqual
 						, CBuiltinFunction
 						{
 							fg_FunctionType
 							(
 								g_Boolean
-								, fg_FunctionParam(g_Any, "_Left")
-								, fg_FunctionParam(g_Any, "_Right")
+								, fg_FunctionParam(g_Any, gc_ConstString__Left)
+								, fg_FunctionParam(g_Any, gc_ConstString__Right)
 							)
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
 							{
 								return _Params[0] >= _Params[1];
 							}
+							, DMibBuildSystemFilePosition
 						}
 					}
 					,
 					{
-						"LessThan"
+						gc_ConstString_LessThan
 						, CBuiltinFunction
 						{
 							fg_FunctionType
 							(
 								g_Boolean
-								, fg_FunctionParam(g_Any, "_Left")
-								, fg_FunctionParam(g_Any, "_Right")
+								, fg_FunctionParam(g_Any, gc_ConstString__Left)
+								, fg_FunctionParam(g_Any, gc_ConstString__Right)
 							)
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
 							{
 								return _Params[0] < _Params[1];
 							}
+							, DMibBuildSystemFilePosition
 						}
 					}
 					,
 					{
-						"LessThanEqual"
+						gc_ConstString_LessThanEqual
 						, CBuiltinFunction
 						{
 							fg_FunctionType
 							(
 								g_Boolean
-								, fg_FunctionParam(g_Any, "_Left")
-								, fg_FunctionParam(g_Any, "_Right")
+								, fg_FunctionParam(g_Any, gc_ConstString__Left)
+								, fg_FunctionParam(g_Any, gc_ConstString__Right)
 							)
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
 							{
 								return _Params[0] <= _Params[1];
 							}
+							, DMibBuildSystemFilePosition
 						}
 					}
 					,
 					{
-						"Equal"
+						gc_ConstString_Equal
 						, CBuiltinFunction
 						{
 							fg_FunctionType
 							(
 								g_Boolean
-								, fg_FunctionParam(g_Any, "_Left")
-								, fg_FunctionParam(g_Any, "_Right")
+								, fg_FunctionParam(g_Any, gc_ConstString__Left)
+								, fg_FunctionParam(g_Any, gc_ConstString__Right)
 							)
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
 							{
 								return _Params[0] == _Params[1];
 							}
+							, DMibBuildSystemFilePosition
 						}
 					}
 					,
 					{
-						"NotEqual"
+						gc_ConstString_NotEqual
 						, CBuiltinFunction
 						{
 							fg_FunctionType
 							(
 								g_Boolean
-								, fg_FunctionParam(g_Any, "_Left")
-								, fg_FunctionParam(g_Any, "_Right")
+								, fg_FunctionParam(g_Any, gc_ConstString__Left)
+								, fg_FunctionParam(g_Any, gc_ConstString__Right)
 							)
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
 							{
 								return _Params[0] != _Params[1];
 							}
+							, DMibBuildSystemFilePosition
 						}
 					}
 					,
 					{
-						"Not"
+						gc_ConstString_Not
 						, CBuiltinFunction
 						{
 							fg_FunctionType
 							(
 								g_Boolean
-								, fg_FunctionParam(g_Boolean, "_Boolean")
+								, fg_FunctionParam(g_Boolean, gc_ConstString__Boolean)
 							)
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
 							{
 								return !_Params[0].f_Boolean();
 							}
+							, DMibBuildSystemFilePosition
 						}
 					}
 					,
 					{
-						"And"
+						gc_ConstString_And
 						, CBuiltinFunction
 						{
 							fg_FunctionType
 							(
 								g_Boolean
-								, fg_FunctionParam(g_Boolean, "_Left")
-								, fg_FunctionParam(g_Boolean, "_Right")
+								, fg_FunctionParam(g_Boolean, gc_ConstString__Left)
+								, fg_FunctionParam(g_Boolean, gc_ConstString__Right)
 							)
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
 							{
 								return _Params[0].f_Boolean() && _Params[1].f_Boolean();
 							}
+							, DMibBuildSystemFilePosition
 						}
 					}
 					,
 					{
-						"Or"
+						gc_ConstString_Or
 						, CBuiltinFunction
 						{
 							fg_FunctionType
 							(
 								g_Boolean
-								, fg_FunctionParam(g_Boolean, "_Left")
-								, fg_FunctionParam(g_Boolean, "_Right")
+								, fg_FunctionParam(g_Boolean, gc_ConstString__Left)
+								, fg_FunctionParam(g_Boolean, gc_ConstString__Right)
 							)
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSON> &&_Params) -> CEJSON
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
 							{
 								return _Params[0].f_Boolean() || _Params[1].f_Boolean();
 							}
+							, DMibBuildSystemFilePosition
 						}
 					}
 				}

@@ -34,15 +34,18 @@ namespace NMib::NBuildSystem
 		bool f_SimpleEval(NContainer::TCMap<NStr::CStr, NStr::CStr> const &_Values) const;
 		bool f_IsCompare() const;
 
-		static ch8 const *fs_ConditionTypeToStr(EConditionType _Type);
+		static NStr::CStr const &fs_ConditionTypeToStr(EConditionType _Type);
 
 		template <typename tf_CStr>
 		void f_FormatRecursive(tf_CStr &o_Str, mint _Depth) const;
 		template <typename tf_CStr>
 		void f_Format(tf_CStr &o_Str) const;
 
-		NContainer::TCLinkedList<CCondition> m_Children;
+		COrdering_Partial operator <=> (CCondition const &_Right) const;
+		bool operator == (CCondition const &_Right) const = default;
 
+		NContainer::TCLinkedList<CCondition> m_Children;
+ 
 		CBuildSystemSyntax::CValue m_Left;
 		CBuildSystemSyntax::CValue m_Right;
 		EConditionType m_Type = EConditionType_Root;
