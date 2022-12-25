@@ -152,7 +152,7 @@ namespace NMib::NBuildSystem
 				mp_fOutputConsole(_Output, _bError);
 		}
 
-		void CStateHandler::f_SetHash(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Hash, CStr const &_Identifier)
+		void CStateHandler::f_SetHash(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Hash, CStr const &_Identifier, bool _bIsStateFile)
 		{
 			DLock(mp_Lock);
 
@@ -164,7 +164,11 @@ namespace NMib::NBuildSystem
 				bExternalPath = true;
 			}
 
+			// Make sure we read the old config file if it exists
+			fp_GetConfigFile(_FileName, _bIsStateFile);
+
 			auto &ConfigFile = mp_NewConfigFiles[_FileName];
+			ConfigFile.m_bIsStateFile = _bIsStateFile;
 			auto &Config = ConfigFile.m_Configs[Identifier];
 			Config.m_Hash = _Hash;
 			Config.m_bExternalPath = bExternalPath;
@@ -173,10 +177,10 @@ namespace NMib::NBuildSystem
 				ConfigFile.m_LineEndings = pFile->m_LineEndings;
 		}
 
-		CStr CStateHandler::f_GetHash(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Identifier)
+		CStr CStateHandler::f_GetHash(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Identifier, bool _bIsStateFile)
 		{
 			DLock(mp_Lock);
-			auto &ConfigFile = fp_GetConfigFile(_FileName);
+			auto &ConfigFile = fp_GetConfigFile(_FileName, _bIsStateFile);
 
 			CStr Identifier = _RepoPath;
 			if (!_RepoPath.f_StartsWith(mp_BasePath))
@@ -238,8 +242,6 @@ namespace NMib::NBuildSystem
 		CConfigFile CStateHandler::fs_ParseConfigFile(CStr const &_Contents, CStr const &_FileName)
 		{
 			CConfigFile ConfigFile;
-
-			CRegistry Registry;
 			{
 				ch8 const *pParse = _Contents;
 				fg_ParseToEndOfLine(pParse);
@@ -249,29 +251,59 @@ namespace NMib::NBuildSystem
 
 			CStr BasePath = CFile::fs_GetPath(_FileName);
 
-			Registry.f_ParseStr(_Contents, _FileName);
-			for (auto &Child : Registry.f_GetChildren())
+			if (_Contents.f_StartsWith("{"))
 			{
-				if (Child.f_GetName().f_StartsWith("~"))
-				{
-					auto &Config = ConfigFile.m_Configs[Child.f_GetName().f_Extract(1)];
-					Config.m_Hash = Child.f_GetThisValue();
-					Config.m_bExternalPath = true;
-				}
-				else
-					ConfigFile.m_Configs[CFile::fs_GetExpandedPath(Child.f_GetName(), BasePath)].m_Hash = Child.f_GetThisValue();
+				auto RegistryJson = CJSONSorted::fs_FromString(_Contents, _FileName);
 
+				for (auto &Repo : fg_Const(RegistryJson).f_Object())
+				{
+					auto &RepoName = Repo.f_Name();
+
+					if (RepoName.f_StartsWith("~"))
+					{
+						auto &Config = ConfigFile.m_Configs[RepoName.f_Extract(1)];
+						Config.m_Hash = Repo.f_Value()["Hash"].f_String();
+						Config.m_bExternalPath = true;
+					}
+					else
+						ConfigFile.m_Configs[CFile::fs_GetExpandedPath(RepoName, BasePath)].m_Hash = Repo.f_Value()["Hash"].f_String();
+				}
+			}
+			else
+			{
+				CRegistry Registry;
+				{
+					ch8 const *pParse = _Contents;
+					fg_ParseToEndOfLine(pParse);
+					if (*pParse == '\r')
+						ConfigFile.m_LineEndings = "\r\n";
+				}
+
+				Registry.f_ParseStr(_Contents, _FileName);
+				for (auto &Child : Registry.f_GetChildren())
+				{
+					if (Child.f_GetName().f_StartsWith("~"))
+					{
+						auto &Config = ConfigFile.m_Configs[Child.f_GetName().f_Extract(1)];
+						Config.m_Hash = Child.f_GetThisValue();
+						Config.m_bExternalPath = true;
+					}
+					else
+						ConfigFile.m_Configs[CFile::fs_GetExpandedPath(Child.f_GetName(), BasePath)].m_Hash = Child.f_GetThisValue();
+				}
 			}
 
 			return ConfigFile;
 		}
 
-		CConfigFile const &CStateHandler::fp_GetConfigFile(CStr const &_FileName)
+		CConfigFile const &CStateHandler::fp_GetConfigFile(CStr const &_FileName, bool _bIsStateFile)
 		{
 			DLock(mp_Lock);
 			if (auto *pFile = mp_ConfigFiles.f_FindEqual(_FileName))
 				return *pFile;
 			auto &ConfigFile = mp_ConfigFiles[_FileName];
+			ConfigFile.m_bIsStateFile = _bIsStateFile;
+
 			if (CFile::fs_FileExists(_FileName))
 				ConfigFile = fs_ParseConfigFile(CFile::fs_ReadStringFromFile(_FileName, true), _FileName);
 
@@ -411,7 +443,7 @@ namespace NMib::NBuildSystem
 
 			CStr ConfigHash;
 			if (!bIsRoot)
-				ConfigHash = o_StateHandler.f_GetHash(_Repo.m_ConfigFile, Location, _Repo.m_Identity);
+				ConfigHash = o_StateHandler.f_GetHash(_Repo.m_ConfigFile, Location, _Repo.m_Identity, false);
 
 			auto fOutputInfo = [&](EOutputType _OutputType, CStr const &_Info)
 				{
@@ -571,7 +603,7 @@ namespace NMib::NBuildSystem
 			if (bIsRoot)
 				co_return false;
 
-			CStr CurrentHash = o_StateHandler.f_GetHash(_Repo.m_StateFile, Location, _Repo.m_Identity);
+			CStr CurrentHash = o_StateHandler.f_GetHash(_Repo.m_StateFile, Location, _Repo.m_Identity, true);
 			CStr HeadHash = fg_GetGitHeadHash(Location, _Repo.m_Position);
 
 			if
@@ -893,8 +925,8 @@ namespace NMib::NBuildSystem
 			}
 
 			CStr GitHeadHash = fg_GetGitHeadHash(Location, _Repo.m_Position);
-			o_StateHandler.f_SetHash(_Repo.m_StateFile, Location, GitHeadHash, _Repo.m_Identity);
-			o_StateHandler.f_SetHash(_Repo.m_ConfigFile, Location, GitHeadHash, _Repo.m_Identity);
+			o_StateHandler.f_SetHash(_Repo.m_StateFile, Location, GitHeadHash, _Repo.m_Identity, true);
+			o_StateHandler.f_SetHash(_Repo.m_ConfigFile, Location, GitHeadHash, _Repo.m_Identity, false);
 			o_StateHandler.f_AddGitIgnore(_Repo.m_StateFile, _BuildSystem);
 
 			co_return bChanged;
@@ -1387,23 +1419,42 @@ namespace NMib::NBuildSystem
 		}
 
 		auto MergedFiles = StateHandler.f_GetMergedFiles();
-		for (auto iFile = MergedFiles.f_GetIterator(); iFile; ++iFile)
+		for (auto &File : MergedFiles)
 		{
-			CRegistry Registry;
+			CStr FileName = MergedFiles.fs_GetKey(File);
+			CStr BasePath = CFile::fs_GetPath(FileName);
 
-			CStr BasePath = CFile::fs_GetPath(iFile.f_GetKey());
-
-			for (auto iConfig = iFile->m_Configs.f_GetIterator(); iConfig; ++iConfig)
+			CStr FileContents;
+			if (File.m_bIsStateFile)
 			{
-				auto &Config = *iConfig;
-				if (Config.m_bExternalPath)
-					Registry.f_SetValueNoPath("~" + iConfig.f_GetKey(), Config.m_Hash);
-				else
-					Registry.f_SetValueNoPath(CFile::fs_MakePathRelative(iConfig.f_GetKey(), BasePath), Config.m_Hash);
-			}
+				CRegistry Registry;
 
-			CStr FileName = iFile.f_GetKey();
-			CStr FileContents = Registry.f_GenerateStr().f_Replace(DMibNewLine, iFile->m_LineEndings);
+				for (auto iConfig = File.m_Configs.f_GetIterator(); iConfig; ++iConfig)
+				{
+					auto &Config = *iConfig;
+					if (Config.m_bExternalPath)
+						Registry.f_SetValueNoPath("~" + iConfig.f_GetKey(), Config.m_Hash);
+					else
+						Registry.f_SetValueNoPath(CFile::fs_MakePathRelative(iConfig.f_GetKey(), BasePath), Config.m_Hash);
+				}
+
+				FileContents = Registry.f_GenerateStr().f_Replace(DMibNewLine, File.m_LineEndings);
+			}
+			else
+			{
+				CJSONSorted StateJson;
+
+				for (auto iConfig = File.m_Configs.f_GetIterator(); iConfig; ++iConfig)
+				{
+					auto &Config = *iConfig;
+					if (Config.m_bExternalPath)
+						StateJson["~" + iConfig.f_GetKey()]["Hash"] = Config.m_Hash;
+					else
+						StateJson[CFile::fs_MakePathRelative(iConfig.f_GetKey(), BasePath)]["Hash"] = Config.m_Hash;
+				}
+
+				FileContents = StateJson.f_ToString().f_Replace("\n", File.m_LineEndings);
+			}
 
 			bool bWasCreated = false;
 			if (!f_AddGeneratedFile(FileName, FileContents, "", bWasCreated))

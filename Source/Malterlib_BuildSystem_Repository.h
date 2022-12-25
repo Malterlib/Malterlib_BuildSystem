@@ -111,10 +111,11 @@ namespace NMib::NBuildSystem::NRepository
 
 	struct CConfigFile
 	{
+		CRepositoryConfig const *f_GetConfig(CRepository const &_Repo, CStr const &_BasePath);
+		
 		TCMap<CStr, CRepositoryConfig> m_Configs;
 		CStr m_LineEndings = "\n";
-
-		CRepositoryConfig const *f_GetConfig(CRepository const &_Repo, CStr const &_BasePath);
+		bool m_bIsStateFile = false;
 	};
 
 	struct CStateHandler
@@ -128,8 +129,8 @@ namespace NMib::NBuildSystem::NRepository
 			)
 		;
 
-		void f_SetHash(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Hash, CStr const &_Identifier);
-		CStr f_GetHash(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Identifier);
+		void f_SetHash(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Hash, CStr const &_Identifier, bool _bIsStateFile);
+		CStr f_GetHash(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Identifier, bool _bIsStateFile);
 		TCMap<CStr, CConfigFile> const &f_GetNewFiles();
 		TCMap<CStr, CConfigFile> f_GetMergedFiles();
 		void f_AddGitIgnore(CStr const &_FileName, CBuildSystem const &_BuildSystem);
@@ -140,7 +141,7 @@ namespace NMib::NBuildSystem::NRepository
 		EAnsiEncodingFlag f_AnsiFlags() const;
 
 	private:
-		CConfigFile const &fp_GetConfigFile(CStr const &_FileName);
+		CConfigFile const &fp_GetConfigFile(CStr const &_FileName, bool _bIsStateFile);
 
 		CStr const mp_BasePath;
 		CStr const mp_OutputDir;
