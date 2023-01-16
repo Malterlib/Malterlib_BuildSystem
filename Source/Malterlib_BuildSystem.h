@@ -409,7 +409,22 @@ namespace NMib::NBuildSystem
 
 		NConcurrency::TCFuture<ERetry> f_Action_Repository_Update(CGenerateOptions const &_GenerateOptions);
 		NConcurrency::TCFuture<ERetry> f_Action_Repository_Status(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoStatusFlag _Flags);
-		NConcurrency::TCFuture<ERetry> f_Action_Repository_ForEachRepo(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, bool _bParallell, NContainer::TCVector<NStr::CStr> const &_Params);
+		NConcurrency::TCFuture<ERetry> f_Action_Repository_ForEachRepo
+			(
+				CGenerateOptions const &_GenerateOptions
+				, CRepoFilter const &_Filter
+				, bool _bParallell
+				, NContainer::TCVector<NStr::CStr> const &_Params
+			)
+		;
+
+		struct CForEachRepoDirOptions
+		{
+			NContainer::TCVector<NStr::CStr> m_Params;
+			NStr::CStr m_Application;
+			bool m_bParallel = true;
+		};
+		NConcurrency::TCFuture<ERetry> f_Action_Repository_ForEachRepoDir(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, CForEachRepoDirOptions const &_Options);
 
 		NConcurrency::TCFuture<ERetry> f_Action_Repository_Branch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, NStr::CStr const &_Branch, ERepoBranchFlag _Flags);
 		NConcurrency::TCFuture<ERetry> f_Action_Repository_Unbranch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoBranchFlag _Flags);

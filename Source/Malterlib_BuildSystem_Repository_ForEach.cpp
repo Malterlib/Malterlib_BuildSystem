@@ -60,4 +60,55 @@ namespace NMib::NBuildSystem
 
 		co_return ERetry_None;
 	}
+
+	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_ForEachRepoDir
+		(
+			CGenerateOptions const &_GenerateOptions
+			, CRepoFilter const &_Filter
+			, CForEachRepoDirOptions const &_Options
+		)
+	{
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+
+		CGenerateEphemeralState GenerateState;
+		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
+			co_return Retry;
+
+		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(_Filter, *this, mp_Data);
+
+		CGitLaunches Launches{f_GetBaseDir(), "Running for each repo", mp_AnsiFlags, mp_fOutputConsole, f_GetCancelledPointer()};
+		auto DestroyLaunchs = co_await co_await Launches.f_Init();
+
+		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
+
+		TCVector<TCAsyncResult<void>> LaunchResults;
+
+		for (auto &Repos : FilteredRepositories.m_FilteredRepositories)
+		{
+			TCActorResultVector<void> Results;
+			for (auto *pRepo : Repos)
+			{
+				auto &Repo = *pRepo;
+
+				TCPromise<void> Result;
+				Launches.f_Launch(Repo, _Options.m_Params, fg_LogAllFunctor(), {}, {}, _Options.m_Application) > [=](TCAsyncResult<void> &&_Result)
+					{
+						Result.f_SetResult(fg_Move(_Result));
+						Launches.f_RepoDone();
+					}
+				;
+
+				if (_Options.m_bParallel)
+					Result.f_MoveFuture() > Results.f_AddResult();
+				else
+					co_await Result.f_MoveFuture();
+			}
+
+			LaunchResults.f_Insert(co_await Results.f_GetResults());
+		}
+
+		fg_Move(LaunchResults) | g_Unwrap;
+
+		co_return ERetry_None;
+	}
 }

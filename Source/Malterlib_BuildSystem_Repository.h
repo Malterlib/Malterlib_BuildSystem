@@ -175,13 +175,21 @@ namespace NMib::NBuildSystem::NRepository
 		void f_SetNumRepos(mint _nRepos, bool _bReport = true);
 		void f_MeasureRepos(TCVector<TCVector<CRepository *>> const &_FilteredRepositories, bool _bReport = true);
 
-		TCFuture<CProcessLaunchActor::CSimpleLaunchResult> f_Launch(CRepository const &_Repo, TCVector<CStr> const &_Params, TCMap<CStr, CStr> const &_Environment = {}) const;
+		TCFuture<CProcessLaunchActor::CSimpleLaunchResult> f_Launch
+			(
+				CRepository const &_Repo
+				, TCVector<CStr> const &_Params
+				, TCMap<CStr, CStr> const &_Environment = {}
+				, CStr const &_Application = "git"
+			) const
+		;
 		TCFuture<CProcessLaunchActor::CSimpleLaunchResult> f_Launch
 			(
 				CStr const &_Directory
 				, TCVector<CStr> const &_Params
 				, TCMap<CStr, CStr> const &_Environment = {}
 				, CProcessLaunchActor::ESimpleLaunchFlag _Flags = CProcessLaunchActor::ESimpleLaunchFlag_None
+				, CStr const &_Application = "git"
 			) const
 		;
 		TCFuture<void> f_Launch
@@ -191,6 +199,7 @@ namespace NMib::NBuildSystem::NRepository
 			 	, TCFunctionMovable<CStr (CProcessLaunchActor::CSimpleLaunchResult const &_Result)> &&_fHandleResult
 			 	, CStr const &_Prefix = {}
 			 	, TCMap<CStr, CStr> const &_Environment = {}
+				, CStr const &_Application = "git"
 			) const
 		;
 		TCFuture<CProcessLaunchActor::CSimpleLaunchResult> f_OpenRepoEditor(CRepoEditor const &_Editor, CStr const &_Repo) const;
