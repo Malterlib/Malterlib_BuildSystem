@@ -6,40 +6,24 @@
 
 namespace NMib::NBuildSystem::NVisualStudio
 {
-	void CGeneratorInstance::f_GenerateSolutionFile(CSolution &_Solution, CStr const &_OutputDir) const
+	TCFuture<void> CGeneratorInstance::f_GenerateSolutionFile(CSolution &_Solution, CStr const &_OutputDir) const
 	{
-		CStr OutputDir = CFile::fs_AppendPath(_OutputDir, CStr(CFile::fs_MakeNiceFilename(_Solution.f_GetName())));
-		fg_ForEach
-			(
-				_Solution.m_Projects
-				, [&](CProject &_Project)
-				{
-					CStr OutputDir = CFile::fs_AppendPath(CFile::fs_AppendPath(_OutputDir, "Files"), CStr(CFile::fs_MakeNiceFilename(_Solution.f_GetName())));
-					f_GenerateProjectFile(_Project, OutputDir);
-				}
-			)
-		;
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
 
+		for (auto &Project : _Solution.m_Projects)
+		{
+			CStr OutputDir = CFile::fs_AppendPath(CFile::fs_AppendPath(_OutputDir, "Files"), CStr(CFile::fs_MakeNiceFilename(_Solution.f_GetName())));
+			co_await f_GenerateProjectFile(Project, OutputDir);
+			co_await g_Yield;
+		}
+
+		CStr OutputDir = CFile::fs_AppendPath(_OutputDir, CStr(CFile::fs_MakeNiceFilename(_Solution.f_GetName())));
 		CStr OutputFile = OutputDir + ".sln";
 
 		CStr FileData;
 
 		FileData += "\r\n";
-		if (m_Version == 2017)
-		{
-			FileData += "Microsoft Visual Studio Solution File, Format Version 12.00\r\n";
-			FileData += "# Visual Studio 15\r\n";
-			FileData += "VisualStudioVersion = 15.0.26206.0\r\n";
-			FileData += "MinimumVisualStudioVersion = 10.0.40219.1\r\n";
-		}
-		else if (m_Version == 2019)
-		{
-			FileData += "Microsoft Visual Studio Solution File, Format Version 12.00\r\n";
-			FileData += "# Visual Studio Version 16\r\n";
-			FileData += "VisualStudioVersion = 16.0.28714.193\r\n";
-			FileData += "MinimumVisualStudioVersion = 10.0.40219.1\r\n";
-		}
-		else if (m_Version == 2022)
+		if (m_Version == 2022)
 		{
 			FileData += "Microsoft Visual Studio Solution File, Format Version 12.00\r\n";
 			FileData += "# Visual Studio Version 17\r\n";
@@ -47,7 +31,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			FileData += "MinimumVisualStudioVersion = 10.0.40219.1\r\n";
 		}
 		else
-			DError("Implement this");
+			DError("Implement this (CGeneratorInstance::f_GenerateSolutionFile)");
 
 		for (auto iProject = _Solution.m_Projects.f_GetIterator(); iProject; ++iProject)
 		{
@@ -130,16 +114,16 @@ namespace NMib::NBuildSystem::NVisualStudio
 			{
 				for (auto iConfig = _Solution.m_EnabledConfigs.f_GetIterator(); iConfig; ++iConfig)
 				{
-					auto pProjectConfig = iProject->m_EnabledConfigs.f_FindEqual(iConfig.f_GetKey());
+					auto pProjectConfig = iProject->m_EnabledProjectConfigs.f_FindEqual(iConfig.f_GetKey());
 					bool bEnabled = !!pProjectConfig;
 
 					if (!pProjectConfig)
-						pProjectConfig = iProject->m_EnabledConfigs.f_FindSmallest();
+						pProjectConfig = iProject->m_EnabledProjectConfigs.f_FindSmallest();
 
 					if (!pProjectConfig)
 						continue;
 
-					auto &ProjectConfig = iProject->m_EnabledConfigs.fs_GetKey(*pProjectConfig);
+					auto &ProjectConfig = iProject->m_EnabledProjectConfigs.fs_GetKey(*pProjectConfig);
 
 					Rows.f_Insert
 						(
@@ -155,7 +139,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 					if (!bEnabled)
 						continue;
 
-					if (!m_BuildSystem.f_EvaluateEntityPropertyBool(**pProjectConfig, EPropertyType_Target, "Disabled", false))
+					if (!m_BuildSystem.f_EvaluateEntityPropertyBool(**pProjectConfig, gc_ConstKey_Target_Disabled, false))
 					{
 						Rows.f_Insert
 							(
@@ -213,5 +197,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			CFile::fs_WriteStringToVector(FileDataVector, CStr(FileData));
 			m_BuildSystem.f_WriteFile(FileDataVector, OutputFile);
 		}
+
+		co_return {};
 	}
 }

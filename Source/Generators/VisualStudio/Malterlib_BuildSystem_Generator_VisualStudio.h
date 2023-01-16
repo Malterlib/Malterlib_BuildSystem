@@ -8,15 +8,292 @@
 
 namespace NMib::NBuildSystem::NVisualStudio
 {
-	extern CUniversallyUniqueIdentifier g_GeneratorGroupUUIDNamespace;
-	extern CUniversallyUniqueIdentifier g_GeneratorProjectUUIDNamespace;
-	extern CUniversallyUniqueIdentifier g_GeneratorSolutionUUIDNamespace;
-	extern CUniversallyUniqueIdentifier g_GeneratorPrefixHeaderUUIDNamespace;
+	extern CUniversallyUniqueIdentifier const gc_GeneratorGroupUUIDNamespace;
+	extern CUniversallyUniqueIdentifier const gc_GeneratorProjectUUIDNamespace;
+	extern CUniversallyUniqueIdentifier const gc_GeneratorSolutionUUIDNamespace;
+	extern CUniversallyUniqueIdentifier const gc_GeneratorPrefixHeaderUUIDNamespace;
 
 	enum ELanguageType
 	{
 		ELanguageType_Native
 		, ELanguageType_CSharp
+	};
+
+	struct CProject;
+
+	struct CProjectXMLState
+	{
+		CXMLDocument m_XMLFile;
+		CXMLDocument m_PropsXMLFile;
+
+		CXMLElement *m_pProject = nullptr;
+
+		CXMLElement *m_pPreProject = nullptr;
+		CXMLElement *m_pGlobals = nullptr;
+		CXMLElement *m_pConfiguration = nullptr;
+
+		CXMLElement *m_pPropsProject = nullptr;
+
+		CXMLElement *m_pPropsPropertyGroup = nullptr;
+		CXMLElement *m_pPropsItemDefinitionGroup = nullptr;
+
+		CXMLElement *m_pFileItemGroup = nullptr;
+
+		CXMLElement *m_pDependenciesItemGroup = nullptr;
+
+		TCMap<CStr, CXMLElement *> m_PropertyGroupLabels;
+		TCMap<CStr, CXMLElement *> m_ItemDefinitionGroups;
+
+		bool m_bIsDotNet = false;
+	};
+
+	struct CGeneratorSetting
+	{
+		template <typename tf_CValue>
+		TCValueWithPositions<tf_CValue> f_GetSetting(CStr const &_Name) const;
+
+		template <typename tf_CValue>
+		tf_CValue f_GetSettingWithoutPositions(CStr const &_Name) const;
+
+		CEJSONSorted m_Value;
+		CBuildSystemPropertyInfo m_PropertyInfo;
+	};
+
+	struct CItemState;
+	struct CGeneratorSettingsVSType;
+
+	struct CGeneratorSettings
+	{
+		TCFuture<void> f_PopulateSettings
+			(
+				CPropertyKeyReference const &_GeneratorSetting
+				, EPropertyType _PropertyType
+				, CBuildSystem const &_BuildSystem
+				, TCMap<CConfiguration, CEntityMutablePointer> const &_EntitiesPerConfig
+			)
+		;
+
+		void f_PopulateSetting
+			(
+				CPropertyKeyReference const &_GeneratorSetting
+				, EPropertyType _PropertyType
+				, CBuildSystem const &_BuildSystem
+				, TCMap<CConfiguration, CEntityMutablePointer> const &_EntitiesPerConfig
+				, CGeneratorSetting &o_Result
+			)
+		;
+
+		struct CVS_SettingShared
+		{
+			auto operator <=> (CVS_SettingShared const &_Right) const = default;
+
+			template <typename tf_CStr>
+			void f_Format(tf_CStr &o_String) const;
+			static void fs_FromJson(CVS_SettingShared &o_Value, NEncoding::CEJSONSorted &&_JSON);
+
+			CStr m_Key;
+			CStr m_Value;
+		};
+
+		struct CVS_Setting_PropertyGroup : public CVS_SettingShared
+		{
+			auto operator <=> (CVS_Setting_PropertyGroup const &_Right) const = default;
+
+			template <typename tf_CStr>
+			void f_Format(tf_CStr &o_String) const;
+			static CVS_Setting_PropertyGroup fs_FromJson(NEncoding::CEJSONSorted &&_JSON);
+
+			// Type: one_of("PropertyGroup")
+			CStr m_Label;
+		};
+
+		struct CVS_Setting_ItemDefinitionGroup : public CVS_SettingShared
+		{
+			auto operator <=> (CVS_Setting_ItemDefinitionGroup const &_Right) const = default;
+
+			template <typename tf_CStr>
+			void f_Format(tf_CStr &o_String) const;
+			static CVS_Setting_ItemDefinitionGroup fs_FromJson(NEncoding::CEJSONSorted &&_JSON);
+
+			// Type: one_of("ItemDefinitionGroup")
+			CStr m_Name;
+		};
+
+		struct CVS_Setting_Item : public CVS_SettingShared
+		{
+			auto operator <=> (CVS_Setting_Item const &_Right) const = default;
+
+			template <typename tf_CStr>
+			void f_Format(tf_CStr &o_String) const;
+		};
+
+		using CVS_Setting = TCVariant<CVS_Setting_Item, CVS_Setting_PropertyGroup, CVS_Setting_ItemDefinitionGroup>;
+
+		struct CVSSettingAggregateProperties
+		{
+			template <typename tf_CStr>
+			void f_Format(tf_CStr &o_String) const;
+
+			TCSet<CConfiguration> m_Configurations;
+			CBuildSystemUniquePositions m_Positions;
+		};
+
+		struct CVSSettingAggregate
+		{
+			template <typename tf_CStr>
+			void f_Format(tf_CStr &o_String) const;
+
+			TCMap<TCVector<CVS_Setting>, CVSSettingAggregateProperties> m_Settings;
+		};
+
+		struct CVSSettingAggregated
+		{
+			template <typename tf_CStr>
+			void f_Format(tf_CStr &o_String) const;
+
+			TCMap<CStr, CVSSettingAggregate> m_AggregatedSettings;
+		};
+
+		struct CParsedSetting
+		{
+			CBuildSystemUniquePositions m_Positions;
+			TCVector<CVS_Setting> m_VSSettings;
+		};
+		
+		struct CParsedGeneratorSetting
+		{
+			TCMap<CStr, CParsedSetting> m_Properties;
+			TCMap<CStr, CParsedSetting> m_NonSharedProperties;
+		};
+
+		struct CParsedGeneratorSettings
+		{
+			bool f_SettingsConstructed()
+			{
+#if DMibEnableSafeCheck > 0
+				return !!m_Settings;
+#else
+				return true;
+#endif
+			}
+
+			TCMap<CConfiguration, CParsedGeneratorSetting> &f_ConstructSettings()
+			{
+#if DMibEnableSafeCheck > 0
+				DMibFastCheck(!m_Settings);
+				m_Settings = fg_Construct();
+				return *m_Settings;
+#else
+				return m_Settings;
+#endif
+			}
+
+			void f_DestructSettings()
+			{
+				m_Settings.f_Clear();
+			}
+
+			TCMap<CConfiguration, CParsedGeneratorSetting> &f_Settings()
+			{
+#if DMibEnableSafeCheck > 0
+				return *m_Settings;
+#else
+				return m_Settings;
+#endif
+			}
+
+			TCMap<CConfiguration, CParsedGeneratorSetting> const &f_Settings() const
+			{
+#if DMibEnableSafeCheck > 0
+				return *m_Settings;
+#else
+				return m_Settings;
+#endif
+			}
+
+			CStr m_VSType;
+			CStr m_Type;
+#if DMibEnableSafeCheck > 0
+			TCOptional<TCMap<CConfiguration, CParsedGeneratorSetting>> m_Settings;
+#else
+			TCMap<CConfiguration, CParsedGeneratorSetting> m_Settings;
+#endif
+		};
+
+		template <typename tf_CAllConfigs>
+		static CStr fs_GetConditionString(TCSet<CConfiguration> const &_Configurations, tf_CAllConfigs const &_AllConfigurations, CProject const &_Project);
+
+		template <bool tf_bCompile, bool tf_bIsItem>
+		static void fs_AddToXMLFiles(CProjectXMLState &_XMLState, CProject const &_Project, CParsedGeneratorSettings &&_Parsed, CItemState const *_pItemState);
+
+		template <typename tf_CValue, typename tf_CThis>
+		static TCValueWithPositions<tf_CValue> fsp_GetSingleSetting(tf_CThis &&_This, CStr const &_Name);
+
+		template <typename tf_CValue>
+		TCValueWithPositions<tf_CValue> f_GetSingleSetting(CStr const &_Name) const &;
+
+		template <typename tf_CValue>
+		TCValueWithPositions<tf_CValue> f_GetSingleSetting(CStr const &_Name) &&;
+
+		template <typename tf_CValue>
+		tf_CValue f_GetSingleSettingWithoutPositions(CStr const &_Name) const;
+
+		template <bool tf_bType, bool tf_bIsItem>
+		CParsedGeneratorSettings f_GetParsedVSSettings(TCMap<CStr, CGeneratorSettingsVSType> *_pCompileSettings);
+
+		TCMap<CConfiguration, CGeneratorSetting> &f_ConstructSettings()
+		{
+#if DMibEnableSafeCheck > 0
+			DMibFastCheck(!m_Settings);
+			m_Settings = fg_Construct();
+			return *m_Settings;
+#else
+			return m_Settings;
+#endif
+		}
+
+		void f_DestructSettings()
+		{
+			m_Settings.f_Clear();
+		}
+
+		TCMap<CConfiguration, CGeneratorSetting> &f_Settings()
+		{
+#if DMibEnableSafeCheck > 0
+			return *m_Settings;
+#else
+			return m_Settings;
+#endif
+		}
+
+		TCMap<CConfiguration, CGeneratorSetting> const &f_Settings() const
+		{
+#if DMibEnableSafeCheck > 0
+			return *m_Settings;
+#else
+			return m_Settings;
+#endif
+		}
+
+#if DMibEnableSafeCheck > 0
+		TCOptional<TCMap<CConfiguration, CGeneratorSetting>> m_Settings;
+#else
+		TCMap<CConfiguration, CGeneratorSetting> m_Settings;
+#endif
+
+		static TCVector<CVS_Setting> ms_ExcludedFromBuildVSSettings;
+	};
+
+	struct CGeneratorSettingsVSType
+	{
+		CGeneratorSettings::CParsedGeneratorSettings m_SharedSettings;
+		TCMap<CStr, CGeneratorSettings::CParsedGeneratorSettings> m_SpecificSettings;
+	};
+
+	struct CItemState
+	{
+		TCMap<CStr, CGeneratorSettingsVSType> const *m_pCompile;
+		CXMLElement *m_pItemElement;
 	};
 
 	struct CLocalConfiguraitonData : public CConfiguraitonData
@@ -40,6 +317,14 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 	};
 
+	struct CPrefixHeader
+	{
+		TCSet<CConfiguration> m_Configurations;
+		CStr m_PCHFile;
+		CBuildSystemUniquePositions m_Positions;
+		bool m_bUsed = false;
+	};
+
 	struct CProjectFile
 	{
 		CStr const &f_GetName() const;
@@ -50,6 +335,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 		CFilePosition m_Position;
 		CStr m_VSType;
 		CStr m_VSFile;
+		CGeneratorSettings m_GeneratorSettings;
+		CGeneratorSettings::CParsedGeneratorSettings m_ParsedSettings;
+		TCMap<CConfiguration, CPrefixHeader * const> m_PrefixHeaders;
 		bool m_bWasGenerated = false;
 	};
 
@@ -59,7 +347,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 		TCMap<CConfiguration, CEntityMutablePointer> m_EnabledConfigs;
 		CFilePosition m_Position;
-		CStr m_VSFile;
+		CGeneratorSettings m_GeneratorSettings;
+		bool m_bExternal = false;
 	};
 
 	struct CSolution;
@@ -72,7 +361,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		CStr f_GetPath() const;
 		CStr const &f_GetGUID();
 		void fr_FindRecursiveDependencies(CBuildSystem const &_BuildSystem, TCSet<CStr> &_Stack, CProjectDependency const *_pDepend, TCMap<CStr, CProject> const &_Projects) const;
-		CStr f_GetSolutionTypeGUID() const;
+		CStr const &f_GetSolutionTypeGUID() const;
 
 		TCMap<CStr, CProjectFile> m_Files;
 		TCMap<CStr, CGroup> m_Groups;
@@ -84,11 +373,11 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 		TCPointer<CGroup> m_pGroup;
 		TCMap<CConfiguration, CEntityMutablePointer> m_EnabledProjectConfigs;
-		TCMap<CConfiguration, CEntityMutablePointer> m_EnabledConfigs;
+		//TCMap<CConfiguration, CEntityMutablePointer> m_EnabledConfigs;
 		CFilePosition m_Position;
 		CFilePosition m_ProjectPosition;
 		CStr m_FileName;
-		ELanguageType m_LanguageType;
+		ELanguageType m_LanguageType = ELanguageType_Native;
 		TCMap<CConfiguration, CStr> m_Platforms;
 
 	private:
@@ -130,6 +419,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 		CStr m_Name;
 
+		TCMap<CConfiguration, TCUniquePointer<CWorkspaceInfo>> m_WorkspaceInfos;
+
 		TCMap<CStr, CGroup> m_Groups;
 		TCMap<CStr, CProject> m_Projects;
 		TCMap<CStr, CSolutionFile> m_SolutionFiles;
@@ -139,7 +430,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 		CStr m_EntityName;
 
 		TCMap<CConfiguration, CConfigDisplay> m_EnabledConfigs;
-		TCMap<CConfiguration, TCUniquePointer<CWorkspaceInfo>> m_WorkspaceInfos;
+
+		mint m_nTotalTargets = 0;
 	};
 
 	struct CGeneratorState
@@ -185,15 +477,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 			bool m_bMainValue = false;
 
-			inline COrdering_Weak operator <=> (CConfigValue const &_Right) const;
-		};
-
-		struct CPrefixHeader
-		{
-			TCSet<CConfiguration> m_Configurations;
-			TCMap<CStr, TCSet<CXMLElement *>> m_Elements;
-			bool m_bUsed = false;
-			CFilePosition m_Position;
+			inline COrdering_Strong operator <=> (CConfigValue const &_Right) const;
 		};
 
 		struct CValueConfigs
@@ -209,95 +493,82 @@ namespace NMib::NBuildSystem::NVisualStudio
 			TCSet<CStr> m_UntranslatedValues;
 		};
 
-		struct CThreadLocal
+		struct CProjectState
 		{
 			bool f_FileExists(CStr const &_Path);
 			void f_CreateDirectory(CStr const &_Path);
-			void f_Clear();
 
 			CStr m_CurrentOutputDir;
-			TCMap<TCMap<CStr, CStr>, TCMap<CStr, CPrefixHeader>> m_PrefixHeaders;
+			TCMap<CStr, TCMap<CStr, CPrefixHeader>> m_PrefixHeaders;
 			ELanguageType m_LanguageType = ELanguageType_Native;
-			TCMap<CStr, CStr> m_CurrentCompileTypes;
 
 			TCMap<CStr, zbool> m_FileExistsCache;
 			TCSet<CStr> m_CreateDirectoryCache;
+		};
+
+		struct CCompileType
+		{
+			template <typename tf_CStr>
+			void f_Format(tf_CStr &o_Str) const
+			{
+				o_Str += typename tf_CStr::CFormat("{}={vs}") << m_VSType << m_EnabledConfigs;
+			}
+
+			CStr m_VSType;
+			TCSet<CConfiguration> m_EnabledConfigs;
 		};
 
 		CGeneratorInstance
 			(
 				CBuildSystem const &_BuildSystem
 				, CBuildSystemData const &_BuildSystemData
-				, TCMap<CPropertyKey, CEJSON> const &_InitialValues
+				, TCMap<CPropertyKey, CEJSONSorted> const &_InitialValues
 				, CStr const &_OutputDir
 			)
 		;
 		~CGeneratorInstance();
 
-		void f_ClearThreadLocal() const;
-
-		virtual bool f_GetBuiltin(CStr const &_Value, CStr &_Result) const override;
+		virtual CValuePotentiallyByRef f_GetBuiltin(CBuildSystemUniquePositions *_pStorePositions, CStr const &_Value, bool &o_bSuccess) const override;
 		virtual CStr f_GetExpandedPath(CStr const &_Path, CStr const &_Base) const override;
 		virtual CSystemEnvironment f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const override;
 
-		CStr f_GetToolsVersion() const;
-		CStr f_GetVisualStudioRoot() const;
+		CStr const &f_GetToolsVersion() const;
+		CEJSONSorted const &f_GetVisualStudioRoot() const;
 
-		void f_SetEvaluatedValues
+		TCFuture<void> f_GenerateProjectFile(CProject &_Project, CStr const &_OutputDir) const;
+		TCFuture<void> f_GenerateSolutionFile(CSolution &_Solution, CStr const &_OutputDir) const;
+
+		TCFuture<TCMap<CStr, CCompileType>> f_GenerateProjectFile_File(CProject &_Project, CProjectState &_ProjectState) const;
+		void f_GenerateProjectFile_AddPrefixHeaders(CProject &_Project, CProjectState &_ProjectState) const;
+		TCFuture<void> f_GenerateProjectFile_Dependency(CProject &_Project, CProjectState &_ProjectState) const;
+		TCFuture<TCMap<CStr, CGeneratorSettingsVSType>> f_GenerateProjectFile_FileTypes
 			(
-				TCMap<CStr, CXMLElement *> const &_Parents
-				, TCMap<CConfiguration, CEntityMutablePointer> const &_Configs
-				, TCMap<CConfiguration, CEntityMutablePointer> const &_AllConfigs
-				, bool _bFile
-				, EPropertyType _PropertyType
-				, TCVector<CStr> const *_pSearchList
-				, TCMap<CConfiguration, TCVector<CStr>> const *_pSearchListPerConfig
-				, CStr const &_DefaultEntity
-				, bool _bPropertyCondition
-				, bool _bAddPropertyDefined
-				, bool _bDontAllowRedefinition
-				, CProject &_Project
+				CProject &_Project
+				, CProjectState &_ProjectState
+				, TCMap<CStr, CCompileType> const &_CompileTypes
 			) const
 		;
+		void f_GenerateProjectFile_AddToXML_FileTypes(CProject &_Project, CProjectState &_ProjectState, CProjectXMLState &_XMLState, TCMap<CStr, CGeneratorSettingsVSType> &&_Compile) const;
+		void f_GenerateProjectFile_AddToXML_File(CProject &_Project, CProjectState &_ProjectState, CProjectXMLState &_XMLState, TCMap<CStr, CGeneratorSettingsVSType> &_Compile) const;
+		void f_GenerateProjectFile_AddToXML_Dependency(CProject &_Project, CProjectState &_ProjectState, CProjectXMLState &_XMLState) const;
 
-		TCMap<CConfiguration, CConfigResult> f_AddConfigValue
-			(
-				TCMap<CConfiguration, CEntityMutablePointer> const &_Configs
-				, TCMap<CConfiguration, CEntityMutablePointer> const &_AllConfigs
-				, CFilePosition const &_Position
-				, EPropertyType _PropType
-				, CStr const &_SourceType
-				, TCMap<CStr, CXMLElement *> const &_Parents
-				, CStr const &_AddAsAttribute
-				, bool _bExcludeFromBuildCondition
-				, TCVector<CStr> const *_pSearchList
-				, TCMap<CConfiguration, TCVector<CStr>> const *_pSearchListPerConfig
-				, CStr const &_DefaultEntity
-				, bool _bPropertyCondition
-				, bool _bAddPropertyDefined
-				, bool _bDontAllowRedefinition
-				, bool _bFile
-				, CProject &_Project
-			) const
-		;
-		void f_GenerateProjectFile(CProject &_Project, CStr const &_OutputDir) const;
-		void f_GenerateSolutionFile(CSolution &_Solution, CStr const &_OutputDir) const;
-
-		CStr f_GetNativePlatform(CStr const &_Platform);
+		CStr f_GetNativePlatform(CProjectState &_ProjectState, CStr const &_Platform);
 		CStr f_GetNativePlatform(ELanguageType _Language, CStr const &_Platform);
 
 		CBuildSystem const &m_BuildSystem;
 		CBuildSystemData const &m_BuildSystemData;
-		CBuildSystemData m_GeneratorSettingsData;
 
 		CGeneratorState m_State;
-		CStr m_OutputDir;
-		CStr m_RelativeBasePath;
-		CStr m_RelativeBasePathAbsolute;
+		CEJSONSorted m_OutputDir;
+		CEJSONSorted m_RelativeBasePath;
+		CEJSONSorted m_RelativeBasePathAbsolute;
 
-		CEntityPointer m_pGeneratorSettings;
+		CEJSONSorted m_Builtin_ProjectPath = ".";
+		CEJSONSorted m_Builtin_Inherit = gc_ConstString_Symbol_Inherit;
 
-		mutable TCThreadLocal<CThreadLocal> m_ThreadLocal;
+		mutable CLowLevelLock m_VisualStudioRootLock;
+		mutable TCAtomic<bool> m_VisualStudioRootCached;
+		mutable CEJSONSorted m_VisualStudioRoot;
 
 		CStr m_Win32Platfrom;
 

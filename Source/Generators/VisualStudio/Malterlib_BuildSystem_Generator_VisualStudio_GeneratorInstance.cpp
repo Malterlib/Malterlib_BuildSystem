@@ -19,27 +19,29 @@ namespace NMib::NBuildSystem::NVisualStudio
 		m_BuildSystem.f_SetGeneratorInterface(nullptr);
 	}
 
-	CStr CGeneratorInstance::f_GetToolsVersion() const
+	CStr const &CGeneratorInstance::f_GetToolsVersion() const
 	{
-		if (m_Version == 2019)
-			return "16.0";
-		else if (m_Version == 2022)
-			return "17.0";
-		DError("Implement this");
+		if (m_Version == 2022)
+			return gc_ConstString_17_0;
+		DError("Implement this (CGeneratorInstance::f_GetToolsVersion)");
 	}
 
-	CStr CGeneratorInstance::f_GetVisualStudioRoot() const
+	CEJSONSorted const &CGeneratorInstance::f_GetVisualStudioRoot() const
 	{
-		static CStr s_Path;
-		if (!s_Path.f_IsEmpty())
-			return s_Path;
+		if (m_VisualStudioRootCached.f_Load())
+			return m_VisualStudioRoot;
 
-		uint32 VSVersion = 0;
+		DMibLock(m_VisualStudioRootLock);
+
+		if (m_VisualStudioRoot.f_IsValid())
+			return m_VisualStudioRoot;
+
+		CEJSONSorted VisualStudioRoot;
+		
 		switch (m_Version)
 		{
-		case 2019:
 		case 2022:
-		{
+			{
 #ifdef DPlatformFamily_Windows
 				CStr ProgramData = m_BuildSystem.f_GetEnvironmentVariable("ProgramData");
 				CStr CachePath = ProgramData / "Microsoft/VisualStudio/Packages";
@@ -65,9 +67,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 				BestVersion.f_SetLen(4);
 				CStr BestPath;
 
-				uint32 ExpectedVersion = 16;
-				if (m_Version == 2022)
-					ExpectedVersion = 17;
+				uint32 ExpectedVersion = 17;
 
 				for (auto &InstanceDir : CFile::fs_FindFiles(InstancesPath / "*", EFileAttrib_Directory))
 				{
@@ -76,7 +76,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 					{
 						CStr JsonContents = CFile::fs_ReadStringFromFile(StateFile);
 
-						CJSON const Json = CJSON::fs_FromString(JsonContents, StateFile);
+						CJSONSorted const Json = CJSONSorted::fs_FromString(JsonContents, StateFile);
 						auto Version = fParseVersion(Json["installationVersion"].f_String());
 						if (Version[0] == ExpectedVersion && Version > BestVersion)
 						{
@@ -93,24 +93,26 @@ namespace NMib::NBuildSystem::NVisualStudio
 				if (BestPath.f_IsEmpty())
 					DError("Failed to find Visual Studio {} path. {}\n"_f << m_Version << Errors);
 
-				return s_Path = BestPath;
+				VisualStudioRoot = BestPath;
+#else
+				VisualStudioRoot = "/opt/VisualStudio{}"_f << m_Version;
 #endif
+				break;
 			}
-		default: DError("Implement this");
+		default: DError("Implement this (f_GetVisualStudioRoot())");
 		}
-		return s_Path = CFile::fs_GetExpandedPath(m_BuildSystem.f_GetEnvironmentVariable(fg_Format("VS{}COMNTOOLS", VSVersion)) + "../..");
-	}
 
-	void CGeneratorInstance::f_ClearThreadLocal() const
-	{
-		m_ThreadLocal->f_Clear();
+		m_VisualStudioRoot = fg_Move(VisualStudioRoot);
+		m_VisualStudioRootCached.f_Exchange(true);
+
+		return m_VisualStudioRoot;
 	}
 
 	CGeneratorInstance::CGeneratorInstance
 		(
 			CBuildSystem const &_BuildSystem
 			, CBuildSystemData const &_BuildSystemData
-			, TCMap<CPropertyKey, CEJSON> const &_InitialValues
+			, TCMap<CPropertyKey, CEJSONSorted> const &_InitialValues
 			, CStr const &_OutputDir
 		)
 		: m_BuildSystem(_BuildSystem)
@@ -120,24 +122,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 	{
 		m_Version = _BuildSystem.f_GetGenerateSettings().m_Generator.f_Replace("VisualStudio", "").f_ToInt(uint32(2022));
 
-		m_RelativeBasePath = CFile::fs_MakePathRelative(m_BuildSystem.f_GetBaseDir(), m_OutputDir + "/Files/Temp");
-		m_RelativeBasePathAbsolute = "$(ProjectDir)" + m_RelativeBasePath;
+		m_RelativeBasePath = CFile::fs_MakePathRelative(m_BuildSystem.f_GetBaseDir(), m_OutputDir.f_String() + "/Files/Temp");
+		m_RelativeBasePathAbsolute = "$(ProjectDir)" + m_RelativeBasePath.f_String();
 		m_BuildSystem.f_SetGeneratorInterface(this);
-		CEntityKey Key;
-		Key.m_Type = EEntityType_GeneratorSetting;
-		Key.m_Name.m_Value = "VisualStudio2012";
-
-		auto pEntity = _BuildSystemData.m_RootEntity.m_ChildEntitiesMap.f_FindEqual(Key);
-		if (!pEntity)
-			m_BuildSystem.fs_ThrowError(CFilePosition(), "No VisualStudio2012 generator settings found");
-
-		_BuildSystem.f_EvaluateData(m_GeneratorSettingsData, _InitialValues, pEntity, true);
-
-		auto pSettings = m_GeneratorSettingsData.m_RootEntity.m_ChildEntitiesMap.f_FindEqual(Key);
-		if (!pSettings)
-			m_BuildSystem.fs_ThrowError(CFilePosition(), "No VisualStudio2012 generator settings found");
-		m_pGeneratorSettings = fg_Explicit(pSettings);
-		_BuildSystem.f_EvaluateAllGeneratorSettings(*pSettings);
 
 		CStr EnableSourceControl = m_BuildSystem.f_GetEnvironmentVariable("MalterlibEnableSourceControl");
 		if (EnableSourceControl == "")
@@ -154,14 +141,14 @@ namespace NMib::NBuildSystem::NVisualStudio
 				Path = CFile::fs_GetPath(Path);
 			}
 		}
-		else if (EnableSourceControl == "true")
+		else if (EnableSourceControl == gc_ConstString_true.m_String)
 			m_bEnableSourceControl = true;
 
 		_BuildSystem.f_RegisterBuiltinVariables
 			(
 				{
-					{CPropertyKey(EPropertyType_Compile, "XInternalPrecompiledHeaderOutputFile"), DMibBuildSystemTypeWithPosition(g_String)}
- 					, {CPropertyKey(EPropertyType_Builtin, "VisualStudioRoot"), DMibBuildSystemTypeWithPosition(g_String)}
+					{CPropertyKey(_BuildSystem.f_StringCache(), EPropertyType_Compile, gc_ConstString_XInternalPrecompiledHeaderOutputFile), DMibBuildSystemTypeWithPosition(g_String)}
+ 					, {CPropertyKey(_BuildSystem.f_StringCache(), EPropertyType_Builtin, gc_ConstString_VisualStudioRoot), DMibBuildSystemTypeWithPosition(g_String)}
 				}
 			)
 		;
@@ -169,7 +156,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 	CStr CGeneratorInstance::f_GetExpandedPath(CStr const &_Path, CStr const &_Base) const
 	{
-		return CFile::fs_GetExpandedPath(_Path.f_Replace(m_RelativeBasePathAbsolute, m_BuildSystem.f_GetBaseDir()), _Base);
+		return CFile::fs_GetExpandedPath(_Path.f_Replace(m_RelativeBasePathAbsolute.f_String(), m_BuildSystem.f_GetBaseDir()), _Base);
 	}
 
 	CSystemEnvironment CGeneratorInstance::f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const
@@ -193,7 +180,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			if (auto *pCachedEnvironment = m_CachedBuildEnvironment.f_FindEqual(_Architecture))
 				return *pCachedEnvironment;
 		}
- 		CStr VisualStudioRoot = f_GetVisualStudioRoot();
+ 		CStr VisualStudioRoot = f_GetVisualStudioRoot().f_String();
 
 		CStr VCVarsDirectory;
 
@@ -271,53 +258,50 @@ namespace NMib::NBuildSystem::NVisualStudio
 #endif
 	}
 
-	bool CGeneratorInstance::f_GetBuiltin(CStr const &_Value, CStr &_Result) const
+	CValuePotentiallyByRef CGeneratorInstance::f_GetBuiltin(CBuildSystemUniquePositions *_pStorePositions, CStr const &_Value, bool &o_bSuccess) const
 	{
-		if (_Value == "BasePathRelativeProject")
+		if (_Value == gc_ConstString_BasePathRelativeProject.m_String)
 		{
-			_Result = m_RelativeBasePath;
-			return true;
+			if (_pStorePositions)
+				_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.BasePathRelativeProject")->f_AddValue(m_RelativeBasePath, m_BuildSystem.f_EnableValues());
+			o_bSuccess = true;
+			return &m_RelativeBasePath;
 		}
-		else if (_Value == "GeneratedBuildSystemDir")
+		else if (_Value == gc_ConstString_GeneratedBuildSystemDir.m_String)
 		{
-			_Result = m_OutputDir;
-			return true;
+			if (_pStorePositions)
+				_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.GeneratedBuildSystemDir")->f_AddValue(m_OutputDir, m_BuildSystem.f_EnableValues());
+			o_bSuccess = true;
+			return &m_OutputDir;
 		}
-		else if (_Value == "BasePath")
+		else if (_Value == gc_ConstString_BasePath.m_String)
 		{
-			_Result = m_RelativeBasePathAbsolute;
-			return true;
+			if (_pStorePositions)
+				_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.BasePath")->f_AddValue(m_RelativeBasePathAbsolute, m_BuildSystem.f_EnableValues());
+			o_bSuccess = true;
+			return &m_RelativeBasePathAbsolute;
 		}
-		else if (_Value == "IntermediateDirectory")
+		else if (_Value == gc_ConstString_ProjectPath.m_String)
 		{
-			_Result = "$(IntDir)";
-			return true;
+			if (_pStorePositions)
+				_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.ProjectPath")->f_AddValue(m_Builtin_ProjectPath, m_BuildSystem.f_EnableValues());
+			o_bSuccess = true;
+			return &m_Builtin_ProjectPath;
 		}
-		else if (_Value == "OutputDirectory")
+		else if (_Value == gc_ConstString_Inherit.m_String)
 		{
-			_Result = "$(OutDir)";
-			return true;
+			if (_pStorePositions)
+				_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.Inherit")->f_AddValue(m_Builtin_Inherit, m_BuildSystem.f_EnableValues());
+			o_bSuccess = true;
+			return &m_Builtin_Inherit;
 		}
-		else if (_Value == "ProjectPath")
+		else if (_Value == gc_ConstString_VisualStudioRoot.m_String)
 		{
-			_Result = ".";
-			return true;
+			if (_pStorePositions)
+				_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.VisualStudioRoot")->f_AddValue(f_GetVisualStudioRoot(), m_BuildSystem.f_EnableValues());
+			o_bSuccess = true;
+			return &f_GetVisualStudioRoot();
 		}
-		else if (_Value == "Inherit")
-		{
-			_Result = "{578185E0-2E2A-4481-A34E-BCC3F64CDCA2}";
-			return true;
-		}
-		else if (_Value == "SourceFileName")
-		{
-			_Result = "%(Filename)";
-			return true;
-		}
-		else if (_Value == "VisualStudioRoot")
-		{
-			_Result = f_GetVisualStudioRoot();
-			return true;
-		}
-		return false;
+		return CEJSONSorted();
 	}
 }

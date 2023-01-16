@@ -15,7 +15,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 	{
 	}
 	
-	COrdering_Weak CGeneratorInstance::CConfigValue::operator <=> (CConfigValue const &_Right) const
+	COrdering_Strong CGeneratorInstance::CConfigValue::operator <=> (CConfigValue const &_Right) const
 	{
 		return fg_TupleReferences(m_Parent, m_Entity, m_Property, m_Value) <=> fg_TupleReferences(_Right.m_Parent, _Right.m_Entity, _Right.m_Property, _Right.m_Value);
 	}
@@ -37,3 +37,5 @@ namespace NMib::NBuildSystem::NVisualStudio
 		return true;
 	}
 }
+
+#include "Malterlib_BuildSystem_Generator_VisualStudio_GeneratorSettings.hpp"

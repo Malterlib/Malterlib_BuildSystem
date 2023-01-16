@@ -3,7 +3,6 @@
 
 #include "Malterlib_BuildSystem_Generator_VisualStudio.h"
 #include <Mib/XML/XML>
-#include <Mib/Cryptography/UUID>
 
 namespace NMib::NBuildSystem::NVisualStudio
 {
@@ -14,1272 +13,224 @@ namespace NMib::NBuildSystem::NVisualStudio
 		return _Platform;
 	}
 
-	CStr CGeneratorInstance::f_GetNativePlatform(CStr const &_Platform)
+	CStr CGeneratorInstance::f_GetNativePlatform(CProjectState &_ProjectState, CStr const &_Platform)
 	{
-		return f_GetNativePlatform(m_ThreadLocal->m_LanguageType, _Platform);
+		return f_GetNativePlatform(_ProjectState.m_LanguageType, _Platform);
 	}
 
-	void CGeneratorInstance::f_GenerateProjectFile(CProject &_Project, CStr const &_OutputDir) const
+	TCFuture<void> CGeneratorInstance::f_GenerateProjectFile(CProject &_Project, CStr const &_OutputDir) const
 	{
-		f_ClearThreadLocal();
-		auto &ThreadLocal = *m_ThreadLocal;
-		ThreadLocal.m_CurrentOutputDir = _OutputDir;
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
 
-		auto fGetEntityPropertyGlobalEJSON
-			= [&](EPropertyType _Type, CStr const &_Name, CFilePosition &o_Position, EEJSONType _ExpectedType) -> CEJSON
-			{
-				bool bFirstConfig = true;
-				CEJSON ReturnValue;
-				CProperty const *pFrom = nullptr;
-				for (auto iConfig = _Project.m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
-				{
-					CProperty const *pFromProperty = nullptr;
-					auto ThisValue = m_BuildSystem.f_EvaluateEntityProperty(**iConfig, _Type, _Name, pFromProperty);
+		CGeneratorSettings TargetSettings;
+		co_await TargetSettings.f_PopulateSettings(gc_ConstKey_GeneratorSetting_Target, EPropertyType_Target, m_BuildSystem, _Project.m_EnabledProjectConfigs);
+		co_await g_Yield;
 
-					m_BuildSystem.f_CheckPropertyTypeValue
-						(
-							_Type
-							, _Name
-							, ThisValue
-							, _ExpectedType
-							, pFromProperty ? pFromProperty->m_Position : pFrom ? pFrom->m_Position : CFilePosition{}
-							, true
-						)
-					;
+		CProjectState ProjectState;
+		CProjectXMLState XMLState;
 
-					if (bFirstConfig)
-					{
-						ReturnValue = ThisValue;
-						pFrom = pFromProperty;
-					}
-					else if (ReturnValue != ThisValue)
-					{
-						m_BuildSystem.fs_ThrowError
-							(
-								pFromProperty ? pFromProperty->m_Position : pFrom->m_Position
-								, CStr::CFormat("You cannot specify different '{}' version for different configurations") << _Name
-							)
-						;
-					}
-				}
-				if (pFrom)
-					o_Position = pFrom->m_Position;
-
-				return ReturnValue;
-			}
-		;
-
-		auto fGetEntityPropertyGlobal
-			= [&](EPropertyType _Type, CStr const &_Name, CFilePosition &o_Position) -> CStr
-			{
-				auto ReturnValue = fGetEntityPropertyGlobalEJSON(_Type, _Name, o_Position, EEJSONType_String);
-				if (!ReturnValue.f_IsValid())
-					return {};
-
-				return ReturnValue.f_String();
-			}
-		;
-
-		CStr ClCompileSuffix;
-		{
-			CFilePosition Position;
-			ClCompileSuffix = fGetEntityPropertyGlobal(EPropertyType_Target, "ClCompileSuffix", Position);
-		}
-
-		CStr WindowsTargetVersion;
-		{
-			CFilePosition Position;
-			WindowsTargetVersion = fGetEntityPropertyGlobal(EPropertyType_Target, "PlatformVersion", Position);
-		}
-
-		ELanguageType LanguageType = ELanguageType_Native;
-		{
-			CFilePosition Position;
-			CStr Language = fGetEntityPropertyGlobal(EPropertyType_Target, "Language", Position);
-
-			if (Language.f_IsEmpty() || Language == "Native")
-				LanguageType = ELanguageType_Native;
-			else if (Language == "C#")
-				LanguageType = ELanguageType_CSharp;
-			else
-				m_BuildSystem.fs_ThrowError(Position, CStr::CFormat("Language '{}' not supported") << Language);
-		}
-
-
-		CStr SettingsPrefix;
-		if (LanguageType == ELanguageType_Native)
-			SettingsPrefix = "Native_";
-		else if (LanguageType == ELanguageType_CSharp)
-			SettingsPrefix = "CSharp_";
-
-		ThreadLocal.m_LanguageType = LanguageType;
-		_Project.m_LanguageType = LanguageType;
-
-		// Todo support csproj as well
-
-		CStr PrefixGenDir = CFile::fs_AppendPath(_OutputDir, _Project.f_GetName());
-
-		ThreadLocal.f_CreateDirectory(PrefixGenDir);
-		ThreadLocal.f_CreateDirectory(_OutputDir);
+		ProjectState.m_CurrentOutputDir = _OutputDir;
 
 		CStr FileName;
-		if (LanguageType == ELanguageType_Native)
-			FileName = CFile::fs_AppendPath(_OutputDir, CStr(CFile::fs_MakeNiceFilename(_Project.f_GetName()))) + ".vcxproj";
-		else if (LanguageType == ELanguageType_CSharp)
-			FileName = CFile::fs_AppendPath(_OutputDir, CStr(CFile::fs_MakeNiceFilename(_Project.f_GetName()))) + ".csproj";
-		CStr PropsFileName = CFile::fs_AppendPath(_OutputDir, CStr(CFile::fs_MakeNiceFilename(_Project.f_GetName()))) + ".props";
+		ELanguageType LanguageType = ELanguageType_Native;
+		{
+			CBuildSystemUniquePositions Positions;
+			auto Language = TargetSettings.f_GetSingleSetting<CStr>(gc_ConstString_Language);
 
-		CXMLDocument XMLFile;
-		CXMLDocument PropsXMLFile;
+			if (Language.m_Value == "Native")
+			{
+				LanguageType = ELanguageType_Native;
+				FileName = CFile::fs_AppendPath(_OutputDir, CStr(CFile::fs_MakeNiceFilename(_Project.f_GetName()))) + ".vcxproj";
+			}
+			else if (Language.m_Value == "C#")
+			{
+				LanguageType = ELanguageType_CSharp;
+				XMLState.m_bIsDotNet = true;
+				FileName = CFile::fs_AppendPath(_OutputDir, CStr(CFile::fs_MakeNiceFilename(_Project.f_GetName()))) + ".csproj";
+			}
+			else
+				m_BuildSystem.fs_ThrowError(Language.m_Positions, "Unsupported language type: {}"_f << Language.m_Value);
+		}
+
+		_Project.m_LanguageType = LanguageType;
+		ProjectState.m_LanguageType = LanguageType;
+
+		ProjectState.f_CreateDirectory(_OutputDir);
+
+		CStr PropsFileName = CFile::fs_AppendPath(_OutputDir, CStr(CFile::fs_MakeNiceFilename(_Project.f_GetName()))) + ".props";
 		{
 			// Project root
-			auto pPropsProject = PropsXMLFile.f_CreateDefaultDocument("Project", "xml version=\"1.0\" encoding=\"utf-8\"");
-			CXMLDocument::f_SetAttribute(pPropsProject, "ToolsVersion", f_GetToolsVersion());
-			CXMLDocument::f_SetAttribute(pPropsProject, "xmlns", "http://schemas.microsoft.com/developer/msbuild/2003");
-
-			auto pProject = XMLFile.f_CreateDefaultDocument("Project", "xml version=\"1.0\" encoding=\"utf-8\"");
-			CXMLDocument::f_SetAttribute(pProject, "DefaultTargets", "Build");
-			CXMLDocument::f_SetAttribute(pProject, "ToolsVersion", f_GetToolsVersion());
-			CXMLDocument::f_SetAttribute(pProject, "xmlns", "http://schemas.microsoft.com/developer/msbuild/2003");
-
-			if (LanguageType == ELanguageType_CSharp)
+			if (XMLState.m_bIsDotNet)
 			{
-				auto pImport = CXMLDocument::f_CreateElement(pProject, "Import");
-				CXMLDocument::f_SetAttribute(pImport, "Project", "$(MSBuildExtensionsPath)\\$(MSBuildToolsVersion)\\Microsoft.Common.props");
-				CXMLDocument::f_SetAttribute(pImport, "Condition", "Exists('$(MSBuildExtensionsPath)\\$(MSBuildToolsVersion)\\Microsoft.Common.props')");
+				ProjectState.f_CreateDirectory(_OutputDir / "obj");
+				PropsFileName = _OutputDir / "obj" / CFile::fs_GetFile(FileName) + ".before.props";
+				XMLState.m_pProject = XMLState.m_XMLFile.f_CreateDefaultDocument("Project");
+				CXMLDocument::f_SetAttribute(XMLState.m_pProject, "Sdk", "Microsoft.NET.Sdk");
+
+				XMLState.m_pPropsProject = XMLState.m_PropsXMLFile.f_CreateDefaultDocument("Project");
+				XMLState.m_pPreProject = CXMLDocument::f_CreateElement(XMLState.m_pPropsProject, gc_ConstString_PropertyGroup);
+			}
+			else
+			{
+				XMLState.m_pPropsProject = XMLState.m_PropsXMLFile.f_CreateDefaultDocument("Project", "xml version=\"1.0\" encoding=\"utf-8\"");
+				CXMLDocument::f_SetAttribute(XMLState.m_pPropsProject, "ToolsVersion", f_GetToolsVersion());
+				CXMLDocument::f_SetAttribute(XMLState.m_pPropsProject, "xmlns", "http://schemas.microsoft.com/developer/msbuild/2003");
+
+				XMLState.m_pProject = XMLState.m_XMLFile.f_CreateDefaultDocument("Project", "xml version=\"1.0\" encoding=\"utf-8\"");
+				CXMLDocument::f_SetAttribute(XMLState.m_pProject, "DefaultTargets", "Build");
+				CXMLDocument::f_SetAttribute(XMLState.m_pProject, "ToolsVersion", f_GetToolsVersion());
+				CXMLDocument::f_SetAttribute(XMLState.m_pProject, "xmlns", "http://schemas.microsoft.com/developer/msbuild/2003");
+
+				XMLState.m_pPreProject = CXMLDocument::f_CreateElement(XMLState.m_pProject, gc_ConstString_PropertyGroup);
 			}
 
-			// Framework Version
-			CXMLElement *pPreProjectPropertyGroup;
-			{
-
-				// External dependencies
-
-				CFilePosition Position;
-				CStr TargetFrameworkVersion = fGetEntityPropertyGlobal(EPropertyType_Target, "TargetFrameworkVersion", Position);
-
-				auto pPropertyGroup = CXMLDocument::f_CreateElement(pProject, "PropertyGroup");
-				pPreProjectPropertyGroup = pPropertyGroup;
-				if (!TargetFrameworkVersion.f_IsEmpty())
-					CXMLDocument::f_AddElementAndText(pPropertyGroup, "TargetFrameworkVersion", TargetFrameworkVersion);
-			}
+			TCSet<CStr> AllPlatforms;
 
 			for (auto iConfig = _Project.m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
 			{
-				CStr Platform = m_BuildSystem.f_EvaluateEntityPropertyString(**iConfig, EPropertyType_Target, "VisualStudioPlatform");
+				CStr Platform = m_BuildSystem.f_EvaluateEntityPropertyString(**iConfig, gc_ConstKey_Target_VisualStudioPlatform);
+				AllPlatforms[Platform];
 				_Project.m_Platforms[iConfig.f_GetKey()] = Platform;
 			}
 
 			// Configurations
 			if (LanguageType == ELanguageType_Native)
 			{
-				auto pConfigs = CXMLDocument::f_CreateElement(pProject, "ItemGroup");
+				auto pConfigs = CXMLDocument::f_CreateElement(XMLState.m_pProject, "ItemGroup");
 				CXMLDocument::f_SetAttribute(pConfigs, "Label", "ProjectConfigurations");
 				for (auto iConfig = _Project.m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
 				{
 					CStr Platform = _Project.m_Platforms[iConfig.f_GetKey()];
 
 					auto pConfig = CXMLDocument::f_CreateElement(pConfigs, "ProjectConfiguration");
-					CXMLDocument::f_SetAttribute(pConfig, "Include", iConfig.f_GetKey().m_Configuration + "|" + Platform);
-					auto pConfigName = CXMLDocument::f_CreateElement(pConfig, "Configuration");
+					CXMLDocument::f_SetAttribute(pConfig, gc_ConstString_Include, iConfig.f_GetKey().m_Configuration + "|" + Platform);
+					auto pConfigName = CXMLDocument::f_CreateElement(pConfig, gc_ConstString_Configuration);
 					CXMLDocument::f_AddText(pConfigName, iConfig.f_GetKey().m_Configuration);
-					auto pPlatformName = CXMLDocument::f_CreateElement(pConfig, "Platform");
+					auto pPlatformName = CXMLDocument::f_CreateElement(pConfig, gc_ConstString_Platform);
 					CXMLDocument::f_AddText(pPlatformName, Platform);
 				}
 			}
-			else if (LanguageType == ELanguageType_CSharp)
-			{
-				CXMLDocument::f_AddElementAndText(pPreProjectPropertyGroup, "AppDesignerFolder", "Properties");
-
-				for (auto iConfig = _Project.m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
-				{
-					CStr Platform = _Project.m_Platforms[iConfig.f_GetKey()];
-					auto pConfig = CXMLDocument::f_CreateElement(pProject, "PropertyGroup");
-					CXMLDocument::f_SetAttribute
-						(
-							pConfig
-							, "Condition"
-							, CStr::CFormat("'$(Configuration)|$(Platform)' == '{}|{}'")
-							<< iConfig.f_GetKey().m_Configuration
-							<< Platform
-						)
-					;
-				}
-			}
+			else if (XMLState.m_bIsDotNet)
+				CXMLDocument::f_AddElementAndText(XMLState.m_pPreProject, "Platforms", CStr::fs_Join(TCVector<CStr>::fs_FromContainer(AllPlatforms), ";"));
 
 			// Globals
 			{
-				auto pGlobals = pPreProjectPropertyGroup;
+				XMLState.m_pGlobals = XMLState.m_pPreProject;
 				if (LanguageType == ELanguageType_Native)
 				{
-					pGlobals = CXMLDocument::f_CreateElement(pProject, "PropertyGroup");
-					CXMLDocument::f_SetAttribute(pGlobals, "Label", "Globals");
+					XMLState.m_pGlobals = CXMLDocument::f_CreateElement(XMLState.m_pProject, gc_ConstString_PropertyGroup);
+					CXMLDocument::f_SetAttribute(XMLState.m_pGlobals, "Label", "Globals");
 				}
 
-				CXMLDocument::f_AddElementAndText(pGlobals, "ProjectGuid", _Project.f_GetGUID());
+				CXMLDocument::f_AddElementAndText(XMLState.m_pGlobals, "ProjectGuid", _Project.f_GetGUID());
 				if (LanguageType == ELanguageType_Native)
-					CXMLDocument::f_AddElementAndText(pGlobals, "RootNamespace", _Project.f_GetName());
-				if (LanguageType == ELanguageType_Native && m_Version == 2012)
-				{
-					auto pTargetsPath = CXMLDocument::f_AddElementAndText(pGlobals, "VCTargetsPath", "$(VCTargetsPath11)");
-					CXMLDocument::f_SetAttribute(pTargetsPath, "Condition", "'$(VCTargetsPath11)' != ''");
-					//CXMLDocument::f_SetAttribute(pTargetsPath, "Condition", "'$(VCTargetsPath11)' != '' and '$(VSVersion)' == '' and $(VisualStudioVersion) == ''");
-				}
-				if (!WindowsTargetVersion.f_IsEmpty())
-					CXMLDocument::f_AddElementAndText(pGlobals, "WindowsTargetPlatformVersion", WindowsTargetVersion);
+					CXMLDocument::f_AddElementAndText(XMLState.m_pGlobals, "RootNamespace", _Project.f_GetName());
 				if (m_bEnableSourceControl)
-					CXMLDocument::f_AddElementAndText(pGlobals, "SccProvider", "Perforce Source Control Provider:{8D316614-311A-48F4-85F7-DF7020F62357}");
+					CXMLDocument::f_AddElementAndText(XMLState.m_pGlobals, "SccProvider", "Perforce Source Control Provider:{8D316614-311A-48F4-85F7-DF7020F62357}");
 			}
 
 			// Default imports
-			CEntity const *pImportTargets = nullptr;
+			if (auto ImportTargets = TargetSettings.f_GetSingleSettingWithoutPositions<TCOptional<TCVector<CStr>>>(gc_ConstString_ImportTargets_Defaults))
 			{
-				CEntityKey EntityKey;
-				EntityKey.m_Type = EEntityType_GeneratorSetting;
-				if (LanguageType == ELanguageType_Native)
-					EntityKey.m_Name.m_Value = "Native_ImportTargets";
-				else if (LanguageType == ELanguageType_CSharp)
-					EntityKey.m_Name.m_Value = "CSharp_ImportTargets";
-				auto pFind = m_pGeneratorSettings->m_ChildEntitiesMap.f_FindEqual(EntityKey);
-				if (pFind)
-					pImportTargets = pFind;
-			}
-
-			{
-				CEntityKey EntityKey;
-				EntityKey.m_Type = EEntityType_GeneratorSetting;
-				if (pImportTargets)
+				for (auto &Target : *ImportTargets)
 				{
-					EntityKey.m_Name.m_Value = "Defaults";
-					auto pInner = pImportTargets->m_ChildEntitiesMap.f_FindEqual(EntityKey);
-					if (pInner)
-					{
-						for (auto iImport = pInner->m_EvaluatedProperties.m_Properties.f_GetIterator(); iImport; ++iImport)
-						{
-							auto pImport = CXMLDocument::f_CreateElement(pProject, "Import");
-							CXMLDocument::f_SetAttribute(pImport, "Project", iImport->m_Value.f_String());
-						}
-					}
+					auto pImport = CXMLDocument::f_CreateElement(XMLState.m_pProject, gc_ConstString_Import);
+					CXMLDocument::f_SetAttribute(pImport, "Project", Target);
 				}
 			}
 
 			// Configuration
-			TCMap<CConfiguration, CConfigResult> TargetTypes;
-
 			{
-				CXMLElement *pConfiguration = pPreProjectPropertyGroup;
-				TCVector<CStr> SearchList;
+				XMLState.m_pConfiguration = XMLState.m_pPreProject;
 				if (LanguageType == ELanguageType_Native)
 				{
-					pConfiguration = CXMLDocument::f_CreateElement(pProject, "PropertyGroup");
-					CXMLDocument::f_SetAttribute(pConfiguration, "Label", "Configuration");
-				}
-
-				SearchList.f_Insert(SettingsPrefix + "Root");
-				if (LanguageType == ELanguageType_CSharp)
-					SearchList.f_Insert("DotNet_Root");
-
-				TCMap<CStr, CXMLElement *> Parents;
-				Parents[CStr()] = pConfiguration;
-				auto fAddTargetConfig
-					= [&](CStr const &_Type)
-					{
-						return f_AddConfigValue
-							(
-								_Project.m_EnabledProjectConfigs
-								, _Project.m_EnabledProjectConfigs
-								, (*_Project.m_EnabledProjectConfigs.f_GetIterator())->f_Data().m_Position
-								, EPropertyType_Target
-								, _Type
-								, Parents
-								, ""
-								, false
-								, &SearchList
-								, nullptr
-								, CStr()
-								, false
-								, false
-								, false
-								, false
-								, _Project
-							)
-						;
-					}
-				;
-				TargetTypes = fAddTargetConfig("Type");
-
-				fAddTargetConfig("IntermediateDirectory");
-				fAddTargetConfig("OutputDirectory");
-
-				if (LanguageType == ELanguageType_Native)
-				{
-					fAddTargetConfig("PlatformToolset");
-					fAddTargetConfig("CharacterSet");
-					fAddTargetConfig("UseOfMfc");
-					fAddTargetConfig("UseOfAtl");
-					fAddTargetConfig("LinkTimeCodeGeneration");
-					fAddTargetConfig("DefaultToolArchitecture");
-					fAddTargetConfig("CLRSupport");
-					fAddTargetConfig("IgnoreWarnCompileDuplicatedFilename");
-
-				}
-				else if (LanguageType == ELanguageType_CSharp)
-				{
-					fAddTargetConfig("FileName");
-					fAddTargetConfig("DefaultNamespace");
-					fAddTargetConfig("ProjectDir");
-					fAddTargetConfig("ToolPath");
+					XMLState.m_pConfiguration = CXMLDocument::f_CreateElement(XMLState.m_pProject, gc_ConstString_PropertyGroup);
+					CXMLDocument::f_SetAttribute(XMLState.m_pConfiguration, "Label", gc_ConstString_Configuration);
 				}
 			}
 
 			// Base path
 			{
 				CStr Path = CFile::fs_MakePathRelative(m_BuildSystem.f_GetBaseDir(), _OutputDir + "/Dummy").f_ReplaceChar('/', '\\');
-				auto pProperties = CXMLDocument::f_CreateElement(pProject, "PropertyGroup");
+				auto pProperties = CXMLDocument::f_CreateElement(XMLState.m_pProject, gc_ConstString_PropertyGroup);
 				CXMLDocument::f_SetAttribute(pProperties, "Label", "Malterlib");
 				CXMLDocument::f_AddElementAndText(pProperties, "MalterlibBaseDir", CStr::CFormat("$([System.IO.Path]::GetFullPath(\"$(MSBuildProjectDirectory){}\\\"))") << Path);
 			}
 
 			// Props
+			if (auto Properties = TargetSettings.f_GetSingleSettingWithoutPositions<TCOptional<TCVector<CStr>>>(gc_ConstString_ImportTargets_Properties))
 			{
-				CEntityKey EntityKey;
-				EntityKey.m_Type = EEntityType_GeneratorSetting;
-				if (pImportTargets)
+				for (auto &Proprety : *Properties)
 				{
-					EntityKey.m_Name.m_Value = "Props";
-					auto pInner = pImportTargets->m_ChildEntitiesMap.f_FindEqual(EntityKey);
-					if (pInner)
-					{
-						for (auto iImport = pInner->m_EvaluatedProperties.m_Properties.f_GetIterator(); iImport; ++iImport)
-						{
-							auto pImport = CXMLDocument::f_CreateElement(pProject, "Import");
-							CXMLDocument::f_SetAttribute(pImport, "Project", iImport->m_Value.f_String());
-						}
-					}
+					auto pImport = CXMLDocument::f_CreateElement(XMLState.m_pProject, gc_ConstString_Import);
+					CXMLDocument::f_SetAttribute(pImport, "Project", Proprety);
 				}
 			}
-
 
 			// User proprety sheets
+			if (LanguageType == ELanguageType_Native)
 			{
-				auto pImportGroup = CXMLDocument::f_CreateElement(pProject, "ImportGroup");
+				auto pImportGroup = CXMLDocument::f_CreateElement(XMLState.m_pProject, "ImportGroup");
 				CXMLDocument::f_SetAttribute(pImportGroup, "Label", "PropertySheets");
-				if (LanguageType == ELanguageType_Native)
-				{
-					auto pImport = CXMLDocument::f_CreateElement(pImportGroup, "Import");
-					CXMLDocument::f_SetAttribute(pImport, "Project", "$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props");
-					CXMLDocument::f_SetAttribute(pImport, "Condition", "exists('$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props')");
-				}
-				{
-					auto pImport = CXMLDocument::f_CreateElement(pImportGroup, "Import");
-					CXMLDocument::f_SetAttribute(pImport, "Project", CFile::fs_GetFile(PropsFileName));
-				}
-			}
 
-			// Version
+				auto pImport = CXMLDocument::f_CreateElement(pImportGroup, gc_ConstString_Import);
+				CXMLDocument::f_SetAttribute(pImport, "Project", "$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props");
+				CXMLDocument::f_SetAttribute(pImport, "Condition", "exists('$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props')");
+
+				pImport = CXMLDocument::f_CreateElement(pImportGroup, gc_ConstString_Import);
+				CXMLDocument::f_SetAttribute(pImport, "Project", CFile::fs_GetFile(PropsFileName));
+			}
 
 			if (LanguageType == ELanguageType_Native)
 			{
-				auto pPropertyGroup = CXMLDocument::f_CreateElement(pProject, "PropertyGroup");
-				CXMLDocument::f_AddElementAndText(pPropertyGroup, "_ProjectFileVersion", "10.0.21006.1");
+				XMLState.m_pPropsPropertyGroup = CXMLDocument::f_CreateElement(XMLState.m_pPropsProject, gc_ConstString_PropertyGroup);
+				XMLState.m_pPropsItemDefinitionGroup = CXMLDocument::f_CreateElement(XMLState.m_pPropsProject, "ItemDefinitionGroup");
 			}
+			else
+				XMLState.m_pPropsPropertyGroup = CXMLDocument::f_CreateElement(XMLState.m_pProject, gc_ConstString_PropertyGroup);
 
-			CXMLElement *pProjectPropertyGroup = nullptr;
-			CXMLElement *pProjectItemDefinitionGroup = nullptr;
-
-			pProjectPropertyGroup = CXMLDocument::f_CreateElement(pPropsProject, "PropertyGroup");
-			if (LanguageType == ELanguageType_Native)
-				pProjectItemDefinitionGroup = CXMLDocument::f_CreateElement(pPropsProject, "ItemDefinitionGroup");
-
-			CXMLElement *pCompileItemGroup_ClCompile = nullptr;
-			CXMLElement *pCompileItemGroup_ClCompileAsC = nullptr;
-			CXMLElement *pCompileItemGroup_ClCompileAsManaged = nullptr;
-			CXMLElement *pCompileItemGroup_ClCompileShared = nullptr;
-			CXMLElement *pCompileItemGroup_InnerClCompile = nullptr;
-			CXMLElement *pCompileItemGroup_InnerClCompileAsC = nullptr;
-			CXMLElement *pCompileItemGroup_InnerClCompileAsManaged = nullptr;
-			TCLinkedList<CXMLElement *> Files_C;
-			TCLinkedList<CXMLElement *> Files_Cpp;
-			TCLinkedList<CXMLElement *> Files_CppManaged;
-			if (LanguageType == ELanguageType_Native)
-			{
-				{
-					auto pItemGroup = CXMLDocument::f_CreateElement(pPropsProject, "ItemDefinitionGroup");
-
-					auto pCompile = CXMLDocument::f_CreateElement(pItemGroup, "ClCompile");
-					pCompileItemGroup_ClCompileShared = pCompile;
-				}
-				{
-					auto pTarget = CXMLDocument::f_CreateElement(pPropsProject, "Target");
-
-					CXMLDocument::f_SetAttribute(pTarget, "Name", "TransformClCompileProperties_CompileAsC");
-					CXMLDocument::f_SetAttribute(pTarget, "BeforeTargets", "ClCompile");
-//						CXMLDocument::f_SetAttribute(pTarget, "DependsOnTargets", "PrepareForBuild");
-
-					auto pItemGroup = CXMLDocument::f_CreateElement(pTarget, "ItemGroup");
-					pCompileItemGroup_ClCompileAsC = pItemGroup;
-
-					auto pCompile = CXMLDocument::f_CreateElement(pItemGroup, "ClCompile");
-					pCompileItemGroup_InnerClCompileAsC = pCompile;
-
-					CXMLDocument::f_SetAttribute(pCompile, "Condition", "'%(ClCompile.CompileAs)'=='CompileAsC'");
-				}
-				{
-					auto pTarget = CXMLDocument::f_CreateElement(pPropsProject, "Target");
-
-					CXMLDocument::f_SetAttribute(pTarget, "Name", "TransformClCompileProperties_CompileAsManaged");
-					CXMLDocument::f_SetAttribute(pTarget, "BeforeTargets", "ClCompile");
-//						CXMLDocument::f_SetAttribute(pTarget, "DependsOnTargets", "PrepareForBuild");
-
-					auto pItemGroup = CXMLDocument::f_CreateElement(pTarget, "ItemGroup");
-					pCompileItemGroup_ClCompileAsManaged = pItemGroup;
-
-					auto pCompile = CXMLDocument::f_CreateElement(pItemGroup, "ClCompile");
-					pCompileItemGroup_InnerClCompileAsManaged = pCompile;
-
-					CXMLDocument::f_SetAttribute(pCompile, "Condition", "'%(ClCompile.CompileAs)'=='CompileAsManaged'");
-				}
-
-				{
-					auto pTarget = CXMLDocument::f_CreateElement(pPropsProject, "Target");
-
-					CXMLDocument::f_SetAttribute(pTarget, "Name", "TransformClCompileProperties_NotCompileAsC");
-					CXMLDocument::f_SetAttribute(pTarget, "BeforeTargets", "ClCompile");
-//						CXMLDocument::f_SetAttribute(pTarget, "DependsOnTargets", "PrepareForBuild");
-
-					auto pItemGroup = CXMLDocument::f_CreateElement(pTarget, "ItemGroup");
-					pCompileItemGroup_ClCompile = pItemGroup;
-
-					auto pCompile = CXMLDocument::f_CreateElement(pItemGroup, "ClCompile");
-					pCompileItemGroup_InnerClCompile = pCompile;
-
-					CXMLDocument::f_SetAttribute(pCompile, "Condition", "('%(ClCompile.CompileAs)'=='' or '%(ClCompile.CompileAs)'=='CompileAsCpp')");
-				}
-			}
-
-			struct CCompilType
-			{
-				CStr m_VSType;
-				TCSet<CConfiguration> m_EnabledConfigs;
-			};
-
-			auto const FileTypeKey = CPropertyKey(EPropertyType_Compile, "Type");
-
-			TCMap<CStr, CCompilType> CompileTypes;
-			CXMLElement *pFileItemGroup = nullptr;
 			// Files
-			auto fGenerateFiles
-				= [&]()
-				{
-					if (!pFileItemGroup)
-						pFileItemGroup = CXMLDocument::f_CreateElement(pProject, "ItemGroup");
-					for (auto iFile = _Project.m_Files.f_GetIterator(); iFile; ++iFile)
-					{
-						if (iFile->m_bWasGenerated)
-							continue;
 
-						iFile->m_bWasGenerated = true;
-						TCVector<CStr> SearchList;
-						SearchList.f_Insert(SettingsPrefix + "Root");
-						if (LanguageType == ELanguageType_CSharp)
-							SearchList.f_Insert("DotNet_Root");
-						TCMap<CStr, CXMLElement *> Parents;
-						Parents[CStr()] = pFileItemGroup;
-						auto Entities
-							= f_AddConfigValue
-							(
-								iFile->m_EnabledConfigs
-								, _Project.m_EnabledProjectConfigs
-								, (*iFile->m_EnabledConfigs.f_GetIterator())->f_Data().m_Position
-								, EPropertyType_Compile
-								, "Type"
-								, Parents
-								, "Include"
-								, true
-								, &SearchList
-								, nullptr
-								, CStr()
-								, false
-								, false // true
-								, false
-								, true
-								, _Project
-							)
-						;
-
-						if (Entities.f_IsEmpty())
-							m_BuildSystem.fs_ThrowError((*iFile->m_EnabledConfigs.f_GetIterator())->f_Data().m_Position, "Internal error");
-
-						auto Result = *Entities.f_GetIterator();
-						CStr VSType = CXMLDocument::f_GetValue(Result.m_pElement);
-						iFile->m_VSType = VSType;
-						iFile->m_VSFile = CXMLDocument::f_GetAttribute(Result.m_pElement, "Include");
-
-						if (LanguageType == ELanguageType_CSharp)
-						{
-							CStr GroupPath = iFile->f_GetGroupPath().f_ReplaceChar('/', '\\');
-							if (!GroupPath.f_IsEmpty())
-								CXMLDocument::f_AddElementAndText(Result.m_pElement, "Link", GroupPath + "\\" + CFile::fs_GetFile(iFile->m_VSFile));
-						}
-
-						CStr UntranslatedType;
-						for (auto &Value : Result.m_UntranslatedValues)
-						{
-							UntranslatedType = Value;
-							ThreadLocal.m_CurrentCompileTypes[Value] = VSType;
-						}
-						for (auto &Value : Result.m_UntranslatedValues)
-							CompileTypes[Value].m_VSType = VSType;
-
-						for (auto iConfig = iFile->m_EnabledConfigs.f_GetIterator(); iConfig; ++iConfig)
-						{
-							CProperty const *pFromProperty = nullptr;
-							if (!m_BuildSystem.f_EvaluateEntityPropertyBool(**iConfig, EPropertyType_Compile, "Disabled", pFromProperty, false))
-							{
-								for (auto &Value : Result.m_UntranslatedValues)
-									CompileTypes[Value].m_EnabledConfigs[iConfig.f_GetKey()];
-							}
-						}
-
-						if (LanguageType == ELanguageType_Native)
-						{
-							for (auto iConfig = iFile->m_EnabledConfigs.f_GetIterator(); iConfig; ++iConfig)
-							{
-								if (m_BuildSystem.f_EvaluateEntityPropertyTryBool(**iConfig, EPropertyType_Compile, "PrecompilePrefixHeader", false))
-								{
-									CStr PrefixHeader = m_BuildSystem.f_EvaluateEntityPropertyString(**iConfig, EPropertyType_Compile, "PrefixHeader", CStr());
-									if (!PrefixHeader.f_IsEmpty())
-									{
-										CStr FilePath = CFile::fs_GetPath((**iConfig).f_Data().m_Position.m_File);
-										CStr FullPrefixHeader = f_GetExpandedPath(PrefixHeader, FilePath);
-
-										if (!ThreadLocal.f_FileExists(FullPrefixHeader))
-										{
-											// Try relative to output
-											FullPrefixHeader = f_GetExpandedPath(PrefixHeader, ThreadLocal.m_CurrentOutputDir);
-										}
-
-										DCheck(!ThreadLocal.m_CurrentCompileTypes.f_IsEmpty());
-
-										auto &PrefixHeaderMap = ThreadLocal.m_PrefixHeaders[ThreadLocal.m_CurrentCompileTypes][FullPrefixHeader];
-										PrefixHeaderMap.m_bUsed = true;
-									}
-								}
-							}
-						}
-
-						TCVector<CStr> SearchLists;
-						if (LanguageType == ELanguageType_Native)
-						{
-							if (UntranslatedType == "C")
-								SearchLists.f_Insert(SettingsPrefix + "CompileAsC");
-							if (UntranslatedType == "C++Managed")
-								SearchLists.f_Insert(SettingsPrefix + "CompileAsManaged");
-						}
-						if (VSType == "ClCompile")
-							SearchLists.f_Insert(SettingsPrefix + VSType + ClCompileSuffix);
-						else
-							SearchLists.f_Insert(SettingsPrefix + VSType);
-
-						SearchLists.f_Insert(SettingsPrefix + "CompileShared");
-						if (LanguageType == ELanguageType_CSharp)
-							SearchLists.f_Insert("DotNet_CompileShared");
-						SearchLists.f_Insert("CompileShared");
-						TCMap<CStr, CXMLElement *> FileParents;
-						FileParents[CStr()] = Result.m_pElement;
-
-						if (LanguageType == ELanguageType_Native)
-						{
-							if (UntranslatedType == "C")
-								Files_C.f_Insert(Result.m_pElement);
-							else if (UntranslatedType == "C++")
-								Files_Cpp.f_Insert(Result.m_pElement);
-							else if (UntranslatedType == "C++Managed")
-								Files_CppManaged.f_Insert(Result.m_pElement);
-						}
-
-						f_SetEvaluatedValues
-							(
-								FileParents
-								, iFile->m_EnabledConfigs
-								, _Project.m_EnabledProjectConfigs
-								, true
-								, EPropertyType_Compile
-								, &SearchLists
-								, nullptr
-								, CStr()
-								, false
-								, false // true
-								, false
-								, _Project
-							)
-						;
-						ThreadLocal.m_CurrentCompileTypes.f_Clear();
-					}
-				}
-			;
-
-			fGenerateFiles();
+			auto CompileTypes = co_await f_GenerateProjectFile_File(_Project, ProjectState);
 
 			// Project properties
-			{
-				// Target
-				{
-					TCMap<CStr, CXMLElement *> ProjectParents;
-					if (LanguageType == ELanguageType_Native)
-					{
-						ProjectParents[CStr()] = pProjectItemDefinitionGroup;
-						ProjectParents["PropertyGroup"] = pProjectPropertyGroup;
-					}
-					else
-					{
-						ProjectParents[CStr()] = pProjectPropertyGroup;
-						ProjectParents["PropertyGroup"] = pProjectPropertyGroup;
-					}
-
-					TCMap<CConfiguration, TCVector<CStr>> SearchLists;
-
-					for (auto iType = TargetTypes.f_GetIterator(); iType; ++iType)
-					{
-						auto &List = SearchLists[iType.f_GetKey()];
-						CStr TargetType = CXMLDocument::f_GetNodeText(iType->m_pElement);
-						DCheck(!TargetType.f_IsEmpty());
-						List.f_Insert(SettingsPrefix + TargetType);
-
-						if (LanguageType == ELanguageType_Native)
-						{
-							if (TargetType == "StaticLibrary" || TargetType == "DynamicLibrary")
-							{
-								List.f_Insert(SettingsPrefix + "SharedLibrary");
-								List.f_Insert("SharedLibrary");
-							}
-							if (TargetType == "Application" || TargetType == "DynamicLibrary")
-							{
-								List.f_Insert(SettingsPrefix + "SharedExecutable");
-								List.f_Insert("SharedExecutable");
-							}
-						}
-						else if (LanguageType == ELanguageType_CSharp)
-						{
-							if (TargetType == "Library")
-							{
-								List.f_Insert(SettingsPrefix + "SharedLibrary");
-								List.f_Insert("DotNet_SharedLibrary");
-								List.f_Insert("SharedLibrary");
-							}
-							if (TargetType == "Library" || TargetType == "WinExe" || TargetType == "Exe")
-							{
-								List.f_Insert(SettingsPrefix + "SharedExecutable");
-								List.f_Insert("DotNet_SharedExecutable");
-								List.f_Insert("SharedExecutable");
-							}
-						}
-						List.f_Insert(SettingsPrefix + "SharedTarget");
-						if (LanguageType == ELanguageType_CSharp)
-							List.f_Insert("DotNet_SharedTarget");
-						List.f_Insert("SharedTarget");
-					}
-
-					f_SetEvaluatedValues
-						(
-							ProjectParents
-							, _Project.m_EnabledProjectConfigs
-							, _Project.m_EnabledProjectConfigs
-							, false
-							, EPropertyType_Target
-							, nullptr
-							, &SearchLists
-							, CStr()
-							, false
-							, false
-							, LanguageType == ELanguageType_CSharp
-							, _Project
-						)
-					;
-				}
-
-				// Compile types
-				for (auto iType = CompileTypes.f_GetIterator(); iType; ++iType)
-				{
-					if (iType->m_EnabledConfigs.f_IsEmpty())
-						continue;
-
-					TCMap<CStr, CXMLElement *> ProjectParents;
-					if (LanguageType == ELanguageType_Native)
-					{
-						if (iType.f_GetKey() == "C")
-							ProjectParents[CStr()] = pCompileItemGroup_ClCompileAsC;
-						else if (iType.f_GetKey() == "C++Managed")
-							ProjectParents[CStr()] = pCompileItemGroup_ClCompileAsManaged;
-						else if (iType.f_GetKey() == "C++")
-							ProjectParents[CStr()] = pCompileItemGroup_ClCompile;
-						else
-							ProjectParents[CStr()] = pProjectItemDefinitionGroup;
-					}
-					else if (LanguageType == ELanguageType_CSharp)
-							ProjectParents[CStr()] = pProjectPropertyGroup;
-					ProjectParents["PropertyGroup"] = pProjectPropertyGroup;
-
-					//DCheck(iType.f_GetKey() != "C"); // Should be set at file level
-					ThreadLocal.m_CurrentCompileTypes[iType.f_GetKey()] = iType->m_VSType;
-
-					TCVector<CStr> SearchList;
-					if (LanguageType == ELanguageType_Native)
-					{
-						if (iType.f_GetKey() == "C")
-							SearchList.f_Insert(SettingsPrefix + "CompileAsC");
-						if (iType.f_GetKey() == "C++Managed")
-							SearchList.f_Insert(SettingsPrefix + "CompileAsManaged");
-					}
-					if (iType->m_VSType == "ClCompile")
-						SearchList.f_Insert(SettingsPrefix + iType->m_VSType + ClCompileSuffix);
-					else
-						SearchList.f_Insert(SettingsPrefix + iType->m_VSType);
-
-					SearchList.f_Insert(SettingsPrefix + "CompileShared");
-					if (LanguageType == ELanguageType_CSharp)
-						SearchList.f_Insert("DotNet_CompileShared");
-					SearchList.f_Insert("CompileShared");
-
-					TCMap<CPropertyKey, CEJSON> StartValuesCompile;
-					StartValuesCompile[FileTypeKey] = iType.f_GetKey();
-
-					TCVector<CEntity *> ToRemove;
-					auto Cleanup = g_OnScopeExit / [&]
-						{
-							for (auto &pToRemove : ToRemove)
-								pToRemove->m_pParent->m_ChildEntitiesMap.f_Remove(pToRemove->f_GetKey());
-						}
-					;
-
-					TCMap<CConfiguration, CEntityMutablePointer> Configs;
-
-					for (auto iConfig = _Project.m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
-					{
-						if (!iType->m_EnabledConfigs.f_FindEqual(iConfig.f_GetKey()))
-							continue;
-
-						auto &ConfigEntity = **iConfig;
-						CEntityKey NewEntityKey = ConfigEntity.f_GetKey();
-
-						auto NewEntityMap = ConfigEntity.m_ChildEntitiesMap(NewEntityKey, &ConfigEntity);
-						auto &TempEntity = *NewEntityMap;
-
-						ToRemove.f_Insert(&TempEntity);
-
-						m_BuildSystem.f_InitEntityForEvaluationNoEnv(TempEntity, StartValuesCompile, EEvaluatedPropertyType_External);
-
-						Configs[iConfig.f_GetKey()] = fg_Explicit(&TempEntity);
-					}
-
-					CStr DefaultEntity;
-					if (LanguageType == ELanguageType_Native)
-						DefaultEntity = iType->m_VSType;
-
-					//m_BuildSystem.f_Eval;
-					f_SetEvaluatedValues
-						(
-							ProjectParents
-							, Configs
-							, _Project.m_EnabledProjectConfigs
-							, false
-							, EPropertyType_Compile
-							, &SearchList
-							, nullptr
-							, DefaultEntity
-							, false
-							, false
-							, LanguageType == ELanguageType_CSharp
-							, _Project
-						)
-					;
-
-					ThreadLocal.m_CurrentCompileTypes.f_Clear();
-				}
-			}
+			// 
 
 			if (LanguageType == ELanguageType_Native)
 			{
-				for (auto iCompilerType = ThreadLocal.m_PrefixHeaders.f_GetIterator(); iCompilerType; ++iCompilerType)
-				{
-					auto &CompilerTypes = iCompilerType.f_GetKey();
-					for (auto iType = CompilerTypes.f_GetIterator(); iType; ++iType)
-					{
-						CStr CompileType = iType.f_GetKey();
-						CStr VSCompileType = *iType;
-						for (auto iPrefixHeader = iCompilerType->f_GetIterator(); iPrefixHeader; ++iPrefixHeader)
-						{
-							if (!iPrefixHeader->m_bUsed || iPrefixHeader->m_Configurations.f_IsEmpty())
-								continue;
-
-							CStr FullHeaderPath = iPrefixHeader.f_GetKey();
-							TCMap<CConfiguration, CEntityMutablePointer> EnabledConfigs;
-							CFilePosition FilePos;
-							TCPointer<CGroup> pGroup;
-							bool bFile = false;
-
-							{
-								auto pFile = _Project.m_Files.f_FindLargestLessThanEqual(FullHeaderPath);
-								if (pFile && pFile->f_GetName() == FullHeaderPath)
-								{
-									EnabledConfigs = pFile->m_EnabledConfigs;
-									FilePos = pFile->m_Position;
-									pGroup = pFile->m_pGroup;
-									bFile = true;
-								}
-								else
-								{
-									EnabledConfigs = _Project.m_EnabledProjectConfigs;
-									if (!iPrefixHeader->m_Position.m_File.f_IsEmpty())
-										FilePos = iPrefixHeader->m_Position;
-									else
-										FilePos = _Project.m_Position;
-									if (!ThreadLocal.f_FileExists(FullHeaderPath))
-										m_BuildSystem.fs_ThrowError(FilePos, CStr::CFormat("Prefix header '{}' was not found") << FullHeaderPath);
-
-								}
-								//	m_BuildSystem.fs_ThrowError(_Project.m_Position, CStr::CFormat("Prefix header '{}' not found in project") << FullHeaderPath);
-							}
-
-							CStr RelativePath = CFile::fs_MakePathRelative(FullHeaderPath, PrefixGenDir);
-
-							CStr GUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorPrefixHeaderUUIDNamespace, RelativePath + CompileType).f_GetAsString();
-
-							CStr FileName;
-							if (CompileType == "C++")
-								FileName = CFile::fs_AppendPath(PrefixGenDir, CStr::CFormat("PP_{}_{nfh,sj8,sf0}.cpp") << _Project.m_EntityName << GUID.f_Hash());
-							else if (CompileType == "C++Managed")
-								FileName = CFile::fs_AppendPath(PrefixGenDir, CStr::CFormat("PPM_{}_{nfh,sj8,sf0}.cpp") << _Project.m_EntityName << GUID.f_Hash());
-							else if (CompileType == "C")
-								FileName = CFile::fs_AppendPath(PrefixGenDir, CStr::CFormat("PP_{}_{nfh,sj8,sf0}.c") << _Project.m_EntityName << GUID.f_Hash());
-							else
-								m_BuildSystem.fs_ThrowError(FilePos, CStr::CFormat("Don't know how to generate precompiled header for compiler type {}") << CompileType);
-
-							CStr FileContents;
-							FileContents += CStr::CFormat("#include \"{}\"\r\n") << RelativePath;
-
-							bool bWasCreated = false;
-							if (!m_BuildSystem.f_AddGeneratedFile(FileName, FileContents, _Project.m_pSolution->f_GetName(), bWasCreated))
-								m_BuildSystem.fs_ThrowError(FilePos, CStr::CFormat("File '{}' already generated with other contents") << FileName);
-
-							if (bWasCreated)
-							{
-								CByteVector FileData;
-								CFile::fs_WriteStringToVector(FileData, CStr(FileContents));
-								m_BuildSystem.f_WriteFile(FileData, FileName);
-							}
-
-							auto FileMap = _Project.m_Files(FileName);
-
-							auto &File = FileMap.f_GetResult();
-
-							File.m_Position = FilePos;
-
-							File.m_pGroup = pGroup;
-
-							CStr PCHFile = CStr::CFormat("$(IntDir){}_{}.pch") << _Project.m_EntityName << GUID;
-
-							for (auto iCondition = iPrefixHeader->m_Elements.f_GetIterator(); iCondition; ++iCondition)
-							{
-								for (auto iElement = iCondition->f_GetIterator(); iElement; ++iElement)
-								{
-									auto pNewElement = CXMLDocument::f_AddElementAndText(*iElement, "PrecompiledHeaderOutputFile", PCHFile);
-#if 0
-									CStr Condition;
-									Condition = "'%(ClCompile.DefinedProperty_PrecompiledHeaderOutputFile)' != 'true'";
-									if (!iCondition.f_GetKey().f_IsEmpty())
-									{
-										Condition += " and (";
-										Condition += iCondition.f_GetKey();
-										Condition += ")";
-									}
-									CXMLDocument::f_SetAttribute(pNewElement, "Condition", Condition);
-#else
-									if (!iCondition.f_GetKey().f_IsEmpty())
-										CXMLDocument::f_SetAttribute(pNewElement, "Condition", iCondition.f_GetKey());
-#endif
-								}
-							}
-
-							DCheck(!iPrefixHeader->m_Configurations.f_IsEmpty());
-
-							for (auto iConfig = iPrefixHeader->m_Configurations.f_GetIterator(); iConfig; ++iConfig)
-							{
-								CStr Platform = _Project.m_Platforms[iConfig.f_GetKey()];
-								auto pFileConfig = EnabledConfigs.f_FindEqual(iConfig.f_GetKey());
-								if (!pFileConfig)
-								{
-									m_BuildSystem.fs_ThrowError
-										(
-											FilePos
-											, CStr::CFormat("Prefix header is not enabled for config '{} - {}'")
-											<< Platform
-											<< iConfig.f_GetKey().m_Configuration
-										)
-									;
-								}
-								CEntity *pParent;
-								if ((*pFileConfig)->f_GetKey().m_Type == EEntityType_File)
-									pParent = (*pFileConfig)->m_pParent;
-								else
-									pParent = &fg_RemoveQualifiers(*(*pFileConfig));
-
-								CEntityKey NewEntityKey;
-								NewEntityKey.m_Type = EEntityType_File;
-								NewEntityKey.m_Name.m_Value = FileName;
-								auto NewEntityMap = pParent->m_ChildEntitiesMap(NewEntityKey, pParent);
-								auto &NewEntity = *NewEntityMap;
-								auto &NewData = NewEntity.f_DataWritable();
-								if (bFile)
-								{
-									NewData.m_Properties = (*pFileConfig)->f_Data().m_Properties;
-									NewData.m_Properties.f_Remove(FileTypeKey);
-									
-								}
-								NewData.m_Position = FilePos;
-								TCMap<CPropertyKey, CEJSON> Values;
-								Values[FileTypeKey] = CompileType;
-								m_BuildSystem.f_InitEntityForEvaluationNoEnv(NewEntity, Values, EEvaluatedPropertyType_External);
-								{
-									NewEntity.f_AddProperty
-										(
-											CPropertyKey(EPropertyType_Compile, "PrecompilePrefixHeader")
-											, CBuildSystemSyntax::CRootValue{CBuildSystemSyntax::CValue{CEJSON(CStr("XInternalCreate"))}}
-											, FilePos
-										)
-									;
-								}
-								{
-									NewEntity.f_AddProperty
-										(
-											CPropertyKey(EPropertyType_Compile, "XInternalPrecompiledHeaderOutputFile")
-											, CBuildSystemSyntax::CRootValue{CBuildSystemSyntax::CValue{CEJSON(PCHFile)}}
-											, FilePos
-										)
-									;
-								}
-								File.m_EnabledConfigs[iConfig.f_GetKey()] = fg_Explicit(&NewEntity);
-							}
-						}
-					}
-				}
-				fGenerateFiles();
+				f_GenerateProjectFile_AddPrefixHeaders(_Project, ProjectState);
+				co_await f_GenerateProjectFile_File(_Project, ProjectState);
 			}
 
-			// Dependencies
-			{
-				auto pItemGroup = CXMLDocument::f_CreateElement(pProject, "ItemGroup");
+			auto CompileTypeSettingsPerVSType = co_await f_GenerateProjectFile_FileTypes(_Project, ProjectState, CompileTypes);
+			co_await f_GenerateProjectFile_Dependency(_Project, ProjectState);
 
-				// Project dependencies
-				{
-					for (auto iDependency = _Project.m_Dependencies.f_GetIterator(); iDependency; ++iDependency)
-					{
-						auto &Dependency = *iDependency;
-						bool bInvalid = false;
-						for (auto iConfig = Dependency.m_EnabledConfigs.f_GetIterator(); iConfig; ++iConfig)
-						{
-							if (!_Project.m_EnabledProjectConfigs.f_FindEqual(iConfig.f_GetKey()))
-							{
-								bInvalid = true;
-								break;
-							}
-						}
-						for (auto iConfig = _Project.m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
-						{
-							if (!Dependency.m_EnabledConfigs.f_FindEqual(iConfig.f_GetKey()))
-							{
-								bInvalid = true;
-								break;
-							}
-						}
-						if (bInvalid)
-						{
-							CStr Configs0;
-							for (auto iConfig = Dependency.m_EnabledConfigs.f_GetIterator(); iConfig; ++iConfig)
-								fg_AddStrSep(Configs0, iConfig.f_GetKey().f_GetFullName(), "\n");
-							CStr Configs1;
-							for (auto iConfig = _Project.m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
-								fg_AddStrSep(Configs1, iConfig.f_GetKey().f_GetFullName(), "\n");
-							m_BuildSystem.fs_ThrowError(Dependency.m_Position, fg_Format("Dependencies cannot be varied per configuration ({}):\n{}\n!=\n{}\n", _Project.f_GetName(), Configs0, Configs1));
-						}
+			XMLState.m_pFileItemGroup = CXMLDocument::f_CreateElement(XMLState.m_pProject, "ItemGroup");
 
-						CStr ProjectDependency = iDependency.f_GetKey();
+			// .Net new SDK project type automatically adds everything it sees inside the directory
+			if (LanguageType != ELanguageType_Native)
+				CXMLDocument::f_SetAttribute(CXMLDocument::f_CreateElement(XMLState.m_pFileItemGroup, gc_ConstString_None), gc_ConstString_Remove, "**");
 
-						auto pDependProject = _Project.m_pSolution->m_Projects.f_FindEqual(ProjectDependency);
+			auto Targets = TargetSettings.f_GetSingleSettingWithoutPositions<TCOptional<TCVector<CStr>>>(gc_ConstString_ImportTargets);
 
-						if (!pDependProject)
-							m_BuildSystem.fs_ThrowError(Dependency.m_Position, CStr::CFormat("Dependency {} not found in workspace") << ProjectDependency);
-
-						for (auto iConfig = _Project.m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
-						{
-							if (!pDependProject->m_EnabledProjectConfigs.f_FindEqual(iConfig.f_GetKey()))
-								m_BuildSystem.fs_ThrowError
-								(
-									Dependency.m_Position
-									, CStr::CFormat("Dependency project does not have required configuration {} - {}")
-									<< _Project.m_Platforms[iConfig.f_GetKey()]
-									<< iConfig.f_GetKey().m_Configuration
-								)
-							;
-						}
-
-						auto pReference = CXMLDocument::f_CreateElement(pItemGroup, "ProjectReference");
-						CStr DependencyProjectFile = CFile::fs_MakeNiceFilename(pDependProject->f_GetName()) + ".vcxproj";
-						CXMLDocument::f_SetAttribute(pReference, "Include", DependencyProjectFile);
-						CXMLDocument::f_AddElementAndText(pReference, "Project", pDependProject->f_GetGUID());
-						CXMLDocument::f_AddElementAndText(pReference, "Name", pDependProject->f_GetName());
-
-						TCVector<CStr> SearchLists;
-						SearchLists.f_Insert(SettingsPrefix + "Dependency");
-						if (LanguageType == ELanguageType_CSharp)
-							SearchLists.f_Insert("DotNet_Dependency");
-
-						SearchLists.f_Insert("Dependency");
-						TCMap<CStr, CXMLElement *> FileParents;
-						FileParents[CStr()] = pReference;
-
-						f_SetEvaluatedValues
-							(
-								FileParents
-								, Dependency.m_EnabledConfigs
-								, _Project.m_EnabledProjectConfigs
-								, false
-								, EPropertyType_Dependency
-								, &SearchLists
-								, nullptr
-								, CStr()
-								, false
-								, false
-								, false
-								, _Project
-							)
-						;
-					}
-				}
-
-				// External dependencies
-				{
-					CFilePosition Position;
-					CEJSON ExternalDependencies = fGetEntityPropertyGlobalEJSON(EPropertyType_Target, "ExternalDependencies", Position, EEJSONType_Array);
-
-					if (ExternalDependencies.f_IsValid())
-					{
-						if (!ExternalDependencies.f_IsStringArray())
-							m_BuildSystem.fs_ThrowError(Position, "Expected ExternalDependencies to be a string array");
-
-						for (auto &Dependency : ExternalDependencies.f_Array())
-						{
-							auto pReference = CXMLDocument::f_CreateElement(pItemGroup, "Reference");
-							CXMLDocument::f_SetAttribute(pReference, "Include", Dependency.f_String());
-						}
-					}
-				}
-			}
+			CGeneratorSettings::fs_AddToXMLFiles<false, false>(XMLState, _Project, TargetSettings.f_GetParsedVSSettings<false, false>(nullptr), nullptr);
+			f_GenerateProjectFile_AddToXML_File(_Project, ProjectState, XMLState, CompileTypeSettingsPerVSType);
+			f_GenerateProjectFile_AddToXML_FileTypes(_Project, ProjectState, XMLState, fg_Move(CompileTypeSettingsPerVSType));
+			f_GenerateProjectFile_AddToXML_Dependency(_Project, ProjectState, XMLState);
 
 			// MSBuild Targets
+			if (Targets)
 			{
-				CEntityKey EntityKey;
-				EntityKey.m_Type = EEntityType_GeneratorSetting;
-				if (pImportTargets)
+				for (auto &Target : *Targets)
 				{
-					EntityKey.m_Name.m_Value = "Targets";
-					auto pInner = pImportTargets->m_ChildEntitiesMap.f_FindEqual(EntityKey);
-					if (pInner)
-					{
-						for (auto iImport = pInner->m_EvaluatedProperties.m_Properties.f_GetIterator(); iImport; ++iImport)
-						{
-							auto pImport = CXMLDocument::f_CreateElement(pProject, "Import");
-							CXMLDocument::f_SetAttribute(pImport, "Project", iImport->m_Value.f_String());
-						}
-					}
+					auto pImport = CXMLDocument::f_CreateElement(XMLState.m_pProject, gc_ConstString_Import);
+					CXMLDocument::f_SetAttribute(pImport, "Project", Target);
 				}
-			}
-
-			if (LanguageType == ELanguageType_Native)
-			{
-				mint nCompileTypes = 0;
-				bool bCppEnabled = false;
-				TCMap<CStr, TCLinkedList<CXMLElement *>> Same;
-				TCSet<CStr> FullyDefinedC;
-				TCSet<CStr> FullyDefinedManaged;
-				TCVector<TCSet<CStr> *> FullyDefined;
-				{
-					CXMLNode *pChild = nullptr;
-					bool bAdded = false;
-					while ((pChild = CXMLDocument::f_Iterate(pCompileItemGroup_InnerClCompileAsC, pChild)))
-					{
-						if (auto pElement = pChild->ToElement())
-						{
-							if (!bAdded)
-							{
-								++nCompileTypes;
-								bAdded = true;
-								FullyDefined.f_Insert(&FullyDefinedC);
-							}
-							Same[CXMLDocument::f_GetAsString(pChild)].f_Insert(pElement);
-							CStr Name = CXMLDocument::f_GetValue(pChild);
-							CStr Value = CXMLDocument::f_GetNodeText(pChild);
-
-							if (Value.f_Find(CStr(CStr::CFormat("%(ClCompile.{})") << Name)) < 0)
-								FullyDefinedC[Name];
-						}
-					}
-				}
-				{
-					CXMLNode *pChild = nullptr;
-					bool bAdded = false;
-					while ((pChild = CXMLDocument::f_Iterate(pCompileItemGroup_InnerClCompileAsManaged, pChild)))
-					{
-						if (auto pElement = pChild->ToElement())
-						{
-							if (!bAdded)
-							{
-								++nCompileTypes;
-								bAdded = true;
-								FullyDefined.f_Insert(&FullyDefinedManaged);
-							}
-							Same[CXMLDocument::f_GetAsString(pChild)].f_Insert(pElement);
-							CStr Name = CXMLDocument::f_GetValue(pChild);
-							CStr Value = CXMLDocument::f_GetNodeText(pChild);
-
-							if (Value.f_Find(CStr(CStr::CFormat("%(ClCompile.{})") << Name)) < 0)
-								FullyDefinedManaged[Name];
-						}
-					}
-				}
-				{
-					CXMLNode *pChild = nullptr;
-					bool bAdded = false;
-					while ((pChild = CXMLDocument::f_Iterate(pCompileItemGroup_InnerClCompile, pChild)))
-					{
-						if (auto pElement = pChild->ToElement())
-						{
-							if (!bAdded)
-							{
-								++nCompileTypes;
-								bAdded = true;
-								bCppEnabled = true;
-							}
-							Same[CXMLDocument::f_GetAsString(pChild)].f_Insert((CXMLElement *)pChild);
-						}
-					}
-				}
-
-				if (nCompileTypes <= 1)
-				{
-					for (auto iSame = Same.f_GetIterator(); iSame; ++iSame)
-						pCompileItemGroup_ClCompileShared->InsertEndChild(CXMLDocument::f_DeepClone(iSame->f_GetFirst(), pCompileItemGroup_ClCompileShared->GetDocument()));
-				}
-				else
-				{
-					for (auto iSame = Same.f_GetIterator(); iSame; ++iSame)
-					{
-						if (iSame->f_GetLen() >= nCompileTypes)
-						{
-							pCompileItemGroup_ClCompileShared->InsertEndChild(CXMLDocument::f_DeepClone(iSame->f_GetFirst(), pCompileItemGroup_ClCompileShared->GetDocument()));
-							for (auto iXml = iSame->f_GetIterator(); iXml; ++iXml)
-								(*iXml)->Parent()->DeleteChild(*iXml);
-						}
-						else
-						{
-							auto pElement = iSame->f_GetFirst();
-
-							auto pParent = pElement->Parent();
-
-							if (pParent == pCompileItemGroup_InnerClCompileAsC)
-							{
-								for (auto iFile = Files_C.f_GetIterator(); iFile; ++iFile)
-								{
-									CXMLNode *pChild = nullptr;
-									if ((pChild = CXMLDocument::f_Iterate((*iFile), pChild)))
-										(*iFile)->InsertFirstChild(CXMLDocument::f_DeepClone(pElement, (*iFile)->GetDocument()));
-									else
-										(*iFile)->InsertEndChild(CXMLDocument::f_DeepClone(pElement, (*iFile)->GetDocument()));
-								}
-							}
-							else if (pParent == pCompileItemGroup_InnerClCompileAsManaged)
-							{
-								if (!bCppEnabled)
-								{
-									CStr Name = CXMLDocument::f_GetValue(pElement);
-									bool bFullyDefined = true;
-									for (auto iDefined = FullyDefined.f_GetIterator(); iDefined; ++iDefined)
-									{
-										if (!(**iDefined).f_FindEqual(Name))
-										{
-											bFullyDefined = false;
-											break;
-										}
-									}
-									if (bFullyDefined)
-									{
-										pCompileItemGroup_ClCompileShared->InsertEndChild(CXMLDocument::f_DeepClone(pElement, pCompileItemGroup_ClCompileShared->GetDocument()));
-									}
-									else
-									{
-										for (auto iFile = Files_CppManaged.f_GetIterator(); iFile; ++iFile)
-										{
-											CXMLNode *pChild = nullptr;
-											if ((pChild = CXMLDocument::f_Iterate((*iFile), pChild)))
-												(*iFile)->InsertFirstChild(CXMLDocument::f_DeepClone(pElement, (*iFile)->GetDocument()));
-											else
-												(*iFile)->InsertEndChild(CXMLDocument::f_DeepClone(pElement, (*iFile)->GetDocument()));
-										}
-									}
-								}
-								else
-								{
-									for (auto iFile = Files_CppManaged.f_GetIterator(); iFile; ++iFile)
-									{
-										CXMLNode *pChild = nullptr;
-										if ((pChild = CXMLDocument::f_Iterate((*iFile), pChild)))
-											(*iFile)->InsertFirstChild(CXMLDocument::f_DeepClone(pElement, (*iFile)->GetDocument()));
-										else
-											(*iFile)->InsertEndChild(CXMLDocument::f_DeepClone(pElement, (*iFile)->GetDocument()));
-									}
-								}
-							}
-							else
-							{
-								CStr Name = CXMLDocument::f_GetValue(pElement);
-								bool bFullyDefined = true;
-								for (auto iDefined = FullyDefined.f_GetIterator(); iDefined; ++iDefined)
-								{
-									if (!(**iDefined).f_FindEqual(Name))
-									{
-										bFullyDefined = false;
-										break;
-									}
-								}
-								if (bFullyDefined)
-								{
-									pCompileItemGroup_ClCompileShared->InsertEndChild(CXMLDocument::f_DeepClone(pElement, pCompileItemGroup_ClCompileShared->GetDocument()));
-								}
-								else
-								{
-									DCheck(pParent == pCompileItemGroup_InnerClCompile);
-									for (auto iFile = Files_Cpp.f_GetIterator(); iFile; ++iFile)
-									{
-										CXMLNode *pChild = nullptr;
-										if ((pChild = CXMLDocument::f_Iterate((*iFile), pChild)))
-											(*iFile)->InsertFirstChild(CXMLDocument::f_DeepClone(pElement, (*iFile)->GetDocument()));
-										else
-											(*iFile)->InsertEndChild(CXMLDocument::f_DeepClone(pElement, (*iFile)->GetDocument()));
-									}
-								}
-							}
-						}
-					}
-				}
-
-				pCompileItemGroup_ClCompile->Parent()->Parent()->DeleteChild(pCompileItemGroup_ClCompile->Parent());
-				pCompileItemGroup_ClCompileAsC->Parent()->Parent()->DeleteChild(pCompileItemGroup_ClCompileAsC->Parent());
-				pCompileItemGroup_ClCompileAsManaged->Parent()->Parent()->DeleteChild(pCompileItemGroup_ClCompileAsManaged->Parent());
 			}
 		}
 
 		{
-			CStr XMLData = XMLFile.f_GetAsString(EXMLOutputDialect_VisualStudio);
+			CStr XMLData = XMLState.m_XMLFile.f_GetAsString(EXMLOutputDialect_VisualStudio);
 			bool bWasCreated;
 			if (!m_BuildSystem.f_AddGeneratedFile(FileName, XMLData, _Project.m_pSolution->f_GetName(), bWasCreated))
 				DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << FileName));
@@ -1293,8 +244,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 			_Project.m_FileName = FileName;
 		}
+
 		{
-			CStr XMLData = PropsXMLFile.f_GetAsString(EXMLOutputDialect_VisualStudio);
+			CStr XMLData = XMLState.m_PropsXMLFile.f_GetAsString(EXMLOutputDialect_VisualStudio);
 			bool bWasCreated;
 			if (!m_BuildSystem.f_AddGeneratedFile(PropsFileName, XMLData, _Project.m_pSolution->f_GetName(), bWasCreated))
 				DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << FileName));
@@ -1322,7 +274,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 				for (auto iFile = _Project.m_Files.f_GetIterator(); iFile; ++iFile)
 				{
 					auto pFileElement = CXMLDocument::f_CreateElement(pItemGroup, iFile->m_VSType);
-					CXMLDocument::f_SetAttribute(pFileElement, "Include", iFile->m_VSFile);
+					CXMLDocument::f_SetAttribute(pFileElement, gc_ConstString_Include, iFile->m_VSFile);
 					CStr GroupPath = iFile->f_GetGroupPath().f_ReplaceChar('/', '\\');
 					if (!GroupPath.f_IsEmpty())
 						CXMLDocument::f_AddElementAndText(pFileElement, "Filter", GroupPath);
@@ -1335,7 +287,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 				for (auto iGroup = _Project.m_Groups.f_GetIterator(); iGroup; ++iGroup)
 				{
 					auto pGroupElement = CXMLDocument::f_CreateElement(pItemGroup, "Filter");
-					CXMLDocument::f_SetAttribute(pGroupElement, "Include", iGroup->f_GetPath().f_ReplaceChar('/','\\'));
+					CXMLDocument::f_SetAttribute(pGroupElement, gc_ConstString_Include, iGroup->f_GetPath().f_ReplaceChar('/','\\'));
 					CXMLDocument::f_AddElementAndText(pGroupElement, "UniqueIdentifier", iGroup->f_GetGUID());
 				}
 			}
@@ -1353,5 +305,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 				m_BuildSystem.f_WriteFile(FileData, FiltersFileName);
 			}
 		}
+
+		co_return {};
 	}
 }

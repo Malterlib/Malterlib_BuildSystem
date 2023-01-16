@@ -6,10 +6,10 @@
 
 namespace NMib::NBuildSystem::NVisualStudio
 {
-	CUniversallyUniqueIdentifier g_GeneratorGroupUUIDNamespace("{2A2485EA-A49B-4829-B93D-FD225BE2D065}");
-	CUniversallyUniqueIdentifier g_GeneratorProjectUUIDNamespace("{0A5F7138-CEB6-422C-A248-1966A6EB17A1}");
-	CUniversallyUniqueIdentifier g_GeneratorSolutionUUIDNamespace("{03AB27C0-C158-4865-8F83-4ACE0C40DE9B}");
-	CUniversallyUniqueIdentifier g_GeneratorPrefixHeaderUUIDNamespace("{03AB27C0-C158-4865-8F83-4ACE0C40DE9B}");
+	constexpr CUniversallyUniqueIdentifier const gc_GeneratorGroupUUIDNamespace(0x2A2485EA, 0xA49B, 0x4829, 0xB93D, constant_uint64(0xFD225BE2D065));
+	constexpr CUniversallyUniqueIdentifier const gc_GeneratorProjectUUIDNamespace(0x0A5F7138, 0xCEB6, 0x422C, 0xA248, constant_uint64(0x1966A6EB17A1));
+	constexpr CUniversallyUniqueIdentifier const gc_GeneratorSolutionUUIDNamespace(0x03AB27C0, 0xC158, 0x4865, 0x8F83, constant_uint64(0x4ACE0C40DE9B));
+	constexpr CUniversallyUniqueIdentifier const gc_GeneratorPrefixHeaderUUIDNamespace(0x03AB27C0, 0xC158, 0x4865, 0x8F83, constant_uint64(0x4ACE0C40DE9B));
 
 	CStr const &CGroup::f_GetPath() const
 	{
@@ -28,7 +28,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		if (!mp_GUID.f_IsEmpty())
 			return mp_GUID;
 
-		mp_GUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorGroupUUIDNamespace, f_GetPath()).f_GetAsString();
+		mp_GUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorGroupUUIDNamespace, f_GetPath()).f_GetAsString();
 		return mp_GUID;
 	}
 
@@ -56,17 +56,17 @@ namespace NMib::NBuildSystem::NVisualStudio
 	CStr CProject::f_GetPath() const
 	{
 		if (m_pGroup)
-			return m_pGroup->f_GetPath() + "/" + f_GetName();
+			return m_pGroup->f_GetPath() / f_GetName();
 		return f_GetName();
 	}
 
-	CStr CProject::f_GetSolutionTypeGUID() const
+	CStr const &CProject::f_GetSolutionTypeGUID() const
 	{
 		if (m_LanguageType == ELanguageType_Native)
-			return "{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}";
+			return gc_ConstString__8BC9CEB8_8B4A_11D0_8D11_00A0C91BC942_;
 		else if (m_LanguageType == ELanguageType_CSharp)
-			return "{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}";
-		return "Error";
+			return gc_ConstString__FAE04EC0_301F_11D3_BF4B_00C04F79EFBC_;
+		return gc_ConstString_Error;
 	}
 
 	CStr const &CProject::f_GetGUID()
@@ -74,7 +74,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		if (!mp_GUID.f_IsEmpty())
 			return mp_GUID;
 
-		mp_GUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorProjectUUIDNamespace, f_GetName()).f_GetAsString();
+		mp_GUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorProjectUUIDNamespace, f_GetName()).f_GetAsString();
 		return mp_GUID;
 	}
 
@@ -106,6 +106,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 		for (auto iDepend = m_Dependencies.f_GetIterator(); iDepend; ++iDepend)
 		{
+			if (iDepend->m_bExternal)
+				continue;
+
 			auto pProject = _Projects.f_FindEqual(iDepend.f_GetKey());
 			if (!pProject)
 				_BuildSystem.fs_ThrowError(iDepend->m_Position, CStr::CFormat("Dependency {} not found in workspace") << iDepend.f_GetKey());
