@@ -110,13 +110,17 @@ namespace NMib::NBuildSystem
 									CStr PullRemoteBranch = RemoteBranch;
 									CStr MissingRemoteBranch = RemoteBranch;
 
-									CStr RemotePullBranchName;
+									CStr DefaultUpstreamBranch = Repo.m_DefaultUpstreamBranch;
 
-									if (bUseDefaultUpstream && Branch == Repo.m_DefaultBranch && !Repo.m_DefaultUpstreamBranch.f_IsEmpty() && !State.f_HasRemoteBranch(RemoteBranch))
-										PullRemoteBranch = "{}/{}"_f << Remote << Repo.m_DefaultUpstreamBranch;
+									auto *pRemote = Repo.m_Remotes.f_FindEqual(Remote);
+									if (pRemote && pRemote->m_DefaultBranch)
+										DefaultUpstreamBranch = pRemote->m_DefaultBranch;
 
-									if (Branch == Repo.m_DefaultBranch && !Repo.m_DefaultUpstreamBranch.f_IsEmpty() && !State.f_HasRemoteBranch(RemoteBranch))
-										MissingRemoteBranch = "{}/{}"_f << Remote << Repo.m_DefaultUpstreamBranch;
+									if (bUseDefaultUpstream && Branch == Repo.m_DefaultBranch && !DefaultUpstreamBranch.f_IsEmpty() && !State.f_HasRemoteBranch(RemoteBranch))
+										PullRemoteBranch = "{}/{}"_f << Remote << DefaultUpstreamBranch;
+
+									if (Branch == Repo.m_DefaultBranch && !DefaultUpstreamBranch.f_IsEmpty() && !State.f_HasRemoteBranch(RemoteBranch))
+										MissingRemoteBranch = "{}/{}"_f << Remote << DefaultUpstreamBranch;
 
 									if (!(_Flags & ERepoStatusFlag_NonDefaultToAll) && Remote != "origin" && Branch != Repo.m_DefaultBranch)
 										;
@@ -131,10 +135,14 @@ namespace NMib::NBuildSystem
 											fg_GetLogEntries(Launches, Repo, Branch, PullRemoteBranch) > ToPull.f_AddResult(Remote);
 									}
 
-									if (Branch != Repo.m_DefaultBranch && !Repo.m_DefaultBranch.f_IsEmpty())
+									CStr DefaultBranch = Repo.m_DefaultBranch;
+									if (pRemote && pRemote->m_DefaultBranch)
+										DefaultBranch = pRemote->m_DefaultBranch;
+
+									if (Branch != DefaultBranch && !DefaultBranch.f_IsEmpty())
 									{
-										CStr AgainstDefaultName = "{}/{}"_f << Remote << Repo.m_DefaultBranch;
-										CStr ExtraRemoteBranch = "{}/{}"_f << Remote << Repo.m_DefaultBranch;
+										CStr AgainstDefaultName = "{}/{}"_f << Remote << DefaultBranch;
+										CStr ExtraRemoteBranch = "{}/{}"_f << Remote << DefaultBranch;
 										if (State.f_HasRemoteBranch(ExtraRemoteBranch))
 										{
 											fg_GetLogEntries(Launches, Repo, ExtraRemoteBranch, Branch) > ToPush.f_AddResult(AgainstDefaultName);
@@ -143,7 +151,7 @@ namespace NMib::NBuildSystem
 									}
 								}
 
-								auto [_ToPush, _ToPull] = co_await 
+								auto [ToPushResults, ToPullResults] = co_await
 									(
 										ToPush.f_GetResults()
 										+ ToPull.f_GetResults()
@@ -172,7 +180,7 @@ namespace NMib::NBuildSystem
 										!fg_CombineResults
 										(
 											CombineResultsPromise
-											, fg_Move(_ToPush)
+											, fg_Move(ToPushResults)
 											, [&](CStr const &_Remote, TCVector<CLogEntry> &&_Log)
 											{
 												auto &[Remotes, LogEntries] = ToRemotePushByHashes[fGetHashes(_Log)];
@@ -193,7 +201,7 @@ namespace NMib::NBuildSystem
 										!fg_CombineResults
 										(
 											CombineResultsPromise
-											, fg_Move(_ToPull)
+											, fg_Move(ToPullResults)
 											, [&](CStr const &_Remote, TCVector<CLogEntry> &&_Log)
 											{
 												auto &[Remotes, LogEntries] = ToLocalPullByHashes[fGetHashes(_Log)];
@@ -279,13 +287,6 @@ namespace NMib::NBuildSystem
 
 								bool bIsCurrentBranch = Branch == State.m_LocalBranches.m_Current;
 
-								bool bHasDifferentUpstream =
-									bUseDefaultUpstream
-									&& Branch == Repo.m_DefaultBranch
-									&& !Repo.m_DefaultUpstreamBranch.f_IsEmpty()
-									&& Repo.m_DefaultBranch != Repo.m_DefaultUpstreamBranch
-								;
-
 								TCVector<CStr> Messages;
 
 								if (bIsCurrentBranch && !State.m_LocalChanges.f_IsEmpty())
@@ -364,6 +365,19 @@ namespace NMib::NBuildSystem
 									bool bMissing = ToPushMissing.f_FindEqual(RemoteName);
 									bool bNoPullNoPush = NoPullNoPush.f_FindEqual(RemoteName);
 
+									CStr DefaultUpstreamBranch = Repo.m_DefaultUpstreamBranch;
+
+									auto *pRemote = Repo.m_Remotes.f_FindEqual(RemoteName);
+									if (pRemote && pRemote->m_DefaultBranch)
+										DefaultUpstreamBranch = pRemote->m_DefaultBranch;
+
+									bool bHasDifferentUpstream =
+										bUseDefaultUpstream
+										&& Branch == Repo.m_DefaultBranch
+										&& !DefaultUpstreamBranch.f_IsEmpty()
+										&& Repo.m_DefaultBranch != DefaultUpstreamBranch
+									;
+
 									if (pToPush && !pToPush->f_IsEmpty())
 									{
 										RemoteMessages.f_Insert
@@ -396,7 +410,7 @@ namespace NMib::NBuildSystem
 													"{}Pull {}{}{} {}"_f
 													<< Colors.f_ToPull()
 													<< Colors.f_Foreground256(242)
-													<< Repo.m_DefaultUpstreamBranch
+													<< DefaultUpstreamBranch
 													<< Colors.f_Default()
 													<< pToPull->f_GetLen()
 												)
@@ -571,6 +585,19 @@ namespace NMib::NBuildSystem
 
 									auto &RemoteName = ToLocalPull.fs_GetKey(ToPull);
 
+									CStr DefaultUpstreamBranch = Repo.m_DefaultUpstreamBranch;
+
+									auto *pRemote = Repo.m_Remotes.f_FindEqual(RemoteName);
+									if (pRemote && pRemote->m_DefaultBranch)
+										DefaultUpstreamBranch = pRemote->m_DefaultBranch;
+
+									bool bHasDifferentUpstream =
+										bUseDefaultUpstream
+										&& Branch == Repo.m_DefaultBranch
+										&& !DefaultUpstreamBranch.f_IsEmpty()
+										&& Repo.m_DefaultBranch != DefaultUpstreamBranch
+									;
+
 									if (bHasDifferentUpstream && !State.f_HasRemoteBranch("{}/{}"_f << RemoteName << Branch))
 									{
 										Launches.f_Output
@@ -583,7 +610,7 @@ namespace NMib::NBuildSystem
 												<< Colors.f_ToPull()
 												<< Colors.f_Default()
 												<< Colors.f_Foreground256(242)
-												<< Repo.m_DefaultUpstreamBranch
+												<< DefaultUpstreamBranch
 												<< Colors.f_Default()
 											)
 										;

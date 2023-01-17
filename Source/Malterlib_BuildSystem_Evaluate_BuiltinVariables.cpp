@@ -282,6 +282,7 @@ namespace NMib::NBuildSystem
 										{"Name", CBuildSystemSyntax::CClassType::CMember{g_String}}
 										, {"URL", CBuildSystemSyntax::CClassType::CMember{g_String}}
 										, {"Write", CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_Boolean, false)}}
+										, {"DefaultBranch", CBuildSystemSyntax::CClassType::CMember{g_String, true}}
 									}
 									, {}
 								}
