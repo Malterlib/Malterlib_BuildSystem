@@ -79,6 +79,7 @@ namespace NMib::NContainer
 				auto &Object = Token.f_Object();
 				Object[gc_ConstString_Type] = gc_ConstString_String;
 				Object[gc_ConstString_Value] = fg_Move(ParsedString);
+				DMibMovedFromValid(ParsedString);
 			}
 		;
 
@@ -356,6 +357,7 @@ namespace NMib::NContainer
 				if (!fg_ParseJSONString<'\'', NEncoding::NJSON::EParseJSONStringFlag_AllowMultiLine>(ParsedString, pParse, ParseContext))
 					f_ThrowError("End of string character ' not found", pParseStart);
 				AccessorsArray.f_Insert(fg_Move(ParsedString));
+				DMibMovedFromValid(ParsedString);
 			}
 			else if (*pParse == '"')
 			{
@@ -368,6 +370,7 @@ namespace NMib::NContainer
 				if (!fg_ParseJSONString<'"', NEncoding::NJSON::EParseJSONStringFlag_AllowMultiLine>(ParsedString, pParse, ParseContext))
 					f_ThrowError("End of string character \" not found", pParseStart);
 				AccessorsArray.f_Insert(fg_Move(ParsedString));
+				DMibMovedFromValid(ParsedString);
 			}
 			else if (fs_CharIsStartIdentifier(*pParse))
 				AccessorsArray.f_Insert(f_ParseIdentifier(pParse));
@@ -988,6 +991,8 @@ namespace NMib::NContainer
 				fg_ParseWhiteSpace(pParse);
 
 				auto OldParameterType = fg_Move(ParameterType);
+				DMibMovedFromValid(ParameterType);
+
 				auto &Object = ParameterType.f_Object();
 				Object[CEJSONConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
 				Object[CEJSONConstStrings::mc_Value] = f_ParseDefaulted(pParse, fg_Move(OldParameterType));

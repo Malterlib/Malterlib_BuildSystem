@@ -534,7 +534,8 @@ namespace NMib::NBuildSystem
 												}
 
 												TCSet<CEntity *> Deleted;
-												fpr_EvaluateData(*pRootCreated, Deleted);
+												if (pRootCreated)
+													fpr_EvaluateData(*pRootCreated, Deleted);
 												pEntity = pParent;
 
 												if
@@ -609,6 +610,8 @@ namespace NMib::NBuildSystem
 							while (!ToProcess.f_IsEmpty())
 							{
 								auto ThisTime = fg_Move(ToProcess);
+								DMibMovedFromValid(ToProcess);
+
 								for (auto &bIndirect : ThisTime)
 								{
 									auto &Depenency = *ThisTime.fs_GetKey(bIndirect);

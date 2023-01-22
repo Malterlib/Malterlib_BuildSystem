@@ -270,10 +270,7 @@ namespace NMib::NBuildSystem
 				if (Group.f_StartsWith("{"))
 				{
 					if (!bAddedCreated)
-					{
-						bAddedCreated = true;
 						fNewCreated(pParentGroup);
-					}
 
 					pParentGroup->f_CopyEntities(GroupEntity, EEntityCopyFlag_MergeEntities);
 					pParentGroup->f_CopyProperties(GroupEntity);
@@ -291,10 +288,7 @@ namespace NMib::NBuildSystem
 					auto Child = pParentGroup->m_ChildEntitiesMap(Key, *pSource, pParentGroup, EEntityCopyFlag_CopyChildren);
 
 					if (!bAddedCreated)
-					{
-						bAddedCreated = true;
 						fNewCreated(&*Child);
-					}
 				}
 			}
 		}

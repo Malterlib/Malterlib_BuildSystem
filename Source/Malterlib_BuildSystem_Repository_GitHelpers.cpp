@@ -406,8 +406,6 @@ namespace NMib::NBuildSystem::NRepository
 
 				TCVector<CLogEntryFull> LogEntries;
 
-				CLogEntryFull *pCurrentEntry;
-
 				auto fParseDate = [](CStr const &_String, CTime &o_Time) -> CStr
 					{
 						ch8 const *pParseStart = _String.f_GetStr();
@@ -447,6 +445,7 @@ namespace NMib::NBuildSystem::NRepository
 					}
 				;
 
+				CLogEntryFull *pCurrentEntry = nullptr;
 				for (auto &Line : _Result.f_GetStdOut().f_SplitLine<true>())
 				{
 					if (Line.f_StartsWith("commit "))

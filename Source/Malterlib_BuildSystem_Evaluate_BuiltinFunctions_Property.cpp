@@ -197,10 +197,9 @@ namespace NMib::NBuildSystem
 		CEJSONSorted Return;
 		CStr NotFoundError;
 
-		auto pEntity = &_Context.m_OriginalContext;
+		CEntity *pEntity = nullptr;
 		{
 			CStr Entity = EntityName;
-			pEntity = nullptr;
 			while (!Entity.f_IsEmpty())
 			{
 				CStr SubEntity = fg_GetStrSepEscaped(Entity, ".");

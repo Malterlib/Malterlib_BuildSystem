@@ -306,14 +306,14 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 
 				for (auto &Project : _Solution.m_Projects)
 				{
-					if (!Project.m_EnabledProjectConfigs.f_Exists(Configuration))
+					auto pConfig = Project.m_EnabledProjectConfigs.f_FindEqual(Configuration);
+					if (!pConfig)
 						continue;
 
 					if (!Project.m_NativeTargets.f_Exists(Configuration))
 						continue;
 
-					auto iConfig = Project.m_EnabledProjectConfigs[Configuration];
-					if (!m_BuildSystem.f_EvaluateEntityPropertyBool(*iConfig, gc_ConstKey_Target_Disabled, false))
+					if (!m_BuildSystem.f_EvaluateEntityPropertyBool(**pConfig, gc_ConstKey_Target_Disabled, false))
 					{
 						auto pBuildActionEntry = XMLFile.f_CreateElement(pBuildActionEntries, "BuildActionEntry");
 						XMLFile.f_SetAttribute(pBuildActionEntry, "buildForTesting", gc_ConstString_YES);
