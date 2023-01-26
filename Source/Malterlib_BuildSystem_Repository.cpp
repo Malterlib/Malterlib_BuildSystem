@@ -646,7 +646,7 @@ namespace NMib::NBuildSystem
 							catch (CException const &_Exception)
 							{
 								ExceptionString = _Exception.f_GetErrorStr();
-								pException = _Exception.f_ExceptionPointer();
+								pException = NException::fg_CurrentException();
 							}
 
 							if (pException)
@@ -917,7 +917,7 @@ namespace NMib::NBuildSystem
 				catch (CException const &_Exception)
 				{
 					if (bPassException)
-						co_return _Exception.f_ExceptionPointer();
+						co_return NException::fg_CurrentException();
 
 					fOutputInfo(EOutputType_Error, "Reconcile error: {}"_f << _Exception.f_GetErrorStr().f_Trim());
 					CBuildSystem::fs_ThrowError(_Repo.m_Position, "Failed to reconcile hash '{}': {}"_f << ConfigHash << _Exception.f_GetErrorStr().f_Trim());

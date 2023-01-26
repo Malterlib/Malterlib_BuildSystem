@@ -377,9 +377,9 @@ namespace NMib::NBuildSystem
 				bTryParsed = true;
 				fp_ParseData(mp_Data.m_RootEntity, mp_Registry, &mp_Data.m_ConfigurationTypes);
 			}
-			catch ([[maybe_unused]] CException const &_Exception)
+			catch ([[maybe_unused]] CException const &)
 			{
-				pFistError = _Exception.f_ExceptionPointer();
+				pFistError = NException::fg_CurrentException();
 			}
 
 			if (pFistError)
