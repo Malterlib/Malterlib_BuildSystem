@@ -124,8 +124,6 @@ namespace NMib::NBuildSystem
 			bool bDoneSomething = false;
 			bool bAllFinished = true;
 			bool bResolved = true;
-			static int iResolve = 0;
-			++iResolve;
 			while (bResolved)
 			{
 				bResolved = false;
