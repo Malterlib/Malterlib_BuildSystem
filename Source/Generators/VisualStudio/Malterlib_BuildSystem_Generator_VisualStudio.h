@@ -4,6 +4,7 @@
 #pragma once
 
 #include "../../Malterlib_BuildSystem.h"
+#include "../Shared/Malterlib_BuildSystem_Generator_VisualStudioRootHelper.h"
 #include <Mib/XML/XML>
 
 namespace NMib::NBuildSystem::NVisualStudio
@@ -486,19 +487,13 @@ namespace NMib::NBuildSystem::NVisualStudio
 		CEJsonSorted m_Builtin_ProjectPath = ".";
 		CEJsonSorted m_Builtin_Inherit = gc_ConstString_Symbol_Inherit;
 
-		mutable CLowLevelLock m_VisualStudioRootLock;
-		mutable TCAtomic<bool> m_VisualStudioRootCached;
-		mutable CEJsonSorted m_VisualStudioRoot;
+		mutable CVisualStudioRootHelper m_VisualStudioRootHelper;
 
 		CStr m_Win32Platfrom;
 
 		bool m_bEnableSourceControl = false;
 
 		uint32 m_Version; // 2012, 2013 etc
-
-		mutable CMutual m_GetEnvironmentLock;
-		mutable TCMap<CStr, CMutual> m_GetEnvironmentLocks;
-		mutable TCMap<CStr, TCMap<CStr, CStr>> m_CachedBuildEnvironment;
 
 	private:
 		template <typename tf_CSet0, typename tf_CSet1>

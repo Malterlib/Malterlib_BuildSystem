@@ -12,6 +12,7 @@ namespace NMib::NBuildSystem
 {
 	void fg_Malterlib_BuildSystem_MakeActive_VisualStudio();
 	void fg_Malterlib_BuildSystem_MakeActive_Xcode();
+	void fg_Malterlib_BuildSystem_MakeActive_Ninja();
 
 	CBuildSystem::CBuildSystem
 		(
@@ -33,6 +34,7 @@ namespace NMib::NBuildSystem
 		mp_Now = mp_NowUTC.f_ToLocal();
 		fg_Malterlib_BuildSystem_MakeActive_VisualStudio();
 		fg_Malterlib_BuildSystem_MakeActive_Xcode();
+		fg_Malterlib_BuildSystem_MakeActive_Ninja();
 	}
 
 	CFilePosition const &CBuildSystemPropertyInfo::f_FallbackPosition() const

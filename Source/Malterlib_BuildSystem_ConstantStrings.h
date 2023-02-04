@@ -128,7 +128,6 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_void;
 	extern CStringAndHash const gc_ConstString_WildcardString;
 	extern CStringAndHash const gc_ConstString_Write;
-	extern CStringAndHash const gc_ConstString_VisualStudioRoot;
 	extern CStringAndHash const gc_ConstString_XInternalPrecompiledHeaderOutputFile;
 	extern CStringAndHash const gc_ConstString_Replace;
 	extern CStringAndHash const gc_ConstString_Find;
@@ -388,6 +387,7 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_LowerCase;
 	extern CStringAndHash const gc_ConstString_Indent;
 	extern CStringAndHash const gc_ConstString_ChunkString;
+	extern CStringAndHash const gc_ConstString_Ninja;
 
 	extern CStringAndHash const gc_ConstString_Array;
 	extern CStringAndHash const gc_ConstString_Binary;

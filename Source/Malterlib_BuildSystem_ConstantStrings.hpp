@@ -129,7 +129,6 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_void = gc_Str<"void">;
 	constexpr CStringAndHash const gc_ConstString_WildcardString = gc_Str<"WildcardString">;
 	constexpr CStringAndHash const gc_ConstString_Write = gc_Str<"Write">;
-	constexpr CStringAndHash const gc_ConstString_VisualStudioRoot = gc_Str<"VisualStudioRoot">;
 	constexpr CStringAndHash const gc_ConstString_XInternalPrecompiledHeaderOutputFile = gc_Str<"XInternalPrecompiledHeaderOutputFile">;
 	constexpr CStringAndHash const gc_ConstString_Replace = gc_Str<"Replace">;
 	constexpr CStringAndHash const gc_ConstString_Find = gc_Str<"Find">;
@@ -388,6 +387,7 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_LowerCase = gc_Str<"LowerCase">;
 	constexpr CStringAndHash const gc_ConstString_Indent = gc_Str<"Indent">;
 	constexpr CStringAndHash const gc_ConstString_ChunkString = gc_Str<"ChunkString">;
+	constexpr CStringAndHash const gc_ConstString_Ninja = gc_Str<"Ninja">;
 
 	constexpr CStringAndHash const gc_ConstString_Array = gc_Str<"Array">;
 	constexpr CStringAndHash const gc_ConstString_Binary = gc_Str<"Binary">;
@@ -658,7 +658,6 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_void);
 		o_StringCache.f_AddConstantString(gc_ConstString_WildcardString);
 		o_StringCache.f_AddConstantString(gc_ConstString_Write);
-		o_StringCache.f_AddConstantString(gc_ConstString_VisualStudioRoot);
 		o_StringCache.f_AddConstantString(gc_ConstString_XInternalPrecompiledHeaderOutputFile);
 		o_StringCache.f_AddConstantString(gc_ConstString_Replace);
 		o_StringCache.f_AddConstantString(gc_ConstString_Find);
@@ -896,6 +895,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString__8BC9CEB8_8B4A_11D0_8D11_00A0C91BC942_);
 		o_StringCache.f_AddConstantString(gc_ConstString__FAE04EC0_301F_11D3_BF4B_00C04F79EFBC_);
 		o_StringCache.f_AddConstantString(gc_ConstString__Automatic);
+		o_StringCache.f_AddConstantString(gc_ConstString_Ninja);
 
 		o_StringCache.f_AddConstantString(gc_ConstString_StringBase64Encode);
 		o_StringCache.f_AddConstantString(gc_ConstString_StringBase64Decode);

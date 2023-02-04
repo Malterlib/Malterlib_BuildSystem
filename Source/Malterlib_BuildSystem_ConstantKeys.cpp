@@ -58,6 +58,13 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_FindFilesRecursiveIn(EPropertyType_Builtin, gc_Str<"FindFilesRecursiveIn">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_FindDirectoriesRecursiveIn(EPropertyType_Builtin, gc_Str<"FindDirectoriesRecursiveIn">);
 
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_Output(EPropertyType_Builtin, gc_Str<"Output">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_Input(EPropertyType_Builtin, gc_Str<"Input">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_Flags(EPropertyType_Builtin, gc_Str<"Flags">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_Dollar(EPropertyType_Builtin, gc_Str<"Dollar">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_RspFile(EPropertyType_Builtin, gc_Str<"RspFile">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_VisualStudioRoot(EPropertyType_Builtin, gc_Str<"VisualStudioRoot">);
+
 	constexpr CPropertyKeyReference const gc_ConstKey_This_Identity(EPropertyType_This, gc_Str<"Identity">);
 	constexpr CPropertyKeyReference const gc_ConstKey_This_IdentityAsAbsolutePath(EPropertyType_This, gc_Str<"IdentityAsAbsolutePath">);
 	constexpr CPropertyKeyReference const gc_ConstKey_This_IdentityPath(EPropertyType_This, gc_Str<"IdentityPath">);
@@ -114,6 +121,8 @@ namespace NMib::NBuildSystem
 
 	constexpr CPropertyKeyReference const gc_ConstKey_GeneratorSetting_Workspace(EPropertyType_GeneratorSetting, gc_Str<"Workspace">);
 	constexpr CPropertyKeyReference const gc_ConstKey_GeneratorSetting_Target(EPropertyType_GeneratorSetting, gc_Str<"Target">);
+	constexpr CPropertyKeyReference const gc_ConstKey_GeneratorSetting_TargetValidateSettings(EPropertyType_GeneratorSetting, gc_Str<"TargetValidateSettings">);
+	constexpr CPropertyKeyReference const gc_ConstKey_GeneratorSetting_CompileValidateSettings(EPropertyType_GeneratorSetting, gc_Str<"CompileValidateSettings">);
 	constexpr CPropertyKeyReference const gc_ConstKey_GeneratorSetting_Dependency(EPropertyType_GeneratorSetting, gc_Str<"Dependency">);
 	constexpr CPropertyKeyReference const gc_ConstKey_GeneratorSetting_Compile(EPropertyType_GeneratorSetting, gc_Str<"Compile">);
 
@@ -223,6 +232,7 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_PreBuildScriptOutputs(EPropertyType_Target, gc_Str<"PreBuildScriptOutputs">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_PreBuildScriptInputs(EPropertyType_Target, gc_Str<"PreBuildScriptInputs">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_LinkWithLibraries(EPropertyType_Target, gc_Str<"LinkWithLibraries">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Target_CompileCommandsFile(EPropertyType_Target, gc_Str<"CompileCommandsFile">);
 
 	constexpr CPropertyKeyReference const gc_ConstKey_Workspace_Enabled(EPropertyType_Workspace, gc_Str<"Enabled">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Workspace_ExtraGroups(EPropertyType_Workspace, gc_Str<"ExtraGroups">);
@@ -307,6 +317,13 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_FindFilesRecursiveIn);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_FindDirectoriesRecursiveIn);
 
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_Output);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_Input);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_Flags);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_Dollar);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_RspFile);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_VisualStudioRoot);
+
 		o_StringCache.f_AddConstantString(gc_ConstKey_This_Identity);
 		o_StringCache.f_AddConstantString(gc_ConstKey_This_IdentityAsAbsolutePath);
 		o_StringCache.f_AddConstantString(gc_ConstKey_This_IdentityPath);
@@ -363,6 +380,8 @@ namespace NMib::NBuildSystem
 
 		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_Workspace);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_Target);
+		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_TargetValidateSettings);
+		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_CompileValidateSettings);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_Compile);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_Dependency);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_DefinedProperties);
@@ -469,6 +488,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_PreBuildScriptInputs);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_LinkWithLibraries);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_AllFiles);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Target_CompileCommandsFile);
 
 		o_StringCache.f_AddConstantString(gc_ConstKey_Workspace_Enabled);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Workspace_ExtraGroups);

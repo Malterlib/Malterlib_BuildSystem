@@ -126,6 +126,7 @@ namespace NMib::NBuildSystem
 					, {CPropertyKey(gc_ConstKey_Target_Group), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
 					, {CPropertyKey(gc_ConstKey_Target_FollowIndirectDependencies), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					, {CPropertyKey(gc_ConstKey_Target_DependencyFile), DMibBuildSystemTypeWithPosition(fg_Optional(g_String))}
+					, {CPropertyKey(gc_ConstKey_Target_CompileCommandsFile), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
 					, {CPropertyKey(gc_ConstKey_Target_Dependencies), DMibBuildSystemTypeWithPosition(g_StringArray)}
 					, {CPropertyKey(gc_ConstKey_Target_DependencyTargets), DMibBuildSystemTypeWithPosition(g_StringArray)}
 					, {CPropertyKey(gc_ConstKey_Target_ExternalDependencies), DMibBuildSystemTypeWithPosition(g_StringArray)}

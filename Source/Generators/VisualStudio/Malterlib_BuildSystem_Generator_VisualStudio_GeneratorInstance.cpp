@@ -5,7 +5,6 @@
 #include "../../Malterlib_BuildSystem_Evaluate_BuiltinFunctions.h"
 
 #include <Mib/XML/XML>
-#include <Mib/Process/ProcessLaunch>
 #include <Mib/Encoding/Json>
 #ifdef DPlatformFamily_Windows
 #include <Mib/Core/PlatformSpecific/WindowsRegistry>
@@ -93,47 +92,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 	CEJsonSorted const &CGeneratorInstance::f_GetVisualStudioRoot() const
 	{
-		if (m_VisualStudioRootCached.f_Load())
-			return m_VisualStudioRoot;
-
-		DMibLock(m_VisualStudioRootLock);
-
-		if (m_VisualStudioRoot.f_IsValid())
-			return m_VisualStudioRoot;
-
-		CEJsonSorted VisualStudioRoot;
-
-		switch (m_Version)
-		{
-		case 2022:
-		case 2026:
-			{
-#ifdef DPlatformFamily_Windows
-				CStr Errors;
-				auto Versions = CBuildSystem::fs_GetVisualStudioVersions(Errors, m_BuildSystem.f_GetEnvironmentVariable("ProgramData"));
-
-				uint32 ExpectedVersion = 17;
-				if (m_Version == 2026)
-					ExpectedVersion = 18;
-
-				auto *pVersion = Versions.f_FindEqual(ExpectedVersion);
-
-				if (!pVersion)
-					DError("Failed to find Visual Studio {} path. {}\n"_f << m_Version << Errors);
-
-				VisualStudioRoot = pVersion->m_RootPath;
-#else
-				VisualStudioRoot = "/opt/VisualStudio{}"_f << m_Version;
-#endif
-				break;
-			}
-		default: DError("Implement this (f_GetVisualStudioRoot())");
-		}
-
-		m_VisualStudioRoot = fg_Move(VisualStudioRoot);
-		m_VisualStudioRootCached.f_Exchange(true);
-
-		return m_VisualStudioRoot;
+		return m_VisualStudioRootHelper.f_GetVisualStudioRoot(m_Version);
 	}
 
 	CGeneratorInstance::CGeneratorInstance
@@ -146,6 +105,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		: m_BuildSystem(_BuildSystem)
 		, m_BuildSystemData(_BuildSystemData)
 		, m_OutputDir(_OutputDir)
+		, m_VisualStudioRootHelper(_BuildSystem)
 		, m_Win32Platfrom("Win32")
 	{
 		m_Version = _BuildSystem.f_GetGenerateSettings().m_Generator.f_Replace("VisualStudio", "").f_ToInt(uint32(2022));
@@ -176,7 +136,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			(
 				{
 					{CPropertyKey(_BuildSystem.f_StringCache(), EPropertyType_Compile, gc_ConstString_XInternalPrecompiledHeaderOutputFile), DMibBuildSystemTypeWithPosition(g_String)}
-					, {CPropertyKey(_BuildSystem.f_StringCache(), EPropertyType_Builtin, gc_ConstString_VisualStudioRoot), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(gc_ConstKey_Builtin_VisualStudioRoot), DMibBuildSystemTypeWithPosition(g_String)}
 				}
 			)
 		;
@@ -189,97 +149,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 	CSystemEnvironment CGeneratorInstance::f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const
 	{
-#if !defined(DPlatformFamily_Windows)
-		return fg_GetSys()->f_Environment();
-#else
-		if (_Platform != "Windows")
-			DMibError("Unable to get build environment for non-Windows platform");
-
-		CMutual *pEnvironmentLock;
-		{
-			DLock(m_GetEnvironmentLock);
-			if (auto *pCachedEnvironment = m_CachedBuildEnvironment.f_FindEqual(_Architecture))
-				return *pCachedEnvironment;
-			pEnvironmentLock = &m_GetEnvironmentLocks[_Architecture];
-		}
-		DLock(*pEnvironmentLock);
-		{
-			DLock(m_GetEnvironmentLock);
-			if (auto *pCachedEnvironment = m_CachedBuildEnvironment.f_FindEqual(_Architecture))
-				return *pCachedEnvironment;
-		}
-		CStr VisualStudioRoot = f_GetVisualStudioRoot().f_String();
-
-		CStr VCVarsDirectory;
-
-		VCVarsDirectory = VisualStudioRoot + "/VC/Auxiliary/Build";
-
-		auto fArchitectureToVSArchitecture = [&](CStr const &_Architecture) -> CStr
-			{
-				if (_Architecture == "x64")
-					return "amd64";
-				else
-					return _Architecture;
-			}
-		;
-
-		CStr TargetVSArchitecture = fArchitectureToVSArchitecture(_Architecture);
-		CStr HostVSArchitecture = fArchitectureToVSArchitecture(gc_ConstStringDynamic_DArchitecture);
-
-		CStr VSArchitecture;
-		if (TargetVSArchitecture == HostVSArchitecture)
-			VSArchitecture = TargetVSArchitecture;
-		else
-			VSArchitecture = "{}_{}"_f << HostVSArchitecture << TargetVSArchitecture;
-
-		CProcessLaunchParams Params{VCVarsDirectory};
-		Params.m_bShowLaunched = false;
-		auto Environment = fg_GetSys()->f_Environment();
-		Environment.f_Remove("PKG_CONFIG_PATH");
-
-		CStr NewPaths;
-		CStr CurrentPaths = Environment["PATH"];
-		TCVector<CStr> ExtraPaths;
-		while (!CurrentPaths.f_IsEmpty())
-		{
-			CStr Path = fg_GetStrSep(CurrentPaths, ";");
-
-			if (Path.f_FindNoCase("\\Git\\") >= 0 || Path.f_FindNoCase("\\Strawberry\\c\\") >= 0 || Path.f_FindNoCase("\\Gnu32\\") >= 0 || Path.f_FindNoCase("\\GnuWin32\\") >= 0)
-			{
-				ExtraPaths.f_Insert(Path);
-				continue;
-			}
-			fg_AddStrSep(NewPaths, Path, ";");
-		}
-		Environment["PATH"] = NewPaths;
-		Params.m_Environment = Environment;
-		Params.m_bMergeEnvironment = false;
-
-		CStr Output = CProcessLaunch::fs_LaunchTool("cmd.exe", {"/c", fg_Format("vcvarsall.bat {} & set", VSArchitecture)}, Params);
-
-		Environment.f_Clear();
-		ch8 const *pParse = Output;
-
-		while (*pParse)
-		{
-			fg_ParseWhiteSpace(pParse);
-			auto *pStart = pParse;
-			fg_ParseToEndOfLine(pParse);
-			CStr Line(pStart, pParse - pStart);
-			CStr Key = fg_GetStrSep(Line, "=");
-			if (Key.f_IsEmpty())
-				continue;
-			Environment[Key] = Line;
-		}
-
-		Environment["PATH"] = Environment["PATH"] + ";" + CStr::fs_Join(ExtraPaths, ";");
-
-		{
-			DLock(m_GetEnvironmentLock);
-			m_CachedBuildEnvironment[_Architecture] = Environment;
-		}
-		return Environment;
-#endif
+		return m_VisualStudioRootHelper.f_GetBuildEnvironment(m_Version, _Platform, _Architecture);
 	}
 
 	CValuePotentiallyByRef CGeneratorInstance::f_GetBuiltin(CBuildSystemUniquePositions *_pStorePositions, CStr const &_Value, bool &o_bSuccess) const
@@ -319,7 +189,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			o_bSuccess = true;
 			return &m_Builtin_Inherit;
 		}
-		else if (_Value == gc_ConstString_VisualStudioRoot.m_String)
+		else if (_Value == gc_ConstKey_Builtin_VisualStudioRoot.m_Name)
 		{
 			if (_pStorePositions)
 				_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.VisualStudioRoot")->f_AddValue(f_GetVisualStudioRoot(), m_BuildSystem.f_EnableValues());

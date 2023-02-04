@@ -57,6 +57,13 @@ namespace NMib::NBuildSystem
 	extern CPropertyKeyReference const gc_ConstKey_Builtin_FindFilesRecursiveIn;
 	extern CPropertyKeyReference const gc_ConstKey_Builtin_FindDirectoriesRecursiveIn;
 
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_Output;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_Input;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_Flags;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_Dollar;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_RspFile;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_VisualStudioRoot;
+
 	extern CPropertyKeyReference const gc_ConstKey_This_Identity;
 	extern CPropertyKeyReference const gc_ConstKey_This_IdentityAsAbsolutePath;
 	extern CPropertyKeyReference const gc_ConstKey_This_IdentityPath;
@@ -113,6 +120,8 @@ namespace NMib::NBuildSystem
 
 	extern CPropertyKeyReference const gc_ConstKey_GeneratorSetting_Workspace;
 	extern CPropertyKeyReference const gc_ConstKey_GeneratorSetting_Target;
+	extern CPropertyKeyReference const gc_ConstKey_GeneratorSetting_TargetValidateSettings;
+	extern CPropertyKeyReference const gc_ConstKey_GeneratorSetting_CompileValidateSettings;
 	extern CPropertyKeyReference const gc_ConstKey_GeneratorSetting_Dependency;
 	extern CPropertyKeyReference const gc_ConstKey_GeneratorSetting_Compile;
 
@@ -221,6 +230,7 @@ namespace NMib::NBuildSystem
 	extern CPropertyKeyReference const gc_ConstKey_Target_PreBuildScriptInputs;
 	extern CPropertyKeyReference const gc_ConstKey_Target_LinkWithLibraries;
 	extern CPropertyKeyReference const gc_ConstKey_Target_AllFiles;
+	extern CPropertyKeyReference const gc_ConstKey_Target_CompileCommandsFile;
 
 	extern CPropertyKeyReference const gc_ConstKey_Workspace_Enabled;
 	extern CPropertyKeyReference const gc_ConstKey_Workspace_ExtraGroups;
