@@ -41,7 +41,7 @@
 		}
 
 		fg_TestTernary4 function(bool _bValue) string
-		fg_TestTernary4 _bValue ? {Value: "Yes"} : {Value: "No"} <Value>
+		fg_TestTernary4 (_bValue ? {Value: "Yes"} : {Value: "No"}) <Value>
 
 		TestObject: type(CTest) = {Value: "Test"}
 		TestObject2: type(CTest) = {Value: "Test", OptionalValue: "Yep"}

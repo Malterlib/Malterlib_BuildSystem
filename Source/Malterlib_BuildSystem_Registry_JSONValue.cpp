@@ -130,7 +130,7 @@ namespace NMib::NContainer
 		uch8 const *pParse = o_pParse;
 		NStr::fg_ParseWhiteSpaceNoLines(pParse);
 		auto pStart = pParse;
-		while (*pParse == '=' || NEncoding::g_Base64EncodingTableReverse[(uint8)*pParse] != -1)
+		while (*pParse == '=' || g_Base64EncodingTableReverse[(uint8)*pParse] != -1)
 			++pParse;
 		auto pEnd = pParse;
 		NStr::fg_ParseWhiteSpaceNoLines(pParse);
@@ -146,13 +146,21 @@ namespace NMib::NContainer
 			f_ThrowError("Unexpected character in Base64 string: {}"_f << NStr::CStr(pParse, 1), o_pParse);
 
 		NContainer::CByteVector Data;
-		NEncoding::fg_Base64Decode(NStr::CStr(pStart, pEnd - pStart), Data);
+		fg_Base64Decode(NStr::CStr(pStart, pEnd - pStart), Data);
 
 		o_pParse = pParse;
 		return Data;
 	}
 
-	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext::f_ParseAfterValue(NEncoding::CJSONSorted &o_Value, uch8 const *&o_pParse)
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext::f_ParseAfterValue(CJSONSorted &o_Value, uch8 const *&o_pParse)
+	{
+	}
+
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext::f_PreParse(CJSONSorted &o_Value, uch8 const *&o_pParse)
+	{
+	}
+
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext::f_PostParse(CJSONSorted &o_Value, uch8 const *&o_pParse)
 	{
 	}
 
@@ -172,7 +180,7 @@ namespace NMib::NContainer
 		else if (NStr::fg_StrStartsWith(pParse, "binary("))
 		{
 			auto Binary = f_ParseBinary(pParse, true);
-			o_Value[CEJSONConstStrings::mc_Binary] = NEncoding::fg_Base64Encode(Binary);
+			o_Value[CEJSONConstStrings::mc_Binary] = fg_Base64Encode(Binary);
 			o_pParse = pParse;
 			return true;
 		}
@@ -204,7 +212,17 @@ namespace NMib::NContainer
 		return true;
 	}
 
-	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseAfterValue(NEncoding::CJSONSorted &o_Value, uch8 const *&o_pParse)
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_PreParse(CJSONSorted &o_Value, uch8 const *&o_pParse)
+	{
+		++m_ParseDepth;
+	}
+
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_PostParse(CJSONSorted &o_Value, uch8 const *&o_pParse)
+	{
+		--m_ParseDepth;
+	}
+
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseAfterValue(CJSONSorted &o_Value, uch8 const *&o_pParse)
 	{
 		if (!m_bParseAfterValue)
 			return;
@@ -219,11 +237,12 @@ namespace NMib::NContainer
 			if (fg_StrStartsWith(pParse, "//") || fg_StrStartsWith(pParse, "/*"))
 				return;
 
-			if
+			while
 				(
 					fg_StrStartsWith(pParse, gc_ConstString_Symbol_AccessObject.m_String)
 					|| fg_StrStartsWith(pParse, gc_ConstString_Symbol_Ellipsis.m_String)
 					|| (m_bSupportBinaryOperators && fs_IsBinaryOperator(pParse)) || fg_StrStartsWith(pParse, gc_ConstString_Symbol_Optional.m_String)
+					|| (*pParse == '<' && !fg_CharIsWhiteSpace(pParse[1]))
 				)
 			{
 				CJSONSorted FirstParam = fg_Move(o_Value);
@@ -232,6 +251,9 @@ namespace NMib::NContainer
 				Object[CEJSONConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
 				Object[CEJSONConstStrings::mc_Value] = f_ParseExpression(pParse, EParseExpressionFlag_SupportAppend | EParseExpressionFlag_NoParentheses, &FirstParam);
 				o_pParse = pParse;
+				fg_ParseWhiteSpaceNoLines(pParse);
+				if (fg_StrStartsWith(pParse, "//") || fg_StrStartsWith(pParse, "/*"))
+					break;
 			}
 		}
 	}
@@ -241,14 +263,12 @@ namespace NMib::NContainer
 		if (CEJSONParseContext::f_ParseValue(o_Value, o_pParse))
 			return true;
 
-		++m_ParseDepth;
-		auto Cleanup = g_OnScopeExit / [&]
-			{
-				--m_ParseDepth;
-			}
-		;
-
 		auto pParse = o_pParse;
+
+		EParseExpressionFlag ExpressionFlags = EParseExpressionFlag_None;
+
+		if (m_ParseDepth == m_ParsingFunctionParamsDepth)
+			ExpressionFlags |= EParseExpressionFlag_ParsingFunctionParams;
 
 		auto fParseExpression = [&]
 			{
@@ -275,7 +295,7 @@ namespace NMib::NContainer
 
 					auto &Object = o_Value.f_Object();
 					Object[CEJSONConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
-					Object[CEJSONConstStrings::mc_Value] = f_ParseExpression(pParse, EParseExpressionFlag_SupportAppend | EParseExpressionFlag_NoParentheses, pFirstParam);
+					Object[CEJSONConstStrings::mc_Value] = f_ParseExpression(pParse, EParseExpressionFlag_SupportAppend | EParseExpressionFlag_NoParentheses | ExpressionFlags, pFirstParam);
 					o_pParse = pParse;
 					return true;
 				}
@@ -550,7 +570,7 @@ namespace NMib::NContainer
 	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext::fs_GenerateValue
 		(
 			tf_CStr &o_String
-			, NEncoding::CJSONSorted const &_Value
+			, CJSONSorted const &_Value
 			, mint _Depth
 			, ch8 const *_pPrettySeparator
 			, EJSONDialectFlag _Flags
@@ -621,7 +641,7 @@ namespace NMib::NContainer
 	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateValue
 		(
 			tf_CStr &o_String
-			, NEncoding::CJSONSorted const &_Value
+			, CJSONSorted const &_Value
 			, mint _Depth
 			, ch8 const *_pPrettySeparator
 			, EJSONDialectFlag _Flags

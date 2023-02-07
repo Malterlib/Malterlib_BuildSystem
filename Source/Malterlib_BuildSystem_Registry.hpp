@@ -36,15 +36,20 @@ namespace NMib::NContainer
 
 			bool f_ParseValue(NEncoding::CJSONSorted &o_Value, uch8 const *&o_pParse);
 			void f_ParseAfterValue(NEncoding::CJSONSorted &o_Value, uch8 const *&o_pParse);
+
+			void f_PreParse(NEncoding::CJSONSorted &o_Value, uch8 const *&o_pParse);
+			void f_PostParse(NEncoding::CJSONSorted &o_Value, uch8 const *&o_pParse);
+
 			static bool fs_IsBinaryOperator(uch8 const *_pParse);
 			static bool fs_IsPrefixOperator(uch8 const *_pParse);
 		};
 
 		enum EParseExpressionFlag
 		{
-			EParseExpressionFlag_None = DMibBit(0)
-			, EParseExpressionFlag_SupportAppend = DMibBit(1)
-			, EParseExpressionFlag_NoParentheses = DMibBit(2)
+			EParseExpressionFlag_None = 0
+			, EParseExpressionFlag_SupportAppend = DMibBit(0)
+			, EParseExpressionFlag_NoParentheses = DMibBit(1)
+			, EParseExpressionFlag_ParsingFunctionParams = DMibBit(2)
 		};
 
 		struct CJSONParseContext : public CEJSONParseContext
@@ -82,6 +87,9 @@ namespace NMib::NContainer
 			bool f_ParseValue(NEncoding::CJSONSorted &o_Value, uch8 const *&o_pParse);
 			void f_ParseAfterValue(NEncoding::CJSONSorted &o_Value, uch8 const *&o_pParse);
 
+			void f_PreParse(NEncoding::CJSONSorted &o_Value, uch8 const *&o_pParse);
+			void f_PostParse(NEncoding::CJSONSorted &o_Value, uch8 const *&o_pParse);
+
 			template <typename tf_CParseContext, typename tf_CStr>
 			static bool fs_GenerateValue(tf_CStr &o_String, NEncoding::CJSONSorted const &_Value, mint _Depth, ch8 const *_pPrettySeparator, NEncoding::EJSONDialectFlag _Flags);
 
@@ -111,8 +119,19 @@ namespace NMib::NContainer
 					}
 				;
 			}
+			auto f_ParsingFunctionParams()
+			{
+				auto Old = m_ParsingFunctionParamsDepth;
+				m_ParsingFunctionParamsDepth = m_ParseDepth + 1;
+				return g_OnScopeExit / [this, Old]
+					{
+						m_ParsingFunctionParamsDepth = Old;
+					}
+				;
+			}
 
 			mint m_ParseDepth = 0;
+			mint m_ParsingFunctionParamsDepth = 0;
 			bool m_bParsingDefine = false;
 			bool m_bSupportBinaryOperators = true;
 			bool m_bParseAfterValue = true;

@@ -304,6 +304,23 @@ namespace
 	TestBinaryOperator7 (Value1 / Value2 % Value3) // Comment
 	TestBinaryOperator8 (Value1 / (Value2 % Value3)) // Comment
 	TestBinaryOperator9 (Value1 ?? "Value") // Comment
+	SearchPath Compile.SearchPath->f_RemoveElements("../../External/ninja"->MakeAbsolute() / "src") // Comment
+	SearchPath2 "../../External/ninja"->MakeAbsolute() / "src" // Comment
+	SearchPath3 true ? "../../External/ninja"->MakeAbsolute() / "src" : "" // Comment
+	SearchPath4 "../../External/ninja"->MakeAbsolute() / "src" ? true : false // Comment
+	TestAccessor0 {
+		Value: "Yes"
+	}<Value>
+	TestAccessor1 _bValue ? {
+		Value: "Yes"
+	} : {
+		Value: "No"
+	}<Value>
+	TestAccessor2 [
+		{
+			Value: "Yes"
+		}
+	]<[0].@(Value)>
 }
 )---";
 				DMibExpect(fParseGenerate(RegistryStr), ==, RegistryStr);

@@ -570,6 +570,7 @@ namespace NMib::NContainer
 			{
 				CJSONSorted Param;
 				auto Cleanup = f_EnableBinaryOperators();
+				auto Cleanup2 = f_ParsingFunctionParams();
 				NJSON::fg_ParseJSONValue(Param, pParse, *this);
 				FunctionParams.f_Insert(fg_Move(Param));
 				bLastTokenValid = true;
@@ -587,7 +588,12 @@ namespace NMib::NContainer
 		return fg_Move(Return).f_ToJson();
 	}
 
-	CJSONSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseExpression(uch8 const *&o_pParse, EParseExpressionFlag _Flags, CJSONSorted *_pFirstParam)
+	CJSONSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseExpression
+		(
+			uch8 const *&o_pParse
+			, EParseExpressionFlag _Flags
+			, CJSONSorted *_pFirstParam
+		)
 	{
 		auto *pParse = o_pParse;
 		bool bUseParentheses = !(_Flags & EParseExpressionFlag_NoParentheses);
@@ -629,7 +635,13 @@ namespace NMib::NContainer
 		{
 			++nParsed;
 
-			if (bUseParentheses)
+			if (_Flags & EParseExpressionFlag_ParsingFunctionParams)
+			{
+				fg_ParseWhiteSpace(pParse);
+				if (*pParse == ',' || *pParse == ')' || fg_StrStartsWith(pParse, gc_ConstString_Symbol_Ellipsis.m_String))
+					break;
+			}
+			else if (bUseParentheses)
 				fg_ParseWhiteSpace(pParse);
 			else
 			{
@@ -1226,6 +1238,8 @@ namespace NMib::NContainer
 						if (!pParam)
 							DMibError("Expression token does not have valid Param member");
 
+						if (!bFirst)
+							o_String += ".";
 						o_String += "@(";
 						NJSON::fg_GenerateJSONValue<CBuildSystemParseContext, tf_CStr>(o_String, *pParam, _Depth, "\t", gc_BuildSystemJSONParseFlags);
 						o_String += ")";
