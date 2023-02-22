@@ -47,42 +47,11 @@ namespace NMib::NBuildSystem::NVisualStudio
 		bool m_bIsDotNet = false;
 	};
 
-	struct CGeneratorSetting
-	{
-		template <typename tf_CValue>
-		TCValueWithPositions<tf_CValue> f_GetSetting(CStr const &_Name) const;
-
-		template <typename tf_CValue>
-		tf_CValue f_GetSettingWithoutPositions(CStr const &_Name) const;
-
-		CEJSONSorted m_Value;
-		CBuildSystemPropertyInfo m_PropertyInfo;
-	};
-
 	struct CItemState;
 	struct CGeneratorSettingsVSType;
 
-	struct CGeneratorSettings
+	struct CGeneratorSettings : public NBuildSystem::CGeneratorSettings
 	{
-		TCFuture<void> f_PopulateSettings
-			(
-				CPropertyKeyReference const &_GeneratorSetting
-				, EPropertyType _PropertyType
-				, CBuildSystem const &_BuildSystem
-				, TCMap<CConfiguration, CEntityMutablePointer> const &_EntitiesPerConfig
-			)
-		;
-
-		void f_PopulateSetting
-			(
-				CPropertyKeyReference const &_GeneratorSetting
-				, EPropertyType _PropertyType
-				, CBuildSystem const &_BuildSystem
-				, TCMap<CConfiguration, CEntityMutablePointer> const &_EntitiesPerConfig
-				, CGeneratorSetting &o_Result
-			)
-		;
-
 		struct CVS_SettingShared
 		{
 			auto operator <=> (CVS_SettingShared const &_Right) const = default;
@@ -226,60 +195,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 		template <bool tf_bCompile, bool tf_bIsItem>
 		static void fs_AddToXMLFiles(CProjectXMLState &_XMLState, CProject const &_Project, CParsedGeneratorSettings &&_Parsed, CItemState const *_pItemState);
 
-		template <typename tf_CValue, typename tf_CThis>
-		static TCValueWithPositions<tf_CValue> fsp_GetSingleSetting(tf_CThis &&_This, CStr const &_Name);
-
-		template <typename tf_CValue>
-		TCValueWithPositions<tf_CValue> f_GetSingleSetting(CStr const &_Name) const &;
-
-		template <typename tf_CValue>
-		TCValueWithPositions<tf_CValue> f_GetSingleSetting(CStr const &_Name) &&;
-
-		template <typename tf_CValue>
-		tf_CValue f_GetSingleSettingWithoutPositions(CStr const &_Name) const;
-
 		template <bool tf_bType, bool tf_bIsItem>
 		CParsedGeneratorSettings f_GetParsedVSSettings(TCMap<CStr, CGeneratorSettingsVSType> *_pCompileSettings);
-
-		TCMap<CConfiguration, CGeneratorSetting> &f_ConstructSettings()
-		{
-#if DMibEnableSafeCheck > 0
-			DMibFastCheck(!m_Settings);
-			m_Settings = fg_Construct();
-			return *m_Settings;
-#else
-			return m_Settings;
-#endif
-		}
-
-		void f_DestructSettings()
-		{
-			m_Settings.f_Clear();
-		}
-
-		TCMap<CConfiguration, CGeneratorSetting> &f_Settings()
-		{
-#if DMibEnableSafeCheck > 0
-			return *m_Settings;
-#else
-			return m_Settings;
-#endif
-		}
-
-		TCMap<CConfiguration, CGeneratorSetting> const &f_Settings() const
-		{
-#if DMibEnableSafeCheck > 0
-			return *m_Settings;
-#else
-			return m_Settings;
-#endif
-		}
-
-#if DMibEnableSafeCheck > 0
-		TCOptional<TCMap<CConfiguration, CGeneratorSetting>> m_Settings;
-#else
-		TCMap<CConfiguration, CGeneratorSetting> m_Settings;
-#endif
 
 		static TCVector<CVS_Setting> ms_ExcludedFromBuildVSSettings;
 	};

@@ -1055,3 +1055,4 @@ namespace NMib::NBuildSystem
 
 #include "Malterlib_BuildSystem_ValuePotentiallyByRef.hpp"
 #include "Malterlib_BuildSystem_FilePosition.hpp"
+#include "Malterlib_BuildSystem_GeneratorSettings.h"
