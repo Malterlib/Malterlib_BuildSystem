@@ -50,8 +50,7 @@ namespace NMib::NBuildSystem
 {
 	void CBuildSystem::f_ExpandDynamicImports(CBuildSystemData &_BuildSystemData) const
 	{
-		TCFunction<void (CEntity &_Entity)> fExpandEntities
-			= [&](CEntity &_Entity)
+		auto fExpandEntities = [&](auto &&_fThis, CEntity &_Entity) -> void
 			{
 				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
 				{
@@ -60,14 +59,15 @@ namespace NMib::NBuildSystem
 					auto &Key = Child.f_GetKey();
 					if (Key.m_Type == EEntityType_Root)
 					{
-						fExpandEntities(Child);
+						_fThis(_fThis, Child);
 						continue;
 					}
 
 					if (Key.m_Type != EEntityType_Import)
 						continue;
 
-					auto pLastInserted = fp_ExpandEntity(Child, _Entity, nullptr);
+					bool bChanged = false;
+					auto pLastInserted = fp_ExpandEntity(Child, _Entity, nullptr, bChanged);
 					if (!pLastInserted)
 						continue;
 
@@ -81,10 +81,9 @@ namespace NMib::NBuildSystem
 				}
 			}
 		;
-		fExpandEntities(_BuildSystemData.m_RootEntity);
+		fExpandEntities(fExpandEntities, _BuildSystemData.m_RootEntity);
 
-		TCFunction<void (CEntity &_Entity)> fExpandImports
-			= [&](CEntity &_Entity)
+		auto fExpandImports = [&](auto &&_fThis, CEntity &_Entity) -> void
 			{
 				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
 				{
@@ -93,7 +92,7 @@ namespace NMib::NBuildSystem
 					auto &Key = Child.f_GetKey();
 					if (Key.m_Type == EEntityType_Root)
 					{
-						fExpandImports(Child);
+						_fThis(_fThis, Child);
 						continue;
 					}
 
@@ -105,7 +104,7 @@ namespace NMib::NBuildSystem
 			}
 		;
 
-		fExpandImports(_BuildSystemData.m_RootEntity);
+		fExpandImports(fExpandImports, _BuildSystemData.m_RootEntity);
 		{
 			DMibLock(mp_SourceFilesLock);
 			mp_SourceFiles += _BuildSystemData.m_MutableSourceFiles;

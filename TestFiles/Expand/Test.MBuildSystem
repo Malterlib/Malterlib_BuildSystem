@@ -1,0 +1,71 @@
+
+*Configuration
+{
+	Debug "Debug Config"
+	Release "Release Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
+
+%Group ["GlobalTargetGroup"]
+{
+	%Target ["Lib_TestTarget"]
+	{
+		Target
+		{
+			Name "Lib_TestTarget"
+			Type "StaticLibrary"
+		}
+
+		%Group ["TestGroup"]
+		{
+			%Group ["TestGroup3"]
+			{
+				%File ["TestFile3.cpp"]
+			}
+		}
+	}
+}
+
+%Target ["TestTarget"]
+{
+	Target
+	{
+		Name "TestTarget"
+	}
+
+	%Group "TestGroupDependency"
+	{
+		%Dependency ["Lib_TestTarget"]
+	}
+
+	%Group ["TestGroup"]
+	{
+		%Group ["TestGroup1"]
+		{
+			%File ["TestFile1.cpp"]
+		}
+		%Group ["TestGroup2"]
+		{
+			%File ["TestFile2.cpp"]
+		}
+	}
+}
+
+%Workspace ["TestWorkspace"]
+{
+	Workspace
+	{
+		Name "TestWorkspace"
+	}
+
+	%Target ["TestTarget"]
+}

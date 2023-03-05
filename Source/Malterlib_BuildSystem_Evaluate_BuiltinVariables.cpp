@@ -303,7 +303,7 @@ namespace NMib::NBuildSystem
 					, {CPropertyKey(mp_StringCache, EPropertyType_GenerateFile, gc_ConstString_Name), DMibBuildSystemTypeWithPosition(g_String)}
 					, {CPropertyKey(mp_StringCache, EPropertyType_GenerateFile, gc_ConstString_Contents), DMibBuildSystemTypeWithPosition(g_String)}
 					, {CPropertyKey(mp_StringCache, EPropertyType_GenerateFile, gc_ConstString_UnicodeBOM), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, true))}
-					, {CPropertyKey(mp_StringCache, EPropertyType_GenerateFile, gc_ConstString_BeforeImports), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(gc_ConstKey_GenerateFile_BeforeImports), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					, {CPropertyKey(mp_StringCache, EPropertyType_GenerateFile, gc_ConstString_UTF16),  DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					, {CPropertyKey(mp_StringCache, EPropertyType_GenerateFile, gc_ConstString_Executable), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					, {CPropertyKey(mp_StringCache, EPropertyType_GenerateFile, gc_ConstString_UnixLineEnds), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}

@@ -21,20 +21,26 @@ namespace NMib::NBuildSystem
 						continue;
 					}
 
-					if (Key.m_Type != EEntityType_Target && Key.m_Type != EEntityType_Workspace)
+					if (Key.m_Type != EEntityType_Target && Key.m_Type != EEntityType_Workspace && Key.m_Type != EEntityType_Group)
 						continue;
 
-					auto pLastInserted = fp_ExpandEntity(Child, _Entity, nullptr);
+					bool bChanged = false;
+					auto pLastInserted = fp_ExpandEntity(Child, _Entity, nullptr, bChanged);
 					if (!pLastInserted)
+					{
+						if (Key.m_Type == EEntityType_Group)
+						{
+							DMibCheck(Child.f_GetKey().m_Name.f_IsConstantString());
+							fExpandEntities(Child);
+						}
+
 						continue;
+					}
 
 					_Entity.m_ChildEntitiesMap.f_Remove(Key);
 
 					if (pLastInserted != &Child)
-					{
 						iChild = pLastInserted;
-						++iChild;
-					}
 				}
 			}
 		;
@@ -56,7 +62,8 @@ namespace NMib::NBuildSystem
 
 					auto KeyCopy = Key;
 
-					auto pLastInserted = fp_ExpandEntity(Child, _Entity, nullptr);
+					bool bChanged = false;
+					auto pLastInserted = fp_ExpandEntity(Child, _Entity, nullptr, bChanged);
 					if (!pLastInserted)
 						continue;
 
@@ -86,7 +93,8 @@ namespace NMib::NBuildSystem
 					if (Key.m_Type != EEntityType_CreateTemplate)
 						continue;
 
-					auto pLastInserted = fp_ExpandEntity(Child, _Entity, nullptr);
+					bool bChanged = false;
+					auto pLastInserted = fp_ExpandEntity(Child, _Entity, nullptr, bChanged);
 					if (!pLastInserted)
 						continue;
 
@@ -129,6 +137,15 @@ namespace NMib::NBuildSystem
 							// Root groups shoud not be considered
 							continue;
 						}
+
+						if (!Child.f_GetKey().m_Name.f_IsConstantString())
+						{
+							CBuildSystemUniquePositions Positions;
+							Positions.f_AddPosition(Child.f_GetFirstValidPosition(), "Entity");
+							fs_ThrowError(Positions, "Expanding not supported");
+							continue;
+						}
+
 						fExpandEntities(Child);
 						continue;
 					}
@@ -136,7 +153,8 @@ namespace NMib::NBuildSystem
 					if (Key.m_Type != EEntityType_File && Key.m_Type != EEntityType_Dependency)
 						continue;
 
-					auto pLastInserted = fp_ExpandEntity(Child, _Entity, nullptr);
+					bool bChanged = false;
+					auto pLastInserted = fp_ExpandEntity(Child, _Entity, nullptr, bChanged);
 					if (!pLastInserted)
 						continue;
 
@@ -160,8 +178,7 @@ namespace NMib::NBuildSystem
 
 		TCVector<CEntityKey> Path;
 
-		TCFunction<void (CEntity &_Entity)> fExpandDependency
-			= [&](CEntity &_Entity)
+		auto fStoreBackup = [&](auto &&_fThis, CEntity &_Entity) -> void
 			{
 				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
 				{
@@ -175,8 +192,11 @@ namespace NMib::NBuildSystem
 							|| Key.m_Type == EEntityType_Import
 						)
 					{
+						if (!Child.f_GetKey().m_Name.f_IsConstantString())
+							continue;
+
 						Path.f_Insert(Child.f_GetKey());
-						fExpandDependency(Child);
+						_fThis(_fThis, Child);
 						Path.f_Remove(Path.f_GetLen() - 1);
 						continue;
 					}
@@ -190,7 +210,7 @@ namespace NMib::NBuildSystem
 			}
 		;
 
-		fExpandDependency(fg_RemoveQualifiers(_Target));
+		fStoreBackup(fStoreBackup, fg_RemoveQualifiers(_Target));
 	}
 
 	void CBuildSystem::f_ExpandTargetDependencies(CWorkspaceInfo &_Workspace, CBuildSystemData &_BuildSystemData, CEntity const &_Target, CDependenciesBackup &o_Backup) const
@@ -202,8 +222,7 @@ namespace NMib::NBuildSystem
 		{
 			// Remove old
 			{
-				TCFunction<void (CEntity &_Entity)> fExpandDependency
-					= [&](CEntity &_Entity)
+				auto fRemoveOld = [&](auto &&_fThis, CEntity &_Entity) -> void
 					{
 						for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
 						{
@@ -217,7 +236,10 @@ namespace NMib::NBuildSystem
 									|| Key.m_Type == EEntityType_Import
 								)
 							{
-								fExpandDependency(Child);
+								if (!Child.f_GetKey().m_Name.f_IsConstantString())
+									continue;
+
+								_fThis(_fThis, Child);
 								continue;
 							}
 
@@ -229,7 +251,7 @@ namespace NMib::NBuildSystem
 					}
 				;
 
-				fExpandDependency(fg_RemoveQualifiers(_Target));
+				fRemoveOld(fRemoveOld, fg_RemoveQualifiers(_Target));
 			}
 			// Restore
 			{
@@ -269,8 +291,7 @@ namespace NMib::NBuildSystem
 
 		// Expand entities
 		{
-			TCFunction<void (CEntity &_Entity)> fExpandDependency
-				= [&](CEntity &_Entity)
+			auto fExpandDependency = [&](auto &&_fThis, CEntity &_Entity, bool _bUnexpandedGroup) -> void
 				{
 					for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
 					{
@@ -284,14 +305,22 @@ namespace NMib::NBuildSystem
 								|| Key.m_Type == EEntityType_Import
 							)
 						{
-							fExpandDependency(Child);
+							_fThis(_fThis, Child, _bUnexpandedGroup || !Child.f_GetKey().m_Name.f_IsConstantString());
 							continue;
 						}
 
 						if (Key.m_Type != EEntityType_Dependency)
 							continue;
 
-						auto pLastInserted = fp_ExpandEntity(Child, _Entity, nullptr);
+						if (_bUnexpandedGroup)
+						{
+							CBuildSystemUniquePositions Positions;
+							Positions.f_AddPosition(Child.f_GetFirstValidPosition(), "Entity");
+							fs_ThrowError(Positions, "Dependency is inside an unexpanded group, this is not supported");
+						}
+
+						bool bChanged = false;
+						auto pLastInserted = fp_ExpandEntity(Child, _Entity, nullptr, bChanged);
 						if (!pLastInserted)
 							continue;
 
@@ -305,21 +334,106 @@ namespace NMib::NBuildSystem
 					}
 				}
 			;
-			fExpandDependency(fg_RemoveQualifiers(_Target));
+			fExpandDependency(fExpandDependency, fg_RemoveQualifiers(_Target), false);
 		}
 	}
 
-	void CBuildSystem::f_ExpandTargetGroups(CBuildSystemData &_BuildSystemData, CEntity const &_Target) const
+	CBuildSystem::CExpandEntityState::CExpandEntityState() = default;
+
+	CBuildSystem::CExpandEntityState::~CExpandEntityState()
+	{
+		if (!m_bEnabled)
+			return;
+
+		for (auto &pToRemove : m_OldEntitiesToRemove)
+		{
+			auto *pPtr = pToRemove.f_Get();
+			pToRemove.f_Clear();
+			pPtr->m_pParent->m_ChildEntitiesMap.f_Remove(pPtr);
+		}
+	}
+
+	void CBuildSystem::f_PopulateTargetAllFiles(CEntity &o_Target) const
+	{
+		TCMap<CStr, TCVector<CStr>> AllFiles;
+		auto fFindFiles = [&](auto &_fSelf, CEntity &_Entity) -> void
+			{
+				for (auto iEntity = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iEntity; ++iEntity)
+				{
+					auto &ChildEntity = *iEntity;
+					switch (ChildEntity.f_GetKey().m_Type)
+					{
+					case EEntityType_GenerateFile:
+					case EEntityType_Target:
+					case EEntityType_Import:
+					case EEntityType_Group:
+						{
+							if (!ChildEntity.f_GetKey().m_Name.f_IsConstantString())
+								continue;
+
+							_fSelf(_fSelf, ChildEntity);
+						}
+						break;
+					case EEntityType_File:
+						{
+							if (!ChildEntity.f_GetKey().m_Name.f_IsConstantString())
+								continue;
+
+							CStr CompileType = f_EvaluateEntityPropertyString(ChildEntity, gc_ConstKey_Compile_Type, CStr());
+
+							AllFiles[CompileType].f_Insert(ChildEntity.f_GetPathForGetProperty());
+						}
+						break;
+					default:
+						break;
+					}
+				}
+			}
+		;
+		fFindFiles(fFindFiles, o_Target);
+
+		for (auto &Files : AllFiles)
+		{
+			auto &Type = AllFiles.fs_GetKey(Files);
+
+			Files.f_Sort();
+			CEJSONSorted AllFilesArray;
+			for (auto &File : Files)
+				AllFilesArray.f_Insert(fg_Move(File));
+
+			CPropertyKey PropertyKey(mp_StringCache, EPropertyType_Target, "AllFiles_{}"_f << Type);
+
+			f_AddExternalProperty(o_Target, PropertyKey.f_Reference(), fg_Move(AllFilesArray));
+		}
+	}
+
+	bool CBuildSystem::f_ExpandTargetGroups(CExpandEntityState &_ExpandState, CBuildSystemData &_BuildSystemData, CEntity const &_Target) const
 	{
 		DRequire(_Target.f_GetKey().m_Type == EEntityType_Target);
-		TCFunction<void (CEntity &_Entity)> fExpandGroup
-			= [&](CEntity &_Entity)
+		bool bChanged = false;
+		auto fExpandGroup = [&](auto &&_fThis, CEntity &_Entity) -> void
 			{
 				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
 				{
 					auto &Child = *iChild;
 					++iChild;
 					auto &Key = Child.f_GetKey();
+
+					if (Key.m_Type == EEntityType_Group)
+					{
+						auto pLastInserted = fp_ExpandEntity(Child, _Entity, nullptr, bChanged);
+						if (pLastInserted)
+						{
+							_ExpandState.m_OldEntitiesToRemove[&Child];
+
+							if (pLastInserted != &Child)
+							{
+								iChild = pLastInserted;
+								continue;
+							}
+						}
+					}
+
 					if
 						(
 							Key.m_Type == EEntityType_Target
@@ -327,33 +441,23 @@ namespace NMib::NBuildSystem
 							|| Key.m_Type == EEntityType_Import
 						)
 					{
-						fExpandGroup(Child);
-					}
-
-					if (Key.m_Type != EEntityType_Group)
-						continue;
-
-					auto pLastInserted = fp_ExpandEntity(Child, _Entity, nullptr);
-					if (!pLastInserted)
-						continue;
-
-					_Entity.m_ChildEntitiesMap.f_Remove(Key);
-
-					if (pLastInserted != &Child)
-					{
-						iChild = pLastInserted;
-						++iChild;
+						if (!Child.f_GetKey().m_Name.f_IsConstantString())
+							continue;
+						_fThis(_fThis, Child);
 					}
 				}
 			}
 		;
 
-		fExpandGroup(fg_RemoveQualifiers(_Target));
+		fExpandGroup(fExpandGroup, fg_RemoveQualifiers(_Target));
+
+		return bChanged;
 	}
 
-	void CBuildSystem::f_ExpandTargetFiles(CBuildSystemData &_BuildSystemData, CEntity const &_Target) const
+	bool CBuildSystem::f_ExpandTargetFiles(CExpandEntityState &_ExpandState, CBuildSystemData &_BuildSystemData, CEntity const &_Target) const
 	{
 		DRequire(_Target.f_GetKey().m_Type == EEntityType_Target);
+		bool bChanged = false;
 		TCFunction<void (CEntity &_Entity)> fExpandFile
 			= [&](CEntity &_Entity)
 			{
@@ -369,6 +473,9 @@ namespace NMib::NBuildSystem
 							|| Key.m_Type == EEntityType_Import
 						)
 					{
+						if (!Child.f_GetKey().m_Name.f_IsConstantString())
+							continue;
+
 						fExpandFile(Child);
 						continue;
 					}
@@ -376,11 +483,11 @@ namespace NMib::NBuildSystem
 					if (Key.m_Type != EEntityType_File)
 						continue;
 
-					auto pLastInserted = fp_ExpandEntity(Child, _Entity, nullptr);
+					auto pLastInserted = fp_ExpandEntity(Child, _Entity, nullptr, bChanged);
 					if (!pLastInserted)
 						continue;
 
-					_Entity.m_ChildEntitiesMap.f_Remove(Key);
+					_ExpandState.m_OldEntitiesToRemove[&Child];
 
 					if (pLastInserted != &Child)
 					{
@@ -392,6 +499,8 @@ namespace NMib::NBuildSystem
 		;
 
 		fExpandFile(fg_RemoveQualifiers(_Target));
+
+		return bChanged;
 	}
 
 	void CBuildSystem::f_ExpandWorkspaceEntities(CBuildSystemData &_BuildSystemData, CEntity const &_Target) const
@@ -411,6 +520,14 @@ namespace NMib::NBuildSystem
 							|| Key.m_Type == EEntityType_Import
 						)
 					{
+						if (!Child.f_GetKey().m_Name.f_IsConstantString())
+						{
+							CBuildSystemUniquePositions Positions;
+							Positions.f_AddPosition(Child.f_GetFirstValidPosition(), "Entity");
+							fs_ThrowError(Positions, "Expanding not supported");
+							continue;
+						}
+
 						fExpandEntities(Child);
 						continue;
 					}
@@ -418,7 +535,8 @@ namespace NMib::NBuildSystem
 					if (Key.m_Type != EEntityType_File)
 						continue;
 
-					auto pLastInserted = fp_ExpandEntity(Child, _Entity, nullptr);
+					bool bChanged = false;
+					auto pLastInserted = fp_ExpandEntity(Child, _Entity, nullptr, bChanged);
 					if (!pLastInserted)
 						continue;
 
@@ -453,6 +571,14 @@ namespace NMib::NBuildSystem
 							|| Key.m_Type == EEntityType_Import
 						)
 					{
+						if (!Child.f_GetKey().m_Name.f_IsConstantString())
+						{
+							CBuildSystemUniquePositions Positions;
+							Positions.f_AddPosition(Child.f_GetFirstValidPosition(), "Entity");
+							fs_ThrowError(Positions, "Expanding not supported");
+							continue;
+						}
+
 						fExpandEntities(Child);
 						continue;
 					}
@@ -460,7 +586,8 @@ namespace NMib::NBuildSystem
 					if (Key.m_Type != EEntityType_Target)
 						continue;
 
-					auto pLastInserted = fp_ExpandEntity(Child, _Entity, nullptr);
+					bool bChanged = false;
+					auto pLastInserted = fp_ExpandEntity(Child, _Entity, nullptr, bChanged);
 					if (!pLastInserted)
 						continue;
 
@@ -504,23 +631,31 @@ namespace NMib::NBuildSystem
 		return &NewEntity;
 	}
 
-	CEntity *CBuildSystem::fp_ExpandEntity(CEntity &_Entity, CEntity &_ParentEntity, TCVector<CEntity *> *o_pCreated) const
+	CEntity *CBuildSystem::fp_ExpandEntity(CEntity &_Entity, CEntity &_ParentEntity, TCVector<CEntity *> *o_pCreated, bool &o_bChanged) const
 	{
 		auto &Key = _Entity.f_GetKey();
 		auto &EntityData = _Entity.f_Data();
 
+		if (EntityData.m_ExpandedOrGeneratedFrom)
+			return nullptr;
+
 		TCVector<CEJSONSorted> Entities;
+
+		CEvaluatedProperties TempProperties;
+		TempProperties.m_pParentProperties = &_Entity.m_EvaluatedProperties;
 
 		if (Key.m_Name.f_IsConstantString())
 		{
 			if (Key.m_Type != EEntityType_File)
 				return nullptr;
+			else
+				_Entity.f_DataWritable().m_ExpandedOrGeneratedFrom = (mint)&_Entity;
 
 			Entities.f_Insert(Key.m_Name.f_Constant());
 		}
 		else
 		{
-			CEvaluationContext EvalContext(&_Entity.m_EvaluatedProperties);
+			CEvaluationContext EvalContext(&TempProperties);
 			CBuildSystemUniquePositions StorePositions;
 			CEvalPropertyValueContext Context{_Entity, _Entity, EntityData.m_Position, EvalContext, nullptr, f_EnablePositions(&StorePositions)};
 			auto Data = fp_EvaluatePropertyValue(Context, Key.m_Name, nullptr);
@@ -534,7 +669,7 @@ namespace NMib::NBuildSystem
 		bool bAllowNonExisting = false;
 		if (Key.m_Type == EEntityType_File)
 		{
-			CEvaluationContext EvalContext(&_Entity.m_EvaluatedProperties);
+			CEvaluationContext EvalContext(&TempProperties);
 
 			CBuildSystemPropertyInfo PropertyInfo;
 			auto Data = fp_EvaluateEntityProperty(_Entity, _Entity, gc_ConstKey_Compile_AllowNonExisting, EvalContext, PropertyInfo, EntityData.m_Position, nullptr, false);
@@ -687,6 +822,15 @@ namespace NMib::NBuildSystem
 
 					if (pOldEntity)
 					{
+						auto & OldEntityData = pOldEntity->f_Data();
+
+						if (pOldEntity->f_Data().m_ExpandedOrGeneratedFrom && OldEntityData.m_ExpandedOrGeneratedFrom == (mint)&_Entity)
+						{
+							if (o_pCreated)
+								o_pCreated->f_Insert(pOldEntity);
+							continue;
+						}
+
 						if (pOldEntity == &_Entity)
 						{
 							if (Files.f_GetLen() != 1 || Entities.f_GetLen() != 1)
@@ -697,10 +841,13 @@ namespace NMib::NBuildSystem
 							pInsertAfter = pParent->m_ChildEntitiesOrdered.fs_GetPrev(pInsertAfter);
 
 						pParent->m_ChildEntitiesMap.f_Remove(pOldEntity);
-						//fsp_ThrowError(_Registry, CStr::CFormat("Entity {} already declared (when adding pattern {})") << FullFileName << SearchPath);
 					}
 
+					o_bChanged = true;
 					auto pNewEntity = fp_AddEntity(_Entity, *pParent, NewKey, pInsertAfterLocal ? pInsertAfter : nullptr, &TempProperties);
+
+					auto &NewEntityData = pNewEntity->f_DataWritable();
+					NewEntityData.m_ExpandedOrGeneratedFrom = (mint)&_Entity;
 
 					if (pInsertAfterLocal)
 						pInsertAfter = pNewEntity;
@@ -718,6 +865,15 @@ namespace NMib::NBuildSystem
 
 				if (pOldEntity)
 				{
+					auto &OldEntityData = pOldEntity->f_Data();
+
+					if (OldEntityData.m_ExpandedOrGeneratedFrom && OldEntityData.m_ExpandedOrGeneratedFrom == (mint)&_Entity)
+					{
+						if (o_pCreated)
+							o_pCreated->f_Insert(pOldEntity);
+						continue;
+					}
+
 					if (pOldEntity == &_Entity)
 					{
 						if (Entities.f_GetLen() != 1)
@@ -729,10 +885,13 @@ namespace NMib::NBuildSystem
 						pInsertAfter = _ParentEntity.m_ChildEntitiesOrdered.fs_GetPrev(pInsertAfter);
 
 					_ParentEntity.m_ChildEntitiesMap.f_Remove(pOldEntity);
-					//fsp_ThrowError(_Registry, CStr::CFormat("Entity {} already declared (when adding pattern {})") << EntityName << SearchPath);
 				}
 
+				o_bChanged = true;
 				auto pNewEntity = fp_AddEntity(_Entity, _ParentEntity, NewKey, pInsertAfter, &TempProperties);
+
+				auto &NewEntityData = pNewEntity->f_DataWritable();
+				NewEntityData.m_ExpandedOrGeneratedFrom = (mint)&_Entity;
 
 				pInsertAfter = pNewEntity;
 
@@ -740,6 +899,7 @@ namespace NMib::NBuildSystem
 					o_pCreated->f_Insert(pNewEntity);
 			}
 		}
+
 		return pInsertAfter;
 	}
 }

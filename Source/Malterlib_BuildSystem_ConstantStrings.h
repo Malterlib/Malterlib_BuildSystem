@@ -17,7 +17,6 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_BasePath;
 	extern CStringAndHash const gc_ConstString_BasePathAbsolute;
 	extern CStringAndHash const gc_ConstString_BasePathRelativeProject;
-	extern CStringAndHash const gc_ConstString_BeforeImports;
 	extern CStringAndHash const gc_ConstString_binary;
 	extern CStringAndHash const gc_ConstString_BinaryOperator;
 	extern CStringAndHash const gc_ConstString_bool;

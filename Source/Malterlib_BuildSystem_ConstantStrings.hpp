@@ -18,7 +18,6 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_BasePath = gc_Str<"BasePath">;
 	constexpr CStringAndHash const gc_ConstString_BasePathAbsolute = gc_Str<"BasePathAbsolute">;
 	constexpr CStringAndHash const gc_ConstString_BasePathRelativeProject = gc_Str<"BasePathRelativeProject">;
-	constexpr CStringAndHash const gc_ConstString_BeforeImports = gc_Str<"BeforeImports">;
 	constexpr CStringAndHash const gc_ConstString_binary = gc_Str<"binary">;
 	constexpr CStringAndHash const gc_ConstString_BinaryOperator = gc_Str<"BinaryOperator">;
 	constexpr CStringAndHash const gc_ConstString_bool = gc_Str<"bool">;
@@ -626,7 +625,6 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_BasePath);
 		o_StringCache.f_AddConstantString(gc_ConstString_BasePathAbsolute);
 		o_StringCache.f_AddConstantString(gc_ConstString_BasePathRelativeProject);
-		o_StringCache.f_AddConstantString(gc_ConstString_BeforeImports);
 		o_StringCache.f_AddConstantString(gc_ConstString_binary);
 		o_StringCache.f_AddConstantString(gc_ConstString_BinaryOperator);
 		o_StringCache.f_AddConstantString(gc_ConstString_bool);

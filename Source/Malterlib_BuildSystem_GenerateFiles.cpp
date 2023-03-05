@@ -7,22 +7,32 @@ namespace NMib::NBuildSystem
 {
 	void CBuildSystem::f_GenerateGlobalFiles(CBuildSystemData &_BuildSystemData, bool _bBeforeImports) const
 	{
-		fp_GenerateFiles(_BuildSystemData, _BuildSystemData.m_RootEntity, false, EEntityType_Root, _bBeforeImports);
+		fp_GenerateFiles(_BuildSystemData, _BuildSystemData.m_RootEntity, false, EEntityType_Root, &gc_ConstKey_GenerateFile_BeforeImports, _bBeforeImports);
 	}
 
 	void CBuildSystem::f_GenerateWorkspaceFiles(CBuildSystemData &_BuildSystemData, CEntity &_Target) const
 	{
-		fp_GenerateFiles(_BuildSystemData, _Target, true, EEntityType_Workspace, false);
+		fp_GenerateFiles(_BuildSystemData, _Target, true, EEntityType_Workspace, nullptr, false);
 	}
 
-	void CBuildSystem::f_GenerateTargetFiles(CBuildSystemData &_BuildSystemData, CEntity &_Target) const
+	bool CBuildSystem::f_GenerateTargetFiles(CBuildSystemData &_BuildSystemData, CEntity &_Target) const
 	{
-		fp_GenerateFiles(_BuildSystemData, _Target, true, EEntityType_Target, false);
+		return fp_GenerateFiles(_BuildSystemData, _Target, true, EEntityType_Target, nullptr, false);
 	}
 
-	void CBuildSystem::fp_GenerateFiles(CBuildSystemData &_BuildSystemData, CEntity &_Entity, bool _bRecursive, EEntityType _Type, bool _bBeforeImports) const
+	bool CBuildSystem::fp_GenerateFiles
+		(
+			CBuildSystemData &_BuildSystemData
+			, CEntity &_Entity
+			, bool _bRecursive
+			, EEntityType _Type
+			, CPropertyKeyReference const *_pConditionalProperty
+			, bool _bConditional
+		) const
 	{
 		CStr Workspace;
+
+		bool bChanged = false;
 
 		auto * pParent = &_Entity;
 		while (pParent && pParent->m_pParent)
@@ -35,8 +45,7 @@ namespace NMib::NBuildSystem
 			pParent = pParent->m_pParent;
 		}
 
-		TCFunction<void (CEntity &_Entity)> fGenerateFile
-			= [&](CEntity &_Entity)
+		auto fGenerateFile = [&](auto &&_fThis, CEntity &_Entity) -> void
 			{
 				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; ++iChild)
 				{
@@ -54,7 +63,10 @@ namespace NMib::NBuildSystem
 					{
 						if (_Type == EEntityType_Workspace && Key.m_Type == EEntityType_Target)
 							continue;
-						fGenerateFile(*iChild);
+						if (_Type == EEntityType_Target && !Key.m_Name.f_IsConstantString())
+							continue;
+
+						_fThis(_fThis, *iChild);
 						continue;
 					}
 
@@ -65,10 +77,13 @@ namespace NMib::NBuildSystem
 
 					auto &ToGenerateData = ToGenerate.f_Data();
 
+					CEvaluatedProperties TempProperties;
+					TempProperties.m_pParentProperties = &ToGenerate.m_EvaluatedProperties;
+
 					TCVector<CEJSONSorted> Identities;
 					CBuildSystemUniquePositions Positions;
 					{
-						CEvaluationContext EvalContext(&ToGenerate.m_EvaluatedProperties);
+						CEvaluationContext EvalContext(&TempProperties);
 						CEvalPropertyValueContext Context{ToGenerate, ToGenerate, ToGenerateData.m_Position, EvalContext, nullptr, f_EnablePositions(&Positions)};
 						auto Value = fp_EvaluatePropertyValue(Context, ToGenerate.f_GetKey().m_Name, nullptr);
 						auto ValueRef = Value.f_Get();
@@ -144,14 +159,18 @@ namespace NMib::NBuildSystem
 								, &gc_ConstKey_GenerateFile_NoDateCheck
 								, &gc_ConstKey_GenerateFile_KeepGeneratedFile
 								, &gc_ConstKey_GenerateFile_SymlinkBasePath
+								, &gc_ConstKey_GenerateFile_Group
 							}
 						;
 
 						if (!f_EvalCondition(TempEntity, ToGenerateData.m_Condition, ToGenerateData.m_DebugFlags & EPropertyFlag_TraceCondition))
 							continue;
 
-						if (f_EvaluateEntityPropertyBool(TempEntity, gc_ConstKey_GenerateFile_BeforeImports, false) != _bBeforeImports)
-							continue;
+						if (_pConditionalProperty)
+						{
+							if (f_EvaluateEntityPropertyBool(TempEntity, *_pConditionalProperty, false) != _bConditional)
+								continue;
+						}
 
 						CStr Path = mp_GeneratorInterface->f_GetExpandedPath(f_EvaluateEntityPropertyString(TempEntity, gc_ConstKey_GenerateFile_Name, CStr()), f_GetBaseDir());
 
@@ -194,10 +213,26 @@ namespace NMib::NBuildSystem
 							{
 								CStr SymlinkBasePath = f_EvaluateEntityPropertyString(TempEntity, gc_ConstKey_GenerateFile_SymlinkBasePath, CStr());
 								if (SymlinkBasePath.f_IsEmpty())
-									fsp_ThrowError(iChild->f_Data().m_Position, "If you specify SymLink you also need to specify the SymlinkBasePath. This is the path under which there can be no symlinks in the parent path of the symlink being created. If a symlink is found here it will be deleted before the new symlink is created.");
+								{
+									fsp_ThrowError
+										(
+											iChild->f_Data().m_Position
+											, "If you specify SymLink you also need to specify the SymlinkBasePath."
+											" This is the path under which there can be no symlinks in the parent path of the symlink being created."
+											" If a symlink is found here it will be deleted before the new symlink is created."
+										)
+									;
+								}
 
 								if (!Path.f_StartsWith(SymlinkBasePath + "/") || Path == SymlinkBasePath)
-									fsp_ThrowError(iChild->f_Data().m_Position, "The name of the generated file '{}' must be prefixed by the SymlinkBasePath '{}'"_f << Path << SymlinkBasePath);
+								{
+									fsp_ThrowError
+										(
+											iChild->f_Data().m_Position
+											, "The name of the generated file '{}' must be prefixed by the SymlinkBasePath '{}'"_f << Path << SymlinkBasePath
+										)
+									;
+								}
 
 								CFile::fs_CreateDirectory(SymlinkBasePath);
 
@@ -326,57 +361,82 @@ namespace NMib::NBuildSystem
 							}
 						}
 
-						if (ToGenerate.m_pParent->f_GetKey().m_Type != EEntityType_Root)
+						if (ToGenerate.m_pParent->f_GetKey().m_Type == EEntityType_Root)
+							continue;
+
+						CEntityKey NewKey;
+						NewKey.m_Type = EEntityType_File;
+						auto &FullFileName = Path;
+						NewKey.m_Name.m_Value = FullFileName;
+
+						CStr Group = f_EvaluateEntityPropertyString(TempEntity, gc_ConstKey_GenerateFile_Group, CStr());
+						auto pParentGroup = &_Entity;
+
+						while (!Group.f_IsEmpty())
 						{
-							CEntityKey NewKey;
-							NewKey.m_Type = EEntityType_File;
-							auto &FullFileName = Path;
-							NewKey.m_Name.m_Value = FullFileName;
+							CStr ParentGroup = fg_GetStrSep(Group, "/");
 
-							CStr Group = f_EvaluateEntityPropertyString(TempEntity, gc_ConstKey_GenerateFile_Group, CStr());
-							auto pParentGroup = &_Entity;
+							CEntityKey Key;
+							Key.m_Name.m_Value = ParentGroup;
+							Key.m_Type = EEntityType_Group;
+							auto Child = pParentGroup->m_ChildEntitiesMap(Key, pParentGroup);
+							(*Child).f_DataWritable().m_Position = pParentGroup->f_Data().m_Position;
+							pParentGroup = &*Child;
+						}
 
-							while (!Group.f_IsEmpty())
+						auto pOldEntity = pParentGroup->m_ChildEntitiesMap.f_FindEqual(NewKey);
+
+						if (pOldEntity)
+						{
+							if (pOldEntity->f_Data().m_ExpandedOrGeneratedFrom && pOldEntity->f_Data().m_ExpandedOrGeneratedFrom == (mint)&_Entity)
+								continue;
+
+							DCheck(pOldEntity != &(*iChild));
+							pParentGroup->m_ChildEntitiesMap.f_Remove(pOldEntity);
+						}
+
+						auto &NewEntity = pParentGroup->m_ChildEntitiesMap(NewKey, ToGenerate, pParentGroup, EEntityCopyFlag_CopyChildren).f_GetResult();
+						auto &NewEntityData = NewEntity.f_DataWritable();
+
+						NewEntityData.m_ExpandedOrGeneratedFrom = (mint)&_Entity;
+
+						NewEntity.m_EvaluatedProperties.m_Properties.f_Clear();
+
+						for (auto &pProperty : c_AllGenerateFileProperties)
+							NewEntityData.m_Properties.f_Remove(*pProperty);
+
+						if (IdentityObject.f_IsObject())
+						{
+							auto *pProperties = IdentityObject.f_GetMember("Properties", EJSONType_Object);
+							if (!pProperties)
+								fs_ThrowError(Positions, "Expected a 'Properties' of object type in generate file object");
+
+							for (auto &SourceProperty : pProperties->f_Object())
 							{
-								CStr ParentGroup = fg_GetStrSep(Group, "/");
+								CPropertyKey Key = CPropertyKey::fs_FromString(mp_StringCache, SourceProperty.f_Name(), ToGenerateData.m_Position);
 
-								CEntityKey Key;
-								Key.m_Name.m_Value = ParentGroup;
-								Key.m_Type = EEntityType_Group;
-								auto Child = pParentGroup->m_ChildEntitiesMap(Key, pParentGroup);
-								(*Child).f_DataWritable().m_Position = pParentGroup->f_Data().m_Position;
-								pParentGroup = &*Child;
+								auto &Property = NewEntity.m_EvaluatedProperties.m_Properties[Key];
+								Property.m_Value = SourceProperty.f_Value();
+								Property.m_Type = EEvaluatedPropertyType_External;
+								Property.m_pProperty = &mp_ExternalProperty[Key.f_GetType()];
 							}
+						}
 
-							auto pOldEntity = pParentGroup->m_ChildEntitiesMap.f_FindEqual(NewKey);
+						NewEntityData.m_HasFullEval = 0;
 
-							if (pOldEntity)
-							{
-								DCheck(pOldEntity != &(*iChild));
-								pParentGroup->m_ChildEntitiesMap.f_Remove(pOldEntity);
-							}
-
-							auto &NewEntity = pParentGroup->m_ChildEntitiesMap(NewKey, ToGenerate, pParentGroup, EEntityCopyFlag_CopyChildren).f_GetResult();
-							NewEntity.m_EvaluatedProperties.m_Properties.f_Clear();
-							auto &NewEntityData = NewEntity.f_DataWritable();
-
-							for (auto &pProperty : c_AllGenerateFileProperties)
-								NewEntityData.m_Properties.f_Remove(*pProperty);
-
-							NewEntityData.m_HasFullEval = 0;
-
-							for (auto &Property : NewEntityData.m_Properties)
-							{
-								auto &Key = NewEntityData.m_Properties.fs_GetKey(Property);
-								if (Key.m_Name == gc_ConstString_FullEval.m_String)
-									NewEntityData.m_HasFullEval |= 1 << Key.f_GetType();
-							}
+						for (auto &Property : NewEntityData.m_Properties)
+						{
+							auto &Key = NewEntityData.m_Properties.fs_GetKey(Property);
+							if (Key.m_Name == gc_ConstString_FullEval.m_String)
+								NewEntityData.m_HasFullEval |= 1 << Key.f_GetType();
 						}
 					}
 				}
 			}
 		;
 
-		fGenerateFile(_Entity);
+		fGenerateFile(fGenerateFile, _Entity);
+
+		return bChanged;
 	}
 }

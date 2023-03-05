@@ -8,10 +8,10 @@
 			"Groups": {},
 			"Name": "TestWorkspace",
 			"Position": {
-				"Character": 576,
+				"Character": 682,
 				"Column": 12,
-				"File": "/Deploy/Tests/BuildSystemTests/Simple/Test.MBuildSystem",
-				"Line": 58
+				"File": "/Deploy/Tests/BuildSystemTests/Expand/Test.MBuildSystem",
+				"Line": 63
 			},
 			"Targets": {
 				"Lib_TestTarget": {
@@ -20,17 +20,17 @@
 						"TestPlatform TestArch Release": true
 					},
 					"Files": {
-						"TestGroup/TestGroup3": {
-							"/Deploy/Tests/BuildSystemTests/Simple/TestFile3.cpp": {
+						"TestGroup": {
+							"/Deploy/Tests/BuildSystemTests/Expand/TestFile3.cpp": {
 								"EnabledConfigs": {
 									"TestPlatform TestArch Debug": true,
 									"TestPlatform TestArch Release": true
 								},
 								"Position": {
-									"Character": 310,
-									"Column": 10,
-									"File": "/Deploy/Tests/BuildSystemTests/Simple/Test.MBuildSystem",
-									"Line": 30
+									"Character": 359,
+									"Column": 11,
+									"File": "/Deploy/Tests/BuildSystemTests/Expand/Test.MBuildSystem",
+									"Line": 32
 								}
 							}
 						}
@@ -44,17 +44,17 @@
 						}
 					},
 					"InnerPosition": {
-						"Character": 171,
-						"Column": 9,
-						"File": "/Deploy/Tests/BuildSystemTests/Simple/Test.MBuildSystem",
-						"Line": 18
+						"Character": 203,
+						"Column": 10,
+						"File": "/Deploy/Tests/BuildSystemTests/Expand/Test.MBuildSystem",
+						"Line": 20
 					},
 					"Name": "Lib_TestTarget",
 					"OuterPosition": {
-						"Character": 408,
-						"Column": 14,
-						"File": "/Deploy/Tests/BuildSystemTests/Simple/Test.MBuildSystem",
-						"Line": 43
+						"Character": 499,
+						"Column": 15,
+						"File": "/Deploy/Tests/BuildSystemTests/Expand/Test.MBuildSystem",
+						"Line": 47
 					}
 				},
 				"TestTarget": {
@@ -73,10 +73,10 @@
 								}
 							},
 							"Position": {
-								"Character": 408,
-								"Column": 14,
-								"File": "/Deploy/Tests/BuildSystemTests/Simple/Test.MBuildSystem",
-								"Line": 43
+								"Character": 499,
+								"Column": 15,
+								"File": "/Deploy/Tests/BuildSystemTests/Expand/Test.MBuildSystem",
+								"Line": 47
 							}
 						}
 					},
@@ -85,31 +85,29 @@
 						"TestPlatform TestArch Release": true
 					},
 					"Files": {
-						"TestGroup/TestGroup1": {
-							"/Deploy/Tests/BuildSystemTests/Simple/TestFile1.cpp": {
+						"TestGroup": {
+							"/Deploy/Tests/BuildSystemTests/Expand/TestFile1.cpp": {
 								"EnabledConfigs": {
 									"TestPlatform TestArch Debug": true,
 									"TestPlatform TestArch Release": true
 								},
 								"Position": {
-									"Character": 484,
+									"Character": 584,
 									"Column": 10,
-									"File": "/Deploy/Tests/BuildSystemTests/Simple/Test.MBuildSystem",
-									"Line": 49
+									"File": "/Deploy/Tests/BuildSystemTests/Expand/Test.MBuildSystem",
+									"Line": 54
 								}
-							}
-						},
-						"TestGroup/TestGroup2": {
-							"/Deploy/Tests/BuildSystemTests/Simple/TestFile2.cpp": {
+							},
+							"/Deploy/Tests/BuildSystemTests/Expand/TestFile2.cpp": {
 								"EnabledConfigs": {
 									"TestPlatform TestArch Debug": true,
 									"TestPlatform TestArch Release": true
 								},
 								"Position": {
-									"Character": 539,
+									"Character": 643,
 									"Column": 10,
-									"File": "/Deploy/Tests/BuildSystemTests/Simple/Test.MBuildSystem",
-									"Line": 53
+									"File": "/Deploy/Tests/BuildSystemTests/Expand/Test.MBuildSystem",
+									"Line": 58
 								}
 							}
 						}
@@ -126,17 +124,17 @@
 						}
 					},
 					"InnerPosition": {
-						"Character": 345,
+						"Character": 400,
 						"Column": 9,
-						"File": "/Deploy/Tests/BuildSystemTests/Simple/Test.MBuildSystem",
-						"Line": 36
+						"File": "/Deploy/Tests/BuildSystemTests/Expand/Test.MBuildSystem",
+						"Line": 38
 					},
 					"Name": "TestTarget",
 					"OuterPosition": {
-						"Character": 644,
+						"Character": 752,
 						"Column": 10,
-						"File": "/Deploy/Tests/BuildSystemTests/Simple/Test.MBuildSystem",
-						"Line": 65
+						"File": "/Deploy/Tests/BuildSystemTests/Expand/Test.MBuildSystem",
+						"Line": 70
 					}
 				}
 			}

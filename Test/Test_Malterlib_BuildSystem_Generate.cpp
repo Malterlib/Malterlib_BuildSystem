@@ -251,6 +251,10 @@ namespace
 			{
 				fp_TestGenerate("Simple");
 			};
+			DMibTestSuite("Expand")
+			{
+				fp_TestGenerate("Expand");
+			};
 			DMibTestSuite("GenerateFile")
 			{
 				auto TestGenerate = fp_TestGenerate("GenerateFile");

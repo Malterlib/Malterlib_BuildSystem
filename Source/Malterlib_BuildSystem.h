@@ -185,6 +185,15 @@ namespace NMib::NBuildSystem
 			CFilePosition m_Position;
 		};
 
+		struct CExpandEntityState
+		{
+			CExpandEntityState();
+			~CExpandEntityState();
+
+			NContainer::TCSet<CEntityMutablePointer> m_OldEntitiesToRemove;
+			bool m_bEnabled = false;
+		};
+
 		void f_SetGeneratorInterface(ICGeneratorInterface *_pInterface) const;
 		NConcurrency::TCFuture<void> f_GenerateBuildSystem
 			(
@@ -208,7 +217,7 @@ namespace NMib::NBuildSystem
 		bool f_AddGeneratedFile(NStr::CStr const &_File, NStr::CStr const &_Data, NStr::CStr const &_Workspace, bool &_bWasCreated, EGeneratedFileFlag _Flags = EGeneratedFileFlag_None) const;
 		void f_GenerateGlobalFiles(CBuildSystemData &_BuildSystemData, bool _bBeforeImports) const;
 		void f_GenerateWorkspaceFiles(CBuildSystemData &_BuildSystemData, CEntity &_Target) const;
-		void f_GenerateTargetFiles(CBuildSystemData &_BuildSystemData, CEntity &_Target) const;
+		bool f_GenerateTargetFiles(CBuildSystemData &_BuildSystemData, CEntity &_Target) const;
 		void f_ExpandRepositoryEntities(CBuildSystemData &_BuildSystemData) const;
 		void f_ExpandCreateTemplateEntities(CBuildSystemData &_BuildSystemData) const;
 		void f_ExpandGlobalEntities(CBuildSystemData &_BuildSystemData) const;
@@ -216,10 +225,11 @@ namespace NMib::NBuildSystem
 		void f_ExpandGlobalTargetsAndWorkspaces(CBuildSystemData &_BuildSystemData) const;
 		void f_ExpandTargetDependenciesBackup(CBuildSystemData &_BuildSystemData, CEntity const &_Target, CDependenciesBackup &o_Backup) const;
 		void f_ExpandTargetDependencies(CWorkspaceInfo &_Workspace, CBuildSystemData &_BuildSystemData, CEntity const &_Target, CDependenciesBackup &o_Backup) const;
-		void f_ExpandTargetGroups(CBuildSystemData &_BuildSystemData, CEntity const &_Target) const;
-		void f_ExpandTargetFiles(CBuildSystemData &_BuildSystemData, CEntity const &_Target) const;
+		bool f_ExpandTargetGroups(CExpandEntityState &_ExpandState, CBuildSystemData &_BuildSystemData, CEntity const &_Target) const;
+		bool f_ExpandTargetFiles(CExpandEntityState &_ExpandState, CBuildSystemData &_BuildSystemData, CEntity const &_Target) const;
 		void f_ExpandWorkspaceTargets(CBuildSystemData &_BuildSystemData, CEntity const &_Target) const;
 		void f_ExpandWorkspaceEntities(CBuildSystemData &_BuildSystemData, CEntity const &_Target) const;
+		void f_PopulateTargetAllFiles(CEntity &o_Target) const;
 		bool f_WriteFile(NContainer::CByteVector const &_FileData, NStr::CStr const &_File, NFile::EFileAttrib _AddAttribs = NFile::EFileAttrib_None) const;
 		void f_SetFileChanged(NStr::CStr const &_File) const;
 		NContainer::TCSet<NStr::CStr> f_GetSourceFiles() const;
@@ -885,7 +895,16 @@ namespace NMib::NBuildSystem
 		void fp_UpdateDependenciesNames(CEntity *_pTargetOuterEntity) const;
 		void fp_EvaluateWorkspace(CBuildSystemData &_Destination, CEntity &_Entity) const;
 		void fp_UsedExternal(CPropertyKeyReference const &_PropertyKey) const;
-		void fp_GenerateFiles(CBuildSystemData &_BuildSystemData, CEntity &_Entity, bool _bRecursive, EEntityType _Type, bool _bBeforeImports) const;
+		bool fp_GenerateFiles
+			(
+				CBuildSystemData &_BuildSystemData
+				, CEntity &_Entity
+				, bool _bRecursive
+				, EEntityType _Type
+				, CPropertyKeyReference const *_pConditionalProperty
+				, bool _bConditional
+			) const
+		;
 		CEntity *fp_AddEntity
 			(
 				CEntity const &_Entity
@@ -895,7 +914,7 @@ namespace NMib::NBuildSystem
 				, NContainer::TCMap<CPropertyKey, CEvaluatedProperty> const *_pExtraProperties
 			) const
 		;
-		CEntity *fp_ExpandEntity(CEntity &_Entity, CEntity &_ParentEntity, NContainer::TCVector<CEntity *> *o_pCreated) const;
+		CEntity *fp_ExpandEntity(CEntity &_Entity, CEntity &_ParentEntity, NContainer::TCVector<CEntity *> *o_pCreated, bool &o_bChanged) const;
 		void fp_ExpandImport(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData) const;
 		CBuildSystemData::CImportData fp_ExpandImportCMake(CEntity &_Entity, CEntity &_ParentEntity, CBuildSystemData &_BuildSystemData) const;
 		CBuildSystemData::CImportData fp_ExpandImportCMake_FromGeneratedDirectory

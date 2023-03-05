@@ -67,6 +67,8 @@ namespace NMib::NBuildSystem
 		NContainer::TCMap<NStr::CStr, NContainer::TCLinkedList<CTypeWithConditions>> m_UserTypes;
 		NContainer::TCMap<CPropertyKey, CPropertyContainer> m_Properties;
 
+		mint m_ExpandedOrGeneratedFrom = 0;
+
 		CFilePosition m_Position;
 		EPropertyFlag m_DebugFlags = EPropertyFlag_None;
 		uint32 m_HasFullEval = 0;
