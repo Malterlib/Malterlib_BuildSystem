@@ -277,7 +277,7 @@ namespace NMib::NBuildSystem
 											if constexpr (NTraits::TCIsSame<CValueType, NStr::CStr>::mc_Value)
 												NContainer::TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_GenerateIdentifier(Appender, _Value);
 											else
-												o_Str += typename tf_CStr::CFormat("@{}") << _Value;
+												Appender.f_Commit().m_String += typename tf_CStr::CFormat("@{}") << _Value;
 										}
 									)
 								;
@@ -311,7 +311,7 @@ namespace NMib::NBuildSystem
 										if constexpr (NTraits::TCIsSame<CValueType, NStr::CStr>::mc_Value)
 											NContainer::TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_GenerateIdentifier(Appender, _Value);
 										else
-											o_Str += typename tf_CStr::CFormat("@{}") << _Value;
+											Appender.f_Commit().m_String += typename tf_CStr::CFormat("@{}") << _Value;
 									}
 								)
 							;
@@ -476,31 +476,30 @@ namespace NMib::NBuildSystem
 	template <typename tf_CStr>
 	void CBuildSystemSyntax::COneOf::f_Format(tf_CStr &o_Str) const
 	{
-		o_Str += "one_of(";
+		typename tf_CStr::CAppender Appender(o_Str);
+
+		Appender += "one_of(";
 		bool bFirst = true;
 		for (auto &OneOf : m_OneOf)
 		{
 			if (bFirst)
 				bFirst = false;
 			else
-				o_Str += ", ";
+				Appender += ", ";
 
 			OneOf.f_Visit
 				(
 					[&](auto const &_Value)
 					{
 						if constexpr (NTraits::TCIsSameDereferencedUnqualified<decltype(_Value), NEncoding::CEJSONSorted>::mc_Value)
-						{
-							typename tf_CStr::CAppender Appender(o_Str);
 							NEncoding::NJSON::fg_GenerateJSONValue<CBuildSystemParseContext>(Appender, _Value.f_ToJson(), 0, "\t", gc_BuildSystemJSONParseFlags);
-						}
 						else
-							o_Str += typename tf_CStr::CFormat("{}") << _Value;
+							Appender.f_Commit().m_String += typename tf_CStr::CFormat("{}") << _Value;
 					}
 				)
 			;
 		}
-		o_Str += ")";
+		Appender += ")";
 	}
 
 	template <typename tf_CStr>
