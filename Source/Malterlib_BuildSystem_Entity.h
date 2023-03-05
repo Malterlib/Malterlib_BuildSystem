@@ -147,8 +147,8 @@ namespace NMib::NBuildSystem
 #endif
 
 #if defined(DMibBuildSystem_DebugReferences) && defined(DMibBuildSystem_DebugReferencesAdvanced)
-		static CMutual mp_DebugSetLock;
-		static TCSet<CEntity const *> mp_DebugSet;
+		static NThread::CMutual mp_DebugSetLock;
+		static NContainer::TCSet<CEntity const *> mp_DebugSet;
 #endif
 	};
 }

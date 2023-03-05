@@ -1857,14 +1857,14 @@ namespace NMib::NBuildSystem
 			if (PropertyName == gc_ConstString_Identity.m_String)
 			{
 				if (!ContextKey.m_Name.f_IsConstantString())
-					fs_ThrowError(_Context, "Identity can only be gotten from entity with constant string name. Path: {}"_f << pOriginalContext->f_GetPath());
+					fs_ThrowError(_Context, "Identity can only be gotten from entity with constant string name. Value: {} Path: {}"_f << ContextKey.m_Name << pOriginalContext->f_GetPath());
 
 				return {pOriginalContext->f_GetKeyName()};
 			}
 			else if (PropertyName == gc_ConstString_IdentityAsAbsolutePath.m_String)
 			{
 				if (!ContextKey.m_Name.f_IsConstantString())
-					fs_ThrowError(_Context, "Identity can only be gotten from entity with constant string name. Path: {}"_f << pOriginalContext->f_GetPath());
+					fs_ThrowError(_Context, "Identity can only be gotten from entity with constant string name. Value: {} Path: {}"_f << ContextKey.m_Name << pOriginalContext->f_GetPath());
 
 				return {CFile::fs_GetExpandedPath(pOriginalContext->f_GetKeyName(), CFile::fs_GetPath(pOriginalContext->f_Data().m_Position.m_File))};
 			}

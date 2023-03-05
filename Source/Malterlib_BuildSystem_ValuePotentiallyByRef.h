@@ -21,7 +21,7 @@ namespace NMib::NBuildSystem
 		CValuePotentiallyByRef &operator = (CValuePotentiallyByRef &&) = delete;
 
 		inline_always NEncoding::CEJSONSorted *f_MakeMutable();
-		inline_always NEncoding::CEJSONSorted const &f_Get();
+		inline_always NEncoding::CEJSONSorted const &f_Get() const;
 		inline_always NEncoding::CEJSONSorted f_Move();
 		inline_always CValuePotentiallyByRef f_GetSubObject(NEncoding::CEJSONSorted const &_SubObject);
 		inline_always NContainer::TCVector<NEncoding::CEJSONSorted> f_MoveArray();
@@ -29,7 +29,14 @@ namespace NMib::NBuildSystem
 		inline_always NStr::CStr f_MoveString();
 
 		void f_Set(NEncoding::CEJSONSorted &&_Other);
-		
+
+		template <typename tf_CStr>
+		void f_Format(tf_CStr &o_Str) const
+		{
+			o_Str += typename tf_CStr::CFormat("{}") << f_Get();
+		}
+
+
 	private:
 		NStorage::TCVariant<NEncoding::CEJSONSorted const *, NEncoding::CEJSONSorted *, NEncoding::CEJSONSorted> mp_ValueVariant;
 	};

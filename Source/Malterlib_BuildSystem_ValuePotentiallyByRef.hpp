@@ -26,7 +26,7 @@ namespace NMib::NBuildSystem
 		return &mp_ValueVariant.f_Get<2>();
 	}
 
-	inline_always NEncoding::CEJSONSorted const &CValuePotentiallyByRef::f_Get()
+	inline_always NEncoding::CEJSONSorted const &CValuePotentiallyByRef::f_Get() const
 	{
 		switch (mp_ValueVariant.f_GetTypeID())
 		{

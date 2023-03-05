@@ -71,7 +71,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 						TempEntity.f_DataWritable().m_Position = ConfigEntity.f_Data().m_Position;
 
 						TCMap<CConfiguration, CEntityMutablePointer> EnabledConfigs;
-						EnabledConfigs[Configuration] = &TempEntity;
+						EnabledConfigs[Configuration] = fg_Explicit(&TempEntity);
 
 						ToRemove.f_Insert(&TempEntity);
 

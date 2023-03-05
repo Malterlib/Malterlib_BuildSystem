@@ -4,28 +4,6 @@
 #include "Malterlib_BuildSystem_Generator_Xcode.h"
 #include <Mib/XML/XML>
 
-namespace NMib::NStr
-{
-	template <typename tf_CStr, typename tf_CSplitChar>
-	NContainer::TCVector<tf_CStr> fg_StrSplit(tf_CStr const &_ToSplit, tf_CSplitChar _SplitChar)
-	{
-		TCVector<tf_CStr> Ret;
-		aint iLast = 0;
-		aint iFind = _ToSplit.f_FindChar(_SplitChar);
-		while (iFind >= 0)
-		{
-			Ret.f_Insert(_ToSplit.f_Extract(iLast, iFind - iLast));
-			iLast = iFind + 1;
-			iFind = _ToSplit.f_FindCharOffset(iLast, _SplitChar);
-		}
-
-		tf_CStr Last = _ToSplit.f_Extract(iLast);
-		if (!Last.f_IsEmpty())
-			Ret.f_Insert(Last);
-
-		return fg_Move(Ret);
-	}
-}
 namespace NMib::NBuildSystem
 {
 	namespace NXcode

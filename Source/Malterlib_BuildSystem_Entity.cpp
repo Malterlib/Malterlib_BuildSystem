@@ -9,7 +9,7 @@ namespace NMib::NBuildSystem
 	CStr const &CEntityKey::f_GetName(CFilePosition const &_Position) const
 	{
 		if (!m_Name.f_IsConstantString())
-			CBuildSystem::fs_ThrowError(_Position, "Entity should be a string");
+			CBuildSystem::fs_ThrowError(_Position, "Entity should be a string not '{}'"_f << m_Name);
 
 		return m_Name.f_ConstantString();
 	}
@@ -91,9 +91,8 @@ namespace NMib::NBuildSystem
 		{
 			DLock(mp_DebugSetLock);
 			CStr ThisPath = f_GetPath();
-			DTrace("{}\n\n", ThisPath);
-			auto pThis = mp_DebugSet.f_FindEqual(this);
-			(void)pThis;
+			[[maybe_unused]] auto pThis = mp_DebugSet.f_FindEqual(this);
+			DMibTrace2("{} {}\n\n", pThis, ThisPath);
 			DMibPDebugBreak;
 		}
 		{
