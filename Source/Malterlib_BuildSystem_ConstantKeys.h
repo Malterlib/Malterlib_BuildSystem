@@ -53,6 +53,7 @@ namespace NMib::NBuildSystem
 	extern CPropertyKeyReference const gc_ConstKey_GenerateFile_UnixLineEnds;
 	extern CPropertyKeyReference const gc_ConstKey_GenerateFile_UTF16;
 
+	extern CPropertyKeyReference const gc_ConstKey_GeneratorSetting_Workspace;
 	extern CPropertyKeyReference const gc_ConstKey_GeneratorSetting_Target;
 	extern CPropertyKeyReference const gc_ConstKey_GeneratorSetting_Dependency;
 	extern CPropertyKeyReference const gc_ConstKey_GeneratorSetting_Compile;

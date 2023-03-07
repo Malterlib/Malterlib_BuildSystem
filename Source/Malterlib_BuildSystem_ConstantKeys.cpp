@@ -54,6 +54,7 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_GenerateFile_UnixLineEnds(EPropertyType_GenerateFile, gc_Str<"UnixLineEnds">);
 	constexpr CPropertyKeyReference const gc_ConstKey_GenerateFile_UTF16(EPropertyType_GenerateFile, gc_Str<"UTF16">);
 
+	constexpr CPropertyKeyReference const gc_ConstKey_GeneratorSetting_Workspace(EPropertyType_GeneratorSetting, gc_Str<"Workspace">);
 	constexpr CPropertyKeyReference const gc_ConstKey_GeneratorSetting_Target(EPropertyType_GeneratorSetting, gc_Str<"Target">);
 	constexpr CPropertyKeyReference const gc_ConstKey_GeneratorSetting_Dependency(EPropertyType_GeneratorSetting, gc_Str<"Dependency">);
 	constexpr CPropertyKeyReference const gc_ConstKey_GeneratorSetting_Compile(EPropertyType_GeneratorSetting, gc_Str<"Compile">);
@@ -214,11 +215,12 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_GenerateFile_UnicodeBOM);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GenerateFile_UnixLineEnds);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GenerateFile_UTF16);
+		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_Workspace);
+		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_Target);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_Compile);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_Dependency);		
 		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_DefinedProperties);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_IsFile);
-		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_Target);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_Xcode_TargetType);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Group_HideTargets);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Import_CMake_AlwaysFullRebuild);
