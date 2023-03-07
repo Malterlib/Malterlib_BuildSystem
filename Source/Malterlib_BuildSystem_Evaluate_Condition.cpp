@@ -298,9 +298,9 @@ namespace NMib::NBuildSystem
 						"{sj*}         {} {} {}{\n}"_f
 						<< ""
 						<< _TraceDepth * 3
-						<< LeftValueRef.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat)
+						<< LeftValueRef.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat | EJSONDialectFlag_TrimWhitespace)
 						<< CCondition::fs_ConditionTypeToStr(_ConditionType)
-						<< RightValueRef.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat)
+						<< RightValueRef.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat | EJSONDialectFlag_TrimWhitespace)
 					)
 				;
 			}
@@ -311,9 +311,9 @@ namespace NMib::NBuildSystem
 						"{sj*}       ! {} {} {}{\n}"_f
 						<< ""
 						<< _TraceDepth * 3
-						<< LeftValueRef.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat)
+						<< LeftValueRef.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat | EJSONDialectFlag_TrimWhitespace)
 						<< CCondition::fs_ConditionTypeToStr(_ConditionType)
-						<< RightValueRef.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat)
+						<< RightValueRef.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat | EJSONDialectFlag_TrimWhitespace)
 					)
 				;
 			}

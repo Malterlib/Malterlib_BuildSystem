@@ -64,7 +64,7 @@ namespace NMib::NBuildSystem
 											pIndentString = _Params[1].f_String();
 									}
 
-									Return = ToFormat.f_ToString(pIndentString, EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat).f_Trim();
+									Return = ToFormat.f_ToString(pIndentString, EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat | EJSONDialectFlag_TrimWhitespace);
 								}
 								catch (CException const &_Exception)
 								{
