@@ -1086,7 +1086,8 @@ namespace NMib::NBuildSystem
 
 					if (_Flags & EDoesValueConformToTypeFlag_CanApplyDefault)
 					{
-						if (!o_Value.f_IsValid())
+						bool bDefaulted = !o_Value.f_IsValid();
+						if (bDefaulted)
 						{
 							CBuildSystemUniquePositions::CPosition *pStoredPosition = nullptr;
 							if (_Context.m_pStorePositions && _TypePosition.f_IsValid())
@@ -1103,7 +1104,12 @@ namespace NMib::NBuildSystem
 							o_pError->m_ErrorPath.f_Insert(" = {}"_f << SpecificType.m_DefaultValue);
 
 						if (!fp_DoesValueConformToType(_Context, SpecificType.m_Type.f_Get(), _TypePosition, o_Value, _Flags, o_pError, _pGetErrorContext))
+						{
+							if (bDefaulted)
+								fs_ThrowError(_Context, "Defaulted value '{}' does not conform to type '{}' it's defaulting"_f << o_Value << SpecificType.m_Type.f_Get());
+
 							return false;
+						}
 
 						if (o_pError)
 							o_pError->m_ErrorPath.f_PopBack();
