@@ -117,6 +117,7 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_Identity = gc_Str<"Identity">;
 	constexpr CStringAndHash const gc_ConstString_IdentityAsAbsolutePath = gc_Str<"IdentityAsAbsolutePath">;
 	constexpr CStringAndHash const gc_ConstString_IdentityPath = gc_Str<"IdentityPath">;
+	constexpr CStringAndHash const gc_ConstString_EntityPath = gc_Str<"EntityPath">;
 	constexpr CStringAndHash const gc_ConstString_IndentWidth = gc_Str<"IndentWidth">;
 	constexpr CStringAndHash const gc_ConstString_Indirect = gc_Str<"Indirect">;
 	constexpr CStringAndHash const gc_ConstString_IndirectOrdered = gc_Str<"IndirectOrdered">;
@@ -723,6 +724,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_Identity);
 		o_StringCache.f_AddConstantString(gc_ConstString_IdentityAsAbsolutePath);
 		o_StringCache.f_AddConstantString(gc_ConstString_IdentityPath);
+		o_StringCache.f_AddConstantString(gc_ConstString_EntityPath);
 		o_StringCache.f_AddConstantString(gc_ConstString_IndentWidth);
 		o_StringCache.f_AddConstantString(gc_ConstString_Indirect);
 		o_StringCache.f_AddConstantString(gc_ConstString_IndirectOrdered);

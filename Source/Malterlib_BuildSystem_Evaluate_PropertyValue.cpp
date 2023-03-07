@@ -1861,6 +1861,8 @@ namespace NMib::NBuildSystem
 
 				return {pOriginalContext->f_GetKeyName()};
 			}
+			else if (PropertyName == gc_ConstString_EntityPath.m_String)
+				return {pOriginalContext->f_GetPath()};
 			else if (PropertyName == gc_ConstString_IdentityAsAbsolutePath.m_String)
 			{
 				if (!ContextKey.m_Name.f_IsConstantString())

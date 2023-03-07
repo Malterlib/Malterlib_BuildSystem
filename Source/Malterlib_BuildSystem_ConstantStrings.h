@@ -116,6 +116,7 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_Identity;
 	extern CStringAndHash const gc_ConstString_IdentityAsAbsolutePath;
 	extern CStringAndHash const gc_ConstString_IdentityPath;
+	extern CStringAndHash const gc_ConstString_EntityPath;
 	extern CStringAndHash const gc_ConstString_IndentWidth;
 	extern CStringAndHash const gc_ConstString_Indirect;
 	extern CStringAndHash const gc_ConstString_IndirectOrdered;

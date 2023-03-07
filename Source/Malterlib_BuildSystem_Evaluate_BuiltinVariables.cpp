@@ -165,6 +165,7 @@ namespace NMib::NBuildSystem
 					, {CPropertyKey(mp_StringCache, EPropertyType_This, gc_ConstString_Identity), DMibBuildSystemTypeWithPosition(g_String)}
 					, {CPropertyKey(mp_StringCache, EPropertyType_This, gc_ConstString_IdentityAsAbsolutePath), DMibBuildSystemTypeWithPosition(g_String)}
 					, {CPropertyKey(mp_StringCache, EPropertyType_This, gc_ConstString_IdentityPath), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(mp_StringCache, EPropertyType_This, gc_ConstString_EntityPath), DMibBuildSystemTypeWithPosition(g_String)}
 					, {CPropertyKey(mp_StringCache, EPropertyType_This, gc_ConstString_Type), DMibBuildSystemTypeWithPosition(g_String)}
 
 					, {CPropertyKey(mp_StringCache, EPropertyType_Group, gc_ConstString_HideTargets), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
