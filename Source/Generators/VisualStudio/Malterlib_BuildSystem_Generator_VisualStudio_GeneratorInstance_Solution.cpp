@@ -194,7 +194,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		if (bWasCreated)
 		{
 			CByteVector FileDataVector;
-			CFile::fs_WriteStringToVector(FileDataVector, CStr(FileData));
+			CFile::fs_WriteStringToVector(FileDataVector, CStr(FileData), false);
 			m_BuildSystem.f_WriteFile(FileDataVector, OutputFile);
 		}
 

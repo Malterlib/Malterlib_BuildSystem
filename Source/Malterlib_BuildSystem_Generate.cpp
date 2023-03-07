@@ -58,7 +58,7 @@ namespace NMib::NBuildSystem
 				JSON[mp_SaveEnvironment.fs_GetKey(EnvVar)] = EnvVar;
 
 			CByteVector FileData;
-			CFile::fs_WriteStringToVector(FileData, JSON.f_ToString());
+			CFile::fs_WriteStringToVector(FileData, JSON.f_ToString(), false);
 
 			CStr EnvironmentStateFile = mp_OutputDir / "Environment.json";
 
@@ -695,7 +695,7 @@ namespace NMib::NBuildSystem
 					auto StringData = _Registry.f_GenerateStr();
 
 					CByteVector FileData;
-					CFile::fs_WriteStringToVector(FileData, StringData);
+					CFile::fs_WriteStringToVector(FileData, StringData, false);
 
 					CFile::fs_CreateDirectory(CFile::fs_GetPath(_FileName));
 					CFile::fs_CopyFileDiff(FileData, _FileName, CTime::fs_NowUTC());

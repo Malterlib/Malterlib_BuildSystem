@@ -242,7 +242,7 @@ fi
 			if (bWasCreated)
 			{
 				CByteVector FileData;
-				CFile::fs_WriteStringToVector(FileData, CStr());
+				CFile::fs_WriteStringToVector(FileData, CStr(), false);
 				m_BuildSystem.f_WriteFile(FileData, GeneratedFile);
 			}
 		}

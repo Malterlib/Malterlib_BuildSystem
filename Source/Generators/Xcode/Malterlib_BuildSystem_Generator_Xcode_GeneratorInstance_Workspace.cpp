@@ -104,7 +104,7 @@ namespace NMib::NBuildSystem::NXcode
 			if (bWasCreated)
 			{
 				CByteVector FileData;
-				CFile::fs_WriteStringToVector(FileData, CStr());
+				CFile::fs_WriteStringToVector(FileData, CStr(), false);
 				m_BuildSystem.f_WriteFile(FileData, GeneratedFile);
 			}
 		}
@@ -119,7 +119,7 @@ namespace NMib::NBuildSystem::NXcode
 			if (bWasCreated)
 			{
 				CByteVector FileData;
-				CFile::fs_WriteStringToVector(FileData, CStr(XMLData));
+				CFile::fs_WriteStringToVector(FileData, CStr(XMLData), false);
 				bool bFileWritten = m_BuildSystem.f_WriteFile(FileData, FileName);
 				if (!bFileWritten && bSchemeChanged)
 				{
