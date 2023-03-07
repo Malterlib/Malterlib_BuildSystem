@@ -821,7 +821,7 @@ namespace NMib::NBuildSystem
 										CFileKey FileKey;
 										FileKey.m_FileName = EntityName;
 										if (_pParentGroup)
-											FileKey.m_GroupPath = _pParentGroup->f_GetGroupPath();
+											FileKey.m_GroupPath = _pParentGroup->f_GetPath();
 
 										auto FileMap = _Target.m_Files(FileKey);
 

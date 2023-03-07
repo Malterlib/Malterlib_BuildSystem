@@ -20,7 +20,7 @@
 						"TestPlatform TestArch Release": true
 					},
 					"Files": {
-						"TestGroup": {
+						"TestGroup/TestGroup3": {
 							"/Deploy/Tests/BuildSystemTests/Expand/TestFile3.cpp": {
 								"EnabledConfigs": {
 									"TestPlatform TestArch Debug": true,
@@ -85,7 +85,7 @@
 						"TestPlatform TestArch Release": true
 					},
 					"Files": {
-						"TestGroup": {
+						"TestGroup/TestGroup1": {
 							"/Deploy/Tests/BuildSystemTests/Expand/TestFile1.cpp": {
 								"EnabledConfigs": {
 									"TestPlatform TestArch Debug": true,
@@ -97,7 +97,9 @@
 									"File": "/Deploy/Tests/BuildSystemTests/Expand/Test.MBuildSystem",
 									"Line": 54
 								}
-							},
+							}
+						},
+						"TestGroup/TestGroup2": {
 							"/Deploy/Tests/BuildSystemTests/Expand/TestFile2.cpp": {
 								"EnabledConfigs": {
 									"TestPlatform TestArch Debug": true,
