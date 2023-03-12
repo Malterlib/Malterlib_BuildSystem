@@ -602,6 +602,7 @@ namespace NMib::NContainer
 			if (*pParse != '(')
 				f_ThrowError("Expression must be enclosed in ()", pParse);
 			++pParse;
+			fg_ParseWhiteSpace(pParse);
 		}
 
 		CJSONSorted Return;
@@ -634,6 +635,13 @@ namespace NMib::NContainer
 		while (*pParse && !fg_CharIsNewLine(*pParse))
 		{
 			++nParsed;
+
+			auto Cleanup = g_OnScopeExit / [&]
+				{
+					if (bUseParentheses && !bEndedParen)
+						fg_ParseWhiteSpace(pParse);
+				}
+			;
 
 			if (_Flags & EParseExpressionFlag_ParsingFunctionParams)
 			{
