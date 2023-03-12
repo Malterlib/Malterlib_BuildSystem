@@ -33,12 +33,12 @@ namespace NMib::NBuildSystem
 			)
 		;
 
-		void f_PopulateSetting
+		static void fs_PopulateSetting
 			(
 				CPropertyKeyReference const &_GeneratorSetting
 				, EPropertyType _PropertyType
 				, CBuildSystem const &_BuildSystem
-				, NContainer::TCMap<CConfiguration, CEntityMutablePointer> const &_EntitiesPerConfig
+				, CEntity &_Entity
 				, CGeneratorSetting &o_Result
 			)
 		;

@@ -38,7 +38,17 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 						++nDepenencies;
 
-						Dependency.m_GeneratorSettings.f_PopulateSetting(gc_ConstKey_GeneratorSetting_Dependency, EPropertyType_Dependency, m_BuildSystem, Dependency.m_EnabledConfigs, *pResult);
+						auto &Entity = **Dependency.m_EnabledConfigs.f_FindEqual(Config);
+
+						CGeneratorSettings::fs_PopulateSetting
+							(
+								gc_ConstKey_GeneratorSetting_Dependency
+								, EPropertyType_Dependency
+								, m_BuildSystem
+								, Entity
+								, *pResult
+							 )
+						;
 
 						if ((nDepenencies % 100) == 0)
 							co_await g_Yield;

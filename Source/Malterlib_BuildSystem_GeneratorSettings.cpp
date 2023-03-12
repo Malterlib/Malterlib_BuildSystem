@@ -5,30 +5,25 @@
 
 namespace NMib::NBuildSystem
 {
-	void CGeneratorSettings::f_PopulateSetting
+	void CGeneratorSettings::fs_PopulateSetting
 		(
 			CPropertyKeyReference const &_GeneratorSetting
 			, EPropertyType _PropertyType
 			, CBuildSystem const &_BuildSystem
-			, TCMap<CConfiguration, CEntityMutablePointer> const &_EntitiesPerConfig
+			, CEntity &_Entity
 			, CGeneratorSetting &o_Result
 		)
 	{
-		auto &Config = TCMap<CConfiguration, CGeneratorSetting>::fs_GetKey(o_Result);
-		auto &Entity = _EntitiesPerConfig[Config];
-
-		auto *pConfig = Entity.f_Get();
-
-		bool bIsFile = Entity.f_Get()->f_GetKey().m_Type == EEntityType_File;
+		bool bIsFile = _Entity.f_GetKey().m_Type == EEntityType_File;
 
 		CEJSONSorted DefinedProperties;
 		if (bIsFile)
-			DefinedProperties = _BuildSystem.f_GetDefinedProperties<true>(*pConfig, _PropertyType, o_Result.m_bIsFullEval);
+			DefinedProperties = _BuildSystem.f_GetDefinedProperties<true>(_Entity, _PropertyType, o_Result.m_bIsFullEval);
 		else
-			DefinedProperties = _BuildSystem.f_GetDefinedProperties<false>(*pConfig, _PropertyType, o_Result.m_bIsFullEval);
+			DefinedProperties = _BuildSystem.f_GetDefinedProperties<false>(_Entity, _PropertyType, o_Result.m_bIsFullEval);
 
 		{
-			auto &EvalProperty = pConfig->m_EvaluatedProperties.m_Properties[gc_ConstKey_GeneratorSetting_DefinedProperties];
+			auto &EvalProperty = _Entity.m_EvaluatedProperties.m_Properties[gc_ConstKey_GeneratorSetting_DefinedProperties];
 			EvalProperty.m_Value = fg_Move(DefinedProperties);
 			EvalProperty.m_Type = EEvaluatedPropertyType_External;
 			EvalProperty.m_pProperty = &_BuildSystem.f_ExternalProperty(EPropertyType_GeneratorSetting);
@@ -36,7 +31,7 @@ namespace NMib::NBuildSystem
 
 		if (_PropertyType == EPropertyType_Compile)
 		{
-			auto &EvalProperty = pConfig->m_EvaluatedProperties.m_Properties[gc_ConstKey_GeneratorSetting_IsFile];
+			auto &EvalProperty = _Entity.m_EvaluatedProperties.m_Properties[gc_ConstKey_GeneratorSetting_IsFile];
 			EvalProperty.m_Value = bIsFile;
 			EvalProperty.m_Type = EEvaluatedPropertyType_External;
 			EvalProperty.m_pProperty = &_BuildSystem.f_ExternalProperty(EPropertyType_GeneratorSetting);
@@ -44,15 +39,15 @@ namespace NMib::NBuildSystem
 
 		auto Cleanup = g_OnScopeExit / [&]
 			{
-				pConfig->m_EvaluatedProperties.m_Properties.f_Remove(gc_ConstKey_GeneratorSetting_DefinedProperties);
-				pConfig->m_EvaluatedProperties.m_Properties.f_Remove(gc_ConstKey_GeneratorSetting_IsFile);
-				pConfig->m_EvaluatedProperties.m_Properties.f_Remove(_GeneratorSetting);
+				_Entity.m_EvaluatedProperties.m_Properties.f_Remove(gc_ConstKey_GeneratorSetting_DefinedProperties);
+				_Entity.m_EvaluatedProperties.m_Properties.f_Remove(gc_ConstKey_GeneratorSetting_IsFile);
+				_Entity.m_EvaluatedProperties.m_Properties.f_Remove(_GeneratorSetting);
 			}
 		;
 
 		o_Result.m_Value = _BuildSystem.f_EvaluateEntityProperty
 			(
-				*pConfig
+				_Entity
 				, _GeneratorSetting
 				, o_Result.m_PropertyInfo
 			)
@@ -85,7 +80,9 @@ namespace NMib::NBuildSystem
 					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
 					co_await _BuildSystem.f_CheckCancelled();
 
-					f_PopulateSetting(_GeneratorSetting, _PropertyType, _BuildSystem, _EntitiesPerConfig, o_Result);
+					auto &Config = Settings.fs_GetKey(o_Result);
+
+					CGeneratorSettings::fs_PopulateSetting(_GeneratorSetting, _PropertyType, _BuildSystem, **_EntitiesPerConfig.f_FindEqual(Config), o_Result);
 
 					co_return {};
 				}

@@ -45,7 +45,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 						++nFiles;
 
-						File.m_GeneratorSettings.f_PopulateSetting(gc_ConstKey_GeneratorSetting_Compile, EPropertyType_Compile, m_BuildSystem, File.m_EnabledConfigs, *pResult);
+						auto &Entity = **File.m_EnabledConfigs.f_FindEqual(Config);
+
+						CGeneratorSettings::fs_PopulateSetting(gc_ConstKey_GeneratorSetting_Compile, EPropertyType_Compile, m_BuildSystem, Entity, *pResult);
 
 						if ((nFiles % 100) == 0)
 							co_await g_Yield;

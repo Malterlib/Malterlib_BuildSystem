@@ -70,14 +70,11 @@ namespace NMib::NBuildSystem::NVisualStudio
 						auto &TempEntity = *NewEntityMap;
 						TempEntity.f_DataWritable().m_Position = ConfigEntity.f_Data().m_Position;
 
-						TCMap<CConfiguration, CEntityMutablePointer> EnabledConfigs;
-						EnabledConfigs[Configuration] = fg_Explicit(&TempEntity);
-
 						ToRemove.f_Insert(&TempEntity);
 
 						m_BuildSystem.f_InitEntityForEvaluationNoEnv(TempEntity, StartValuesCompile, EEvaluatedPropertyType_External);
 
-						Settings.f_PopulateSetting(gc_ConstKey_GeneratorSetting_Compile, EPropertyType_Compile, m_BuildSystem, EnabledConfigs, *pResult);
+						CGeneratorSettings::fs_PopulateSetting(gc_ConstKey_GeneratorSetting_Compile, EPropertyType_Compile, m_BuildSystem, TempEntity, *pResult);
 					}
 
 					co_return {};

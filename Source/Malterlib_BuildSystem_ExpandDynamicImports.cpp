@@ -352,7 +352,7 @@ namespace NMib::NBuildSystem
 #endif
 
 		// Dependent variables
-		CStr GeneratorVersion = "38";
+		CStr GeneratorVersion = "40";
 		CStr GeneratorFullRebuildVersion = "4";
 
 		CStr FullRebuildVersion = "{}-{}"_f << f_EvaluateEntityPropertyString(_Entity, gc_ConstKey_Import_CMake_FullRebuildVersion) << GeneratorFullRebuildVersion;
