@@ -529,7 +529,7 @@ namespace NMib::NBuildSystem
 		CStringCache &f_StringCache() const;
 
 		template <bool tf_bFile>
-		NEncoding::CEJSONSorted f_GetDefinedProperties(CEntity &_Entity, EPropertyType _PropertyType) const;
+		NEncoding::CEJSONSorted f_GetDefinedProperties(CEntity &_Entity, EPropertyType _PropertyType, bool &o_bIsFullEval) const;
 
 		NConcurrency::TCFuture<void> f_CheckCancelled() const;
 		NStorage::TCSharedPointer<NAtomic::TCAtomic<bool>> f_GetCancelledPointer() const;

@@ -816,10 +816,11 @@ namespace NMib::NBuildSystem
 								if (_Params[1].f_IsValid())
 									bFile = _Params[1].f_Boolean();
 
+								bool bIsFullEval = false;
 								if (bFile)
-									return _This.f_GetDefinedProperties<true>(_Context.m_Context, PropertyType);
+									return _This.f_GetDefinedProperties<true>(_Context.m_Context, PropertyType, bIsFullEval);
 								else
-									return _This.f_GetDefinedProperties<false>(_Context.m_Context, PropertyType);
+									return _This.f_GetDefinedProperties<false>(_Context.m_Context, PropertyType, bIsFullEval);
 							}
 							, DMibBuildSystemFilePosition
 						}

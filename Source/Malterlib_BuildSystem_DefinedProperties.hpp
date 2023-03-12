@@ -6,7 +6,7 @@
 namespace NMib::NBuildSystem
 {
 	template <bool tf_bFile>
-	CEJSONSorted CBuildSystem::f_GetDefinedProperties(CEntity &_Entity, EPropertyType _PropertyType) const
+	CEJSONSorted CBuildSystem::f_GetDefinedProperties(CEntity &_Entity, EPropertyType _PropertyType, bool &o_bIsFullEval) const
 	{
 		using namespace NStr;
 		
@@ -25,6 +25,8 @@ namespace NMib::NBuildSystem
 				bFullFileSettings = f_EvaluateEntityPropertyBool(*pTopConfig, gc_ConstKeys_FullEval[_PropertyType], PropertyInfo, false);
 				break;
 			}
+
+			o_bIsFullEval = bFullFileSettings;
 		}
 
 		CEJSONSorted GeneratorSettings;

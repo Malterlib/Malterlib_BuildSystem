@@ -19,6 +19,7 @@ namespace NMib::NBuildSystem
 
 		NEncoding::CEJSONSorted m_Value;
 		CBuildSystemPropertyInfo m_PropertyInfo;
+		bool m_bIsFullEval = false;
 	};
 
 	struct CGeneratorSettings

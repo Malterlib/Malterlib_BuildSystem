@@ -19,10 +19,11 @@ namespace NMib::NBuildSystem::NXcode
 
 		CEJSONSorted GeneratorSettings;
 
+		bool bIsFullEval = false;
 		if (_bFile)
-			GeneratorSettings = m_BuildSystem.f_GetDefinedProperties<true>(*pTopConfig, EPropertyType_Compile);
+			GeneratorSettings = m_BuildSystem.f_GetDefinedProperties<true>(*pTopConfig, EPropertyType_Compile, bIsFullEval);
 		else
-			GeneratorSettings = m_BuildSystem.f_GetDefinedProperties<false>(*pTopConfig, EPropertyType_Compile);
+			GeneratorSettings = m_BuildSystem.f_GetDefinedProperties<false>(*pTopConfig, EPropertyType_Compile, bIsFullEval);
 
 		{
 			{
@@ -146,7 +147,8 @@ namespace NMib::NBuildSystem::NXcode
 		auto *pConfig = _Entity.f_Get();
 		auto pTopConfig = pConfig;
 
-		CEJSONSorted GeneratorSettings = m_BuildSystem.f_GetDefinedProperties<false>(*pTopConfig, EPropertyType_Target);
+		bool bIsFullEval = false;
+		CEJSONSorted GeneratorSettings = m_BuildSystem.f_GetDefinedProperties<false>(*pTopConfig, EPropertyType_Target, bIsFullEval);
 
 		{
 			{

@@ -23,9 +23,9 @@ namespace NMib::NBuildSystem
 
 		CEJSONSorted DefinedProperties;
 		if (bIsFile)
-			DefinedProperties = _BuildSystem.f_GetDefinedProperties<true>(*pConfig, _PropertyType);
+			DefinedProperties = _BuildSystem.f_GetDefinedProperties<true>(*pConfig, _PropertyType, o_Result.m_bIsFullEval);
 		else
-			DefinedProperties = _BuildSystem.f_GetDefinedProperties<false>(*pConfig, _PropertyType);
+			DefinedProperties = _BuildSystem.f_GetDefinedProperties<false>(*pConfig, _PropertyType, o_Result.m_bIsFullEval);
 
 		{
 			auto &EvalProperty = pConfig->m_EvaluatedProperties.m_Properties[gc_ConstKey_GeneratorSetting_DefinedProperties];
