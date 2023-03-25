@@ -507,11 +507,11 @@ namespace NMib::NContainer
 	template <>
 	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_Generate<CStr>
 		(
-		 	CStr &o_Output
-		 	, NBuildSystem::CBuildSystemSyntax::CRootValue const &_Value
-		 	, bool _bForceEscape
-		 	, mint _Level
-		 	, CStr const &_PreData
+			CStr &o_Output
+			, NBuildSystem::CBuildSystemSyntax::CRootValue const &_Value
+			, bool _bForceEscape
+			, mint _Level
+			, CStr const &_PreData
 		)
 	{
 		if (!_Value.m_Value.f_IsValid())
@@ -677,10 +677,10 @@ namespace NMib::NContainer
 			, NStr::CStr::CAppender
 		>
 		(
-	   		CStr::CAppender &o_String
-		 	, CJSONSorted const &_Value
-		 	, mint _Depth
-		 	, ch8 const *_pPrettySeparator
+			CStr::CAppender &o_String
+			, CJSONSorted const &_Value
+			, mint _Depth
+			, ch8 const *_pPrettySeparator
 			, EJSONDialectFlag _Flags
 		)
 	;
@@ -690,10 +690,10 @@ namespace NMib::NContainer
 			, NStr::CStrNonTracked::CAppender
 		>
 		(
-	   		CStrNonTracked::CAppender &o_String
-		 	, CJSONSorted const &_Value
-		 	, mint _Depth
-		 	, ch8 const *_pPrettySeparator
+			CStrNonTracked::CAppender &o_String
+			, CJSONSorted const &_Value
+			, mint _Depth
+			, ch8 const *_pPrettySeparator
 			, EJSONDialectFlag _Flags
 		)
 	;
@@ -705,10 +705,10 @@ namespace NMib::NContainer
 			, CStr::CAppender
 		>
 		(
-	   		CStr::CAppender &o_String
-		 	, CJSONSorted const &_Value
-		 	, mint _Depth
-		 	, ch8 const *_pPrettySeparator
+			CStr::CAppender &o_String
+			, CJSONSorted const &_Value
+			, mint _Depth
+			, ch8 const *_pPrettySeparator
 			, EJSONDialectFlag _Flags
 		)
 	;
@@ -718,10 +718,10 @@ namespace NMib::NContainer
 			, NStr::CStrNonTracked::CAppender
 		>
 		(
-	   		CStrNonTracked::CAppender &o_String
-		 	, CJSONSorted const &_Value
-		 	, mint _Depth
-		 	, ch8 const *_pPrettySeparator
+			CStrNonTracked::CAppender &o_String
+			, CJSONSorted const &_Value
+			, mint _Depth
+			, ch8 const *_pPrettySeparator
 			, EJSONDialectFlag _Flags
 		)
 	;

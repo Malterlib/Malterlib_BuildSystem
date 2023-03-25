@@ -49,7 +49,7 @@
 	GenerateFile
 	{
 		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
-		Contents 	`Generate File Contents:\n`\
+		Contents	`Generate File Contents:\n`\
 					`@(fg_TestTernary(TestObject))\n`\
 					`@(fg_TestTernary(TestObject2))\n`\
 					`@(fg_TestTernary2(true))\n`\

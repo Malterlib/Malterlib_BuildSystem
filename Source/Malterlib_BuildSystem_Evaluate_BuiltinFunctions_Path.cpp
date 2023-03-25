@@ -246,7 +246,7 @@ namespace NMib::NBuildSystem
 							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
 							{
 								return _Params[0].f_String().f_ReplaceChar('\\', '/');
- 							}
+							}
 							, DMibBuildSystemFilePosition
 						}
 					}
@@ -280,7 +280,7 @@ namespace NMib::NBuildSystem
 								fg_ShortenPath(Return);
 #endif
 								return fg_Move(Return);
- 							}
+							}
 							, DMibBuildSystemFilePosition
 						}
 					}

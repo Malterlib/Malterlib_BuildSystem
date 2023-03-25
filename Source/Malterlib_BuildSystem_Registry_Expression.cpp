@@ -393,7 +393,7 @@ namespace NMib::NContainer
 				bool bIsValid = false;
 				if (Param.f_IsInteger())
 					bIsValid = true;
- 				else if
+				else if
 					(
 						Param.f_IsObject()
 						&& Param.f_GetMember(CEJSONConstStrings::mc_Type, EJSONType_String)
@@ -1275,9 +1275,9 @@ namespace NMib::NContainer
 	template <typename tf_CStr>
 	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateExpression
 		(
-		 	tf_CStr &o_String
-		 	, CJSONSorted const &_Token
-		 	, bool _bQuoteStrings
+			tf_CStr &o_String
+			, CJSONSorted const &_Token
+			, bool _bQuoteStrings
 			, mint _Depth
 		)
 	{
@@ -1764,18 +1764,18 @@ namespace NMib::NContainer
 
 	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateExpression
 		(
-		 	CStr::CAppender &o_String
-		 	, CJSONSorted const &_Token
-		 	, bool _bQuoteStrings
+			CStr::CAppender &o_String
+			, CJSONSorted const &_Token
+			, bool _bQuoteStrings
 			, mint _Depth
 		)
 	;
 
 	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateExpression
 		(
-		 	CStrNonTracked::CAppender &o_String
-		 	, CJSONSorted const &_Token
-		 	, bool _bQuoteStrings
+			CStrNonTracked::CAppender &o_String
+			, CJSONSorted const &_Token
+			, bool _bQuoteStrings
 			, mint _Depth
 		)
 	;

@@ -173,8 +173,8 @@ namespace NMib::NBuildSystem
 
 		m_Registry.f_ForEachInTree
 			(
-			 	[&](CBuildSystemRegistry const &_Registry)
-			 	{
+				[&](CBuildSystemRegistry const &_Registry)
+				{
 					if (fIsRoot(_Registry))
 					{
 						fCheckWhitespace(CPropertyKey{o_StringCache, "General"}, _Registry);

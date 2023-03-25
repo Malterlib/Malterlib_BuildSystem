@@ -363,13 +363,13 @@ namespace NMib::NBuildSystem
 		TCFuture<bool> DMibWorkaroundUBSanSectionErrors fg_HandleRepository
 			(
 				CGitLaunches &_Launches
-			 	, CStr const &_ReposDirectory
-			 	, CRepository const &_Repo
-			 	, CStateHandler &o_StateHandler
-			 	, CBuildSystem const &_BuildSystem
-			 	, TCMap<CStr, CRepository const *> const &_AllRepositories
-			 	, EHandleRepositoryAction _ReconcileAction
-			 	, mint _MaxRepoWidth
+				, CStr const &_ReposDirectory
+				, CRepository const &_Repo
+				, CStateHandler &o_StateHandler
+				, CBuildSystem const &_BuildSystem
+				, TCMap<CStr, CRepository const *> const &_AllRepositories
+				, EHandleRepositoryAction _ReconcileAction
+				, mint _MaxRepoWidth
 			)
 		{
 			co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
@@ -609,12 +609,12 @@ namespace NMib::NBuildSystem
 			if
 				(
 					!ConfigHash.f_IsEmpty()
-				 	&&
-				 	(
+					&&
+					(
 						(HeadHash != ConfigHash && CurrentHash != ConfigHash)
-					 	|| bForceReset
+						|| bForceReset
 					)
-				 	&& !fg_IsSubmodule(Location)
+					&& !fg_IsSubmodule(Location)
 				)
 			{
 				bool bPassException = false;
@@ -891,11 +891,11 @@ namespace NMib::NBuildSystem
 
 							fOutputInfo
 								(
-								 	OutputType
-								 	, "{}{}{} recommended for {}{}{} -> {}{}{}"_f
-								 	<< Colors.f_RepositoryName() << ActionStr << Colors.f_Default()
-								 	<< Colors.f_ToPush() << HeadHash << Colors.f_Default()
-								 	<< Colors.f_ToPush() << ConfigHash << Colors.f_Default()
+									OutputType
+									, "{}{}{} recommended for {}{}{} -> {}{}{}"_f
+									<< Colors.f_RepositoryName() << ActionStr << Colors.f_Default()
+									<< Colors.f_ToPush() << HeadHash << Colors.f_Default()
+									<< Colors.f_ToPush() << ConfigHash << Colors.f_Default()
 								)
 							;
 							bPassException = true;

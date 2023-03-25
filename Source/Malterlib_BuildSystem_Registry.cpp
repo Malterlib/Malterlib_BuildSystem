@@ -248,7 +248,7 @@ namespace NMib::NContainer
 		else if (pParse[0] == '#')
 		{
 			pParse += 1;
- 			fParsePrefixOperator(gc_ConstString_Symbol_PragmaPrefix);
+			fParsePrefixOperator(gc_ConstString_Symbol_PragmaPrefix);
 		}
 		else
 			o_Key = NBuildSystem::CBuildSystemSyntax::CRootKey::fs_FromJSON(o_ParseContext.m_StringCache, CEJSONSorted::fs_FromJSON(fParseValue()), _Location);
@@ -259,9 +259,9 @@ namespace NMib::NContainer
 	template <>
 	NBuildSystem::CBuildSystemSyntax::CRootValue TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_Parse<CBuildSystemRegistryParseContext>
 		(
-		 	ch8 const * &o_pParse
-		 	, CBuildSystemRegistryParseContext &o_ParseContext
-		 	, bool &o_bWasEscaped
+			ch8 const * &o_pParse
+			, CBuildSystemRegistryParseContext &o_ParseContext
+			, bool &o_bWasEscaped
 		)
 	{
 		o_bWasEscaped = false;

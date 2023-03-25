@@ -20,7 +20,7 @@
 	GenerateFile
 	{
 		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
-		Contents 	`Generate File Contents:\n`\
+		Contents	`Generate File Contents:\n`\
 					`@('Testing " 123'->ToString())\n`\
 					`@('Testing " 123'->EJSONToString())\n`\
 					`@('Testing " 123'->EJSONToString(""))\n`\

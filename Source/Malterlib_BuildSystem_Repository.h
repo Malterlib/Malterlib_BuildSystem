@@ -194,11 +194,11 @@ namespace NMib::NBuildSystem::NRepository
 		;
 		TCFuture<void> f_Launch
 			(
-			 	CRepository const &_Repo
-			 	, TCVector<CStr> const &_Params
-			 	, TCFunctionMovable<CStr (CProcessLaunchActor::CSimpleLaunchResult const &_Result)> &&_fHandleResult
-			 	, CStr const &_Prefix = {}
-			 	, TCMap<CStr, CStr> const &_Environment = {}
+				CRepository const &_Repo
+				, TCVector<CStr> const &_Params
+				, TCFunctionMovable<CStr (CProcessLaunchActor::CSimpleLaunchResult const &_Result)> &&_fHandleResult
+				, CStr const &_Prefix = {}
+				, TCMap<CStr, CStr> const &_Environment = {}
 				, CStr const &_Application = "git"
 			) const
 		;

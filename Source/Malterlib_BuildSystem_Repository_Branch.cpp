@@ -139,10 +139,10 @@ namespace NMib::NBuildSystem
 
 	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_CleanupBranches
 		(
-		 	CGenerateOptions const &_GenerateOptions
-		 	, CRepoFilter const &_Filter
-		 	, ERepoCleanupBranchesFlag _Flags
-		 	, TCVector<CStr> const &_Branches
+			CGenerateOptions const &_GenerateOptions
+			, CRepoFilter const &_Filter
+			, ERepoCleanupBranchesFlag _Flags
+			, TCVector<CStr> const &_Branches
 		)
 	{
 		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
@@ -390,10 +390,10 @@ namespace NMib::NBuildSystem
 
 	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_CleanupTags
 		(
-		 	CGenerateOptions const &_GenerateOptions
-		 	, CRepoFilter const &_Filter
-		 	, ERepoCleanupTagsFlag _Flags
-		 	, TCVector<CStr> const &_Tags
+			CGenerateOptions const &_GenerateOptions
+			, CRepoFilter const &_Filter
+			, ERepoCleanupTagsFlag _Flags
+			, TCVector<CStr> const &_Tags
 		)
 	{
 		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);

@@ -814,7 +814,7 @@ namespace NMib::NBuildSystem
 
 			TCVector<CReplaceContents> ReplaceContents;
 			{
- 				for (auto &Replace : CacheReplaceContents.f_Array())
+				for (auto &Replace : CacheReplaceContents.f_Array())
 				{
 					ReplaceContents.f_Insert
 						(
@@ -841,7 +841,7 @@ namespace NMib::NBuildSystem
 
 			TCVector<CDuplicateLine> DuplicateLines;
 			{
- 				for (auto &Replace : CacheDuplicateLines.f_Array())
+				for (auto &Replace : CacheDuplicateLines.f_Array())
 				{
 					DuplicateLines.f_Insert
 						(

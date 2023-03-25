@@ -62,8 +62,8 @@ namespace NMib::NContainer
 			, CBuildSystemSyntax::CRootValue>::CJSONParseContext
 		>
 		(
-		 	CStr &o_Key
-		 	, uch8 const *&o_pParse
+			CStr &o_Key
+			, uch8 const *&o_pParse
 		)
 	{
 		auto pParse = o_pParse;

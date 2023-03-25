@@ -71,7 +71,7 @@
 	GenerateFile
 	{
 		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
-		Contents 	`Generate File Contents:\n`\
+		Contents	`Generate File Contents:\n`\
 					`@(CalcValue<Test>)\n`\
 					`@(CalcValue<TestOptional.InnerValue>)\n`\
 					`@(CalcValue<TestOptional><InnerValue>)\n`\

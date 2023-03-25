@@ -148,7 +148,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			(
 				{
 					{CPropertyKey(_BuildSystem.f_StringCache(), EPropertyType_Compile, gc_ConstString_XInternalPrecompiledHeaderOutputFile), DMibBuildSystemTypeWithPosition(g_String)}
- 					, {CPropertyKey(_BuildSystem.f_StringCache(), EPropertyType_Builtin, gc_ConstString_VisualStudioRoot), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(_BuildSystem.f_StringCache(), EPropertyType_Builtin, gc_ConstString_VisualStudioRoot), DMibBuildSystemTypeWithPosition(g_String)}
 				}
 			)
 		;
@@ -180,7 +180,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			if (auto *pCachedEnvironment = m_CachedBuildEnvironment.f_FindEqual(_Architecture))
 				return *pCachedEnvironment;
 		}
- 		CStr VisualStudioRoot = f_GetVisualStudioRoot().f_String();
+		CStr VisualStudioRoot = f_GetVisualStudioRoot().f_String();
 
 		CStr VCVarsDirectory;
 

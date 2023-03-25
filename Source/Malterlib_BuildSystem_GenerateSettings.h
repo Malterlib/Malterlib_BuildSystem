@@ -7,8 +7,8 @@ namespace NMib::NBuildSystem
 {
 	enum EGenerationFlag // : uint32
 	{
-		EGenerationFlag_None 				= 0
-		, EGenerationFlag_AbsoluteFilePaths 	= DMibBit(0)
+		EGenerationFlag_None					= 0
+		, EGenerationFlag_AbsoluteFilePaths		= DMibBit(0)
 		, EGenerationFlag_SingleThreaded		= DMibBit(1)
 		, EGenerationFlag_UseCachedEnvironment	= DMibBit(2)
 		, EGenerationFlag_DisableUserSettings	= DMibBit(3)

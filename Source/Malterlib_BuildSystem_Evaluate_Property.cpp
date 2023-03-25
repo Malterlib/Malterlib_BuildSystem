@@ -56,7 +56,7 @@ namespace NMib::NBuildSystem
 			, CPropertyKeyReference const &_PropertyKey
 			, CBuildSystemPropertyInfo &o_PropertyInfo
 			, CEvaluatedProperties *_pEvaluatedProperties
- 		) const
+		) const
 	{
 		CEvaluationContext EvalContext(_pEvaluatedProperties ? _pEvaluatedProperties : &_Entity.m_EvaluatedProperties);
 		return fp_EvaluateEntityProperty(_Entity, _Entity, _PropertyKey, EvalContext, o_PropertyInfo, o_PropertyInfo.f_FallbackPosition(), nullptr, false);

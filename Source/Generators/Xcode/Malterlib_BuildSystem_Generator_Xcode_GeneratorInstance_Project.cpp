@@ -145,7 +145,7 @@ namespace NMib::NBuildSystem::NXcode
 
 				auto &PreBuildScript = NativeTarget.m_BuildScripts[gc_ConstString_PreBuildScript.m_String];
 				PreBuildScript.m_Inputs.f_Insert(LibraryPath);
-				PreBuildScript.m_Script += 	R"-----(
+				PreBuildScript.m_Script +=	R"-----(
 if [ -e "{0}" ]; then
 	MTool CopyWriteTimeIfNewer "{1}" "{0}"
 fi
@@ -685,7 +685,7 @@ fi
 							).m_Value.f_Get().f_String()
 						;
 
- 						auto InputsJson = fp_GetConfigValue(File.m_EnabledConfigs, Configuration, gc_ConstKey_Compile_Custom_Inputs, EEJSONType_Array, false);
+						auto InputsJson = fp_GetConfigValue(File.m_EnabledConfigs, Configuration, gc_ConstKey_Compile_Custom_Inputs, EEJSONType_Array, false);
 						auto &InputsJsonRef = InputsJson.m_Value.f_Get();
 						if (!InputsJsonRef.f_IsStringArray())
 							m_BuildSystem.fs_ThrowError(CustomCommandLine.m_Positions, "You need to Custom_Inputs as a string array");
@@ -694,7 +694,7 @@ fi
 						for (auto &Input : InputsJsonRef.f_Array())
 							Inputs.f_Insert(fReplaceVariables(Input.f_String()));
 
- 						auto OutputsJson = fp_GetConfigValue(File.m_EnabledConfigs, Configuration, gc_ConstKey_Compile_Custom_Outputs, EEJSONType_Array, false);
+						auto OutputsJson = fp_GetConfigValue(File.m_EnabledConfigs, Configuration, gc_ConstKey_Compile_Custom_Outputs, EEJSONType_Array, false);
 						auto &OutputsJsonRef = OutputsJson.m_Value.f_Get();
 						if (!OutputsJsonRef.f_IsStringArray())
 							m_BuildSystem.fs_ThrowError(CustomCommandLine.m_Positions, "You need to Custom_Outputs as a string array");

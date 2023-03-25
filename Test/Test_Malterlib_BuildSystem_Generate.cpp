@@ -342,7 +342,7 @@ namespace
 						, {"Other message contributing values", {}, 2, true}
 						, {"Type", {BuildSystemFile, 1, 26, 13}, 3}
 						, {"Parent contexts", {}, 1, true}
-						, {"Context", {BuildSystemFile, 1, 60, 13}, 2}
+						, {"Context", {BuildSystemFile, 1, 60, 12}, 2}
 						, {"Parent context contributing values", {}, 2, true}
 						, 
 						{
@@ -387,9 +387,9 @@ namespace
 				CStr BuildSystemFile = TempDirectory / "Test.MBuildSystem";
 				TCVector<CParseError> ExpectedParseErrors = 
 					{
-						{"error: No such function: Property.TestFunction", {BuildSystemFile, 1, 32, 13}, 0}
+						{"error: No such function: Property.TestFunction", {BuildSystemFile, 1, 32, 12}, 0}
 						, {"Contributing values", {}, 1, true}
-						, {"Contributing to value", {BuildSystemFile, 1, 32, 13}, 2}
+						, {"Contributing to value", {BuildSystemFile, 1, 32, 12}, 2}
 						, {"Context contributing values", {}, 1, true}
 						, 
 						{
@@ -421,9 +421,9 @@ namespace
 #endif
 				TCVector<CParseError> ExpectedParseErrors = 
 					{
-						{"error: Could not find user type of name 'CTest'", {BuildSystemFile, 1, 40, 13}, 0}
+						{"error: Could not find user type of name 'CTest'", {BuildSystemFile, 1, 40, 12}, 0}
 						, {"Contributing values", {}, 1, true}
-						, {"Contributing to value", {BuildSystemFile, 1, 40, 13}, 2}
+						, {"Contributing to value", {BuildSystemFile, 1, 40, 12}, 2}
 						, {"Context contributing values", {}, 1, true}
 						, 
 						{
@@ -449,7 +449,7 @@ namespace
 							, 2
 						}
 						, {"Parent contexts", {}, 1, true}
-						, {"Context", {BuildSystemFile, 1, 40, 13}, 2}
+						, {"Context", {BuildSystemFile, 1, 40, 12}, 2}
 						, {"Entity and parents", {}, 2, true}
 						, {"Path=Root->GenerateFile:TestFile", {BuildSystemFile, 1, 29, 15}, 3}
 					}

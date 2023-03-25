@@ -62,7 +62,7 @@ namespace NMib::NBuildSystem
 				BuildSystem.f_SetEnablePositions();
 
 			auto RetryResult = co_await _fCommand(BuildSystem).f_Wrap();
- 			if (!RetryResult)
+			if (!RetryResult)
 			{
 				if (RetryResult.f_HasExceptionType<NStr::CExceptionParse>() && !BuildSystem.f_EnablePositions() && _GenerateOptions.m_DetailedPositions == EDetailedPositions_OnDemand)
 				{

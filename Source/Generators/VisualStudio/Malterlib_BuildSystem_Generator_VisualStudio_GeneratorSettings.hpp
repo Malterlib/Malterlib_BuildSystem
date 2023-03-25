@@ -459,7 +459,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 										DMibNeverGetHere; // not supported for compile
 									else
 									{
- 										Value = Value.f_Replace(gc_ConstString_Symbol_Inherit.m_String, (CFStr128::CFormat("%({}.{})") << _Setting.m_Name << _Setting.m_Key).f_GetStr());
+										Value = Value.f_Replace(gc_ConstString_Symbol_Inherit.m_String, (CFStr128::CFormat("%({}.{})") << _Setting.m_Name << _Setting.m_Key).f_GetStr());
 										auto *pGroup = _XMLState.m_ItemDefinitionGroups.f_FindEqual(_Setting.m_Name);
 										if (pGroup)
 											pParentElement = *pGroup;

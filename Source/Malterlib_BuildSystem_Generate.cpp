@@ -185,7 +185,7 @@ namespace NMib::NBuildSystem
 						mp_Environment[EnvVar.f_Name()] = EnvVar.f_Value().f_String();
 				}
 				catch (NException::CException const &_Exception)
-			 	{
+				{
 					DMibError("Failed to parse Environment.json: {}"_f << _Exception);
 				}
 			}
@@ -446,9 +446,9 @@ namespace NMib::NBuildSystem
 
 		o_Retry = co_await CBuildSystem::fp_GeneratePrepare
 			(
-			 	_GenerateOptions
-			 	, GenerateState
-			 	, [&]() -> TCFuture<bool>
+				_GenerateOptions
+				, GenerateState
+				, [&]() -> TCFuture<bool>
 				{
 					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
 

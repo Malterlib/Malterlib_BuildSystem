@@ -16,7 +16,7 @@ namespace NMib::NBuildSystem
 		, EPropertyFlag_TraceEval = DMibBit(0)
 		, EPropertyFlag_TraceEvalSuccess = DMibBit(1)
 		, EPropertyFlag_TraceCondition = DMibBit(2)
- 		, EPropertyFlag_NeedPerFile = DMibBit(3)
+		, EPropertyFlag_NeedPerFile = DMibBit(3)
 	};
 
 	struct CPropertyKey;

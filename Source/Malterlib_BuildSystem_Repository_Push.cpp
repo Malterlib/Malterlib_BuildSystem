@@ -23,7 +23,7 @@ namespace NMib::NBuildSystem
 				(
 					_Repo
 					, FetchParams
-				 	, fg_FetchEnvironment(_BuildSystem)
+					, fg_FetchEnvironment(_BuildSystem)
 				)
 				> Promise / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
 				{
@@ -143,10 +143,10 @@ namespace NMib::NBuildSystem
 
 	TCFuture<CBuildSystem::ERetry> DMibWorkaroundUBSanSectionErrors CBuildSystem::f_Action_Repository_Push
 		(
-		 	CGenerateOptions const &_GenerateOptions
-		 	, CRepoFilter const &_Filter
-		 	, TCVector<CStr> const &_Remotes
-		 	, ERepoPushFlag _PushFlags
+			CGenerateOptions const &_GenerateOptions
+			, CRepoFilter const &_Filter
+			, TCVector<CStr> const &_Remotes
+			, ERepoPushFlag _PushFlags
 		)
 	{
 		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);

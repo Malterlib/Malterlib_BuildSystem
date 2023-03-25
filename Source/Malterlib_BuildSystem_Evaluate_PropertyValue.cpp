@@ -403,7 +403,7 @@ namespace NMib::NBuildSystem
 		Identifier.m_PropertyType = Property.f_GetType();
 		Identifier.m_Name = Property.f_GetStringAndHash();
 
- 		auto *pTypeWithPosition = fp_GetTypeForProperty(_Context, Property.f_Reference());
+		auto *pTypeWithPosition = fp_GetTypeForProperty(_Context, Property.f_Reference());
 
 		if (!pTypeWithPosition)
 			fs_ThrowError(_Context, "Found no type for {}"_f << Property);
@@ -1972,7 +1972,7 @@ namespace NMib::NBuildSystem
 			return fp_EvaluatePropertyValueParam(_Context, _Value.m_Expression.f_GetAsType<CBuildSystemSyntax::CParam>());
 		else if (_Value.m_Expression.f_IsOfType<TCIndirection<CBuildSystemSyntax::CJSONAccessor>>())
 			return fp_EvaluatePropertyValueJSONAccessor(_Context, _Value.m_Expression.f_GetAsType<TCIndirection<CBuildSystemSyntax::CJSONAccessor>>().f_Get());
- 		else
+		else
 			DMibNeverGetHere;
 
 		return CEJSONSorted();

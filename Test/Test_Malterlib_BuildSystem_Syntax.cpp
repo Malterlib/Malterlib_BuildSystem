@@ -372,7 +372,7 @@ namespace
 
 		void f_TestExpression()
 		{
- 			{
+			{
 				DMibTestPath("Identifier");
 				auto const &Value = fs_ParseString("Test").m_Value.m_Value;
 				DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CExpression>());
@@ -384,7 +384,7 @@ namespace
 				DMibAssertTrue(Identifier.f_IsNameConstantString());
 				DMibExpect(Identifier.f_NameConstantString(), ==, "Test");
 			}
- 			{
+			{
 				DMibTestPath("IdentifierSpecific");
 				auto const &Value = fs_ParseString("Workspace:Target.Test").m_Value.m_Value;
 				DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CExpression>());
@@ -398,9 +398,9 @@ namespace
 				DMibExpect(Identifier.m_EntityType, ==, EEntityType_Workspace);
 				DMibExpect(Identifier.m_PropertyType, ==, EPropertyType_Target);
 			}
- 			{
+			{
 				DMibTestPath("IdentifierAccessor");
- 				auto const &Value = fs_ParseString("Workspace:Target.Test<@(DynamicProp).ArrayProp[2].Prop2[SubscriptProp]>").m_Value.m_Value;
+				auto const &Value = fs_ParseString("Workspace:Target.Test<@(DynamicProp).ArrayProp[2].Prop2[SubscriptProp]>").m_Value.m_Value;
 				DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CExpression>());
 				auto &Expression = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
 
@@ -425,7 +425,7 @@ namespace
 				DMibExpectTrue(JSONAccessor.m_Accessors[4].m_Accessor.f_IsOfType<CBuildSystemSyntax::CJSONSubscript>());
 				DMibAssertTrue(JSONAccessor.m_Accessors[4].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJSONSubscript>().m_Index.f_IsOfType<CBuildSystemSyntax::CExpression>());
 			}
-  			{
+			{
 				DMibTestPath("IdentifierArrayAccessor");
 				auto const &Value = fs_ParseString("Workspace:Target.Test<[0]>").m_Value.m_Value;
 				DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CExpression>());
@@ -614,7 +614,7 @@ namespace
 				DMibAssertTrue(EvalStringTokens[0].m_Token.f_IsOfType<NStr::CStr>());
 				DMibExpect(EvalStringTokens[0].m_Token.f_GetAsType<NStr::CStr>(), ==, "Test");
 			}
- 			{
+			{
 				DMibTestPath("Identifier");
 				auto const &Value = fs_ParseString("Test->Func()").m_Value.m_Value;
 				DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CExpression>());
@@ -629,7 +629,7 @@ namespace
 				auto &Identifier = Param.f_GetAsType<TCIndirection<CBuildSystemSyntax::CIdentifier>>().f_Get();
 				DMibExpect(Identifier.f_NameConstantString(), ==, "Test");
 			}
- 			{
+			{
 				DMibTestPath("IdentifierSpecific");
 				auto const &Value = fs_ParseString("Workspace:Target.Test->Func()").m_Value.m_Value;
 				DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CExpression>());
@@ -646,7 +646,7 @@ namespace
 				DMibExpect(Identifier.m_EntityType, ==, EEntityType_Workspace);
 				DMibExpect(Identifier.m_PropertyType, ==, EPropertyType_Target);
 			}
- 			{
+			{
 				DMibTestPath("IdentifierAccessor");
 				auto const &Value = fs_ParseString("Workspace:Target.Test<@(DynamicProp).ArrayProp[2].Prop2[SubscriptProp]>->Func()").m_Value.m_Value;
 				DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CExpression>());
@@ -681,13 +681,13 @@ namespace
 				DMibExpectTrue(JSONAccessor.m_Accessors[4].m_Accessor.f_IsOfType<CBuildSystemSyntax::CJSONSubscript>());
 				DMibAssertTrue(JSONAccessor.m_Accessors[4].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJSONSubscript>().m_Index.f_IsOfType<CBuildSystemSyntax::CExpression>());
 			}
- 			{
+			{
 				DMibTestPath("PostFunctionAccessor");
 				auto const &Value = fs_ParseString("Workspace:Target.Test->Func()<@(DynamicProp).ArrayProp[2].Prop2[SubscriptProp]>").m_Value.m_Value;
 				DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CExpression>());
 
 				auto &JSONAccessorExpression = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
- 				DMibAssertTrue(JSONAccessorExpression.f_IsOfType<NStorage::TCIndirection<CBuildSystemSyntax::CJSONAccessor>>());
+				DMibAssertTrue(JSONAccessorExpression.f_IsOfType<NStorage::TCIndirection<CBuildSystemSyntax::CJSONAccessor>>());
 				auto &JSONAccessor = JSONAccessorExpression.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CJSONAccessor>>().f_Get();
 
 				DMibAssertTrue(JSONAccessor.m_Param.m_Param.f_IsOfType<NStorage::TCIndirection<CBuildSystemSyntax::CExpression>>());
@@ -718,13 +718,13 @@ namespace
 				DMibExpectTrue(JSONAccessor.m_Accessors[4].m_Accessor.f_IsOfType<CBuildSystemSyntax::CJSONSubscript>());
 				DMibAssertTrue(JSONAccessor.m_Accessors[4].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJSONSubscript>().m_Index.f_IsOfType<CBuildSystemSyntax::CExpression>());
 			}
- 			{
+			{
 				DMibTestPath("FunctionAccessor");
 				auto const &Value = fs_ParseString("Func(5)<@(DynamicProp).ArrayProp[2].Prop2[SubscriptProp]>").m_Value.m_Value;
 				DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CExpression>());
 
 				auto &JSONAccessorExpression = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
- 				DMibAssertTrue(JSONAccessorExpression.f_IsOfType<NStorage::TCIndirection<CBuildSystemSyntax::CJSONAccessor>>());
+				DMibAssertTrue(JSONAccessorExpression.f_IsOfType<NStorage::TCIndirection<CBuildSystemSyntax::CJSONAccessor>>());
 				auto &JSONAccessor = JSONAccessorExpression.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CJSONAccessor>>().f_Get();
 
 				DMibAssertTrue(JSONAccessor.m_Param.m_Param.f_IsOfType<NStorage::TCIndirection<CBuildSystemSyntax::CExpression>>());
@@ -739,7 +739,7 @@ namespace
 
 				auto &Param = FunctionCall.m_Params[0].m_Param;
 
- 				DMibAssertTrue(Param.f_IsOfType<CEJSONSorted>());
+				DMibAssertTrue(Param.f_IsOfType<CEJSONSorted>());
 				auto &Constant = Param.f_GetAsType<CEJSONSorted>();
 				DMibExpect(Constant, ==, CEJSONSorted(5));
 
@@ -797,7 +797,7 @@ namespace
 				DMibAssertTrue(Param.f_IsOfType<CBuildSystemSyntax::CWildcardString>());
 				auto &String = Param.f_GetAsType<CBuildSystemSyntax::CWildcardString>().m_String;
 				DMibAssertTrue(String.f_IsOfType<NStr::CStr>());
-  				DMibExpect(String.f_GetAsType<NStr::CStr>(), ==, "Test");
+				DMibExpect(String.f_GetAsType<NStr::CStr>(), ==, "Test");
 			}
 			{
 				DMibTestPath("WildcardStringEval");
@@ -1615,7 +1615,7 @@ namespace
 			DMibTestSuite("Date")
 			{
 				f_TestDate();
- 			};
+			};
 			DMibTestSuite("DateMinute")
 			{
 				f_TestDateMinute();

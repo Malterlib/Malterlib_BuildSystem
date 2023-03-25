@@ -29,7 +29,7 @@ namespace NMib::NBuildSystem
 
 	CBuildSystemSyntax::CKeyLogicalOperator CBuildSystemSyntax::CKeyLogicalOperator::fs_FromJSON(NEncoding::CEJSONSorted const &_JSON, CFilePosition const &_Position)
 	{
- 		auto &UserType = _JSON.f_UserType();
+		auto &UserType = _JSON.f_UserType();
 		DMibRequire(UserType.m_Type == gc_ConstString_BuildSystemToken.m_String);
 
 		auto &Value = UserType.m_Value;
@@ -63,7 +63,7 @@ namespace NMib::NBuildSystem
 
 	auto CBuildSystemSyntax::CKeyPrefixOperator::fs_TypeFromJSON(NEncoding::CEJSONSorted const &_JSON, CFilePosition const &_Position) -> EOperator
 	{
- 		auto &UserType = _JSON.f_UserType();
+		auto &UserType = _JSON.f_UserType();
 		DMibRequire(UserType.m_Type == gc_ConstString_BuildSystemToken.m_String);
 
 		auto &Value = UserType.m_Value;
@@ -163,7 +163,7 @@ namespace NMib::NBuildSystem
 			, CFilePosition const &_Position
 		)
 	{
- 		auto &UserType = _JSON.f_UserType();
+		auto &UserType = _JSON.f_UserType();
 		DMibRequire(UserType.m_Type == gc_ConstString_BuildSystemToken.m_String);
 
 		CBuildSystemSyntax::CKeyPrefixOperator OutputOperator;
@@ -364,7 +364,7 @@ namespace NMib::NBuildSystem
 				return CParam{_JSON};
 		}
 
- 		auto &UserType = _JSON.f_UserType();
+		auto &UserType = _JSON.f_UserType();
 		DMibRequire(UserType.m_Type == gc_ConstString_BuildSystemToken.m_String);
 
 		auto &Value = UserType.m_Value;

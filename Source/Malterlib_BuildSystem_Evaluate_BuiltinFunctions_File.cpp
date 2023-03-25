@@ -67,7 +67,7 @@ namespace NMib::NBuildSystem
 				{
 					{
 						gc_ConstString_GeneratedFiles
- 						, CBuiltinFunction
+						, CBuiltinFunction
 						{
 							fg_FunctionType(g_StringArray, fg_FunctionParam(g_String, gc_ConstString__Wildcard))
 							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
@@ -183,7 +183,7 @@ namespace NMib::NBuildSystem
 						{
 							FindFunctionType
 							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
- 							{
+							{
 								return _This.fp_BuiltinFunction_FindFiles(_Context, fg_Move(_Params), EFindFilesFunctionType_File);
 							}
 							, DMibBuildSystemFilePosition

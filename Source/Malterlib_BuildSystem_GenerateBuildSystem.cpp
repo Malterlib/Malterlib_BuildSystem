@@ -933,7 +933,7 @@ namespace NMib::NBuildSystem
 						CStr Name = f_EvaluateEntityPropertyString(Entity, gc_ConstKey_Workspace_Name);
 
 						auto &Workspace = **ConfigData.m_Workspaces(Name, fg_Construct());
- 						auto &EntityName = Entity.f_GetKeyName();
+						auto &EntityName = Entity.f_GetKeyName();
 
 						if (Workspace.m_EntityName.f_IsEmpty())
 							Workspace.m_EntityName = EntityName;

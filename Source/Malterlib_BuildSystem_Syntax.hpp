@@ -234,7 +234,7 @@ namespace NMib::NBuildSystem
 
 	template <typename tf_CStr>
 	void CBuildSystemSyntax::CJSONAccessor::f_Format(tf_CStr &o_Str) const
- 	{
+	{
 		o_Str += typename tf_CStr::CFormat("{}") << m_Param;
 		fs_FormatAccessors(o_Str, m_Accessors);
 	}

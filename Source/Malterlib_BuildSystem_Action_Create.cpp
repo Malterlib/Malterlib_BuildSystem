@@ -41,10 +41,10 @@ namespace NMib::NBuildSystem
 				{
 					_BuildSystem.fs_ThrowError
 						(
-						 	ChildEntityData.m_Position
-						 	, "Create template with name '{}' already exists"_f << Name
-						  	, TCVector<CBuildSystemError>
-						 	{
+							ChildEntityData.m_Position
+							, "Create template with name '{}' already exists"_f << Name
+							, TCVector<CBuildSystemError>
+							{
 								CBuildSystemError
 								{
 									CBuildSystemUniquePositions((*Mapped).m_Position, "Create template")

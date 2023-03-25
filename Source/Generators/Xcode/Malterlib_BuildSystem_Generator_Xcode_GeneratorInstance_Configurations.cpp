@@ -271,8 +271,8 @@ namespace NMib::NBuildSystem
 					{
 						m_BuildSystem.fs_ThrowError
 							(
-							 	Dependency.m_Position
-							 	, "Dependency project does not have required configuration {} - {}"_f << Configuration.m_Platform << Configuration.m_Configuration
+								Dependency.m_Position
+								, "Dependency project does not have required configuration {} - {}"_f << Configuration.m_Platform << Configuration.m_Configuration
 							)
 						;
 					}
@@ -801,11 +801,11 @@ namespace NMib::NBuildSystem
 		void CGeneratorInstance::fp_GenerateBuildConfigurationFile
 			(
 				CProjectState &_ProjectState
-			 	, CProject& _Project
-			 	, CConfiguration const &_Configuration
-			 	, CStr const &_OutputFile
-			 	, CStr const &_OutputDir
-			 	, CNativeTarget const &_NativeTarget
+				, CProject& _Project
+				, CConfiguration const &_Configuration
+				, CStr const &_OutputFile
+				, CStr const &_OutputDir
+				, CNativeTarget const &_NativeTarget
 			) const
 		{
 			CStr FileData;

@@ -45,7 +45,7 @@ namespace NMib::NBuildSystem::NRepository
 
 	CGitLaunches::COwner::~COwner()
 	{
- 		auto &State = *m_pState;
+		auto &State = *m_pState;
 		if (State.m_CheckAbortTimer)
 			fg_Exchange(State.m_CheckAbortTimer, nullptr)->f_Destroy() > fg_DiscardResult();
 	}
@@ -585,11 +585,11 @@ namespace NMib::NBuildSystem::NRepository
 
 	TCFuture<void> CGitLaunches::f_Launch
 		(
-		 	CRepository const &_Repo
-		 	, TCVector<CStr> const &_Params
-		 	, TCFunctionMovable<CStr (CProcessLaunchActor::CSimpleLaunchResult const &_Result)> &&_fHandleResult
-		 	, CStr const &_Prefix
-		 	, TCMap<CStr, CStr> const &_Environment
+			CRepository const &_Repo
+			, TCVector<CStr> const &_Params
+			, TCFunctionMovable<CStr (CProcessLaunchActor::CSimpleLaunchResult const &_Result)> &&_fHandleResult
+			, CStr const &_Prefix
+			, TCMap<CStr, CStr> const &_Environment
 			, CStr const &_Application
 		) const
 	{

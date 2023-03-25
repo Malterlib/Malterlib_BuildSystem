@@ -214,7 +214,7 @@ namespace NMib::NBuildSystem
 								(
 									Key.m_Type == EEntityType_Target
 									|| Key.m_Type == EEntityType_Group
-		 							|| Key.m_Type == EEntityType_Import
+									|| Key.m_Type == EEntityType_Import
 								)
 							{
 								fExpandDependency(Child);
@@ -324,7 +324,7 @@ namespace NMib::NBuildSystem
 						(
 							Key.m_Type == EEntityType_Target
 							|| Key.m_Type == EEntityType_Group
- 							|| Key.m_Type == EEntityType_Import
+							|| Key.m_Type == EEntityType_Import
 						)
 					{
 						fExpandGroup(Child);
@@ -366,7 +366,7 @@ namespace NMib::NBuildSystem
 						(
 							Key.m_Type == EEntityType_Target
 							|| Key.m_Type == EEntityType_Group
- 							|| Key.m_Type == EEntityType_Import
+							|| Key.m_Type == EEntityType_Import
 						)
 					{
 						fExpandFile(Child);
@@ -450,7 +450,7 @@ namespace NMib::NBuildSystem
 					if
 						(
 							Key.m_Type == EEntityType_Group
- 							|| Key.m_Type == EEntityType_Import
+							|| Key.m_Type == EEntityType_Import
 						)
 					{
 						fExpandEntities(Child);
@@ -618,7 +618,7 @@ namespace NMib::NBuildSystem
 						if (bWildcardSearch)
 						{
 							TCSet<CStr> Exclude;
- 							TCVector<CStr> ExcludedFiles = f_EvaluateEntityPropertyStringArray(_Entity, gc_ConstKey_ExcludeFiles, TCVector<CStr>());
+							TCVector<CStr> ExcludedFiles = f_EvaluateEntityPropertyStringArray(_Entity, gc_ConstKey_ExcludeFiles, TCVector<CStr>());
 
 							for (auto &Exclude : ExcludedFiles)
 							{

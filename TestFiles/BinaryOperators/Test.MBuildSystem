@@ -24,7 +24,7 @@
 		Value3: float = 6.0
 		Value4: [string]?
 		TestValueString: string = `@((Value1 / Value2)->EJSONToString(""))`
- 		TestValue: float = Value1 / Value2 + Value3
+		TestValue: float = Value1 / Value2 + Value3
 		TestValue2: float = Value1 / Value2 + 7.0
 		TestValue3: string = "Path0" / "Path1"
 		TestValue4: float = Value1 + 5.0 / Value2
@@ -61,18 +61,18 @@
 		TestValue35: string = "" ?? Error("Should Not Eval")
 		TestValue36: bool = true ?? Error("Should Not Eval")
 		TestValue37: bool = false ?? Error("Should Not Eval")
- 		TestValue38: string = null ?? "Null"
+		TestValue38: string = null ?? "Null"
 		TestValue39: string = undefined ?? "Undefined"
 		TestValue40: string = ("" ?? Error("Should Not Eval"))
 		TestValue41: bool = (true ?? Error("Should Not Eval"))
 		TestValue42: bool = (false ?? Error("Should Not Eval"))
- 		TestValue43: string = (null ?? "Null")
+		TestValue43: string = (null ?? "Null")
 		TestValue44: string = (undefined ?? "Undefined")
 	}
 	GenerateFile
 	{
 		Name BuildSystemOutputDir / "TestGenerateFile.txt"
-		Contents 	`Generate File Contents:\n`\
+		Contents	`Generate File Contents:\n`\
 					`@(TestValueString)\n`\
 					`@(TestValue->EJSONToString(""))\n`\
 					`@(TestValue2->EJSONToString(""))\n`\

@@ -279,13 +279,13 @@ namespace NMib::NBuildSystem::NXcode
 
 	auto CGeneratorInstance::fp_GetConfigValue
 		(
-		 	TCMap<CConfiguration, CEntityMutablePointer> const &_Configs
-		 	, CConfiguration const &_Configuration
-		 	, CPropertyKeyReference const &_PropertyKey
+			TCMap<CConfiguration, CEntityMutablePointer> const &_Configs
+			, CConfiguration const &_Configuration
+			, CPropertyKeyReference const &_PropertyKey
 			, EEJSONType _ExpectedType
 			, bool _bOptional
 		) const
-	 	-> CSingleValue
+		-> CSingleValue
 	{
 		auto pEntity = _Configs.f_FindEqual(_Configuration);
 		if (!pEntity)

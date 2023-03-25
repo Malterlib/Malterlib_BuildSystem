@@ -52,8 +52,8 @@ namespace NMib::NBuildSystem
 			o_Deleted[&_Entity];
 			_Entity.f_ForEachChild
 				(
-				 	[&](CEntity *_pChild)
-				 	{
+					[&](CEntity *_pChild)
+					{
 						o_Deleted[_pChild];
 					}
 				)

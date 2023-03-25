@@ -367,7 +367,7 @@ namespace NMib::NBuildSystem
 			}
 		}
 
- 		for (auto *pParent = _DestinationEntity.m_pParent; pParent; pParent = pParent->m_pParent)
+		for (auto *pParent = _DestinationEntity.m_pParent; pParent; pParent = pParent->m_pParent)
 		{
 			if (auto pExistingType = pParent->f_Data().m_VariableDefinitions.f_FindEqual(_VariableName))
 			{
@@ -414,7 +414,7 @@ namespace NMib::NBuildSystem
 			auto &Type = Value.m_Value.m_Value.f_GetAsType<CBuildSystemSyntax::CDefine>().m_Type;
 
 			fs_AddEntityUserType(o_Entity, _VariableName.m_Name, Type, _Registry, pConditions, DebugFlags);
- 		}
+		}
 		else if (Value.m_Value.m_Value.f_IsOfType<CBuildSystemSyntax::CDefine>())
 		{
 			TCSharedPointer<CCondition> pConditions;
@@ -473,7 +473,7 @@ namespace NMib::NBuildSystem
 
 		for (auto iReg = _Registry.f_GetChildIterator(); iReg; ++iReg)
 		{
- 			CBuildSystemRegistry &Registry = *iReg;
+			CBuildSystemRegistry &Registry = *iReg;
 			if (CCondition::fs_TryParseCondition(Registry, *pDestinationCondition))
 			{
 				if (!o_pConditions)
@@ -566,7 +566,7 @@ namespace NMib::NBuildSystem
 			EntityData.m_HasFullEval |= 1 << _PropertyKey.f_GetType();
 	}
 
- 	void CBuildSystem::fp_ParseProperty
+	void CBuildSystem::fp_ParseProperty
 		(
 			CEntity &o_Entity
 			, CBuildSystemSyntax::CIdentifier const &_Identifier

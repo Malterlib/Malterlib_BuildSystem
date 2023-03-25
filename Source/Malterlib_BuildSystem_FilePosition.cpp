@@ -98,7 +98,7 @@ namespace NMib::NBuildSystem
 		CBuildSystemUniquePositions Return;
 
 		for (auto &Position : _Value.f_Array())
-		 	Return.f_AddPosition(CFilePosition::fs_FromJSON(Position), Position[gc_ConstString_Identifier].f_String(), Position[gc_ConstString_Message].f_String());
+			Return.f_AddPosition(CFilePosition::fs_FromJSON(Position), Position[gc_ConstString_Identifier].f_String(), Position[gc_ConstString_Message].f_String());
 
 		return Return;
 	}
@@ -109,7 +109,7 @@ namespace NMib::NBuildSystem
 
 		for (auto &Position : _Value.f_Array())
 		{
-		 	Return.f_AddPosition
+			Return.f_AddPosition
 				(
 					CFilePosition::fs_FromJSON(fg_Move(Position))
 					, fg_Move(Position[gc_ConstString_Identifier].f_String())

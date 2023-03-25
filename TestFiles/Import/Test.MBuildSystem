@@ -29,7 +29,7 @@ Import "Import.MHeader"
 	GenerateFile
 	{
 		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
-		Contents 	`Generate File Contents:\n`\
+		Contents	`Generate File Contents:\n`\
 					`@(ImportString)`
 		Executable false
 		UnixLineEnds true

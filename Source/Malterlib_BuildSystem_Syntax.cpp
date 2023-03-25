@@ -115,7 +115,7 @@ namespace NMib::NBuildSystem
 		return m_Value.f_GetAsType<CExpression>();
 	}
 
- 	auto CBuildSystemSyntax::CValue::fs_FromJSONToken
+	auto CBuildSystemSyntax::CValue::fs_FromJSONToken
 		(
 			CStringCache &o_StringCache
 			, NEncoding::CEJSONSorted const &_Token
@@ -194,7 +194,7 @@ namespace NMib::NBuildSystem
 			if (!Token.f_IsObject())
 				CBuildSystem::fs_ThrowError(_Position, "Token is not object");
 
-  			auto pType = Token.f_GetMember(gc_ConstString_Type, EJSONType_String);
+			auto pType = Token.f_GetMember(gc_ConstString_Type, EJSONType_String);
 			if (!pType)
 				CBuildSystem::fs_ThrowError(_Position, "Token does not have valid Type member");
 
@@ -213,7 +213,7 @@ namespace NMib::NBuildSystem
 	}
 
 	CEJSONSorted CBuildSystemSyntax::CRootValue::f_ToJSON() const
- 	{
+	{
 		if (!m_Accessors.f_IsEmpty())
 		{
 			CEJSONSorted Return;
@@ -235,7 +235,7 @@ namespace NMib::NBuildSystem
 	}
 
 	auto CBuildSystemSyntax::CRootValue::fs_FromJSON(CStringCache &o_StringCache, NEncoding::CEJSONSorted const &_JSON, CFilePosition const &_Position, bool _bAppendAllowed) -> CRootValue
- 	{
+	{
 		CRootValue Return;
 
 		if (!_JSON.f_IsUserType())
@@ -293,7 +293,7 @@ namespace NMib::NBuildSystem
 	}
 
 	auto CBuildSystemSyntax::CRootKey::fs_FromJSON(CStringCache &o_StringCache, NEncoding::CEJSONSorted const &_JSON, CFilePosition const &_Position) -> CRootKey
- 	{
+	{
 		CRootKey Return;
 
 		if (!_JSON.f_IsUserType())

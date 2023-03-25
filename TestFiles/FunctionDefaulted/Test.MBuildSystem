@@ -102,7 +102,7 @@
 	GenerateFile
 	{
 		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
-		Contents 	`Generate File Contents:\n`\
+		Contents	`Generate File Contents:\n`\
 					`@(CalcValue("Test 1")->ToString())\n`\
 					`@(CalcValue2("Test 1")->ToString())\n`\
 					`@(CalcValue3("Test 1")->ToString())\n`\

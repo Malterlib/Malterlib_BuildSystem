@@ -460,7 +460,7 @@ namespace NMib::NBuildSystem
 								, fg_FunctionParam(g_String, gc_ConstString__EntityName)
 								, fg_FunctionParam(fg_Optional(g_ObjectWithAny), gc_ConstString__Properties, g_Optional)
 							)
- 							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
 							{
 								return _This.fp_BuiltinFunction_GetProperty(_Context, fg_Move(_Params), EBuiltinFunctionGetProperty_HasProperty, &_Context);
 							}
@@ -488,7 +488,7 @@ namespace NMib::NBuildSystem
 							fg_FunctionType(g_Boolean, fg_FunctionParam(g_String, gc_ConstString__EntityType))
 							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
 							{
- 								auto &EntityTypeStr = _Params[0].f_String();
+								auto &EntityTypeStr = _Params[0].f_String();
 
 								EEntityType EntityType = fg_EntityTypeFromStr(EntityTypeStr);
 								if (EntityType == EEntityType_Invalid)

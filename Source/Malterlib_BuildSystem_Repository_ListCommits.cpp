@@ -37,16 +37,16 @@ namespace NMib::NBuildSystem
 
 	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_ListCommits
 		(
-		 	CGenerateOptions const &_GenerateOptions
-		 	, CRepoFilter const &_Filter
-		 	, CStr const &_From
-		 	, CStr const &_To
-		 	, ERepoListCommitsFlag _Flags
-		 	, TCVector<CWildcardColumn> const &_WildcardColumns
-		 	, CStr const &_Prefix
-		 	, uint32 _MaxCommitsMainRepo
-		 	, uint32 _MaxCommits
-		 	, uint32 _MaxMessageWidth
+			CGenerateOptions const &_GenerateOptions
+			, CRepoFilter const &_Filter
+			, CStr const &_From
+			, CStr const &_To
+			, ERepoListCommitsFlag _Flags
+			, TCVector<CWildcardColumn> const &_WildcardColumns
+			, CStr const &_Prefix
+			, uint32 _MaxCommitsMainRepo
+			, uint32 _MaxCommits
+			, uint32 _MaxMessageWidth
 			, NStorage::TCSharedPointer<CCommandLineControl> const &_pCommandLine
 		)
 	{

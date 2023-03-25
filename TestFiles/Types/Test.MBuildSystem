@@ -42,7 +42,7 @@ Type
 	GenerateFile
 	{
 		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
-		Contents 	`Generate File Contents:\n`\
+		Contents	`Generate File Contents:\n`\
 					`@(CalcValue)\n`\
 					`@(CalcValueUserType->ToString())\n`\
 					`@(CalcValueUserTypeOneOf->ToString())\n`

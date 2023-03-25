@@ -48,7 +48,7 @@
 	GenerateFile
 	{
 		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
-		Contents 	`Generate File Contents:\n`\
+		Contents	`Generate File Contents:\n`\
 					`@(TestValue1)\n`\
 					`@(TestValue2)\n`\
 					`@(TestValue3)\n`\
