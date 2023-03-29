@@ -627,7 +627,7 @@ namespace NMib::NBuildSystem
 						;
 					}
 
-					auto Results = co_await BranchResults.f_GetResults() | g_Unwrap;
+					auto Results = co_await (co_await BranchResults.f_GetResults() | g_Unwrap);
 					bool bActionNeeded = false;
 					for (auto &bActionNeededResult : Results)
 						bActionNeeded = bActionNeeded || bActionNeededResult;
@@ -645,7 +645,7 @@ namespace NMib::NBuildSystem
 			;
 		}
 
-		auto Results = co_await RepoResults.f_GetResults() | g_Unwrap;
+		auto Results = co_await (co_await RepoResults.f_GetResults() | g_Unwrap);
 
 		TCMap<mint, TCVector<CRepository>> EditorsToLaunch;
 		bool bActionNeeded = false;
@@ -691,7 +691,7 @@ namespace NMib::NBuildSystem
 					;
 
 				}
-				co_await EditorLaunchResults.f_GetResults() | g_Unwrap;
+				co_await (co_await EditorLaunchResults.f_GetResults() | g_Unwrap);
 			}
 		}
 

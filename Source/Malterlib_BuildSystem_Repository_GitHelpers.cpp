@@ -671,8 +671,8 @@ namespace NMib::NBuildSystem::NRepository
 
 					co_await _BuildSystem.f_CheckCancelled();
 
-					fg_Move(FetchResult) | g_Unwrap;
-					(fg_Move(RemoteHeadResults) | g_Unwrap) | g_Unwrap;
+					co_await (fg_Move(FetchResult) | g_Unwrap);
+					co_await ((co_await (fg_Move(RemoteHeadResults) | g_Unwrap)) | g_Unwrap);
 
 					TCActorResultVector<void> SetHeadResults;
 
@@ -694,7 +694,7 @@ namespace NMib::NBuildSystem::NRepository
 						}
 					}
 
-					co_await SetHeadResults.f_GetResults() | g_Unwrap;
+					co_await (co_await SetHeadResults.f_GetResults() | g_Unwrap);
 
 					co_return {};
 				}
@@ -702,7 +702,7 @@ namespace NMib::NBuildSystem::NRepository
 			;
 		}
 
-		co_await Results.f_GetResults() | g_Unwrap;
+		co_await (co_await Results.f_GetResults() | g_Unwrap);
 
 		co_return {};
 	}

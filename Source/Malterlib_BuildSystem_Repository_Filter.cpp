@@ -86,7 +86,7 @@ namespace NMib::NBuildSystem::NRepository
 			++iStage;
 		}
 
-		auto SyncedResults = co_await DeferredResultsOrdered.f_GetResults() | g_Unwrap;
+		auto SyncedResults = co_await (co_await DeferredResultsOrdered.f_GetResults() | g_Unwrap);
 
 		for (auto &Repos : SyncedResults)
 		{

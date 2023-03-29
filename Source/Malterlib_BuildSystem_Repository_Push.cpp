@@ -63,7 +63,7 @@ namespace NMib::NBuildSystem
 				;
 			}
 
-			auto CanPushResults = co_await CanPushResultsMap.f_GetResults() | g_Unwrap;
+			auto CanPushResults = co_await (co_await CanPushResultsMap.f_GetResults() | g_Unwrap);
 
 			TCSet<CStr> NewPush;
 			bool bAllFastForward = true;
@@ -128,7 +128,7 @@ namespace NMib::NBuildSystem
 			for (auto &Remote : _Remotes)
 				fg_GetLogEntries(_Launches, _Repo, "{}/{}"_f << Remote << _Branches.m_Current, _Branches.m_Current, false) > NeedPushResults.f_AddResult(Remote);
 
-			auto ResultsUnwrapped = co_await NeedPushResults.f_GetResults() | g_Unwrap;
+			auto ResultsUnwrapped = co_await (co_await NeedPushResults.f_GetResults() | g_Unwrap);
 
 			TCSet<CStr> NeedPush;
 			for (auto &Commits : ResultsUnwrapped)
@@ -273,7 +273,7 @@ namespace NMib::NBuildSystem
 								Launches.f_Launch(Repo, Params, fg_LogAllFunctor()) > PushResults.f_AddResult();
 						}
 
-						co_await PushResults.f_GetResults() | g_Unwrap;
+						co_await (co_await PushResults.f_GetResults() | g_Unwrap);
 
 						co_return true;
 					}
@@ -282,7 +282,7 @@ namespace NMib::NBuildSystem
 			}
 
 			bool bDidPush = false;
-			for (auto ResultsUnwrapped = co_await Results.f_GetResults() | g_Unwrap; auto &bResult : ResultsUnwrapped)
+			for (auto ResultsUnwrapped = co_await (co_await Results.f_GetResults() | g_Unwrap); auto &bResult : ResultsUnwrapped)
 				bDidPush = bDidPush || bResult;
 
 			if (bDidPush)

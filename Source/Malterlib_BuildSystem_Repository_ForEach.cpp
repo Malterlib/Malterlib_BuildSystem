@@ -56,7 +56,7 @@ namespace NMib::NBuildSystem
 			LaunchResults.f_Insert(co_await Results.f_GetResults());
 		}
 
-		fg_Move(LaunchResults) | g_Unwrap;
+		co_await (fg_Move(LaunchResults) | g_Unwrap);
 
 		co_return ERetry_None;
 	}
@@ -107,7 +107,7 @@ namespace NMib::NBuildSystem
 			LaunchResults.f_Insert(co_await Results.f_GetResults());
 		}
 
-		fg_Move(LaunchResults) | g_Unwrap;
+		co_await (fg_Move(LaunchResults) | g_Unwrap);
 
 		co_return ERetry_None;
 	}

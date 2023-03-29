@@ -20,7 +20,9 @@ namespace NMib::NBuildSystem
 			for (auto &Value : _Container)
 				_fFunctor(Value) > Results.f_AddResult();
 
-			fg_UnwrapFirst(co_await Results.f_GetResults());
+			auto Result = fg_UnwrapFirst(co_await Results.f_GetResults());
+			if (!Result)
+				co_return fg_Move(Result).f_GetException();
 
 			co_return {};
 		}
@@ -59,7 +61,9 @@ namespace NMib::NBuildSystem
 				iValue = 0;
 		}
 
-		fg_UnwrapFirst(co_await Results.f_GetResults());
+		auto Result = fg_UnwrapFirst(co_await Results.f_GetResults());
+		if (!Result)
+			co_return fg_Move(Result).f_GetException();
 
 		co_return {};
 	}

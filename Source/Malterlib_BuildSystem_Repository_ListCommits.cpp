@@ -287,8 +287,8 @@ namespace NMib::NBuildSystem
 			fg_GetLogEntriesFull(Launches, *pRepository, *pEndCommit, *pStartCommit) > ReverseCommitsResults.f_AddResult(Location);
 		}
 
-		auto LogEntriesPerRepo = co_await CommitsResults.f_GetResults() | g_Unwrap;
-		auto ReverseLogEntriesPerRepo = co_await ReverseCommitsResults.f_GetResults() | g_Unwrap;
+		auto LogEntriesPerRepo = co_await (co_await CommitsResults.f_GetResults() | g_Unwrap);
+		auto ReverseLogEntriesPerRepo = co_await (co_await ReverseCommitsResults.f_GetResults() | g_Unwrap);
 
 		struct CWildcardColumn
 		{

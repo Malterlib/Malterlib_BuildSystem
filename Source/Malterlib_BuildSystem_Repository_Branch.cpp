@@ -66,7 +66,7 @@ namespace NMib::NBuildSystem
 				break;
 		}
 
-		fg_Move(LaunchResults) | g_Unwrap;
+		co_await (fg_Move(LaunchResults) | g_Unwrap);
 
 		co_await f_CheckCancelled();
 
@@ -131,7 +131,7 @@ namespace NMib::NBuildSystem
 				break;
 		}
 
-		fg_Move(LaunchResults) | g_Unwrap;
+		co_await (fg_Move(LaunchResults) | g_Unwrap);
 		co_await f_CheckCancelled();
 
 		co_return ERetry_None;
@@ -382,7 +382,7 @@ namespace NMib::NBuildSystem
 			Promise.f_MoveFuture() > LaunchResults.f_AddResult();
 		}
 
-		co_await LaunchResults.f_GetResults() | g_Unwrap;
+		co_await (co_await LaunchResults.f_GetResults() | g_Unwrap);
 		co_await f_CheckCancelled();
 
 		co_return ERetry_None;
@@ -655,7 +655,7 @@ namespace NMib::NBuildSystem
 			Promise.f_MoveFuture() > LaunchResults.f_AddResult();
 		}
 
-		co_await LaunchResults.f_GetResults() | g_Unwrap;
+		co_await (co_await LaunchResults.f_GetResults() | g_Unwrap);
 		co_await f_CheckCancelled();
 
 		co_return ERetry_None;
