@@ -34,7 +34,7 @@ namespace NMib::NBuildSystem
 
 		TCFuture<void> f_Generate(CBuildSystem const *_pBuildSystem, CBuildSystemData const *_pBuildSystemData, CStr _OutputDir, TCMap<CStr, uint32> &o_NumWorkspaceTargets) override
 		{
-			co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+			co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 			CClock Clock;
 			Clock.f_Start();
@@ -178,7 +178,7 @@ namespace NMib::NBuildSystem
 					SortedWorkspaces
 					, [&](TCUniquePointer<CSolution> &_pSolution) -> TCFuture<void>
 					{
-						co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+						co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 						co_await BuildSystem.f_CheckCancelled();
 
 						CAnsiEncoding Encoding(BuildSystem.f_AnsiFlags());
@@ -210,7 +210,7 @@ namespace NMib::NBuildSystem
 									InfosToProcess
 									, [&](CGenerateWorkspaceInfo &_WorkspaceInfo) -> TCFuture<void>
 									{
-										co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+										co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 										co_await BuildSystem.f_CheckCancelled();
 
 										auto Start = Timer.f_GetTime();

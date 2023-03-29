@@ -12,7 +12,7 @@ namespace NMib::NBuildSystem
 
 	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Branch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, CStr const &_Branch, ERepoBranchFlag _Flags)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 		CGenerateEphemeralState GenerateState;
 		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
@@ -75,7 +75,7 @@ namespace NMib::NBuildSystem
 
 	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Unbranch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoBranchFlag _Flags)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 		CGenerateEphemeralState GenerateState;
 		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
@@ -145,7 +145,7 @@ namespace NMib::NBuildSystem
 			, TCVector<CStr> const &_Branches
 		)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 		CGenerateEphemeralState GenerateState;
 		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
@@ -396,7 +396,7 @@ namespace NMib::NBuildSystem
 			, TCVector<CStr> const &_Tags
 		)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 		
 		CGenerateEphemeralState GenerateState;
 		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)

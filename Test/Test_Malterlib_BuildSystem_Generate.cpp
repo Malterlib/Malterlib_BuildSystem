@@ -146,26 +146,26 @@ namespace
 				(
 					g_Dispatch / [&]() -> TCFuture<void>
 					{
-						co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+						co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 						Retry = co_await CBuildSystem::fs_RunBuildSystem
-						(
-							[&](NBuildSystem::CBuildSystem &_BuildSystem) -> TCFuture<CBuildSystem::ERetry>
-							{
-								co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+							(
+								[&](NBuildSystem::CBuildSystem &_BuildSystem) -> TCFuture<CBuildSystem::ERetry>
+								{
+									co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
-								CBuildSystem::ERetry Retry = CBuildSystem::ERetry_None;
-								if (co_await _BuildSystem.f_Action_Generate(GenerateOptions, Retry))
-									bChanged = true;
-								co_return Retry;
-							}
-							, pCommandLineControl
-							, [](CStr const &_Output, bool _bError)
-							{
-							}
-							, GenerateOptions
-						)
-					;
+									CBuildSystem::ERetry Retry = CBuildSystem::ERetry_None;
+									if (co_await _BuildSystem.f_Action_Generate(GenerateOptions, Retry))
+										bChanged = true;
+									co_return Retry;
+								}
+								, pCommandLineControl
+								, [](CStr const &_Output, bool _bError)
+								{
+								}
+								, GenerateOptions
+							)
+						;
 
 						co_return {};
 					}

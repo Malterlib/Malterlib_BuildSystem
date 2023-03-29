@@ -9,7 +9,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 {
 	auto CGeneratorInstance::f_GenerateProjectFile_Dependency(CProject &_Project, CProjectState &_ProjectState) const -> TCFuture<void>
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 		for (auto &Dependency : _Project.m_Dependencies)
 		{
@@ -23,7 +23,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 				_Project.m_EnabledProjectConfigs
 				, [&](auto &_ProjectEntity) -> TCFuture<void>
 				{
-					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 					co_await m_BuildSystem.f_CheckCancelled();
 
 					auto &Config = _Project.m_EnabledProjectConfigs.fs_GetKey(_ProjectEntity);

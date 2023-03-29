@@ -15,7 +15,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			, TCMap<CStr, CCompileType> const &_CompileTypes
 		) const
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 		TCMap<CStr, CGeneratorSettings> CompileTypeSettings;
 		for (auto &CompileType : _CompileTypes)
@@ -38,7 +38,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 				_Project.m_EnabledProjectConfigs
 				, [&](auto &_pEntity) -> TCFuture<void>
 				{
-					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 					co_await m_BuildSystem.f_CheckCancelled();
 
 					auto &Configuration = _Project.m_EnabledProjectConfigs.fs_GetKey(_pEntity);

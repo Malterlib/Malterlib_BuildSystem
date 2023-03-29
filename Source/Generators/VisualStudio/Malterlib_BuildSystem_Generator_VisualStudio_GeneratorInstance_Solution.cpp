@@ -8,7 +8,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 {
 	TCFuture<void> CGeneratorInstance::f_GenerateSolutionFile(CSolution &_Solution, CStr const &_OutputDir) const
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 		for (auto &Project : _Solution.m_Projects)
 		{

@@ -577,7 +577,7 @@ namespace NMib::NBuildSystem::NRepository
 
 	TCFuture<void> DMibWorkaroundUBSanSectionErrors fg_UpdateRemotes(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 		CGitLaunches Launches
 			{
@@ -709,7 +709,7 @@ namespace NMib::NBuildSystem::NRepository
 
 	TCFuture<CGitVersion> DMibWorkaroundUBSanSectionErrors fg_GetGitVersion(CGitLaunches &_Launches)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 		static CGitVersion GitVersion;
 		static constinit CLowLevelLockAggregate Lock;

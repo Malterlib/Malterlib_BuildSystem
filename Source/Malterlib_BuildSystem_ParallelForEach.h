@@ -8,7 +8,7 @@ namespace NMib::NBuildSystem
 	template <typename tf_CContainer, typename tf_CFunctor>
 	NConcurrency::TCFuture<void> DMibWorkaroundUBSanSectionErrorsDisable fg_ParallelForEach(tf_CContainer &&_Container, tf_CFunctor &&_fFunctor, bool _bSingleThreaded)
 	{
-		co_await (NConcurrency::ECoroutineFlag_AllowReferences | NConcurrency::ECoroutineFlag_CaptureExceptions);
+		co_await (NConcurrency::ECoroutineFlag_AllowReferences | NConcurrency::ECoroutineFlag_CaptureMalterlibExceptions);
 
 		if (_Container.f_IsEmpty())
 			co_return {};

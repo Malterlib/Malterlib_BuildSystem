@@ -15,7 +15,7 @@ namespace NMib::NBuildSystem::NRepository
 			, EFilterRepoFlag _Flags
 		)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 		CGitLaunches Launches{_BuildSystem.f_GetBaseDir(), "Filtering repos", _BuildSystem.f_AnsiFlags(), _BuildSystem.f_OutputConsoleFunctor(), _BuildSystem.f_GetCancelledPointer()};
 		auto DestroyLaunchs = co_await co_await Launches.f_Init();

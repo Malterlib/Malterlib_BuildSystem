@@ -16,7 +16,7 @@ namespace NMib::NBuildSystem::NXcode
 			, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable
 		) const
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 		CProjectState ProjectState;
 
@@ -335,7 +335,7 @@ fi
 
 	TCFuture<void> CGeneratorInstance::fp_EvaluateFileTypeCompileFlags(CProjectState &_ProjectState, CProject &_Project) const
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 		for (auto Iter = _ProjectState.m_EvaluatedTypesInUse.f_GetIterator(); Iter; ++Iter)
 		{
@@ -379,7 +379,7 @@ fi
 					Results
 					, [&](CConfigResultCompile &o_Result) -> TCFuture<void>
 					{
-						co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+						co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 						co_await m_BuildSystem.f_CheckCancelled();
 
 						auto &Config = TCMap<CConfiguration, CConfigResultCompile>::fs_GetKey(o_Result);
@@ -448,7 +448,7 @@ fi
 
 	TCFuture<void> CGeneratorInstance::fp_EvaluateFiles(CProjectState &_ProjectState, CProject &_Project) const
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 		for (auto &File : _Project.m_Files)
 		{
@@ -461,7 +461,7 @@ fi
 				_Project.m_EnabledProjectConfigs
 				, [&](auto &_ProjectEntity) -> TCFuture<void>
 				{
-					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 					co_await m_BuildSystem.f_CheckCancelled();
 
 					auto &Config = _Project.m_EnabledProjectConfigs.fs_GetKey(_ProjectEntity);

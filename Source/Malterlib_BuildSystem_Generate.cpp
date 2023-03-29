@@ -90,7 +90,7 @@ namespace NMib::NBuildSystem
 			, TCFunction<TCFuture<bool> ()> &&_fPreParse
 		)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 		auto &GenerateSettings = _GenerateOptions.m_Settings;
 
@@ -384,46 +384,54 @@ namespace NMib::NBuildSystem
 
 			if (pFistError)
 			{
-				try
-				{
-					if (!bTryParsed)
-					{
-						try
+				auto Result = co_await fg_CallSafe
+					(
+						[&]() -> TCFuture<ERetry>
 						{
-							fp_ParseData(mp_Data.m_RootEntity, mp_Registry, &mp_Data.m_ConfigurationTypes);
-						}
-						catch ([[maybe_unused]] CException const &_Exception2)
-						{
-							f_OutputConsole
-								(
-									"{}Error trying to parse data to handle repositories (will try anyway):{}\n{}\n\n"_f
-									<< Colors.f_StatusWarning()
-									<< Colors.f_Default()
-									<< _Exception2.f_GetErrorStr().f_Indent(DMibPFileLineFormatIndent)
-									, true
-								)
-							;
-						}
-					}
+							co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+							if (!bTryParsed)
+							{
+								try
+								{
+									fp_ParseData(mp_Data.m_RootEntity, mp_Registry, &mp_Data.m_ConfigurationTypes);
+								}
+								catch ([[maybe_unused]] CException const &_Exception2)
+								{
+									f_OutputConsole
+										(
+											"{}Error trying to parse data to handle repositories (will try anyway):{}\n{}\n\n"_f
+											<< Colors.f_StatusWarning()
+											<< Colors.f_Default()
+											<< _Exception2.f_GetErrorStr().f_Indent(DMibPFileLineFormatIndent)
+											, true
+										)
+									;
+								}
+							}
 
-					if (auto Retry = co_await fp_HandleRepositories(_GenerateState.m_GeneratorValues))
-						co_return Retry;
-					else
-						co_return pFistError;
-				}
-				catch ([[maybe_unused]] CException const &_Exception2)
+							if (auto Retry = co_await fp_HandleRepositories(_GenerateState.m_GeneratorValues))
+								co_return Retry;
+							else
+								co_return pFistError;
+						}
+					)
+					.f_Wrap()
+				;
+				if (!Result)
 				{
 					f_OutputConsole
 						(
 							"{}Error trying to handle repositories as fallback:{}\n{}\n\n"_f
-							<<  Colors.f_StatusWarning()
+							<< Colors.f_StatusWarning()
 							<< Colors.f_Default()
-							<< _Exception2.f_GetErrorStr().f_Indent(DMibPFileLineFormatIndent)
+							<< Result.f_GetExceptionStr().f_Indent(DMibPFileLineFormatIndent)
 							, true
 						)
 					;
 					co_return pFistError;
 				}
+				else
+					co_return *Result;
 			}
 
 			if (auto Retry = co_await fp_HandleRepositories(_GenerateState.m_GeneratorValues))
@@ -435,7 +443,7 @@ namespace NMib::NBuildSystem
 
 	TCFuture<bool> CBuildSystem::f_Action_Generate(CGenerateOptions const &_GenerateOptions, ERetry &o_Retry)
 	{
-		co_await (ECoroutineFlag_CaptureExceptions | ECoroutineFlag_AllowReferences);
+		co_await (ECoroutineFlag_CaptureMalterlibExceptions | ECoroutineFlag_AllowReferences);
 
 		if (_GenerateOptions.m_Settings.m_Action == "Clean")
 			co_return false; // For now we don't support clean
@@ -450,7 +458,7 @@ namespace NMib::NBuildSystem
 				, GenerateState
 				, [&]() -> TCFuture<bool>
 				{
-					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 					co_await f_CheckCancelled();
 
@@ -581,7 +589,7 @@ namespace NMib::NBuildSystem
 										ToProcess
 										, [&](auto &&_fToProcess) -> TCFuture<void>
 										{
-											co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+											co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 											_fToProcess();
 

@@ -372,7 +372,7 @@ namespace NMib::NBuildSystem
 				, mint _MaxRepoWidth
 			)
 		{
-			co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+			co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 			CColors Colors(o_StateHandler.f_AnsiFlags());
 
@@ -388,7 +388,7 @@ namespace NMib::NBuildSystem
 
 			auto fLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir, TCMap<CStr, CStr> const &_Environment = {}) -> TCFuture<CStr>
 				{
-					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 					TCVector<CStr> CommandLineParams{"-C", _WorkingDir};
 					CommandLineParams.f_Insert(_Params);
@@ -399,7 +399,7 @@ namespace NMib::NBuildSystem
 			;
 			auto fLaunchGitQuestion = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir, bool _bErrorOnStdErr) -> TCFuture<bool>
 				{
-					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 					auto Return = co_await _Launches.f_Launch(_WorkingDir, _Params);
 
@@ -412,7 +412,7 @@ namespace NMib::NBuildSystem
 			;
 			auto fLaunchGitNonEmpty = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir) -> TCFuture<bool>
 				{
-					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 					auto Return = co_await _Launches.f_Launch(_WorkingDir, _Params);
 
@@ -424,7 +424,7 @@ namespace NMib::NBuildSystem
 			;
 			auto fTryLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir) -> TCFuture<CStr>
 				{
-					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 					auto Return = co_await _Launches.f_Launch(_WorkingDir, _Params);
 
@@ -491,51 +491,56 @@ namespace NMib::NBuildSystem
 				CStr GitRoot = fg_GetGitRoot(Location);
 				if (GitRoot.f_IsEmpty() || !_Repo.m_bSubmodule)
 				{
-					try
-					{
-						co_await fLaunchGit({"clone", "-n", _Repo.m_URL, Location}, "");
+					auto Result = co_await fg_CallSafe
+						(
+							[&]() -> TCFuture<void>
+							{
+								co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
-						TCVector<CStr> Params = {"checkout", "-B", _Repo.m_DefaultBranch};
+								co_await fLaunchGit({"clone", "-n", _Repo.m_URL, Location}, "");
 
-						if (!ConfigHash.f_IsEmpty())
-							Params.f_Insert(ConfigHash);
+								TCVector<CStr> Params = {"checkout", "-B", _Repo.m_DefaultBranch};
 
-						co_await fLaunchGit(Params, Location);
+								if (!ConfigHash.f_IsEmpty())
+									Params.f_Insert(ConfigHash);
 
-						bChanged = true;
+								co_await fLaunchGit(Params, Location);
 
-						co_await fLaunchGit({"branch", "-u", "origin/{}"_f << _Repo.m_DefaultBranch}, Location);
+								bChanged = true;
 
-						if (_Repo.m_bUpdateSubmodules)
-							co_await fLaunchGit({"submodule", "update", "--init"}, Location);
-					}
-					catch (CExceptionCoroutineWrapper const &_Exception)
-					{
-						CBuildSystem::fs_ThrowError(_Repo.m_Position, fg_Format("Failed to clone repository: {}", fg_ExceptionString(_Exception.f_GetSpecific().m_pException)));
-					}
-					catch (CException const &_Exception)
-					{
-						CBuildSystem::fs_ThrowError(_Repo.m_Position, fg_Format("Failed to clone repository: {}", _Exception));
-					}
+								co_await fLaunchGit({"branch", "-u", "origin/{}"_f << _Repo.m_DefaultBranch}, Location);
+
+								if (_Repo.m_bUpdateSubmodules)
+									co_await fLaunchGit({"submodule", "update", "--init"}, Location);
+
+								co_return {};
+							}
+						)
+						.f_Wrap()
+					;
+					if (!Result)
+						CBuildSystem::fs_ThrowError(_Repo.m_Position, fg_Format("Failed to clone repository: {}", Result.f_GetExceptionStr()));
 				}
 				else
 				{
 					CStr RelativeLocation = CFile::fs_MakePathRelative(Location, GitRoot);
-					try
-					{
-						DLock(*g_SubmoduleAddLock); // Currently git has race issues with submodule adds
-						co_await fLaunchGit({"submodule", "add", "-b", _Repo.m_DefaultBranch, "--name", _Repo.m_SubmoduleName, _Repo.m_URL, RelativeLocation}, GitRoot);
-						co_await fLaunchGit({"config", "-f", ".gitmodules", fg_Format("submodule.{}.fetchRecurseSubmodules", _Repo.m_SubmoduleName), "on-demand"}, GitRoot);
-						bChanged = true;
-					}
-					catch (CExceptionCoroutineWrapper const &_Exception)
-					{
-						CBuildSystem::fs_ThrowError(_Repo.m_Position, fg_Format("Failed to add submodule repository: {}", fg_ExceptionString(_Exception.f_GetSpecific().m_pException)));
-					}
-					catch (CException const &_Exception)
-					{
-						CBuildSystem::fs_ThrowError(_Repo.m_Position, fg_Format("Failed to add submodule repository: {}", _Exception));
-					}
+					auto Result = co_await fg_CallSafe
+						(
+							[&]() -> TCFuture<void>
+							{
+								co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+								DLock(*g_SubmoduleAddLock); // Currently git has race issues with submodule adds
+								co_await fLaunchGit({"submodule", "add", "-b", _Repo.m_DefaultBranch, "--name", _Repo.m_SubmoduleName, _Repo.m_URL, RelativeLocation}, GitRoot);
+								co_await fLaunchGit({"config", "-f", ".gitmodules", fg_Format("submodule.{}.fetchRecurseSubmodules", _Repo.m_SubmoduleName), "on-demand"}, GitRoot);
+								bChanged = true;
+
+								co_return {};
+							}
+						)
+						.f_Wrap()
+					;
+					if (!Result)
+						CBuildSystem::fs_ThrowError(_Repo.m_Position, fg_Format("Failed to add submodule repository: {}", Result.f_GetExceptionStr()));
 				}
 			}
 			else if (!bIsRoot)
@@ -618,309 +623,301 @@ namespace NMib::NBuildSystem
 				)
 			{
 				bool bPassException = false;
-				try
-				{
-					if (HeadHash != ConfigHash)
-					{
-						if (!(co_await fLaunchGitQuestion({"cat-file", "-e", "{}^{{commit}"_f << ConfigHash}, Location, false)))
+				auto Result = co_await fg_CallSafe
+					(
+						[&]() -> TCFuture<void>
 						{
-							TCVector<CStr> FetchParams = {"fetch", "--all", "--prune", "--tags"};
-							if (_BuildSystem.f_GetGenerateOptions().m_bForceUpdateRemotes)
-								FetchParams.f_Insert("--force");
+							co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
-							auto GitVersion = co_await fg_GetGitVersion(_Launches);
-							if (bForceReset && GitVersion >= CGitVersion{2, 17})
-								FetchParams.f_Insert("--prune-tags");
-
-							CExceptionPointer pException;
-							CStr ExceptionString;
-							try
+							if (HeadHash != ConfigHash)
 							{
-								co_await fLaunchGit(FetchParams, Location, fg_FetchEnvironment(_BuildSystem));
-							}
-							catch (CExceptionCoroutineWrapper const &_Exception)
-							{
-								ExceptionString = fg_ExceptionString(_Exception.f_GetSpecific().m_pException);
-								pException = _Exception.f_GetSpecific().m_pException;
-							}
-							catch (CException const &_Exception)
-							{
-								ExceptionString = _Exception.f_GetErrorStr();
-								pException = NException::fg_CurrentException();
-							}
-
-							if (pException)
-							{
-								if (!co_await fLaunchGitQuestion({"cat-file", "-e", "{}^{{commit}"_f << ConfigHash}, Location, false))
-									std::rethrow_exception(pException);
-
-								fOutputInfo(EOutputType_Error, "Not all remotes were fetched: {}"_f << ExceptionString);
-							}
-						}
-					}
-
-					if (bForceReset)
-					{
-						if (HeadHash != ConfigHash || co_await fLaunchGitNonEmpty({"status", "--porcelain"}, Location))
-						{
-							fOutputInfo(EOutputType_Warning, "Force Resetting to '{}'"_f << ConfigHash);
-							co_await fLaunchGit({"checkout", "-f", "-B", _Repo.m_DefaultBranch, ConfigHash}, Location);
-							co_await fLaunchGit({"branch", "-u", "origin/{}"_f << _Repo.m_DefaultBranch}, Location);
-							co_await fLaunchGit({"clean", "-fd"}, Location);
-							if (_Repo.m_bUpdateSubmodules)
-								co_await fLaunchGit({"submodule", "update", "--init"}, Location);
-
-							// git remote set-head origin master
-							bChanged = true;
-						}
-					}
-					else
-					{
-						EHandleRepositoryAction RecommendedAction = EHandleRepositoryAction_None;
-
-						do
-						{
-							if (co_await fLaunchGitQuestion({"merge-base", "--is-ancestor", HeadHash, ConfigHash}, Location, true))
-							{
-								if (!(co_await fLaunchGit({"status", "--porcelain"}, Location)).f_IsEmpty())
-									RecommendedAction = EHandleRepositoryAction_Rebase;
-								else
-									RecommendedAction = EHandleRepositoryAction_Reset;
-								break;
-							}
-
-							if (co_await fLaunchGitQuestion({"merge-base", "--is-ancestor", ConfigHash, HeadHash}, Location, true))
-							{
-								RecommendedAction = EHandleRepositoryAction_None;
-								break;
-							}
-
-							if (!(co_await fLaunchGit({"status", "--porcelain"}, Location)).f_IsEmpty())
-							{
-								RecommendedAction = EHandleRepositoryAction_ManualResolve;
-								break;
-							}
-
-							bool bIsOnRemote = false;
-
-							if (co_await fLaunchGitNonEmpty({"branch", "-r", "--contains", HeadHash}, Location) || co_await fLaunchGitNonEmpty({"tag", "--contains", HeadHash}, Location))
-								bIsOnRemote = true;
-
-							if (bIsOnRemote)
-								RecommendedAction = EHandleRepositoryAction_Reset;
-							else
-								RecommendedAction = EHandleRepositoryAction_ManualResolve;
-
-							auto *pRepo = _AllRepositories.f_FindLargestLessThanEqual(_Repo.m_ConfigFile);
-							if (!pRepo || !_Repo.m_ConfigFile.f_StartsWith((*pRepo)->m_Location))
-							{
-								//fOutputInfo(EOutputType_Warning, "Could not find containing repo for config file '{}'"_f << _Repo.m_ConfigFile);
-								break;
-							}
-
-							auto &Repo = **pRepo;
-
-							CStr ConfigDir = CFile::fs_GetPath(_Repo.m_ConfigFile);
-
-							CStr RepoIdentifier = _Repo.f_GetIdentifierName(ConfigDir, BaseDir);
-
-							CStr History = co_await fLaunchGit({"log", "-p", "origin/{}"_f << Repo.m_DefaultBranch, "--", _Repo.m_ConfigFile}, Repo.m_Location);
-							CStr FilteredHistory;
-							CStr LookFor = "+{} "_f << RepoIdentifier;
-
-							bool bFoundConfig = false;
-							bool bFoundCurrent = false;
-
-							for (auto &Line : History.f_SplitLine())
-							{
-								if (!Line.f_StartsWith(LookFor))
-									continue;
-								CStr Commit = Line.f_Extract(LookFor.f_GetLen());
-								if (Commit == ConfigHash)
+								if (!(co_await fLaunchGitQuestion({"cat-file", "-e", "{}^{{commit}"_f << ConfigHash}, Location, false)))
 								{
-									if (bFoundCurrent)
+									TCVector<CStr> FetchParams = {"fetch", "--all", "--prune", "--tags"};
+									if (_BuildSystem.f_GetGenerateOptions().m_bForceUpdateRemotes)
+										FetchParams.f_Insert("--force");
+
+									auto GitVersion = co_await fg_GetGitVersion(_Launches);
+									if (bForceReset && GitVersion >= CGitVersion{2, 17})
+										FetchParams.f_Insert("--prune-tags");
+
+									auto Result = co_await fLaunchGit(FetchParams, Location, fg_FetchEnvironment(_BuildSystem)).f_Wrap();
+									if (!Result)
+									{
+										if (!co_await fLaunchGitQuestion({"cat-file", "-e", "{}^{{commit}"_f << ConfigHash}, Location, false))
+											co_return fg_Move(Result.f_GetException());
+
+										fOutputInfo(EOutputType_Error, "Not all remotes were fetched: {}"_f << Result.f_GetExceptionStr());
+									}
+								}
+							}
+
+							if (bForceReset)
+							{
+								if (HeadHash != ConfigHash || co_await fLaunchGitNonEmpty({"status", "--porcelain"}, Location))
+								{
+									fOutputInfo(EOutputType_Warning, "Force Resetting to '{}'"_f << ConfigHash);
+									co_await fLaunchGit({"checkout", "-f", "-B", _Repo.m_DefaultBranch, ConfigHash}, Location);
+									co_await fLaunchGit({"branch", "-u", "origin/{}"_f << _Repo.m_DefaultBranch}, Location);
+									co_await fLaunchGit({"clean", "-fd"}, Location);
+									if (_Repo.m_bUpdateSubmodules)
+										co_await fLaunchGit({"submodule", "update", "--init"}, Location);
+
+									// git remote set-head origin master
+									bChanged = true;
+								}
+							}
+							else
+							{
+								EHandleRepositoryAction RecommendedAction = EHandleRepositoryAction_None;
+
+								do
+								{
+									if (co_await fLaunchGitQuestion({"merge-base", "--is-ancestor", HeadHash, ConfigHash}, Location, true))
+									{
+										if (!(co_await fLaunchGit({"status", "--porcelain"}, Location)).f_IsEmpty())
+											RecommendedAction = EHandleRepositoryAction_Rebase;
+										else
+											RecommendedAction = EHandleRepositoryAction_Reset;
+										break;
+									}
+
+									if (co_await fLaunchGitQuestion({"merge-base", "--is-ancestor", ConfigHash, HeadHash}, Location, true))
 									{
 										RecommendedAction = EHandleRepositoryAction_None;
 										break;
 									}
-									bFoundConfig = true;
-								}
-								if (Commit == HeadHash)
-								{
-									if (bFoundConfig)
+
+									if (!(co_await fLaunchGit({"status", "--porcelain"}, Location)).f_IsEmpty())
 									{
-										RecommendedAction = EHandleRepositoryAction_Reset; // Our current commit is in origin history, it should be safe to do a reset
+										RecommendedAction = EHandleRepositoryAction_ManualResolve;
 										break;
 									}
-									bFoundCurrent = true;
+
+									bool bIsOnRemote = false;
+
+									if
+										(
+											co_await fLaunchGitNonEmpty({"branch", "-r", "--contains", HeadHash}, Location)
+											|| co_await fLaunchGitNonEmpty({"tag", "--contains", HeadHash}, Location)
+										)
+									{
+										bIsOnRemote = true;
+									}
+
+									if (bIsOnRemote)
+										RecommendedAction = EHandleRepositoryAction_Reset;
+									else
+										RecommendedAction = EHandleRepositoryAction_ManualResolve;
+
+									auto *pRepo = _AllRepositories.f_FindLargestLessThanEqual(_Repo.m_ConfigFile);
+									if (!pRepo || !_Repo.m_ConfigFile.f_StartsWith((*pRepo)->m_Location))
+									{
+										//fOutputInfo(EOutputType_Warning, "Could not find containing repo for config file '{}'"_f << _Repo.m_ConfigFile);
+										break;
+									}
+
+									auto &Repo = **pRepo;
+
+									CStr ConfigDir = CFile::fs_GetPath(_Repo.m_ConfigFile);
+
+									CStr RepoIdentifier = _Repo.f_GetIdentifierName(ConfigDir, BaseDir);
+
+									CStr History = co_await fLaunchGit({"log", "-p", "origin/{}"_f << Repo.m_DefaultBranch, "--", _Repo.m_ConfigFile}, Repo.m_Location);
+									CStr FilteredHistory;
+									CStr LookFor = "+{} "_f << RepoIdentifier;
+
+									bool bFoundConfig = false;
+									bool bFoundCurrent = false;
+
+									for (auto &Line : History.f_SplitLine())
+									{
+										if (!Line.f_StartsWith(LookFor))
+											continue;
+										CStr Commit = Line.f_Extract(LookFor.f_GetLen());
+										if (Commit == ConfigHash)
+										{
+											if (bFoundCurrent)
+											{
+												RecommendedAction = EHandleRepositoryAction_None;
+												break;
+											}
+											bFoundConfig = true;
+										}
+										if (Commit == HeadHash)
+										{
+											if (bFoundConfig)
+											{
+												RecommendedAction = EHandleRepositoryAction_Reset; // Our current commit is in origin history, it should be safe to do a reset
+												break;
+											}
+											bFoundCurrent = true;
+										}
+									}
 								}
-							}
-						}
-						while (false)
-							;
+								while (false)
+									;
 
-						EHandleRepositoryAction Action = EHandleRepositoryAction_None;
+								EHandleRepositoryAction Action = EHandleRepositoryAction_None;
 
-						if (_ReconcileAction == EHandleRepositoryAction_Auto)
-							Action = RecommendedAction;
-						else if (_ReconcileAction != EHandleRepositoryAction_None)
-							Action = _ReconcileAction;
+								if (_ReconcileAction == EHandleRepositoryAction_Auto)
+									Action = RecommendedAction;
+								else if (_ReconcileAction != EHandleRepositoryAction_None)
+									Action = _ReconcileAction;
 
-						if (Action == EHandleRepositoryAction_Reset)
-						{
-							if ((co_await fLaunchGit({"rev-parse", "--abbrev-ref", "HEAD"}, Location)).f_Trim() == "HEAD")
-							{
-								fOutputInfo(EOutputType_Warning, "Resetting to {} and recovering from detached head"_f << ConfigHash);
-								co_await fLaunchGit({"checkout", "-f", "-B", _Repo.m_DefaultBranch, ConfigHash}, Location); // Recover from detached head
-							}
-							else
-							{
-								fOutputInfo(EOutputType_Warning, "Resetting to {}"_f << ConfigHash);
-								co_await fLaunchGit({"reset", "--hard", ConfigHash}, Location);
-							}
-							if (_Repo.m_bUpdateSubmodules)
-								co_await fLaunchGit({"submodule", "update", "--init"}, Location);
-						}
-						else if (Action == EHandleRepositoryAction_Rebase)
-						{
-							fOutputInfo(EOutputType_Normal, "Rebasing on top of {}"_f << ConfigHash);
-
-							TCSet<CStr> AllConfigFiles;
-							for (auto &pRepository : _AllRepositories)
-								AllConfigFiles[pRepository->m_ConfigFile];
-
-							auto fResolveConflicts = [&](CStr const &_ConflictingFiles) -> TCFuture<bool>
+								if (Action == EHandleRepositoryAction_Reset)
 								{
-									co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+									if ((co_await fLaunchGit({"rev-parse", "--abbrev-ref", "HEAD"}, Location)).f_Trim() == "HEAD")
+									{
+										fOutputInfo(EOutputType_Warning, "Resetting to {} and recovering from detached head"_f << ConfigHash);
+										co_await fLaunchGit({"checkout", "-f", "-B", _Repo.m_DefaultBranch, ConfigHash}, Location); // Recover from detached head
+									}
+									else
+									{
+										fOutputInfo(EOutputType_Warning, "Resetting to {}"_f << ConfigHash);
+										co_await fLaunchGit({"reset", "--hard", ConfigHash}, Location);
+									}
+									if (_Repo.m_bUpdateSubmodules)
+										co_await fLaunchGit({"submodule", "update", "--init"}, Location);
+								}
+								else if (Action == EHandleRepositoryAction_Rebase)
+								{
+									fOutputInfo(EOutputType_Normal, "Rebasing on top of {}"_f << ConfigHash);
+
+									TCSet<CStr> AllConfigFiles;
+									for (auto &pRepository : _AllRepositories)
+										AllConfigFiles[pRepository->m_ConfigFile];
+
+									auto fResolveConflicts = [&](CStr const &_ConflictingFiles) -> TCFuture<bool>
+										{
+											co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+
+											bool bAllResolved = true;
+											for (auto &File : _ConflictingFiles.f_SplitLine<true>())
+											{
+												CStr FullPath = CFile::fs_AppendPath(_Repo.m_Location, File);
+
+												if (AllConfigFiles.f_FindEqual(FullPath))
+												{
+													fOutputInfo(EOutputType_Warning, "Ignoring conflict in config file '{}'"_f << File);
+													co_await fLaunchGit({"checkout", "--ours", "--", File}, Location);
+													co_await fLaunchGit({"add", File}, Location);
+												}
+												else
+													bAllResolved = false;
+											}
+											co_return bAllResolved;
+										}
+									;
 
 									bool bAllResolved = true;
-									for (auto &File : _ConflictingFiles.f_SplitLine<true>())
+									if (auto RebaseError = co_await fTryLaunchGit({"rebase", "--autostash", ConfigHash}, Location))
 									{
-										CStr FullPath = CFile::fs_AppendPath(_Repo.m_Location, File);
-
-										if (AllConfigFiles.f_FindEqual(FullPath))
+										while (bAllResolved)
 										{
-											fOutputInfo(EOutputType_Warning, "Ignoring conflict in config file '{}'"_f << File);
-											co_await fLaunchGit({"checkout", "--ours", "--", File}, Location);
-											co_await fLaunchGit({"add", File}, Location);
+											CStr ConflictingFiles = co_await fLaunchGit({"diff", "--name-only", "--diff-filter=U"}, Location);
+											if (ConflictingFiles.f_IsEmpty())
+											{
+												bAllResolved = false;
+												break;
+											}
+
+											if (!(co_await fResolveConflicts(ConflictingFiles)))
+												bAllResolved = false;
+
+											if (bAllResolved)
+											{
+												if ((co_await fLaunchGit({"status", "--porcelain"}, Location)).f_IsEmpty())
+												{
+													if (!(co_await fTryLaunchGit({"rebase", "--skip"}, Location)))
+														break;
+												}
+												else
+												{
+													if (!(co_await fTryLaunchGit({"rebase", "--continue"}, Location)))
+														break;
+												}
+											}
 										}
-										else
-											bAllResolved = false;
-									}
-									co_return bAllResolved;
-								}
-							;
 
-							bool bAllResolved = true;
-							if (auto RebaseError = co_await fTryLaunchGit({"rebase", "--autostash", ConfigHash}, Location))
-							{
-								while (bAllResolved)
-								{
-									CStr ConflictingFiles = co_await fLaunchGit({"diff", "--name-only", "--diff-filter=U"}, Location);
-									if (ConflictingFiles.f_IsEmpty())
-									{
-										bAllResolved = false;
-										break;
+										if (!bAllResolved)
+										{
+											fOutputInfo(EOutputType_Error, "Failed to automatically resolve rebase conflicts:\n\n{}\n"_f << RebaseError.f_Trim());
+											DMibError("Aborting, resolve conflicts manually");
+										}
 									}
-
-									if (!(co_await fResolveConflicts(ConflictingFiles)))
-										bAllResolved = false;
 
 									if (bAllResolved)
 									{
-										if ((co_await fLaunchGit({"status", "--porcelain"}, Location)).f_IsEmpty())
-										{
-											if (!(co_await fTryLaunchGit({"rebase", "--skip"}, Location)))
-												break;
-										}
-										else
-										{
-											if (!(co_await fTryLaunchGit({"rebase", "--continue"}, Location)))
-												break;
-										}
+										CStr ConflictingFiles = co_await fLaunchGit({"diff", "--name-only", "--diff-filter=U"}, Location);
+										if (!ConflictingFiles.f_IsEmpty())
+											co_await fResolveConflicts(ConflictingFiles);
+										if (_Repo.m_bUpdateSubmodules)
+											co_await fLaunchGit({"submodule", "update", "--init"}, Location);
 									}
 								}
-
-								if (!bAllResolved)
+								else if (Action == EHandleRepositoryAction_ManualResolve)
 								{
-									fOutputInfo(EOutputType_Error, "Failed to automatically resolve rebase conflicts:\n\n{}\n"_f << RebaseError.f_Trim());
-									DMibError("Aborting, resolve conflicts manually");
+									fOutputInfo(EOutputType_Error, "Manual reconcile against {} needed"_f << ConfigHash);
+									bPassException = true;
+									DMibError("Manual reconcile needed");
 								}
+								else if (_ReconcileAction != EHandleRepositoryAction_Auto)
+								{
+									CStr ActionStr;
+
+									EOutputType OutputType = EOutputType_Warning;
+									switch (RecommendedAction)
+									{
+									case EHandleRepositoryAction_None:
+										ActionStr = "(Leave as is)";
+										break;
+									case EHandleRepositoryAction_ManualResolve:
+										ActionStr = "(Resolve manually)";
+										OutputType = EOutputType_Error;
+										break;
+									case EHandleRepositoryAction_Reset:
+										ActionStr = "reset";
+										break;
+									case EHandleRepositoryAction_Rebase:
+										ActionStr = "rebase";
+										break;
+									case EHandleRepositoryAction_Auto:
+									default:
+										ActionStr = "internal error";
+										break;
+									}
+
+									fOutputInfo
+										(
+											OutputType
+											, "{}{}{} recommended for {}{}{} -> {}{}{}"_f
+											<< Colors.f_RepositoryName() << ActionStr << Colors.f_Default()
+											<< Colors.f_ToPush() << HeadHash << Colors.f_Default()
+											<< Colors.f_ToPush() << ConfigHash << Colors.f_Default()
+										)
+									;
+									bPassException = true;
+									DMibError(fg_ReconcileHelp(o_StateHandler.f_AnsiFlags()));
+								}
+								bChanged = true;
 							}
 
-							if (bAllResolved)
-							{
-								CStr ConflictingFiles = co_await fLaunchGit({"diff", "--name-only", "--diff-filter=U"}, Location);
-								if (!ConflictingFiles.f_IsEmpty())
-									co_await fResolveConflicts(ConflictingFiles);
-								if (_Repo.m_bUpdateSubmodules)
-									co_await fLaunchGit({"submodule", "update", "--init"}, Location);
-							}
+							co_return {};
 						}
-						else if (Action == EHandleRepositoryAction_ManualResolve)
-						{
-							fOutputInfo(EOutputType_Error, "Manual reconcile against {} needed"_f << ConfigHash);
-							bPassException = true;
-							DMibError("Manual reconcile needed");
-						}
-						else if (_ReconcileAction != EHandleRepositoryAction_Auto)
-						{
-							CStr ActionStr;
+					)
+					.f_Wrap()
+				;
 
-							EOutputType OutputType = EOutputType_Warning;
-							switch (RecommendedAction)
-							{
-							case EHandleRepositoryAction_None:
-								ActionStr = "(Leave as is)";
-								break;
-							case EHandleRepositoryAction_ManualResolve:
-								ActionStr = "(Resolve manually)";
-								OutputType = EOutputType_Error;
-								break;
-							case EHandleRepositoryAction_Reset:
-								ActionStr = "reset";
-								break;
-							case EHandleRepositoryAction_Rebase:
-								ActionStr = "rebase";
-								break;
-							case EHandleRepositoryAction_Auto:
-							default:
-								ActionStr = "internal error";
-								break;
-							}
-
-							fOutputInfo
-								(
-									OutputType
-									, "{}{}{} recommended for {}{}{} -> {}{}{}"_f
-									<< Colors.f_RepositoryName() << ActionStr << Colors.f_Default()
-									<< Colors.f_ToPush() << HeadHash << Colors.f_Default()
-									<< Colors.f_ToPush() << ConfigHash << Colors.f_Default()
-								)
-							;
-							bPassException = true;
-							DMibError(fg_ReconcileHelp(o_StateHandler.f_AnsiFlags()));
-						}
-						bChanged = true;
-					}
-				}
-				catch (CExceptionCoroutineWrapper const &_Exception)
-				{
-					auto ExceptionString = fg_ExceptionString(_Exception.f_GetSpecific().m_pException);
-					auto pException = _Exception.f_GetSpecific().m_pException;
-					if (bPassException)
-						co_return pException;
-
-					fOutputInfo(EOutputType_Error, "Reconcile error: {}"_f << ExceptionString.f_Trim());
-					CBuildSystem::fs_ThrowError(_Repo.m_Position, "Failed to reconcile hash '{}': {}"_f << ConfigHash << ExceptionString.f_Trim());
-				}
-				catch (CException const &_Exception)
+				if (!Result)
 				{
 					if (bPassException)
-						co_return NException::fg_CurrentException();
+						co_return fg_Move(Result).f_GetException();
 
-					fOutputInfo(EOutputType_Error, "Reconcile error: {}"_f << _Exception.f_GetErrorStr().f_Trim());
-					CBuildSystem::fs_ThrowError(_Repo.m_Position, "Failed to reconcile hash '{}': {}"_f << ConfigHash << _Exception.f_GetErrorStr().f_Trim());
+					CStr ErrorString = Result.f_GetExceptionStr().f_Trim();
+
+					fOutputInfo(EOutputType_Error, "Reconcile error: {}"_f << ErrorString);
+					CBuildSystem::fs_ThrowError(_Repo.m_Position, "Failed to reconcile hash '{}': {}"_f << ConfigHash << ErrorString);
 				}
 			}
 
@@ -1206,7 +1203,7 @@ namespace NMib::NBuildSystem
 
 	TCFuture<CBuildSystem::ERetry> CBuildSystem::fp_HandleRepositories(TCMap<CPropertyKey, CEJSONSorted> const &_Values)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 		f_InitEntityForEvaluation(mp_Data.m_RootEntity, _Values);
 		f_ExpandRepositoryEntities(mp_Data);
@@ -1327,7 +1324,7 @@ namespace NMib::NBuildSystem
 					Repos
 					, [&, FileActor](auto &_Repos) mutable -> TCFuture<void>
 					{
-						co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+						co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 						co_await f_CheckCancelled();
 
 						CStr ReposDirectory = _Repos.f_GetPath();
@@ -1375,7 +1372,7 @@ namespace NMib::NBuildSystem
 								_Repos.m_Repositories
 								, [&](auto &_Repo) -> TCFuture<void>
 								{
-									co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+									co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 									co_await f_CheckCancelled();
 
 									if

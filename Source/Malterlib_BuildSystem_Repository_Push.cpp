@@ -149,7 +149,7 @@ namespace NMib::NBuildSystem
 			, ERepoPushFlag _PushFlags
 		)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 		TCSharedPointer<CGenerateEphemeralState> pGenerateState = fg_Construct();
 

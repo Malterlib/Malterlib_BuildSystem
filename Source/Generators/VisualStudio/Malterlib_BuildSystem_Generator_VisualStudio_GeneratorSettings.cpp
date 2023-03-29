@@ -70,7 +70,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			, TCMap<CConfiguration, CEntityMutablePointer> const &_EntitiesPerConfig
 		)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 		f_ConstructSettings();
 
@@ -84,7 +84,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 				Settings
 				, [&](CGeneratorSetting &o_Result) -> TCFuture<void>
 				{
-					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 					co_await _BuildSystem.f_CheckCancelled();
 
 					f_PopulateSetting(_GeneratorSetting, _PropertyType, _BuildSystem, _EntitiesPerConfig, o_Result);

@@ -50,7 +50,7 @@ namespace NMib::NBuildSystem
 			, NStorage::TCSharedPointer<CCommandLineControl> const &_pCommandLine
 		)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 		
 		CGenerateEphemeralState GenerateState;
 		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
@@ -221,16 +221,13 @@ namespace NMib::NBuildSystem
 
 					State.m_PendingGitShow.f_Remove(ConfigFile);
 
-					try
 					{
+						auto CaptureScope = co_await (g_CaptureExceptions % "Exception parsing config files");
+
 						if (StartResult.m_ExitCode == 0)
 							State.m_StartConfigFiles[ConfigFile] = CStateHandler::fs_ParseConfigFile(StartResult.f_GetStdOut(), ConfigFile);
 						if (EndResult.m_ExitCode == 0)
 							State.m_EndConfigFiles[ConfigFile] = CStateHandler::fs_ParseConfigFile(EndResult.f_GetStdOut(), ConfigFile);
-					}
-					catch (NException::CException const &_Exception)
-					{
-						co_return DMibErrorInstance("Excption parsing config files: {}"_f << _Exception);
 					}
 				}
 			}

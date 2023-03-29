@@ -9,7 +9,7 @@ namespace NMib::NBuildSystem::NXcode
 {
 	TCFuture<void> CGeneratorInstance::f_GenerateWorkspaceFile(CSolution &_Solution, CStr const &_OutputDir) const
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 		CXMLDocument XMLFile(false);
 

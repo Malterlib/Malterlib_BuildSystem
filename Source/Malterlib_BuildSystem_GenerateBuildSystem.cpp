@@ -897,7 +897,7 @@ namespace NMib::NBuildSystem
 				*o_pConfigurations
 				, [&](TCUniquePointer<CConfiguraitonData> &o_pConfig) -> TCFuture<void>
 				{
-					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 					co_await f_CheckCancelled();
 
 					auto &ConfigData = *o_pConfig;

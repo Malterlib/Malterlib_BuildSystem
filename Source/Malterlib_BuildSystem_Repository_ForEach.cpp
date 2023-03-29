@@ -17,7 +17,7 @@ namespace NMib::NBuildSystem
 			, TCVector<CStr> const &_Params
 		)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 		
 		CGenerateEphemeralState GenerateState;
 		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
@@ -68,7 +68,7 @@ namespace NMib::NBuildSystem
 			, CForEachRepoDirOptions const &_Options
 		)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 		CGenerateEphemeralState GenerateState;
 		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)

@@ -14,7 +14,7 @@ namespace NMib::NBuildSystem
 			, CGenerateOptions const &_GenerateOptions
 		)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 		TCSharedPointer<TCAtomic<bool>> pCancelled = fg_Construct();
 
@@ -125,7 +125,7 @@ namespace NMib::NBuildSystem
 
 	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Update(CGenerateOptions const &_GenerateOptions)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 		
 		CGenerateEphemeralState GenerateState;
 		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)

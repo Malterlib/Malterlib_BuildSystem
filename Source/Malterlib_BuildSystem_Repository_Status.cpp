@@ -32,7 +32,7 @@ namespace NMib::NBuildSystem
 
 	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Status(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoStatusFlag _Flags)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
 		TCSharedPointer<CGenerateEphemeralState> pGenerateState = fg_Construct();
 
