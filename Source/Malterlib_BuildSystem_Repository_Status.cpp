@@ -4,7 +4,7 @@
 #include "Malterlib_BuildSystem_Repository.h"
 
 #include <Mib/Concurrency/AsyncDestroy>
-#include <Mib/Concurrency/ActorSequencer>
+#include <Mib/Concurrency/ActorSequencerActor>
 
 namespace NMib::NBuildSystem
 {
@@ -663,30 +663,35 @@ namespace NMib::NBuildSystem
 		{
 			CRepoEditor RepoEditor = fg_GetRepoEditor(*this, mp_Data);
 
-			TCActorSequencer<void> EditorLaunchSequencer(RepoEditor.m_bOpenSequential ? 1 : 16);
+			CSequencer EditorLaunchSequencer("BuildSystem Action Repository Status EditorLaunchSequencer", RepoEditor.m_bOpenSequential ? 1 : 16);
 
 			for (auto &EditorLaunches : EditorsToLaunch)
 			{
 				TCActorResultVector<void> EditorLaunchResults;
 				for (auto &Repo : EditorLaunches)
 				{
-					EditorLaunchSequencer / [=]() -> TCFuture<void>
-						{
-							auto Result = co_await Launches.f_OpenRepoEditor(RepoEditor, Repo.m_Location);
-							if (Result.m_ExitCode)
+					EditorLaunchSequencer.f_RunSequenced
+						(
+							g_ActorFunctorWeak / [=](CActorSubscription &&_Subscription) -> TCFuture<void>
 							{
-								Launches.f_Output
-									(
-										EOutputType_Error
-										, Repo
-										, "Failed to launch repository editor: {}"_f
-										<< Result.f_GetCombinedOut().f_Trim()
-									)
-								;
-							}
+								auto Result = co_await Launches.f_OpenRepoEditor(RepoEditor, Repo.m_Location);
+								if (Result.m_ExitCode)
+								{
+									Launches.f_Output
+										(
+											EOutputType_Error
+											, Repo
+											, "Failed to launch repository editor: {}"_f
+											<< Result.f_GetCombinedOut().f_Trim()
+										)
+									;
+								}
 
-							co_return {};
-						}
+								(void)_Subscription;
+
+								co_return {};
+							}
+						)
 						> EditorLaunchResults.f_AddResult();
 					;
 

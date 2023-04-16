@@ -4,7 +4,7 @@
 #include "Malterlib_BuildSystem_Repository.h"
 
 #include <Mib/Concurrency/AsyncDestroy>
-#include <Mib/Concurrency/ActorSequencer>
+#include <Mib/Concurrency/ActorSequencerActor>
 
 namespace NMib::NBuildSystem
 {
@@ -165,7 +165,7 @@ namespace NMib::NBuildSystem
 
 		TCActorResultVector<void> LaunchResults;
 
-		TCMap<CRepository *, TCSharedPointer<TCActorSequencer<void>>> DeleteLaunchSequencers;
+		TCMap<CRepository *, CSequencer> DeleteLaunchSequencers;
 
 		for (auto &[RepoBound, iSequence] : FilteredRepositories.f_GetAllRepos())
 		{
@@ -188,7 +188,7 @@ namespace NMib::NBuildSystem
 			else
 				RemotesFuture = TCPromise<TCVector<CStr>>() <<= g_Void;
 
-			auto pDeleteLaunchSequencer = (DeleteLaunchSequencers[pRepo] = fg_Construct());
+			auto &DeleteLaunchSequencer = *DeleteLaunchSequencers(pRepo, "BuildSystem Action Repository CleanupBranches DeleteLaunchSequencer {}"_f << Repo.f_GetName());
 
 			auto RepoDoneScope = Launches.f_RepoDoneScope();
 
@@ -346,19 +346,22 @@ namespace NMib::NBuildSystem
 									return;
 								}
 
-								*pDeleteLaunchSequencer / [=]() -> TCFuture<void>
-									{
-										Launches.f_Output(EOutputType_Warning, Repo, "{} - deleting {}"_f << FullBranch << DeleteReason);
+								DeleteLaunchSequencer.f_RunSequenced
+									( 
+										g_ActorFunctorWeak / [=](CActorSubscription &&_Subscription) -> TCFuture<void>
+										{
+											Launches.f_Output(EOutputType_Warning, Repo, "{} - deleting {}"_f << FullBranch << DeleteReason);
 
-										TCFuture<void> LaunchFuture;
+											if (Remote)
+												co_await Launches.f_Launch(Repo, {"push", Remote, "--delete", "refs/heads/{}"_f << Branch}, fg_LogAllFunctor());
+											else
+												co_await Launches.f_Launch(Repo, {"branch", "-D", FullBranch}, fg_LogAllFunctor());
 
-										if (Remote)
-											LaunchFuture = Launches.f_Launch(Repo, {"push", Remote, "--delete", "refs/heads/{}"_f << Branch}, fg_LogAllFunctor());
-										else
-											LaunchFuture = Launches.f_Launch(Repo, {"branch", "-D", FullBranch}, fg_LogAllFunctor());
+											(void)_Subscription;
 
-										return LaunchFuture;
-									}
+											co_return {};
+										}
+									)
 									> Promise;
 								;
 							}
@@ -416,7 +419,7 @@ namespace NMib::NBuildSystem
 
 		TCActorResultVector<void> LaunchResults;
 
-		TCMap<CRepository *, TCSharedPointer<TCActorSequencer<void>>> DeleteLaunchSequencers;
+		TCMap<CRepository *, CSequencer> DeleteLaunchSequencers;
 
 		for (auto &[RepoBound, iSequence] : FilteredRepositories.f_GetAllRepos())
 		{
@@ -432,7 +435,7 @@ namespace NMib::NBuildSystem
 			else
 				RemotesFuture = TCPromise<TCVector<CStr>>() <<= g_Void;
 
-			auto pDeleteLaunchSequencer = (DeleteLaunchSequencers[pRepo] = fg_Construct());
+			auto &DeleteLaunchSequencer = *DeleteLaunchSequencers(pRepo, "BuildSystem Action Repository CleanupTags DeleteLaunchSequencer {}"_f << Repo.f_GetName());
 
 			auto RepoDoneScope = Launches.f_RepoDoneScope();
 
@@ -617,19 +620,22 @@ namespace NMib::NBuildSystem
 											return;
 										}
 
-										*pDeleteLaunchSequencer / [=]() -> TCFuture<void>
-											{
-												Launches.f_Output(EOutputType_Warning, Repo, "{} - deleting {}"_f << Tag.f_GetName() << DeleteReason);
+										DeleteLaunchSequencer.f_RunSequenced
+											(
+												g_ActorFunctorWeak / [=](CActorSubscription &&_Subscription) -> TCFuture<void>
+												{
+													Launches.f_Output(EOutputType_Warning, Repo, "{} - deleting {}"_f << Tag.f_GetName() << DeleteReason);
 
-												TCFuture<void> LaunchFuture;
+													if (Tag.m_Remote)
+														co_await Launches.f_Launch(Repo, {"push", Tag.m_Remote, "--delete", "refs/tags/{}"_f << Tag.m_Tag}, fg_LogAllFunctor());
+													else
+														co_await Launches.f_Launch(Repo, {"tag", "-d", Tag.m_Tag}, fg_LogAllFunctor());
 
-												if (Tag.m_Remote)
-													LaunchFuture = Launches.f_Launch(Repo, {"push", Tag.m_Remote, "--delete", "refs/tags/{}"_f << Tag.m_Tag}, fg_LogAllFunctor());
-												else
-													LaunchFuture = Launches.f_Launch(Repo, {"tag", "-d", Tag.m_Tag}, fg_LogAllFunctor());
+													(void)_Subscription;
 
-												return LaunchFuture;
-											}
+													co_return {};
+												}
+											)
 											> Promise;
 										;
 									}

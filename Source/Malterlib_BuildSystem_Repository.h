@@ -212,7 +212,7 @@ namespace NMib::NBuildSystem::NRepository
 
 		static uint32 fs_MaxProcesses();
 
-		using CLaunchSequencer = TCActorSequencerActor<CProcessLaunchActor::CSimpleLaunchResult>;
+		using CLaunchSequencer = TCSequencer<CProcessLaunchActor::CSimpleLaunchResult>;
 
 		struct COwner;
 		struct CState
@@ -247,7 +247,7 @@ namespace NMib::NBuildSystem::NRepository
 			TCMap<CStr, TCVector<CDeferredOutput>> m_DeferredOutput;
 			TCVector<TCSet<CStr>> m_OutputOrder;
 
-			TCActor<CLaunchSequencer> m_LaunchSequencer{fg_Construct(fg_Clamp(NSys::fg_Thread_GetVirtualCores()*2u, 32u, fs_MaxProcesses()))};
+			CLaunchSequencer m_LaunchSequencer{"GitLaunches State LaunchSequencer", fg_Clamp(NSys::fg_Thread_GetVirtualCores()*2u, 32u, fs_MaxProcesses())};
 
 			mutable CMutual m_ConsoleOutputLock;
 

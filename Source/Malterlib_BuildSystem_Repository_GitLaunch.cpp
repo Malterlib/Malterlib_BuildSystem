@@ -437,10 +437,9 @@ namespace NMib::NBuildSystem::NRepository
 		if (*State.m_pCancelled)
 			return Promise <<= DMibErrorInstance("Aborted");
 
-		State.m_LaunchSequencer
+		State.m_LaunchSequencer.f_RunSequenced
 			(
-				&CLaunchSequencer::f_RunSequenced
-				, g_ActorFunctorWeak / [=, pState = m_pState, Launch = fg_Move(_Launch)](CActorSubscription &&_DoneSubscription) mutable -> TCFuture<CProcessLaunchActor::CSimpleLaunchResult>
+				g_ActorFunctorWeak / [=, pState = m_pState, Launch = fg_Move(_Launch)](CActorSubscription &&_DoneSubscription) mutable -> TCFuture<CProcessLaunchActor::CSimpleLaunchResult>
 				{
 					auto &State = *pState;
 					TCPromise<CProcessLaunchActor::CSimpleLaunchResult> Promise;
