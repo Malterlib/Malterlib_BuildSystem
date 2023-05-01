@@ -379,6 +379,7 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_ExecuteCommand;
 	extern CStringAndHash const gc_ConstString_File_entity;
 	extern CStringAndHash const gc_ConstString_FileExists;
+	extern CStringAndHash const gc_ConstString_LinkExists;
 	extern CStringAndHash const gc_ConstString_FileOrDirectoryExists;
 	extern CStringAndHash const gc_ConstString_FindDirectoriesIn;
 	extern CStringAndHash const gc_ConstString_FindDirectoriesRecursiveIn;

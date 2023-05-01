@@ -152,6 +152,19 @@ namespace NMib::NBuildSystem
 					}
 					,
 					{
+						gc_ConstString_LinkExists
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_Boolean, fg_FunctionParam(g_String, gc_ConstString__FileName))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							{
+								return _This.mp_FindCache.f_FileExists(_Params[0].f_String(), EFileAttrib_Link);
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
 						gc_ConstString_DirectoryExists
 						, CBuiltinFunction
 						{
