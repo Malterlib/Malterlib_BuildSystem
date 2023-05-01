@@ -338,7 +338,6 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_OTHER_LDFLAGS;
 	extern CStringAndHash const gc_ConstString_LDFlagsFirst;
 	extern CStringAndHash const gc_ConstString_OTHER_LIBTOOLFLAGS;
-	extern CStringAndHash const gc_ConstString_BuildSystemPlatform;
 	extern CStringAndHash const gc_ConstString_PropertyGroup;
 	extern CStringAndHash const gc_ConstString_XInternalCreate;
 	extern CStringAndHash const gc_ConstString_CMakeLanguage;

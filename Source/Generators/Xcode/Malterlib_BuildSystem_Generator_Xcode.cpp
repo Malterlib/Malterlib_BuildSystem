@@ -18,7 +18,6 @@ namespace NMib::NBuildSystem
 			Values[CPropertyKey(_BuildSystem.f_StringCache(), gc_ConstString_GeneratorFamily)] = gc_ConstString_Xcode;
 			Values[CPropertyKey(_BuildSystem.f_StringCache(), gc_ConstString_BuildSystemBasePath)] = _BuildSystem.f_GetBaseDir();
 			Values[CPropertyKey(_BuildSystem.f_StringCache(), gc_ConstString_BuildSystemOutputDir)] = _OutputDir;
-			Values[CPropertyKey(_BuildSystem.f_StringCache(), gc_ConstString_BuildSystemPlatform)] = gc_ConstString_macOS;
 			Values[CPropertyKey(_BuildSystem.f_StringCache(), gc_ConstString_BuildSystemFile)] = _BuildSystem.f_GetGenerateSettings().m_SourceFile;
 			Values[CPropertyKey(_BuildSystem.f_StringCache(), gc_ConstString_BuildSystemName)] = CFile::fs_GetFileNoExt(_BuildSystem.f_GetGenerateSettings().m_SourceFile);
 

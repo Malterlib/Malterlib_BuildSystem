@@ -338,7 +338,6 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_OTHER_LDFLAGS = gc_Str<"OTHER_LDFLAGS">;
 	constexpr CStringAndHash const gc_ConstString_LDFlagsFirst = gc_Str<"LDFlagsFirst">;
 	constexpr CStringAndHash const gc_ConstString_OTHER_LIBTOOLFLAGS = gc_Str<"OTHER_LIBTOOLFLAGS">;
-	constexpr CStringAndHash const gc_ConstString_BuildSystemPlatform = gc_Str<"BuildSystemPlatform">;
 	constexpr CStringAndHash const gc_ConstString_PropertyGroup = gc_Str<"PropertyGroup">;
 	constexpr CStringAndHash const gc_ConstString_XInternalCreate = gc_Str<"XInternalCreate">;
 	constexpr CStringAndHash const gc_ConstString_CMakeLanguage = gc_Str<"CMakeLanguage">;
@@ -944,7 +943,6 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_OTHER_LDFLAGS);
 		o_StringCache.f_AddConstantString(gc_ConstString_LDFlagsFirst);
 		o_StringCache.f_AddConstantString(gc_ConstString_OTHER_LIBTOOLFLAGS);
-		o_StringCache.f_AddConstantString(gc_ConstString_BuildSystemPlatform);
 		o_StringCache.f_AddConstantString(gc_ConstString_PropertyGroup);
 		o_StringCache.f_AddConstantString(gc_ConstString_XInternalCreate);
 		o_StringCache.f_AddConstantString(gc_ConstString_CMakeLanguage);
