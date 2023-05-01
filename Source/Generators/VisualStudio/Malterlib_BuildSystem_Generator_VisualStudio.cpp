@@ -398,7 +398,7 @@ namespace NMib::NBuildSystem
 
 						BuildSystem.f_OutputConsole
 							(
-								"{}Generate{}  {sl*,a-} {fe2,sl5} s wall{\n}"_f
+								"{}Generate{}  {sl*,a-} {fe2,sl5} s{\n}"_f
 								<< Encoding.f_StatusNormal()
 								<< Encoding.f_Default()
 								<< Workspace.f_GetName()
