@@ -94,7 +94,6 @@ namespace NMib::NBuildSystem
 		return fg_Move(_Params[1]);
 	}
 
-
 	void CBuildSystem::fp_RegisterBuiltinFunctions_Misc()
 	{
 		f_RegisterFunctions

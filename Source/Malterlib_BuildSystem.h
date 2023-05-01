@@ -936,6 +936,7 @@ namespace NMib::NBuildSystem
 		void fp_RegisterBuiltinFunctions_Windows();
 		void fp_RegisterBuiltinFunctions_File();
 		void fp_RegisterBuiltinFunctions_Misc();
+		void fp_RegisterBuiltinFunctions_Color();
 		void fp_RegisterBuiltinFunctions_Compare();
 		void fp_RegisterBuiltinFunctions_Path();
 		void fp_RegisterBuiltinFunctions_Property();

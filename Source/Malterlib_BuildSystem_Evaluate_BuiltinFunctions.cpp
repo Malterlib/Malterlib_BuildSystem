@@ -23,6 +23,7 @@ namespace NMib::NBuildSystem
 		fp_RegisterBuiltinFunctions_Windows();
 		fp_RegisterBuiltinFunctions_File();
 		fp_RegisterBuiltinFunctions_Misc();
+		fp_RegisterBuiltinFunctions_Color();
 		fp_RegisterBuiltinFunctions_Compare();
 		fp_RegisterBuiltinFunctions_Path();
 		fp_RegisterBuiltinFunctions_Property();
