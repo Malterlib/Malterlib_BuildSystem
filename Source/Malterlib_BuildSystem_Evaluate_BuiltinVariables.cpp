@@ -347,6 +347,7 @@ namespace NMib::NBuildSystem
 											{gc_ConstString_Name, CBuildSystemSyntax::CClassType::CMember{g_String}}
 											, {gc_ConstString_URL, CBuildSystemSyntax::CClassType::CMember{g_String}}
 											, {gc_ConstString_Write, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_Boolean, false)}}
+											, {gc_ConstString_DefaultBranch, CBuildSystemSyntax::CClassType::CMember{g_String, true}}
 										}
 										, {}
 									}

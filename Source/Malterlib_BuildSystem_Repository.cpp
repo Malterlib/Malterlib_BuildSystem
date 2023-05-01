@@ -1061,6 +1061,9 @@ namespace NMib::NBuildSystem
 						if (auto pValue = Remote.f_GetMember(gc_ConstString_Write))
 							OutRemote.m_bCanPush = pValue->f_Boolean();
 
+						if (auto pValue = Remote.f_GetMember(gc_ConstString_DefaultBranch))
+							OutRemote.m_DefaultBranch = pValue->f_String();
+
 						for (auto &Wildcard : NoPushRemotes)
 						{
 							if (fg_StrMatchWildcard(Name.f_GetStr(), Wildcard.f_GetStr()) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)

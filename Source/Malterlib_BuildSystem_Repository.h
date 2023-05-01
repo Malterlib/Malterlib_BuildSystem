@@ -49,6 +49,7 @@ namespace NMib::NBuildSystem::NRepository
 		}
 
 		CStr m_URL;
+		CStr m_DefaultBranch;
 		bool m_bCanPush = true;
 	};
 

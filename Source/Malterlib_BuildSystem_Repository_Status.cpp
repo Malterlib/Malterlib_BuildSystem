@@ -102,20 +102,29 @@ namespace NMib::NBuildSystem
 								TCActorResultMap<CStr, TCVector<CLogEntry>> ToPush;
 								TCActorResultMap<CStr, TCVector<CLogEntry>> ToPull;
 								TCSet<CStr> ToPushMissing;
+								TCSet<CStr> ToPullAdded;
 
 								for (auto &Remote : State.m_Remotes)
 								{
 									CStr RemoteBranch = "{}/{}"_f << Remote << Branch;
 									CStr PullRemoteBranch = RemoteBranch;
+									CStr PullRemoteBranchName = Remote;
 									CStr MissingRemoteBranch = RemoteBranch;
 
-									CStr RemotePullBranchName;
+									CStr DefaultUpstreamBranch = Repo.m_DefaultUpstreamBranch;
 
-									if (bUseDefaultUpstream && Branch == Repo.m_DefaultBranch && !Repo.m_DefaultUpstreamBranch.f_IsEmpty() && !State.f_HasRemoteBranch(RemoteBranch))
-										PullRemoteBranch = "{}/{}"_f << Remote << Repo.m_DefaultUpstreamBranch;
+									auto *pRemote = Repo.m_Remotes.f_FindEqual(Remote);
+									if (pRemote && pRemote->m_DefaultBranch)
+										DefaultUpstreamBranch = pRemote->m_DefaultBranch;
 
-									if (Branch == Repo.m_DefaultBranch && !Repo.m_DefaultUpstreamBranch.f_IsEmpty() && !State.f_HasRemoteBranch(RemoteBranch))
-										MissingRemoteBranch = "{}/{}"_f << Remote << Repo.m_DefaultUpstreamBranch;
+									if (bUseDefaultUpstream && Branch == Repo.m_DefaultBranch && !DefaultUpstreamBranch.f_IsEmpty() && !State.f_HasRemoteBranch(RemoteBranch))
+									{
+										PullRemoteBranch = "{}/{}"_f << Remote << DefaultUpstreamBranch;
+										PullRemoteBranchName = PullRemoteBranch;
+									}
+
+									if (Branch == Repo.m_DefaultBranch && !DefaultUpstreamBranch.f_IsEmpty() && !State.f_HasRemoteBranch(RemoteBranch))
+										MissingRemoteBranch = "{}/{}"_f << Remote << DefaultUpstreamBranch;
 
 									if (!(_Flags & ERepoStatusFlag_NonDefaultToAll) && Remote != "origin" && Branch != Repo.m_DefaultBranch)
 										;
@@ -127,22 +136,30 @@ namespace NMib::NBuildSystem
 											ToPushMissing[Remote];
 
 										if (State.f_HasRemoteBranch(PullRemoteBranch))
-											fg_GetLogEntries(Launches, Repo, Branch, PullRemoteBranch) > ToPull.f_AddResult(Remote);
+										{
+											if (ToPullAdded(PullRemoteBranchName).f_WasCreated())
+												fg_GetLogEntries(Launches, Repo, Branch, PullRemoteBranch) > ToPull.f_AddResult(PullRemoteBranchName);
+										}
 									}
 
-									if (Branch != Repo.m_DefaultBranch && !Repo.m_DefaultBranch.f_IsEmpty())
+									CStr DefaultBranch = Repo.m_DefaultBranch;
+									if (pRemote && pRemote->m_DefaultBranch)
+										DefaultBranch = pRemote->m_DefaultBranch;
+
+									if (Branch != DefaultBranch && !DefaultBranch.f_IsEmpty())
 									{
-										CStr AgainstDefaultName = "{}/{}"_f << Remote << Repo.m_DefaultBranch;
-										CStr ExtraRemoteBranch = "{}/{}"_f << Remote << Repo.m_DefaultBranch;
+										CStr AgainstDefaultName = "{}/{}"_f << Remote << DefaultBranch;
+										CStr ExtraRemoteBranch = "{}/{}"_f << Remote << DefaultBranch;
 										if (State.f_HasRemoteBranch(ExtraRemoteBranch))
 										{
 											fg_GetLogEntries(Launches, Repo, ExtraRemoteBranch, Branch) > ToPush.f_AddResult(AgainstDefaultName);
-											fg_GetLogEntries(Launches, Repo, Branch, ExtraRemoteBranch) > ToPull.f_AddResult(AgainstDefaultName);
+											if (ToPullAdded(AgainstDefaultName).f_WasCreated())
+												fg_GetLogEntries(Launches, Repo, Branch, ExtraRemoteBranch) > ToPull.f_AddResult(AgainstDefaultName);
 										}
 									}
 								}
 
-								auto [_ToPush, _ToPull] = co_await 
+								auto [ToPushResults, ToPullResults] = co_await
 									(
 										ToPush.f_GetResults()
 										+ ToPull.f_GetResults()
@@ -171,7 +188,7 @@ namespace NMib::NBuildSystem
 										!fg_CombineResults
 										(
 											CombineResultsPromise
-											, fg_Move(_ToPush)
+											, fg_Move(ToPushResults)
 											, [&](CStr const &_Remote, TCVector<CLogEntry> &&_Log)
 											{
 												auto &[Remotes, LogEntries] = ToRemotePushByHashes[fGetHashes(_Log)];
@@ -192,7 +209,7 @@ namespace NMib::NBuildSystem
 										!fg_CombineResults
 										(
 											CombineResultsPromise
-											, fg_Move(_ToPull)
+											, fg_Move(ToPullResults)
 											, [&](CStr const &_Remote, TCVector<CLogEntry> &&_Log)
 											{
 												auto &[Remotes, LogEntries] = ToLocalPullByHashes[fGetHashes(_Log)];
