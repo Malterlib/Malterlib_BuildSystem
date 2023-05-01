@@ -84,6 +84,14 @@ namespace NMib::NBuildSystem
 			return f_Default() + f_Foreground256(221);
 		}
 
+		NStr::CStr CColors::f_ChangedBranchName(CStr const &_Name) const
+		{
+			if (_Name == "origin" || _Name.f_StartsWith("origin/"))
+				return f_Default() + f_Foreground256(221);
+			else
+				return f_Default() + f_Foreground256(214);
+		}
+
 		NStr::CStr CColors::f_BranchName() const
 		{
 			return f_Default();

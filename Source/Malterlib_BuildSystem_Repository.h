@@ -18,6 +18,7 @@ namespace NMib::NBuildSystem::NRepository
 		CColors(EAnsiEncodingFlag _AnsiFlags);
 
 		NStr::CStr f_RepositoryName() const;
+		NStr::CStr f_ChangedBranchName(CStr const &_Name) const;
 		NStr::CStr f_BranchName() const;
 
 		NStr::CStr f_ToCommit() const;
