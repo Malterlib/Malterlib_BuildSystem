@@ -492,7 +492,7 @@ namespace NMib::NBuildSystem
 						if constexpr (NTraits::TCIsSameDereferencedUnqualified<decltype(_Value), NEncoding::CEJSONSorted>::mc_Value)
 						{
 							typename tf_CStr::CAppender Appender(o_Str);
-							NEncoding::NJSON::fg_GenerateJSONValue<CBuildSystemParseContext>(Appender, _Value.f_ToJSON(), 0, "\t", gc_BuildSystemJSONParseFlags);
+							NEncoding::NJSON::fg_GenerateJSONValue<CBuildSystemParseContext>(Appender, _Value.f_ToJson(), 0, "\t", gc_BuildSystemJSONParseFlags);
 						}
 						else
 							o_Str += typename tf_CStr::CFormat("{}") << _Value;
@@ -579,7 +579,7 @@ namespace NMib::NBuildSystem
 					if constexpr (NTraits::TCIsSameDereferencedUnqualified<decltype(_Value), NEncoding::CEJSONSorted>::mc_Value)
 					{
 						typename tf_CStr::CAppender Appender(o_Str);
-						NEncoding::NJSON::fg_GenerateJSONValue<CBuildSystemParseContext>(Appender, _Value.f_ToJSON(), 0, "\t", gc_BuildSystemJSONParseFlags);
+						NEncoding::NJSON::fg_GenerateJSONValue<CBuildSystemParseContext>(Appender, _Value.f_ToJson(), 0, "\t", gc_BuildSystemJSONParseFlags);
 					}
 					else
 						o_Str += typename tf_CStr::CFormat("{}") << _Value;

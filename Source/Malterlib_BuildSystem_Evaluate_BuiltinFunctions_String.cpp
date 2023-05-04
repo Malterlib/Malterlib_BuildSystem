@@ -99,7 +99,7 @@ namespace NMib::NBuildSystem
 											pIndentString = _Params[1].f_String();
 									}
 
-									Return = ToFormat.f_ToJSONNoConvert().f_ToString(pIndentString).f_Trim();
+									Return = ToFormat.f_ToJsonNoConvert().f_ToString(pIndentString).f_Trim();
 								}
 								catch (CException const &_Exception)
 								{
@@ -151,7 +151,7 @@ namespace NMib::NBuildSystem
 								CEJSONSorted Return;
 								try
 								{
-									Return = CEJSONSorted::fs_FromJSONNoConvert(CJSONSorted::fs_FromString(_Params[0].f_String(), FileName));
+									Return = CEJSONSorted::fs_FromJsonNoConvert(CJSONSorted::fs_FromString(_Params[0].f_String(), FileName));
 								}
 								catch (CException const &_Exception)
 								{

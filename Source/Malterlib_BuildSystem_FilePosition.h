@@ -17,8 +17,8 @@ namespace NMib::NBuildSystem
 		inline CFilePosition &operator = (NStr::CParseLocation const &_Position);
 		inline NStr::CParseLocation const &f_Location() const;
 
-		static CFilePosition fs_FromJSON(NEncoding::CEJSONSorted const &_Value);
-		static CFilePosition fs_FromJSON(NEncoding::CEJSONSorted &&_Value);
+		static CFilePosition fs_FromJson(NEncoding::CEJSONSorted const &_Value);
+		static CFilePosition fs_FromJson(NEncoding::CEJSONSorted &&_Value);
 
 		COrdering_Strong operator <=> (CFilePosition const &_Other) const;
 
@@ -80,8 +80,8 @@ namespace NMib::NBuildSystem
 		void f_AddPositions(CBuildSystemUniquePositions &&_Other);
 		void f_AddPositions(NStorage::TCSharedPointer<CBuildSystemUniquePositions> const &_Other);
 
-		static CBuildSystemUniquePositions fs_FromJSON(NEncoding::CEJSONSorted const &_Value);
-		static CBuildSystemUniquePositions fs_FromJSON(NEncoding::CEJSONSorted &&_Value);
+		static CBuildSystemUniquePositions fs_FromJson(NEncoding::CEJSONSorted const &_Value);
+		static CBuildSystemUniquePositions fs_FromJson(NEncoding::CEJSONSorted &&_Value);
 
 		NContainer::TCLinkedList<CPosition> m_Positions;
 		NIntrusive::TCAVLTree<&CPosition::m_TreeLink, CPosition::CCompare> m_PositionTree;

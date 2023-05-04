@@ -188,7 +188,7 @@ namespace NMib::NContainer
 				Object[gc_ConstString_Operator] = _Operator;
 				Object[gc_ConstString_Right] = fParseValue();
 
-				o_Key = NBuildSystem::CBuildSystemSyntax::CRootKey::fs_FromJSON(o_ParseContext.m_StringCache, Temp, _Location);
+				o_Key = NBuildSystem::CBuildSystemSyntax::CRootKey::fs_FromJson(o_ParseContext.m_StringCache, Temp, _Location);
 			}
 		;
 
@@ -208,7 +208,7 @@ namespace NMib::NContainer
 				Object[gc_ConstString_Type] = gc_ConstString_KeyLogicalOperator;
 				Object[gc_ConstString_Operator] = _Operator;
 
-				o_Key = NBuildSystem::CBuildSystemSyntax::CRootKey::fs_FromJSON(o_ParseContext.m_StringCache, Temp, _Location);
+				o_Key = NBuildSystem::CBuildSystemSyntax::CRootKey::fs_FromJson(o_ParseContext.m_StringCache, Temp, _Location);
 			}
 		;
 
@@ -251,7 +251,7 @@ namespace NMib::NContainer
 			fParsePrefixOperator(gc_ConstString_Symbol_PragmaPrefix);
 		}
 		else
-			o_Key = NBuildSystem::CBuildSystemSyntax::CRootKey::fs_FromJSON(o_ParseContext.m_StringCache, CEJSONSorted::fs_FromJSON(fParseValue()), _Location);
+			o_Key = NBuildSystem::CBuildSystemSyntax::CRootKey::fs_FromJson(o_ParseContext.m_StringCache, CEJSONSorted::fs_FromJson(fParseValue()), _Location);
 
 		o_pParse = (ch8 const *)(pParse);
 	}
@@ -282,7 +282,7 @@ namespace NMib::NContainer
 
 		o_pParse = (ch8 const *)(pParse);
 
-		return NBuildSystem::CBuildSystemSyntax::CRootValue::fs_FromJSON(o_ParseContext.m_StringCache, NEncoding::CEJSONSorted::fs_FromJSON(fg_Move(Output)), ParseLocation, true);
+		return NBuildSystem::CBuildSystemSyntax::CRootValue::fs_FromJson(o_ParseContext.m_StringCache, NEncoding::CEJSONSorted::fs_FromJson(fg_Move(Output)), ParseLocation, true);
 	}
 
 	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_ValueIsEmpty(NBuildSystem::CBuildSystemSyntax::CRootValue const &_Value, bool _bForceEscape)

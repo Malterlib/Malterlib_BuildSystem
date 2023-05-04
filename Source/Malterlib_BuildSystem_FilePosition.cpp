@@ -12,7 +12,7 @@ namespace NMib::NBuildSystem
 		return Default;
 	}
 
-	CFilePosition CFilePosition::fs_FromJSON(CEJSONSorted const &_Value)
+	CFilePosition CFilePosition::fs_FromJson(CEJSONSorted const &_Value)
 	{
 		CFilePosition FilePosition;
 		FilePosition.m_File = _Value[gc_ConstString_File].f_String();
@@ -23,7 +23,7 @@ namespace NMib::NBuildSystem
 		return FilePosition;
 	}
 
-	CFilePosition CFilePosition::fs_FromJSON(CEJSONSorted &&_Value)
+	CFilePosition CFilePosition::fs_FromJson(CEJSONSorted &&_Value)
 	{
 		CFilePosition FilePosition;
 		FilePosition.m_File = fg_Move(_Value[gc_ConstString_File].f_String());
@@ -93,17 +93,17 @@ namespace NMib::NBuildSystem
 		m_Message += "\n{}"_f << _Value.f_ToString("    ", EJSONDialectFlag_All).f_Trim().f_Indent("    ");
 	}
 
-	CBuildSystemUniquePositions CBuildSystemUniquePositions::fs_FromJSON(CEJSONSorted const &_Value)
+	CBuildSystemUniquePositions CBuildSystemUniquePositions::fs_FromJson(CEJSONSorted const &_Value)
 	{
 		CBuildSystemUniquePositions Return;
 
 		for (auto &Position : _Value.f_Array())
-			Return.f_AddPosition(CFilePosition::fs_FromJSON(Position), Position[gc_ConstString_Identifier].f_String(), Position[gc_ConstString_Message].f_String());
+			Return.f_AddPosition(CFilePosition::fs_FromJson(Position), Position[gc_ConstString_Identifier].f_String(), Position[gc_ConstString_Message].f_String());
 
 		return Return;
 	}
 
-	CBuildSystemUniquePositions CBuildSystemUniquePositions::fs_FromJSON(CEJSONSorted &&_Value)
+	CBuildSystemUniquePositions CBuildSystemUniquePositions::fs_FromJson(CEJSONSorted &&_Value)
 	{
 		CBuildSystemUniquePositions Return;
 
@@ -111,7 +111,7 @@ namespace NMib::NBuildSystem
 		{
 			Return.f_AddPosition
 				(
-					CFilePosition::fs_FromJSON(fg_Move(Position))
+					CFilePosition::fs_FromJson(fg_Move(Position))
 					, fg_Move(Position[gc_ConstString_Identifier].f_String())
 					, fg_Move(Position[gc_ConstString_Message].f_String())
 				)

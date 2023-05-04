@@ -6,12 +6,12 @@
 
 namespace NMib::NBuildSystem
 {
-	NEncoding::CEJSONSorted CBuildSystemSyntax::CJSONAccessorEntry::f_ToJSON() const
+	NEncoding::CEJSONSorted CBuildSystemSyntax::CJSONAccessorEntry::f_ToJson() const
 	{
 		switch (m_Accessor.f_GetTypeID())
 		{
 		case 0: return m_Accessor.f_Get<0>();
-		case 1: return CEJSONSorted::fs_FromJSON(m_Accessor.f_Get<1>().f_ToJSON().f_UserType().m_Value);
+		case 1: return CEJSONSorted::fs_FromJson(m_Accessor.f_Get<1>().f_ToJson().f_UserType().m_Value);
 		case 2:
 			{
 				CEJSONSorted Return;
@@ -23,7 +23,7 @@ namespace NMib::NBuildSystem
 				switch (Entry.m_Index.f_GetTypeID())
 				{
 				case 0: OutArgument = Entry.m_Index.f_Get<0>(); break;
-				case 1: OutArgument = Entry.m_Index.f_Get<1>().f_ToJSON(); break;
+				case 1: OutArgument = Entry.m_Index.f_Get<1>().f_ToJson(); break;
 				default: DMibNeverGetHere;
 				};
 
@@ -36,7 +36,7 @@ namespace NMib::NBuildSystem
 		return {};
 	}
 
-	auto CBuildSystemSyntax::CJSONAccessorEntry::fs_FromJSON(CStringCache &o_StringCache, CEJSONSorted const &_JSON, CFilePosition const &_Position) -> CJSONAccessorEntry
+	auto CBuildSystemSyntax::CJSONAccessorEntry::fs_FromJson(CStringCache &o_StringCache, CEJSONSorted const &_JSON, CFilePosition const &_Position) -> CJSONAccessorEntry
 	{
 		if (_JSON.f_IsString())
 			return {_JSON.f_String()};
@@ -60,7 +60,7 @@ namespace NMib::NBuildSystem
 					if (UserType.m_Type != gc_ConstString_BuildSystemToken.m_String)
 						CBuildSystem::fs_ThrowError(_Position, "Accessor expression argument does not have valid type");
 
-					auto Value = CEJSONSorted::fs_FromJSON(UserType.m_Value);
+					auto Value = CEJSONSorted::fs_FromJson(UserType.m_Value);
 
 					auto pType = Value.f_GetMember(gc_ConstString_Type, EJSONType_String);
 					if (!pType || pType->f_String() != gc_ConstString_Expression.m_String)
@@ -74,7 +74,7 @@ namespace NMib::NBuildSystem
 					if (!pParen)
 						CBuildSystem::fs_ThrowError(_Position, "Accessor exprossion token does not have valid Paren member");
 
-					return {CJSONSubscript{CExpression::fs_FromJSON(o_StringCache, *pParam, _Position, pParen->f_Boolean())}};
+					return {CJSONSubscript{CExpression::fs_FromJson(o_StringCache, *pParam, _Position, pParen->f_Boolean())}};
 				}
 				else
 					CBuildSystem::fs_ThrowError(_Position, "Accessor does not have valid Argument member");
@@ -89,7 +89,7 @@ namespace NMib::NBuildSystem
 				if (!pParen)
 					CBuildSystem::fs_ThrowError(_Position, "Expression token does not have valid Paren member");
 
-				return {CExpression::fs_FromJSON(o_StringCache, *pParam, _Position, pParen->f_Boolean())};
+				return {CExpression::fs_FromJson(o_StringCache, *pParam, _Position, pParen->f_Boolean())};
 			}
 			else
 				CBuildSystem::fs_ThrowError(_Position, "Unknown type for accessor: {}"_f << pType->f_String());
@@ -100,7 +100,7 @@ namespace NMib::NBuildSystem
 		return {};
 	}
 
-	NEncoding::CEJSONSorted CBuildSystemSyntax::CJSONAccessor::f_ToJSON() const
+	NEncoding::CEJSONSorted CBuildSystemSyntax::CJSONAccessor::f_ToJson() const
 	{
 		CEJSONSorted Return;
 		auto &UserType = Return.f_UserType();
@@ -108,17 +108,17 @@ namespace NMib::NBuildSystem
 
 		auto &Object = UserType.m_Value.f_Object();
 		Object[gc_ConstString_Type] = gc_ConstString_JSONAccessor;
-		Object[gc_ConstString_Param] = m_Param.f_ToJSON().f_ToJSON();
+		Object[gc_ConstString_Param] = m_Param.f_ToJson().f_ToJson();
 
 		auto &Accessors = Object[gc_ConstString_Accessors].f_Array();
 
 		for (auto &Accessor : m_Accessors)
-			Accessors.f_Insert(Accessor.f_ToJSON().f_ToJSON());
+			Accessors.f_Insert(Accessor.f_ToJson().f_ToJson());
 
 		return Return;
 	}
 
-	auto CBuildSystemSyntax::CJSONAccessor::fs_FromJSON(CStringCache &o_StringCache, NEncoding::CEJSONSorted const &_JSON, CFilePosition const &_Position) -> CJSONAccessor
+	auto CBuildSystemSyntax::CJSONAccessor::fs_FromJson(CStringCache &o_StringCache, NEncoding::CEJSONSorted const &_JSON, CFilePosition const &_Position) -> CJSONAccessor
 	{
 		auto pParam = _JSON.f_GetMember(gc_ConstString_Param);
 		if (!pParam)
@@ -129,7 +129,7 @@ namespace NMib::NBuildSystem
 		CJSONAccessor Return;
 
 		if (!Param.f_IsUserType())
-			Return.m_Param = CParam::fs_FromJSON(o_StringCache, Param, _Position, {}, true);
+			Return.m_Param = CParam::fs_FromJson(o_StringCache, Param, _Position, {}, true);
 		else
 		{
 			auto &UserType = Param.f_UserType();
@@ -139,7 +139,7 @@ namespace NMib::NBuildSystem
 			if (!pType)
 				CBuildSystem::fs_ThrowError(_Position, "Param does not have valid Type member");
 
-			Return.m_Param = CParam::fs_FromJSON(o_StringCache, Param, _Position, pType->f_String(), true);
+			Return.m_Param = CParam::fs_FromJson(o_StringCache, Param, _Position, pType->f_String(), true);
 		}
 
 		auto pAccessors = _JSON.f_GetMember(gc_ConstString_Accessors, EJSONType_Array);
@@ -147,7 +147,7 @@ namespace NMib::NBuildSystem
 			CBuildSystem::fs_ThrowError(_Position, "JSONAccessor token does not have valid Accessors member");
 
 		for (auto &Accessor : pAccessors->f_Array())
-			Return.m_Accessors.f_Insert(CJSONAccessorEntry::fs_FromJSON(o_StringCache, Accessor, _Position));
+			Return.m_Accessors.f_Insert(CJSONAccessorEntry::fs_FromJson(o_StringCache, Accessor, _Position));
 
 		return Return;
 	}

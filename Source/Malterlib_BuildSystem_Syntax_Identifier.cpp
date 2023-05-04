@@ -71,7 +71,7 @@ namespace NMib::NBuildSystem
 		return CPropertyKeyReference(CAssertAddedToStringCache(), f_PropertyTypeConstant(), ConstantName.m_String, ConstantName.m_Hash);
 	}
 
-	NEncoding::CEJSONSorted CBuildSystemSyntax::CIdentifierReference::f_ToJSON() const
+	NEncoding::CEJSONSorted CBuildSystemSyntax::CIdentifierReference::f_ToJson() const
 	{
 		CEJSONSorted Return;
 
@@ -80,12 +80,12 @@ namespace NMib::NBuildSystem
 
 		auto &Object = UserType.m_Value.f_Object();
 		Object[gc_ConstString_Type] = gc_ConstString_IdentifierReference;
-		Object[gc_ConstString_Identifier] = m_Identifier.f_ToJSON().f_ToJSON();
+		Object[gc_ConstString_Identifier] = m_Identifier.f_ToJson().f_ToJson();
 
 		return Return;
 	}
 	
-	NEncoding::CEJSONSorted CBuildSystemSyntax::CIdentifier::f_ToJSON() const
+	NEncoding::CEJSONSorted CBuildSystemSyntax::CIdentifier::f_ToJson() const
 	{
 		CEJSONSorted Return;
 		auto &UserType = Return.f_UserType();
@@ -98,7 +98,7 @@ namespace NMib::NBuildSystem
 		switch (m_Name.f_GetTypeID())
 		{
 		case 0: Name = m_Name.f_Get<0>().m_String; break;
-		case 1: Name = m_Name.f_Get<1>().f_ToJSONArray(true).f_ToJSON(); break;
+		case 1: Name = m_Name.f_Get<1>().f_ToJsonArray(true).f_ToJson(); break;
 		default: DMibNeverGetHere;
 		}
 
@@ -116,7 +116,7 @@ namespace NMib::NBuildSystem
 			switch (m_PropertyType.f_GetTypeID())
 			{
 			case 0: PropertyType = fg_PropertyTypeToStr(m_PropertyType.f_Get<0>()); break;
-			case 1: PropertyType = m_PropertyType.f_Get<1>().f_ToJSONArray(true).f_ToJSON(); break;
+			case 1: PropertyType = m_PropertyType.f_Get<1>().f_ToJsonArray(true).f_ToJson(); break;
 			default: DMibNeverGetHere;
 			}
 		}
@@ -124,7 +124,7 @@ namespace NMib::NBuildSystem
 		return Return;
 	}
 	
-	auto CBuildSystemSyntax::CIdentifier::fs_FromJSON(CStringCache &o_StringCache, CEJSONSorted const &_JSON, CFilePosition const &_Position) -> CIdentifier
+	auto CBuildSystemSyntax::CIdentifier::fs_FromJson(CStringCache &o_StringCache, CEJSONSorted const &_JSON, CFilePosition const &_Position) -> CIdentifier
 	{
 		CIdentifier Return;
 
@@ -146,7 +146,7 @@ namespace NMib::NBuildSystem
 		if (pName->f_IsString())
 			Return.m_Name = CStringAndHash(o_StringCache, pName->f_String(), pName->f_String().f_Hash());
 		else if (pName->f_IsArray())
-			Return.m_Name = CEvalString::fs_FromJSON(o_StringCache, CEJSONSorted::fs_FromJSON(*pName), _Position);
+			Return.m_Name = CEvalString::fs_FromJson(o_StringCache, CEJSONSorted::fs_FromJson(*pName), _Position);
 		else
 			CBuildSystem::fs_ThrowError(_Position, "Identifier token does not have valid Name member");
 
@@ -170,7 +170,7 @@ namespace NMib::NBuildSystem
 				CBuildSystem::fs_ThrowError(_Position, "Unknown property type: {}"_f << *pPropertyType);
 		}
 		else if (pPropertyType->f_IsArray())
-			Return.m_PropertyType = CEvalString::fs_FromJSON(o_StringCache, CEJSONSorted::fs_FromJSON(*pPropertyType), _Position);
+			Return.m_PropertyType = CEvalString::fs_FromJson(o_StringCache, CEJSONSorted::fs_FromJson(*pPropertyType), _Position);
 		else
 			CBuildSystem::fs_ThrowError(_Position, "Identifier token does not have valid PropertyType member");
 

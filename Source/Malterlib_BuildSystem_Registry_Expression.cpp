@@ -433,7 +433,7 @@ namespace NMib::NContainer
 
 		o_pParse = pParse;
 
-		return fg_Move(Return).f_ToJSON();
+		return fg_Move(Return).f_ToJson();
 	}
 
 	CEJSONSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseIdentifierTokenEJSON(uch8 const *&o_pParse)
@@ -516,7 +516,7 @@ namespace NMib::NContainer
 
 	CJSONSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseIdentifierToken(uch8 const * &o_pParse)
 	{
-		return f_ParseIdentifierTokenEJSON(o_pParse).f_ToJSON();
+		return f_ParseIdentifierTokenEJSON(o_pParse).f_ToJson();
 	}
 
 	CJSONSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseFunctionToken
@@ -584,7 +584,7 @@ namespace NMib::NContainer
 
 		o_pParse = pParse;
 
-		return fg_Move(Return).f_ToJSON();
+		return fg_Move(Return).f_ToJson();
 	}
 
 	CJSONSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseExpression(uch8 const *&o_pParse, EParseExpressionFlag _Flags, CJSONSorted *_pFirstParam)
@@ -707,7 +707,7 @@ namespace NMib::NContainer
 					ReturnUserType.m_Type = gc_ConstString_BuildSystemToken;
 					ReturnUserType.m_Value = fg_Move(Expression);
 
-					Param = fg_Move(Return).f_ToJSON();
+					Param = fg_Move(Return).f_ToJson();
 				}
 				else
 				{
@@ -786,7 +786,7 @@ namespace NMib::NContainer
 				Object[gc_ConstString_Left] = fg_Move(Left);
 				Object[gc_ConstString_Right] = fg_Move(Right);
 
-				Param = fg_Move(Return).f_ToJSON();
+				Param = fg_Move(Return).f_ToJson();
 			}
 			else if (m_bSupportBinaryOperators && !m_bParsingDefine && !Param && fs_IsPrefixOperator(pParse))
 			{
@@ -819,7 +819,7 @@ namespace NMib::NContainer
 				Object[gc_ConstString_Operator] = fg_Move(Operator);
 				Object[gc_ConstString_Right] = fg_Move(Right);
 
-				Param = fg_Move(Return).f_ToJSON();
+				Param = fg_Move(Return).f_ToJson();
 			}
 			else if (m_bSupportBinaryOperators && !m_bParsingDefine && fs_IsBinaryOperator(pParse))
 			{
@@ -879,7 +879,7 @@ namespace NMib::NContainer
 				Object[gc_ConstString_Left] = fg_Move(*Param);
 				Object[gc_ConstString_Right] = fg_Move(Right);
 
-				Param = fg_Move(Return).f_ToJSON();
+				Param = fg_Move(Return).f_ToJson();
 			}
 			else
 			{

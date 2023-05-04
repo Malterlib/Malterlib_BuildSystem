@@ -126,7 +126,7 @@ namespace NMib::NBuildSystem
 							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
 							{
 								if (!_Params[0].f_Array().f_IsEmpty())
-									fs_ThrowError(_Context, CBuildSystemUniquePositions::fs_FromJSON(_Params[0]), fg_FormatJSONArray(_Params[1].f_Array(), false));
+									fs_ThrowError(_Context, CBuildSystemUniquePositions::fs_FromJson(_Params[0]), fg_FormatJSONArray(_Params[1].f_Array(), false));
 								else
 									fs_ThrowError(_Context, fg_FormatJSONArray(_Params[1].f_Array(), false));
 							}

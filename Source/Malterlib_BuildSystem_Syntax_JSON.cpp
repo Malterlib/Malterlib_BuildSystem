@@ -8,23 +8,23 @@
 
 namespace NMib::NBuildSystem
 {
-	NEncoding::CEJSONSorted CBuildSystemSyntax::CArray::f_ToJSON() const
+	NEncoding::CEJSONSorted CBuildSystemSyntax::CArray::f_ToJson() const
 	{
 		CEJSONSorted Return;
 		auto &Array = Return.f_Array();
 		for (auto &Value : m_Array)
-			Array.f_Insert(Value.f_Get().f_ToJSON());
+			Array.f_Insert(Value.f_Get().f_ToJson());
 		return Return;
 	}
 
-	auto CBuildSystemSyntax::CArray::fs_FromJSON(CStringCache &o_StringCache, NEncoding::CEJSONSorted const &_JSON, CFilePosition const &_Position, bool _bAppendAllowed)
+	auto CBuildSystemSyntax::CArray::fs_FromJson(CStringCache &o_StringCache, NEncoding::CEJSONSorted const &_JSON, CFilePosition const &_Position, bool _bAppendAllowed)
 		-> NStorage::TCVariant<NEncoding::CEJSONSorted, CArray>
 	{
 		CArray Array;
 		bool bAllConstant = true;
 		for (auto &Element : _JSON.f_Array())
 		{
-			auto &Value = Array.m_Array.f_Insert(CValue::fs_FromJSON(o_StringCache, Element, _Position, _bAppendAllowed));
+			auto &Value = Array.m_Array.f_Insert(CValue::fs_FromJson(o_StringCache, Element, _Position, _bAppendAllowed));
 			if (!Value.f_Get().f_IsConstant())
 				bAllConstant = false;
 		}
@@ -57,7 +57,7 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	NEncoding::CEJSONSorted CBuildSystemSyntax::CObject::f_ToJSON() const
+	NEncoding::CEJSONSorted CBuildSystemSyntax::CObject::f_ToJson() const
 	{
 		CEJSONSorted Return;
 		auto &Object = Return.f_Object();
@@ -86,12 +86,12 @@ namespace NMib::NBuildSystem
 				break;
 			}
 
-			Object[OutKey] = Value.m_Value.f_Get().f_ToJSON();
+			Object[OutKey] = Value.m_Value.f_Get().f_ToJson();
 		}
 		return Return;
 	}
 	
-	auto CBuildSystemSyntax::CObject::fs_FromJSON(CStringCache &o_StringCache, NEncoding::CEJSONSorted const &_JSON, CFilePosition const &_Position, bool _bAppendAllowed)
+	auto CBuildSystemSyntax::CObject::fs_FromJson(CStringCache &o_StringCache, NEncoding::CEJSONSorted const &_JSON, CFilePosition const &_Position, bool _bAppendAllowed)
 		-> NStorage::TCVariant<NEncoding::CEJSONSorted, CObject>
 	{
 		CObject Object;
@@ -138,7 +138,7 @@ namespace NMib::NBuildSystem
 					ParseContext.m_pStartParse = (uch8 const *)Name.f_GetStr();
 					auto pParse = ParseContext.m_pStartParse;
 
-					Key.m_Key = CEvalString::fs_FromJSON(o_StringCache, CEJSONSorted::fs_FromJSON(ParseContext.f_ParseEvalStringToken(pParse))[gc_ConstString_Value], _Position);
+					Key.m_Key = CEvalString::fs_FromJson(o_StringCache, CEJSONSorted::fs_FromJson(ParseContext.f_ParseEvalStringToken(pParse))[gc_ConstString_Value], _Position);
 				}
 				break;
 			}
@@ -148,7 +148,7 @@ namespace NMib::NBuildSystem
 			auto &ObjectValue = Object.m_Object[Key];
 			Object.m_ObjectSorted.f_Insert(ObjectValue);
 
-			CValue &Value = ObjectValue.m_Value = CValue::fs_FromJSON(o_StringCache, Member.f_Value(), _Position, _bAppendAllowed);
+			CValue &Value = ObjectValue.m_Value = CValue::fs_FromJson(o_StringCache, Member.f_Value(), _Position, _bAppendAllowed);
 
 			if (!Value.f_IsConstant())
 				bAllConstant = false;

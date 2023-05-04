@@ -130,7 +130,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 				auto &JSON = VSSetting.f_Value();
 
-				CBuildSystemUniquePositions Positions = CBuildSystemUniquePositions::fs_FromJSON(fg_Move(JSON[gc_ConstString_Positions]));
+				CBuildSystemUniquePositions Positions = CBuildSystemUniquePositions::fs_FromJson(fg_Move(JSON[gc_ConstString_Positions]));
 				TCVector<CVS_Setting> VSSettingsVector;
 
 				if constexpr (tf_bIsItem)

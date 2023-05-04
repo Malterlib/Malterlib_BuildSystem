@@ -109,7 +109,7 @@ namespace NMib::NBuildSystem::NXcode
 					auto &Positions = ValueObject[gc_ConstString_Positions.m_String];
 
 					if (m_BuildSystem.f_EnablePositions())
-						Element.m_Positions.f_AddPositions(CBuildSystemUniquePositions::fs_FromJSON(Positions));
+						Element.m_Positions.f_AddPositions(CBuildSystemUniquePositions::fs_FromJson(Positions));
 
 					auto &Value = ValueObject[gc_ConstString_Value.m_String];
 

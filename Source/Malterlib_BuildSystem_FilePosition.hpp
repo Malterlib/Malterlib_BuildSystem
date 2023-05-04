@@ -59,7 +59,7 @@ namespace NMib::NBuildSystem
 			CBuildSystem::fs_ThrowError(_PropertyInfo, "Missing Positions member for '{}'"_f << _Name);
 
 		if (pPositions)
-			m_Positions = CBuildSystemUniquePositions::fs_FromJSON(*pPositions);
+			m_Positions = CBuildSystemUniquePositions::fs_FromJson(*pPositions);
 
 		if constexpr (NTraits::TCIsSame<t_CType, NEncoding::CEJSONSorted>::mc_Value)
 			m_Value = fg_Forward<tf_CValue>(pMember->f_GetMemberValue(gc_ConstString_Value, fg_Move(_DefaultValue)));
@@ -91,7 +91,7 @@ namespace NMib::NBuildSystem
 			CBuildSystem::fs_ThrowError(_PropertyInfo, "Missing Positions member for '{}'"_f << _Name);
 
 		if (pPositions)
-			m_Positions = CBuildSystemUniquePositions::fs_FromJSON(*pPositions);
+			m_Positions = CBuildSystemUniquePositions::fs_FromJson(*pPositions);
 
 		auto *pValue = pMember->f_GetMember(gc_ConstString_Value);
 		if (!pValue)

@@ -522,7 +522,7 @@ namespace NMib::NContainer
 		}
 
 		CStr::CAppender Appender(o_Output);
-		fg_GenerateJSONValue<CJSONParseContext>(Appender, _Value.f_ToJSON().f_ToJSON(), _Level, "\t", gc_BuildSystemJSONParseFlags);
+		fg_GenerateJSONValue<CJSONParseContext>(Appender, _Value.f_ToJson().f_ToJson(), _Level, "\t", gc_BuildSystemJSONParseFlags);
 	}
 
 	template <>
@@ -543,7 +543,7 @@ namespace NMib::NContainer
 		}
 
 		CStr::CAppender Appender(o_Output);
-		fg_GenerateJSONValue<CJSONParseContext>(Appender, _Value.f_ToJSON().f_ToJSON(), _Level, "\t", gc_BuildSystemJSONParseFlags);
+		fg_GenerateJSONValue<CJSONParseContext>(Appender, _Value.f_ToJson().f_ToJson(), _Level, "\t", gc_BuildSystemJSONParseFlags);
 	}
 
 	template <typename tf_CParseContext, typename tf_CStr>

@@ -115,7 +115,7 @@ namespace NMib::NBuildSystem
 		return m_Value.f_GetAsType<CExpression>();
 	}
 
-	auto CBuildSystemSyntax::CValue::fs_FromJSONToken
+	auto CBuildSystemSyntax::CValue::fs_FromJsonToken
 		(
 			CStringCache &o_StringCache
 			, NEncoding::CEJSONSorted const &_Token
@@ -135,51 +135,51 @@ namespace NMib::NBuildSystem
 				CBuildSystem::fs_ThrowError(_Position, "Expression token does not have valid Paren member");
 
 			if (_TokenType == gc_ConstString_AppendExpression.m_String)
-				return CExpressionAppend::fs_FromJSON(o_StringCache, *pParam, _Position, pParen->f_Boolean());
+				return CExpressionAppend::fs_FromJson(o_StringCache, *pParam, _Position, pParen->f_Boolean());
 			else
-				return CExpression::fs_FromJSON(o_StringCache, *pParam, _Position, pParen->f_Boolean());
+				return CExpression::fs_FromJson(o_StringCache, *pParam, _Position, pParen->f_Boolean());
 		}
 		else if (_TokenType == gc_ConstString_EvalString.m_String)
 		{
 			auto pValue = _Token.f_GetMember(gc_ConstString_Value, EJSONType_Array);
 			if (!pValue)
 				CBuildSystem::fs_ThrowError(_Position, "Eval string does not have valid Value member");
-			return CEvalString::fs_FromJSON(o_StringCache, *pValue, _Position);
+			return CEvalString::fs_FromJson(o_StringCache, *pValue, _Position);
 		}
 		else if (_TokenType == gc_ConstString_WildcardString.m_String)
-			return CWildcardString::fs_FromJSON(o_StringCache, _Token, _Position);
+			return CWildcardString::fs_FromJson(o_StringCache, _Token, _Position);
 		else if (_TokenType == gc_ConstString_Operator.m_String)
-			return COperator::fs_FromJSON(o_StringCache, _Token, _Position, _bAppendAllowed);
+			return COperator::fs_FromJson(o_StringCache, _Token, _Position, _bAppendAllowed);
 		else if (_TokenType == gc_ConstString_TypeDefaulted.m_String)
-			return CBuildSystemSyntax::CDefine{CBuildSystemSyntax::CType{CBuildSystemSyntax::CTypeDefaulted::fs_FromJSON(o_StringCache, _Token, _Position)}};
+			return CBuildSystemSyntax::CDefine{CBuildSystemSyntax::CType{CBuildSystemSyntax::CTypeDefaulted::fs_FromJson(o_StringCache, _Token, _Position)}};
 		else if (_TokenType == gc_ConstString_Define.m_String)
-			return CDefine::fs_FromJSON(o_StringCache, _Token, _Position);
+			return CDefine::fs_FromJson(o_StringCache, _Token, _Position);
 		else if (_TokenType == gc_ConstString_FunctionType.m_String)
-			return CBuildSystemSyntax::CDefine{CFunctionType::fs_FromJSON(o_StringCache, _Token, _Position)};
+			return CBuildSystemSyntax::CDefine{CFunctionType::fs_FromJson(o_StringCache, _Token, _Position)};
 		else
 			CBuildSystem::fs_ThrowError(_Position, "Unknown build system token type: {}"_f << _TokenType);
 	}
 
-	NEncoding::CEJSONSorted CBuildSystemSyntax::CValue::f_ToJSON() const
+	NEncoding::CEJSONSorted CBuildSystemSyntax::CValue::f_ToJson() const
 	{
 		switch (m_Value.f_GetTypeID())
 		{
 		case 0: return m_Value.f_Get<0>();
-		case 1: return m_Value.f_Get<1>().f_ToJSON();
-		case 2: return m_Value.f_Get<2>().f_ToJSON();
-		case 3: return m_Value.f_Get<3>().f_ToJSON();
-		case 4: return m_Value.f_Get<4>().f_ToJSON();
-		case 5: return m_Value.f_Get<5>().f_ToJSON();
-		case 6: return m_Value.f_Get<6>().f_ToJSON();
-		case 7: return m_Value.f_Get<7>().f_ToJSON();
-		case 8: return m_Value.f_Get<8>().f_ToJSON();
+		case 1: return m_Value.f_Get<1>().f_ToJson();
+		case 2: return m_Value.f_Get<2>().f_ToJson();
+		case 3: return m_Value.f_Get<3>().f_ToJson();
+		case 4: return m_Value.f_Get<4>().f_ToJson();
+		case 5: return m_Value.f_Get<5>().f_ToJson();
+		case 6: return m_Value.f_Get<6>().f_ToJson();
+		case 7: return m_Value.f_Get<7>().f_ToJson();
+		case 8: return m_Value.f_Get<8>().f_ToJson();
 		}
 
 		DMibNeverGetHere;
 		return {};
 	}
 
-	auto CBuildSystemSyntax::CValue::fs_FromJSON(CStringCache &o_StringCache, CEJSONSorted const &_JSON, CFilePosition const &_Position, bool _bAppendAllowed) -> CValue
+	auto CBuildSystemSyntax::CValue::fs_FromJson(CStringCache &o_StringCache, CEJSONSorted const &_JSON, CFilePosition const &_Position, bool _bAppendAllowed) -> CValue
 	{
 		CValue Return;
 
@@ -189,7 +189,7 @@ namespace NMib::NBuildSystem
 			if (UserType.m_Type != gc_ConstString_BuildSystemToken.m_String)
 				CBuildSystem::fs_ThrowError(_Position, "Invalid value user type");
 
-			auto Token = CEJSONSorted::fs_FromJSON(UserType.m_Value);
+			auto Token = CEJSONSorted::fs_FromJson(UserType.m_Value);
 
 			if (!Token.f_IsObject())
 				CBuildSystem::fs_ThrowError(_Position, "Token is not object");
@@ -200,19 +200,19 @@ namespace NMib::NBuildSystem
 
 			auto &TokenType = pType->f_String();
 
-			Return.m_Value = fs_FromJSONToken(o_StringCache, Token, TokenType, _Position, _bAppendAllowed);
+			Return.m_Value = fs_FromJsonToken(o_StringCache, Token, TokenType, _Position, _bAppendAllowed);
 		}
 		else if (_JSON.f_IsArray())
-			Return.m_Value = CArray::fs_FromJSON(o_StringCache, _JSON, _Position, _bAppendAllowed);
+			Return.m_Value = CArray::fs_FromJson(o_StringCache, _JSON, _Position, _bAppendAllowed);
 		else if (_JSON.f_IsObject())
-			Return.m_Value = CObject::fs_FromJSON(o_StringCache, _JSON, _Position, _bAppendAllowed);
+			Return.m_Value = CObject::fs_FromJson(o_StringCache, _JSON, _Position, _bAppendAllowed);
 		else
 			Return.m_Value = _JSON;
 
 		return Return;
 	}
 
-	CEJSONSorted CBuildSystemSyntax::CRootValue::f_ToJSON() const
+	CEJSONSorted CBuildSystemSyntax::CRootValue::f_ToJson() const
 	{
 		if (!m_Accessors.f_IsEmpty())
 		{
@@ -222,25 +222,25 @@ namespace NMib::NBuildSystem
 
 			auto &Object = UserType.m_Value.f_Object();
 			Object[gc_ConstString_Type] = gc_ConstString_RootValue;
-			Object[gc_ConstString_Value] = m_Value.f_ToJSON().f_ToJSON();
+			Object[gc_ConstString_Value] = m_Value.f_ToJson().f_ToJson();
 			auto &Accessors = Object[gc_ConstString_Accessors].f_Array();
 
 			for (auto &Accessor : m_Accessors)
-				Accessors.f_Insert(Accessor.f_ToJSON().f_ToJSON());
+				Accessors.f_Insert(Accessor.f_ToJson().f_ToJson());
 
 			return Return;
 		}
 		else
-			return m_Value.f_ToJSON();
+			return m_Value.f_ToJson();
 	}
 
-	auto CBuildSystemSyntax::CRootValue::fs_FromJSON(CStringCache &o_StringCache, NEncoding::CEJSONSorted const &_JSON, CFilePosition const &_Position, bool _bAppendAllowed) -> CRootValue
+	auto CBuildSystemSyntax::CRootValue::fs_FromJson(CStringCache &o_StringCache, NEncoding::CEJSONSorted const &_JSON, CFilePosition const &_Position, bool _bAppendAllowed) -> CRootValue
 	{
 		CRootValue Return;
 
 		if (!_JSON.f_IsUserType())
 		{
-			Return.m_Value = CValue::fs_FromJSON(o_StringCache, _JSON, _Position, _bAppendAllowed);
+			Return.m_Value = CValue::fs_FromJson(o_StringCache, _JSON, _Position, _bAppendAllowed);
 			return Return;
 		}
 
@@ -248,7 +248,7 @@ namespace NMib::NBuildSystem
 		if (UserType.m_Type != gc_ConstString_BuildSystemToken.m_String)
 			CBuildSystem::fs_ThrowError(_Position, "Invalid value user type");
 
-		auto Token = CEJSONSorted::fs_FromJSON(UserType.m_Value);
+		auto Token = CEJSONSorted::fs_FromJson(UserType.m_Value);
 
 		if (!Token.f_IsObject())
 			CBuildSystem::fs_ThrowError(_Position, "Token is not object");
@@ -264,41 +264,41 @@ namespace NMib::NBuildSystem
 			if (!pValue)
 				CBuildSystem::fs_ThrowError(_Position, "RootValue token does not have a valid Value member");
 
-			Return.m_Value = CValue::fs_FromJSON(o_StringCache, *pValue, _Position, _bAppendAllowed);
+			Return.m_Value = CValue::fs_FromJson(o_StringCache, *pValue, _Position, _bAppendAllowed);
 
 			auto pAccessors = Token.f_GetMember(gc_ConstString_Accessors, EJSONType_Array);
 			if (pAccessors)
 			{
 				for (auto &Accessor : pAccessors->f_Array())
-					Return.m_Accessors.f_Insert(CJSONAccessorEntry::fs_FromJSON(o_StringCache, Accessor, _Position));
+					Return.m_Accessors.f_Insert(CJSONAccessorEntry::fs_FromJson(o_StringCache, Accessor, _Position));
 			}
 		}
 		else
-			Return.m_Value.m_Value = CValue::fs_FromJSONToken(o_StringCache, Token, TokenType, _Position, _bAppendAllowed);
+			Return.m_Value.m_Value = CValue::fs_FromJsonToken(o_StringCache, Token, TokenType, _Position, _bAppendAllowed);
 
 		return Return;
 	}
 
-	CEJSONSorted CBuildSystemSyntax::CRootKey::f_ToJSON() const
+	CEJSONSorted CBuildSystemSyntax::CRootKey::f_ToJson() const
 	{
 		switch (m_Value.f_GetTypeID())
 		{
-		case 0: return m_Value.f_GetAsType<CValue>().f_ToJSON();
-		case 1: return m_Value.f_GetAsType<CKeyPrefixOperator>().f_ToJSON();
-		case 2: return m_Value.f_GetAsType<CKeyLogicalOperator>().f_ToJSON();
+		case 0: return m_Value.f_GetAsType<CValue>().f_ToJson();
+		case 1: return m_Value.f_GetAsType<CKeyPrefixOperator>().f_ToJson();
+		case 2: return m_Value.f_GetAsType<CKeyLogicalOperator>().f_ToJson();
 		}
 
 		DMibNeverGetHere;
 		return {};
 	}
 
-	auto CBuildSystemSyntax::CRootKey::fs_FromJSON(CStringCache &o_StringCache, NEncoding::CEJSONSorted const &_JSON, CFilePosition const &_Position) -> CRootKey
+	auto CBuildSystemSyntax::CRootKey::fs_FromJson(CStringCache &o_StringCache, NEncoding::CEJSONSorted const &_JSON, CFilePosition const &_Position) -> CRootKey
 	{
 		CRootKey Return;
 
 		if (!_JSON.f_IsUserType())
 		{
-			Return.m_Value = CValue::fs_FromJSON(o_StringCache, _JSON, _Position, false);
+			Return.m_Value = CValue::fs_FromJson(o_StringCache, _JSON, _Position, false);
 			return Return;
 		}
 
@@ -306,7 +306,7 @@ namespace NMib::NBuildSystem
 		if (UserType.m_Type != gc_ConstString_BuildSystemToken.m_String)
 			CBuildSystem::fs_ThrowError(_Position, "Invalid value user type");
 
-		auto Token = CEJSONSorted::fs_FromJSON(UserType.m_Value);
+		auto Token = CEJSONSorted::fs_FromJson(UserType.m_Value);
 
 		if (!Token.f_IsObject())
 			CBuildSystem::fs_ThrowError(_Position, "Token is not object");
@@ -317,11 +317,11 @@ namespace NMib::NBuildSystem
 
 		auto &TokenType = pType->f_String();
 		if (TokenType == gc_ConstString_KeyLogicalOperator.m_String)
-			Return.m_Value = CKeyLogicalOperator::fs_FromJSON(_JSON, _Position);
+			Return.m_Value = CKeyLogicalOperator::fs_FromJson(_JSON, _Position);
 		else if (TokenType == gc_ConstString_KeyPrefixOperator.m_String)
-			Return.m_Value = CKeyPrefixOperator::fs_FromJSON(o_StringCache, _JSON, _Position);
+			Return.m_Value = CKeyPrefixOperator::fs_FromJson(o_StringCache, _JSON, _Position);
 		else
-			Return.m_Value = CValue::fs_FromJSON(o_StringCache, _JSON, _Position, false);
+			Return.m_Value = CValue::fs_FromJson(o_StringCache, _JSON, _Position, false);
 
 		return Return;
 	}

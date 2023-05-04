@@ -26,7 +26,7 @@ namespace NMib::NBuildSystem
 		return m_Token.f_GetAsType<CStr>();
 	}
 
-	NEncoding::CEJSONSorted CBuildSystemSyntax::CEvalStringToken::f_ToJSON(bool _bRawString) const
+	NEncoding::CEJSONSorted CBuildSystemSyntax::CEvalStringToken::f_ToJson(bool _bRawString) const
 	{
 		switch (m_Token.f_GetTypeID())
 		{
@@ -41,14 +41,14 @@ namespace NMib::NBuildSystem
 				ReturnObject[gc_ConstString_Value] = m_Token.f_Get<0>();
 				return Return;
 			}
-		case 1: return CEJSONSorted::fs_FromJSON(m_Token.f_Get<1>().f_Get().f_ToJSON().f_UserType().m_Value);
+		case 1: return CEJSONSorted::fs_FromJson(m_Token.f_Get<1>().f_Get().f_ToJson().f_UserType().m_Value);
 		default: DMibNeverGetHere;
 		}
 
 		return {};
 	}
 
-	auto CBuildSystemSyntax::CEvalStringToken::fs_FromJSON(CStringCache &o_StringCache, CEJSONSorted const &_JSON, CFilePosition const &_Position) -> CEvalStringToken
+	auto CBuildSystemSyntax::CEvalStringToken::fs_FromJson(CStringCache &o_StringCache, CEJSONSorted const &_JSON, CFilePosition const &_Position) -> CEvalStringToken
 	{
 		if (_JSON.f_IsString())
 			return CEvalStringToken{_JSON.f_String()};
@@ -74,7 +74,7 @@ namespace NMib::NBuildSystem
 			if (!pParen)
 				CBuildSystem::fs_ThrowError(_Position, "Eval string expression does not have valid Paren member");
 
-			return CEvalStringToken{CExpression::fs_FromJSON(o_StringCache, *pParam, _Position, pParen->f_Boolean())};
+			return CEvalStringToken{CExpression::fs_FromJson(o_StringCache, *pParam, _Position, pParen->f_Boolean())};
 		}
 		else
 			CBuildSystem::fs_ThrowError(_Position, "Eval string token does not have known Type: {}"_f << pType->f_String());
@@ -82,30 +82,30 @@ namespace NMib::NBuildSystem
 		return {};
 	}
 
-	NEncoding::CEJSONSorted CBuildSystemSyntax::CEvalString::f_ToJSONArray(bool _bRawString) const
+	NEncoding::CEJSONSorted CBuildSystemSyntax::CEvalString::f_ToJsonArray(bool _bRawString) const
 	{
 		CEJSONSorted Return;
 
 		auto &Array = Return.f_Array();
 		for (auto &Token : m_Tokens)
-			Array.f_Insert(Token.f_ToJSON(_bRawString));
+			Array.f_Insert(Token.f_ToJson(_bRawString));
 
 		return Return;
 	}
 
-	NEncoding::CEJSONSorted CBuildSystemSyntax::CEvalString::f_ToJSON() const
+	NEncoding::CEJSONSorted CBuildSystemSyntax::CEvalString::f_ToJson() const
 	{
 		CEJSONSorted Return;
 		auto &UserType = Return.f_UserType();
 		UserType.m_Type = gc_ConstString_BuildSystemToken;
 		auto &Object = UserType.m_Value.f_Object();
 		Object[gc_ConstString_Type] = gc_ConstString_EvalString;
-		Object[gc_ConstString_Value] = f_ToJSONArray(false).f_ToJSON();
+		Object[gc_ConstString_Value] = f_ToJsonArray(false).f_ToJson();
 
 		return Return;
 	}
 
-	auto CBuildSystemSyntax::CEvalString::fs_FromJSON(CStringCache &o_StringCache, CEJSONSorted const &_JSON, CFilePosition const &_Position) -> CEvalString
+	auto CBuildSystemSyntax::CEvalString::fs_FromJson(CStringCache &o_StringCache, CEJSONSorted const &_JSON, CFilePosition const &_Position) -> CEvalString
 	{
 		if (!_JSON.f_IsArray())
 			CBuildSystem::fs_ThrowError(_Position, "Eval string tokens are not an array");
@@ -113,12 +113,12 @@ namespace NMib::NBuildSystem
 		CEvalString Return;
 
 		for (auto &Token : _JSON.f_Array())
-			Return.m_Tokens.f_Insert(CEvalStringToken::fs_FromJSON(o_StringCache, Token, _Position));
+			Return.m_Tokens.f_Insert(CEvalStringToken::fs_FromJson(o_StringCache, Token, _Position));
 
 		return Return;
 	}
 
-	NEncoding::CEJSONSorted CBuildSystemSyntax::CWildcardString::f_ToJSON() const
+	NEncoding::CEJSONSorted CBuildSystemSyntax::CWildcardString::f_ToJson() const
 	{
 		CEJSONSorted Return;
 		auto &UserType = Return.f_UserType();
@@ -131,14 +131,14 @@ namespace NMib::NBuildSystem
 		switch (m_String.f_GetTypeID())
 		{
 		case 0: Value = m_String.f_Get<0>(); break;
-		case 1: Value = m_String.f_Get<1>().f_ToJSON().f_UserType().m_Value; break;
+		case 1: Value = m_String.f_Get<1>().f_ToJson().f_UserType().m_Value; break;
 		default: DMibNeverGetHere;
 		}
 
 		return Return;
 	}
 
-	auto CBuildSystemSyntax::CWildcardString::fs_FromJSON(CStringCache &o_StringCache, CEJSONSorted const &_JSON, CFilePosition const &_Position) -> CWildcardString
+	auto CBuildSystemSyntax::CWildcardString::fs_FromJson(CStringCache &o_StringCache, CEJSONSorted const &_JSON, CFilePosition const &_Position) -> CWildcardString
 	{
 		auto &Value = _JSON;
 		DMibRequire
@@ -160,7 +160,7 @@ namespace NMib::NBuildSystem
 			if (!pTokenArray)
 				CBuildSystem::fs_ThrowError(_Position, "Invalid Value for wildcard token type");
 
-			return CWildcardString{CEvalString::fs_FromJSON(o_StringCache, *pTokenArray, _Position)};
+			return CWildcardString{CEvalString::fs_FromJson(o_StringCache, *pTokenArray, _Position)};
 		}
 		else
 			CBuildSystem::fs_ThrowError(_Position, "Wildcard string token does not have valid Value member");
