@@ -20,6 +20,7 @@ Choose how you want to reconcile changes:
 Accept recommended actions   : {0}./mib update_repos '--reconcile=*:auto'{1}
 Rebase all                   : {0}./mib update_repos '--reconcile=*:rebase'{1}
 Reset all                    : {0}./mib update_repos '--reconcile=*:reset'{1}
+No action, leave as is       : {0}./mib update_repos '--reconcile=*:leave'{1}
 
 To choose separate action for different repositories you can specify wildcards. The last matching wildcard wins:
 {0}./mib update_repos '--reconcile=*:auto,External/*:reset'{1}
@@ -870,6 +871,8 @@ namespace NMib::NBuildSystem
 									bPassException = true;
 									DMibError("Manual reconcile needed");
 								}
+								else if (Action == EHandleRepositoryAction_Leave)
+									;
 								else if (_ReconcileAction != EHandleRepositoryAction_Auto)
 								{
 									CStr ActionStr;

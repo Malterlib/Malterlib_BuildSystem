@@ -43,8 +43,10 @@ namespace NMib::NBuildSystem
 				Action = EHandleRepositoryAction_Reset;
 			else if (ActionStr == gc_ConstString_rebase.m_String)
 				Action = EHandleRepositoryAction_Rebase;
+			else if (ActionStr == gc_ConstString_leave.m_String)
+				Action = EHandleRepositoryAction_Leave;
 			else
-				DError("Invalid format for --reconcile. Expected action to be one of: [auto, reset, rebase]");
+				DError("Invalid format for --reconcile. Expected action to be one of: [auto, reset, rebase, leave]");
 
 			m_ReconcileActions[WildCard] = Action;
 		}

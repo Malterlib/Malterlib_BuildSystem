@@ -21,6 +21,7 @@ namespace NMib::NBuildSystem
 		, EHandleRepositoryAction_ManualResolve
 		, EHandleRepositoryAction_Reset
 		, EHandleRepositoryAction_Rebase
+		, EHandleRepositoryAction_Leave
 	};
 
 	enum EHandleRepositoryRemovedAction
