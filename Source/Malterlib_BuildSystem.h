@@ -540,6 +540,7 @@ namespace NMib::NBuildSystem
 		NEncoding::CEJSONSorted f_GetDefinedProperties(CEntity &_Entity, EPropertyType _PropertyType, bool &o_bIsFullEval) const;
 
 		NConcurrency::TCFuture<void> f_CheckCancelled() const;
+		void f_CheckCancelledException() const;
 		NStorage::TCSharedPointer<NAtomic::TCAtomic<bool>> f_GetCancelledPointer() const;
 		
 		constexpr static uint32 mc_MToolVersion = 2;

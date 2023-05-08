@@ -142,6 +142,12 @@ namespace NMib::NBuildSystem
 		co_return DMibErrorInstance("Aborted");
 	}
 
+	void CBuildSystem::f_CheckCancelledException() const
+	{
+		if (mp_pCancelled && mp_pCancelled->f_Load())
+			DMibError("Aborted");
+	}
+
 	TCSharedPointer<TCAtomic<bool>> CBuildSystem::f_GetCancelledPointer() const
 	{
 		return mp_pCancelled;

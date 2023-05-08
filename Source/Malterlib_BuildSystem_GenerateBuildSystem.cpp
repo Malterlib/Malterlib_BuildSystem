@@ -195,6 +195,7 @@ namespace NMib::NBuildSystem
 		while (bDependencyAdded)
 		{
 			bDependencyAdded = false;
+			f_CheckCancelledException();
 
 			TCSet<CTargetInfo *> TargetsToProcess;
 			for (auto &TargetInfo : Workspace.m_Targets)
@@ -205,6 +206,7 @@ namespace NMib::NBuildSystem
 			while (!TargetsToProcess.f_IsEmpty())
 			{
 				TargetsAlreadyProcessed += TargetsToProcess;
+				f_CheckCancelledException();
 
 				TCSet<CTargetInfo *> NewTargetsToProcess;
 
@@ -367,6 +369,8 @@ namespace NMib::NBuildSystem
 						TargetsToProcess
 						, [&](CTargetInfo *_pTarget)
 						{
+							f_CheckCancelledException();
+
 							_pTarget->m_DependenciesMap.f_Clear();
 
 							f_ExpandTargetDependencies(Workspace, Evaluated, *_pTarget->m_pOuterEntity, _pTarget->m_DependenciesBackup);
@@ -750,6 +754,8 @@ namespace NMib::NBuildSystem
 						CExpandEntityState ExpandState;
 						for (bool bDoneSomething = true; fg_Exchange(bDoneSomething, false);)
 						{
+							f_CheckCancelledException();
+
 							f_PopulateTargetAllFiles(*_Target.m_pOuterEntity);
 
 							if (f_ExpandTargetGroups(ExpandState, Evaluated, *_Target.m_pOuterEntity))
