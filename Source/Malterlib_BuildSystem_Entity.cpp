@@ -149,6 +149,14 @@ namespace NMib::NBuildSystem
 		return g_RootKey;
 	}
 
+	mint CEntity::f_ExpandedOrGeneratedFromSource() const
+	{
+		auto &Data = f_Data();
+		if (Data.m_ExpandedOrGeneratedFrom)
+			return Data.m_ExpandedOrGeneratedFrom;
+		return (mint)this;
+	}
+
 	void CEntity::f_CopyAll(CEntity const &_Other, bool _bCopyChildren)
 	{
 		m_pData = _Other.m_pData;

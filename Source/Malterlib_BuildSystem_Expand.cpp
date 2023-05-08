@@ -643,13 +643,14 @@ namespace NMib::NBuildSystem
 
 		CEvaluatedProperties TempProperties;
 		TempProperties.m_pParentProperties = &_Entity.m_EvaluatedProperties;
+		mint ExpandedOrGeneratedFromSource = _Entity.f_ExpandedOrGeneratedFromSource();
 
 		if (Key.m_Name.f_IsConstantString())
 		{
 			if (Key.m_Type != EEntityType_File)
 				return nullptr;
 			else
-				_Entity.f_DataWritable().m_ExpandedOrGeneratedFrom = (mint)&_Entity;
+				_Entity.f_DataWritable().m_ExpandedOrGeneratedFrom = ExpandedOrGeneratedFromSource;
 
 			Entities.f_Insert(Key.m_Name.f_Constant());
 		}
@@ -820,11 +821,16 @@ namespace NMib::NBuildSystem
 
 					auto pOldEntity = pParent->m_ChildEntitiesMap.f_FindEqual(NewKey);
 
+					TCSet<mint> OldExpandedOrGeneratedFromSet;
 					if (pOldEntity)
 					{
-						auto & OldEntityData = pOldEntity->f_Data();
+						auto &OldEntityData = pOldEntity->f_Data();
 
-						if (pOldEntity->f_Data().m_ExpandedOrGeneratedFrom && OldEntityData.m_ExpandedOrGeneratedFrom == (mint)&_Entity)
+						if
+							(
+								(OldEntityData.m_ExpandedOrGeneratedFrom && OldEntityData.m_ExpandedOrGeneratedFrom == ExpandedOrGeneratedFromSource)
+								|| OldEntityData.m_ExpandedOrGeneratedFromSet.f_FindEqual(ExpandedOrGeneratedFromSource)
+							)
 						{
 							if (o_pCreated)
 								o_pCreated->f_Insert(pOldEntity);
@@ -835,8 +841,14 @@ namespace NMib::NBuildSystem
 						{
 							if (Files.f_GetLen() != 1 || Entities.f_GetLen() != 1)
 								fsp_ThrowError(EntityData.m_Position, "Internal error: pOldEntity == &_Entity && (Files.f_GetLen() != 1 || Entities.f_GetLen() != 1)");
+
 							return nullptr; // We don't need to do anything
 						}
+
+						OldExpandedOrGeneratedFromSet = OldEntityData.m_ExpandedOrGeneratedFromSet;
+						if (OldEntityData.m_ExpandedOrGeneratedFrom)
+							OldExpandedOrGeneratedFromSet[OldEntityData.m_ExpandedOrGeneratedFrom];
+
 						if (pOldEntity == pInsertAfter)
 							pInsertAfter = pParent->m_ChildEntitiesOrdered.fs_GetPrev(pInsertAfter);
 
@@ -844,10 +856,12 @@ namespace NMib::NBuildSystem
 					}
 
 					o_bChanged = true;
+
 					auto pNewEntity = fp_AddEntity(_Entity, *pParent, NewKey, pInsertAfterLocal ? pInsertAfter : nullptr, &TempProperties);
 
 					auto &NewEntityData = pNewEntity->f_DataWritable();
-					NewEntityData.m_ExpandedOrGeneratedFrom = (mint)&_Entity;
+					NewEntityData.m_ExpandedOrGeneratedFromSet = fg_Move(OldExpandedOrGeneratedFromSet);
+					NewEntityData.m_ExpandedOrGeneratedFrom = ExpandedOrGeneratedFromSource;
 
 					if (pInsertAfterLocal)
 						pInsertAfter = pNewEntity;
@@ -863,11 +877,16 @@ namespace NMib::NBuildSystem
 				NewKey.m_Name.m_Value = EntityName;
 				auto pOldEntity = _ParentEntity.m_ChildEntitiesMap.f_FindEqual(NewKey);
 
+				TCSet<mint> OldExpandedOrGeneratedFromSet;
 				if (pOldEntity)
 				{
 					auto &OldEntityData = pOldEntity->f_Data();
 
-					if (OldEntityData.m_ExpandedOrGeneratedFrom && OldEntityData.m_ExpandedOrGeneratedFrom == (mint)&_Entity)
+					if
+						(
+							(OldEntityData.m_ExpandedOrGeneratedFrom && OldEntityData.m_ExpandedOrGeneratedFrom == ExpandedOrGeneratedFromSource)
+							|| OldEntityData.m_ExpandedOrGeneratedFromSet.f_FindEqual(ExpandedOrGeneratedFromSource)
+						)
 					{
 						if (o_pCreated)
 							o_pCreated->f_Insert(pOldEntity);
@@ -881,6 +900,10 @@ namespace NMib::NBuildSystem
 						return nullptr; // We don't need to do anything
 					}
 
+					OldExpandedOrGeneratedFromSet = OldEntityData.m_ExpandedOrGeneratedFromSet;
+					if (OldEntityData.m_ExpandedOrGeneratedFrom)
+						OldExpandedOrGeneratedFromSet[OldEntityData.m_ExpandedOrGeneratedFrom];
+
 					if (pOldEntity == pInsertAfter)
 						pInsertAfter = _ParentEntity.m_ChildEntitiesOrdered.fs_GetPrev(pInsertAfter);
 
@@ -888,10 +911,12 @@ namespace NMib::NBuildSystem
 				}
 
 				o_bChanged = true;
+
 				auto pNewEntity = fp_AddEntity(_Entity, _ParentEntity, NewKey, pInsertAfter, &TempProperties);
 
 				auto &NewEntityData = pNewEntity->f_DataWritable();
-				NewEntityData.m_ExpandedOrGeneratedFrom = (mint)&_Entity;
+				NewEntityData.m_ExpandedOrGeneratedFromSet = fg_Move(OldExpandedOrGeneratedFromSet);
+				NewEntityData.m_ExpandedOrGeneratedFrom = ExpandedOrGeneratedFromSource;
 
 				pInsertAfter = pNewEntity;
 

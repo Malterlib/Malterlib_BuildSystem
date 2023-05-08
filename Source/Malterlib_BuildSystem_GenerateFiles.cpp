@@ -384,21 +384,39 @@ namespace NMib::NBuildSystem
 							pParentGroup = &*Child;
 						}
 
+						mint ExpandedOrGeneratedFromSource = _Entity.f_ExpandedOrGeneratedFromSource();
+
 						auto pOldEntity = pParentGroup->m_ChildEntitiesMap.f_FindEqual(NewKey);
 
+						TCSet<mint> OldExpandedOrGeneratedFromSet;
 						if (pOldEntity)
 						{
-							if (pOldEntity->f_Data().m_ExpandedOrGeneratedFrom && pOldEntity->f_Data().m_ExpandedOrGeneratedFrom == (mint)&_Entity)
+							auto &OldEntityData = pOldEntity->f_Data();
+
+							if
+								(
+									(OldEntityData.m_ExpandedOrGeneratedFrom && OldEntityData.m_ExpandedOrGeneratedFrom == ExpandedOrGeneratedFromSource)
+									|| OldEntityData.m_ExpandedOrGeneratedFromSet.f_FindEqual(ExpandedOrGeneratedFromSource)
+								)
+							{
 								continue;
+							}
+
+							OldExpandedOrGeneratedFromSet = OldEntityData.m_ExpandedOrGeneratedFromSet;
+							if (OldEntityData.m_ExpandedOrGeneratedFrom)
+								OldExpandedOrGeneratedFromSet[OldEntityData.m_ExpandedOrGeneratedFrom];
 
 							DCheck(pOldEntity != &(*iChild));
 							pParentGroup->m_ChildEntitiesMap.f_Remove(pOldEntity);
 						}
 
+						bChanged = true;
+
 						auto &NewEntity = pParentGroup->m_ChildEntitiesMap(NewKey, ToGenerate, pParentGroup, EEntityCopyFlag_CopyChildren).f_GetResult();
 						auto &NewEntityData = NewEntity.f_DataWritable();
 
-						NewEntityData.m_ExpandedOrGeneratedFrom = (mint)&_Entity;
+						NewEntityData.m_ExpandedOrGeneratedFromSet = fg_Move(OldExpandedOrGeneratedFromSet);
+						NewEntityData.m_ExpandedOrGeneratedFrom = ExpandedOrGeneratedFromSource;
 
 						NewEntity.m_EvaluatedProperties.m_Properties.f_Clear();
 
