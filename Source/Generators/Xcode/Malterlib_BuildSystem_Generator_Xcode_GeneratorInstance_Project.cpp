@@ -112,6 +112,40 @@ namespace NMib::NBuildSystem::NXcode
 
 				NativeTarget.m_ProductSourceTree = gc_ConstString_BUILT_PRODUCTS_DIR;
 				NativeTarget.m_BuildActionMask = 0;
+
+				TCMap<CStr, CBuildScript *> OutputToBuildScript;
+
+				for (auto &CustomScript : NativeTarget.m_CustomBuildScripts)
+				{
+					for (auto &Output : CustomScript.m_Outputs)
+						OutputToBuildScript[Output] = &CustomScript;
+				}
+
+				TCSet<CBuildScript *> AddedScripts;
+				TCVector<CBuildScript> NewCustomBuildScripts;
+
+				auto fAddScript = [&](auto &&_fAddScript, CBuildScript *_pScript)
+					{
+						if (!AddedScripts(_pScript).f_WasCreated())
+							return;
+
+						for (auto &Input : _pScript->m_Inputs)
+						{
+							auto *pInputScript = OutputToBuildScript.f_FindEqual(Input);
+							if (pInputScript)
+								_fAddScript(_fAddScript, *pInputScript);
+						}
+
+						NewCustomBuildScripts.f_Insert(fg_Move(*_pScript));
+					}
+				;
+
+				for (auto &CustomScript : NativeTarget.m_CustomBuildScripts)
+				{
+					fAddScript(fAddScript, &CustomScript);
+				}
+
+				NativeTarget.m_CustomBuildScripts = fg_Move(NewCustomBuildScripts);
 			}
 
 			for (auto *pDependentTarget : NativeTarget.m_CTargets)
