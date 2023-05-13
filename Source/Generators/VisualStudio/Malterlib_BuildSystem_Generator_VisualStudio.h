@@ -198,7 +198,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 		template <bool tf_bType, bool tf_bIsItem>
 		CParsedGeneratorSettings f_GetParsedVSSettings(TCMap<CStr, CGeneratorSettingsVSType> *_pCompileSettings);
 
-		static TCVector<CVS_Setting> ms_ExcludedFromBuildVSSettings;
+		static TCVector<CVS_Setting> ms_ExcludedFromBuildVSSettingsTrue;
+		static TCVector<CVS_Setting> ms_ExcludedFromBuildVSSettingsFalse;
 	};
 
 	struct CGeneratorSettingsVSType

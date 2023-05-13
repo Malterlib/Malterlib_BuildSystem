@@ -5,7 +5,8 @@
 
 namespace NMib::NBuildSystem::NVisualStudio
 {
-	TCVector<CGeneratorSettings::CVS_Setting> CGeneratorSettings::ms_ExcludedFromBuildVSSettings{CVS_Setting_Item{CStr(gc_ConstString_ExcludedFromBuild), gc_ConstString_true}};
+	TCVector<CGeneratorSettings::CVS_Setting> CGeneratorSettings::ms_ExcludedFromBuildVSSettingsTrue{CVS_Setting_Item{CStr(gc_ConstString_ExcludedFromBuild), gc_ConstString_true}};
+	TCVector<CGeneratorSettings::CVS_Setting> CGeneratorSettings::ms_ExcludedFromBuildVSSettingsFalse{CVS_Setting_Item{CStr(gc_ConstString_ExcludedFromBuild), gc_ConstString_false}};
 
 	void CGeneratorSettings::CVS_SettingShared::fs_FromJson(CVS_SettingShared &o_Value, NEncoding::CEJSONSorted &&_JSON)
 	{

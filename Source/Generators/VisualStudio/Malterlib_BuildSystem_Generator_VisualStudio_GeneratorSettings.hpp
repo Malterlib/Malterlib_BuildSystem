@@ -350,18 +350,21 @@ namespace NMib::NBuildSystem::NVisualStudio
 				if (Settings.f_FindEqual(Configuration))
 					continue;
 
-				CStr SettingName = gc_ConstString_Disabled;
+				auto &OutSetting = AggregatedSettings.m_AggregatedSettings[gc_ConstString_Disabled.m_String];
+				auto &OutSettings = OutSetting.m_Settings[ms_ExcludedFromBuildVSSettingsTrue];
+				OutSetting.m_Settings.f_Remove(ms_ExcludedFromBuildVSSettingsFalse);
 
-				auto &OutSetting = AggregatedSettings.m_AggregatedSettings[SettingName];
-				auto &OutSettings = OutSetting.m_Settings[ms_ExcludedFromBuildVSSettings];
 				OutSettings.m_Configurations[Configuration];
 			}
 
-			if (auto *pDisabled = AggregatedSettings.m_AggregatedSettings.f_FindEqual("Disabled"))
+			if (auto *pDisabled = AggregatedSettings.m_AggregatedSettings.f_FindEqual(gc_ConstString_Disabled.m_String))
 			{
-				AllConfigurationsNonDisabled = pAllConfigurations->f_KeySet();
-				AllConfigurationsNonDisabled -= pDisabled->m_Settings.f_FindAny()->m_Configurations;
-				bAllConfigurationsNonDisabledValid = true;
+				if (auto *pSetting = pDisabled->m_Settings.f_FindEqual(ms_ExcludedFromBuildVSSettingsTrue))
+				{
+					AllConfigurationsNonDisabled = pAllConfigurations->f_KeySet();
+					AllConfigurationsNonDisabled -= pSetting->m_Configurations;
+					bAllConfigurationsNonDisabledValid = true;
+				}
 			}
 		}
 
