@@ -186,28 +186,24 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 		VCVarsDirectory = VisualStudioRoot + "/VC/Auxiliary/Build";
 
+		auto fArchitectureToVSArchitecture = [&](CStr const &_Architecture) -> CStr
+			{
+				if (_Architecture == "x64")
+					return "amd64";
+				else
+					return _Architecture;
+			}
+		;
+
+		CStr TargetVSArchitecture = fArchitectureToVSArchitecture(_Architecture);
+		CStr HostVSArchitecture = fArchitectureToVSArchitecture(gc_ConstStringDynamic_DArchitecture);
+
 		CStr VSArchitecture;
-#ifdef DArchitecture_x86
-		if (_Architecture == "x64")
-			VSArchitecture = "x86_amd64";
-		else if (_Architecture == "x86")
-			VSArchitecture = "x86";
-		else if (_Architecture == "arm")
-			VSArchitecture = "x86_arm";
+		if (TargetVSArchitecture == HostVSArchitecture)
+			VSArchitecture = TargetVSArchitecture;
 		else
-			DError(fg_Format("Unsupported VS architecture: {}", _Architecture));
-#elif DArchitecture_x64
-		if (_Architecture == "x64")
-			VSArchitecture = "amd64";
-		else if (_Architecture == "x86")
-			VSArchitecture = "amd64_x86";
-		else if (_Architecture == "arm")
-			VSArchitecture = "amd64_arm";
-		else
-			DError(fg_Format("Unsupported VS architecture: {}", _Architecture));
-#else
-		DError("Cannot get build environment for Visual Studio on this architecture");
-#endif
+			VSArchitecture = "{}_{}"_f << HostVSArchitecture << TargetVSArchitecture;
+
 		CProcessLaunchParams Params{VCVarsDirectory};
 		Params.m_bShowLaunched = false;
 		auto Environment = fg_GetSys()->f_Environment();
