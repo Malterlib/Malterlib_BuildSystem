@@ -73,7 +73,6 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_DefaultUpstreamBranch;
 	extern CStringAndHash const gc_ConstString_DefaultValue;
 	extern CStringAndHash const gc_ConstString_Define;
-	extern CStringAndHash const gc_ConstString_Dependencies;
 	extern CStringAndHash const gc_ConstString_DependencyFile;
 	extern CStringAndHash const gc_ConstString_Disabled;
 	extern CStringAndHash const gc_ConstString_Ellipsis;

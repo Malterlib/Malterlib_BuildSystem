@@ -139,6 +139,7 @@ namespace NMib::NBuildSystem
 	extern CPropertyKeyReference const gc_ConstKey_Target_VisualStudioPlatform;
 	extern CPropertyKeyReference const gc_ConstKey_Target_DependenciesNames;
 	extern CPropertyKeyReference const gc_ConstKey_Target_Dependencies;
+	extern CPropertyKeyReference const gc_ConstKey_Target_DependencyTargets;
 
 	extern CPropertyKeyReference const gc_ConstKey_Workspace_Enabled;
 	extern CPropertyKeyReference const gc_ConstKey_Workspace_ExtraGroups;

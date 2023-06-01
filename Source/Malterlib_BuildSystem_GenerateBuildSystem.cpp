@@ -464,10 +464,18 @@ namespace NMib::NBuildSystem
 															Key.m_Type = EEntityType_Group;
 															mint iDistinguish = 0;
 															Key.m_Name.m_Value = fg_Format("Dependency Distinguisher {}", iDistinguish);
-															while (pParent->m_ChildEntitiesMap.f_FindEqual(Key))
+															while (auto *pOldDistinguisher = pParent->m_ChildEntitiesMap.f_FindEqual(Key))
 															{
-																++iDistinguish;
-																Key.m_Name.m_Value = fg_Format("Dependency Distinguisher {}", iDistinguish);
+																if (pOldDistinguisher->f_HasOnlyGroups())
+																{
+																	pParent->m_ChildEntitiesMap.f_Remove(Key);
+																	break;
+																}
+																else
+																{
+																	++iDistinguish;
+																	Key.m_Name.m_Value = fg_Format("Dependency Distinguisher {}", iDistinguish);
+																}
 															}
 															auto Mapped = pParent->m_ChildEntitiesMap(Key, pParent);
 															auto &NewDependency = Mapped.f_GetResult();
@@ -641,12 +649,15 @@ namespace NMib::NBuildSystem
 							}
 
 							TCVector<CStr> DependencyFiles;
+							TCVector<CStr> DependencyTargets;
 							TCVector<CStr> Dependencies;
 							TCVector<CStr> ExternalDependencies;
 							TCVector<CStr> DependencyInjectionGroups;
 
 							for (auto &Dependency : _pTarget->m_DependenciesOrdered)
 							{
+								Dependencies.f_Insert(Dependency.m_pEntity->f_GetPathForGetProperty());
+
 								if (Dependency.m_bExternal)
 								{
 									ExternalDependencies.f_Insert(Dependency.m_pEntity->f_GetPathForGetProperty());
@@ -682,7 +693,7 @@ namespace NMib::NBuildSystem
 									}
 
 								}
-								Dependencies.f_Insert(pDependentTarget->m_pInnerEntity->f_GetPathForGetProperty());
+								DependencyTargets.f_Insert(pDependentTarget->m_pInnerEntity->f_GetPathForGetProperty());
 							}
 
 							auto fAddNameList = [&](CPropertyKeyReference const &_Key, TCVector<CStr> &&_Names) -> bool
@@ -710,6 +721,9 @@ namespace NMib::NBuildSystem
 								if (fAddNameList(DependencyFileNamePropertyKey, fg_Move(DependencyFiles)))
 									bChanged = true;
 							}
+
+							DependencyTargets.f_Sort();
+							bChanged = fAddNameList(gc_ConstKey_Target_DependencyTargets, fg_Move(DependencyTargets)) || bChanged;
 
 							Dependencies.f_Sort();
 							bChanged = fAddNameList(gc_ConstKey_Target_Dependencies, fg_Move(Dependencies)) || bChanged;

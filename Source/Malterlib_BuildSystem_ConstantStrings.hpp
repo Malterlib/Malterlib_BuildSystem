@@ -74,7 +74,6 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_DefaultUpstreamBranch = gc_Str<"DefaultUpstreamBranch">;
 	constexpr CStringAndHash const gc_ConstString_DefaultValue = gc_Str<"DefaultValue">;
 	constexpr CStringAndHash const gc_ConstString_Define = gc_Str<"Define">;
-	constexpr CStringAndHash const gc_ConstString_Dependencies = gc_Str<"Dependencies">;
 	constexpr CStringAndHash const gc_ConstString_DependencyFile = gc_Str<"DependencyFile">;
 	constexpr CStringAndHash const gc_ConstString_Disabled = gc_Str<"Disabled">;
 	constexpr CStringAndHash const gc_ConstString_Ellipsis = gc_Str<"Ellipsis">;
@@ -684,7 +683,6 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_DefaultUpstreamBranch);
 		o_StringCache.f_AddConstantString(gc_ConstString_DefaultValue);
 		o_StringCache.f_AddConstantString(gc_ConstString_Define);
-		o_StringCache.f_AddConstantString(gc_ConstString_Dependencies);
 		o_StringCache.f_AddConstantString(gc_ConstString_DependencyFile);
 		o_StringCache.f_AddConstantString(gc_ConstString_Disabled);
 		o_StringCache.f_AddConstantString(gc_ConstString_Ellipsis);

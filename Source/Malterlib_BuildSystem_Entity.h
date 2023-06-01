@@ -120,6 +120,7 @@ namespace NMib::NBuildSystem
 		CFilePosition const &f_GetFirstValidPosition() const;
 		bool f_HasFullEval(EPropertyType _PropertyType)const ;
 		bool f_HasParent(CEntity const *_pEntity) const;
+		bool f_HasOnlyGroups() const;
 
 		CEntityData const &f_Data() const;
 		CEntityData &f_DataWritable();

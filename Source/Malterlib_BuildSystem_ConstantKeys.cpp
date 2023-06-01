@@ -140,6 +140,7 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_VisualStudioPlatform(EPropertyType_Target, gc_Str<"VisualStudioPlatform">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_DependenciesNames(EPropertyType_Target, gc_Str<"DependenciesNames">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_Dependencies(EPropertyType_Target, gc_Str<"Dependencies">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Target_DependencyTargets(EPropertyType_Target, gc_Str<"DependencyTargets">);
 
 	constexpr CPropertyKeyReference const gc_ConstKey_Workspace_Enabled(EPropertyType_Workspace, gc_Str<"Enabled">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Workspace_ExtraGroups(EPropertyType_Workspace, gc_Str<"ExtraGroups">);
@@ -296,6 +297,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_VisualStudioPlatform);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_DependenciesNames);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_Dependencies);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Target_DependencyTargets);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Workspace_Enabled);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Workspace_ExtraGroups);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Workspace_Name);

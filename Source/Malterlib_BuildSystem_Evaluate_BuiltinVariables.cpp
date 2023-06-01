@@ -104,7 +104,8 @@ namespace NMib::NBuildSystem
 					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_Group), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
 					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_FollowIndirectDependencies), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_DependencyFile), DMibBuildSystemTypeWithPosition(fg_Optional(g_String))}
-					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_Dependencies), DMibBuildSystemTypeWithPosition(g_StringArray)}
+					, {CPropertyKey(gc_ConstKey_Target_Dependencies), DMibBuildSystemTypeWithPosition(g_StringArray)}
+					, {CPropertyKey(gc_ConstKey_Target_DependencyTargets), DMibBuildSystemTypeWithPosition(g_StringArray)}
 					, {CPropertyKey(gc_ConstKey_Target_ExternalDependencies), DMibBuildSystemTypeWithPosition(g_StringArray)}
 					, {CPropertyKey(gc_ConstKey_Target_DependenciesNames), DMibBuildSystemTypeWithPosition(g_StringArray)}
 					,

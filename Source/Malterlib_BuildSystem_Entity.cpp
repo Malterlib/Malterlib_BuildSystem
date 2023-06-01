@@ -440,6 +440,19 @@ namespace NMib::NBuildSystem
 		return (f_Data().m_HasFullEval & (1 << _PropertyType)) != 0;
 	}
 
+	bool CEntity::f_HasOnlyGroups() const
+	{
+		for (auto &Child : m_ChildEntitiesMap)
+		{
+			if (Child.f_GetKey().m_Type != EEntityType_Group)
+				return false;
+
+			if (!Child.f_HasOnlyGroups())
+				return false;
+		}
+		return true;
+	}
+
 	bool CEntity::f_HasParent(CEntity const *_pEntity) const
 	{
 		if (this == _pEntity)
