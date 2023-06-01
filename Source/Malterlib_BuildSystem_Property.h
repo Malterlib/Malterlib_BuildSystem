@@ -32,6 +32,10 @@ namespace NMib::NBuildSystem
 		constexpr CPropertyKeyReference(EPropertyType _Type, CStringAndHash const &_Name);
 		
 		inline_always COrdering_Strong operator <=> (CPropertyKey const &_Right) const;
+		inline_always COrdering_Strong operator <=> (CPropertyKeyReference const &_Right) const;
+
+		inline_always bool operator == (CPropertyKey const &_Right) const;
+		inline_always bool operator == (CPropertyKeyReference const &_Right) const;
 
 		template <typename tf_CStr>
 		void f_Format(tf_CStr &o_Str) const;

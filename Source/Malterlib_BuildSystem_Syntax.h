@@ -92,6 +92,7 @@ namespace NMib::NBuildSystem
 		CPropertyKeyReference f_Reference() const;
 
 		inline_always bool operator == (CPropertyKey const &_Right) const;
+		inline_always bool operator == (CPropertyKeyReference const &_Right) const;
 		inline_always COrdering_Strong operator <=> (CPropertyKey const &_Right) const;
 		inline_always COrdering_Strong operator <=> (CPropertyKeyReference const &_Right) const;
 
