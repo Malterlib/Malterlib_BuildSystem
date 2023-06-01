@@ -466,11 +466,20 @@ namespace NMib::NBuildSystem
 			template <typename tf_CStr>
 			void f_Format(tf_CStr &o_Str) const;
 			static CJSONAccessorEntry fs_FromJson(CStringCache &o_StringCache, NEncoding::CEJSONSorted const &_JSON, CFilePosition const &_Position);
+			static NStorage::TCVariant<NStr::CStr, CExpression, CJSONSubscript> fs_AccessorFromJson
+				(
+					CStringCache &o_StringCache
+					, NEncoding::CEJSONSorted const &_JSON
+					, CFilePosition const &_Position
+				)
+			;
+			NEncoding::CEJSONSorted f_AccessorToJson() const;
 			NEncoding::CEJSONSorted f_ToJson() const;
 			COrdering_Partial operator <=> (CJSONAccessorEntry const &_Right) const;
 			bool operator == (CJSONAccessorEntry const &_Right) const;
 
 			NStorage::TCVariant<NStr::CStr, CExpression, CJSONSubscript> m_Accessor;
+			bool m_bOptional = false;
 		};
 
 		struct CJSONAccessor

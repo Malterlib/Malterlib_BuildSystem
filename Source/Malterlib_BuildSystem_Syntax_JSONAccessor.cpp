@@ -6,7 +6,7 @@
 
 namespace NMib::NBuildSystem
 {
-	NEncoding::CEJSONSorted CBuildSystemSyntax::CJSONAccessorEntry::f_ToJson() const
+	NEncoding::CEJSONSorted CBuildSystemSyntax::CJSONAccessorEntry::f_AccessorToJson() const
 	{
 		switch (m_Accessor.f_GetTypeID())
 		{
@@ -36,7 +36,36 @@ namespace NMib::NBuildSystem
 		return {};
 	}
 
+	NEncoding::CEJSONSorted CBuildSystemSyntax::CJSONAccessorEntry::f_ToJson() const
+	{
+		NEncoding::CEJSONSorted Return;
+		Return[gc_ConstString_OptionalChaining] = m_bOptional;
+		Return[gc_ConstString_Accessor] = f_AccessorToJson();
+		return Return;
+	}
+
 	auto CBuildSystemSyntax::CJSONAccessorEntry::fs_FromJson(CStringCache &o_StringCache, CEJSONSorted const &_JSON, CFilePosition const &_Position) -> CJSONAccessorEntry
+	{
+		if (!_JSON.f_IsObject())
+			CBuildSystem::fs_ThrowError(_Position, "JSONAccessorEntry is not an object");
+
+		auto pOptionalChain = _JSON.f_GetMember(gc_ConstString_OptionalChaining, EJSONType_Boolean);
+		if (!pOptionalChain)
+			CBuildSystem::fs_ThrowError(_Position, "JSONAccessorEntry does not contain OptionalChain property");
+
+		auto pAccessor = _JSON.f_GetMember(gc_ConstString_Accessor);
+		if (!pAccessor)
+			CBuildSystem::fs_ThrowError(_Position, "JSONAccessorEntry does not contain Accessor property");
+
+		return {.m_Accessor = fs_AccessorFromJson(o_StringCache, *pAccessor, _Position), .m_bOptional = pOptionalChain->f_Boolean()};
+	}
+
+	auto CBuildSystemSyntax::CJSONAccessorEntry::fs_AccessorFromJson
+		(
+			CStringCache &o_StringCache
+			, NEncoding::CEJSONSorted const &_JSON
+			, CFilePosition const &_Position
+		) -> NStorage::TCVariant<NStr::CStr, CExpression, CJSONSubscript>
 	{
 		if (_JSON.f_IsString())
 			return {_JSON.f_String()};

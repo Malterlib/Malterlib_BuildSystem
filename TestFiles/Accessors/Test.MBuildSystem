@@ -67,6 +67,12 @@
 		{
 			!!CalcValueAny<Test> "Test 4 Appended"
 		}
+
+		TestUndefined: {...: any}?
+
+		TestValueOptionalChaining1: string = (CalcValueAny<TestUndefined?.Undef> || "Undef1")
+		TestValueOptionalChaining2: string = (TestUndefined<?.Undef> || "Undef2")
+		TestValueOptionalChaining3: string = (CalcValueAny<?.TestOptional?.InnerValue> || "Undef2")
 	}
 	GenerateFile
 	{
@@ -83,7 +89,10 @@
 					`@(CalcValueAny<TestOptional><InnerValue>)\n`\
 					`@(CalcValueAny<"TestOptional.InnerValue">)\n`\
 					`@(CalcValueAny<TestOptional><InnerValue>->Split(" ")<[ArrayAccessIndex]>)\n`\
-					`@(TestValueAny)\n`
+					`@(TestValueAny)\n`\
+					`@(TestValueOptionalChaining1)\n`\
+					`@(TestValueOptionalChaining2)\n`\
+					`@(TestValueOptionalChaining3)\n`
 		Executable false
 		UnixLineEnds true
 		UnicodeBOM false

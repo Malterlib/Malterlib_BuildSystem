@@ -342,11 +342,30 @@ namespace NMib::NContainer
 
 		auto &AccessorsArray = Object[gc_ConstString_Accessors].f_Array();
 
+		bool bOptionalChaining = false;
+		auto fAddAccessor = [&](CJSONSorted &&_Accessor)
+			{
+				CJSONSorted Accessor;
+				Accessor[gc_ConstString_Accessor] = fg_Move(_Accessor);
+				Accessor[gc_ConstString_OptionalChaining] = fg_Exchange(bOptionalChaining, false);
+
+				AccessorsArray.f_Insert(fg_Move(Accessor));
+			}
+		;
+
 		bool bEndedParen = false;
 
 		while (*pParse)
 		{
-			if (*pParse == '\'')
+			if (pParse[0] == '?' && pParse[1] == '.')
+			{
+				if (bOptionalChaining)
+					f_ThrowError("Optional chaining already specified", pParse);
+				bOptionalChaining = true;
+
+				pParse += 2;
+			}
+			else if (*pParse == '\'')
 			{
 				CJSONParseContextCatureStringMap ParseContext;
 				ParseContext.m_pOriginalParseContext = this;
@@ -356,7 +375,7 @@ namespace NMib::NContainer
 				auto pParseStart = pParse;
 				if (!fg_ParseJSONString<'\'', NEncoding::NJSON::EParseJSONStringFlag_AllowMultiLine>(ParsedString, pParse, ParseContext))
 					f_ThrowError("End of string character ' not found", pParseStart);
-				AccessorsArray.f_Insert(fg_Move(ParsedString));
+				fAddAccessor(fg_Move(ParsedString));
 				DMibMovedFromValid(ParsedString);
 			}
 			else if (*pParse == '"')
@@ -369,15 +388,15 @@ namespace NMib::NContainer
 				auto pParseStart = pParse;
 				if (!fg_ParseJSONString<'"', NEncoding::NJSON::EParseJSONStringFlag_AllowMultiLine>(ParsedString, pParse, ParseContext))
 					f_ThrowError("End of string character \" not found", pParseStart);
-				AccessorsArray.f_Insert(fg_Move(ParsedString));
+				fAddAccessor(fg_Move(ParsedString));
 				DMibMovedFromValid(ParsedString);
 			}
 			else if (fs_CharIsStartIdentifier(*pParse))
-				AccessorsArray.f_Insert(f_ParseIdentifier(pParse));
+				fAddAccessor(f_ParseIdentifier(pParse));
 			else if (*pParse == '@')
 			{
 				++pParse;
-				AccessorsArray.f_Insert(f_ParseExpression(pParse, EParseExpressionFlag_None));
+				fAddAccessor(f_ParseExpression(pParse, EParseExpressionFlag_None));
 			}
 			else if (*pParse == '.')
 				++pParse;
@@ -410,9 +429,11 @@ namespace NMib::NContainer
 				if (!bIsValid)
 					f_ThrowError("Subscript needs an integer or @(Identifier) expression", pParseStart);
 
-				auto &Object = AccessorsArray.f_Insert().f_Object();
+				CJSONSorted Object;
 				Object[gc_ConstString_Type] = gc_ConstString_Subscript;
 				Object[gc_ConstString_Argument] = fg_Move(Param);
+
+				fAddAccessor(fg_Move(Object));
 
 				if (*pParse != ']')
 					f_ThrowError("Expected ]", pParse);
@@ -1217,11 +1238,31 @@ namespace NMib::NContainer
 		void fg_GenerateAccessors(tf_CStr &o_String, TCVector<CJSONSorted> const &_Accessors, mint _Depth)
 		{
 			bool bFirst = true;
-			for (auto &Ident : _Accessors)
+			for (auto &Accessor : _Accessors)
 			{
+				if (!Accessor.f_IsObject())
+					DMibError("Invalid accessor");
+
+				auto pOptionalChaining = Accessor.f_GetMember(gc_ConstString_OptionalChaining, EJSONType_Boolean);
+				if (!pOptionalChaining)
+					DMibError("Accessor does not have valid OptionalChaining member");
+
+				auto pAccessor = Accessor.f_GetMember(gc_ConstString_Accessor);
+				if (!pAccessor)
+					DMibError("Accessor does not have valid Accessor member");
+
+				bool bAddedChainging = false;
+				if (pOptionalChaining->f_Boolean())
+				{
+					bAddedChainging = true;
+					o_String += "?.";
+				}
+
+				auto &Ident = *pAccessor;
+
 				if (Ident.f_IsString())
 				{
-					if (!bFirst)
+					if (!bFirst && !bAddedChainging)
 						o_String += ".";
 					o_String += Ident.f_String();
 				}
@@ -1246,7 +1287,7 @@ namespace NMib::NContainer
 						if (!pParam)
 							DMibError("Expression token does not have valid Param member");
 
-						if (!bFirst)
+						if (!bFirst && !bAddedChainging)
 							o_String += ".";
 						o_String += "@(";
 						NJSON::fg_GenerateJSONValue<CBuildSystemParseContext, tf_CStr>(o_String, *pParam, _Depth, "\t", gc_BuildSystemJSONParseFlags);

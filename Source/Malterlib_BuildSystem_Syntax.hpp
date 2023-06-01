@@ -201,6 +201,9 @@ namespace NMib::NBuildSystem
 	template <typename tf_CStr>
 	void CBuildSystemSyntax::CJSONAccessorEntry::f_Format(tf_CStr &o_Str) const
 	{
+		if (m_bOptional)
+			o_Str += "?.";
+
 		m_Accessor.f_Visit
 			(
 				[&](auto const &_Value)

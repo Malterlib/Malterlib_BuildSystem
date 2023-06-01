@@ -171,14 +171,14 @@ namespace NMib::NBuildSystem
 		(
 			CEvalPropertyValueContext &_Context
 			, NContainer::TCVector<CBuildSystemSyntax::CJSONAccessorEntry> const &_Accessors
-			, NFunction::TCFunctionNoAlloc<void (NStr::CStr const &_Member)> const &_fApplyMemberName
-			, NFunction::TCFunctionNoAlloc<void (int64 _Index)> const &_fApplyArrayIndex
+			, NFunction::TCFunctionNoAlloc<void (NStr::CStr const &_Member, bool _bOptionalChain)> const &_fApplyMemberName
+			, NFunction::TCFunctionNoAlloc<void (int64 _Index, bool _bOptionalChain)> const &_fApplyArrayIndex
 		) const
 	{
 		for (auto &Accessor : _Accessors)
 		{
 			if (Accessor.m_Accessor.f_IsOfType<CStr>())
-				_fApplyMemberName(Accessor.m_Accessor.f_GetAsType<CStr>());
+				_fApplyMemberName(Accessor.m_Accessor.f_GetAsType<CStr>(), Accessor.m_bOptional);
 			else if (Accessor.m_Accessor.f_IsOfType<CBuildSystemSyntax::CExpression>())
 			{
 				auto ExpressionResult = fp_EvaluatePropertyValueExpression(_Context, Accessor.m_Accessor.f_GetAsType<CBuildSystemSyntax::CExpression>());
@@ -192,13 +192,13 @@ namespace NMib::NBuildSystem
 						)
 					;
 				}
-				_fApplyMemberName(ExpressionResultRef.f_String());
+				_fApplyMemberName(ExpressionResultRef.f_String(), Accessor.m_bOptional);
 			}
 			else if (Accessor.m_Accessor.f_IsOfType<CBuildSystemSyntax::CJSONSubscript>())
 			{
 				auto &Subscript = Accessor.m_Accessor.f_GetAsType<CBuildSystemSyntax::CJSONSubscript>();
 				if (Subscript.m_Index.f_IsOfType<uint32>())
-					_fApplyArrayIndex(Subscript.m_Index.f_GetAsType<uint32>());
+					_fApplyArrayIndex(Subscript.m_Index.f_GetAsType<uint32>(), Accessor.m_bOptional);
 				else if (Subscript.m_Index.f_IsOfType<CBuildSystemSyntax::CExpression>())
 				{
 					auto ExpressionResult = fp_EvaluatePropertyValueExpression(_Context, Subscript.m_Index.f_GetAsType<CBuildSystemSyntax::CExpression>());
@@ -214,7 +214,7 @@ namespace NMib::NBuildSystem
 						;
 					}
 
-					_fApplyArrayIndex(ExpressionResultRef.f_Integer());
+					_fApplyArrayIndex(ExpressionResultRef.f_Integer(), Accessor.m_bOptional);
 				}
 				else
 					DMibNeverGetHere;
@@ -342,7 +342,7 @@ namespace NMib::NBuildSystem
 			(
 				_Context
 				, _Accessors
-				, [&Vars](CStr const &_MemberName)
+				, [&Vars](CStr const &_MemberName, bool _bOptionalChain)
 				{
 					auto pSaveTypePosition = Vars.m_pTypePosition;
 					//CDefaultType, CUserType, CClassType, CArrayType, COneOf, CFunctionType
@@ -366,7 +366,7 @@ namespace NMib::NBuildSystem
 							fs_ThrowError(Vars.m_Context, "No member named '{}' in type '{}'"_f << _MemberName << *Vars.m_pType);
 					}
 				}
-				, [&Vars](int64 _Index)
+				, [&Vars](int64 _Index, bool _bOptionalChain)
 				{
 					auto pSaveTypePosition = Vars.m_pTypePosition;
 					if (Vars.m_pType->f_IsAny(Vars.f_GetCanonicalFunctor()))
@@ -456,7 +456,7 @@ namespace NMib::NBuildSystem
 			if (!_pWriteContext->m_pAccessors)
 				fs_ThrowError(_Context, "No accessors specified");
 
-			pType = fp_ApplyAccessorsToType(_Context, pType, *_pWriteContext->m_pAccessors, pTypePosition);
+			pType = fGetCanonicalType(fp_ApplyAccessorsToType(_Context, pType, *_pWriteContext->m_pAccessors, pTypePosition), fGetCanonicalType);
 
 			pOriginalValue = _pWriteContext->m_pWriteDestination;
 		}
@@ -1629,8 +1629,22 @@ namespace NMib::NBuildSystem
 			(
 				_Context
 				, _Accessors
-				, [&](CStr const &_MemberName)
+				, [&](CStr const &_MemberName, bool _bOptionalChain)
 				{
+					if (!pValue || !pValue->f_IsValid())
+					{
+						if (_bOptionalChain)
+							return;
+
+						fs_ThrowError
+							(
+								_Context
+								, "JSON value is undefined so cannot apply member name '{}'"_f
+								<< _MemberName
+							)
+						;
+					}
+
 					if (!pValue->f_IsObject())
 					{
 						fs_ThrowError
@@ -1645,8 +1659,21 @@ namespace NMib::NBuildSystem
 
 					pValue = pValue->f_GetMember(_MemberName);
 				}
-				, [&](int64 _Index)
+				, [&](int64 _Index, bool _bOptionalChain)
 				{
+					if (!pValue || !pValue->f_IsValid())
+					{
+						if (_bOptionalChain)
+							return;
+
+						fs_ThrowError
+							(
+								_Context
+								, "JSON value is undefined so cannot apply cannot apply subscript index"
+							)
+						;
+					}
+
 					if (!pValue->f_IsArray())
 						fs_ThrowError(_Context, "JSON value '{}' is not an array so cannot apply subscript index"_f << pValue->f_ToString(nullptr, EJSONDialectFlag_AllowUndefined));
 
@@ -2018,22 +2045,30 @@ namespace NMib::NBuildSystem
 
 			auto Return = fp_EvaluatePropertyValueIdentifier(_Context, Identifier, true);
 			CEJSONSorted *pWriteDestination = Return.f_MakeMutable();
+			bool bAppliedAccessors = false;
 
 			fp_ApplyAccessors
 				(
 					_Context
 					, _Value.m_Accessors
-					, [&](CStr const &_MemberName)
+					, [&](CStr const &_MemberName, bool _bOptionalChain)
 					{
+						if (_bOptionalChain)
+							fs_ThrowError(_Context, "Optional chaining operator does not make sense for a write accessor");
+
 						if (!pWriteDestination->f_IsObject() && pWriteDestination->f_IsValid())
 							fs_ThrowError(_Context, "Not an object so cannot apply member");
 
 						auto &Member = (*pWriteDestination)[_MemberName];
 
 						pWriteDestination = &Member;
+						bAppliedAccessors = true;
 					}
-					, [&](int64 _Index)
+					, [&](int64 _Index, bool _bOptionalChain)
 					{
+						if (_bOptionalChain)
+							fs_ThrowError(_Context, "Optional chaining operator does not make sense for a write accessor");
+
 						if (!pWriteDestination->f_IsArray())
 							fs_ThrowError(_Context, "Not an array so cannot apply subscript index");
 
@@ -2043,12 +2078,24 @@ namespace NMib::NBuildSystem
 							fs_ThrowError(_Context, "Index {} is out of range for array that has {} elements"_f << _Index << Array.f_GetLen());
 
 						pWriteDestination = &Array[_Index];
+						bAppliedAccessors = true;
 					}
 				)
 			;
 
-			CWritePropertyContext WriteContext{*_pProperty, o_bTypeAlreadyChecked, pWriteDestination, &_Value.m_Accessors};
+			bool bTypeAlreadyChecked = false;
+			CWritePropertyContext WriteContext
+				{
+					.m_Property = *_pProperty
+					, .m_bTypeAlreadyChecked = bTypeAlreadyChecked
+					, .m_pWriteDestination = pWriteDestination
+					, .m_pAccessors = &_Value.m_Accessors
+				}
+			;
 			*pWriteDestination = fp_EvaluatePropertyValue(_Context, _Value.m_Value, &WriteContext).f_Move();
+
+			if (!bAppliedAccessors && bTypeAlreadyChecked)
+				o_bTypeAlreadyChecked = true;
 
 			return Return;
 		}

@@ -608,6 +608,8 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_p_Types;
 	extern CStringAndHash const gc_ConstString_rebase;
 	extern CStringAndHash const gc_ConstString_reset;
+	extern CStringAndHash const gc_ConstString_OptionalChaining;
+	extern CStringAndHash const gc_ConstString_Accessor;
 
 	extern CStringAndHash const gc_ConstString_Symbol_Inherit;
 

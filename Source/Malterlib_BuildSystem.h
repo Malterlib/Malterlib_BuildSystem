@@ -723,8 +723,8 @@ namespace NMib::NBuildSystem
 			(
 				CEvalPropertyValueContext &_Context
 				, NContainer::TCVector<CBuildSystemSyntax::CJSONAccessorEntry> const &_Accessors
-				, NFunction::TCFunctionNoAlloc<void (NStr::CStr const &_Member)> const &_fApplyMemberName
-				, NFunction::TCFunctionNoAlloc<void (int64 _Index)> const &_fApplyArrayIndex
+				, NFunction::TCFunctionNoAlloc<void (NStr::CStr const &_Member, bool _bOptionalChain)> const &_fApplyMemberName
+				, NFunction::TCFunctionNoAlloc<void (int64 _Index, bool _bOptionalChain)> const &_fApplyArrayIndex
 			) const
 		;
 		void fp_ParseProperty

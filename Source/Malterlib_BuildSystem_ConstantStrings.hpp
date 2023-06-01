@@ -608,6 +608,8 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_p_Types = gc_Str<"p_Types">;
 	constexpr CStringAndHash const gc_ConstString_rebase = gc_Str<"rebase">;
 	constexpr CStringAndHash const gc_ConstString_reset = gc_Str<"reset">;
+	constexpr CStringAndHash const gc_ConstString_OptionalChaining = gc_Str<"OptionalChaining">;
+	constexpr CStringAndHash const gc_ConstString_Accessor = gc_Str<"Accessor">;
 
 	constexpr CStringAndHash const gc_ConstString_Symbol_Inherit = gc_Str<"{578185E0-2E2A-4481-A34E-BCC3F64CDCA2}">;
 
@@ -1219,6 +1221,8 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_p_Types);
 		o_StringCache.f_AddConstantString(gc_ConstString_rebase);
 		o_StringCache.f_AddConstantString(gc_ConstString_reset);
+		o_StringCache.f_AddConstantString(gc_ConstString_OptionalChaining);
+		o_StringCache.f_AddConstantString(gc_ConstString_Accessor);
 
 		o_StringCache.f_AddConstantString(gc_ConstString_Symbol_Inherit);
 	}

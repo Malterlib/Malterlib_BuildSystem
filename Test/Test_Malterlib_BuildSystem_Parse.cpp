@@ -139,6 +139,10 @@ namespace
 	TestReferenceFunc `Other`->ToString() // Comment
 	TestObjectReference Other<Prop[0]> // Comment
 	TestArrayReference Other<[0]> // Comment
+	TestOptionalChainging1 Other<?.[0]> // Comment
+	TestOptionalChainging2 Other<Test?.[0]> // Comment
+	TestOptionalChainging3 Other<Test?.Test> // Comment
+	TestOptionalChainging4 Other<?.Test> // Comment
 	TestTernary Other ? Other1 : Other2 // Comment
 	TestTernaryFunction function() string = Other ? Other1 : Other2 // Comment
 	TestTernaryDefine: string = Other ? Other1 : Other2 // Comment
