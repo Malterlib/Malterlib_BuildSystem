@@ -105,7 +105,7 @@ namespace NMib::NBuildSystem
 		co_return CBuildSystem::ERetry_None;
 	}
 
-	CBuildSystem::CRepoFilter CBuildSystem::CRepoFilter::fs_ParseParams(NEncoding::CEJSON const &_Params)
+	CBuildSystem::CRepoFilter CBuildSystem::CRepoFilter::fs_ParseParams(NEncoding::CEJSONSorted const &_Params)
 	{
 		CBuildSystem::CRepoFilter Filter;
 

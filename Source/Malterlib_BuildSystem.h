@@ -69,7 +69,7 @@ namespace NMib::NBuildSystem
 
 		struct CRepoFilter
 		{
-			static CRepoFilter fs_ParseParams(NEncoding::CEJSON const &_Params);
+			static CRepoFilter fs_ParseParams(NEncoding::CEJSONSorted const &_Params);
 
 			NStr::CStr m_NameWildcard;
 			NStr::CStr m_Type;
