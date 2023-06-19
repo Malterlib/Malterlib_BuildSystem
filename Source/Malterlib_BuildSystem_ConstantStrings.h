@@ -9,7 +9,6 @@ namespace NMib::NBuildSystem
 {
 	extern CStringAndHash const gc_ConstString_Accessors;
 	extern CStringAndHash const gc_ConstString_AllowNonExisting;
-	extern CStringAndHash const gc_ConstString_AllTargets;
 	extern CStringAndHash const gc_ConstString_any;
 	extern CStringAndHash const gc_ConstString_AppendExpression;
 	extern CStringAndHash const gc_ConstString_Architecture;

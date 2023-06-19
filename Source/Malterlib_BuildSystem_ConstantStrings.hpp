@@ -10,7 +10,6 @@ namespace NMib::NBuildSystem
 {
 	constexpr CStringAndHash const gc_ConstString_Accessors = gc_Str<"Accessors">;
 	constexpr CStringAndHash const gc_ConstString_AllowNonExisting = gc_Str<"AllowNonExisting">;
-	constexpr CStringAndHash const gc_ConstString_AllTargets = gc_Str<"AllTargets">;
 	constexpr CStringAndHash const gc_ConstString_any = gc_Str<"any">;
 	constexpr CStringAndHash const gc_ConstString_AppendExpression = gc_Str<"AppendExpression">;
 	constexpr CStringAndHash const gc_ConstString_Architecture = gc_Str<"Architecture">;
@@ -619,7 +618,6 @@ namespace NMib::NBuildSystem
 		DMibLock(o_StringCache.m_Lock);
 		o_StringCache.f_AddConstantString(gc_ConstString_Accessors);
 		o_StringCache.f_AddConstantString(gc_ConstString_AllowNonExisting);
-		o_StringCache.f_AddConstantString(gc_ConstString_AllTargets);
 		o_StringCache.f_AddConstantString(gc_ConstString_any);
 		o_StringCache.f_AddConstantString(gc_ConstString_AppendExpression);
 		o_StringCache.f_AddConstantString(gc_ConstString_Architecture);

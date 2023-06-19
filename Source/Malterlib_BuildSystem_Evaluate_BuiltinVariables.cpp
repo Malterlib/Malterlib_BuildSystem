@@ -83,7 +83,7 @@ namespace NMib::NBuildSystem
 					, {CPropertyKey(mp_StringCache, EPropertyType_Compile, gc_ConstString_AllowNonExisting), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 
 					, {CPropertyKey(mp_StringCache, EPropertyType_Workspace, gc_ConstString_Name), DMibBuildSystemTypeWithPosition(g_String)}
-					, {CPropertyKey(mp_StringCache, EPropertyType_Workspace, gc_ConstString_AllTargets), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, EJSONType_Array))}
+					, {CPropertyKey(gc_ConstKey_Workspace_AllTargets), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, EJSONType_Array))}
 					, {CPropertyKey(mp_StringCache, EPropertyType_Workspace, gc_ConstString_ExtraGroups), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
 					, {CPropertyKey(mp_StringCache, EPropertyType_Workspace, gc_ConstString_Enabled), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, true))}
 
