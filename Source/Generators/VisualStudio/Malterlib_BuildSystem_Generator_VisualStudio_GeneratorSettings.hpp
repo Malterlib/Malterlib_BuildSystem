@@ -65,7 +65,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		for (auto &Position : m_Positions.m_Positions)
 			ParseErrors.f_Insert({.m_Error = Position.f_GetMessage(), .m_Location = Position.m_Key.m_Position});
 
-		o_String += CParseError::fs_ToString(ParseErrors).f_Indent("                ");
+		o_String += CParseError::fs_ToString(ParseErrors).f_Indent("                ", true, false);
 	}
 
 	template <typename tf_CStr>
