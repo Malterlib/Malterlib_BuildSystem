@@ -526,7 +526,7 @@ namespace NMib::NBuildSystem
 											Tag = Tag.f_Left(Tag.f_GetLen() - 3);
 
 										if (bWritable)
-											AllTags[CTag{Remote, Tag, Hash}].m_Hash = Hash;
+											AllTags[CTag{.m_Remote = Remote, .m_Tag = Tag, .m_Hash = Hash}];
 										else
 											ReferencedTags[Tag];
 									}

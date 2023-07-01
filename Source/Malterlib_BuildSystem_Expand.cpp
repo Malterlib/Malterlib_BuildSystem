@@ -345,12 +345,16 @@ namespace NMib::NBuildSystem
 		if (!m_bEnabled)
 			return;
 
-		for (auto &pToRemove : m_OldEntitiesToRemove)
-		{
-			auto *pPtr = pToRemove.f_Get();
-			pToRemove.f_Clear();
-			pPtr->m_pParent->m_ChildEntitiesMap.f_Remove(pPtr);
-		}
+		m_OldEntitiesToRemove.f_ExtractAll
+			(
+				[&](auto &&_Handle)
+				{
+					auto *pPtr = _Handle->f_Get();
+					_Handle->f_Clear();
+					pPtr->m_pParent->m_ChildEntitiesMap.f_Remove(pPtr);
+				}
+			)
+		;
 	}
 
 	void CBuildSystem::f_PopulateTargetAllFiles(CEntity &o_Target) const
