@@ -271,8 +271,10 @@ namespace
 			DMibTestSuite("Append")
 			{
 				auto TestGenerate = fp_TestGenerate("Append");
-				DMibAssertTrue(CFile::fs_FileExists(TestGenerate.m_OutputDirectory / "TestGenerateFile.txt"));
-				DMibExpect(CFile::fs_ReadStringFromFile(TestGenerate.m_OutputDirectory / "TestGenerateFile.txt"), ==, TestGenerate.m_ExpectedContents);
+				DMibAssertTrue(CFile::fs_FileExists(TestGenerate.m_OutputDirectory / "TestGenerateFile1.txt"));
+				DMibAssertTrue(CFile::fs_FileExists(TestGenerate.m_OutputDirectory / "TestGenerateFile2.txt"));
+				DMibExpect(CFile::fs_ReadStringFromFile(TestGenerate.m_OutputDirectory / "TestGenerateFile1.txt"), ==, TestGenerate.m_ExpectedContents);
+				DMibExpect(CFile::fs_ReadStringFromFile(TestGenerate.m_OutputDirectory / "TestGenerateFile2.txt"), ==, TestGenerate.m_ExpectedContents);
 			};
 			DMibTestSuite("FunctionCallAppend")
 			{

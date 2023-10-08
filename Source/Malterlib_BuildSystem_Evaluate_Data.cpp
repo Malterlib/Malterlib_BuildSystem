@@ -151,6 +151,7 @@ namespace NMib::NBuildSystem
 					|| Key.m_Type == EEntityType_Target
 					|| Key.m_Type == EEntityType_Group
 					|| Key.m_Type == EEntityType_Import
+					|| Key.m_Type == EEntityType_GenerateFile
 				)
 			)
 			{
@@ -178,6 +179,7 @@ namespace NMib::NBuildSystem
 					&& Key.m_Type != EEntityType_Target
 					&& Key.m_Type != EEntityType_Group
 					&& Key.m_Type != EEntityType_Import
+					&& Key.m_Type != EEntityType_GenerateFile
 				)
 			)
 			{

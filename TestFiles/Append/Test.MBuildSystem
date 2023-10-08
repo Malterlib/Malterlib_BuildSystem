@@ -29,11 +29,18 @@ Type
 Property
 {
 	CalcValueArray: [string]
-	CalcValueArray =+ "TestFile"
+	CalcValueArray =+ "1"
+	CalcValueArray =+ "2"
 }
 
 %GenerateFile CalcValueArray->Unique()
 {
+	|
+	{
+		this.Identity "1"
+		this.Identity "2"
+	}
+
 	Property
 	{
 		CalcValue: string
@@ -94,7 +101,7 @@ Property
 	}
 	GenerateFile
 	{
-		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
+		Name `@(BuildSystemOutputDir)/TestGenerateFile@(this.Identity).txt`
 		Contents	`Generate File Contents:\n`\
 					`@(CalcValue)\n`\
 					`@(CalcValueUserType->ToString())\n`\
@@ -106,6 +113,7 @@ Property
 
 		Executable false
 		UnixLineEnds true
+		BeforeImports true
 		UnicodeBOM false
 	}
 }
