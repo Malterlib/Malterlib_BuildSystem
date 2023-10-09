@@ -377,6 +377,7 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_File_entity = gc_Str<"File entity">;
 	constexpr CStringAndHash const gc_ConstString_FileExists = gc_Str<"FileExists">;
 	constexpr CStringAndHash const gc_ConstString_LinkExists = gc_Str<"LinkExists">;
+	constexpr CStringAndHash const gc_ConstString_ResolveSymbolicLink = gc_Str<"ResolveSymbolicLink">;
 	constexpr CStringAndHash const gc_ConstString_FileOrDirectoryExists = gc_Str<"FileOrDirectoryExists">;
 	constexpr CStringAndHash const gc_ConstString_FindDirectoriesIn = gc_Str<"FindDirectoriesIn">;
 	constexpr CStringAndHash const gc_ConstString_FindDirectoriesRecursiveIn = gc_Str<"FindDirectoriesRecursiveIn">;
@@ -982,6 +983,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_File_entity);
 		o_StringCache.f_AddConstantString(gc_ConstString_FileExists);
 		o_StringCache.f_AddConstantString(gc_ConstString_LinkExists);
+		o_StringCache.f_AddConstantString(gc_ConstString_ResolveSymbolicLink);
 		o_StringCache.f_AddConstantString(gc_ConstString_FileOrDirectoryExists);
 		o_StringCache.f_AddConstantString(gc_ConstString_FindDirectoriesIn);
 		o_StringCache.f_AddConstantString(gc_ConstString_FindDirectoriesRecursiveIn);

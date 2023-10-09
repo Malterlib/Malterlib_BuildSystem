@@ -165,6 +165,19 @@ namespace NMib::NBuildSystem
 					}
 					,
 					{
+						gc_ConstString_ResolveSymbolicLink
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__FileName))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							{
+								return _This.mp_FindCache.f_ResolveSymbolicLink(_Params[0].f_String());
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
 						gc_ConstString_DirectoryExists
 						, CBuiltinFunction
 						{

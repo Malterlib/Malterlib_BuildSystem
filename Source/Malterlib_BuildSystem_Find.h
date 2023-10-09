@@ -42,6 +42,7 @@ namespace NMib::NBuildSystem
 		void f_AddSourceFile(NStr::CStr const &_FileName) const;		
 		NContainer::TCSet<NStr::CStr> f_GetSourceFiles() const;
 		bool f_FileExists(NStr::CStr const &_File, NFile::EFileAttrib _Attributes) const;
+		CStr f_ResolveSymbolicLink(NStr::CStr const &_File) const;
 		
 	private:
 		struct CEntry
@@ -56,6 +57,8 @@ namespace NMib::NBuildSystem
 		mutable NContainer::TCMap<CFindOptions, CEntry> mp_SourceSearches;
 		mutable align_cacheline NThread::CMutual mp_SourceFilesLock;
 		mutable NContainer::TCSet<NStr::CStr> mp_SourceFiles;
+		mutable align_cacheline NThread::CMutual mp_ResolvedLinksLock;
+		mutable NContainer::TCMap<NStr::CStr, NStorage::TCVariant<NStr::CStr, NException::CExceptionPointer>> mp_ResolvedLinks;
 	};
 }
 

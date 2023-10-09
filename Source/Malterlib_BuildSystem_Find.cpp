@@ -36,6 +36,28 @@ namespace NMib::NBuildSystem
 		return Ret;
 	}
 
+	CStr CFindCache::f_ResolveSymbolicLink(NStr::CStr const &_File) const
+	{
+		DLock(mp_ResolvedLinksLock);
+		auto Mapping = mp_ResolvedLinks(_File);
+		if (Mapping.f_WasCreated())
+		{
+			try
+			{
+				(*Mapping) = CFile::fs_ResolveSymbolicLink(_File);
+			}
+			catch (CException const &_Exception)
+			{
+				(*Mapping) = _Exception.f_ExceptionPointer();
+			}
+		}
+
+		if (!(*Mapping).f_IsOfType<CStr>())
+			std::rethrow_exception((*Mapping).f_GetAsType<CExceptionPointer>());
+
+		return (*Mapping).f_GetAsType<CStr>();
+	}
+
 	bool CFindCache::f_FileExists(NStr::CStr const &_File, EFileAttrib _Attributes) const
 	{
 		CFindOptions Options(_File, _Attributes);
