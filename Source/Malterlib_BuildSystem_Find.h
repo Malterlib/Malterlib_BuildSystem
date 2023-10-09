@@ -42,7 +42,7 @@ namespace NMib::NBuildSystem
 		void f_AddSourceFile(NStr::CStr const &_FileName) const;		
 		NContainer::TCSet<NStr::CStr> f_GetSourceFiles() const;
 		bool f_FileExists(NStr::CStr const &_File, NFile::EFileAttrib _Attributes) const;
-		CStr f_ResolveSymbolicLink(NStr::CStr const &_File) const;
+		NStr::CStr f_ResolveSymbolicLink(NStr::CStr const &_File) const;
 		
 	private:
 		struct CEntry
