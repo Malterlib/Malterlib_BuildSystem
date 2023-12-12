@@ -84,17 +84,17 @@ namespace NMib::NBuildSystem::NVisualStudio
 	{
 	}
 
-	void CProject::fr_FindRecursiveDependencies(CBuildSystem const &_BuildSystem, TCSet<CStr> &_Stack, CProjectDependency const *_pDepend, TCMap<CStr, CProject> const &_Projects) const
+	void CProject::fr_FindRecursiveDependencies(CBuildSystem const &_BuildSystem, TCSet<CStr> &_Stack, CProjectDependency const *_pDepend, TCMap<CStr, CProject> &_Projects)
 	{
+		if (m_bCheckedDependencies)
+			return;
+
 		auto Mapped = _Stack(f_GetName());
-		auto Cleanup
-			= fg_OnScopeExit
-			(
-				[&]
-				{
-					_Stack.f_Remove(f_GetName());
-				}
-			)
+		auto Cleanup = g_OnScopeExit /
+			[&]
+			{
+				_Stack.f_Remove(f_GetName());
+			}
 		;
 		if (!Mapped.f_WasCreated())
 		{
@@ -114,6 +114,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 				_BuildSystem.fs_ThrowError(iDepend->m_Position, CStr::CFormat("Dependency {} not found in workspace") << iDepend.f_GetKey());
 			pProject->fr_FindRecursiveDependencies(_BuildSystem, _Stack, iDepend, _Projects);
 		}
+
+		m_bCheckedDependencies = true;
 	}
 
 	CStr const &CSolutionFile::f_GetName() const
@@ -134,6 +136,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 	void CSolution::f_FindRecursiveDependencies(CBuildSystem const &_BuildSystem)
 	{
+		for (auto &Project : m_Projects)
+			Project.m_bCheckedDependencies = false;
+
 		for (auto iProject = m_Projects.f_GetIterator(); iProject; ++iProject)
 		{
 			TCSet<CStr> Stack;

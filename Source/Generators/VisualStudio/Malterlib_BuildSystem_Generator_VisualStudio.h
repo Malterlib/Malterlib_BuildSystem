@@ -278,7 +278,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		CStr const &f_GetName() const;
 		CStr f_GetPath() const;
 		CStr const &f_GetGUID();
-		void fr_FindRecursiveDependencies(CBuildSystem const &_BuildSystem, TCSet<CStr> &_Stack, CProjectDependency const *_pDepend, TCMap<CStr, CProject> const &_Projects) const;
+		void fr_FindRecursiveDependencies(CBuildSystem const &_BuildSystem, TCSet<CStr> &_Stack, CProjectDependency const *_pDepend, TCMap<CStr, CProject> &_Projects);
 		CStr const &f_GetSolutionTypeGUID() const;
 
 		TCMap<CStr, CProjectFile> m_Files;
@@ -297,6 +297,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 		CStr m_FileName;
 		ELanguageType m_LanguageType = ELanguageType_Native;
 		TCMap<CConfiguration, CStr> m_Platforms;
+
+		bool m_bCheckedDependencies = false;
 
 	private:
 		CStr mp_GUID;

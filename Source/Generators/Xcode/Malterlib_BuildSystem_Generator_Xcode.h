@@ -293,7 +293,7 @@ namespace NMib::NBuildSystem::NXcode
 		CStr const &f_GetProjectDependenciesGroupGUID();
 		CStr const &f_GetConfigurationsGroupGUID();
 		CStr const &f_GetBuildConfigurationListGUID();
-		void fr_FindRecursiveDependencies(CBuildSystem const &_BuildSystem, TCSet<CStr> &_Stack, CProjectDependency const *_pDepend, TCMap<CStr, CProject> const &_Projects) const;
+		void fr_FindRecursiveDependencies(CBuildSystem const &_BuildSystem, TCSet<CStr> &_Stack, CProjectDependency const *_pDepend, TCMap<CStr, CProject> &_Projects);
 
 		CNativeTarget &f_GetDefaultNativeTarget(CConfiguration const &_Configuration);
 
@@ -317,6 +317,8 @@ namespace NMib::NBuildSystem::NXcode
 		CFilePosition m_Position;
 		CFilePosition m_ProjectPosition;
 		CStr m_FileName;
+
+		bool m_bCheckedDependencies = false;
 
 	private:
 		CStr mp_GUID;
