@@ -77,6 +77,7 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_Import_CMake_Config(EPropertyType_Import, gc_Str<"CMake_Config">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Import_CMake_CxxCompiler(EPropertyType_Import, gc_Str<"CMake_CxxCompiler">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Import_CMake_CxxCompilerTarget(EPropertyType_Import, gc_Str<"CMake_CxxCompilerTarget">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Import_CMake_OutputFilesParseTerminators(EPropertyType_Import, gc_Str<"CMake_OutputFilesParseTerminators">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Import_CMake_CxxExternalToolChain(EPropertyType_Import, gc_Str<"CMake_CxxExternalToolChain">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Import_CMake_DiffHash(EPropertyType_Import, gc_Str<"CMake_DiffHash">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Import_CMake_Environment(EPropertyType_Import, gc_Str<"CMake_Environment">);
@@ -236,6 +237,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_Import_CMake_Config);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Import_CMake_CxxCompiler);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Import_CMake_CxxCompilerTarget);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Import_CMake_OutputFilesParseTerminators);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Import_CMake_CxxExternalToolChain);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Import_CMake_DiffHash);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Import_CMake_Environment);

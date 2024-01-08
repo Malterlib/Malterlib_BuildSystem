@@ -76,6 +76,7 @@ namespace NMib::NBuildSystem
 	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_Config;
 	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_CxxCompiler;
 	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_CxxCompilerTarget;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_OutputFilesParseTerminators;
 	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_CxxExternalToolChain;
 	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_DiffHash;
 	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_Environment;

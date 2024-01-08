@@ -369,6 +369,7 @@ namespace NMib::NBuildSystem
 		TCVector<CStr> CmakeVariables = f_EvaluateEntityPropertyStringArray(_Entity, gc_ConstKey_Import_CMake_Variables, TCVector<CStr>());
 		TCVector<CStr> CmakeIncludeInHash = f_EvaluateEntityPropertyStringArray(_Entity, gc_ConstKey_Import_CMake_IncludeInHash, TCVector<CStr>());
 		TCVector<CStr> CmakeExcludeFromHash = f_EvaluateEntityPropertyStringArray(_Entity, gc_ConstKey_Import_CMake_ExcludeFromHash, TCVector<CStr>());
+		CStr CmakeOutputFilesParseTerminators = f_EvaluateEntityPropertyString(_Entity, gc_ConstKey_Import_CMake_OutputFilesParseTerminators, CStr("/\"' ,\t\r\n"));
 
 		CStr HashContents = fg_Format("Config (Not checked): {}\n", f_EvaluateEntityPropertyString(_Entity, gc_ConstKey_FullConfiguration));
 
@@ -1155,8 +1156,7 @@ namespace NMib::NBuildSystem
 									return false;
 
 								auto pParseEnd = o_pParse + _ToFind.f_GetLen();
-								static constexpr auto pEndChars = "/\"' ,\t\r\n";
-								if (!*pParseEnd || fg_StrFindChar(pEndChars, *pParseEnd) >= 0)
+								if (!*pParseEnd || fg_StrFindChar(CmakeOutputFilesParseTerminators, *pParseEnd) >= 0)
 								{
 									auto RelativePath = CFile::fs_MakePathRelative(_ToFind, TempDirectory);
 									o_String += "{}(CMakeIntermediateDirectory)/{}/{}"_f << (bIsMHeader ? "@" : "#")<< IntermediateName << RelativePath;
@@ -1889,7 +1889,6 @@ namespace NMib::NBuildSystem
 								Target.m_pBaseName->f_SetThisValue({CStr("{}{}"_f << Target.m_pBaseName->f_GetThisValue().m_Value.f_ConstantString() << DisambiguateNumber)});
 							else
 								DMibConOut2("Missing base name: {}\n", DisambiguatedName);
-
 
 							f_OutputConsole
 								(
