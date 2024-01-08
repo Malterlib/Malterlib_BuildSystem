@@ -369,6 +369,7 @@ namespace NMib::NBuildSystem
 		TCVector<CStr> CmakeVariables = f_EvaluateEntityPropertyStringArray(_Entity, gc_ConstKey_Import_CMake_Variables, TCVector<CStr>());
 		TCVector<CStr> CmakeIncludeInHash = f_EvaluateEntityPropertyStringArray(_Entity, gc_ConstKey_Import_CMake_IncludeInHash, TCVector<CStr>());
 		TCVector<CStr> CmakeExcludeFromHash = f_EvaluateEntityPropertyStringArray(_Entity, gc_ConstKey_Import_CMake_ExcludeFromHash, TCVector<CStr>());
+		TCVector<CStr> CmakeDisableIncludeReplace = f_EvaluateEntityPropertyStringArray(_Entity, gc_ConstKey_Import_CMake_DisableIncludeReplace, TCVector<CStr>());
 		CStr CmakeOutputFilesParseTerminators = f_EvaluateEntityPropertyString(_Entity, gc_ConstKey_Import_CMake_OutputFilesParseTerminators, CStr("/\"' ,\t\r\n"));
 
 		CStr HashContents = fg_Format("Config (Not checked): {}\n", f_EvaluateEntityPropertyString(_Entity, gc_ConstKey_FullConfiguration));
@@ -406,6 +407,8 @@ namespace NMib::NBuildSystem
 				fAddStringHash(o_DependenciesHash, "{}"_f << CmakeVariables, "Import.CMake_Variables", _bPerformExclude);
 				fAddStringHash(o_DependenciesHash, "{}"_f << CmakeIncludeInHash, "Import.CMake_IncludeInHash", _bPerformExclude);
 				fAddStringHash(o_DependenciesHash, "{}"_f << IntermediateName, "Import.CMake_IntermediateName", _bPerformExclude);
+				if (!CmakeDisableIncludeReplace.f_IsEmpty())
+					fAddStringHash(o_DependenciesHash, "{}"_f << CmakeDisableIncludeReplace, "Import.CMake_DisableIncludeReplace", _bPerformExclude);
 			}
 		;
 
@@ -1131,6 +1134,10 @@ namespace NMib::NBuildSystem
 							continue;
 
 						CStr FileName(pStartFileName, pParseLine - pStartFileName);
+
+						if (fg_StrMatchesAnyWildcardInContainer(FileName, CmakeDisableIncludeReplace))
+							continue;
+
 						CStr ExpandedFileName = CFile::fs_GetExpandedPath(FileName, FileDirectory);
 						if (!fStartsWith(ExpandedFileName, TempDirectory))
 							continue;

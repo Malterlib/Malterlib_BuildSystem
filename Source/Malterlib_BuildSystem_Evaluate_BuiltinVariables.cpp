@@ -269,6 +269,7 @@ namespace NMib::NBuildSystem
 					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_IntermediateName), DMibBuildSystemTypeWithPosition(g_String)}
 					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_Variables), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
 					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_ExcludeFromHash), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
+					, {CPropertyKey(gc_ConstKey_Import_CMake_DisableIncludeReplace), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
 					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_SharedTempDirectory), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
 					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_Path), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
 					, {CPropertyKey(mp_StringCache, EPropertyType_Import, gc_ConstString_CMake_VariablesWithPaths), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
