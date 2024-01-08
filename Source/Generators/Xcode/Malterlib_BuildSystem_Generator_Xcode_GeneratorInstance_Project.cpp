@@ -785,7 +785,8 @@ fi
 									auto Mapping = pParent->m_ChildEntitiesMap(EntityKey, pParent);
 
 									auto *pNewEntity = &Mapping.f_GetResult();
-									pNewEntity->f_DataWritable().m_Position = pFile->m_Position;
+									if (pFile)
+										pNewEntity->f_DataWritable().m_Position = pFile->m_Position;
 
 									if (Mapping.f_WasCreated())
 										pParent->m_ChildEntitiesOrdered.f_Insert(*pNewEntity);
