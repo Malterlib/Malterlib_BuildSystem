@@ -308,7 +308,7 @@ namespace NMib::NBuildSystem
 									for (auto iDependency = TargetInfo.m_DependenciesOrdered.f_GetIterator(); iDependency; ++iDependency)
 									{
 										auto const &DependencyInfo = *iDependency;
-										if (DependencyInfo.m_bIndirect)
+										if (DependencyInfo.m_bIndirect && !DependencyInfo.m_bIndirectOrdered)
 											continue;
 
 										auto const &DependencyName = iDependency->f_GetName();
@@ -319,6 +319,7 @@ namespace NMib::NBuildSystem
 										Dep.m_Position = DependencyInfo.m_pEntity->f_Data().m_Position;
 										Dep.m_EnabledConfigs[Config] = DependencyInfo.m_pEntity;
 										Dep.m_PerConfig[Config].m_bLink = DependencyInfo.m_bLink;
+										Dep.m_PerConfig[Config].m_bObjectLibrary = DependencyInfo.m_bObjectLibrary;
 
 										if (DepMap.f_WasCreated())
 											Dep.m_bExternal = DependencyInfo.m_bExternal;

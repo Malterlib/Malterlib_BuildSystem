@@ -230,6 +230,7 @@ namespace NMib::NBuildSystem::NXcode
 			CStr m_SearchPath;
 			CStr m_LinkerGroup;
 			bool m_bLink = false;
+			bool m_bObjectLibrary = false;
 
 		private:
 			CStr mp_DependencyContainerItemGUID;

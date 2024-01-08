@@ -22,6 +22,8 @@ namespace NMib::NBuildSystem
 		bool m_bLink = false;
 		bool m_bExternal = false;
 		bool m_bIndirect = false;
+		bool m_bIndirectOrdered = false;
+		bool m_bObjectLibrary = false;
 	};
 
 	struct CTargetFileInfo : public CGroupMember
@@ -76,5 +78,6 @@ namespace NMib::NBuildSystem
 		NContainer::TCSet<NStr::CStr> m_AlreadyAddedGroups;
 
 		bool m_bIsExpanded = false;
+		bool m_bObjectLibrary = false;
 	};
 }

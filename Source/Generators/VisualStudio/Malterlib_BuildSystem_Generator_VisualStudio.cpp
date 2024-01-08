@@ -350,7 +350,7 @@ namespace NMib::NBuildSystem
 
 								for (auto &DependencyInfo : TargetInfo.m_DependenciesOrdered)
 								{
-									if (DependencyInfo.m_bIndirect)
+									if (DependencyInfo.m_bIndirect && !DependencyInfo.m_bIndirectOrdered)
 										continue;
 
 									auto const &DependencyName = DependencyInfo.f_GetName();

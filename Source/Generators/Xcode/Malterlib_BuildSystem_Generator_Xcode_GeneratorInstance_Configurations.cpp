@@ -986,7 +986,7 @@ namespace NMib::NBuildSystem
 						Link += "-Xlinker -( ";
 					for (auto &LinkConfig : iLinkerGroup->m_Configs)
 					{
-						if (LinkConfig.m_bInternal && _NativeTarget.m_ProductType != "com.apple.product-type.library.static")
+						if ((LinkConfig.m_bInternal || LinkConfig.m_pPerConfig->m_bObjectLibrary) && _NativeTarget.m_ProductType != "com.apple.product-type.library.static")
 						{
 							if (_Configuration.m_PlatformBase.f_StartsWith("macOS"))
 								LinkForced += "-force_load \"{}/{}\" "_f << LinkConfig.m_pPerConfig->m_SearchPath << LinkConfig.m_pPerConfig->m_CalculatedPath;

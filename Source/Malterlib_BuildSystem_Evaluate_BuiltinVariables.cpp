@@ -89,7 +89,8 @@ namespace NMib::NBuildSystem
 
 					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_Type), DMibBuildSystemTypeWithPosition(g_String)}
 					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_Language), DMibBuildSystemTypeWithPosition(fg_Optional(g_String))}
-					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_Name), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(gc_ConstKey_Target_Name), DMibBuildSystemTypeWithPosition(g_String)}
+					, {CPropertyKey(gc_ConstKey_Target_ObjectLibrary), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_IntermediateDirectory), DMibBuildSystemTypeWithPosition(g_String)}
 					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_OutputDirectory), DMibBuildSystemTypeWithPosition(g_String)}
 					, {CPropertyKey(mp_StringCache, EPropertyType_Target, gc_ConstString_Disabled), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
@@ -122,6 +123,8 @@ namespace NMib::NBuildSystem
 					, {CPropertyKey(mp_StringCache, EPropertyType_Dependency, gc_ConstString_IndirectOrdered), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					, {CPropertyKey(mp_StringCache, EPropertyType_Dependency, gc_ConstString_Link), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, true))}
 					, {CPropertyKey(mp_StringCache, EPropertyType_Dependency, gc_ConstString_Target), DMibBuildSystemTypeWithPosition(fg_Optional(g_String))}
+					, {CPropertyKey(gc_ConstKey_Dependency_ObjectLibrary), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+
 					, {CPropertyKey(gc_ConstKey_Dependency_Type), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
 					, {CPropertyKey(gc_ConstKey_Dependency_Name), DMibBuildSystemTypeWithPosition(g_String)}
 					,

@@ -39,6 +39,7 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_Name(EPropertyType_Dependency, gc_Str<"Name">);	
 	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_Target(EPropertyType_Dependency, gc_Str<"Target">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_TargetProperties(EPropertyType_Dependency, gc_Str<"TargetProperties">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_ObjectLibrary(EPropertyType_Dependency, gc_Str<"ObjectLibrary">);	
 
 	constexpr CPropertyKeyReference const gc_ConstKey_GenerateFile_BeforeImports(EPropertyType_GenerateFile, gc_Str<"BeforeImports">);
 	constexpr CPropertyKeyReference const gc_ConstKey_GenerateFile_Contents(EPropertyType_GenerateFile, gc_Str<"Contents">);
@@ -135,6 +136,7 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_Group(EPropertyType_Target, gc_Str<"Group">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_LinkerGroup(EPropertyType_Target, gc_Str<"LinkerGroup">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_Name(EPropertyType_Target, gc_Str<"Name">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Target_ObjectLibrary(EPropertyType_Target, gc_Str<"ObjectLibrary">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_OutputDirectory(EPropertyType_Target, gc_Str<"OutputDirectory">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_PlatformVersion(EPropertyType_Target, gc_Str<"PlatformVersion">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_TargetFrameworkVersion(EPropertyType_Target, gc_Str<"TargetFrameworkVersion">);
@@ -204,6 +206,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_Name);		
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_Target);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_TargetProperties);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_ObjectLibrary);		
 		o_StringCache.f_AddConstantString(gc_ConstKey_GenerateFile_BeforeImports);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GenerateFile_Contents);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GenerateFile_Executable);
@@ -293,6 +296,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_Group);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_LinkerGroup);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_Name);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Target_ObjectLibrary);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_OutputDirectory);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_PlatformVersion);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_TargetFrameworkVersion);

@@ -129,6 +129,8 @@ namespace NMib::NBuildSystem
 				else
 					Workspace.m_RootGroup.m_Children.f_Insert(Target);
 
+				Target.m_bObjectLibrary = f_EvaluateEntityPropertyBool(TargetEntity, gc_ConstKey_Target_ObjectLibrary);
+
 				return pTargetInfo;
 			}
 		;
@@ -614,6 +616,16 @@ namespace NMib::NBuildSystem
 											Dep.m_pEntity = fg_Explicit(pEntity);
 											Dep.m_Position = pEntity->f_Data().m_Position;
 											Dep.m_bIndirect = (bIndirect && !_bRecursive) || _bIndirect;
+											Dep.m_bIndirectOrdered = !_bRecursive && f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Dependency_IndirectOrdered, false);
+											Dep.m_bObjectLibrary = pDependentTarget->m_bObjectLibrary;
+
+											f_AddExternalProperty
+												(
+													*Dep.m_pEntity
+													, gc_ConstKey_Dependency_ObjectLibrary
+													, Dep.m_bObjectLibrary
+												)
+											;											
 
 											bool bFollowIndirectDependencies = f_EvaluateEntityPropertyBool(*pDependentTarget->m_pInnerEntity, gc_ConstKey_Target_FollowIndirectDependencies, false);
 
@@ -676,7 +688,7 @@ namespace NMib::NBuildSystem
 									)
 								;
 
-								if (Dependency.m_bIndirect)
+								if (Dependency.m_bIndirect && !Dependency.m_bIndirectOrdered)
 									continue;
 
 								bool bDoLink = f_EvaluateEntityPropertyBool(*Dependency.m_pEntity, gc_ConstKey_Dependency_Link, true);
