@@ -1490,11 +1490,12 @@ namespace NMib::NBuildSystem
 										break;
 
 									auto &Value = o_This.f_GetThisValue();
-									if (!Value.m_Value.f_IsConstantString())
-										break;
 
 									if (Identifier.f_NameConstantString() == gc_ConstString_Target.m_String)
 									{
+										if (!Value.m_Value.f_IsConstantString())
+											break;
+
 										auto &Target = Targets[Value.m_Value.f_ConstantString()] = fg_Move(NextTarget);
 										Target.m_pBuildSystemRegistry = &o_This;
 										Target.m_pNameValue = &Value.m_Value;
@@ -1506,10 +1507,15 @@ namespace NMib::NBuildSystem
 									}
 									else if (Identifier.f_NameConstantString() == gc_ConstString_Dependency.m_String)
 									{
+										if (!Value.m_Value.f_IsConstantString())
+											break;
+
 										auto &Dependency = NextTarget.m_Dependencies[Value.m_Value.f_ConstantString()];
 										Dependency.m_pValue = &Value.m_Value;
 										Dependency.m_pBuildSystemRegistry = &o_This;
 									}
+									else if (Identifier.f_NameConstantString() == gc_ConstString_File.m_String)
+										NextTarget.m_Inputs[CStr::fs_ToStr(Value.m_Value)];
 								}
 								while (false)
 									;
