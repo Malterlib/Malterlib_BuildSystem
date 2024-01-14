@@ -1848,7 +1848,7 @@ namespace NMib::NBuildSystem
 									Target.m_Dependencies[TargetName];
 									CBuildSystemSyntax::CRootKey Name = {CBuildSystemSyntax::CKeyPrefixOperator::fs_Entity(mp_StringCache, gc_ConstString_Dependency)};
 
-									auto pNewDependency = Target.m_pBuildSystemRegistry->f_CreateChildNoPath(Name);
+									auto pNewDependency = Target.m_pBuildSystemRegistry->f_CreateChildNoPath(Name, true);
 									pNewDependency->f_SetThisValue(CBuildSystemSyntax::CRootValue{TargetName});
 									if (TargetName.f_StartsWith("Lib_"))
 									{
@@ -1863,7 +1863,7 @@ namespace NMib::NBuildSystem
 												{CBuildSystemSyntax::CValue::fs_Identifier(mp_StringCache, gc_ConstString_Link, EPropertyType_Dependency)}
 											)
 											->f_SetThisValue({false})
-									;
+										;
 									}
 
 									break;
