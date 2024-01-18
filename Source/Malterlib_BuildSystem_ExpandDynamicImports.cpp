@@ -357,6 +357,7 @@ namespace NMib::NBuildSystem
 
 		CStr FullRebuildVersion = "{}-{}"_f << f_EvaluateEntityPropertyString(_Entity, gc_ConstKey_Import_CMake_FullRebuildVersion) << GeneratorFullRebuildVersion;
 		TCVector<CStr> CacheExcludePatterns = f_EvaluateEntityPropertyStringArray(_Entity, gc_ConstKey_Import_CMake_CacheExcludePatterns, TCVector<CStr>());
+		TCVector<CStr> CacheExcludeDependenciesPatterns = f_EvaluateEntityPropertyStringArray(_Entity, gc_ConstKey_Import_CMake_CacheExcludeDependenciesPatterns, TCVector<CStr>());
 		CEJSONSorted CacheReplaceContents = f_EvaluateEntityProperty(_Entity, gc_ConstKey_Import_CMake_CacheReplaceContents).f_Move();
 		CEJSONSorted CacheDuplicateLines = f_EvaluateEntityProperty(_Entity, gc_ConstKey_Import_CMake_CacheDuplicateLines).f_Move();
 		CEJSONSorted CmakeEnvironmentContents = f_EvaluateEntityProperty(_Entity, gc_ConstKey_Import_CMake_Environment).f_Move();
@@ -409,6 +410,8 @@ namespace NMib::NBuildSystem
 				fAddStringHash(o_DependenciesHash, "{}"_f << IntermediateName, "Import.CMake_IntermediateName", _bPerformExclude);
 				if (!CmakeDisableIncludeReplace.f_IsEmpty())
 					fAddStringHash(o_DependenciesHash, "{}"_f << CmakeDisableIncludeReplace, "Import.CMake_DisableIncludeReplace", _bPerformExclude);
+				if (!CacheExcludeDependenciesPatterns.f_IsEmpty())
+					fAddStringHash(o_DependenciesHash, "{}"_f << CacheExcludeDependenciesPatterns, "Import.CMake_CacheExcludeDependenciesPatterns", _bPerformExclude);
 			}
 		;
 
@@ -866,15 +869,6 @@ namespace NMib::NBuildSystem
 				}
 			}
 
-			TCSet<CStr> IgnoreInputs;
-			{
-				for (auto &ToIgnore : CacheIgnoreInputs)
-				{
-					if (ToIgnore)
-						IgnoreInputs[ToIgnore];
-				}
-			}
-
 			auto FoundFiles = CFile::fs_FindFiles(FindOptions);
 			mint PathPrefixLen = TempDirectory.f_GetLen() + 1;
 
@@ -1058,7 +1052,9 @@ namespace NMib::NBuildSystem
 
 				CStr FileContents = CFile::fs_ReadStringFromFile(File.m_Path, true);
 
-				if (Extension == "dependencies")
+				bool bIsDependencies = Extension == "dependencies";
+
+				if (bIsDependencies)
 				{
 					CStr NewFileContents;
 					ch8 const *pParse = FileContents;
@@ -1070,16 +1066,7 @@ namespace NMib::NBuildSystem
 						fg_ParseEndOfLine(pParse);
 						if (fStartsWith(Line, TempDirectory))
 						{
-							bool bExcluded = false;
-							for (auto &ExcludePattern : FindOptions.m_ExcludePatterns)
-							{
-								if (fg_StrMatchWildcard(Line.f_GetStr(), ExcludePattern.f_GetStr()) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
-								{
-									bExcluded = true;
-									break;
-								}
-							}
-							if (bExcluded)
+							if (fg_StrMatchesAnyWildcardInContainer(Line, FindOptions.m_ExcludePatterns))
 								continue;
 						}
 						else if (Line.f_Find("/CMakeRoot/") >= 0)
@@ -1159,7 +1146,7 @@ namespace NMib::NBuildSystem
 					FileContents = fg_Move(NewFileContents);
 				}
 
-				if (!OutputFilesMultiReplace.f_IsEmpty())
+				if (!OutputFilesMultiReplace.f_IsEmpty() && !bIsDependencies)
 				{
 					FileContents = OutputFilesMultiReplace.f_Replace
 						(
@@ -1932,8 +1919,9 @@ namespace NMib::NBuildSystem
 
 					FileContents = Registry.f_GenerateStr();
 				}
-				else if (Extension == "dependencies")
+				else if (bIsDependencies)
 				{
+					CStr NewFileContents;
 					ch8 const *pParse = FileContents;
 					while (*pParse)
 					{
@@ -1941,13 +1929,20 @@ namespace NMib::NBuildSystem
 						fg_ParseToEndOfLine(pParse);
 						CStr Line(pLineStart, pParse - pLineStart);
 						fg_ParseEndOfLine(pParse);
+						CStr ExpandedLine = CFile::fs_GetExpandedPath(Line, DestPathDirectory);
+						if (fg_StrMatchesAnyWildcardInContainer(ExpandedLine, CacheExcludeDependenciesPatterns))
+							continue;
 
-						DependencyFiles[CFile::fs_GetExpandedPath(Line, CFile::fs_GetPath(DestPath))];
+						DependencyFiles[ExpandedLine];
+
+						NewFileContents += Line;
+						NewFileContents += "\n";
 					}
+					FileContents = fg_Move(NewFileContents);
 				}
 
 				{
-					CFile::fs_CreateDirectory(CFile::fs_GetPath(DestPath));
+					CFile::fs_CreateDirectory(DestPathDirectory);
 					CByteVector BinaryFileContents;
 					CFile::fs_WriteStringToVector(BinaryFileContents, FileContents, false);
 					f_WriteFile(BinaryFileContents, DestPath, File.m_Attribs | EFileAttrib_UnixAttributesValid);
