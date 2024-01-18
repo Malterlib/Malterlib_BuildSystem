@@ -559,8 +559,15 @@ namespace NMib::NBuildSystem
 			for (auto &File : DependencyFiles)
 			{
 				if (!CFile::fs_FileExists(File))
+				{
+					f_OutputConsole("Missing file in dependencies: {}\n"_f << File);
 					continue;
+				}
+
 				CStr FileContents = CFile::fs_ReadStringFromFile(File, true).f_Replace("\r\n", "\n");
+				if (bVerboseHash)
+					f_OutputConsole("{}: {}\n"_f << File << NCryptography::CHash_SHA256::fs_DigestFromData(FileContents.f_GetStr(), FileContents.f_GetLen()));
+
 				DependenciesHash.f_AddData(FileContents.f_GetStr(), FileContents.f_GetLen());
 			}
 
