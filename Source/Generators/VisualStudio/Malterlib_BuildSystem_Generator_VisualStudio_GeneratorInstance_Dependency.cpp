@@ -98,9 +98,17 @@ namespace NMib::NBuildSystem::NVisualStudio
 				}
 			}
 
-			for (auto &Entity : _Project.m_EnabledProjectConfigs)
+			auto pDependProject = _Project.m_pSolution->m_Projects.f_FindEqual(ProjectDependency);
+
+			if (!pDependProject)
+				m_BuildSystem.fs_ThrowError(Dependency.m_Position, CStr::CFormat("Dependency {} not found in workspace") << ProjectDependency);
+
+			for (auto &Entity : pDependProject->m_EnabledProjectConfigs)
 			{
-				auto &Config = Dependency.m_EnabledConfigs.fs_GetKey(Entity);
+				auto &Config = pDependProject->m_EnabledProjectConfigs.fs_GetKey(Entity);
+				if (!_Project.m_EnabledProjectConfigs.f_FindEqual(Config))
+					continue;
+
 				if (!Dependency.m_EnabledConfigs.f_FindEqual(Config))
 				{
 					bInvalid = true;
@@ -115,23 +123,31 @@ namespace NMib::NBuildSystem::NVisualStudio
 					fg_AddStrSep(Configs0, iConfig.f_GetKey().f_GetFullName(), "\n");
 
 				CStr Configs1;
-				for (auto iConfig = _Project.m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
+				for (auto iConfig = pDependProject->m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
+				{
+					if (!_Project.m_EnabledProjectConfigs.f_FindEqual(iConfig.f_GetKey()))
+						continue;
+
 					fg_AddStrSep(Configs1, iConfig.f_GetKey().f_GetFullName(), "\n");
+				}
 
 				m_BuildSystem.fs_ThrowError
 					(
 						Dependency.m_Position
-						, fg_Format("Dependencies cannot be varied per configuration ({}):\n{}\n!=\n{}\n", _Project.f_GetName(), Configs0, Configs1)
+						, fg_Format
+						(
+							"Dependencies cannot be varied per configuration ({}:{} depends on {}): Dependency:\n{}\n Project:\n{}\n"
+							, _Project.m_pSolution->f_GetName()
+							, _Project.f_GetName()
+							, Dependency.f_GetName()
+							, Configs0
+							, Configs1
+						)
 					)
 				;
 			}
 
-			auto pDependProject = _Project.m_pSolution->m_Projects.f_FindEqual(ProjectDependency);
-
-			if (!pDependProject)
-				m_BuildSystem.fs_ThrowError(Dependency.m_Position, CStr::CFormat("Dependency {} not found in workspace") << ProjectDependency);
-
-			for (auto iConfig = _Project.m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
+			for (auto iConfig = Dependency.m_EnabledConfigs.f_GetIterator(); iConfig; ++iConfig)
 			{
 				if (!pDependProject->m_EnabledProjectConfigs.f_FindEqual(iConfig.f_GetKey()))
 				{
