@@ -13,6 +13,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 		for (auto &Dependency : _Project.m_Dependencies)
 		{
+			if (Dependency.m_EnabledConfigs.f_IsEmpty())
+				continue;
+
 			auto &GeneratorSettings = Dependency.m_GeneratorSettings.f_ConstructSettings();
 			for (auto &Config : Dependency.m_EnabledConfigs)
 				GeneratorSettings[Dependency.m_EnabledConfigs.fs_GetKey(Config)];
@@ -30,6 +33,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 					mint nDepenencies = 0;
 					for (auto &Dependency : _Project.m_Dependencies)
 					{
+						if (Dependency.m_EnabledConfigs.f_IsEmpty())
+							continue;
+
 						auto &GeneratorSettings = Dependency.m_GeneratorSettings.f_Settings();
 
 						auto *pResult = GeneratorSettings.f_FindEqual(Config);
@@ -70,6 +76,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 		for (auto &Dependency : _Project.m_Dependencies)
 		{
+			if (Dependency.m_EnabledConfigs.f_IsEmpty())
+				continue;
+
 			auto ParsedSettings = Dependency.m_GeneratorSettings.f_GetParsedVSSettings<true, true>(nullptr);
 
 			if (Dependency.m_bExternal)
@@ -118,17 +127,32 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 			if (bInvalid)
 			{
-				CStr Configs0;
+				CStr ConfigsDependency;
 				for (auto iConfig = Dependency.m_EnabledConfigs.f_GetIterator(); iConfig; ++iConfig)
-					fg_AddStrSep(Configs0, iConfig.f_GetKey().f_GetFullName(), "\n");
+					fg_AddStrSep(ConfigsDependency, iConfig.f_GetKey().f_GetFullName(), "\n   ");
 
-				CStr Configs1;
+				CStr ConfigsDependencyDebug;
+				for (auto &Debug : Dependency.m_PerConfigDebug.f_Entries())
+				{
+					fg_AddStrSep
+						(
+							ConfigsDependencyDebug
+							, "{}   Indirect {}   IndirectOrdered {}"_f 
+							<< Debug.f_Key().f_GetFullName() 
+							<< Debug.f_Value().m_bIndirect 
+							<< Debug.f_Value().m_bIndirectOrdered
+							, "\n   "
+						)
+					;
+				}
+
+				CStr ConfigsProject;
 				for (auto iConfig = pDependProject->m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
 				{
 					if (!_Project.m_EnabledProjectConfigs.f_FindEqual(iConfig.f_GetKey()))
 						continue;
 
-					fg_AddStrSep(Configs1, iConfig.f_GetKey().f_GetFullName(), "\n");
+					fg_AddStrSep(ConfigsProject, iConfig.f_GetKey().f_GetFullName(), "\n   ");
 				}
 
 				m_BuildSystem.fs_ThrowError
@@ -136,12 +160,13 @@ namespace NMib::NBuildSystem::NVisualStudio
 						Dependency.m_Position
 						, fg_Format
 						(
-							"Dependencies cannot be varied per configuration ({}:{} depends on {}): Dependency:\n{}\n Project:\n{}\n"
+							"Dependencies cannot be varied per configuration ({}:{} depends on {}):\nDependency:\n   {}\nProject:\n   {}\nDependency Debug:\n   {}\n"
 							, _Project.m_pSolution->f_GetName()
 							, _Project.f_GetName()
 							, Dependency.f_GetName()
-							, Configs0
-							, Configs1
+							, ConfigsDependency
+							, ConfigsProject
+							, ConfigsDependencyDebug
 						)
 					)
 				;

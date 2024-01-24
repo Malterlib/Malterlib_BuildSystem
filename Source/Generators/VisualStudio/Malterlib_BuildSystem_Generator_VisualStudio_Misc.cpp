@@ -106,6 +106,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 		for (auto iDepend = m_Dependencies.f_GetIterator(); iDepend; ++iDepend)
 		{
+			if (iDepend->m_EnabledConfigs.f_IsEmpty())
+				continue;
+
 			if (iDepend->m_bExternal)
 				continue;
 

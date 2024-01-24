@@ -259,11 +259,18 @@ namespace NMib::NBuildSystem::NVisualStudio
 		bool m_bWasGenerated = false;
 	};
 
+	struct CProjectDependencyDebug
+	{
+		bool m_bIndirect;
+		bool m_bIndirectOrdered;
+	};
+
 	struct CProjectDependency
 	{
 		CStr const &f_GetName() const;
 
 		TCMap<CConfiguration, CEntityMutablePointer> m_EnabledConfigs;
+		TCMap<CConfiguration, CProjectDependencyDebug> m_PerConfigDebug;
 		CFilePosition m_Position;
 		CGeneratorSettings m_GeneratorSettings;
 		bool m_bExternal = false;

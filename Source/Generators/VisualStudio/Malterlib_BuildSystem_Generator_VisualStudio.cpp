@@ -350,14 +350,18 @@ namespace NMib::NBuildSystem
 
 								for (auto &DependencyInfo : TargetInfo.m_DependenciesOrdered)
 								{
-									if (DependencyInfo.m_bIndirect && !DependencyInfo.m_bIndirectOrdered)
-										continue;
-
 									auto const &DependencyName = DependencyInfo.f_GetName();
 									auto DepMap = Target.m_Dependencies(DependencyName);
 									auto &Dep = DepMap.f_GetResult();
-
 									Dep.m_Position = DependencyInfo.m_pEntity->f_Data().m_Position;
+
+									auto &DebugConfig = Dep.m_PerConfigDebug[Config];
+									DebugConfig.m_bIndirect = DependencyInfo.m_bIndirect;
+									DebugConfig.m_bIndirectOrdered = DependencyInfo.m_bIndirectOrdered;
+
+									if (DependencyInfo.m_bIndirect && !DependencyInfo.m_bIndirectOrdered)
+										continue;
+
 									Dep.m_EnabledConfigs[Config] = DependencyInfo.m_pEntity;
 
 									if (DepMap.f_WasCreated())
