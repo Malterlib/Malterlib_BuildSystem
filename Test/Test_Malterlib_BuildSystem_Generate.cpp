@@ -3,6 +3,7 @@
 
 #include <Mib/Core/Core>
 #include <Mib/BuildSystem/BuildSystem>
+#include <Mib/Concurrency/DistributedActorTestHelpers>
 #include <Mib/File/ExeFS>
 #include <Mib/File/VirtualFSs/MalterlibFS>
 #include <Mib/Encoding/JSONShortcuts>
@@ -124,20 +125,7 @@ namespace
 			CBuildSystem::ERetry Retry;
 
 			{
-				TCSharedPointer<CDefaultRunLoop> pRunLoop = fg_Construct();
-				auto CleanupRunLoop = g_OnScopeExit / [&]
-					{
-						while (pRunLoop->m_RefCount.f_Get() > 0)
-							pRunLoop->f_WaitOnceTimeout(0.1);
-					}
-				;
-				TCActor<CDispatchingActor> HelperActor(fg_Construct(), pRunLoop->f_Dispatcher());
-				auto CleanupHelperActor = g_OnScopeExit / [&]
-					{
-						HelperActor->f_BlockDestroy(pRunLoop->f_ActorDestroyLoop());
-					}
-				;
-				CCurrentlyProcessingActorScope CurrentActor{HelperActor};
+				CActorRunLoopTestHelper RunLoopHelper;
 
 				TCDistributedActor<CCommandLineControlActorTest> pCommandLineControlActor = fg_Construct();
 				TCSharedPointer<CCommandLineControl> pCommandLineControl = fg_Construct();
@@ -170,7 +158,7 @@ namespace
 						co_return {};
 					}
 				)
-				.f_CallSync(pRunLoop);
+				.f_CallSync(RunLoopHelper.m_pRunLoop);
 			}
 
 			DMibExpect(Retry, ==, CBuildSystem::ERetry_None)(ETestFlag_Aggregated);
