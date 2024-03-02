@@ -37,6 +37,11 @@ namespace
 			co_return {};
 		}
 
+		TCFuture<TCActorSubscriptionWithID<>> f_RegisterForScreenChange(FOnScreenChange &&_fOnScreenChange) override
+		{
+			co_return {};
+		}
+
 		TCFuture<NContainer::CSecureByteVector> f_ReadBinary() override
 		{
 			co_return {};
