@@ -1318,25 +1318,12 @@ namespace NMib::NBuildSystem
 		CGitLaunches Launches{f_GetBaseDir(), "Check repository status", mp_AnsiFlags, mp_fOutputConsole, f_GetCancelledPointer()};
 		auto DestroyLaunchs = co_await co_await Launches.f_Init();
 
-		if (!mp_FileActors.f_IsConstructed())
-		{
-			mp_FileActors.f_ConstructFunctor
-				(
-					[]
-					{
-						return fg_Construct(fg_Construct(), "File actor");
-					}
-				)
-			;
-		}
-
 		for (auto &Repos : ReposOrdered)
 		{
-			auto FileActor = *mp_FileActors;
 			co_await fg_ParallelForEach
 				(
 					Repos
-					, [&, FileActor](auto &_Repos) mutable -> TCFuture<void>
+					, [&](auto &_Repos) mutable -> TCFuture<void>
 					{
 						co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 						co_await f_CheckCancelled();
@@ -1344,33 +1331,39 @@ namespace NMib::NBuildSystem
 						CStr ReposDirectory = _Repos.f_GetPath();
 						CStr LockFileName = ReposDirectory + "/RepoLock.MRepoState";
 
-						auto pLockFile = co_await
-							(
-								g_Dispatch(FileActor) / [&]()
-								{
-									CFile::fs_CreateDirectory(ReposDirectory);
-									StateHandler.f_AddGitIgnore(ReposDirectory + "/RepoLock.MRepoState", *this);
-									TCUniquePointer<CLockFile> pLockFile = fg_Construct(LockFileName);
+						TCUniquePointer<CLockFile> pLockFile;
+						{
+							auto BlockingActorCheckout = fg_BlockingActor();
+							pLockFile = co_await
+								(
+									g_Dispatch(BlockingActorCheckout) / [&]()
+									{
+										CFile::fs_CreateDirectory(ReposDirectory);
+										StateHandler.f_AddGitIgnore(ReposDirectory + "/RepoLock.MRepoState", *this);
+										TCUniquePointer<CLockFile> pLockFile = fg_Construct(LockFileName);
 
-									if (mp_bDebugFileLocks)
-										f_OutputConsole("{} File lock: {}\n"_f << pLockFile.f_Get() << LockFileName, true);
+										if (mp_bDebugFileLocks)
+											f_OutputConsole("{} File lock: {}\n"_f << pLockFile.f_Get() << LockFileName, true);
 
-									pLockFile->f_LockWithException(5.0*60.0);
+										pLockFile->f_LockWithException(5.0*60.0);
 
-									return fg_Move(pLockFile);
-								}
-							)
-						;
+										return fg_Move(pLockFile);
+									}
+								)
+							;
+						}
 
 						if (mp_bDebugFileLocks)
 							f_OutputConsole("{} File locked: {}\n"_f << pLockFile.f_Get() << LockFileName, true);
 
-						auto CleanupLock = g_OnScopeExitActor(FileActor) / [&, pLockFile = fg_Move(pLockFile), fOutputConsole = mp_fOutputConsole]() mutable -> TCFuture<void>
+						auto CleanupLock = g_BlockingActorSubscription 
+							/ [LockFileName, bDebugFileLocks = mp_bDebugFileLocks, pLockFile = fg_Move(pLockFile), fOutputConsole = mp_fOutputConsole]
+							() mutable -> TCFuture<void>
 							{
 								try
 								{
 									pLockFile.f_Clear();
-									if (mp_bDebugFileLocks && fOutputConsole)
+									if (bDebugFileLocks && fOutputConsole)
 										fOutputConsole("{} File lock released: {}\n"_f << pLockFile.f_Get() << LockFileName, true);
 								}
 								catch (CExceptionFile const &)

@@ -1068,8 +1068,6 @@ namespace NMib::NBuildSystem
 		bool mp_bEnableValues = false;
 
 		NStorage::TCSharedPointer<NAtomic::TCAtomic<bool>> mp_pCancelled;
-
-		NConcurrency::TCRoundRobinActors<NConcurrency::CSeparateThreadActor> mp_FileActors{4};
 	};
 }
 
