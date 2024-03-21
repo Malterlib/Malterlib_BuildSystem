@@ -5,6 +5,7 @@
 
 #include <Mib/Concurrency/AsyncDestroy>
 #include <Mib/Concurrency/ActorSequencerActor>
+#include <Mib/Concurrency/LogError>
 
 namespace NMib::NBuildSystem
 {
@@ -166,6 +167,24 @@ namespace NMib::NBuildSystem
 		TCActorResultVector<void> LaunchResults;
 
 		TCMap<CRepository *, CSequencer> DeleteLaunchSequencers;
+
+		auto AsyncDestroy = co_await fg_AsyncDestroyLogError
+			(
+				[&]() -> TCFuture<void>
+				{
+					auto DeleteLaunchSequencersToDestroy = fg_Move(DeleteLaunchSequencers);
+
+					TCActorResultVector<void> DestroyResults;
+
+					for (auto &ToDestory : DeleteLaunchSequencersToDestroy)
+						fg_Move(ToDestory).f_Destroy() > DestroyResults.f_AddResult();
+
+					co_await DestroyResults.f_GetUnwrappedResults();
+
+					co_return {};
+				}
+			)
+		;
 
 		for (auto &[RepoBound, iSequence] : FilteredRepositories.f_GetAllRepos())
 		{
@@ -420,6 +439,24 @@ namespace NMib::NBuildSystem
 		TCActorResultVector<void> LaunchResults;
 
 		TCMap<CRepository *, CSequencer> DeleteLaunchSequencers;
+
+		auto AsyncDestroy = co_await fg_AsyncDestroyLogError
+			(
+				[&]() -> TCFuture<void>
+				{
+					auto DeleteLaunchSequencersToDestroy = fg_Move(DeleteLaunchSequencers);
+
+					TCActorResultVector<void> DestroyResults;
+
+					for (auto &ToDestory : DeleteLaunchSequencersToDestroy)
+						fg_Move(ToDestory).f_Destroy() > DestroyResults.f_AddResult();
+
+					co_await DestroyResults.f_GetUnwrappedResults();
+
+					co_return {};
+				}
+			)
+		;
 
 		for (auto &[RepoBound, iSequence] : FilteredRepositories.f_GetAllRepos())
 		{

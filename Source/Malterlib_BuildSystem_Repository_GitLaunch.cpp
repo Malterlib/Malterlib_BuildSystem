@@ -173,6 +173,8 @@ namespace NMib::NBuildSystem::NRepository
 
 		for (auto &RepoOutput : m_DeferredOutput)
 			fOutputSection(m_DeferredOutput.fs_GetKey(RepoOutput), RepoOutput);
+
+		fg_Move(m_LaunchSequencer).f_Destroy() > fg_DiscardResult();
 	}
 
 	void CGitLaunches::CState::f_OutputState() const
