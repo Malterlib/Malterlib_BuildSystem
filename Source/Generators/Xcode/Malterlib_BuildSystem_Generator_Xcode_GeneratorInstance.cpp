@@ -26,7 +26,7 @@ namespace NMib::NBuildSystem::NXcode
 		m_RelativeBasePath = CFile::fs_MakePathRelative(m_BuildSystem.f_GetBaseDir(), m_OutputDir.f_String() + "/Files/Temp");
 		m_RelativeBasePathAbsolute = "$SRCROOT/" + m_RelativeBasePath.f_String();
 		m_BuildSystem.f_SetGeneratorInterface(this);
-		CStr Generator = _InitialValues[CPropertyKey(_BuildSystem.f_StringCache(), EPropertyType_Property, gc_ConstString_Generator)].f_String();
+		CStr Generator = _InitialValues[CPropertyKey(gc_ConstKey_Generator)].f_String();
 		m_XcodeVersion = Generator.f_Replace("Xcode", "").f_ToInt(uint32(13));
 		
 		_BuildSystem.f_RegisterBuiltinVariables
@@ -51,35 +51,35 @@ namespace NMib::NBuildSystem::NXcode
 	CValuePotentiallyByRef CGeneratorInstance::f_GetBuiltin(CBuildSystemUniquePositions *_pStorePositions, CStr const &_Value, bool &o_bSuccess) const
 	{
 		// TODO
-		if (_Value == gc_ConstString_BasePathRelativeProject.m_String)
+		if (_Value == gc_ConstKey_Builtin_BasePathRelativeProject.m_Name)
 		{
 			if (_pStorePositions)
 				_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.BasePathRelativeProject")->f_AddValue(m_RelativeBasePath, m_BuildSystem.f_EnableValues());
 			o_bSuccess = true;
 			return &m_RelativeBasePath;
 		}
-		else if (_Value == gc_ConstString_BasePath.m_String)
+		else if (_Value == gc_ConstKey_Builtin_BasePath.m_Name)
 		{
 			if (_pStorePositions)
 				_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.BasePath")->f_AddValue(m_RelativeBasePathAbsolute, m_BuildSystem.f_EnableValues());
 			o_bSuccess = true;
 			return &m_RelativeBasePathAbsolute;
 		}
-		else if (_Value == gc_ConstString_GeneratedBuildSystemDir.m_String)
+		else if (_Value == gc_ConstKey_Builtin_GeneratedBuildSystemDir.m_Name)
 		{
 			if (_pStorePositions)
 				_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.GeneratedBuildSystemDir")->f_AddValue(m_OutputDir, m_BuildSystem.f_EnableValues());
 			o_bSuccess = true;
 			return &m_OutputDir;
 		}
-		else if (_Value == gc_ConstString_ProjectPath.m_String)
+		else if (_Value == gc_ConstKey_Builtin_ProjectPath.m_Name)
 		{
 			if (_pStorePositions)
 				_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.ProjectPath")->f_AddValue(m_Builtin_ProjectPath, m_BuildSystem.f_EnableValues());
 			o_bSuccess = true;
 			return &m_Builtin_ProjectPath;
 		}
-		else if (_Value == gc_ConstString_Inherit.m_String)
+		else if (_Value == gc_ConstKey_Builtin_Inherit.m_Name)
 		{
 			if (_pStorePositions)
 				_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.Inherit")->f_AddValue(m_Builtin_Inherit, m_BuildSystem.f_EnableValues());

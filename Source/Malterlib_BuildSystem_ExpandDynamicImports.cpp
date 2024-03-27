@@ -434,7 +434,7 @@ namespace NMib::NBuildSystem
 		auto fInitConfigHash = [&](CHash_SHA512 &o_DependenciesHash)
 			{
 				fInitHash(o_DependenciesHash, false);
-				fAddStringHash(o_DependenciesHash, FileName, gc_ConstString_FileName.m_String, false);
+				fAddStringHash(o_DependenciesHash, FileName, gc_ConstKey_Target_FileName.m_Name, false);
 				fAddStringHash(o_DependenciesHash, SharedTempDirectory, "Import.SharedTempDirectory", false);
 				fAddStringHash(o_DependenciesHash, Platform, gc_ConstString_Platform.m_String, false);
 				fAddStringHash(o_DependenciesHash, Architecture, gc_ConstString_Architecture.m_String, false);
@@ -1291,7 +1291,7 @@ namespace NMib::NBuildSystem
 
 									auto &Value = Child.f_GetThisValue();
 
-									if (Identifier.f_NameConstantString() == gc_ConstString_Custom_WorkingDirectory.m_String)
+									if (Identifier.f_NameConstantString() == gc_ConstKey_Compile_Custom_WorkingDirectory.m_Name)
 									{
 										if (!Value.m_Value.m_Value.f_IsOfType<CBuildSystemSyntax::CExpression>())
 											continue;
@@ -1316,7 +1316,7 @@ namespace NMib::NBuildSystem
 										WorkingDirectorySource = ParamValue.f_String();
 									}
 
-									if (Identifier.f_NameConstantString() == gc_ConstString_Custom_Outputs.m_String)
+									if (Identifier.f_NameConstantString() == gc_ConstKey_Compile_Custom_Outputs.m_Name)
 									{
 										if (Child.f_GetThisValue().m_Value.f_IsArray())
 										{
@@ -1343,7 +1343,7 @@ namespace NMib::NBuildSystem
 										}
 									}
 
-									if (Identifier.f_NameConstantString() == gc_ConstString_Custom_CommandLine.m_String)
+									if (Identifier.f_NameConstantString() == gc_ConstKey_Compile_Custom_CommandLine.m_Name)
 									{
 										for (auto &Token : Child.f_GetThisValue().m_Value.f_EvalString().m_Tokens)
 										{
@@ -1535,7 +1535,7 @@ namespace NMib::NBuildSystem
 									if (!Value.m_Value.f_IsArray())
 										break;
 
-									if (Identifier.f_NameConstantString() == gc_ConstString_Custom_Outputs.m_String)
+									if (Identifier.f_NameConstantString() == gc_ConstKey_Compile_Custom_Outputs.m_Name)
 									{
 										if (Value.m_Value.f_IsArray())
 										{
@@ -1548,7 +1548,7 @@ namespace NMib::NBuildSystem
 												NextTarget.m_Outputs[CStr::fs_ToStr(Entry)];
 										}
 									}
-									else if (Identifier.f_NameConstantString() == gc_ConstString_Custom_Inputs.m_String)
+									else if (Identifier.f_NameConstantString() == gc_ConstKey_Compile_Custom_Inputs.m_Name)
 									{
 										if (Value.m_Value.f_IsArray())
 										{
@@ -1585,7 +1585,7 @@ namespace NMib::NBuildSystem
 
 									auto &Value = o_This.f_GetThisValue();
 
-									if (Identifier.f_NameConstantString() == gc_ConstString_SearchPath.m_String)
+									if (Identifier.f_NameConstantString() == gc_ConstKey_Compile_SearchPath.m_Name)
 									{
 										if (!Value.m_Value.m_Value.f_IsOfType<CBuildSystemSyntax::COperator>())
 											break;
@@ -1804,19 +1804,19 @@ namespace NMib::NBuildSystem
 												(
 													pExistingDependency->m_pBuildSystemRegistry->f_GetChildNoPath
 													(
-														{CBuildSystemSyntax::CValue::fs_Identifier(mp_StringCache, gc_ConstString_Indirect, EPropertyType_Dependency)}
+														{CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_Indirect)}
 													)
 												)
 											{
 												pExistingDependency->m_pBuildSystemRegistry
 													->f_CreateChildNoPath
 													(
-														{CBuildSystemSyntax::CValue::fs_Identifier(mp_StringCache, gc_ConstString_IndirectOrdered, EPropertyType_Dependency)}
+														{CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_IndirectOrdered)}
 													)
 													->f_SetThisValue({{true}})
 												;
 												pExistingDependency->m_pBuildSystemRegistry
-													->f_CreateChildNoPath({CBuildSystemSyntax::CValue::fs_Identifier(mp_StringCache, gc_ConstString_Link, EPropertyType_Dependency)})
+													->f_CreateChildNoPath({CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_Link)})
 													->f_SetThisValue({{false}})
 												;
 											}
@@ -1848,13 +1848,13 @@ namespace NMib::NBuildSystem
 									{
 										pNewDependency->f_CreateChildNoPath
 											(
-												{CBuildSystemSyntax::CValue::fs_Identifier(mp_StringCache, gc_ConstString_IndirectOrdered, EPropertyType_Dependency)}
+												{CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_IndirectOrdered)}
 											)
 											->f_SetThisValue({{true}})
 										;
 										pNewDependency->f_CreateChildNoPath
 											(
-												{CBuildSystemSyntax::CValue::fs_Identifier(mp_StringCache, gc_ConstString_Link, EPropertyType_Dependency)}
+												{CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_Link)}
 											)
 											->f_SetThisValue({{false}})
 										;

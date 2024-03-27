@@ -15,6 +15,51 @@ namespace NMib::NBuildSystem
 	extern CPropertyKeyReference const gc_ConstKey_Platform;
 	extern CPropertyKeyReference const gc_ConstKey_Disabled;
 	extern CPropertyKeyReference const gc_ConstKey_HiddenGroup;
+	extern CPropertyKeyReference const gc_ConstKey_MToolVersion;
+	extern CPropertyKeyReference const gc_ConstKey_Generator;
+	extern CPropertyKeyReference const gc_ConstKey_GeneratorFamily;
+	extern CPropertyKeyReference const gc_ConstKey_BuildSystemBasePath;
+	extern CPropertyKeyReference const gc_ConstKey_BuildSystemOutputDir;
+	extern CPropertyKeyReference const gc_ConstKey_BuildSystemFile;
+	extern CPropertyKeyReference const gc_ConstKey_BuildSystemName;
+	extern CPropertyKeyReference const gc_ConstKey_HostPlatform;
+	extern CPropertyKeyReference const gc_ConstKey_HostPlatformFamily;
+	extern CPropertyKeyReference const gc_ConstKey_HostArchitecture;
+	extern CPropertyKeyReference const gc_ConstKey_Configuration;
+
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_GeneratedFiles;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_SourceFiles;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_BuildSystemSourceAbsolute;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_BuildSystemSource;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_GeneratorStateFile;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_BasePathAbsolute;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_MToolExe;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_MalterlibExe;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_BasePathRelativeProject;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_GeneratedBuildSystemDir;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_BasePath;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_IntermediateDirectory;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_OutputDirectory;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_ProjectPath;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_Inherit;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_SourceFileName;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_CMakeRoot;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_ReadFile;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_FileExists;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_LinkExists;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_ResolveSymbolicLink;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_DirectoryExists;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_FileOrDirectoryExists;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_FindFilesIn;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_FindDirectoriesIn;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_FindFilesRecursiveIn;
+	extern CPropertyKeyReference const gc_ConstKey_Builtin_FindDirectoriesRecursiveIn;
+
+	extern CPropertyKeyReference const gc_ConstKey_This_Identity;
+	extern CPropertyKeyReference const gc_ConstKey_This_IdentityAsAbsolutePath;
+	extern CPropertyKeyReference const gc_ConstKey_This_IdentityPath;
+	extern CPropertyKeyReference const gc_ConstKey_This_EntityPath;
+	extern CPropertyKeyReference const gc_ConstKey_This_Type;
 
 	extern CPropertyKeyReference const gc_ConstKey_Compile_AllowNonExisting;
 	extern CPropertyKeyReference const gc_ConstKey_Compile_Custom_CommandLine;
@@ -28,6 +73,13 @@ namespace NMib::NBuildSystem
 	extern CPropertyKeyReference const gc_ConstKey_Compile_XInternalPrecompiledHeaderOutputFile;
 	extern CPropertyKeyReference const gc_ConstKey_Compile_PrefixHeader;
 	extern CPropertyKeyReference const gc_ConstKey_Compile_Type;
+	extern CPropertyKeyReference const gc_ConstKey_Compile_SearchPath;
+	extern CPropertyKeyReference const gc_ConstKey_Compile_SystemSearchPath;
+	extern CPropertyKeyReference const gc_ConstKey_Compile_PreprocessorDefines;
+	extern CPropertyKeyReference const gc_ConstKey_Compile_Custom_Message;
+	extern CPropertyKeyReference const gc_ConstKey_Compile_TabWidth;
+	extern CPropertyKeyReference const gc_ConstKey_Compile_IndentWidth;
+	extern CPropertyKeyReference const gc_ConstKey_Compile_UsesTabs;
 
 	extern CPropertyKeyReference const gc_ConstKey_CreateTemplate_Name;
 
@@ -145,6 +197,14 @@ namespace NMib::NBuildSystem
 	extern CPropertyKeyReference const gc_ConstKey_Target_DependenciesNames;
 	extern CPropertyKeyReference const gc_ConstKey_Target_Dependencies;
 	extern CPropertyKeyReference const gc_ConstKey_Target_DependencyTargets;
+	extern CPropertyKeyReference const gc_ConstKey_Target_Type;
+	extern CPropertyKeyReference const gc_ConstKey_Target_Language;
+	extern CPropertyKeyReference const gc_ConstKey_Target_IntermediateDirectory;
+	extern CPropertyKeyReference const gc_ConstKey_Target_PostBuildScriptOutputs;
+	extern CPropertyKeyReference const gc_ConstKey_Target_PostBuildScriptInputs;
+	extern CPropertyKeyReference const gc_ConstKey_Target_PreBuildScriptOutputs;
+	extern CPropertyKeyReference const gc_ConstKey_Target_PreBuildScriptInputs;
+	extern CPropertyKeyReference const gc_ConstKey_Target_LinkWithLibraries;
 
 	extern CPropertyKeyReference const gc_ConstKey_Workspace_Enabled;
 	extern CPropertyKeyReference const gc_ConstKey_Workspace_ExtraGroups;

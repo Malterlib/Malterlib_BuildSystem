@@ -32,19 +32,19 @@ namespace NMib::NBuildSystem
 		{
 			TCMap<CPropertyKey, CEJSONSorted> Values;
 
-			Values[CPropertyKey(_BuildSystem.f_StringCache(), gc_ConstString_Generator)] = _BuildSystem.f_GetGenerateSettings().m_Generator;
-			Values[CPropertyKey(_BuildSystem.f_StringCache(), gc_ConstString_GeneratorFamily)] = gc_ConstString_VisualStudio;
-			Values[CPropertyKey(_BuildSystem.f_StringCache(), gc_ConstString_BuildSystemBasePath)] = _BuildSystem.f_GetBaseDir();
-			Values[CPropertyKey(_BuildSystem.f_StringCache(), gc_ConstString_BuildSystemOutputDir)] = _OutputDir;
-			Values[CPropertyKey(_BuildSystem.f_StringCache(), gc_ConstString_BuildSystemFile)] = _BuildSystem.f_GetGenerateSettings().m_SourceFile;
-			Values[CPropertyKey(_BuildSystem.f_StringCache(), gc_ConstString_BuildSystemName)] = CFile::fs_GetFileNoExt(_BuildSystem.f_GetGenerateSettings().m_SourceFile);
+			Values[CPropertyKey(gc_ConstKey_Generator)] = _BuildSystem.f_GetGenerateSettings().m_Generator;
+			Values[CPropertyKey(gc_ConstKey_GeneratorFamily)] = gc_ConstString_VisualStudio;
+			Values[CPropertyKey(gc_ConstKey_BuildSystemBasePath)] = _BuildSystem.f_GetBaseDir();
+			Values[CPropertyKey(gc_ConstKey_BuildSystemOutputDir)] = _OutputDir;
+			Values[CPropertyKey(gc_ConstKey_BuildSystemFile)] = _BuildSystem.f_GetGenerateSettings().m_SourceFile;
+			Values[CPropertyKey(gc_ConstKey_BuildSystemName)] = CFile::fs_GetFileNoExt(_BuildSystem.f_GetGenerateSettings().m_SourceFile);
 
-			if (_BuildSystem.f_GetEnvironmentVariable(gc_ConstString_HostPlatform).f_IsEmpty())
-				Values[CPropertyKey(_BuildSystem.f_StringCache(), gc_ConstString_HostPlatform)] = gc_ConstStringDynamic_DPlatform;
-			if (_BuildSystem.f_GetEnvironmentVariable(gc_ConstString_HostPlatformFamily).f_IsEmpty())
-				Values[CPropertyKey(_BuildSystem.f_StringCache(), gc_ConstString_HostPlatformFamily)] = gc_ConstStringDynamic_DPlatformFamily;
-			if (_BuildSystem.f_GetEnvironmentVariable(gc_ConstString_HostArchitecture).f_IsEmpty())
-				Values[CPropertyKey(_BuildSystem.f_StringCache(), gc_ConstString_HostArchitecture)] = gc_ConstStringDynamic_DArchitecture;
+			if (_BuildSystem.f_GetEnvironmentVariable(gc_ConstKey_HostPlatform.m_Name).f_IsEmpty())
+				Values[CPropertyKey(gc_ConstKey_HostPlatform)] = gc_ConstStringDynamic_DPlatform;
+			if (_BuildSystem.f_GetEnvironmentVariable(gc_ConstKey_HostPlatformFamily.m_Name).f_IsEmpty())
+				Values[CPropertyKey(gc_ConstKey_HostPlatformFamily)] = gc_ConstStringDynamic_DPlatformFamily;
+			if (_BuildSystem.f_GetEnvironmentVariable(gc_ConstKey_HostArchitecture.m_Name).f_IsEmpty())
+				Values[CPropertyKey(gc_ConstKey_HostArchitecture)] = gc_ConstStringDynamic_DArchitecture;
 
 			return Values;
 		}

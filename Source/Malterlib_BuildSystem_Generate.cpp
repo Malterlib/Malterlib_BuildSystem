@@ -25,7 +25,7 @@ namespace NMib::NBuildSystem
 
 			CValuePotentiallyByRef f_GetBuiltin(CBuildSystemUniquePositions *_pStorePositions, CStr const &_Value, bool &o_bSuccess) const override
 			{
-				if (_Value == gc_ConstString_GeneratedBuildSystemDir.m_String)
+				if (_Value == gc_ConstKey_Builtin_GeneratedBuildSystemDir.m_Name)
 				{
 					if (_pStorePositions)
 						_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.GeneratedBuildSystemDir")->f_AddValue(m_OutputDir, false);

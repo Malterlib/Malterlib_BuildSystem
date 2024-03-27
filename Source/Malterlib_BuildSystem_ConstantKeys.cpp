@@ -16,6 +16,51 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_Platform(EPropertyType_Property, gc_Str<"Platform">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Disabled(EPropertyType_Property, gc_Str<"Disabled">);
 	constexpr CPropertyKeyReference const gc_ConstKey_HiddenGroup(EPropertyType_Property, gc_Str<"HiddenGroup">);
+	constexpr CPropertyKeyReference const gc_ConstKey_MToolVersion(EPropertyType_Property, gc_Str<"MToolVersion">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Generator(EPropertyType_Property, gc_Str<"Generator">);
+	constexpr CPropertyKeyReference const gc_ConstKey_GeneratorFamily(EPropertyType_Property, gc_Str<"GeneratorFamily">);
+	constexpr CPropertyKeyReference const gc_ConstKey_BuildSystemBasePath(EPropertyType_Property, gc_Str<"BuildSystemBasePath">);
+	constexpr CPropertyKeyReference const gc_ConstKey_BuildSystemOutputDir(EPropertyType_Property, gc_Str<"BuildSystemOutputDir">);
+	constexpr CPropertyKeyReference const gc_ConstKey_BuildSystemFile(EPropertyType_Property, gc_Str<"BuildSystemFile">);
+	constexpr CPropertyKeyReference const gc_ConstKey_BuildSystemName(EPropertyType_Property, gc_Str<"BuildSystemName">);
+	constexpr CPropertyKeyReference const gc_ConstKey_HostPlatform(EPropertyType_Property, gc_Str<"HostPlatform">);
+	constexpr CPropertyKeyReference const gc_ConstKey_HostPlatformFamily(EPropertyType_Property, gc_Str<"HostPlatformFamily">);
+	constexpr CPropertyKeyReference const gc_ConstKey_HostArchitecture(EPropertyType_Property, gc_Str<"HostArchitecture">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Configuration(EPropertyType_Property, gc_Str<"Configuration">);
+
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_GeneratedFiles(EPropertyType_Builtin, gc_Str<"GeneratedFiles">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_SourceFiles(EPropertyType_Builtin, gc_Str<"SourceFiles">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_BuildSystemSourceAbsolute(EPropertyType_Builtin, gc_Str<"BuildSystemSourceAbsolute">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_BuildSystemSource(EPropertyType_Builtin, gc_Str<"BuildSystemSource">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_GeneratorStateFile(EPropertyType_Builtin, gc_Str<"GeneratorStateFile">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_BasePathAbsolute(EPropertyType_Builtin, gc_Str<"BasePathAbsolute">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_MToolExe(EPropertyType_Builtin, gc_Str<"MToolExe">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_MalterlibExe(EPropertyType_Builtin, gc_Str<"MalterlibExe">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_BasePathRelativeProject(EPropertyType_Builtin, gc_Str<"BasePathRelativeProject">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_GeneratedBuildSystemDir(EPropertyType_Builtin, gc_Str<"GeneratedBuildSystemDir">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_BasePath(EPropertyType_Builtin, gc_Str<"BasePath">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_IntermediateDirectory(EPropertyType_Builtin, gc_Str<"IntermediateDirectory">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_OutputDirectory(EPropertyType_Builtin, gc_Str<"OutputDirectory">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_ProjectPath(EPropertyType_Builtin, gc_Str<"ProjectPath">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_Inherit(EPropertyType_Builtin, gc_Str<"Inherit">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_SourceFileName(EPropertyType_Builtin, gc_Str<"SourceFileName">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_CMakeRoot(EPropertyType_Builtin, gc_Str<"CMakeRoot">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_ReadFile(EPropertyType_Builtin, gc_Str<"ReadFile">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_FileExists(EPropertyType_Builtin, gc_Str<"FileExists">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_LinkExists(EPropertyType_Builtin, gc_Str<"LinkExists">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_ResolveSymbolicLink(EPropertyType_Builtin, gc_Str<"ResolveSymbolicLink">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_DirectoryExists(EPropertyType_Builtin, gc_Str<"DirectoryExists">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_FileOrDirectoryExists(EPropertyType_Builtin, gc_Str<"FileOrDirectoryExists">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_FindFilesIn(EPropertyType_Builtin, gc_Str<"FindFilesIn">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_FindDirectoriesIn(EPropertyType_Builtin, gc_Str<"FindDirectoriesIn">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_FindFilesRecursiveIn(EPropertyType_Builtin, gc_Str<"FindFilesRecursiveIn">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_FindDirectoriesRecursiveIn(EPropertyType_Builtin, gc_Str<"FindDirectoriesRecursiveIn">);
+
+	constexpr CPropertyKeyReference const gc_ConstKey_This_Identity(EPropertyType_This, gc_Str<"Identity">);
+	constexpr CPropertyKeyReference const gc_ConstKey_This_IdentityAsAbsolutePath(EPropertyType_This, gc_Str<"IdentityAsAbsolutePath">);
+	constexpr CPropertyKeyReference const gc_ConstKey_This_IdentityPath(EPropertyType_This, gc_Str<"IdentityPath">);
+	constexpr CPropertyKeyReference const gc_ConstKey_This_EntityPath(EPropertyType_This, gc_Str<"EntityPath">);
+	constexpr CPropertyKeyReference const gc_ConstKey_This_Type(EPropertyType_This, gc_Str<"Type">);
 
 	constexpr CPropertyKeyReference const gc_ConstKey_Compile_AllowNonExisting(EPropertyType_Compile, gc_Str<"AllowNonExisting">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Compile_Custom_CommandLine(EPropertyType_Compile, gc_Str<"Custom_CommandLine">);
@@ -29,6 +74,13 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_Compile_XInternalPrecompiledHeaderOutputFile(EPropertyType_Compile, gc_Str<"XInternalPrecompiledHeaderOutputFile">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Compile_PrefixHeader(EPropertyType_Compile, gc_Str<"PrefixHeader">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Compile_Type(EPropertyType_Compile, gc_Str<"Type">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Compile_SearchPath(EPropertyType_Compile, gc_Str<"SearchPath">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Compile_SystemSearchPath(EPropertyType_Compile, gc_Str<"SystemSearchPath">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Compile_PreprocessorDefines(EPropertyType_Compile, gc_Str<"PreprocessorDefines">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Compile_Custom_Message(EPropertyType_Compile, gc_Str<"Custom_Message">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Compile_TabWidth(EPropertyType_Compile, gc_Str<"TabWidth">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Compile_IndentWidth(EPropertyType_Compile, gc_Str<"IndentWidth">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Compile_UsesTabs(EPropertyType_Compile, gc_Str<"UsesTabs">);
 
 	constexpr CPropertyKeyReference const gc_ConstKey_CreateTemplate_Name(EPropertyType_CreateTemplate, gc_Str<"Name">);
 
@@ -147,6 +199,15 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_Dependencies(EPropertyType_Target, gc_Str<"Dependencies">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_DependencyTargets(EPropertyType_Target, gc_Str<"DependencyTargets">);
 
+	constexpr CPropertyKeyReference const gc_ConstKey_Target_Type(EPropertyType_Target, gc_Str<"Type">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Target_Language(EPropertyType_Target, gc_Str<"Language">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Target_IntermediateDirectory(EPropertyType_Target, gc_Str<"IntermediateDirectory">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Target_PostBuildScriptOutputs(EPropertyType_Target, gc_Str<"PostBuildScriptOutputs">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Target_PostBuildScriptInputs(EPropertyType_Target, gc_Str<"PostBuildScriptInputs">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Target_PreBuildScriptOutputs(EPropertyType_Target, gc_Str<"PreBuildScriptOutputs">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Target_PreBuildScriptInputs(EPropertyType_Target, gc_Str<"PreBuildScriptInputs">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Target_LinkWithLibraries(EPropertyType_Target, gc_Str<"LinkWithLibraries">);
+
 	constexpr CPropertyKeyReference const gc_ConstKey_Workspace_Enabled(EPropertyType_Workspace, gc_Str<"Enabled">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Workspace_ExtraGroups(EPropertyType_Workspace, gc_Str<"ExtraGroups">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Workspace_Name(EPropertyType_Workspace, gc_Str<"Name">);
@@ -188,6 +249,52 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_Platform);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Disabled);
 		o_StringCache.f_AddConstantString(gc_ConstKey_HiddenGroup);
+		o_StringCache.f_AddConstantString(gc_ConstKey_MToolVersion);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Generator);
+		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorFamily);
+		o_StringCache.f_AddConstantString(gc_ConstKey_BuildSystemBasePath);
+		o_StringCache.f_AddConstantString(gc_ConstKey_BuildSystemOutputDir);
+		o_StringCache.f_AddConstantString(gc_ConstKey_BuildSystemFile);
+		o_StringCache.f_AddConstantString(gc_ConstKey_BuildSystemName);
+		o_StringCache.f_AddConstantString(gc_ConstKey_HostPlatform);
+		o_StringCache.f_AddConstantString(gc_ConstKey_HostPlatformFamily);
+		o_StringCache.f_AddConstantString(gc_ConstKey_HostArchitecture);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Configuration);
+
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_GeneratedFiles);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_SourceFiles);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_BuildSystemSourceAbsolute);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_BuildSystemSource);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_GeneratorStateFile);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_BasePathAbsolute);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_MToolExe);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_MalterlibExe);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_BasePathRelativeProject);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_GeneratedBuildSystemDir);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_BasePath);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_IntermediateDirectory);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_OutputDirectory);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_ProjectPath);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_Inherit);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_SourceFileName);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_CMakeRoot);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_ReadFile);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_FileExists);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_LinkExists);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_ResolveSymbolicLink);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_DirectoryExists);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_FileOrDirectoryExists);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_FindFilesIn);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_FindDirectoriesIn);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_FindFilesRecursiveIn);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_FindDirectoriesRecursiveIn);
+
+		o_StringCache.f_AddConstantString(gc_ConstKey_This_Identity);
+		o_StringCache.f_AddConstantString(gc_ConstKey_This_IdentityAsAbsolutePath);
+		o_StringCache.f_AddConstantString(gc_ConstKey_This_IdentityPath);
+		o_StringCache.f_AddConstantString(gc_ConstKey_This_EntityPath);
+		o_StringCache.f_AddConstantString(gc_ConstKey_This_Type);
+
 		o_StringCache.f_AddConstantString(gc_ConstKey_Compile_AllowNonExisting);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Compile_Custom_CommandLine);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Compile_Custom_Inputs);
@@ -200,7 +307,16 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_Compile_XInternalPrecompiledHeaderOutputFile);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Compile_PrefixHeader);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Compile_Type);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Compile_SearchPath);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Compile_SystemSearchPath);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Compile_PreprocessorDefines);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Compile_Custom_Message);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Compile_TabWidth);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Compile_IndentWidth);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Compile_UsesTabs);
+
 		o_StringCache.f_AddConstantString(gc_ConstKey_CreateTemplate_Name);
+
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_Indirect);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_IndirectOrdered);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_Link);
@@ -208,7 +324,8 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_Name);		
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_Target);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_TargetProperties);
-		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_ObjectLibrary);		
+		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_ObjectLibrary);
+
 		o_StringCache.f_AddConstantString(gc_ConstKey_GenerateFile_BeforeImports);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GenerateFile_Contents);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GenerateFile_Executable);
@@ -222,6 +339,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_GenerateFile_UnicodeBOM);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GenerateFile_UnixLineEnds);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GenerateFile_UTF16);
+
 		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_Workspace);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_Target);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_Compile);
@@ -229,7 +347,9 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_DefinedProperties);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_IsFile);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_Xcode_TargetType);
+
 		o_StringCache.f_AddConstantString(gc_ConstKey_Group_HideTargets);
+
 		o_StringCache.f_AddConstantString(gc_ConstKey_Import_CMake_AlwaysFullRebuild);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Import_CMake_CacheDirectory);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Import_CMake_CacheDuplicateLines);
@@ -266,6 +386,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_Import_CMake_VerboseHash);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Import_SharedTempDirectory);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Import_TempDirectory);
+
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_ConfigFile);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_DefaultBranch);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_DefaultUpstreamBranch);
@@ -284,6 +405,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_URL);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_UserEmail);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_UserName);
+
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_ClCompileSuffix);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_DependencyFile);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_DependencyInjectionGroups);
@@ -308,6 +430,15 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_DependenciesNames);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_Dependencies);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_DependencyTargets);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Target_Type);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Target_Language);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Target_IntermediateDirectory);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Target_PostBuildScriptOutputs);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Target_PostBuildScriptInputs);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Target_PreBuildScriptOutputs);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Target_PreBuildScriptInputs);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Target_LinkWithLibraries);
+
 		o_StringCache.f_AddConstantString(gc_ConstKey_Workspace_Enabled);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Workspace_ExtraGroups);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Workspace_Name);

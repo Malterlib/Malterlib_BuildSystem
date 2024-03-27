@@ -158,7 +158,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			{
 				CStr GroupPath = File.f_GetGroupPath().f_ReplaceChar('/', '\\');
 				if (!GroupPath.f_IsEmpty())
-					CXMLDocument::f_AddElementAndText(ItemState.m_pItemElement, gc_ConstString_Link, GroupPath + "\\" + CFile::fs_GetFile(File.m_VSFile));
+					CXMLDocument::f_AddElementAndText(ItemState.m_pItemElement, gc_ConstKey_Dependency_Link.m_Name, GroupPath + "\\" + CFile::fs_GetFile(File.m_VSFile));
 			}
 
 			for (auto &pPrefixHeader : File.m_PrefixHeaders)

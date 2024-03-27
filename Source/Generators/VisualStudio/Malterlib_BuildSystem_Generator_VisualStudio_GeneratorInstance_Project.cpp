@@ -35,7 +35,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		ELanguageType LanguageType = ELanguageType_Native;
 		{
 			CBuildSystemUniquePositions Positions;
-			auto Language = TargetSettings.f_GetSingleSetting<CStr>(gc_ConstString_Language);
+			auto Language = TargetSettings.f_GetSingleSetting<CStr>(gc_ConstKey_Target_Language.m_Name);
 
 			if (Language.m_Value == "Native")
 			{

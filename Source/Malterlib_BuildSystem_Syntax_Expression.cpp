@@ -121,6 +121,35 @@ namespace NMib::NBuildSystem
 		return Return;
 	}
 
+	CBuildSystemSyntax::CValue CBuildSystemSyntax::CValue::fs_Identifier(CPropertyKeyReference const &_KeyReference)
+	{
+		return
+			{
+				CBuildSystemSyntax::CExpression
+				{
+					CBuildSystemSyntax::CParam
+					{
+						NStorage::TCIndirection<CBuildSystemSyntax::CIdentifier>
+						{
+							CBuildSystemSyntax::CIdentifier
+							{
+								CStringAndHash
+								{
+									CAssertAddedToStringCache()
+									, _KeyReference.m_Name
+									, _KeyReference.f_GetNameHash()
+								}
+								, EEntityType_Invalid
+								, _KeyReference.f_GetType()
+								, _KeyReference.f_GetType() == EPropertyType_Property
+							}
+						}
+					}
+				}
+			}
+		;
+	}
+
 	CBuildSystemSyntax::CValue CBuildSystemSyntax::CValue::fs_Identifier(CStringCache &o_StringCache, CStr const &_Identifier, EPropertyType _PropertyType)
 	{
 		return

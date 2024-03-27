@@ -1791,7 +1791,7 @@ namespace NMib::NBuildSystem
 
 		if (PropertyType == EPropertyType_Builtin)
 		{
-			if (PropertyName == gc_ConstString_GeneratedFiles.m_String)
+			if (PropertyName == gc_ConstKey_Builtin_GeneratedFiles.m_Name)
 			{
 				TCVector<CEJSONSorted> Ret;
 				{
@@ -1808,7 +1808,7 @@ namespace NMib::NBuildSystem
 
 				return CEJSONSorted(fg_Move(Ret));
 			}
-			else if (PropertyName == gc_ConstString_SourceFiles.m_String)
+			else if (PropertyName == gc_ConstKey_Builtin_SourceFiles.m_Name)
 			{
 				TCVector<CEJSONSorted> Ret;
 				{
@@ -1822,49 +1822,49 @@ namespace NMib::NBuildSystem
 
 				return CEJSONSorted(fg_Move(Ret));
 			}
-			else if (PropertyName == gc_ConstString_BuildSystemSourceAbsolute.m_String)
+			else if (PropertyName == gc_ConstKey_Builtin_BuildSystemSourceAbsolute.m_Name)
 			{
 				if (_Context.m_pStorePositions)
 					_Context.m_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.BuildSystemSourceAbsolute")->f_AddValue(mp_FileLocation, f_EnableValues());
 
 				return &mp_FileLocation;
 			}
-			else if (PropertyName == gc_ConstString_BuildSystemSource.m_String)
+			else if (PropertyName == gc_ConstKey_Builtin_BuildSystemSource.m_Name)
 			{
 				if (_Context.m_pStorePositions)
 					_Context.m_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.BuildSystemSource")->f_AddValue(mp_FileLocationFile, f_EnableValues());
 				
 				return &mp_FileLocationFile;
 			}
-			else if (PropertyName == gc_ConstString_GeneratorStateFile.m_String)
+			else if (PropertyName == gc_ConstKey_Builtin_GeneratorStateFile.m_Name)
 			{
 				if (_Context.m_pStorePositions)
 					_Context.m_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.GeneratorStateFile")->f_AddValue(mp_GeneratorStateFileName, f_EnableValues());
 				
 				return &mp_GeneratorStateFileName;
 			}
-			else if (PropertyName == gc_ConstString_BasePathAbsolute.m_String)
+			else if (PropertyName == gc_ConstKey_Builtin_BasePathAbsolute.m_Name)
 			{
 				if (_Context.m_pStorePositions)
 					_Context.m_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.BasePathAbsolute")->f_AddValue(f_GetBaseDir(), f_EnableValues());
 				
 				return &mp_BaseDir;
 			}
-			else if (PropertyName == gc_ConstString_MToolExe.m_String)
+			else if (PropertyName == gc_ConstKey_Builtin_MToolExe.m_Name)
 			{
 				if (_Context.m_pStorePositions)
 					_Context.m_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.MToolExe")->f_AddValue(mp_MToolExe, f_EnableValues());
 
 				return &mp_MToolExe;
 			}
-			else if (PropertyName == gc_ConstString_CMakeRoot.m_String)
+			else if (PropertyName == gc_ConstKey_Builtin_CMakeRoot.m_Name)
 			{
 				if (_Context.m_pStorePositions)
 					_Context.m_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.CMakeRoot")->f_AddValue(mp_CMakeRoot, f_EnableValues());
 
 				return &mp_CMakeRoot;
 			}
-			else if (PropertyName == gc_ConstString_MalterlibExe.m_String)
+			else if (PropertyName == gc_ConstKey_Builtin_MalterlibExe.m_Name)
 			{
 				if (_Context.m_pStorePositions)
 					_Context.m_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.MalterlibExe")->f_AddValue(mp_MalterlibExe, f_EnableValues());

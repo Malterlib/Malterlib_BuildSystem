@@ -793,6 +793,7 @@ namespace NMib::NBuildSystem
 			CExpression const &f_Expression() const;
 
 			static CValue fs_Identifier(CStringCache &o_StringCache, NStr::CStr const &_Identifier, EPropertyType _PropertyType = EPropertyType_Property);
+			static CValue fs_Identifier(CPropertyKeyReference const &_KeyReference);
 
 			CVariant m_Value;
 		};

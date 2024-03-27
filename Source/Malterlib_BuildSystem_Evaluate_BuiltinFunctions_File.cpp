@@ -66,7 +66,7 @@ namespace NMib::NBuildSystem
 			(
 				{
 					{
-						gc_ConstString_GeneratedFiles
+						gc_ConstKey_Builtin_GeneratedFiles.m_Name
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_StringArray, fg_FunctionParam(g_String, gc_ConstString__Wildcard))
@@ -95,7 +95,7 @@ namespace NMib::NBuildSystem
 					}
 					,
 					{
-						gc_ConstString_SourceFiles
+						gc_ConstKey_Builtin_SourceFiles.m_Name
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_StringArray, fg_FunctionParam(g_String, gc_ConstString__Wildcard))
@@ -121,7 +121,7 @@ namespace NMib::NBuildSystem
 					}
 					,
 					{
-						gc_ConstString_ReadFile
+						gc_ConstKey_Builtin_ReadFile.m_Name
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__FileName))
@@ -139,7 +139,7 @@ namespace NMib::NBuildSystem
 					}
 					,
 					{
-						gc_ConstString_FileExists
+						gc_ConstKey_Builtin_FileExists.m_Name
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_Boolean, fg_FunctionParam(g_String, gc_ConstString__FileName))
@@ -152,7 +152,7 @@ namespace NMib::NBuildSystem
 					}
 					,
 					{
-						gc_ConstString_LinkExists
+						gc_ConstKey_Builtin_LinkExists.m_Name
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_Boolean, fg_FunctionParam(g_String, gc_ConstString__FileName))
@@ -165,7 +165,7 @@ namespace NMib::NBuildSystem
 					}
 					,
 					{
-						gc_ConstString_ResolveSymbolicLink
+						gc_ConstKey_Builtin_ResolveSymbolicLink.m_Name
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__FileName))
@@ -178,7 +178,7 @@ namespace NMib::NBuildSystem
 					}
 					,
 					{
-						gc_ConstString_DirectoryExists
+						gc_ConstKey_Builtin_DirectoryExists.m_Name
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_Boolean, fg_FunctionParam(g_String, gc_ConstString__FileName))
@@ -191,7 +191,7 @@ namespace NMib::NBuildSystem
 					}
 					,
 					{
-						gc_ConstString_FileOrDirectoryExists
+						gc_ConstKey_Builtin_FileOrDirectoryExists.m_Name
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_Boolean, fg_FunctionParam(g_String, gc_ConstString__FileName))
@@ -204,7 +204,7 @@ namespace NMib::NBuildSystem
 					}
 					,
 					{
-						gc_ConstString_FindFilesIn
+						gc_ConstKey_Builtin_FindFilesIn.m_Name
 						, CBuiltinFunction
 						{
 							FindFunctionType
@@ -217,7 +217,7 @@ namespace NMib::NBuildSystem
 					}
 					,
 					{
-						gc_ConstString_FindDirectoriesIn
+						gc_ConstKey_Builtin_FindDirectoriesIn.m_Name
 						, CBuiltinFunction
 						{
 							FindFunctionType
@@ -230,7 +230,7 @@ namespace NMib::NBuildSystem
 					}
 					,
 					{
-						gc_ConstString_FindFilesRecursiveIn
+						gc_ConstKey_Builtin_FindFilesRecursiveIn.m_Name
 						, CBuiltinFunction
 						{
 							FindFunctionType
@@ -243,7 +243,7 @@ namespace NMib::NBuildSystem
 					}
 					,
 					{
-						gc_ConstString_FindDirectoriesRecursiveIn
+						gc_ConstKey_Builtin_FindDirectoriesRecursiveIn.m_Name
 						, CBuiltinFunction
 						{
 							FindFunctionType

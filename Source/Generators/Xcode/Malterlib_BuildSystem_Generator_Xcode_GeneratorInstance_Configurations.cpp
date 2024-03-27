@@ -149,8 +149,8 @@ namespace NMib::NBuildSystem
 						{
 							bFoundPostBuildScript = true;
 
-							auto &InputsElement = pEvaluated->m_Element[gc_ConstString_PostBuildScriptInputs.m_String];
-							auto &OutputsElement = pEvaluated->m_Element[gc_ConstString_PostBuildScriptOutputs.m_String];
+							auto &InputsElement = pEvaluated->m_Element[gc_ConstKey_Target_PostBuildScriptInputs.m_Name];
+							auto &OutputsElement = pEvaluated->m_Element[gc_ConstKey_Target_PostBuildScriptOutputs.m_Name];
 							PostBuildScript.m_Inputs = InputsElement.f_ValueArray();
 							PostBuildScript.m_Outputs = OutputsElement.f_ValueArray();
 
@@ -168,7 +168,7 @@ namespace NMib::NBuildSystem
 							ToolBuildScript.m_Outputs = OutputsElement.f_ValueArray();
 
 							CStr DependencyFile;
-							if (auto pDependencyFile = pEvaluated->m_Element.f_FindEqual(gc_ConstString_DependencyFile.m_String))
+							if (auto pDependencyFile = pEvaluated->m_Element.f_FindEqual(gc_ConstKey_Target_DependencyFile.m_Name))
 								DependencyFile = pDependencyFile->f_GetValue();
 
 							CElement const& BuildScript = pEvaluated->m_Element[gc_ConstString_ToolBuildScript.m_String];
@@ -195,8 +195,8 @@ namespace NMib::NBuildSystem
 						{
 							bFoundPreBuildScript = true;
 
-							auto &InputsElement = pEvaluated->m_Element[gc_ConstString_PreBuildScriptInputs.m_String];
-							auto &OutputsElement = pEvaluated->m_Element[gc_ConstString_PreBuildScriptOutputs.m_String];
+							auto &InputsElement = pEvaluated->m_Element[gc_ConstKey_Target_PreBuildScriptInputs.m_Name];
+							auto &OutputsElement = pEvaluated->m_Element[gc_ConstKey_Target_PreBuildScriptOutputs.m_Name];
 							PreBuildScript.m_Inputs = InputsElement.f_ValueArray();
 							PreBuildScript.m_Outputs = OutputsElement.f_ValueArray();
 
