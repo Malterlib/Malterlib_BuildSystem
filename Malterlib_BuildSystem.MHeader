@@ -57,6 +57,10 @@ Property.MalterlibBuildSystemEmbedCMake: bool?
 	{
 		Dependency.Indirect true
 	}
+	%Dependency "Lib_Malterlib_Git"
+	{
+		Dependency.Indirect true
+	}
 	%Group "EmbedCMake"
 	{
 		&

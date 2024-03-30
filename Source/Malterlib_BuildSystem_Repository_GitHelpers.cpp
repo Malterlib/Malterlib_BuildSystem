@@ -4,6 +4,7 @@
 #include "Malterlib_BuildSystem_Repository.h"
 
 #include <Mib/Concurrency/AsyncDestroy>
+#include <Mib/Git/Helpers/ConfigParser>
 
 namespace NMib::NBuildSystem::NRepository
 {
@@ -82,58 +83,25 @@ namespace NMib::NBuildSystem::NRepository
 
 		CStr Config = CFile::fs_ReadStringFromFile(GitDirectory + "/config", true);
 
+		auto ConfigContents = CGitConfigParser::fs_Parse(Config);
+
 		CGitConfig GitConfig;
 
-		auto pParse = Config.f_GetStr();
-		CStr LastRemote;
-		bool bIsUserConfig = false;
-		while (*pParse)
-		{
-			fg_ParseWhiteSpace(pParse);
-			if (fg_StrStartsWith(pParse, "[remote"))
-			{
-				pParse += 7;
-				fg_ParseWhiteSpace(pParse);
-				auto pStart = pParse;
-				fg_ParseEscape<'\"'>(pParse, '\"');
+		if (auto *pValue = ConfigContents.f_GetValue("user", "name"))
+			GitConfig.m_UserName = *pValue;
 
-				CStr RemoteName(pStart, pParse - pStart);
-				LastRemote = fg_RemoveEscape<'\"'>(RemoteName);
-			}
-			else if (fg_StrStartsWith(pParse, "[user]"))
-				bIsUserConfig = true;
-			else if (bIsUserConfig && fg_StrStartsWith(pParse, "name ="))
+		if (auto *pValue = ConfigContents.f_GetValue("user", "email"))
+			GitConfig.m_UserEmail = *pValue;
+
+		if (auto *pRemotes = ConfigContents.m_Sections.f_FindEqual("remote"))
+		{
+			for (auto &SubSection : pRemotes->m_SubSections.f_Entries())
 			{
-				pParse += 6;
-				fg_ParseWhiteSpace(pParse);
-				auto pStart = pParse;
-				fg_ParseToEndOfLine(pParse);
-				GitConfig.m_UserName = CStr(pStart, pParse - pStart);
+				auto &Value = SubSection.f_Value();
+
+				if (auto *pValue = Value.m_Values.f_FindEqual("url"))
+					GitConfig.m_Remotes[SubSection.f_Key()].m_Url = pValue->f_GetLast();
 			}
-			else if (bIsUserConfig && fg_StrStartsWith(pParse, "email ="))
-			{
-				pParse += 7;
-				fg_ParseWhiteSpace(pParse);
-				auto pStart = pParse;
-				fg_ParseToEndOfLine(pParse);
-				GitConfig.m_UserEmail = CStr(pStart, pParse - pStart);
-			}
-			else if (!LastRemote.f_IsEmpty() && fg_StrStartsWith(pParse, "url ="))
-			{
-				pParse += 5;
-				fg_ParseWhiteSpace(pParse);
-				auto pStart = pParse;
-				fg_ParseToEndOfLine(pParse);
-				CStr URL(pStart, pParse - pStart);
-				GitConfig.m_Remotes[LastRemote] = URL;
-			}
-			else if (*pParse == '[')
-			{
-				bIsUserConfig = false;
-				LastRemote.f_Clear();
-			}
-			fg_ParseToEndOfLine(pParse);
-			fg_ParseEndOfLine(pParse);
 		}
 
 		return GitConfig;
