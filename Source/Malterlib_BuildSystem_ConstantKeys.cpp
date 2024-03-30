@@ -173,6 +173,7 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_URL(EPropertyType_Repository, gc_Str<"URL">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_UserEmail(EPropertyType_Repository, gc_Str<"UserEmail">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_UserName(EPropertyType_Repository, gc_Str<"UserName">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Repository_LfsReleaseStore(EPropertyType_Repository, gc_Str<"LfsReleaseStore">);
 
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_ClCompileSuffix(EPropertyType_Target, gc_Str<"ClCompileSuffix">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_DependencyFile(EPropertyType_Target, gc_Str<"DependencyFile">);
@@ -405,6 +406,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_URL);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_UserEmail);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_UserName);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_LfsReleaseStore);
 
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_ClCompileSuffix);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_DependencyFile);

@@ -52,6 +52,7 @@ namespace NMib::NBuildSystem::NRepository
 		CStr m_URL;
 		CStr m_DefaultBranch;
 		bool m_bCanPush = true;
+		bool m_bLfsReleaseStore = false;
 	};
 
 	struct CRepository
@@ -93,6 +94,7 @@ namespace NMib::NBuildSystem::NRepository
 		bool m_bSubmodule = false;
 		bool m_bExcludeFromSeen = false;
 		bool m_bUpdateSubmodules = false;
+		bool m_bLfsReleaseStore = false;
 	};
 
 	struct CReposLocation
@@ -356,7 +358,31 @@ namespace NMib::NBuildSystem::NRepository
 
 	struct CGitConfig
 	{
-		TCMap<CStr, CStr> m_Remotes;
+		struct CRemote
+		{
+			CStr m_Url;
+			CStr m_TagOptions;
+			TCVector<CStr> m_Fetch;
+			bool m_bMalterlibLfsSetup = false;
+		};
+
+		struct CLfsOptions
+		{
+			CStr m_Url;
+			CStr m_TagOptions;
+			TCVector<CStr> m_Fetch;
+		};
+
+		struct CLfsCustomTransfer
+		{
+			CStr m_Arguments;
+			CStr m_Path;
+			bool m_bConcurrent = false;
+		};
+
+		CLfsCustomTransfer m_MalterlibCustomTransfer;
+		TCMap<CStr, CRemote> m_Remotes;
+		TCMap<CStr, CStr> m_CustomLfsTransferAgents;
 		CStr m_UserName;
 		CStr m_UserEmail;
 	};

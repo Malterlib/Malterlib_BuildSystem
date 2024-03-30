@@ -223,6 +223,7 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_ApplyToPaths = gc_Str<"ApplyToPaths">;
 	constexpr CStringAndHash const gc_ConstString_Include = gc_Str<"Include">;
 	constexpr CStringAndHash const gc_ConstString_XcodeGeneratorDependencyFiles = gc_Str<"XcodeGeneratorDependencyFiles">;
+	constexpr CStringAndHash const gc_ConstString_LfsReleaseStore = gc_Str<"LfsReleaseStore">;
 
 	constexpr CStringAndHash const gc_ConstString_Settings = gc_Str<"Settings">;
 	constexpr CStringAndHash const gc_ConstString_17_0 = gc_Str<"17.0">;
@@ -695,6 +696,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_ApplyToPaths);
 		o_StringCache.f_AddConstantString(gc_ConstString_Include);
 		o_StringCache.f_AddConstantString(gc_ConstString_XcodeGeneratorDependencyFiles);
+		o_StringCache.f_AddConstantString(gc_ConstString_LfsReleaseStore);
 
 		o_StringCache.f_AddConstantString(gc_ConstString_Settings);
 		o_StringCache.f_AddConstantString(gc_ConstString_17_0);

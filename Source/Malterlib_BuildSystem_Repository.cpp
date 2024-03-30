@@ -490,6 +490,34 @@ namespace NMib::NBuildSystem
 					bCloneNew = true;
 			}
 
+			auto fGetCloneConfigParams = [&]() -> TCVector<CStr>
+				{
+					TCVector<CStr> Params;
+
+					auto GlobalMibExecutable = CFile::fs_GetUserHomeDirectory() / (".Malterlib/bin/mib" + CFile::mc_ExecutableExtension);
+
+					if (_Repo.m_bLfsReleaseStore)
+					{
+						Params.f_Insert({"--config", "lfs.customtransfer.malterlib-release.path={}"_f << GlobalMibExecutable});
+						Params.f_Insert({"--config", "lfs.customtransfer.malterlib-release.args=lfs-release-store"});
+						Params.f_Insert({"--config", "lfs.customtransfer.malterlib-release.concurrent=true"});
+						Params.f_Insert({"--config", "lfs.{}.standalonetransferagent=malterlib-release"_f << _Repo.m_URL});
+						Params.f_Insert({"--config", "remote.origin.fetch=^refs/heads/lfs"});
+						Params.f_Insert({"--config", "remote.origin.fetch=^refs/tags/lfs/*"});
+						Params.f_Insert({"--no-tags"});
+						Params.f_Insert({"--config", "remote.origin.malterlib-lfs-setup=true"});
+					}
+
+					if (_Repo.m_UserName)
+						Params.f_Insert({"--config", "user.name={}"_f << _Repo.m_UserName});
+
+					if (_Repo.m_UserEmail)
+						Params.f_Insert({"--config", "user.email={}"_f << _Repo.m_UserEmail});
+
+					return Params;
+				}
+			;
+
 			if (bCloneNew)
 			{
 				if (ConfigHash.f_IsEmpty())
@@ -506,7 +534,19 @@ namespace NMib::NBuildSystem
 							{
 								co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 
-								co_await fLaunchGit({"clone", "-n", _Repo.m_URL, Location}, "");
+								TCVector<CStr> CloneParams{"clone"};
+
+								CloneParams.f_Insert(fGetCloneConfigParams());
+								CloneParams.f_Insert({"-n", _Repo.m_URL, Location});
+
+								co_await fLaunchGit(CloneParams, "");
+
+								if (_Repo.m_bLfsReleaseStore)
+								{
+									co_await fLaunchGit({"update-ref", "-d", "refs/remotes/origin/lfs"}, Location);
+									co_await fLaunchGit({"config", "--local", "--unset", "remote.origin.tagOpt"}, Location);
+									co_await fLaunchGit({"fetch"}, Location);
+								}
 
 								TCVector<CStr> Params = {"checkout", "-B", _Repo.m_DefaultBranch};
 
@@ -564,7 +604,9 @@ namespace NMib::NBuildSystem
 			auto GitConfig = fg_GetGitConfig(Location, _Repo.m_Position);
 			auto &CurrentRemotes = GitConfig.m_Remotes;
 			auto WantedRemotes = _Repo.m_Remotes;
-			WantedRemotes["origin"].m_URL = _Repo.m_URL;
+			auto &OriginRemote = WantedRemotes["origin"];
+			OriginRemote.m_URL = _Repo.m_URL;
+			OriginRemote.m_bLfsReleaseStore = _Repo.m_bLfsReleaseStore;
 
 			if (_Repo.m_UserName && GitConfig.m_UserName != _Repo.m_UserName)
 			{
@@ -578,6 +620,45 @@ namespace NMib::NBuildSystem
 				co_await fLaunchGit({"config", "--local", "user.email", _Repo.m_UserEmail}, Location);
 			}
 
+			auto fSetupLfsReleaseStorage = [&, bDidSetup = false]() -> TCFuture<void>
+				{
+					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+
+					if (bDidSetup)
+						co_return {};
+
+					co_await _BuildSystem.f_SetupGlobalMTool();
+
+					auto &CustomTransfer = GitConfig.m_MalterlibCustomTransfer;
+					auto GlobalMibExecutable = CFile::fs_GetUserHomeDirectory() / (".Malterlib/bin/mib" + CFile::mc_ExecutableExtension);
+
+					bool bChangedConfig = false;
+
+					if (CustomTransfer.m_Path != GlobalMibExecutable)
+					{
+						bChangedConfig = true;
+						co_await fLaunchGit({"config", "--local", "lfs.customtransfer.malterlib-release.path", GlobalMibExecutable}, Location);
+					}
+
+					if (CustomTransfer.m_Arguments != "lfs-release-store")
+					{
+						bChangedConfig = true;
+						co_await fLaunchGit({"config", "--local", "lfs.customtransfer.malterlib-release.args", "lfs-release-store"}, Location);
+					}
+
+					if (!CustomTransfer.m_bConcurrent)
+					{
+						bChangedConfig = true;
+						co_await fLaunchGit({"config", "--local", "lfs.customtransfer.malterlib-release.concurrent", "true"}, Location);
+					}
+
+					if (bChangedConfig)
+						fOutputInfo(EOutputType_Normal, "Setting up LFS custom transfer agent");
+
+					co_return {};
+				}
+			;
+
 			if (!WantedRemotes.f_IsEmpty())
 			{
 				for (auto iRemote = WantedRemotes.f_GetIterator(); iRemote; ++iRemote)
@@ -587,10 +668,44 @@ namespace NMib::NBuildSystem
 					auto pCurrentRemote = CurrentRemotes.f_FindEqual(RemoteName);
 					if (pCurrentRemote)
 					{
-						if (*pCurrentRemote == Remote.m_URL)
-							continue;
-						fOutputInfo(EOutputType_Normal, "Changing remote URL '{}={}'"_f << RemoteName << Remote.m_URL);
-						co_await fLaunchGit({"remote", "set-url", RemoteName, Remote.m_URL}, Location);
+						if (pCurrentRemote->m_Url != Remote.m_URL)
+						{
+							fOutputInfo(EOutputType_Normal, "Changing remote URL '{}={}'"_f << RemoteName << Remote.m_URL);
+							co_await fLaunchGit({"remote", "set-url", RemoteName, Remote.m_URL}, Location);
+						}
+
+						if (Remote.m_bLfsReleaseStore)
+						{
+							co_await fSetupLfsReleaseStorage();
+
+							auto *pTransferAgent = GitConfig.m_CustomLfsTransferAgents.f_FindEqual(Remote.m_URL);
+							if (!pTransferAgent || *pTransferAgent != "malterlib-release")
+							{
+								fOutputInfo(EOutputType_Normal, "Adding Malterlib Release LFS transfer agent");
+
+								co_await fLaunchGit({"config", "--local", "lfs.{}.standalonetransferagent"_f << Remote.m_URL, "malterlib-release"}, Location);
+							}
+
+							if (!pCurrentRemote->m_bMalterlibLfsSetup)
+							{
+								fOutputInfo(EOutputType_Normal, "Setting up LFS fetch exclusions");
+
+								co_await fLaunchGit({"config", "--local", "--add", "remote.{}.fetch"_f << RemoteName, "^refs/heads/lfs"}, Location);
+								co_await fLaunchGit({"config", "--local", "--add", "remote.{}.fetch"_f << RemoteName, "^refs/tags/lfs/*"}, Location);
+								co_await fLaunchGit({"config", "--local", "remote.{}.malterlib-lfs-setup"_f << RemoteName, "true"}, Location);
+							}
+						}
+						else
+						{
+							auto *pTransferAgent = GitConfig.m_CustomLfsTransferAgents.f_FindEqual(Remote.m_URL);
+							if (pTransferAgent && *pTransferAgent == "malterlib-release")
+							{
+								fOutputInfo(EOutputType_Normal, "Removing Malterlib Release LFS transfer agent");
+
+								co_await fLaunchGit({"config", "--local", "--unset", "lfs.{}.standalonetransferagent"_f << Remote.m_URL}, Location);
+							}
+						}
+
 						continue;
 					}
 					fOutputInfo(EOutputType_Normal, "Adding remote '{}={}'"_f << RemoteName << Remote.m_URL);
@@ -1009,6 +1124,8 @@ namespace NMib::NBuildSystem
 					auto ProtectedTags = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, gc_ConstKey_Repository_ProtectedTags, TCVector<CStr>());
 					auto bUpdateSubmodules = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_UpdateSubmodules, false);
 					auto bExcludeFromSeen = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_ExcludeFromSeen, false);
+					auto bLfsReleaseStore = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_LfsReleaseStore, false);
+
 					TCVector<CStr> NoPushRemotes = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, gc_ConstKey_Repository_NoPushRemotes, TCVector<CStr>());
 
 					CBuildSystemPropertyInfo PropertyInfoRemotes;
@@ -1057,6 +1174,7 @@ namespace NMib::NBuildSystem
 					Repo.m_ProtectedTags.f_AddContainer(ProtectedTags);
 					Repo.m_bUpdateSubmodules = bUpdateSubmodules;
 					Repo.m_bExcludeFromSeen = bExcludeFromSeen;
+					Repo.m_bLfsReleaseStore = bLfsReleaseStore;
 
 					for (auto &Remote : Remotes.f_Get().f_Array())
 					{
@@ -1074,6 +1192,9 @@ namespace NMib::NBuildSystem
 
 						if (auto pValue = Remote.f_GetMember(gc_ConstString_DefaultBranch))
 							OutRemote.m_DefaultBranch = pValue->f_String();
+
+						if (auto pValue = Remote.f_GetMember(gc_ConstString_LfsReleaseStore))
+							OutRemote.m_bLfsReleaseStore = pValue->f_Boolean();
 
 						for (auto &Wildcard : NoPushRemotes)
 						{

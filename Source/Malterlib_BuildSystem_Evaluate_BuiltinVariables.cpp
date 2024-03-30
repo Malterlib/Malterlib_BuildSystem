@@ -338,6 +338,7 @@ namespace NMib::NBuildSystem
 					, {CPropertyKey(gc_ConstKey_Repository_ProtectedTags), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
 					, {CPropertyKey(gc_ConstKey_Repository_UpdateSubmodules), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					, {CPropertyKey(gc_ConstKey_Repository_NoPushRemotes), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
+					, {CPropertyKey(gc_ConstKey_Repository_LfsReleaseStore), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					,
 					{
 						CPropertyKey(gc_ConstKey_Repository_Remotes)
@@ -354,6 +355,7 @@ namespace NMib::NBuildSystem
 											, {gc_ConstString_URL, CBuildSystemSyntax::CClassType::CMember{g_String}}
 											, {gc_ConstString_Write, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_Boolean, false)}}
 											, {gc_ConstString_DefaultBranch, CBuildSystemSyntax::CClassType::CMember{g_String, true}}
+											, {gc_ConstString_LfsReleaseStore, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_Boolean, false)}}
 										}
 										, {}
 									}

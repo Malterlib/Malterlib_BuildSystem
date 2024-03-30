@@ -101,6 +101,40 @@ namespace NMib::NBuildSystem::NRepository
 
 				if (auto *pValue = Value.m_Values.f_FindEqual("url"))
 					GitConfig.m_Remotes[SubSection.f_Key()].m_Url = pValue->f_GetLast();
+
+				if (auto *pValue = Value.m_Values.f_FindEqual("fetch"))
+					GitConfig.m_Remotes[SubSection.f_Key()].m_Fetch = *pValue;
+
+				if (auto *pValue = Value.m_Values.f_FindEqual("tagopt"))
+					GitConfig.m_Remotes[SubSection.f_Key()].m_TagOptions = pValue->f_GetLast();
+
+				if (auto *pValue = Value.m_Values.f_FindEqual("malterlib-lfs-setup"))
+					GitConfig.m_Remotes[SubSection.f_Key()].m_bMalterlibLfsSetup = CGitConfigParser::fs_ToBoolean(pValue->f_GetLast());
+			}
+		}
+
+		if (auto *pLfs = ConfigContents.m_Sections.f_FindEqual("lfs"))
+		{
+			if (auto *pCustomTransfer = pLfs->m_SubSections.f_FindEqual("customtransfer.malterlib-release"))
+			{
+				auto &CustomTransfer = GitConfig.m_MalterlibCustomTransfer;
+
+				if (auto *pValue = pCustomTransfer->m_Values.f_FindEqual("args"))
+					CustomTransfer.m_Arguments = pValue->f_GetLast();
+
+				if (auto *pValue = pCustomTransfer->m_Values.f_FindEqual("path"))
+					CustomTransfer.m_Path = pValue->f_GetLast();
+
+				if (auto *pValue = pCustomTransfer->m_Values.f_FindEqual("concurrent"))
+					CustomTransfer.m_bConcurrent = CGitConfigParser::fs_ToBoolean(pValue->f_GetLast());
+			}
+
+			for (auto &SubSection : pLfs->m_SubSections.f_Entries())
+			{
+				auto &Value = SubSection.f_Value();
+
+				if (auto *pValue = Value.m_Values.f_FindEqual("standalonetransferagent"))
+					GitConfig.m_CustomLfsTransferAgents[SubSection.f_Key()] = pValue->f_GetLast();
 			}
 		}
 

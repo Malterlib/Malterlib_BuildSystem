@@ -223,6 +223,7 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_ApplyToPaths;
 	extern CStringAndHash const gc_ConstString_Include;
 	extern CStringAndHash const gc_ConstString_XcodeGeneratorDependencyFiles;
+	extern CStringAndHash const gc_ConstString_LfsReleaseStore;
 
 	extern CStringAndHash const gc_ConstString_Settings;
 	extern CStringAndHash const gc_ConstString_17_0;
