@@ -85,11 +85,13 @@ namespace NMib::NBuildSystem::NVisualStudio
 			}
 
 			TCSet<CStr> AllPlatforms;
+			TCSet<CStr> AllConfigurations;
 
 			for (auto iConfig = _Project.m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
 			{
 				CStr Platform = m_BuildSystem.f_EvaluateEntityPropertyString(**iConfig, gc_ConstKey_Target_VisualStudioPlatform);
 				AllPlatforms[Platform];
+				AllConfigurations[iConfig.f_GetKey().m_Configuration];
 				_Project.m_Platforms[iConfig.f_GetKey()] = Platform;
 			}
 
@@ -111,7 +113,10 @@ namespace NMib::NBuildSystem::NVisualStudio
 				}
 			}
 			else if (XMLState.m_bIsDotNet)
+			{
 				CXMLDocument::f_AddElementAndText(XMLState.m_pPreProject, "Platforms", CStr::fs_Join(TCVector<CStr>::fs_FromContainer(AllPlatforms), ";"));
+				CXMLDocument::f_AddElementAndText(XMLState.m_pPreProject, "Configurations", CStr::fs_Join(TCVector<CStr>::fs_FromContainer(AllConfigurations), ";"));
+			}
 
 			// Globals
 			{
