@@ -155,7 +155,7 @@ namespace NMib::NBuildSystem
 		else if (_TokenType == gc_ConstString_Define.m_String)
 			return CDefine::fs_FromJson(o_StringCache, _Token, _Position);
 		else if (_TokenType == gc_ConstString_FunctionType.m_String)
-			return CBuildSystemSyntax::CDefine{CFunctionType::fs_FromJson(o_StringCache, _Token, _Position)};
+			return CBuildSystemSyntax::CDefine{.m_Type = {CFunctionType::fs_FromJson(o_StringCache, _Token, _Position)}};
 		else
 			CBuildSystem::fs_ThrowError(_Position, "Unknown build system token type: {}"_f << _TokenType);
 	}

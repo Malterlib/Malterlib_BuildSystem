@@ -50,7 +50,7 @@ namespace NMib::NBuildSystem
 {
 	void CBuildSystem::f_ExpandDynamicImports(CBuildSystemData &_BuildSystemData) const
 	{
-		auto fExpandEntities = [&](auto &&_fThis, CEntity &_Entity) -> void
+		auto fExpandEntities = [&](this auto &&_fThis, CEntity &_Entity) -> void
 			{
 				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
 				{
@@ -59,7 +59,7 @@ namespace NMib::NBuildSystem
 					auto &Key = Child.f_GetKey();
 					if (Key.m_Type == EEntityType_Root)
 					{
-						_fThis(_fThis, Child);
+						_fThis(Child);
 						continue;
 					}
 
@@ -81,9 +81,9 @@ namespace NMib::NBuildSystem
 				}
 			}
 		;
-		fExpandEntities(fExpandEntities, _BuildSystemData.m_RootEntity);
+		fExpandEntities(_BuildSystemData.m_RootEntity);
 
-		auto fExpandImports = [&](auto &&_fThis, CEntity &_Entity) -> void
+		auto fExpandImports = [&](this auto &&_fThis, CEntity &_Entity) -> void
 			{
 				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
 				{
@@ -92,7 +92,7 @@ namespace NMib::NBuildSystem
 					auto &Key = Child.f_GetKey();
 					if (Key.m_Type == EEntityType_Root)
 					{
-						_fThis(_fThis, Child);
+						_fThis(Child);
 						continue;
 					}
 
@@ -104,7 +104,7 @@ namespace NMib::NBuildSystem
 			}
 		;
 
-		fExpandImports(fExpandImports, _BuildSystemData.m_RootEntity);
+		fExpandImports(_BuildSystemData.m_RootEntity);
 		{
 			DMibLock(mp_SourceFilesLock);
 			mp_SourceFiles += _BuildSystemData.m_MutableSourceFiles;
@@ -1813,11 +1813,11 @@ namespace NMib::NBuildSystem
 													(
 														{CBuildSystemSyntax::CValue::fs_Identifier(mp_StringCache, gc_ConstString_IndirectOrdered, EPropertyType_Dependency)}
 													)
-													->f_SetThisValue({true})
+													->f_SetThisValue({{true}})
 												;
 												pExistingDependency->m_pBuildSystemRegistry
 													->f_CreateChildNoPath({CBuildSystemSyntax::CValue::fs_Identifier(mp_StringCache, gc_ConstString_Link, EPropertyType_Dependency)})
-													->f_SetThisValue({false})
+													->f_SetThisValue({{false}})
 												;
 											}
 										}
@@ -1843,20 +1843,20 @@ namespace NMib::NBuildSystem
 									CBuildSystemSyntax::CRootKey Name = {CBuildSystemSyntax::CKeyPrefixOperator::fs_Entity(mp_StringCache, gc_ConstString_Dependency)};
 
 									auto pNewDependency = Target.m_pBuildSystemRegistry->f_CreateChildNoPath(Name, true);
-									pNewDependency->f_SetThisValue(CBuildSystemSyntax::CRootValue{TargetName});
+									pNewDependency->f_SetThisValue(CBuildSystemSyntax::CRootValue{{TargetName}});
 									if (TargetName.f_StartsWith("Lib_"))
 									{
 										pNewDependency->f_CreateChildNoPath
 											(
 												{CBuildSystemSyntax::CValue::fs_Identifier(mp_StringCache, gc_ConstString_IndirectOrdered, EPropertyType_Dependency)}
 											)
-											->f_SetThisValue({true})
+											->f_SetThisValue({{true}})
 										;
 										pNewDependency->f_CreateChildNoPath
 											(
 												{CBuildSystemSyntax::CValue::fs_Identifier(mp_StringCache, gc_ConstString_Link, EPropertyType_Dependency)}
 											)
-											->f_SetThisValue({false})
+											->f_SetThisValue({{false}})
 										;
 									}
 
@@ -1893,7 +1893,7 @@ namespace NMib::NBuildSystem
 							*Target.m_pNameValue = {DisambiguatedName};
 
 							if (Target.m_pBaseName)
-								Target.m_pBaseName->f_SetThisValue({CStr("{}{}"_f << Target.m_pBaseName->f_GetThisValue().m_Value.f_ConstantString() << DisambiguateNumber)});
+								Target.m_pBaseName->f_SetThisValue({{CStr("{}{}"_f << Target.m_pBaseName->f_GetThisValue().m_Value.f_ConstantString() << DisambiguateNumber)}});
 							else
 								DMibConOut2("Missing base name: {}\n", DisambiguatedName);
 

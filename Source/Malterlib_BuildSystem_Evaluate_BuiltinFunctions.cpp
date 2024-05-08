@@ -78,7 +78,7 @@ namespace NMib::NBuildSystem
 
 	CBuildSystemSyntax::CType fg_Defaulted(CBuildSystemSyntax::CType const &_Type, CEJSONSorted &&_Default)
 	{
-		return CBuildSystemSyntax::CType{CBuildSystemSyntax::CBuildSystemSyntax::CTypeDefaulted{{_Type}, fg_Move(_Default)}};
+		return CBuildSystemSyntax::CType{CBuildSystemSyntax::CBuildSystemSyntax::CTypeDefaulted{.m_Type = {_Type}, .m_DefaultValue = {fg_Move(_Default)}}};
 	}
 
 	CBuildSystemSyntax::CType fg_Optional(CBuildSystemSyntax::CType const &_Type)

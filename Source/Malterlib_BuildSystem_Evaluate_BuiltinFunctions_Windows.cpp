@@ -49,6 +49,8 @@ namespace NMib::NBuildSystem
 									RegRoot = ERegRoot::ERegRoot_Win64_CurrentUser;
 								else if (Root == gc_ConstString_Win64_Classes.m_String)
 									RegRoot = ERegRoot::ERegRoot_Win64_Classes;
+								else 
+									fs_ThrowError(_Context, "Unknown root: {}"_f << Root);
 
 								NMib::NPlatform::CWin32_Registry Registry{RegRoot};
 								if (Registry.f_ValueExists(_Params[1].f_String(), _Params[2].f_String()))

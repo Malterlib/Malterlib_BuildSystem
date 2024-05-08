@@ -45,7 +45,7 @@ namespace NMib::NBuildSystem
 			pParent = pParent->m_pParent;
 		}
 
-		auto fGenerateFile = [&](auto &&_fThis, CEntity &_Entity) -> void
+		auto fGenerateFile = [&](this auto &&_fThis, CEntity &_Entity) -> void
 			{
 				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; ++iChild)
 				{
@@ -66,7 +66,7 @@ namespace NMib::NBuildSystem
 						if (_Type == EEntityType_Target && !Key.m_Name.f_IsConstantString())
 							continue;
 
-						_fThis(_fThis, *iChild);
+						_fThis(*iChild);
 						continue;
 					}
 
@@ -116,7 +116,7 @@ namespace NMib::NBuildSystem
 						else
 							fs_ThrowError(Positions, "Expected generate file to be a string or an object");
 
-						CEntityKey NewEntityKey{EEntityType_GenerateFile, Identity};
+						CEntityKey NewEntityKey{.m_Type = EEntityType_GenerateFile, .m_Name = {Identity}};
 
 						auto NewEntityMap = ToGenerate.m_ChildEntitiesMap(NewEntityKey, &ToGenerate);
 						auto &TempEntity = *NewEntityMap;
@@ -453,7 +453,7 @@ namespace NMib::NBuildSystem
 			}
 		;
 
-		fGenerateFile(fGenerateFile, _Entity);
+		fGenerateFile(_Entity);
 
 		return bChanged;
 	}

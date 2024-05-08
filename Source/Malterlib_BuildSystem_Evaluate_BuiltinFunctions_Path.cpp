@@ -19,8 +19,7 @@ namespace
 				EndPath = CFile::fs_GetFile(o_Path) / EndPath;
 				o_Path = CFile::fs_GetPath(o_Path);
 			}
-			bool bExists = CFile::fs_FileExists(o_Path);
-										
+
 			if (o_Path)
 				o_Path = NFile::NPlatform::fg_ConvertToShortWindowsPath<CWStr, CStr>(o_Path, false) / EndPath;
 			else

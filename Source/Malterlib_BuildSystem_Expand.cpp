@@ -178,7 +178,7 @@ namespace NMib::NBuildSystem
 
 		TCVector<CEntityKey> Path;
 
-		auto fStoreBackup = [&](auto &&_fThis, CEntity &_Entity) -> void
+		auto fStoreBackup = [&](this auto &&_fThis, CEntity &_Entity) -> void
 			{
 				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
 				{
@@ -196,7 +196,7 @@ namespace NMib::NBuildSystem
 							continue;
 
 						Path.f_Insert(Child.f_GetKey());
-						_fThis(_fThis, Child);
+						_fThis(Child);
 						Path.f_Remove(Path.f_GetLen() - 1);
 						continue;
 					}
@@ -210,7 +210,7 @@ namespace NMib::NBuildSystem
 			}
 		;
 
-		fStoreBackup(fStoreBackup, fg_RemoveQualifiers(_Target));
+		fStoreBackup(fg_RemoveQualifiers(_Target));
 	}
 
 	void CBuildSystem::f_ExpandTargetDependencies(CWorkspaceInfo &_Workspace, CBuildSystemData &_BuildSystemData, CEntity const &_Target, CDependenciesBackup &o_Backup) const
@@ -222,7 +222,7 @@ namespace NMib::NBuildSystem
 		{
 			// Remove old
 			{
-				auto fRemoveOld = [&](auto &&_fThis, CEntity &_Entity) -> void
+				auto fRemoveOld = [&](this auto &&_fThis, CEntity &_Entity) -> void
 					{
 						for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
 						{
@@ -239,7 +239,7 @@ namespace NMib::NBuildSystem
 								if (!Child.f_GetKey().m_Name.f_IsConstantString())
 									continue;
 
-								_fThis(_fThis, Child);
+								_fThis(Child);
 								continue;
 							}
 
@@ -251,7 +251,7 @@ namespace NMib::NBuildSystem
 					}
 				;
 
-				fRemoveOld(fRemoveOld, fg_RemoveQualifiers(_Target));
+				fRemoveOld(fg_RemoveQualifiers(_Target));
 			}
 			// Restore
 			{
@@ -291,7 +291,7 @@ namespace NMib::NBuildSystem
 
 		// Expand entities
 		{
-			auto fExpandDependency = [&](auto &&_fThis, CEntity &_Entity, bool _bUnexpandedGroup) -> void
+			auto fExpandDependency = [&](this auto &&_fThis, CEntity &_Entity, bool _bUnexpandedGroup) -> void
 				{
 					for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
 					{
@@ -305,7 +305,7 @@ namespace NMib::NBuildSystem
 								|| Key.m_Type == EEntityType_Import
 							)
 						{
-							_fThis(_fThis, Child, _bUnexpandedGroup || !Child.f_GetKey().m_Name.f_IsConstantString());
+							_fThis(Child, _bUnexpandedGroup || !Child.f_GetKey().m_Name.f_IsConstantString());
 							continue;
 						}
 
@@ -334,7 +334,7 @@ namespace NMib::NBuildSystem
 					}
 				}
 			;
-			fExpandDependency(fExpandDependency, fg_RemoveQualifiers(_Target), false);
+			fExpandDependency(fg_RemoveQualifiers(_Target), false);
 		}
 	}
 
@@ -415,7 +415,7 @@ namespace NMib::NBuildSystem
 	{
 		DRequire(_Target.f_GetKey().m_Type == EEntityType_Target);
 		bool bChanged = false;
-		auto fExpandGroup = [&](auto &&_fThis, CEntity &_Entity) -> void
+		auto fExpandGroup = [&](this auto &&_fThis, CEntity &_Entity) -> void
 			{
 				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
 				{
@@ -447,13 +447,13 @@ namespace NMib::NBuildSystem
 					{
 						if (!Child.f_GetKey().m_Name.f_IsConstantString())
 							continue;
-						_fThis(_fThis, Child);
+						_fThis(Child);
 					}
 				}
 			}
 		;
 
-		fExpandGroup(fExpandGroup, fg_RemoveQualifiers(_Target));
+		fExpandGroup(fg_RemoveQualifiers(_Target));
 
 		return bChanged;
 	}
