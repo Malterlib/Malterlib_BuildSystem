@@ -35,16 +35,16 @@ namespace NMib::NBuildSystem
 		auto &Value = UserType.m_Value;
 		auto *pType = UserType.m_Value.f_GetMember(gc_ConstString_Type);
 		if (!pType)
-			CBuildSystem::fs_ThrowError(_Position, "Missing Type member for PrefixOperator token");
+			CBuildSystem::fs_ThrowError(_Position, "Missing Type member for KeyLogicalOperator token");
 
 		auto &Type = pType->f_String();
 
 		if (Type != gc_ConstString_KeyLogicalOperator.m_String)
-			CBuildSystem::fs_ThrowError(_Position, "'{}' is not a valid type for Param"_f << Type);
+			CBuildSystem::fs_ThrowError(_Position, "'{}' is not a valid type for KeyLogicalOperator"_f << Type);
 
 		auto pOperator = Value.f_GetMember(gc_ConstString_Operator);
 		if (!pOperator)
-			CBuildSystem::fs_ThrowError(_Position, "Missing Operator member for PrefixOperator token");
+			CBuildSystem::fs_ThrowError(_Position, "Missing Operator member for KeyLogicalOperator token");
 
 		CBuildSystemSyntax::CKeyLogicalOperator OutputOperator;
 
@@ -69,16 +69,16 @@ namespace NMib::NBuildSystem
 		auto &Value = UserType.m_Value;
 		auto *pType = UserType.m_Value.f_GetMember(gc_ConstString_Type);
 		if (!pType)
-			CBuildSystem::fs_ThrowError(_Position, "Missing Type member for PrefixOperator token");
+			CBuildSystem::fs_ThrowError(_Position, "Missing Type member for KeyPrefixOperator token");
 
 		auto &Type = pType->f_String();
 
 		if (Type != gc_ConstString_KeyPrefixOperator.m_String)
-			CBuildSystem::fs_ThrowError(_Position, "'{}' is not a valid type for Param"_f << Type);
+			CBuildSystem::fs_ThrowError(_Position, "'{}' is not a valid type for KeyPrefixOperator"_f << Type);
 
 		auto pOperator = Value.f_GetMember(gc_ConstString_Operator);
 		if (!pOperator)
-			CBuildSystem::fs_ThrowError(_Position, "Missing Operator member for PrefixOperator token");
+			CBuildSystem::fs_ThrowError(_Position, "Missing Operator member for KeyPrefixOperator token");
 
 		CBuildSystemSyntax::CKeyPrefixOperator OutputOperator;
 
@@ -94,7 +94,7 @@ namespace NMib::NBuildSystem
 		else if (Operator == gc_ConstString_Symbol_PragmaPrefix.m_String)
 			return EOperator_Pragma;
 		else
-			CBuildSystem::fs_ThrowError(_Position, "Invalid operator '{}' for PrefixOperator token"_f << Operator);
+			CBuildSystem::fs_ThrowError(_Position, "Invalid operator '{}' for KeyPrefixOperator token"_f << Operator);
 	}
 
 	NEncoding::CEJSONSorted CBuildSystemSyntax::CKeyPrefixOperator::f_ToJson() const
