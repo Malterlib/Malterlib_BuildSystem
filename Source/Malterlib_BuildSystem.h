@@ -534,6 +534,10 @@ namespace NMib::NBuildSystem
 		bool f_EnableValues() const;
 		void f_SetEnableValues();
 
+		bool f_ApplyRepoPolicy() const;
+		bool f_ApplyRepoPolicyPretend() const;
+		bool f_ApplyRepoPolicyCreateMissing() const;
+
 		CStringCache &f_StringCache() const;
 
 		template <bool tf_bFile>
@@ -1011,6 +1015,9 @@ namespace NMib::NBuildSystem
 		CGenerateOptions mp_GenerateOptions;
 		bool mp_bNoReconcileOptions = false;
 		bool mp_bSingleThreaded = false;
+		bool mp_bApplyRepoPolicy = false;
+		bool mp_bApplyRepoPolicyPretend = true;
+		bool mp_bApplyRepoPolicyCreateMissing = false;
 
 		align_cacheline mutable NThread::CMutualManyRead mp_SourceFilesLock;
 		mutable NContainer::TCSet<NStr::CStr> mp_SourceFiles;

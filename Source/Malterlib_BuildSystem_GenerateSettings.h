@@ -65,6 +65,8 @@ namespace NMib::NBuildSystem
 		bool m_bSkipUpdate = false;
 		bool m_bForceUpdateRemotes = true;
 		bool m_bDetailedValues = false;
-
+		bool m_bApplyRepoPolicy = false;
+		bool m_bApplyRepoPolicyPretend = true;
+		bool m_bApplyRepoPolicyCreateMissing = true;
 	};
 }

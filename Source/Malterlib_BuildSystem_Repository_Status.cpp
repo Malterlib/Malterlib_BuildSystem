@@ -253,7 +253,7 @@ namespace NMib::NBuildSystem
 		if (_Flags & CBuildSystem::ERepoStatusFlag_OnlyTracked)
 			FilterFlags |= EFilterRepoFlag_OnlyTracked;
 
-		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(Filter, *this, mp_Data, FilterFlags);
+		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(Filter, *this, mp_Data, EGetRepoFlag::mc_None, FilterFlags);
 
 		if (_Flags & ERepoStatusFlag_UpdateRemotes)
 			co_await fg_UpdateRemotes(*this, FilteredRepositories);

@@ -478,6 +478,10 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_reset;
 	extern CStringAndHash const gc_ConstString_OptionalChaining;
 	extern CStringAndHash const gc_ConstString_Accessor;
+	extern CStringAndHash const gc_ConstString_CRepositoryPolicy;
+	extern CStringAndHash const gc_ConstString_ApplyRepoPolicy;
+	extern CStringAndHash const gc_ConstString_ApplyRepoPolicyPretend;
+	extern CStringAndHash const gc_ConstString_ApplyRepoPolicyCreateMissing;
 
 	extern CStringAndHash const gc_ConstString_Symbol_Inherit;
 

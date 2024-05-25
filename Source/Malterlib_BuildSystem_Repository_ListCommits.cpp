@@ -58,12 +58,12 @@ namespace NMib::NBuildSystem
 
 		TCSet<CStr> ShowRepos;
 		{
-			auto Repos = (co_await fg_GetFilteredRepos(_Filter, *this, mp_Data)).f_GetAllRepos();
+			auto Repos = (co_await fg_GetFilteredRepos(_Filter, *this, mp_Data, EGetRepoFlag::mc_None)).f_GetAllRepos();
 			for (auto Repo : Repos)
 				ShowRepos[fg_Get<0>(Repo).m_Location];
 		}
 
-		TCSharedPointer<CFilteredRepos> pFilteredRepositories = fg_Construct(co_await fg_GetFilteredRepos(CRepoFilter(), *this, mp_Data));
+		TCSharedPointer<CFilteredRepos> pFilteredRepositories = fg_Construct(co_await fg_GetFilteredRepos(CRepoFilter(), *this, mp_Data, EGetRepoFlag::mc_None));
 		auto &FilteredRepositories = *pFilteredRepositories;
 
 		TCLinkedList<CRepository> AllRepos;

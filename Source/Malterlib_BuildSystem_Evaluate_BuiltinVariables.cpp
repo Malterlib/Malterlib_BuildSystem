@@ -356,6 +356,9 @@ namespace NMib::NBuildSystem
 											, {gc_ConstString_Write, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_Boolean, false)}}
 											, {gc_ConstString_DefaultBranch, CBuildSystemSyntax::CClassType::CMember{g_String, true}}
 											, {gc_ConstString_LfsReleaseStore, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_Boolean, false)}}
+											, {gc_ConstKey_Repository_ApplyPolicy.m_Name, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_Boolean, false)}}
+											, {gc_ConstKey_Repository_ApplyPolicyPretend.m_Name, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_Boolean, false)}}
+											, {gc_ConstKey_Repository_Policy.m_Name, CBuildSystemSyntax::CClassType::CMember{fg_UserType(gc_ConstString_CRepositoryPolicy), true}}
 										}
 										, {}
 									}

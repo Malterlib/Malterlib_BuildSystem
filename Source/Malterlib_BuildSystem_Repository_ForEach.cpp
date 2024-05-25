@@ -23,7 +23,7 @@ namespace NMib::NBuildSystem
 		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
 			co_return Retry;
 
-		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(_Filter, *this, mp_Data);
+		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(_Filter, *this, mp_Data, EGetRepoFlag::mc_None);
 
 		CGitLaunches Launches{f_GetBaseDir(), "Running for each repo", mp_AnsiFlags, mp_fOutputConsole, f_GetCancelledPointer()};
 		auto DestroyLaunchs = co_await co_await Launches.f_Init();
@@ -74,7 +74,7 @@ namespace NMib::NBuildSystem
 		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
 			co_return Retry;
 
-		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(_Filter, *this, mp_Data);
+		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(_Filter, *this, mp_Data, EGetRepoFlag::mc_None);
 
 		CGitLaunches Launches{f_GetBaseDir(), "Running for each repo", mp_AnsiFlags, mp_fOutputConsole, f_GetCancelledPointer()};
 		auto DestroyLaunchs = co_await co_await Launches.f_Init();

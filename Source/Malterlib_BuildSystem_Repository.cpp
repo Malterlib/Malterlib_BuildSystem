@@ -607,6 +607,13 @@ namespace NMib::NBuildSystem
 			auto &OriginRemote = WantedRemotes["origin"];
 			OriginRemote.m_URL = _Repo.m_URL;
 			OriginRemote.m_bLfsReleaseStore = _Repo.m_bLfsReleaseStore;
+	
+			if (_BuildSystem.f_ApplyRepoPolicy())
+			{
+				OriginRemote.m_bApplyPolicy = _Repo.m_bApplyPolicy;
+				OriginRemote.m_bApplyPolicyPretend = _Repo.m_bApplyPolicyPretend;
+				OriginRemote.m_Policy = _Repo.m_Policy;
+			}
 
 			if (_Repo.m_UserName && GitConfig.m_UserName != _Repo.m_UserName)
 			{
@@ -716,6 +723,26 @@ namespace NMib::NBuildSystem
 					else
 						co_await fLaunchGit({"fetch", "--tags", RemoteName}, Location);
 				}
+
+				if (_BuildSystem.f_ApplyRepoPolicy())
+				{
+					for (auto &Remote : WantedRemotes)
+					{
+						if (!Remote.m_bApplyPolicy)
+							continue;
+
+						EApplyPolicyFlag Flags = EApplyPolicyFlag::mc_None;
+
+						if (_BuildSystem.f_ApplyRepoPolicyPretend() || Remote.m_bApplyPolicyPretend)
+							Flags |= EApplyPolicyFlag::mc_Pretend;
+
+						if (_BuildSystem.f_ApplyRepoPolicyCreateMissing())
+							Flags |= EApplyPolicyFlag::mc_CreateMissing;
+
+						co_await fg_ApplyPolicies(Remote.m_URL, Location, Remote.m_Policy, Flags, fOutputInfo);
+					}
+				}
+
 				if (bForceReset)
 				{
 					for (auto iRemote = CurrentRemotes.f_GetIterator(); iRemote; ++iRemote)
@@ -1073,8 +1100,10 @@ namespace NMib::NBuildSystem
 			return Editor;
 		}
 
-		TCVector<TCMap<CStr, CReposLocation>> fg_GetRepos(CBuildSystem &_BuildSystem, CBuildSystemData &_Data)
+		TCVector<TCMap<CStr, CReposLocation>> fg_GetRepos(CBuildSystem &_BuildSystem, CBuildSystemData &_Data, EGetRepoFlag _Flags)
 		{
+			bool bIncludePolicy = fg_IsSet(_Flags, EGetRepoFlag::mc_IncludePolicy);
+
 			TCMap<CStr, CReposLocation> Repos;
 
 			TCMap<CStr, CFilePosition> RepoRoots;
@@ -1176,6 +1205,16 @@ namespace NMib::NBuildSystem
 					Repo.m_bExcludeFromSeen = bExcludeFromSeen;
 					Repo.m_bLfsReleaseStore = bLfsReleaseStore;
 
+					if (bIncludePolicy)
+					{
+						Repo.m_bApplyPolicy = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_ApplyPolicy, false);
+						if (Repo.m_bApplyPolicy)
+						{
+							Repo.m_Policy = _BuildSystem.f_EvaluateEntityPropertyObject(ChildEntity, gc_ConstKey_Repository_Policy, CEJSONSorted(EJSONType_Object)).f_Move();
+							Repo.m_bApplyPolicyPretend = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_ApplyPolicyPretend, false);
+						}
+					}
+
 					for (auto &Remote : Remotes.f_Get().f_Array())
 					{
 						CStr Name = Remote[gc_ConstString_Name].f_String();
@@ -1202,6 +1241,16 @@ namespace NMib::NBuildSystem
 							{
 								OutRemote.m_bCanPush = false;
 								break;
+							}
+						}
+
+						if (bIncludePolicy)
+						{
+							OutRemote.m_bApplyPolicy = Remote.f_GetMemberValue(gc_ConstKey_Repository_ApplyPolicy.m_Name, false).f_Boolean();
+							if (OutRemote.m_bApplyPolicy)
+							{
+								OutRemote.m_Policy = Remote.f_GetMemberValue(gc_ConstKey_Repository_Policy.m_Name, CEJSONSorted(EJSONType_Object));
+								OutRemote.m_bApplyPolicyPretend = Remote.f_GetMemberValue(gc_ConstKey_Repository_ApplyPolicyPretend.m_Name, false).f_Boolean();
 							}
 						}
 					}
@@ -1346,7 +1395,7 @@ namespace NMib::NBuildSystem
 		if (mp_GenerateOptions.m_bSkipUpdate)
 			co_return ERetry_None;
 
-		TCVector<TCMap<CStr, CReposLocation>> ReposOrdered = fg_GetRepos(*this, mp_Data);
+		TCVector<TCMap<CStr, CReposLocation>> ReposOrdered = fg_GetRepos(*this, mp_Data, mp_bApplyRepoPolicy ? EGetRepoFlag::mc_IncludePolicy : EGetRepoFlag::mc_None);
 
 		TCMap<CStr, CRepository const *> AllRepositories;
 

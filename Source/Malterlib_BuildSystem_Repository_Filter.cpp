@@ -12,6 +12,7 @@ namespace NMib::NBuildSystem::NRepository
 			CBuildSystem::CRepoFilter const &_Filter
 			, CBuildSystem &_BuildSystem
 			, CBuildSystemData &_Data
+			, EGetRepoFlag _GetRepoFlags
 			, EFilterRepoFlag _Flags
 		)
 	{
@@ -21,7 +22,7 @@ namespace NMib::NBuildSystem::NRepository
 		auto DestroyLaunchs = co_await co_await Launches.f_Init();
 
 		CFilteredRepos FilteredRepos;
-		FilteredRepos.m_ReposOrdered = fg_GetRepos(_BuildSystem, _Data);
+		FilteredRepos.m_ReposOrdered = fg_GetRepos(_BuildSystem, _Data, _GetRepoFlags);
 		TCMap<mint, TCVector<CRepository *>> FilteredPerStage;
 
 		TCActorResultMap<mint, TCMap<CRepository *, TCAsyncResult<bool>>> DeferredResultsOrdered;

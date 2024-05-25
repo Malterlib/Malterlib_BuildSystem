@@ -51,8 +51,11 @@ namespace NMib::NBuildSystem::NRepository
 
 		CStr m_URL;
 		CStr m_DefaultBranch;
+		CEJSONSorted m_Policy;
 		bool m_bCanPush = true;
 		bool m_bLfsReleaseStore = false;
+		bool m_bApplyPolicy = false;
+		bool m_bApplyPolicyPretend = false;
 	};
 
 	struct CRepository
@@ -91,10 +94,13 @@ namespace NMib::NBuildSystem::NRepository
 		TCSet<CStr> m_ProtectedBranches;
 		TCSet<CStr> m_ProtectedTags;
 		CFilePosition m_Position;
+		CEJSONSorted m_Policy;
 		bool m_bSubmodule = false;
 		bool m_bExcludeFromSeen = false;
 		bool m_bUpdateSubmodules = false;
 		bool m_bLfsReleaseStore = false;
+		bool m_bApplyPolicy = false;
+		bool m_bApplyPolicyPretend = false;
 	};
 
 	struct CReposLocation
@@ -403,13 +409,26 @@ namespace NMib::NBuildSystem::NRepository
 		uint32 m_Patch = 0;
 	};
 
+	enum class EApplyPolicyFlag
+	{
+		mc_None = 0
+		, mc_Pretend = DMibBit(0)
+		, mc_CreateMissing = DMibBit(1)
+	};
+
+	enum class EGetRepoFlag
+	{
+		mc_None = 0
+		, mc_IncludePolicy = DMibBit(0)
+	};
+
 	TCFuture<CGitVersion> fg_GetGitVersion(CGitLaunches &_Launches);
 	CStr fg_GetGitRoot(CStr const &_Directory);
 	CStr fg_GetGitDataDir(CStr const &_GitRoot, CFilePosition const &_Position);
 	CStr fg_GetGitHeadHash(CStr const &_GitRoot, CFilePosition const &_Position);
 	CGitConfig fg_GetGitConfig(CStr const &_GitRoot, CFilePosition const &_Position);
 	bool fg_IsSubmodule(CStr const &_GitRoot);
-	TCVector<TCMap<CStr, CReposLocation>> fg_GetRepos(CBuildSystem &_BuildSystem, CBuildSystemData &_Data);
+	TCVector<TCMap<CStr, CReposLocation>> fg_GetRepos(CBuildSystem &_BuildSystem, CBuildSystemData &_Data, EGetRepoFlag _Flags);
 	CRepoEditor fg_GetRepoEditor(CBuildSystem &_BuildSystem, CBuildSystemData &_Data);
 
 	TCFunctionMovable<CStr (CProcessLaunchActor::CSimpleLaunchResult const &_Result)> fg_LogAllFunctor();
@@ -429,5 +448,15 @@ namespace NMib::NBuildSystem::NRepository
 	TCFuture<void> fg_UpdateRemotes(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage = {});
 	TCMap<CStr, CStr> fg_FetchEnvironment(CBuildSystem const &_BuildSystem);
 
-	TCFuture<CFilteredRepos> fg_GetFilteredRepos(CBuildSystem::CRepoFilter const &_Filter, CBuildSystem &_BuildSystem, CBuildSystemData &_Data, EFilterRepoFlag _Flags = EFilterRepoFlag_None);
+	TCFuture<CFilteredRepos> fg_GetFilteredRepos
+		(
+			CBuildSystem::CRepoFilter const &_Filter
+			, CBuildSystem &_BuildSystem
+			, CBuildSystemData &_Data
+			, EGetRepoFlag _GetRepoFlags
+			, EFilterRepoFlag _Flags = EFilterRepoFlag_None
+		)
+	;
+
+	TCFuture<void> fg_ApplyPolicies(CStr _Url, CStr _RepoDir, CEJSONSorted _Policy, EApplyPolicyFlag _Flags, TCFunction<void (EOutputType _OutputType, CStr const &_String)> _fOutputInfo);
 }

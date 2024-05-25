@@ -25,6 +25,21 @@ namespace NMib::NBuildSystem
 		mp_bEnableValues = true;
 	}
 
+	bool CBuildSystem::f_ApplyRepoPolicy() const
+	{
+		return mp_bApplyRepoPolicy;
+	}
+
+	bool CBuildSystem::f_ApplyRepoPolicyPretend() const
+	{
+		return mp_bApplyRepoPolicyPretend;
+	}
+
+	bool CBuildSystem::f_ApplyRepoPolicyCreateMissing() const
+	{
+		return mp_bApplyRepoPolicyCreateMissing;
+	}
+
 	CStringCache &CBuildSystem::f_StringCache() const
 	{
 		return mp_StringCache;

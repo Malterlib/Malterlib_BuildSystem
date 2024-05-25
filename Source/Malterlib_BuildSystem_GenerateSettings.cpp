@@ -28,6 +28,15 @@ namespace NMib::NBuildSystem
 		m_bReconcileForce = _Params[gc_ConstString_ReconcileForce].f_Boolean();
 		m_bReconcileNoOptions = _Params[gc_ConstString_ReconcileNoOptions].f_Boolean();
 
+		if (auto *pValue = _Params.f_GetMember(gc_ConstString_ApplyRepoPolicy))
+			m_bApplyRepoPolicy = pValue->f_Boolean();
+
+		if (auto *pValue = _Params.f_GetMember(gc_ConstString_ApplyRepoPolicyPretend))
+			m_bApplyRepoPolicyPretend = pValue->f_Boolean();
+
+		if (auto *pValue = _Params.f_GetMember(gc_ConstString_ApplyRepoPolicyCreateMissing))
+			m_bApplyRepoPolicyCreateMissing = pValue->f_Boolean();
+
 		for (auto &RepoOptions : _Params[gc_ConstString_Reconcile].f_String().f_Split<true>(","))
 		{
 			CStr WildCard;

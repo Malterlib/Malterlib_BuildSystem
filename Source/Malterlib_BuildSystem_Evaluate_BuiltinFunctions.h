@@ -42,6 +42,7 @@ namespace NMib::NBuildSystem
 	CBuildSystemSyntax::CType fg_Array(CBuildSystemSyntax::CType::CVariant &&_Type);
 	CBuildSystemSyntax::CType fg_Array(CBuildSystemSyntax::CType &&_Type);
 	CBuildSystemSyntax::CType fg_Defaulted(CBuildSystemSyntax::CType const &_Type, NEncoding::CEJSONSorted &&_Default);
+	CBuildSystemSyntax::CType fg_UserType(CStr const &_Name);
 	CBuildSystemSyntax::CType fg_Optional(CBuildSystemSyntax::CType const &_Type);
 	template <typename ...tfp_CParameter>
 	CBuildSystemSyntax::CType fg_OneOf(tfp_CParameter && ...p_Params);

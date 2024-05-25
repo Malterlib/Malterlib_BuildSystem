@@ -99,6 +99,10 @@ namespace NMib::NBuildSystem
 		if (_GenerateOptions.m_bReconcileNoOptions)
 			f_NoReconcileOptions();
 
+		mp_bApplyRepoPolicy = _GenerateOptions.m_bApplyRepoPolicy;
+		mp_bApplyRepoPolicyPretend = _GenerateOptions.m_bApplyRepoPolicyPretend;
+		mp_bApplyRepoPolicyCreateMissing = _GenerateOptions.m_bApplyRepoPolicyCreateMissing;
+
 		mp_bSingleThreaded = (GenerateSettings.m_GenerationFlags & EGenerationFlag_SingleThreaded) != 0;
 
 		_GenerateState.m_pGenerator = fg_CreateRuntimeType<CBuildSystemGenerator>(NMib::NStr::CStr("CBuildSystemGenerator_") + GenerateSettings.m_Generator);

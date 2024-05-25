@@ -156,7 +156,7 @@ namespace NMib::NBuildSystem
 		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, *pGenerateState, nullptr); Retry != ERetry_None)
 			co_return Retry;
 
-		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(_Filter, *this, mp_Data);
+		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(_Filter, *this, mp_Data, EGetRepoFlag::mc_None);
 
 		CGitLaunches Launches{f_GetBaseDir(), (_PushFlags & ERepoPushFlag_Pretend) ? "Pretending to push repos" : "Pushing repos", mp_AnsiFlags, mp_fOutputConsole, f_GetCancelledPointer()};
 		auto DestroyLaunchs = co_await co_await Launches.f_Init();

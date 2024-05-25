@@ -81,6 +81,11 @@ namespace NMib::NBuildSystem
 		return CBuildSystemSyntax::CType{CBuildSystemSyntax::CBuildSystemSyntax::CTypeDefaulted{.m_Type = {_Type}, .m_DefaultValue = {fg_Move(_Default)}}};
 	}
 
+	CBuildSystemSyntax::CType fg_UserType(CStr const &_Name)
+	{
+		return CBuildSystemSyntax::CType{CBuildSystemSyntax::CBuildSystemSyntax::CUserType{.m_Name = _Name}};
+	}
+
 	CBuildSystemSyntax::CType fg_Optional(CBuildSystemSyntax::CType const &_Type)
 	{
 		return CBuildSystemSyntax::CType{_Type.m_Type, true};
