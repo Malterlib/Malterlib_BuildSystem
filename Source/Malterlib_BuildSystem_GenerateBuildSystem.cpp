@@ -797,7 +797,7 @@ namespace NMib::NBuildSystem
 						ExpandState.m_bEnabled = true;
 					}
 
-					auto fFindFiles = [&](auto &_fSelf, CEntity &_Entity, CGroupInfo *_pParentGroup) -> void
+					auto fFindFiles = [&](this auto &&_fThis, CEntity &_Entity, CGroupInfo *_pParentGroup) -> void
 						{
 							for (auto iEntity = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iEntity; ++iEntity)
 							{
@@ -808,7 +808,7 @@ namespace NMib::NBuildSystem
 								case EEntityType_Target:
 								case EEntityType_Import:
 									{
-										_fSelf(_fSelf, ChildEntity, _pParentGroup);
+										_fThis(ChildEntity, _pParentGroup);
 									}
 									break;
 								case EEntityType_Group:
@@ -820,7 +820,7 @@ namespace NMib::NBuildSystem
 											)
 										;
 										if (Hidden.f_IsBoolean() && Hidden.f_Boolean())
-											_fSelf(_fSelf, ChildEntity, _pParentGroup);
+											_fThis(ChildEntity, _pParentGroup);
 										else
 										{
 											CStr Name = ChildEntity.f_GetKeyName();
@@ -842,7 +842,7 @@ namespace NMib::NBuildSystem
 												_pParentGroup->m_Children.f_Insert(Group);
 											else
 												_Target.m_RootGroup.m_Children.f_Insert(Group);
-											_fSelf(_fSelf, ChildEntity, &Group);
+											_fThis(ChildEntity, &Group);
 										}
 									}
 									break;
@@ -894,7 +894,7 @@ namespace NMib::NBuildSystem
 							}
 						}
 					;
-					fFindFiles(fFindFiles, *_Target.m_pOuterEntity, nullptr);
+					fFindFiles(*_Target.m_pOuterEntity, nullptr);
 
 					_Target.m_RootGroup.fr_PruneEmpty();
 					for (auto iGroup = _Target.m_Groups.f_GetIterator(); iGroup; )

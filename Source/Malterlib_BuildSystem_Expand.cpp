@@ -360,7 +360,7 @@ namespace NMib::NBuildSystem
 	void CBuildSystem::f_PopulateTargetAllFiles(CEntity &o_Target) const
 	{
 		TCMap<CStr, TCVector<CStr>> AllFiles;
-		auto fFindFiles = [&](auto &_fSelf, CEntity &_Entity) -> void
+		auto fFindFiles = [&](this auto &&_fThis, CEntity &_Entity) -> void
 			{
 				for (auto iEntity = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iEntity; ++iEntity)
 				{
@@ -375,7 +375,7 @@ namespace NMib::NBuildSystem
 							if (!ChildEntity.f_GetKey().m_Name.f_IsConstantString())
 								continue;
 
-							_fSelf(_fSelf, ChildEntity);
+							_fThis( ChildEntity);
 						}
 						break;
 					case EEntityType_File:
@@ -394,7 +394,7 @@ namespace NMib::NBuildSystem
 				}
 			}
 		;
-		fFindFiles(fFindFiles, o_Target);
+		fFindFiles(o_Target);
 
 		for (auto &Files : AllFiles)
 		{

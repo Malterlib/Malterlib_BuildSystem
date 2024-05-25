@@ -417,7 +417,7 @@ namespace NMib::NBuildSystem
 
 		auto *pType = fp_GetCanonicalType(_Context, &pTypeWithPosition->m_Type, pTypePosition);
 
-		auto fGetCanonicalType = [&](CBuildSystemSyntax::CType const *_pType, auto &_fGetCanonicalType) -> CBuildSystemSyntax::CType const *
+		auto fGetCanonicalType = [&](this auto &&_fThis, CBuildSystemSyntax::CType const *_pType) -> CBuildSystemSyntax::CType const *
 			{
 				auto pType = fp_GetCanonicalType(_Context, _pType, pTypePosition);
 
@@ -433,7 +433,7 @@ namespace NMib::NBuildSystem
 
 						auto &Type = OneType.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CType>>().f_Get();
 
-						auto *pCanonicalType = _fGetCanonicalType(&Type, _fGetCanonicalType);
+						auto *pCanonicalType = _fThis(&Type);
 
 						if (pCanonicalType->m_Type.template f_IsOfType<CBuildSystemSyntax::CArrayType>())
 							return pCanonicalType;
@@ -451,7 +451,7 @@ namespace NMib::NBuildSystem
 			}
 		;
 
-		pType = fGetCanonicalType(pType, fGetCanonicalType);
+		pType = fGetCanonicalType(pType);
 
 		TCOptional<CValuePotentiallyByRef> OriginalEvaluatedValue;
 		CEJSONSorted *pOriginalValue;
@@ -461,7 +461,7 @@ namespace NMib::NBuildSystem
 			if (!_pWriteContext->m_pAccessors)
 				fs_ThrowError(_Context, "No accessors specified");
 
-			pType = fGetCanonicalType(fp_ApplyAccessorsToType(_Context, pType, *_pWriteContext->m_pAccessors, pTypePosition), fGetCanonicalType);
+			pType = fGetCanonicalType(fp_ApplyAccessorsToType(_Context, pType, *_pWriteContext->m_pAccessors, pTypePosition));
 
 			pOriginalValue = _pWriteContext->m_pWriteDestination;
 		}
