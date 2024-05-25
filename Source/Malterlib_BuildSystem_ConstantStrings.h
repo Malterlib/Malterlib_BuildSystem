@@ -52,6 +52,7 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_JSONAccessor;
 	extern CStringAndHash const gc_ConstString_KeyLogicalOperator;
 	extern CStringAndHash const gc_ConstString_KeyPrefixOperator;
+	extern CStringAndHash const gc_ConstString_Namespace;
 	extern CStringAndHash const gc_ConstString_Left;
 	extern CStringAndHash const gc_ConstString_Legacy;
 	extern CStringAndHash const gc_ConstString_Line;
@@ -113,6 +114,7 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_Symbol_OperatorSubtract;
 	extern CStringAndHash const gc_ConstString_Symbol_Optional;
 	extern CStringAndHash const gc_ConstString_Symbol_PragmaPrefix;
+	extern CStringAndHash const gc_ConstString_namespace;
 	extern CStringAndHash const gc_ConstString_Target;
 	extern CStringAndHash const gc_ConstString_Ternary;
 	extern CStringAndHash const gc_ConstString_Type;

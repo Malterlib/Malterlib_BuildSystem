@@ -286,6 +286,7 @@ namespace NMib::NBuildSystem
 		case 0: return m_Value.f_GetAsType<CValue>().f_ToJson();
 		case 1: return m_Value.f_GetAsType<CKeyPrefixOperator>().f_ToJson();
 		case 2: return m_Value.f_GetAsType<CKeyLogicalOperator>().f_ToJson();
+		case 3: return m_Value.f_GetAsType<CNamespace>().f_ToJson();
 		}
 
 		DMibNeverGetHere;
@@ -320,6 +321,8 @@ namespace NMib::NBuildSystem
 			Return.m_Value = CKeyLogicalOperator::fs_FromJson(_JSON, _Position);
 		else if (TokenType == gc_ConstString_KeyPrefixOperator.m_String)
 			Return.m_Value = CKeyPrefixOperator::fs_FromJson(o_StringCache, _JSON, _Position);
+		else if (TokenType == gc_ConstString_Namespace.m_String)
+			Return.m_Value = CNamespace::fs_FromJson(o_StringCache, _JSON, _Position);
 		else
 			Return.m_Value = CValue::fs_FromJson(o_StringCache, _JSON, _Position, false);
 

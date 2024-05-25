@@ -837,6 +837,17 @@ namespace NMib::NBuildSystem
 			CValue m_Right;
 		};
 
+		struct CNamespace
+		{
+			static CNamespace fs_FromJson(CStringCache &o_StringCache, NEncoding::CEJSONSorted const &_JSON, CFilePosition const &_Position);
+			NEncoding::CEJSONSorted f_ToJson() const;
+
+			template <typename tf_CStr>
+			void f_Format(tf_CStr &o_Str) const;
+			COrdering_Partial operator <=> (CNamespace const &_Right) const;
+			bool operator == (CNamespace const &_Right) const;
+		};
+
 		struct CKeyLogicalOperator
 		{
 			enum EOperator
@@ -868,6 +879,7 @@ namespace NMib::NBuildSystem
 			bool f_IsValue() const;
 			bool f_IsKeyPrefixOperator() const;
 			bool f_IsKeyLogicalOperator() const;
+			bool f_IsNamespace() const;
 			CValue const &f_Value() const;
 			CKeyPrefixOperator const &f_KeyPrefixOperator() const;
 			CKeyLogicalOperator const &f_KeyLogicalOperator() const;
@@ -875,7 +887,7 @@ namespace NMib::NBuildSystem
 
 			aint f_Cmp(CRootKey const &_Right) const;
 
-			using CVariant = NStorage::TCVariant<CValue, CKeyPrefixOperator, CKeyLogicalOperator>;
+			using CVariant = NStorage::TCVariant<CValue, CKeyPrefixOperator, CKeyLogicalOperator, CNamespace>;
 
 			CVariant m_Value;
 		};

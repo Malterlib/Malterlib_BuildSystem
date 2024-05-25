@@ -375,6 +375,16 @@ namespace NMib::NBuildSystem
 		return fg_TupleReferences(m_Operator) <=> fg_TupleReferences(_Right.m_Operator);
 	}
 
+	COrdering_Partial CBuildSystemSyntax::CNamespace::operator <=> (CNamespace const &_Right) const
+	{
+		return COrdering_Partial::equivalent;
+	}
+
+	bool CBuildSystemSyntax::CNamespace::operator == (CNamespace const &_Right) const
+	{
+		return true;
+	}
+
 	bool CBuildSystemSyntax::CKeyLogicalOperator::operator == (CKeyLogicalOperator const &_Right) const
 	{
 		return fg_TupleReferences(m_Operator) == fg_TupleReferences(_Right.m_Operator);
@@ -410,6 +420,11 @@ namespace NMib::NBuildSystem
 	bool CBuildSystemSyntax::CRootKey::f_IsKeyPrefixOperator() const
 	{
 		return m_Value.f_IsOfType<CKeyPrefixOperator>();
+	}
+
+	bool CBuildSystemSyntax::CRootKey::f_IsNamespace() const
+	{
+		return m_Value.f_IsOfType<CNamespace>();
 	}
 
 	CBuildSystemSyntax::CKeyPrefixOperator const &CBuildSystemSyntax::CRootKey::f_KeyPrefixOperator() const

@@ -664,10 +664,11 @@ namespace NMib::NBuildSystem
 				, CEntity &o_Entity
 				, CBuildSystemRegistry &_Registry
 				, NStorage::TCSharedPointer<CCondition> const &_pConditions
+				, NStr::CStr const &_Namespaces
 			) const
 		;
 		CTypeWithPosition const *fp_GetTypeForProperty(CEvalPropertyValueContext &_Context, CPropertyKeyReference const &_VariableName) const;
-		CTypeWithPosition const *fp_GetUserTypeWithPositionForProperty(CEvalPropertyValueContext &_Context, NStr::CStr const &_UserType) const;
+		CTypeWithPosition const *fp_GetUserTypeWithPositionForProperty(CEvalPropertyValueContext &_Context, NStr::CStr const &_UserType, NStr::CStr &o_Namespace) const;
 
 		enum EDoesValueConformToTypeFlag
 		{
@@ -682,6 +683,7 @@ namespace NMib::NBuildSystem
 				, CFilePosition const &_TypePosition
 				, NEncoding::CEJSONSorted &o_Value
 				, EDoesValueConformToTypeFlag _Flags
+				, NStr::CStr const &_Namespace
 				, CTypeConformError *o_pError = nullptr
 				, NFunction::TCFunctionNoAlloc<NStr::CStr ()> const *_pGetErrorContext = nullptr
 			) const

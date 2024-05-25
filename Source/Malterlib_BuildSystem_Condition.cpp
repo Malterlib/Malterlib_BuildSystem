@@ -19,6 +19,11 @@ namespace NMib::NBuildSystem
 		;
 	}
 
+	bool CCondition::f_IsDefault() const
+	{
+		return m_Type == EConditionType_Root && m_Children.f_IsEmpty();
+	}
+
 	namespace
 	{
 		auto fg_ConditionTuple(CCondition const &_Condition)
@@ -89,7 +94,9 @@ namespace NMib::NBuildSystem
 
 		do
 		{
-			if (Name.f_IsKeyPrefixOperator())
+			if (Name.f_IsNamespace())
+				return false;
+			else if (Name.f_IsKeyPrefixOperator())
 			{
 				auto &PrefixOperator = Name.f_KeyPrefixOperator();
 

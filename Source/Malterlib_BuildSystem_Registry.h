@@ -30,6 +30,7 @@ namespace NMib::NBuildSystem
 		}
 
 		CStringCache &m_StringCache;
+		bool m_bParsingNamespace = false;
 	};
 
 	using CCustomRegistryKeyValue = NContainer::TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>;

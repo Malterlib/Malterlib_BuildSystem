@@ -71,6 +71,7 @@ namespace NMib::NContainer
 			NEncoding::CJSONSorted f_ParseDefaulted(uch8 const *&o_pParse, NEncoding::CJSONSorted &&_Type);
 			void f_ParsePostDefine(uch8 const *&o_pParse, NEncoding::CJSONSorted &o_Value);
 			NStr::CStr f_ParseIdentifier(uch8 const *&o_pParse);
+			NStr::CStr f_ParseIdentifierWithNamespace(uch8 const *&o_pParse);
 			NStr::CStr f_ParseIdentifierLax(uch8 const *&o_pParse);
 
 			template <typename tf_CStr>
@@ -135,6 +136,7 @@ namespace NMib::NContainer
 			bool m_bParsingDefine = false;
 			bool m_bSupportBinaryOperators = true;
 			bool m_bParseAfterValue = true;
+			bool m_bParsingNamespace = false;
 		};
 
 		struct CJSONParseContextCatureStringMap : public CJSONParseContext

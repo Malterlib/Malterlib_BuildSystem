@@ -53,6 +53,7 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_JSONAccessor = gc_Str<"JSONAccessor">;
 	constexpr CStringAndHash const gc_ConstString_KeyLogicalOperator = gc_Str<"KeyLogicalOperator">;
 	constexpr CStringAndHash const gc_ConstString_KeyPrefixOperator = gc_Str<"KeyPrefixOperator">;
+	constexpr CStringAndHash const gc_ConstString_Namespace = gc_Str<"Namespace">;
 	constexpr CStringAndHash const gc_ConstString_Left = gc_Str<"Left">;
 	constexpr CStringAndHash const gc_ConstString_Legacy = gc_Str<"Legacy">;
 	constexpr CStringAndHash const gc_ConstString_Line = gc_Str<"Line">;
@@ -114,6 +115,7 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_Symbol_OperatorSubtract = gc_Str<"-">;
 	constexpr CStringAndHash const gc_ConstString_Symbol_Optional = gc_Str<"?">;
 	constexpr CStringAndHash const gc_ConstString_Symbol_PragmaPrefix = gc_Str<"#">;
+	constexpr CStringAndHash const gc_ConstString_namespace = gc_Str<"namespace">;
 	constexpr CStringAndHash const gc_ConstString_Target = gc_Str<"Target">;
 	constexpr CStringAndHash const gc_ConstString_Ternary = gc_Str<"Ternary">;
 	constexpr CStringAndHash const gc_ConstString_Type = gc_Str<"Type">;
@@ -528,6 +530,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_JSONAccessor);
 		o_StringCache.f_AddConstantString(gc_ConstString_KeyLogicalOperator);
 		o_StringCache.f_AddConstantString(gc_ConstString_KeyPrefixOperator);
+		o_StringCache.f_AddConstantString(gc_ConstString_Namespace);
 		o_StringCache.f_AddConstantString(gc_ConstString_Left);
 		o_StringCache.f_AddConstantString(gc_ConstString_Legacy);
 		o_StringCache.f_AddConstantString(gc_ConstString_Line);
@@ -587,6 +590,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_Symbol_OperatorSubtract);
 		o_StringCache.f_AddConstantString(gc_ConstString_Symbol_Optional);
 		o_StringCache.f_AddConstantString(gc_ConstString_Symbol_PragmaPrefix);
+		o_StringCache.f_AddConstantString(gc_ConstString_namespace);
 		o_StringCache.f_AddConstantString(gc_ConstString_Target);
 		o_StringCache.f_AddConstantString(gc_ConstString_Ternary);
 		o_StringCache.f_AddConstantString(gc_ConstString_Type);

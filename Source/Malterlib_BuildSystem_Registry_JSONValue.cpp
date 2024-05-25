@@ -303,7 +303,35 @@ namespace NMib::NContainer
 			}
 		;
 
-		if (*pParse == '~' && (pParse[1] == '\"' || pParse[1] == '\'' || pParse[1] == '`'))
+		if (m_bParsingNamespace)
+		{
+			if (!fs_CharIsStartIdentifier(*pParse))
+				f_ThrowError("Expected start of namespace name", pParse);
+
+			TCVector<CStr> AllNamespaces;
+			while (*pParse)
+			{
+				AllNamespaces.f_Insert(f_ParseIdentifier(pParse));
+				if (*pParse == ':' && pParse[1] == ':')
+				{
+					pParse += 2;
+					if (!fs_CharIsStartIdentifier(*pParse))
+						f_ThrowError("Expected start of next namespace name", pParse);
+				}
+				else
+					break;
+			}
+
+			m_bParsingNamespace = false;
+
+			CStr Name = CStr::fs_Join(AllNamespaces, "::");
+			Name.f_SetUserData(EJSONStringType_NoQuote);
+			o_Value = Name;
+			o_pParse = pParse;
+
+			return true;
+		}
+		else if (*pParse == '~' && (pParse[1] == '\"' || pParse[1] == '\'' || pParse[1] == '`'))
 		{
 			++pParse;
 
@@ -632,6 +660,11 @@ namespace NMib::NContainer
 					}
 				}
 			}
+		}
+		else if (_Value.f_IsString() && _Value.f_String().f_GetUserData() == EJSONStringType_NoQuote)
+		{
+			o_String += _Value.f_String();
+			return true;
 		}
 
 		return false;

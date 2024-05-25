@@ -395,6 +395,7 @@ namespace NMib::NBuildSystem
 			, CEntity &o_Entity
 			, CBuildSystemRegistry &_Registry
 			, TCSharedPointer<CCondition> const &_pConditions
+			, CStr const &_Namespaces
 		) const
 	{
 		auto &Value = _Registry.f_GetThisValue();
@@ -413,7 +414,14 @@ namespace NMib::NBuildSystem
 
 			auto &Type = Value.m_Value.m_Value.f_GetAsType<CBuildSystemSyntax::CDefine>().m_Type;
 
-			fs_AddEntityUserType(o_Entity, _VariableName.m_Name, Type, _Registry, pConditions, DebugFlags);
+			CStr TypeName;
+
+			if (_Namespaces)
+				TypeName = "{}::{}"_f << _Namespaces << _VariableName.m_Name;
+			else
+				TypeName = _VariableName.m_Name;
+
+			fs_AddEntityUserType(o_Entity, TypeName, Type, _Registry, pConditions, DebugFlags);
 		}
 		else if (Value.m_Value.m_Value.f_IsOfType<CBuildSystemSyntax::CDefine>())
 		{
@@ -587,7 +595,7 @@ namespace NMib::NBuildSystem
 		if (!_Identifier.m_bEmptyPropertyType)
 		{
 			if (_bDefines)
-				fp_ParsePropertyValueDefines(_Identifier.f_PropertyKeyReferenceConstant(), o_Entity, _Registry, _pConditions);
+				fp_ParsePropertyValueDefines(_Identifier.f_PropertyKeyReferenceConstant(), o_Entity, _Registry, _pConditions, {});
 			else
 				fp_ParsePropertyValue(_Identifier.f_PropertyKeyReferenceConstant(), o_Entity, _Registry, nullptr);
 			return;
@@ -602,65 +610,106 @@ namespace NMib::NBuildSystem
 		if (Identifier.f_IsEmpty() || Type == EPropertyType_Invalid)
 			fsp_ThrowError(_Registry, "Unrecognized property type '{}'"_f << _Identifier.m_Name);
 
-		CCondition Conditions;
+		TCVector<CStr> Namespaces;
+		CStr NamespacesString;
 
-		TCSharedPointer<CCondition> pConditions;
-
-		bool bWasCondition = true;
-		auto fGetConditions = [&]
+		auto fParseRecursiveNamespaces = [&](this auto &&_fThis, CBuildSystemRegistry &_Registry, CCondition const *_pConditions) -> void
 			{
-				if (!pConditions && !Conditions.m_Children.f_IsEmpty())
-					pConditions = fg_Construct(Conditions);
+				CCondition Conditions;
+				TCSharedPointer<CCondition> pConditions;
 
-				return pConditions;
+				bool bWasCondition = true;
+				auto fGetConditions = [&]
+					{
+						if (!pConditions && !Conditions.f_IsDefault())
+						{
+							if (!_pConditions || _pConditions->f_IsDefault())
+								pConditions = fg_Construct(fg_Move(Conditions));
+							else
+							{
+								pConditions = fg_Construct();
+								pConditions->m_Children.f_Insert(_pConditions->m_Children);
+								pConditions->m_Children.f_Insert(fg_Move(Conditions));
+							}
+						}
+
+						return pConditions;
+					}
+				;
+
+				for (auto iReg = _Registry.f_GetChildIterator(); iReg; ++iReg)
+				{
+					auto &Registry = *iReg;
+					if (CCondition::fs_TryParseCondition(Registry, Conditions))
+					{
+						if (!bWasCondition)
+							fsp_ThrowError(Registry, "Conditions needs to specified first");
+
+						continue;
+					}
+
+					bWasCondition = false;
+
+					if (Registry.f_GetName().f_IsNamespace())
+					{
+						if (!_bDefines)
+							continue;
+
+						auto &Value = Registry.f_GetThisValue();
+						if (!Value.m_Value.f_IsConstantString())
+							fsp_ThrowError(Registry, "Namespaces need to be constant strings: {}"_f << Value.m_Value);
+
+						CStr Namespace = Value.m_Value.f_ConstantString();
+						Namespaces.f_Insert(Namespace);
+						NamespacesString = CStr::fs_Join(Namespaces, "::");
+
+						auto pConditions = fGetConditions();
+						_fThis(Registry, pConditions.f_Get());
+
+						Namespaces.f_Remove(Namespaces.f_GetLen() - 1);
+						NamespacesString = CStr::fs_Join(Namespaces, "::");
+
+						continue;
+					}
+
+					fp_HandleKey
+						(
+							Registry
+							, [&](CBuildSystemSyntax::CKeyPrefixOperator const &_PrefixOperator)
+							{
+								if (_PrefixOperator.m_Operator == CBuildSystemSyntax::CKeyPrefixOperator::EOperator_Entity)
+									fsp_ThrowError(Registry, "You cannot specify entities inside property groups");
+								else if (_PrefixOperator.m_Operator == CBuildSystemSyntax::CKeyPrefixOperator::EOperator_ConfigurationTuple)
+									fsp_ThrowError(Registry, "You cannot specify configurations inside property groups");
+								else
+									fsp_ThrowError(Registry, "Unexpected prefix operator: {}"_f << _PrefixOperator.m_Operator);
+							}
+							, [&](CBuildSystemSyntax::CIdentifier const &_Identifier)
+							{
+								if (_Identifier.m_EntityType != EEntityType_Invalid)
+									fsp_ThrowError(Registry, "You cannot specify an entity type for a property expression");
+
+								if (!_Identifier.m_bEmptyPropertyType)
+									fsp_ThrowError(Registry, "You cannot specify an property type for properties in a property group");
+
+								if (!_Identifier.f_IsNameConstantString())
+									fsp_ThrowError(Registry, "You cannot use dynamic naming for a property expression");
+
+								if (_bDefines)
+									fp_ParsePropertyValueDefines(_Identifier.f_PropertyKeyReferenceConstant(Type), o_Entity, Registry, fGetConditions(), NamespacesString);
+								else
+									fp_ParsePropertyValue(_Identifier.f_PropertyKeyReferenceConstant(Type), o_Entity, Registry, fGetConditions());
+							}
+							, "Only conditions and properties are supported here"
+							, EHandleKeyFlag_AllowPropertyType
+						)
+					;
+				}
 			}
 		;
 
-		for (auto iReg = _Registry.f_GetChildIterator(); iReg; ++iReg)
-		{
-			auto &Registry = *iReg;
-			if (CCondition::fs_TryParseCondition(Registry, Conditions))
-			{
-				if (!bWasCondition)
-					fsp_ThrowError(Registry, "Conditions needs to specified first");
-				continue;
-			}
-
-			bWasCondition = false;
-
-			fp_HandleKey
-				(
-					Registry
-					, [&](CBuildSystemSyntax::CKeyPrefixOperator const &_PrefixOperator)
-					{
-						if (_PrefixOperator.m_Operator == CBuildSystemSyntax::CKeyPrefixOperator::EOperator_Entity)
-							fsp_ThrowError(Registry, "You cannot specify entities inside property groups");
-						else if (_PrefixOperator.m_Operator == CBuildSystemSyntax::CKeyPrefixOperator::EOperator_ConfigurationTuple)
-							fsp_ThrowError(Registry, "You cannot specify configurations inside property groups");
-						else
-							fsp_ThrowError(Registry, "Unexpected prefix operator: {}"_f << _PrefixOperator.m_Operator);
-					}
-					, [&](CBuildSystemSyntax::CIdentifier const &_Identifier)
-					{
-						if (_Identifier.m_EntityType != EEntityType_Invalid)
-							fsp_ThrowError(Registry, "You cannot specify an entity type for a property expression");
-
-						if (!_Identifier.m_bEmptyPropertyType)
-							fsp_ThrowError(Registry, "You cannot specify an property type for properties in a property group");
-
-						if (!_Identifier.f_IsNameConstantString())
-							fsp_ThrowError(Registry, "You cannot use dynamic naming for a property expression");
-
-						if (_bDefines)
-							fp_ParsePropertyValueDefines(_Identifier.f_PropertyKeyReferenceConstant(Type), o_Entity, Registry, fGetConditions());
-						else
-							fp_ParsePropertyValue(_Identifier.f_PropertyKeyReferenceConstant(Type), o_Entity, Registry, fGetConditions());
-					}
-					, "Only conditions and properties are supported here"
-					, EHandleKeyFlag_AllowPropertyType
-				)
-			;
-		}
+		CCondition Conditions;
+		fParseRecursiveNamespaces(_Registry, &Conditions);
 	}
 
 	CEntity *CBuildSystem::fp_ParseEntity(CEntity &_Parent, CBuildSystemSyntax::CIdentifier const &_Identifier, CBuildSystemRegistry &_Registry) const

@@ -48,8 +48,11 @@ namespace
 	TestInt 65 // Comment
 	Type
 	{
-		CTest: {
-			"int": one_of(int, float)
+		namespace NTest
+		{
+			CTest: {
+				"int": one_of(int, float)
+			}
 		}
 	} // Comment
 	TestDefine: {

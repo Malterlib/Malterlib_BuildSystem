@@ -327,6 +327,29 @@ namespace NMib::NContainer
 		return Return;
 	}
 
+	NStr::CStr TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseIdentifierWithNamespace(uch8 const *&o_pParse)
+	{
+		auto *pParse = o_pParse;
+
+		if (!fs_CharIsStartIdentifier(*pParse))
+			f_ThrowError("Expected start of identifier (A-Z a-z _ \\)", o_pParse);
+
+		TCVector<CStr> Identifiers;
+
+		while (auto Identifier = f_ParseIdentifier(pParse))
+		{
+			Identifiers.f_Insert(fg_Move(Identifier));
+			if (fg_StrStartsWith(pParse, "::"))
+				pParse += 2;
+			else
+				break;
+		}
+
+		o_pParse = pParse;
+
+		return CStr::fs_Join(Identifiers, "::");
+	}
+
 	CJSONSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseJSONAccessor(uch8 const *&o_pParse, NEncoding::CJSONSorted &&_Param)
 	{
 		auto pParse = o_pParse;
@@ -1093,7 +1116,7 @@ namespace NMib::NContainer
 			f_ThrowError("Expected (", pParse);
 		++pParse;
 
-		CStr TypeIdentifier = f_ParseIdentifier(pParse);
+		CStr TypeIdentifier = f_ParseIdentifierWithNamespace(pParse);
 
 		fg_ParseWhiteSpace(pParse);
 		if (*pParse != ')')
@@ -1780,6 +1803,8 @@ namespace NMib::NContainer
 
 			NJSON::fg_GenerateJSONValue<CBuildSystemParseContext, tf_CStr>(o_String, *pRight, _Depth, "\t", gc_BuildSystemJSONParseFlags);
 		}
+		else if (TokenType == gc_ConstString_Namespace.m_String)
+			o_String += gc_ConstString_namespace.m_String;
 		else if (TokenType == gc_ConstString_KeyLogicalOperator.m_String)
 		{
 			auto pOperator = _Token.f_GetMember(gc_ConstString_Operator);

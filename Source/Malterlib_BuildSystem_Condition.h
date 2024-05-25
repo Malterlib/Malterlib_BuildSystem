@@ -33,6 +33,7 @@ namespace NMib::NBuildSystem
 		static void fs_ParseCondition(CBuildSystemRegistry const &_Registry, CCondition &_ParentCondition, bool _bRoot = true);
 		bool f_SimpleEval(NContainer::TCMap<NStr::CStr, NStr::CStr> const &_Values) const;
 		bool f_IsCompare() const;
+		bool f_IsDefault() const;
 
 		static NStr::CStr const &fs_ConditionTypeToStr(EConditionType _Type);
 

@@ -1,0 +1,70 @@
+
+*Configuration
+{
+	Debug "Debug Config"
+	Release "Release Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
+
+Type
+{
+	namespace NTest1
+	{
+		namespace NTest3
+		{
+			CTestOneOf: one_of(string, {
+				Test: string
+				, TestOptional?: string
+			})
+
+			CTest: type(NTest2::CTest)
+		}
+		namespace NTest2
+		{
+			CTest: {
+				Test: string
+				, TestOptional?: string
+			}
+
+			CTestOneOf: type(NTest3::CTestOneOf)
+		}
+
+		CTest: type(NTest3::CTest)
+		CTestOneOf: type(NTest2::CTestOneOf)
+	}
+}
+
+%GenerateFile "TestFile"
+{
+	Property
+	{
+		CalcValue: string
+		CalcValueUserType: type(NTest1::CTest)
+		CalcValueUserTypeOneOf: type(NTest1::CTestOneOf)
+
+		CalcValue "Testing"
+		CalcValueUserType {Test: "Testing 1", TestOptional: "Testing 2"}
+		CalcValueUserTypeOneOf {Test: "Testing 1", TestOptional: "Testing 2"}
+	}
+	GenerateFile
+	{
+		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
+		Contents	`Generate File Contents:\n`\
+					`@(CalcValue)\n`\
+					`@(CalcValueUserType->ToString())\n`\
+					`@(CalcValueUserTypeOneOf->ToString())\n`
+		
+		Executable false
+		UnixLineEnds true
+		UnicodeBOM false
+	}
+}

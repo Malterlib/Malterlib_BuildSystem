@@ -236,11 +236,13 @@ namespace NMib::NBuildSystem
 		CBuildSystemUniquePositions Positions;
 		CEvalPropertyValueContext Context{_Entity, _Entity, EntityData.m_Position, EvalContext, nullptr, f_EnablePositions(&Positions)};
 
+		CStr Namespace;
+
 		auto pType = _pType;
 		while (pType->m_Type.f_IsOfType<CBuildSystemSyntax::CUserType>())
 		{
 			auto &UserTypeName = pType->m_Type.f_GetAsType<CBuildSystemSyntax::CUserType>().m_Name;
-			auto pUserType = fp_GetUserTypeWithPositionForProperty(Context, UserTypeName);
+			auto pUserType = fp_GetUserTypeWithPositionForProperty(Context, UserTypeName, Namespace);
 			if (!pUserType)
 			{
 				Positions.f_AddPositionFirst(o_TypePosition, gc_ConstString_Type, gc_ConstString_Type);
@@ -260,13 +262,16 @@ namespace NMib::NBuildSystem
 		) const
 	{
 		auto pType = _pType;
+
+		CStr Namespace;
+
 		while (pType->m_Type.f_IsOfType<CBuildSystemSyntax::CUserType>() || pType->m_Type.f_IsOfType<CBuildSystemSyntax::CTypeDefaulted>())
 		{
 			if (pType->m_Type.f_IsOfType<CBuildSystemSyntax::CUserType>())
 			{
 				auto &UserTypeName = pType->m_Type.f_GetAsType<CBuildSystemSyntax::CUserType>().m_Name;
-				auto pUserType = fp_GetUserTypeWithPositionForProperty(_Context, UserTypeName);
 
+				auto *pUserType = fp_GetUserTypeWithPositionForProperty(_Context, UserTypeName, Namespace);
 				if (!pUserType)
 					fs_ThrowError(_Context, *o_pTypePosition, "Could not find user type of name '{}'"_f << UserTypeName);
 
@@ -506,7 +511,7 @@ namespace NMib::NBuildSystem
 			if (RightRef.f_IsArray())
 			{
 				auto TempRight = RightRef;
-				if (fp_DoesValueConformToType(_Context, *pType, *pTypePosition, TempRight, EDoesValueConformToTypeFlag_CanApplyDefault))
+				if (fp_DoesValueConformToType(_Context, *pType, *pTypePosition, TempRight, EDoesValueConformToTypeFlag_CanApplyDefault, {}))
 				{
 					bHandled = true;
 
@@ -523,7 +528,18 @@ namespace NMib::NBuildSystem
 			if (!bHandled)
 			{
 				auto TempRight = RightRef;
-				if (fp_DoesValueConformToType(_Context, pType->m_Type.f_GetAsType<CBuildSystemSyntax::CArrayType>().m_Type.f_Get(), *pTypePosition, TempRight, EDoesValueConformToTypeFlag_CanApplyDefault))
+				if 
+				(
+					fp_DoesValueConformToType
+					(
+						_Context
+						, pType->m_Type.f_GetAsType<CBuildSystemSyntax::CArrayType>().m_Type.f_Get()
+						, *pTypePosition
+						, TempRight
+						, EDoesValueConformToTypeFlag_CanApplyDefault
+					 	, {}
+					)
+				)
 				{
 					bHandled = true;
 
@@ -540,8 +556,18 @@ namespace NMib::NBuildSystem
 				CTypeConformError ConformErrorElement;
 				auto TempRight1 = RightRef;
 				auto TempRight2 = RightRef;
-				fp_DoesValueConformToType(_Context, *pType, *pTypePosition, TempRight1, EDoesValueConformToTypeFlag_None, &ConformErrorArray);
-				fp_DoesValueConformToType(_Context, pType->m_Type.f_GetAsType<CBuildSystemSyntax::CArrayType>().m_Type.f_Get(), *pTypePosition, TempRight2, EDoesValueConformToTypeFlag_None, &ConformErrorElement);
+				fp_DoesValueConformToType(_Context, *pType, *pTypePosition, TempRight1, EDoesValueConformToTypeFlag_None, {}, &ConformErrorArray);
+				fp_DoesValueConformToType
+					(
+						_Context
+						, pType->m_Type.f_GetAsType<CBuildSystemSyntax::CArrayType>().m_Type.f_Get()
+						, *pTypePosition
+						, TempRight2
+						, EDoesValueConformToTypeFlag_None
+						, {}
+						, &ConformErrorElement
+					)
+				;
 
 				fs_ThrowError
 					(
@@ -758,32 +784,79 @@ namespace NMib::NBuildSystem
 		return {};
 	}
 
-	CTypeWithPosition const *CBuildSystem::fp_GetUserTypeWithPositionForProperty(CEvalPropertyValueContext &_Context, NStr::CStr const &_UserType) const
+	CTypeWithPosition const *CBuildSystem::fp_GetUserTypeWithPositionForProperty(CEvalPropertyValueContext &_Context, NStr::CStr const &_UserType, NStr::CStr &o_Namespace) const
 	{
 		for (auto *pEntity = &_Context.m_Context; pEntity; pEntity = pEntity->m_pParent)
 		{
-			auto pTypes = pEntity->f_Data().m_UserTypes.f_FindEqual(_UserType);
-			if (pTypes)
+			NContainer::TCLinkedList<CTypeWithConditions> const *pTypes;
+			CStr Namespace;
+
+			if (o_Namespace)
 			{
-				for (auto &Type : *pTypes)
+				CStr FullName = "{}::{}"_f << o_Namespace << _UserType;
+				pTypes = pEntity->f_Data().m_UserTypes.f_FindEqual(FullName);
+
+				if (!pTypes)
 				{
-					if
-						(
-							!Type.m_pConditions
-							|| fpr_EvalCondition
-							(
-								_Context.m_Context
-								, _Context.m_OriginalContext
-								, *Type.m_pConditions
-								, _Context.m_EvalContext
-								, Type.m_DebugFlags
-								, &_Context
-								, _Context.m_pStorePositions
-							)
-						)
+					auto Namespaces = o_Namespace.f_Split("::");
+					Namespaces.f_PopBack();
+					Namespace = CStr::fs_Join(Namespaces, "::");
+
+					while (!Namespaces.f_IsEmpty())
 					{
-						return &Type.m_Type;
+						CStr FullName = "{}::{}"_f << Namespace << _UserType;
+						pTypes = pEntity->f_Data().m_UserTypes.f_FindEqual(FullName);
+						if (pTypes)
+							break;
+
+						Namespaces.f_PopBack();
+						Namespace = CStr::fs_Join(Namespaces, "::");
 					}
+
+					if (!pTypes)
+						pTypes = pEntity->f_Data().m_UserTypes.f_FindEqual(_UserType);
+				}
+				else
+					Namespace = o_Namespace;
+			}
+			else
+				pTypes = pEntity->f_Data().m_UserTypes.f_FindEqual(_UserType);
+
+			if (!pTypes)
+				continue;
+
+			for (auto &Type : *pTypes)
+			{
+				if
+					(
+						!Type.m_pConditions
+						|| fpr_EvalCondition
+						(
+							_Context.m_Context
+							, _Context.m_OriginalContext
+							, *Type.m_pConditions
+							, _Context.m_EvalContext
+							, Type.m_DebugFlags
+							, &_Context
+							, _Context.m_pStorePositions
+						)
+					)
+				{
+					if (auto iLast = _UserType.f_FindReverse("::"); iLast >= 0)
+					{
+						if (Namespace)
+						{
+							Namespace += "::";
+							Namespace += _UserType.f_Left(iLast);
+						}
+						else
+							Namespace = _UserType.f_Left(iLast);
+					}
+
+					if (Namespace.f_GetStr() != o_Namespace.f_GetStr())
+						o_Namespace = Namespace;
+
+					return &Type.m_Type;
 				}
 			}
 		}
@@ -850,6 +923,7 @@ namespace NMib::NBuildSystem
 			, CFilePosition const &_TypePosition
 			, CEJSONSorted &o_Value
 			, EDoesValueConformToTypeFlag _Flags
+			, CStr const &_Namespace
 			, CTypeConformError *o_pError
 			, NFunction::TCFunctionNoAlloc<CStr ()> const *_pGetErrorContext
 		) const
@@ -1065,14 +1139,15 @@ namespace NMib::NBuildSystem
 				{
 					auto &SpecificType = _Type.m_Type.f_GetAsType<CBuildSystemSyntax::CUserType>();
 
-					auto *pType = fp_GetUserTypeWithPositionForProperty(_Context, SpecificType.m_Name);
+					CStr Namespace = _Namespace;
+					auto *pType = fp_GetUserTypeWithPositionForProperty(_Context, SpecificType.m_Name, Namespace);
 					if (!pType)
 						fs_ThrowError(_Context, "Could not find user type of name '{}'"_f << SpecificType.m_Name);
 
 					if (o_pError)
 						o_pError->m_ErrorPath.f_Insert("type({})"_f << SpecificType.m_Name);
 
-					if (!fp_DoesValueConformToType(_Context, pType->m_Type, pType->m_Position, o_Value, _Flags, o_pError, _pGetErrorContext))
+					if (!fp_DoesValueConformToType(_Context, pType->m_Type, pType->m_Position, o_Value, _Flags, Namespace, o_pError, _pGetErrorContext))
 						return false;
 
 					if (o_pError)
@@ -1103,7 +1178,7 @@ namespace NMib::NBuildSystem
 						if (o_pError)
 							o_pError->m_ErrorPath.f_Insert(" = {}"_f << SpecificType.m_DefaultValue);
 
-						if (!fp_DoesValueConformToType(_Context, SpecificType.m_Type.f_Get(), _TypePosition, o_Value, _Flags, o_pError, _pGetErrorContext))
+						if (!fp_DoesValueConformToType(_Context, SpecificType.m_Type.f_Get(), _TypePosition, o_Value, _Flags, _Namespace, o_pError, _pGetErrorContext))
 						{
 							if (bDefaulted)
 								fs_ThrowError(_Context, "Defaulted value '{}' does not conform to type '{}' it's defaulting"_f << o_Value << SpecificType.m_Type.f_Get());
@@ -1117,7 +1192,7 @@ namespace NMib::NBuildSystem
 						return true;
 					}
 
-					return fp_DoesValueConformToType(_Context, SpecificType.m_Type.f_Get(), _TypePosition, o_Value, _Flags, o_pError, _pGetErrorContext);
+					return fp_DoesValueConformToType(_Context, SpecificType.m_Type.f_Get(), _TypePosition, o_Value, _Flags, _Namespace, o_pError, _pGetErrorContext);
 				}
 				else if (_Type.m_Type.f_IsOfType<CBuildSystemSyntax::CClassType>())
 				{
@@ -1181,7 +1256,7 @@ namespace NMib::NBuildSystem
 							if (_Flags & EDoesValueConformToTypeFlag_CanApplyDefault)
 							{
 								CEJSONSorted MaybeDefaulted;
-								if (fp_DoesValueConformToType(_Context, Member.m_Type.f_Get(), _TypePosition, MaybeDefaulted, _Flags, o_pError, _pGetErrorContext))
+								if (fp_DoesValueConformToType(_Context, Member.m_Type.f_Get(), _TypePosition, MaybeDefaulted, _Flags, _Namespace, o_pError, _pGetErrorContext))
 								{
 									Object[MemberName] = fg_Move(MaybeDefaulted);
 									CheckedMembers[MemberName];
@@ -1205,7 +1280,7 @@ namespace NMib::NBuildSystem
 							if (o_pError)
 								o_pError->m_ErrorPath.f_GetLast() = MemberName;
 
-							if (!fp_DoesValueConformToType(_Context, Member.m_Type.f_Get(), _TypePosition, *pObjectMember, _Flags, o_pError, _pGetErrorContext))
+							if (!fp_DoesValueConformToType(_Context, Member.m_Type.f_Get(), _TypePosition, *pObjectMember, _Flags, _Namespace, o_pError, _pGetErrorContext))
 								return false;
 						}
 
@@ -1221,9 +1296,23 @@ namespace NMib::NBuildSystem
 								if (o_pError)
 									o_pError->m_ErrorPath.f_GetLast() = "... = {}"_f << Member.f_Name();
 
-								if (!fp_DoesValueConformToType(_Context, SpecificType.m_OtherKeysType.f_Get().f_Get(), _TypePosition, Member.f_Value(), _Flags, o_pError, _pGetErrorContext))
+								if
+								(
+									!fp_DoesValueConformToType
+									(
+										_Context
+										, SpecificType.m_OtherKeysType.f_Get().f_Get()
+										, _TypePosition
+										, Member.f_Value()
+										, _Flags
+										, _Namespace
+										, o_pError
+										, _pGetErrorContext
+									)
+								)
+								{
 									return false;
-
+								}
 							}
 						}
 
@@ -1298,7 +1387,7 @@ namespace NMib::NBuildSystem
 						if (o_pError)
 							o_pError->m_ErrorPath.f_GetLast() = "[{}]"_f << iElement;
 
-						if (!fp_DoesValueConformToType(_Context, SpecificType.m_Type.f_Get(), _TypePosition, ElementValue, _Flags, o_pError, _pGetErrorContext))
+						if (!fp_DoesValueConformToType(_Context, SpecificType.m_Type.f_Get(), _TypePosition, ElementValue, _Flags, _Namespace, o_pError, _pGetErrorContext))
 							return false;
 
 						++iElement;
@@ -1412,14 +1501,14 @@ namespace NMib::NBuildSystem
 								if (o_pError)
 								{
 									CTypeConformError Error;
-									if (fp_DoesValueConformToType(_Context, Type, _TypePosition, Value, _Flags, &Error, _pGetErrorContext))
+									if (fp_DoesValueConformToType(_Context, Type, _TypePosition, Value, _Flags, _Namespace, &Error, _pGetErrorContext))
 									{
 										o_Value = fg_Move(Value);
 										return true;
 									}
 									ConformErrors.f_Insert(Error);
 								}
-								else if (fp_DoesValueConformToType(_Context, Type, _TypePosition, Value, _Flags, nullptr, _pGetErrorContext))
+								else if (fp_DoesValueConformToType(_Context, Type, _TypePosition, Value, _Flags, _Namespace, nullptr, _pGetErrorContext))
 								{
 									o_Value = fg_Move(Value);
 									return true;
@@ -1431,11 +1520,11 @@ namespace NMib::NBuildSystem
 								if (o_pError)
 								{
 									CTypeConformError Error;
-									if (fp_DoesValueConformToType(_Context, Type, _TypePosition, o_Value, _Flags, &Error, _pGetErrorContext))
+									if (fp_DoesValueConformToType(_Context, Type, _TypePosition, o_Value, _Flags, _Namespace, &Error, _pGetErrorContext))
 										return true;
 									ConformErrors.f_Insert(Error);
 								}
-								else if (fp_DoesValueConformToType(_Context, Type, _TypePosition, o_Value, _Flags, nullptr, _pGetErrorContext))
+								else if (fp_DoesValueConformToType(_Context, Type, _TypePosition, o_Value, _Flags, _Namespace, nullptr, _pGetErrorContext))
 									return true;
 							}
 						}
@@ -1469,7 +1558,7 @@ namespace NMib::NBuildSystem
 					if (o_pError)
 						o_pError->m_ErrorPath.f_Insert("{}"_f << SpecificType);
 
-					if (!fp_DoesValueConformToType(_Context, SpecificType.m_Return.f_Get(), _TypePosition, o_Value, _Flags, o_pError, _pGetErrorContext))
+					if (!fp_DoesValueConformToType(_Context, SpecificType.m_Return.f_Get(), _TypePosition, o_Value, _Flags, _Namespace, o_pError, _pGetErrorContext))
 						return false;
 
 					if (o_pError)
@@ -1587,10 +1676,10 @@ namespace NMib::NBuildSystem
 			}
 		}
 
-		if (!fp_DoesValueConformToType(_Context, _Type, *pTypePosition, o_Value, _Flags | EDoesValueConformToTypeFlag_CanApplyDefault, nullptr, &_fGetErrorContext))
+		if (!fp_DoesValueConformToType(_Context, _Type, *pTypePosition, o_Value, _Flags | EDoesValueConformToTypeFlag_CanApplyDefault, {}, nullptr, &_fGetErrorContext))
 		{
 			CTypeConformError Error;
-			fp_DoesValueConformToType(_Context, _Type, *pTypePosition, o_Value, _Flags | EDoesValueConformToTypeFlag_CanApplyDefault, &Error);
+			fp_DoesValueConformToType(_Context, _Type, *pTypePosition, o_Value, _Flags | EDoesValueConformToTypeFlag_CanApplyDefault, {}, &Error);
 
 			if (pCanonicalType->m_Type.f_IsOfType<CBuildSystemSyntax::CFunctionType>())
 			{

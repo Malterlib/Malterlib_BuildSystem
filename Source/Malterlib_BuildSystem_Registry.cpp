@@ -158,6 +158,12 @@ namespace NMib::NContainer
 	{
 		o_bWasEscaped = false;
 
+		if (o_ParseContext.m_bParsingNamespace)
+		{
+			auto ParseLocation = o_ParseContext.f_GetLocation((ch8 const *)o_pParse);
+			DMibError(NStr::CStr::CFormat("{}You need to specify name for namespace") << o_ParseContext.f_FormatLocation(ParseLocation));
+		}
+
 		uch8 const *pParse = (uch8 const *)(o_pParse);
 
 		auto fParseValue = [&]() -> NEncoding::CJSONSorted
@@ -212,7 +218,21 @@ namespace NMib::NContainer
 			}
 		;
 
-		if (pParse[0] == '!' && pParse[1] == '!')
+		if (fg_StrStartsWith(pParse, gc_ConstString_namespace.m_String) && fg_CharIsWhiteSpaceNoLines(pParse[9]))
+		{
+			pParse += 9;
+			CEJSONSorted Temp;
+			auto &UserType = Temp.f_UserType();
+			UserType.m_Type = gc_ConstString_BuildSystemToken;
+
+			auto &Object = UserType.m_Value.f_Object();
+			Object[gc_ConstString_Type] = gc_ConstString_Namespace;
+
+			o_Key = NBuildSystem::CBuildSystemSyntax::CRootKey::fs_FromJson(o_ParseContext.m_StringCache, Temp, _Location);
+
+			o_ParseContext.m_bParsingNamespace = true;
+		}
+		else if (pParse[0] == '!' && pParse[1] == '!')
 		{
 			pParse += 2;
 			fParsePrefixOperator(gc_ConstString_Symbol_LogicalNotNot);
@@ -275,12 +295,14 @@ namespace NMib::NContainer
 		if (!Context.m_pStartParse)
 			Context.m_pStartParse = pParse;
 		Context.m_FileName = o_ParseContext.m_File;
+		Context.m_bParsingNamespace = o_ParseContext.m_bParsingNamespace;
 
 		NEncoding::NJSON::fg_ParseJSONValue(Output, pParse, Context);
 
 		auto ParseLocation = o_ParseContext.f_GetLocation(o_pParse);
 
 		o_pParse = (ch8 const *)(pParse);
+		o_ParseContext.m_bParsingNamespace = Context.m_bParsingNamespace;
 
 		return NBuildSystem::CBuildSystemSyntax::CRootValue::fs_FromJson(o_ParseContext.m_StringCache, NEncoding::CEJSONSorted::fs_FromJson(fg_Move(Output)), ParseLocation, true);
 	}

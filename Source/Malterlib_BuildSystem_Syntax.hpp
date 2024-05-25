@@ -633,4 +633,10 @@ namespace NMib::NBuildSystem
 		}
 		o_Str += typename tf_CStr::CFormat("{}") << m_Right;
 	}
+
+	template <typename tf_CStr>
+	void CBuildSystemSyntax::CNamespace::f_Format(tf_CStr &o_Str) const
+	{
+		o_Str += gc_ConstString_namespace.m_String;
+	}
 }

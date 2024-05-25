@@ -219,6 +219,41 @@ namespace NMib::NBuildSystem
 		return fs_FromJson(o_StringCache, CKeyPrefixOperator::fs_TypeFromJson(_JSON, _Position), _JSON, _Position);
 	}
 
+	NEncoding::CEJSONSorted CBuildSystemSyntax::CNamespace::f_ToJson() const
+	{
+		CEJSONSorted Return;
+		auto &UserType = Return.f_UserType();
+		UserType.m_Type = gc_ConstString_BuildSystemToken;
+
+		auto &Object = UserType.m_Value.f_Object();
+		Object[gc_ConstString_Type] = gc_ConstString_Namespace;
+
+		return Return;
+	}
+
+	CBuildSystemSyntax::CNamespace CBuildSystemSyntax::CNamespace::fs_FromJson
+		(
+			CStringCache &o_StringCache
+			, NEncoding::CEJSONSorted const &_JSON
+			, CFilePosition const &_Position
+		)
+	{
+		auto &UserType = _JSON.f_UserType();
+		DMibRequire(UserType.m_Type == gc_ConstString_BuildSystemToken.m_String);
+
+		auto &Value = UserType.m_Value;
+		auto *pType = Value.f_GetMember(gc_ConstString_Type);
+		if (!pType)
+			CBuildSystem::fs_ThrowError(_Position, "Missing Type member for Namespace token");
+
+		auto &Type = pType->f_String();
+
+		if (Type != gc_ConstString_Namespace.m_String)
+			CBuildSystem::fs_ThrowError(_Position, "'{}' is not a valid type for Namespace"_f << Type);
+
+		return {};
+	}
+
 	bool CBuildSystemSyntax::CParam::f_IsBinaryOperator() const
 	{
 		if (m_Param.f_IsOfType<NStorage::TCIndirection<CBinaryOperator>>())
