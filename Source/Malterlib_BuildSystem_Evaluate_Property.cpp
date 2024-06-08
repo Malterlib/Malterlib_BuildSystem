@@ -40,6 +40,21 @@ namespace NMib::NBuildSystem
 		return mp_bApplyRepoPolicyCreateMissing;
 	}
 
+	bool CBuildSystem::f_UpdateLfsReleaseIndexes() const
+	{
+		return mp_bUpdateLfsReleaseIndexes;
+	}
+
+	bool CBuildSystem::f_UpdateLfsReleaseIndexesPretend() const
+	{
+		return mp_bUpdateLfsReleaseIndexesPretend;
+	}
+
+	bool CBuildSystem::f_UpdateLfsReleaseIndexesPruneOrphanedAssets() const
+	{
+		return mp_bUpdateLfsReleaseIndexesPruneOrphanedAssets;
+	}
+
 	CStringCache &CBuildSystem::f_StringCache() const
 	{
 		return mp_StringCache;

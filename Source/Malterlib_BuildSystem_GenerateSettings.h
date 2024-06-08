@@ -68,5 +68,8 @@ namespace NMib::NBuildSystem
 		bool m_bApplyRepoPolicy = false;
 		bool m_bApplyRepoPolicyPretend = true;
 		bool m_bApplyRepoPolicyCreateMissing = true;
+		bool m_bUpdateLfsReleaseIndexes = false;
+		bool m_bUpdateLfsReleaseIndexesPretend = false;
+		bool m_bUpdateLfsReleaseIndexesPruneOrphanedAssets = false;
 	};
 }

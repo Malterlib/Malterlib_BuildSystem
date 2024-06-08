@@ -3,10 +3,12 @@
 
 #include "Malterlib_BuildSystem.h"
 #include "Malterlib_BuildSystem_Repository.h"
+
+#include <Mib/Concurrency/AsyncDestroy>
+#include <Mib/Encoding/EJSON>
+#include <Mib/Git/LfsReleaseStore>
 #include <Mib/Process/ProcessLaunch>
 #include <Mib/Process/ProcessLaunchActor>
-#include <Mib/Encoding/EJSON>
-#include <Mib/Concurrency/AsyncDestroy>
 
 CStr fg_ReconcileHelp(EAnsiEncodingFlag _AnsiFlags)
 {
@@ -740,6 +742,46 @@ namespace NMib::NBuildSystem
 							Flags |= EApplyPolicyFlag::mc_CreateMissing;
 
 						co_await fg_ApplyPolicies(Remote.m_URL, Location, Remote.m_Policy, Flags, fOutputInfo);
+					}
+				}
+
+				if (_BuildSystem.f_UpdateLfsReleaseIndexes())
+				{
+					for (auto iRemote = WantedRemotes.f_GetIterator(); iRemote; ++iRemote)
+					{
+						auto &RemoteName = iRemote.f_GetKey();
+						auto &Remote = *iRemote;
+	
+						if (!Remote.m_bLfsReleaseStore)
+							continue;
+
+						{
+							TCActor<NGit::CLfsReleaseStoreService> LfsService = fg_Construct(nullptr, Location);
+
+							auto Destroy = co_await fg_AsyncDestroy(LfsService);
+
+							NGit::CLfsReleaseStoreService::EUpdateReleaseIndexOption Options = NGit::CLfsReleaseStoreService::EUpdateReleaseIndexOption::mc_None;
+
+							if (_BuildSystem.f_UpdateLfsReleaseIndexesPretend())
+								Options |= NGit::CLfsReleaseStoreService::EUpdateReleaseIndexOption::mc_Pretend;
+
+							if (_BuildSystem.f_UpdateLfsReleaseIndexesPruneOrphanedAssets())
+								Options |= NGit::CLfsReleaseStoreService::EUpdateReleaseIndexOption::mc_PruneOrphanedAssets;
+
+							co_await LfsService
+								(
+									&NGit::CLfsReleaseStoreService::f_UpdateReleaseIndex
+									, RemoteName
+									, Options
+									, [fOutputInfo](NStr::CStr const &_Output)
+									{
+										fOutputInfo(EOutputType_Normal, _Output.f_TrimRight());
+									}
+								)
+							;
+						}
+
+						co_await g_AsyncDestroy;
 					}
 				}
 

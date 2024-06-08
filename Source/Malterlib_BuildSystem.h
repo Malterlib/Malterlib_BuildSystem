@@ -537,6 +537,9 @@ namespace NMib::NBuildSystem
 		bool f_ApplyRepoPolicy() const;
 		bool f_ApplyRepoPolicyPretend() const;
 		bool f_ApplyRepoPolicyCreateMissing() const;
+		bool f_UpdateLfsReleaseIndexes() const;
+		bool f_UpdateLfsReleaseIndexesPretend() const;
+		bool f_UpdateLfsReleaseIndexesPruneOrphanedAssets() const;
 
 		CStringCache &f_StringCache() const;
 
@@ -1018,6 +1021,9 @@ namespace NMib::NBuildSystem
 		bool mp_bApplyRepoPolicy = false;
 		bool mp_bApplyRepoPolicyPretend = true;
 		bool mp_bApplyRepoPolicyCreateMissing = false;
+		bool mp_bUpdateLfsReleaseIndexes = false;
+		bool mp_bUpdateLfsReleaseIndexesPretend = false;
+		bool mp_bUpdateLfsReleaseIndexesPruneOrphanedAssets = false;
 
 		align_cacheline mutable NThread::CMutualManyRead mp_SourceFilesLock;
 		mutable NContainer::TCSet<NStr::CStr> mp_SourceFiles;

@@ -102,6 +102,9 @@ namespace NMib::NBuildSystem
 		mp_bApplyRepoPolicy = _GenerateOptions.m_bApplyRepoPolicy;
 		mp_bApplyRepoPolicyPretend = _GenerateOptions.m_bApplyRepoPolicyPretend;
 		mp_bApplyRepoPolicyCreateMissing = _GenerateOptions.m_bApplyRepoPolicyCreateMissing;
+		mp_bUpdateLfsReleaseIndexes = _GenerateOptions.m_bUpdateLfsReleaseIndexes;
+		mp_bUpdateLfsReleaseIndexesPretend = _GenerateOptions.m_bUpdateLfsReleaseIndexesPretend;
+		mp_bUpdateLfsReleaseIndexesPruneOrphanedAssets = _GenerateOptions.m_bUpdateLfsReleaseIndexesPruneOrphanedAssets;
 
 		mp_bSingleThreaded = (GenerateSettings.m_GenerationFlags & EGenerationFlag_SingleThreaded) != 0;
 

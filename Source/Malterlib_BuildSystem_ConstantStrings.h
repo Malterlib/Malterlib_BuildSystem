@@ -482,6 +482,9 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_ApplyRepoPolicy;
 	extern CStringAndHash const gc_ConstString_ApplyRepoPolicyPretend;
 	extern CStringAndHash const gc_ConstString_ApplyRepoPolicyCreateMissing;
+	extern CStringAndHash const gc_ConstString_UpdateLfsReleaseIndexes;
+	extern CStringAndHash const gc_ConstString_UpdateLfsReleaseIndexesPretend;
+	extern CStringAndHash const gc_ConstString_UpdateLfsReleaseIndexesPruneOrphanedAssets;
 
 	extern CStringAndHash const gc_ConstString_Symbol_Inherit;
 

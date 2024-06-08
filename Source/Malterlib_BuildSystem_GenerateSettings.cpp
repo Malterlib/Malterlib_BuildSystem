@@ -37,6 +37,15 @@ namespace NMib::NBuildSystem
 		if (auto *pValue = _Params.f_GetMember(gc_ConstString_ApplyRepoPolicyCreateMissing))
 			m_bApplyRepoPolicyCreateMissing = pValue->f_Boolean();
 
+		if (auto *pValue = _Params.f_GetMember(gc_ConstString_UpdateLfsReleaseIndexes))
+			m_bUpdateLfsReleaseIndexes = pValue->f_Boolean();
+
+		if (auto *pValue = _Params.f_GetMember(gc_ConstString_UpdateLfsReleaseIndexesPretend))
+			m_bUpdateLfsReleaseIndexesPretend = pValue->f_Boolean();
+
+		if (auto *pValue = _Params.f_GetMember(gc_ConstString_UpdateLfsReleaseIndexesPruneOrphanedAssets))
+			m_bUpdateLfsReleaseIndexesPruneOrphanedAssets = pValue->f_Boolean();
+
 		for (auto &RepoOptions : _Params[gc_ConstString_Reconcile].f_String().f_Split<true>(","))
 		{
 			CStr WildCard;
