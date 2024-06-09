@@ -9,7 +9,7 @@ namespace NMib::NBuildSystem
 	CBuildSystemPreprocessor::CBuildSystemPreprocessor
 		(
 			CBuildSystemRegistry &_ResultRegistry
-			, TCSet<CStr> &_SourceFiles
+			, TCMap<CStr, TCSharedPointer<CHashDigest_SHA256>> &_SourceFiles
 			, CFindCache const &_FindCache
 			, TCMap<CStr, CStr> const &_Environment
 			, CStringCache &_StringCache
@@ -63,7 +63,7 @@ namespace NMib::NBuildSystem
 			{
 				if (CFile::fs_FileExists(FullPath, EFileAttrib_File))
 				{
-					mp_FindCache.f_AddSourceFile(FullPath);
+					mp_FindCache.f_AddSourceFile(FullPath, nullptr);
 					o_Files.f_Insert(FullPath);
 				}
 			}

@@ -32,7 +32,7 @@ namespace NMib::NBuildSystem
 		NContainer::TCMap<NStr::CStr, CConfigurationType> m_ConfigurationTypes;
 		CEntity m_RootEntity{nullptr};
 
-		NContainer::TCSet<NStr::CStr> m_MutableSourceFiles;
+		NContainer::TCMap<NStr::CStr, NStorage::TCSharedPointer<NCryptography::CHashDigest_SHA256>> m_MutableSourceFiles;
 
 		struct CImportData
 		{

@@ -464,6 +464,7 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString__ValueName;
 	extern CStringAndHash const gc_ConstString__WildcardToSearchFor;
 	extern CStringAndHash const gc_ConstString__bFile;
+	extern CStringAndHash const gc_ConstString__bByDigest;
 	extern CStringAndHash const gc_ConstString_auto;
 	extern CStringAndHash const gc_ConstString_bash;
 	extern CStringAndHash const gc_ConstString_delete;

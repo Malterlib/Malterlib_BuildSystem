@@ -31,6 +31,49 @@ namespace NMib::NBuildSystem
 				return true;
 			}
 		}
+		else if (m_Flags & EGeneratedFileFlag_ByDigest)
+		{
+			try
+			{
+				if (!m_pDigest)
+				{
+					if (!o_bChanged.f_Exchange(true))
+						_BuildSystem.f_OutputConsole("Dependency check: Regenerating build system because digest was missing: {}{\n}"_f << FileName);
+					return true;
+				}
+				else
+				{
+					auto pDigest = _BuildSystem.f_ReadFileDigest(FileName);
+					if (*pDigest != *m_pDigest)
+					{
+						if (!o_bChanged.f_Exchange(true))
+						{
+							_BuildSystem.f_OutputConsole
+								(
+									"Dependency check: Regenerating build system because file digest changed ({} != {}): {}{\n}"_f
+									<< *pDigest
+									<< *m_pDigest
+									<< FileName
+								)
+							;
+						}
+						return true;
+					}
+				}
+			}
+			catch (CException const &_Exception)
+			{
+				if (!o_bChanged.f_Exchange(true))
+					_BuildSystem.f_OutputConsole("Dependency check: Regenerating build system because file digest check failed: {}{\n}{}{\n}"_f << FileName << _Exception);
+				return true;
+			}
+			catch (...)
+			{
+				if (!o_bChanged.f_Exchange(true))
+					_BuildSystem.f_OutputConsole("Dependency check: Regenerating build system because file is missing: {}{\n}"_f << FileName);
+				return true;
+			}
+		}
 		else
 		{
 #ifdef DPlatformFamily_Windows

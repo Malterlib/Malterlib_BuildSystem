@@ -194,6 +194,12 @@ namespace NMib::NBuildSystem
 			bool m_bEnabled = false;
 		};
 
+		struct CFileWithDigest
+		{
+			NStr::CStr m_Contents;
+			NStorage::TCSharedPointer<NCryptography::CHashDigest_SHA256> m_pDigest;
+		};
+
 		void f_SetGeneratorInterface(ICGeneratorInterface *_pInterface) const;
 		NConcurrency::TCFuture<void> f_GenerateBuildSystem
 			(
@@ -232,7 +238,7 @@ namespace NMib::NBuildSystem
 		void f_PopulateTargetAllFiles(CEntity &o_Target) const;
 		bool f_WriteFile(NContainer::CByteVector const &_FileData, NStr::CStr const &_File, NFile::EFileAttrib _AddAttribs = NFile::EFileAttrib_None) const;
 		void f_SetFileChanged(NStr::CStr const &_File) const;
-		NContainer::TCSet<NStr::CStr> f_GetSourceFiles() const;
+		NContainer::TCMap<NStr::CStr, NStorage::TCSharedPointer<NCryptography::CHashDigest_SHA256>> f_GetSourceFiles() const;
 		CEntity const *f_EvaluateData
 			(
 				CBuildSystemData &_Destination
@@ -387,8 +393,10 @@ namespace NMib::NBuildSystem
 			)
 		;
 		static NStr::CStr fs_GetNameIdentifierString(CBuildSystemRegistry const &_Registry);
-		void f_AddSourceFile(NStr::CStr const &_File) const;
+		void f_AddSourceFile(NStr::CStr const &_File, NStorage::TCSharedPointer<NCryptography::CHashDigest_SHA256> &&_pDigest) const;
 		NStr::CStr f_ReadFile(NStr::CStr const &_File) const;
+		CFileWithDigest f_ReadFileWithDigest(NStr::CStr const &_File) const;
+		NStorage::TCSharedPointer<NCryptography::CHashDigest_SHA256> f_ReadFileDigest(NStr::CStr const &_File) const;
 		void f_CheckPropertyTypeValue
 			(
 				CPropertyKeyReference const &_PropertyKey
@@ -988,6 +996,7 @@ namespace NMib::NBuildSystem
 		{
 			NThread::CLowLevelLock m_Lock;
 			NStr::CStr m_Contents;
+			NStorage::TCSharedPointer<NCryptography::CHashDigest_SHA256> m_pDigest;
 			bool m_bRead = false;
 		};
 
@@ -1026,7 +1035,7 @@ namespace NMib::NBuildSystem
 		bool mp_bUpdateLfsReleaseIndexesPruneOrphanedAssets = false;
 
 		align_cacheline mutable NThread::CMutualManyRead mp_SourceFilesLock;
-		mutable NContainer::TCSet<NStr::CStr> mp_SourceFiles;
+		mutable NContainer::TCMap<NStr::CStr, NStorage::TCSharedPointer<NCryptography::CHashDigest_SHA256>> mp_SourceFiles;
 		CFindCache mp_FindCache;
 		CBuildSystemRegistry mp_Registry;
 

@@ -16,6 +16,8 @@ namespace NMib::NBuildSystem
 		_Stream << m_WriteTime;
 		_Stream << m_Workspaces;
 		_Stream << m_Flags;
+		if (m_Flags & EGeneratedFileFlag_ByDigest)
+			_Stream << *m_pDigest;
 	}
 
 	template <typename tf_CStream>
@@ -24,6 +26,11 @@ namespace NMib::NBuildSystem
 		_Stream >> m_WriteTime;
 		_Stream >> m_Workspaces;
 		_Stream >> m_Flags;
+		if (m_Flags & EGeneratedFileFlag_ByDigest)
+		{
+			m_pDigest = fg_Construct();
+			_Stream >> *m_pDigest;
+		}
 	}
 	
 	template <typename tf_CStream>

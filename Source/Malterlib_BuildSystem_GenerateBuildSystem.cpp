@@ -928,7 +928,7 @@ namespace NMib::NBuildSystem
 		) const
 	{
 		{
-			NContainer::TCSet<NStr::CStr> SourceFiles;
+			NContainer::TCMap<NStr::CStr, TCSharedPointer<CHashDigest_SHA256>> SourceFiles;
 			{
 				DMibLockRead(mp_SourceFilesLock);
 				SourceFiles = mp_SourceFiles;

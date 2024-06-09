@@ -102,13 +102,13 @@ namespace NMib::NBuildSystem
 		return pEntry->m_FoundFiles;
 	}
 	
-	void CFindCache::f_AddSourceFile(CStr const &_FileName) const
+	void CFindCache::f_AddSourceFile(CStr const &_FileName, TCSharedPointer<CHashDigest_SHA256> &&_pDigest) const
 	{
 		DLock(mp_SourceFilesLock);
-		mp_SourceFiles[_FileName];
+		mp_SourceFiles[_FileName] = fg_Move(_pDigest);
 	}
 	
-	TCSet<CStr> CFindCache::f_GetSourceFiles() const
+	TCMap<CStr, TCSharedPointer<CHashDigest_SHA256>> CFindCache::f_GetSourceFiles() const
 	{
 		DLock(mp_SourceFilesLock);
 		return mp_SourceFiles;

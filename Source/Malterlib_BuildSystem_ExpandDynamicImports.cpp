@@ -141,7 +141,7 @@ namespace NMib::NBuildSystem
 
 				CStr Dependencies = CFile::fs_ReadStringFromFile(fg_Format("{}/{}.MHeader.dependencies", _Directory, Project), true);
 
-				TCSet<CStr> SourceFileToAdd;
+				TCMap<CStr, TCSharedPointer<CHashDigest_SHA256>> SourceFileToAdd;
 				ch8 const *pParse = Dependencies.f_GetStr();
 				while (*pParse)
 				{
@@ -153,7 +153,7 @@ namespace NMib::NBuildSystem
 
 				{
 					DMibLock(mp_SourceFilesLock);
-					mp_SourceFiles += SourceFileToAdd;
+					mp_SourceFiles += fg_Move(SourceFileToAdd);
 				}
 			}
 		}

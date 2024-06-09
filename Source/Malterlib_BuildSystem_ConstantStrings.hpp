@@ -464,6 +464,7 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString__ValueName = gc_Str<"_ValueName">;
 	constexpr CStringAndHash const gc_ConstString__WildcardToSearchFor = gc_Str<"_WildcardToSearchFor">;
 	constexpr CStringAndHash const gc_ConstString__bFile = gc_Str<"_bFile">;
+	constexpr CStringAndHash const gc_ConstString__bByDigest = gc_Str<"_bByDigest">;
 	constexpr CStringAndHash const gc_ConstString_auto = gc_Str<"auto">;
 	constexpr CStringAndHash const gc_ConstString_bash = gc_Str<"bash">;
 	constexpr CStringAndHash const gc_ConstString_delete = gc_Str<"delete">;
@@ -952,6 +953,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString__ValueName);
 		o_StringCache.f_AddConstantString(gc_ConstString__WildcardToSearchFor);
 		o_StringCache.f_AddConstantString(gc_ConstString__bFile);
+		o_StringCache.f_AddConstantString(gc_ConstString__bByDigest);
 		o_StringCache.f_AddConstantString(gc_ConstString_auto);
 		o_StringCache.f_AddConstantString(gc_ConstString_bash);
 		o_StringCache.f_AddConstantString(gc_ConstString_delete);

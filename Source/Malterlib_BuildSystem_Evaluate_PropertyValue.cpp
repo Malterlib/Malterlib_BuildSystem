@@ -1902,8 +1902,8 @@ namespace NMib::NBuildSystem
 				TCVector<CEJSONSorted> Ret;
 				{
 					DMibLockRead(mp_SourceFilesLock);
-					for (auto iFile = mp_SourceFiles.f_GetIterator(); iFile; ++iFile)
-						Ret.f_Insert(*iFile);
+					for (auto &File : mp_SourceFiles.f_Keys())
+						Ret.f_Insert(File);
 				}
 
 				if (_Context.m_pStorePositions)

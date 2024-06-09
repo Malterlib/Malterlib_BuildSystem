@@ -776,7 +776,7 @@ namespace NMib::NBuildSystem
 						{
 							if (CFile::fs_FileExists(FindOptions.m_Path, Attribs))
 							{
-								mp_FindCache.f_AddSourceFile(FindOptions.m_Path);
+								mp_FindCache.f_AddSourceFile(FindOptions.m_Path, nullptr);
 								Files.f_Insert(FindOptions.m_Path);
 							}
 						}

@@ -107,10 +107,10 @@ namespace NMib::NBuildSystem
 								{
 									DMibLockRead(_This.mp_SourceFilesLock);
 
-									for (auto iFile = _This.mp_SourceFiles.f_GetIterator(); iFile; ++iFile)
+									for (auto &File : _This.mp_SourceFiles.f_Keys())
 									{
-										if (NStr::fg_StrMatchWildcard(iFile->f_GetStr(), Wildcard.f_GetStr()) == NStr::EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
-											Return.f_Insert(*iFile);
+										if (NStr::fg_StrMatchWildcard(File.f_GetStr(), Wildcard.f_GetStr()) == NStr::EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
+											Return.f_Insert(File);
 									}
 								}
 
@@ -124,13 +124,27 @@ namespace NMib::NBuildSystem
 						gc_ConstKey_Builtin_ReadFile.m_Name
 						, CBuiltinFunction
 						{
-							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__FileName))
+							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__FileName), fg_FunctionParam(fg_Optional(g_Boolean), gc_ConstString__bByDigest, g_Optional))
 							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
 							{
 								CStr FileName = _Params[0].f_String();
 
-								CStr Ret = _This.f_ReadFile(FileName);
-								_This.f_AddSourceFile(FileName);
+								bool bByDigest = false;
+								if (_Params.f_GetLen() > 1 && _Params[1].f_IsValid())
+									bByDigest = _Params[1].f_Boolean();
+
+								CStr Ret;
+								if (bByDigest)
+								{
+									auto FileWithDigest = _This.f_ReadFileWithDigest(FileName);
+									Ret = FileWithDigest.m_Contents;
+									_This.f_AddSourceFile(FileName, fg_Move(FileWithDigest.m_pDigest));
+								}
+								else
+								{
+									Ret = _This.f_ReadFile(FileName);
+									_This.f_AddSourceFile(FileName, nullptr);
+								}
 
 								return fg_Move(Ret);
 							}

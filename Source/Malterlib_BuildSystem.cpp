@@ -78,10 +78,64 @@ namespace NMib::NBuildSystem
 		return mp_AnsiFlags;
 	}
 
-	TCSet<CStr> CBuildSystem::f_GetSourceFiles() const
+	TCMap<CStr, TCSharedPointer<CHashDigest_SHA256>> CBuildSystem::f_GetSourceFiles() const
 	{
 		DMibLockRead(mp_SourceFilesLock);
 		return mp_SourceFiles;
+	}
+
+	TCSharedPointer<CHashDigest_SHA256> CBuildSystem::f_ReadFileDigest(NStr::CStr const &_File) const
+	{
+		CCachedFile *pCachedFile;
+		{
+			DMibLock(mp_CachedFilesLock);
+			pCachedFile = &mp_CachedFiles[_File];
+		}		
+
+		DMibLock(pCachedFile->m_Lock);
+
+		if (!pCachedFile->m_pDigest)
+		{
+			TCBinaryStreamFile<> Stream;
+			Stream.f_Open(_File, EFileOpen_Read | EFileOpen_ShareAll);
+			pCachedFile->m_pDigest = fg_Construct(CHash_SHA256::fs_DigestFromStream(Stream));
+		}
+
+		return pCachedFile->m_pDigest;
+	}
+
+	auto CBuildSystem::f_ReadFileWithDigest(NStr::CStr const &_File) const -> CFileWithDigest
+	{
+		CCachedFile *pCachedFile;
+		{
+			DMibLock(mp_CachedFilesLock);
+			pCachedFile = &mp_CachedFiles[_File];
+		}		
+
+		DMibLock(pCachedFile->m_Lock);
+		if (!pCachedFile->m_bRead)
+		{
+			auto FileContents = CFile::fs_ReadFile(_File);
+			pCachedFile->m_Contents = CFile::fs_ReadStringFromVector(FileContents, true);
+
+			if (!pCachedFile->m_pDigest)
+				pCachedFile->m_pDigest = fg_Construct(CHash_SHA256::fs_DigestFromData(FileContents));
+			
+			pCachedFile->m_bRead = true;
+		}
+		else if (!pCachedFile->m_pDigest)
+		{
+			TCBinaryStreamFile<> Stream;
+			Stream.f_Open(_File, EFileOpen_Read | EFileOpen_ShareAll);
+			pCachedFile->m_pDigest = fg_Construct(CHash_SHA256::fs_DigestFromStream(Stream));
+		}
+
+		return CFileWithDigest
+			{
+				.m_Contents = pCachedFile->m_Contents
+				, .m_pDigest = pCachedFile->m_pDigest
+			}
+		;
 	}
 
 	NStr::CStr CBuildSystem::f_ReadFile(NStr::CStr const &_File) const
@@ -102,10 +156,10 @@ namespace NMib::NBuildSystem
 		return pCachedFile->m_Contents;
 	}
 
-	void CBuildSystem::f_AddSourceFile(CStr const &_File) const
+	void CBuildSystem::f_AddSourceFile(CStr const &_File, TCSharedPointer<CHashDigest_SHA256> &&_pDigest) const
 	{
 		DMibLock(mp_SourceFilesLock);
-		mp_SourceFiles[_File];
+		mp_SourceFiles[_File] = fg_Move(_pDigest);
 	}
 
 	bool CBuildSystem::f_AddGeneratedFile(CStr const &_File, CStr const &_Data, CStr const &_Workspace, bool &_bWasCreated, EGeneratedFileFlag _Flags) const

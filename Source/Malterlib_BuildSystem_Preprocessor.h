@@ -14,7 +14,7 @@ namespace NMib::NBuildSystem
 		CBuildSystemPreprocessor
 			(
 				CBuildSystemRegistry &_ResultRegistry
-				, TCSet<CStr> &_SourceFiles
+				, TCMap<CStr, TCSharedPointer<CHashDigest_SHA256>> &_SourceFiles
 				, CFindCache const &_FindCache
 				, TCMap<CStr, CStr> const &_Environment
 				, CStringCache &_StringCache
@@ -36,7 +36,7 @@ namespace NMib::NBuildSystem
 		void fpr_FindFilesRecursive(CBuildSystemRegistry &_Registry, TCVector<CStr> &o_Files, CStr const &_Path, CStr const &_ToFind);
 
 		CBuildSystemRegistry &mp_ResultRegistry;
-		TCSet<CStr> &mp_SourceFiles;
+		TCMap<CStr, TCSharedPointer<CHashDigest_SHA256>> &mp_SourceFiles;
 		CFindCache const &mp_FindCache;
 		CStringCache &mp_StringCache;
 		TCMap<CStr, CStr> const &mp_Environment;

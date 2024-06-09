@@ -15,10 +15,24 @@ namespace NMib::NBuildSystem
 			struct CFileState
 			{
 				CTime m_WriteTime;
+				TCSharedPointer<CHashDigest_SHA256> m_pDigest;
+
 				template <typename tf_CStream>
 				void f_Stream(tf_CStream &_Stream)
 				{
 					_Stream % m_WriteTime;
+
+					if (_Stream.f_GetVersion() >= 0x102)
+					{
+						bool bDigest = !!m_pDigest;
+						_Stream % bDigest;
+						if (bDigest)
+						{
+							if (!m_pDigest)
+								m_pDigest = fg_Construct();
+							_Stream % *m_pDigest;
+						}
+					}
 				}
 			};
 
@@ -28,18 +42,23 @@ namespace NMib::NBuildSystem
 			template <typename tf_CStream>
 			void f_Stream(tf_CStream &_Stream)
 			{
-				uint32 Version = 0x101;
+				uint32 Version = 0x102;
 				_Stream % Version;
-				if (Version < 0x101)
+				if (Version < 0x101 || Version > 0x102)
 					DMibError("Invalid CExecuteCommandState version");
+
+				DBinaryStreamVersion(_Stream, Version);
+
 				_Stream % m_States;
 				_Stream % m_Parameters;
 			}
 
-			void f_AddFile(CStr const &_FileName)
+			void f_AddFile(CStr const &_FileName, TCSharedPointer<CHashDigest_SHA256> &&_pDigest)
 			{
 				auto &State = m_States[_FileName];
 				State.m_WriteTime = CFile::fs_GetWriteTime(_FileName);
+
+				State.m_pDigest = fg_Move(_pDigest);
 			}
 		};
 	}
@@ -63,6 +82,8 @@ namespace NMib::NBuildSystem
 							)
 							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
 							{
+								constexpr static auto c_ByDigest = gc_Str<"ByDigest:">.m_Str;
+
 								auto const &GenerateStateFile = _Params[0].f_String();
 
 								if (GenerateStateFile.f_IsEmpty())
@@ -115,8 +136,21 @@ namespace NMib::NBuildSystem
 										Stream >> State;
 
 										bool bAllValid = true;
+										bool bByDigest = false;
 										for (auto &Input : Inputs)
 										{
+											if (Input == c_ByDigest)
+											{
+												bByDigest = true;
+												continue;
+											}
+
+											auto Cleanup = g_OnScopeExit / [&]
+												{
+													bByDigest = false;
+												}
+											;
+
 											auto *pState = State.m_States.f_FindEqual(Input);
 											if (!pState)
 											{
@@ -124,17 +158,62 @@ namespace NMib::NBuildSystem
 												break;
 											}
 
-											if (pState->m_WriteTime != CFile::fs_GetWriteTime(Input))
+											if (bByDigest)
 											{
-												bAllValid = false;
-												break;
+												if (!pState->m_pDigest)
+												{
+													bAllValid = false;
+													break;
+												}
+
+												auto pDigest = _This.f_ReadFileDigest(Input);
+
+												if (*pState->m_pDigest != *pDigest)
+												{
+													bAllValid = false;
+													break;
+												}
+											}
+											else
+											{
+												if (pState->m_pDigest)
+												{
+													bAllValid = false;
+													break;
+												}
+
+												if (pState->m_WriteTime != CFile::fs_GetWriteTime(Input))
+												{
+													bAllValid = false;
+													break;
+												}
 											}
 										}
 
 										if (bAllValid && FunctionParams == State.m_Parameters)
 										{
+											bool bByDigest = false;
 											for (auto &Input : Inputs)
-												_This.f_AddSourceFile(Input);
+											{
+												if (Input == c_ByDigest)
+												{
+													bByDigest = true;
+													continue;
+												}
+
+												auto Cleanup = g_OnScopeExit / [&]
+													{
+														bByDigest = false;
+													}
+												;
+
+												auto *pState = State.m_States.f_FindEqual(Input);
+												DMibFastCheck(pState);
+												if (!pState)
+													continue;
+
+												_This.f_AddSourceFile(Input, bByDigest ? fg_Move(pState->m_pDigest) : nullptr);
+											}
 
 											Stream >> Ret;
 
@@ -163,10 +242,32 @@ namespace NMib::NBuildSystem
 								}
 
 								CExecuteCommandState State;
+								bool bByDigest = false;
 								for (auto &Input : Inputs)
 								{
-									_This.f_AddSourceFile(Input);
-									State.f_AddFile(Input);
+									if (Input == c_ByDigest)
+									{
+										bByDigest = true;
+										continue;
+									}
+
+									auto Cleanup = g_OnScopeExit / [&]
+										{
+											bByDigest = false;
+										}
+									;
+
+									if (bByDigest)
+									{
+										auto pDigest = _This.f_ReadFileDigest(Input);
+										_This.f_AddSourceFile(Input, fg_TempCopy(pDigest));
+										State.f_AddFile(Input, fg_Move(pDigest));
+									}
+									else
+									{
+										_This.f_AddSourceFile(Input, nullptr);
+										State.f_AddFile(Input, nullptr);
+									}
 								}
 
 								State.m_Parameters = FunctionParams;

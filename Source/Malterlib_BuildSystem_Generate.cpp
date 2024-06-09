@@ -721,14 +721,23 @@ namespace NMib::NBuildSystem
 
 		{
 			CGeneratorArchiveState State;
-			auto fUpdateFileInfo
-				= [&](TCMap<CStr, CGeneratorArchiveState::CProcessedFile> &_Files, CStr const &_FileName) -> CGeneratorArchiveState::CProcessedFile &
+			auto fUpdateFileInfo = [&]
+				(
+					TCMap<CStr, CGeneratorArchiveState::CProcessedFile> &_Files
+					, CStr const &_FileName
+					, TCSharedPointer<CHashDigest_SHA256> const &_pDigest
+				) -> CGeneratorArchiveState::CProcessedFile &
 				{
 					CStr FileName = CFile::fs_MakePathRelative(_FileName, GenerateState.m_OutputDir);
 					auto &ProcessedFile = _Files[FileName];
 					try
 					{
 						ProcessedFile.m_WriteTime = CFile::fs_GetWriteTime(_FileName);
+						if (_pDigest)
+						{
+							ProcessedFile.m_Flags |= EGeneratedFileFlag_ByDigest;
+							ProcessedFile.m_pDigest = _pDigest;
+						}
 					}
 					catch (CExceptionFile const &)
 					{
@@ -737,22 +746,22 @@ namespace NMib::NBuildSystem
 				}
 			;
 
-			fUpdateFileInfo(State.m_ExeFile, CFile::fs_GetProgramPath());
+			fUpdateFileInfo(State.m_ExeFile, CFile::fs_GetProgramPath(), nullptr);
 
 			mint nSourceFiles = 0;
-			for (auto iFile = mp_SourceFiles.f_GetIterator(); iFile; ++iFile)
+			for (auto &File : mp_SourceFiles.f_Entries())
 			{
 				++nSourceFiles;
-				fUpdateFileInfo(State.m_SourceFiles, *iFile);
+				fUpdateFileInfo(State.m_SourceFiles, File.f_Key(), File.f_Value());
 			}
 
 			mint nReferencedFiles = 0;
 			{
 				auto SourceFiles = mp_FindCache.f_GetSourceFiles();
-				for (auto iFile = SourceFiles.f_GetIterator(); iFile; ++iFile)
+				for (auto &File : SourceFiles.f_Entries())
 				{
 					++nReferencedFiles;
-					fUpdateFileInfo(State.m_ReferencedFiles, *iFile).m_Flags |= EGeneratedFileFlag_NoDateCheck;
+					fUpdateFileInfo(State.m_ReferencedFiles, File.f_Key(), File.f_Value()).m_Flags |= EGeneratedFileFlag_NoDateCheck;
 				}
 			}
 

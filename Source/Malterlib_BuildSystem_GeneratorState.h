@@ -14,13 +14,14 @@ namespace NMib::NBuildSystem
 		, EGeneratedFileFlag_NoDateCheck = DMibBit(1)
 		, EGeneratedFileFlag_KeepGeneratedFile = DMibBit(2)
 		, EGeneratedFileFlag_Symlink = DMibBit(3)
+		, EGeneratedFileFlag_ByDigest = DMibBit(4)
 	};
 
 	struct CGeneratorArchiveState
 	{
 		enum 
 		{
-			EFileVersion = 0x121
+			EFileVersion = 0x122
 		};
 
 		struct CProcessedFile
@@ -37,6 +38,7 @@ namespace NMib::NBuildSystem
 
 			NContainer::TCSet<NStr::CStr> m_Workspaces;
 			NTime::CTime m_WriteTime;
+			NStorage::TCSharedPointer<NCryptography::CHashDigest_SHA256> m_pDigest;
 			EGeneratedFileFlag m_Flags = EGeneratedFileFlag_None;
 		};
 		
