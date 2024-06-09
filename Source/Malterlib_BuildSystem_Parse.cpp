@@ -121,7 +121,7 @@ namespace NMib::NBuildSystem
 			}
 
 			for (auto iRemove = ToRemove.f_GetIterator(); iRemove; ++iRemove)
-				delete *iRemove;
+				fg_DeleteObject(NMemory::CDefaultAllocator(), *iRemove);
 		}
 
 		TCSharedPointer<CCondition> pConditions = fg_Construct();
