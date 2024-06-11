@@ -14,3 +14,14 @@ true
 Undef1
 Undef2
 Test 2
+{
+	"Test": [
+		8,
+		6
+	]
+}
+[
+	{
+		"Test": 8
+	}
+]

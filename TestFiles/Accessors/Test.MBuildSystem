@@ -73,6 +73,16 @@
 		TestValueOptionalChaining1: string = (CalcValueAny<TestUndefined?.Undef> || "Undef1")
 		TestValueOptionalChaining2: string = (TestUndefined<?.Undef> || "Undef2")
 		TestValueOptionalChaining3: string = (CalcValueAny<?.TestOptional?.InnerValue> || "Undef2")
+
+		TestArray: {Test: [int]}
+		TestArray {Test: [5, 6]}
+
+		TestArray #<Test.[0]> 8
+
+		TestArrayFirst: [{Test: int}] = [{Test: 5}]
+		TestArrayFirst [{Test: 5}]
+
+		TestArrayFirst #<[0].Test> 8
 	}
 	GenerateFile
 	{
@@ -92,7 +102,10 @@
 					`@(TestValueAny)\n`\
 					`@(TestValueOptionalChaining1)\n`\
 					`@(TestValueOptionalChaining2)\n`\
-					`@(TestValueOptionalChaining3)\n`
+					`@(TestValueOptionalChaining3)\n`\
+					`@(TestArray->ToString())\n`\
+					`@(TestArrayFirst->ToString())\n`
+
 		Executable false
 		UnixLineEnds true
 		UnicodeBOM false
