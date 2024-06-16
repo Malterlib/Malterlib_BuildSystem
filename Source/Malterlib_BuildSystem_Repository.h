@@ -42,6 +42,16 @@ namespace NMib::NBuildSystem::NRepository
 		bool m_bOpenSequential = false;
 	};
 
+	struct CRemoteProperties
+	{
+		CStr m_URL;
+		CStr m_DefaultBranch;
+		CEJSONSorted m_Policy;
+		bool m_bLfsReleaseStore = false;
+		bool m_bApplyPolicy = false;
+		bool m_bApplyPolicyPretend = false;
+	};
+
 	struct CRemote
 	{
 		CStr const &f_Name() const
@@ -49,13 +59,8 @@ namespace NMib::NBuildSystem::NRepository
 			return TCMap<CStr, CRemote>::fs_GetKey(*this);
 		}
 
-		CStr m_URL;
-		CStr m_DefaultBranch;
-		CEJSONSorted m_Policy;
+		CRemoteProperties m_Properties;
 		bool m_bCanPush = true;
-		bool m_bLfsReleaseStore = false;
-		bool m_bApplyPolicy = false;
-		bool m_bApplyPolicyPretend = false;
 	};
 
 	struct CRepository
@@ -82,8 +87,6 @@ namespace NMib::NBuildSystem::NRepository
 		CStr m_Location;
 		CStr m_ConfigFile;
 		CStr m_StateFile;
-		CStr m_URL;
-		CStr m_DefaultBranch;
 		CStr m_DefaultUpstreamBranch;
 		CStr m_SubmoduleName;
 		CStr m_Type;
@@ -94,13 +97,12 @@ namespace NMib::NBuildSystem::NRepository
 		TCSet<CStr> m_ProtectedBranches;
 		TCSet<CStr> m_ProtectedTags;
 		CFilePosition m_Position;
-		CEJSONSorted m_Policy;
+
+		CRemoteProperties m_OriginProperties;
+
 		bool m_bSubmodule = false;
 		bool m_bExcludeFromSeen = false;
 		bool m_bUpdateSubmodules = false;
-		bool m_bLfsReleaseStore = false;
-		bool m_bApplyPolicy = false;
-		bool m_bApplyPolicyPretend = false;
 	};
 
 	struct CReposLocation

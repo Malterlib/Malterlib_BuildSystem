@@ -156,7 +156,7 @@ namespace NMib::NBuildSystem::NRepository
 		CStr HeadRef = CFile::fs_ReadStringFromFile(GitDirectory + "/HEAD", true).f_TrimRight("\n");
 		if (HeadRef.f_StartsWith("ref: "))
 		{
-			if (HeadRef != ("ref: refs/heads/{}"_f << _Repo.m_DefaultBranch).f_GetStr())
+			if (HeadRef != ("ref: refs/heads/{}"_f << _Repo.m_OriginProperties.m_DefaultBranch).f_GetStr())
 				return Promise <<= true;
 		}
 		else
@@ -626,7 +626,7 @@ namespace NMib::NBuildSystem::NRepository
 					auto RepoDoneScope = Launches.f_RepoDoneScope();
 
 					auto Remotes = Repo.m_Remotes;
-					Remotes["origin"].m_URL = Repo.m_URL;
+					Remotes["origin"].m_Properties.m_URL = Repo.m_OriginProperties.m_URL;
 
 					for (auto &Remote : Remotes)
 					{
@@ -667,7 +667,7 @@ namespace NMib::NBuildSystem::NRepository
 						(
 							Launches.f_Launch(Repo, FetchParams, fg_LogAllFunctor(), {}, FetchEnvironment)
 							+ RemoteQueryResults.f_GetResults()
-							+ Launches.f_Launch(Repo, {"for-each-ref", "--format=%(upstream:short)", "refs/heads/{}"_f << Repo.m_DefaultBranch})
+							+ Launches.f_Launch(Repo, {"for-each-ref", "--format=%(upstream:short)", "refs/heads/{}"_f << Repo.m_OriginProperties.m_DefaultBranch})
 						).f_Wrap()
 					;
 
@@ -678,12 +678,12 @@ namespace NMib::NBuildSystem::NRepository
 
 					TCActorResultVector<void> SetHeadResults;
 
-					CStr ExpectedTracking = "origin/{}"_f << Repo.m_DefaultBranch;
+					CStr ExpectedTracking = "origin/{}"_f << Repo.m_OriginProperties.m_DefaultBranch;
 					CStr CurrentTracking = TrackingResult ? TrackingResult->f_GetStdOut().f_Trim() : CStr();
 					if (CurrentTracking != ExpectedTracking)
 					{
 						Launches.f_Output(EOutputType_Normal, Repo, "Updating default branch remote tracking branch from {} to {}"_f << CurrentTracking << ExpectedTracking);
-						Launches.f_Launch(Repo, {"branch", "-u", ExpectedTracking, Repo.m_DefaultBranch}, fg_LogAllFunctor()) > SetHeadResults.f_AddResult();
+						Launches.f_Launch(Repo, {"branch", "-u", ExpectedTracking, Repo.m_OriginProperties.m_DefaultBranch}, fg_LogAllFunctor()) > SetHeadResults.f_AddResult();
 					}
 
 					for (auto &Remote : *pRemoteHeadBranches)

@@ -498,12 +498,12 @@ namespace NMib::NBuildSystem
 
 					auto GlobalMibExecutable = CFile::fs_GetUserHomeDirectory() / (".Malterlib/bin/mib" + CFile::mc_ExecutableExtension);
 
-					if (_Repo.m_bLfsReleaseStore)
+					if (_Repo.m_OriginProperties.m_bLfsReleaseStore)
 					{
 						Params.f_Insert({"--config", "lfs.customtransfer.malterlib-release.path={}"_f << GlobalMibExecutable});
 						Params.f_Insert({"--config", "lfs.customtransfer.malterlib-release.args=lfs-release-store"});
 						Params.f_Insert({"--config", "lfs.customtransfer.malterlib-release.concurrent=true"});
-						Params.f_Insert({"--config", "lfs.{}.standalonetransferagent=malterlib-release"_f << _Repo.m_URL});
+						Params.f_Insert({"--config", "lfs.{}.standalonetransferagent=malterlib-release"_f << _Repo.m_OriginProperties.m_URL});
 						Params.f_Insert({"--config", "remote.origin.fetch=^refs/heads/lfs"});
 						Params.f_Insert({"--config", "remote.origin.fetch=^refs/tags/lfs/*"});
 						Params.f_Insert({"--no-tags"});
@@ -539,18 +539,18 @@ namespace NMib::NBuildSystem
 								TCVector<CStr> CloneParams{"clone"};
 
 								CloneParams.f_Insert(fGetCloneConfigParams());
-								CloneParams.f_Insert({"-n", _Repo.m_URL, Location});
+								CloneParams.f_Insert({"-n", _Repo.m_OriginProperties.m_URL, Location});
 
 								co_await fLaunchGit(CloneParams, "");
 
-								if (_Repo.m_bLfsReleaseStore)
+								if (_Repo.m_OriginProperties.m_bLfsReleaseStore)
 								{
 									co_await fLaunchGit({"update-ref", "-d", "refs/remotes/origin/lfs"}, Location);
 									co_await fLaunchGit({"config", "--local", "--unset", "remote.origin.tagOpt"}, Location);
 									co_await fLaunchGit({"fetch"}, Location);
 								}
 
-								TCVector<CStr> Params = {"checkout", "-B", _Repo.m_DefaultBranch};
+								TCVector<CStr> Params = {"checkout", "-B", _Repo.m_OriginProperties.m_DefaultBranch};
 
 								if (!ConfigHash.f_IsEmpty())
 									Params.f_Insert(ConfigHash);
@@ -559,7 +559,7 @@ namespace NMib::NBuildSystem
 
 								bChanged = true;
 
-								co_await fLaunchGit({"branch", "-u", "origin/{}"_f << _Repo.m_DefaultBranch}, Location);
+								co_await fLaunchGit({"branch", "-u", "origin/{}"_f << _Repo.m_OriginProperties.m_DefaultBranch}, Location);
 
 								if (_Repo.m_bUpdateSubmodules)
 									co_await fLaunchGit({"submodule", "update", "--init"}, Location);
@@ -581,7 +581,21 @@ namespace NMib::NBuildSystem
 							{
 								co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
 								DLock(*g_SubmoduleAddLock); // Currently git has race issues with submodule adds
-								co_await fLaunchGit({"submodule", "add", "-b", _Repo.m_DefaultBranch, "--name", _Repo.m_SubmoduleName, _Repo.m_URL, RelativeLocation}, GitRoot);
+								co_await fLaunchGit
+									(
+										{
+											"submodule"
+											, "add"
+											, "-b"
+											, _Repo.m_OriginProperties.m_DefaultBranch
+											, "--name"
+											, _Repo.m_SubmoduleName
+											, _Repo.m_OriginProperties.m_URL
+											, RelativeLocation
+										}
+										, GitRoot
+									)
+								;
 								co_await fLaunchGit({"config", "-f", ".gitmodules", fg_Format("submodule.{}.fetchRecurseSubmodules", _Repo.m_SubmoduleName), "on-demand"}, GitRoot);
 								bChanged = true;
 
@@ -607,15 +621,7 @@ namespace NMib::NBuildSystem
 			auto &CurrentRemotes = GitConfig.m_Remotes;
 			auto WantedRemotes = _Repo.m_Remotes;
 			auto &OriginRemote = WantedRemotes["origin"];
-			OriginRemote.m_URL = _Repo.m_URL;
-			OriginRemote.m_bLfsReleaseStore = _Repo.m_bLfsReleaseStore;
-	
-			if (_BuildSystem.f_ApplyRepoPolicy())
-			{
-				OriginRemote.m_bApplyPolicy = _Repo.m_bApplyPolicy;
-				OriginRemote.m_bApplyPolicyPretend = _Repo.m_bApplyPolicyPretend;
-				OriginRemote.m_Policy = _Repo.m_Policy;
-			}
+			OriginRemote.m_Properties = _Repo.m_OriginProperties;
 
 			if (_Repo.m_UserName && GitConfig.m_UserName != _Repo.m_UserName)
 			{
@@ -677,22 +683,22 @@ namespace NMib::NBuildSystem
 					auto pCurrentRemote = CurrentRemotes.f_FindEqual(RemoteName);
 					if (pCurrentRemote)
 					{
-						if (pCurrentRemote->m_Url != Remote.m_URL)
+						if (pCurrentRemote->m_Url != Remote.m_Properties.m_URL)
 						{
-							fOutputInfo(EOutputType_Normal, "Changing remote URL '{}={}'"_f << RemoteName << Remote.m_URL);
-							co_await fLaunchGit({"remote", "set-url", RemoteName, Remote.m_URL}, Location);
+							fOutputInfo(EOutputType_Normal, "Changing remote URL '{}={}'"_f << RemoteName << Remote.m_Properties.m_URL);
+							co_await fLaunchGit({"remote", "set-url", RemoteName, Remote.m_Properties.m_URL}, Location);
 						}
 
-						if (Remote.m_bLfsReleaseStore)
+						if (Remote.m_Properties.m_bLfsReleaseStore)
 						{
 							co_await fSetupLfsReleaseStorage();
 
-							auto *pTransferAgent = GitConfig.m_CustomLfsTransferAgents.f_FindEqual(Remote.m_URL);
+							auto *pTransferAgent = GitConfig.m_CustomLfsTransferAgents.f_FindEqual(Remote.m_Properties.m_URL);
 							if (!pTransferAgent || *pTransferAgent != "malterlib-release")
 							{
 								fOutputInfo(EOutputType_Normal, "Adding Malterlib Release LFS transfer agent");
 
-								co_await fLaunchGit({"config", "--local", "lfs.{}.standalonetransferagent"_f << Remote.m_URL, "malterlib-release"}, Location);
+								co_await fLaunchGit({"config", "--local", "lfs.{}.standalonetransferagent"_f << Remote.m_Properties.m_URL, "malterlib-release"}, Location);
 							}
 
 							if (!pCurrentRemote->m_bMalterlibLfsSetup)
@@ -706,19 +712,19 @@ namespace NMib::NBuildSystem
 						}
 						else
 						{
-							auto *pTransferAgent = GitConfig.m_CustomLfsTransferAgents.f_FindEqual(Remote.m_URL);
+							auto *pTransferAgent = GitConfig.m_CustomLfsTransferAgents.f_FindEqual(Remote.m_Properties.m_URL);
 							if (pTransferAgent && *pTransferAgent == "malterlib-release")
 							{
 								fOutputInfo(EOutputType_Normal, "Removing Malterlib Release LFS transfer agent");
 
-								co_await fLaunchGit({"config", "--local", "--unset", "lfs.{}.standalonetransferagent"_f << Remote.m_URL}, Location);
+								co_await fLaunchGit({"config", "--local", "--unset", "lfs.{}.standalonetransferagent"_f << Remote.m_Properties.m_URL}, Location);
 							}
 						}
 
 						continue;
 					}
-					fOutputInfo(EOutputType_Normal, "Adding remote '{}={}'"_f << RemoteName << Remote.m_URL);
-					co_await fLaunchGit({"remote", "add", RemoteName, Remote.m_URL}, Location);
+					fOutputInfo(EOutputType_Normal, "Adding remote '{}={}'"_f << RemoteName << Remote.m_Properties.m_URL);
+					co_await fLaunchGit({"remote", "add", RemoteName, Remote.m_Properties.m_URL}, Location);
 
 					if (_BuildSystem.f_GetGenerateOptions().m_bForceUpdateRemotes)
 						co_await fLaunchGit({"fetch", "--tags", "--force", RemoteName}, Location);
@@ -730,18 +736,18 @@ namespace NMib::NBuildSystem
 				{
 					for (auto &Remote : WantedRemotes)
 					{
-						if (!Remote.m_bApplyPolicy)
+						if (!Remote.m_Properties.m_bApplyPolicy)
 							continue;
 
 						EApplyPolicyFlag Flags = EApplyPolicyFlag::mc_None;
 
-						if (_BuildSystem.f_ApplyRepoPolicyPretend() || Remote.m_bApplyPolicyPretend)
+						if (_BuildSystem.f_ApplyRepoPolicyPretend() || Remote.m_Properties.m_bApplyPolicyPretend)
 							Flags |= EApplyPolicyFlag::mc_Pretend;
 
 						if (_BuildSystem.f_ApplyRepoPolicyCreateMissing())
 							Flags |= EApplyPolicyFlag::mc_CreateMissing;
 
-						co_await fg_ApplyPolicies(Remote.m_URL, Location, Remote.m_Policy, Flags, fOutputInfo);
+						co_await fg_ApplyPolicies(Remote.m_Properties.m_URL, Location, Remote.m_Properties.m_Policy, Flags, fOutputInfo);
 					}
 				}
 
@@ -752,7 +758,7 @@ namespace NMib::NBuildSystem
 						auto &RemoteName = iRemote.f_GetKey();
 						auto &Remote = *iRemote;
 	
-						if (!Remote.m_bLfsReleaseStore)
+						if (!Remote.m_Properties.m_bLfsReleaseStore)
 							continue;
 
 						{
@@ -850,8 +856,8 @@ namespace NMib::NBuildSystem
 								if (HeadHash != ConfigHash || co_await fLaunchGitNonEmpty({"status", "--porcelain"}, Location))
 								{
 									fOutputInfo(EOutputType_Warning, "Force Resetting to '{}'"_f << ConfigHash);
-									co_await fLaunchGit({"checkout", "-f", "-B", _Repo.m_DefaultBranch, ConfigHash}, Location);
-									co_await fLaunchGit({"branch", "-u", "origin/{}"_f << _Repo.m_DefaultBranch}, Location);
+									co_await fLaunchGit({"checkout", "-f", "-B", _Repo.m_OriginProperties.m_DefaultBranch, ConfigHash}, Location);
+									co_await fLaunchGit({"branch", "-u", "origin/{}"_f << _Repo.m_OriginProperties.m_DefaultBranch}, Location);
 									co_await fLaunchGit({"clean", "-fd"}, Location);
 									if (_Repo.m_bUpdateSubmodules)
 										co_await fLaunchGit({"submodule", "update", "--init"}, Location);
@@ -916,7 +922,7 @@ namespace NMib::NBuildSystem
 
 									CStr RepoIdentifier = _Repo.f_GetIdentifierName(ConfigDir, BaseDir);
 
-									CStr History = co_await fLaunchGit({"log", "-p", "origin/{}"_f << Repo.m_DefaultBranch, "--", _Repo.m_ConfigFile}, Repo.m_Location);
+									CStr History = co_await fLaunchGit({"log", "-p", "origin/{}"_f << Repo.m_OriginProperties.m_DefaultBranch, "--", _Repo.m_ConfigFile}, Repo.m_Location);
 									CStr FilteredHistory;
 									CStr LookFor = "+{} "_f << RepoIdentifier;
 
@@ -963,7 +969,7 @@ namespace NMib::NBuildSystem
 									if ((co_await fLaunchGit({"rev-parse", "--abbrev-ref", "HEAD"}, Location)).f_Trim() == "HEAD")
 									{
 										fOutputInfo(EOutputType_Warning, "Resetting to {} and recovering from detached head"_f << ConfigHash);
-										co_await fLaunchGit({"checkout", "-f", "-B", _Repo.m_DefaultBranch, ConfigHash}, Location); // Recover from detached head
+										co_await fLaunchGit({"checkout", "-f", "-B", _Repo.m_OriginProperties.m_DefaultBranch, ConfigHash}, Location); // Recover from detached head
 									}
 									else
 									{
@@ -1232,8 +1238,6 @@ namespace NMib::NBuildSystem
 					Repo.m_Location = Location;
 					Repo.m_ConfigFile = ConfigFile;
 					Repo.m_StateFile = StateFile;
-					Repo.m_URL = URL;
-					Repo.m_DefaultBranch = DefaultBranch;
 					Repo.m_DefaultUpstreamBranch = DefaultUpstreamBranch;
 					Repo.m_Tags.f_AddContainer(Tags);
 					Repo.m_bSubmodule = bSubmodule;
@@ -1245,15 +1249,25 @@ namespace NMib::NBuildSystem
 					Repo.m_ProtectedTags.f_AddContainer(ProtectedTags);
 					Repo.m_bUpdateSubmodules = bUpdateSubmodules;
 					Repo.m_bExcludeFromSeen = bExcludeFromSeen;
-					Repo.m_bLfsReleaseStore = bLfsReleaseStore;
+
+					Repo.m_OriginProperties.m_URL = URL;
+					Repo.m_OriginProperties.m_DefaultBranch = DefaultBranch;
+					Repo.m_OriginProperties.m_bLfsReleaseStore = bLfsReleaseStore;
 
 					if (bIncludePolicy)
 					{
-						Repo.m_bApplyPolicy = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_ApplyPolicy, false);
-						if (Repo.m_bApplyPolicy)
+						Repo.m_OriginProperties.m_bApplyPolicy = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_ApplyPolicy, false);
+						if (Repo.m_OriginProperties.m_bApplyPolicy)
 						{
-							Repo.m_Policy = _BuildSystem.f_EvaluateEntityPropertyObject(ChildEntity, gc_ConstKey_Repository_Policy, CEJSONSorted(EJSONType_Object)).f_Move();
-							Repo.m_bApplyPolicyPretend = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_ApplyPolicyPretend, false);
+							Repo.m_OriginProperties.m_Policy = _BuildSystem.f_EvaluateEntityPropertyObject
+								(
+									ChildEntity
+									, gc_ConstKey_Repository_Policy
+									, CEJSONSorted(EJSONType_Object)
+								)
+								.f_Move()
+							;
+							Repo.m_OriginProperties.m_bApplyPolicyPretend = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_ApplyPolicyPretend, false);
 						}
 					}
 
@@ -1266,16 +1280,16 @@ namespace NMib::NBuildSystem
 						CStr URL = Remote[gc_ConstString_URL].f_String();
 
 						auto &OutRemote = Repo.m_Remotes[Name];
-						OutRemote.m_URL = URL;
+						OutRemote.m_Properties.m_URL = URL;
 
 						if (auto pValue = Remote.f_GetMember(gc_ConstString_Write))
 							OutRemote.m_bCanPush = pValue->f_Boolean();
 
 						if (auto pValue = Remote.f_GetMember(gc_ConstString_DefaultBranch))
-							OutRemote.m_DefaultBranch = pValue->f_String();
+							OutRemote.m_Properties.m_DefaultBranch = pValue->f_String();
 
 						if (auto pValue = Remote.f_GetMember(gc_ConstString_LfsReleaseStore))
-							OutRemote.m_bLfsReleaseStore = pValue->f_Boolean();
+							OutRemote.m_Properties.m_bLfsReleaseStore = pValue->f_Boolean();
 
 						for (auto &Wildcard : NoPushRemotes)
 						{
@@ -1288,17 +1302,17 @@ namespace NMib::NBuildSystem
 
 						if (bIncludePolicy)
 						{
-							OutRemote.m_bApplyPolicy = Remote.f_GetMemberValue(gc_ConstKey_Repository_ApplyPolicy.m_Name, false).f_Boolean();
-							if (OutRemote.m_bApplyPolicy)
+							OutRemote.m_Properties.m_bApplyPolicy = Remote.f_GetMemberValue(gc_ConstKey_Repository_ApplyPolicy.m_Name, false).f_Boolean();
+							if (OutRemote.m_Properties.m_bApplyPolicy)
 							{
-								OutRemote.m_Policy = Remote.f_GetMemberValue(gc_ConstKey_Repository_Policy.m_Name, CEJSONSorted(EJSONType_Object));
-								OutRemote.m_bApplyPolicyPretend = Remote.f_GetMemberValue(gc_ConstKey_Repository_ApplyPolicyPretend.m_Name, false).f_Boolean();
+								OutRemote.m_Properties.m_Policy = Remote.f_GetMemberValue(gc_ConstKey_Repository_Policy.m_Name, CEJSONSorted(EJSONType_Object));
+								OutRemote.m_Properties.m_bApplyPolicyPretend = Remote.f_GetMemberValue(gc_ConstKey_Repository_ApplyPolicyPretend.m_Name, false).f_Boolean();
 							}
 						}
 					}
 					Repo.m_Position = ChildEntityData.m_Position;
 
-					if (Repo.m_URL.f_IsEmpty())
+					if (Repo.m_OriginProperties.m_URL.f_IsEmpty())
 						_BuildSystem.fs_ThrowError(PropertyInfoURL, ChildEntityData.m_Position, "You have to specify Repository.URL");
 					if (Repo.m_ConfigFile.f_IsEmpty() && Repo.m_Type != gc_ConstString_Root.m_String)
 					{
@@ -1323,7 +1337,7 @@ namespace NMib::NBuildSystem
 
 						_BuildSystem.fs_ThrowError(Positions, "You have to specify Repository.ConfigFile and Repository.StateFile must not be same file");
 					}
-					if (Repo.m_DefaultBranch.f_IsEmpty())
+					if (Repo.m_OriginProperties.m_DefaultBranch.f_IsEmpty())
 						_BuildSystem.fs_ThrowError(PropertyInfoDefaultBranch, ChildEntityData.m_Position, "You have to specify Repository.DefaultBranch");
 					if (Repo.m_bSubmodule && Repo.m_SubmoduleName.f_IsEmpty())
 						_BuildSystem.fs_ThrowError(PropertyInfoSubmoduleName, ChildEntityData.m_Position, "You have to specify Repository.SubmoduleName");

@@ -323,25 +323,31 @@ namespace NMib::NBuildSystem
 									CStr DefaultUpstreamBranch = Repo.m_DefaultUpstreamBranch;
 
 									auto *pRemote = Repo.m_Remotes.f_FindEqual(Remote);
-									if (pRemote && pRemote->m_DefaultBranch)
-										DefaultUpstreamBranch = pRemote->m_DefaultBranch;
+									if (pRemote && pRemote->m_Properties.m_DefaultBranch)
+										DefaultUpstreamBranch = pRemote->m_Properties.m_DefaultBranch;
 
-									if (bUseDefaultUpstream && Branch == Repo.m_DefaultBranch && !DefaultUpstreamBranch.f_IsEmpty() && !State.f_HasRemoteBranch(RemoteBranch))
+									if 
+									(
+										bUseDefaultUpstream 
+										&& Branch == Repo.m_OriginProperties.m_DefaultBranch
+										&& !DefaultUpstreamBranch.f_IsEmpty()
+										&& !State.f_HasRemoteBranch(RemoteBranch)
+									)
 									{
 										PullRemoteBranch = "{}/{}"_f << Remote << DefaultUpstreamBranch;
 										PullRemoteBranchName = PullRemoteBranch;
 									}
 
-									if (Branch == Repo.m_DefaultBranch && !DefaultUpstreamBranch.f_IsEmpty() && !State.f_HasRemoteBranch(RemoteBranch))
+									if (Branch == Repo.m_OriginProperties.m_DefaultBranch && !DefaultUpstreamBranch.f_IsEmpty() && !State.f_HasRemoteBranch(RemoteBranch))
 										MissingRemoteBranch = "{}/{}"_f << Remote << DefaultUpstreamBranch;
 
-									if (!(_Flags & ERepoStatusFlag_NonDefaultToAll) && Remote != "origin" && Branch != Repo.m_DefaultBranch)
+									if (!(_Flags & ERepoStatusFlag_NonDefaultToAll) && Remote != "origin" && Branch != Repo.m_OriginProperties.m_DefaultBranch)
 										;
 									else
 									{
 										if (State.f_HasRemoteBranch(RemoteBranch))
 											fg_GetLogEntries(Launches, Repo, RemoteBranch, Branch) > ToPush.f_AddResult(Remote);
-										else if ((Remote == "origin" && Branch == Repo.m_DefaultBranch) || !State.f_HasRemoteBranch(MissingRemoteBranch))
+										else if ((Remote == "origin" && Branch == Repo.m_OriginProperties.m_DefaultBranch) || !State.f_HasRemoteBranch(MissingRemoteBranch))
 											ToPushMissing[Remote];
 
 										if (State.f_HasRemoteBranch(PullRemoteBranch))
@@ -351,9 +357,9 @@ namespace NMib::NBuildSystem
 										}
 									}
 
-									CStr DefaultBranch = Repo.m_DefaultBranch;
-									if (pRemote && pRemote->m_DefaultBranch)
-										DefaultBranch = pRemote->m_DefaultBranch;
+									CStr DefaultBranch = Repo.m_OriginProperties.m_DefaultBranch;
+									if (pRemote && pRemote->m_Properties.m_DefaultBranch)
+										DefaultBranch = pRemote->m_Properties.m_DefaultBranch;
 
 									if (Branch != DefaultBranch && !DefaultBranch.f_IsEmpty())
 									{

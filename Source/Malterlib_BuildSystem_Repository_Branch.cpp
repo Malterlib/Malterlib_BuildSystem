@@ -99,17 +99,17 @@ namespace NMib::NBuildSystem
 				auto &Repo = *pRepo;
 
 				CStr CurrentBranch = fg_GetBranch(Repo);
-				if (CurrentBranch == Repo.m_DefaultBranch)
+				if (CurrentBranch == Repo.m_OriginProperties.m_DefaultBranch)
 					continue;
 
 				TCVector<CStr> ParamsCheckout;
 
 				if (_Flags & ERepoBranchFlag_Force)
-					ParamsCheckout = {"checkout", "-B", Repo.m_DefaultBranch};
-				else if (!fg_BranchExists(Repo, Repo.m_DefaultBranch))
-					ParamsCheckout = {"checkout", "-b", Repo.m_DefaultBranch};
+					ParamsCheckout = {"checkout", "-B", Repo.m_OriginProperties.m_DefaultBranch};
+				else if (!fg_BranchExists(Repo, Repo.m_OriginProperties.m_DefaultBranch))
+					ParamsCheckout = {"checkout", "-b", Repo.m_OriginProperties.m_DefaultBranch};
 				else
-					ParamsCheckout = {"checkout", Repo.m_DefaultBranch};
+					ParamsCheckout = {"checkout", Repo.m_OriginProperties.m_DefaultBranch};
 
 				if (_Flags & ERepoBranchFlag_Pretend)
 					Launches.f_Output(EOutputType_Normal, Repo, "git {}"_f << CProcessLaunchParams::fs_GetParams(ParamsCheckout));
@@ -295,7 +295,7 @@ namespace NMib::NBuildSystem
 							continue;
 						}
 
-						if (Branch == Repo.m_DefaultBranch)
+						if (Branch == Repo.m_OriginProperties.m_DefaultBranch)
 						{
 							if (_Flags & ERepoCleanupBranchesFlag_Verbose)
 								Launches.f_Output(EOutputType_Normal, Repo, "{} - default branch protected"_f << FullBranch);
@@ -328,8 +328,8 @@ namespace NMib::NBuildSystem
 
 						TCPromise<void> Promise;
 
-						Launches.f_Launch(Repo, {"merge-base", "--is-ancestor", FullBranch, "{}/{}"_f << CompareRemote << Repo.m_DefaultBranch})
-							+ Launches.f_Launch(Repo, {"log", "--oneline", "--cherry", "{}/{}...{}"_f << CompareRemote << Repo.m_DefaultBranch << FullBranch})
+						Launches.f_Launch(Repo, {"merge-base", "--is-ancestor", FullBranch, "{}/{}"_f << CompareRemote << Repo.m_OriginProperties.m_DefaultBranch})
+							+ Launches.f_Launch(Repo, {"log", "--oneline", "--cherry", "{}/{}...{}"_f << CompareRemote << Repo.m_OriginProperties.m_DefaultBranch << FullBranch})
 							> Promise / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result, CProcessLaunchActor::CSimpleLaunchResult &&_ResultRebase) mutable
 							{
 								bool bIsInDefault = _Result.m_ExitCode == 0;
@@ -620,8 +620,8 @@ namespace NMib::NBuildSystem
 
 								TCPromise<void> Promise;
 
-								Launches.f_Launch(Repo, {"merge-base", "--is-ancestor", Tag.f_GetRef(), "{}/{}"_f << CompareRemote << Repo.m_DefaultBranch})
-									+ Launches.f_Launch(Repo, {"log", "--oneline", "--cherry", "{}/{}...{}"_f << CompareRemote << Repo.m_DefaultBranch << Tag.f_GetRef()})
+								Launches.f_Launch(Repo, {"merge-base", "--is-ancestor", Tag.f_GetRef(), "{}/{}"_f << CompareRemote << Repo.m_OriginProperties.m_DefaultBranch})
+									+ Launches.f_Launch(Repo, {"log", "--oneline", "--cherry", "{}/{}...{}"_f << CompareRemote << Repo.m_OriginProperties.m_DefaultBranch << Tag.f_GetRef()})
 									> Promise / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result, CProcessLaunchActor::CSimpleLaunchResult &&_ResultRebase) mutable
 									{
 										bool bIsInDefault = _Result.m_ExitCode == 0;

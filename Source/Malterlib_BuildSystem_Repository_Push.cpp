@@ -195,10 +195,10 @@ namespace NMib::NBuildSystem
 								if (auto pRemote = Repo.m_Remotes.f_FindEqual(Remote.f_Name()); pRemote && !pRemote->m_bCanPush)
 									continue;
 
-								if (!(_PushFlags & ERepoPushFlag_NonDefaultToAll) && Branches.m_Current != Repo.m_DefaultBranch && Remote.f_Name() != "origin")
+								if (!(_PushFlags & ERepoPushFlag_NonDefaultToAll) && Branches.m_Current != Repo.m_OriginProperties.m_DefaultBranch && Remote.f_Name() != "origin")
 									continue;
 
-								if (!AddedUrls(Remote.m_URL).f_WasCreated())
+								if (!AddedUrls(Remote.m_Properties.m_URL).f_WasCreated())
 									continue;
 
 								Remotes.f_Insert(Remote.f_Name());
