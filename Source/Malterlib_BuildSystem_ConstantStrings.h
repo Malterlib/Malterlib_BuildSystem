@@ -480,6 +480,7 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_OptionalChaining;
 	extern CStringAndHash const gc_ConstString_Accessor;
 	extern CStringAndHash const gc_ConstString_CRepositoryPolicy;
+	extern CStringAndHash const gc_ConstString_CRepositoryReleasePackage;
 	extern CStringAndHash const gc_ConstString_ApplyRepoPolicy;
 	extern CStringAndHash const gc_ConstString_ApplyRepoPolicyPretend;
 	extern CStringAndHash const gc_ConstString_ApplyRepoPolicyCreateMissing;

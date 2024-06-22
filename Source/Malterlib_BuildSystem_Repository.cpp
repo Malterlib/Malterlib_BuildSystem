@@ -1151,6 +1151,7 @@ namespace NMib::NBuildSystem
 		TCVector<TCMap<CStr, CReposLocation>> fg_GetRepos(CBuildSystem &_BuildSystem, CBuildSystemData &_Data, EGetRepoFlag _Flags)
 		{
 			bool bIncludePolicy = fg_IsSet(_Flags, EGetRepoFlag::mc_IncludePolicy);
+			bool bIncludeReleasePackage = fg_IsSet(_Flags, EGetRepoFlag::mc_IncludeReleasePackage);
 
 			TCMap<CStr, CReposLocation> Repos;
 
@@ -1271,6 +1272,34 @@ namespace NMib::NBuildSystem
 						}
 					}
 
+					auto fParseReleasePackage = [](CEJSONSorted const &_Value) -> CReleasePackage
+						{
+							CReleasePackage ReleasePackage;
+							ReleasePackage.m_ReleaseName = _Value["ReleaseName"].f_String();
+							ReleasePackage.m_Description = _Value["Description"].f_String();
+							ReleasePackage.m_SourceReference = _Value["SourceReference"].f_String();
+							ReleasePackage.m_bMakeLatest = _Value["MakeLatest"].f_Boolean();
+
+							for (auto &Package : _Value["Packages"].f_Array())
+							{
+								auto &OutPackage = ReleasePackage.m_Packages.f_Insert();
+								OutPackage.m_PackageName = Package["PackageName"].f_String();
+								OutPackage.m_Files = Package["Files"].f_StringArray();
+								OutPackage.m_CompressArguments = Package["CompressArguments"].f_StringArray();
+								OutPackage.m_bCompress = Package["Compress"].f_Boolean();
+							}
+
+							return ReleasePackage;
+						}
+					;
+
+					if (bIncludeReleasePackage)
+					{
+						auto ReleasePackageJson = _BuildSystem.f_EvaluateEntityPropertyObject(ChildEntity, gc_ConstKey_Repository_ReleasePackage, CEJSONSorted()).f_Move();
+						if (ReleasePackageJson.f_IsValid())
+							Repo.m_OriginProperties.m_ReleasePackage = fParseReleasePackage(ReleasePackageJson);
+					}
+
 					for (auto &Remote : Remotes.f_Get().f_Array())
 					{
 						CStr Name = Remote[gc_ConstString_Name].f_String();
@@ -1308,6 +1337,13 @@ namespace NMib::NBuildSystem
 								OutRemote.m_Properties.m_Policy = Remote.f_GetMemberValue(gc_ConstKey_Repository_Policy.m_Name, CEJSONSorted(EJSONType_Object));
 								OutRemote.m_Properties.m_bApplyPolicyPretend = Remote.f_GetMemberValue(gc_ConstKey_Repository_ApplyPolicyPretend.m_Name, false).f_Boolean();
 							}
+						}
+
+						if (bIncludeReleasePackage)
+						{
+							auto ReleasePackageJson = Remote.f_GetMemberValue(gc_ConstKey_Repository_ReleasePackage.m_Name, CEJSONSorted());
+							if (ReleasePackageJson.f_IsValid())
+								OutRemote.m_Properties.m_ReleasePackage = fParseReleasePackage(ReleasePackageJson);
 						}
 					}
 					Repo.m_Position = ChildEntityData.m_Position;

@@ -42,11 +42,29 @@ namespace NMib::NBuildSystem::NRepository
 		bool m_bOpenSequential = false;
 	};
 
+	struct CReleasePackage
+	{
+		struct CPackage
+		{
+			CStr m_PackageName;
+			TCVector<CStr> m_Files;
+			TCVector<CStr> m_CompressArguments;
+			bool m_bCompress = false;
+		};
+
+		CStr m_ReleaseName;
+		CStr m_Description;
+		CStr m_SourceReference;
+		TCVector<CPackage> m_Packages;
+		bool m_bMakeLatest = true;
+	};
+
 	struct CRemoteProperties
 	{
 		CStr m_URL;
 		CStr m_DefaultBranch;
 		CEJSONSorted m_Policy;
+		TCOptional<CReleasePackage> m_ReleasePackage;
 		bool m_bLfsReleaseStore = false;
 		bool m_bApplyPolicy = false;
 		bool m_bApplyPolicyPretend = false;
@@ -422,6 +440,7 @@ namespace NMib::NBuildSystem::NRepository
 	{
 		mc_None = 0
 		, mc_IncludePolicy = DMibBit(0)
+		, mc_IncludeReleasePackage = DMibBit(0)
 	};
 
 	TCFuture<CGitVersion> fg_GetGitVersion(CGitLaunches &_Launches);

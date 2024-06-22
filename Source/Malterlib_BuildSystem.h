@@ -489,6 +489,14 @@ namespace NMib::NBuildSystem
 			)
 		;
 
+		NConcurrency::TCFuture<ERetry> f_Action_Repository_ReleasePackage
+			(
+				CGenerateOptions const &_GenerateOptions
+				, CRepoFilter const &_Filter
+				, NStorage::TCSharedPointer<NConcurrency::CCommandLineControl> const &_pCommandLine
+			)
+		;
+
 		NCommandLine::EAnsiEncodingFlag f_AnsiFlags() const;
 
 		void f_RegisterFunctions(NContainer::TCMap<NStr::CStr, CBuiltinFunction> &&_Functions);

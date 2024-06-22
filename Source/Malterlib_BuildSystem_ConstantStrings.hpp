@@ -480,6 +480,7 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_OptionalChaining = gc_Str<"OptionalChaining">;
 	constexpr CStringAndHash const gc_ConstString_Accessor = gc_Str<"Accessor">;
 	constexpr CStringAndHash const gc_ConstString_CRepositoryPolicy = gc_Str<"CRepositoryPolicy">;
+	constexpr CStringAndHash const gc_ConstString_CRepositoryReleasePackage = gc_Str<"CRepositoryReleasePackage">;
 	constexpr CStringAndHash const gc_ConstString_ApplyRepoPolicy = gc_Str<"ApplyRepoPolicy">;
 	constexpr CStringAndHash const gc_ConstString_ApplyRepoPolicyPretend = gc_Str<"ApplyRepoPolicyPretend">;
 	constexpr CStringAndHash const gc_ConstString_ApplyRepoPolicyCreateMissing = gc_Str<"ApplyRepoPolicyCreateMissing">;
@@ -969,6 +970,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_OptionalChaining);
 		o_StringCache.f_AddConstantString(gc_ConstString_Accessor);
 		o_StringCache.f_AddConstantString(gc_ConstString_CRepositoryPolicy);
+		o_StringCache.f_AddConstantString(gc_ConstString_CRepositoryReleasePackage);
 		o_StringCache.f_AddConstantString(gc_ConstString_ApplyRepoPolicy);
 		o_StringCache.f_AddConstantString(gc_ConstString_ApplyRepoPolicyPretend);
 		o_StringCache.f_AddConstantString(gc_ConstString_ApplyRepoPolicyCreateMissing);

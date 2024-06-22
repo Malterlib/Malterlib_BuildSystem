@@ -175,6 +175,7 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_UserName(EPropertyType_Repository, gc_Str<"UserName">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_LfsReleaseStore(EPropertyType_Repository, gc_Str<"LfsReleaseStore">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_Policy(EPropertyType_Repository, gc_Str<"Policy">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Repository_ReleasePackage(EPropertyType_Repository, gc_Str<"ReleasePackage">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_ApplyPolicy(EPropertyType_Repository, gc_Str<"ApplyPolicy">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_ApplyPolicyPretend(EPropertyType_Repository, gc_Str<"ApplyPolicyPretend">);
 
@@ -411,6 +412,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_UserName);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_LfsReleaseStore);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_Policy);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_ReleasePackage);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_ApplyPolicy);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_ApplyPolicyPretend);
 

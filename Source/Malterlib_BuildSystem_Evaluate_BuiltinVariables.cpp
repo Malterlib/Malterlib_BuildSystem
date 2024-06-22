@@ -359,6 +359,11 @@ namespace NMib::NBuildSystem
 											, {gc_ConstKey_Repository_ApplyPolicy.m_Name, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_Boolean, false)}}
 											, {gc_ConstKey_Repository_ApplyPolicyPretend.m_Name, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_Boolean, false)}}
 											, {gc_ConstKey_Repository_Policy.m_Name, CBuildSystemSyntax::CClassType::CMember{fg_UserType(gc_ConstString_CRepositoryPolicy), true}}
+											, 
+											{
+												gc_ConstKey_Repository_ReleasePackage.m_Name
+												, CBuildSystemSyntax::CClassType::CMember{fg_UserType(gc_ConstString_CRepositoryReleasePackage), true}
+											}
 										}
 										, {}
 									}
