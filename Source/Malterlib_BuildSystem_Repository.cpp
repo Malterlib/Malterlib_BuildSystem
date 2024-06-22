@@ -564,6 +564,9 @@ namespace NMib::NBuildSystem
 								if (_Repo.m_bUpdateSubmodules)
 									co_await fLaunchGit({"submodule", "update", "--init"}, Location);
 
+								if (_Repo.m_bBootstrapSource)
+									co_await _BuildSystem.f_SetupBootstrapMTool();
+
 								co_return {};
 							}
 						)
@@ -862,6 +865,9 @@ namespace NMib::NBuildSystem
 									if (_Repo.m_bUpdateSubmodules)
 										co_await fLaunchGit({"submodule", "update", "--init"}, Location);
 
+									if (_Repo.m_bBootstrapSource)
+										co_await _BuildSystem.f_SetupBootstrapMTool();
+
 									// git remote set-head origin master
 									bChanged = true;
 								}
@@ -978,6 +984,9 @@ namespace NMib::NBuildSystem
 									}
 									if (_Repo.m_bUpdateSubmodules)
 										co_await fLaunchGit({"submodule", "update", "--init"}, Location);
+
+									if (_Repo.m_bBootstrapSource)
+										co_await _BuildSystem.f_SetupBootstrapMTool();
 								}
 								else if (Action == EHandleRepositoryAction_Rebase)
 								{
@@ -1051,8 +1060,12 @@ namespace NMib::NBuildSystem
 										CStr ConflictingFiles = co_await fLaunchGit({"diff", "--name-only", "--diff-filter=U"}, Location);
 										if (!ConflictingFiles.f_IsEmpty())
 											co_await fResolveConflicts(ConflictingFiles);
+
 										if (_Repo.m_bUpdateSubmodules)
 											co_await fLaunchGit({"submodule", "update", "--init"}, Location);
+
+										if (_Repo.m_bBootstrapSource)
+											co_await _BuildSystem.f_SetupBootstrapMTool();
 									}
 								}
 								else if (Action == EHandleRepositoryAction_ManualResolve)
@@ -1203,6 +1216,7 @@ namespace NMib::NBuildSystem
 					auto bUpdateSubmodules = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_UpdateSubmodules, false);
 					auto bExcludeFromSeen = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_ExcludeFromSeen, false);
 					auto bLfsReleaseStore = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_LfsReleaseStore, false);
+					auto bBootstrapSource = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_BootstrapSource, false);
 
 					TCVector<CStr> NoPushRemotes = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, gc_ConstKey_Repository_NoPushRemotes, TCVector<CStr>());
 
@@ -1250,6 +1264,7 @@ namespace NMib::NBuildSystem
 					Repo.m_ProtectedTags.f_AddContainer(ProtectedTags);
 					Repo.m_bUpdateSubmodules = bUpdateSubmodules;
 					Repo.m_bExcludeFromSeen = bExcludeFromSeen;
+					Repo.m_bBootstrapSource = bBootstrapSource;
 
 					Repo.m_OriginProperties.m_URL = URL;
 					Repo.m_OriginProperties.m_DefaultBranch = DefaultBranch;

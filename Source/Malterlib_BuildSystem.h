@@ -567,6 +567,7 @@ namespace NMib::NBuildSystem
 		NStorage::TCSharedPointer<NAtomic::TCAtomic<bool>> f_GetCancelledPointer() const;
 
 		NConcurrency::TCFuture<void> f_SetupGlobalMTool() const;
+		NConcurrency::TCFuture<void> f_SetupBootstrapMTool() const;
 
 		constexpr static uint32 mc_MToolVersion = 2;
 
@@ -1103,6 +1104,7 @@ namespace NMib::NBuildSystem
 		bool mp_bEnablePositions = false;
 		bool mp_bEnableValues = false;
 		mutable NAtomic::TCAtomic<bool> mp_bGlobalMToolAlreadySetup = false;
+		mutable NAtomic::TCAtomic<bool> mp_bBootstrapMToolAlreadySetup = false;
 
 		NStorage::TCSharedPointer<NAtomic::TCAtomic<bool>> mp_pCancelled;
 	};

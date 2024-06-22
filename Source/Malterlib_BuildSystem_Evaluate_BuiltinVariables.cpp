@@ -337,6 +337,7 @@ namespace NMib::NBuildSystem
 					, {CPropertyKey(gc_ConstKey_Repository_ProtectedBranches), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
 					, {CPropertyKey(gc_ConstKey_Repository_ProtectedTags), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
 					, {CPropertyKey(gc_ConstKey_Repository_UpdateSubmodules), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(gc_ConstKey_Repository_BootstrapSource), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					, {CPropertyKey(gc_ConstKey_Repository_NoPushRemotes), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
 					, {CPropertyKey(gc_ConstKey_Repository_LfsReleaseStore), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					,

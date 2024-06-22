@@ -120,6 +120,7 @@ namespace NMib::NBuildSystem::NRepository
 
 		bool m_bSubmodule = false;
 		bool m_bExcludeFromSeen = false;
+		bool m_bBootstrapSource = false;
 		bool m_bUpdateSubmodules = false;
 	};
 

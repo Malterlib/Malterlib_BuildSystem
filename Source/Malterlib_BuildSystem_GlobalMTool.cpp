@@ -92,4 +92,31 @@ namespace NMib::NBuildSystem
 
 		co_return {};
 	}
+
+	TCFuture<void> CBuildSystem::f_SetupBootstrapMTool() const
+	{
+		if (mp_bBootstrapMToolAlreadySetup.f_Load())
+			co_return {};
+
+		auto Subscription = co_await mp_SetupGlobalMToolSequencer.f_Sequence();
+
+		if (mp_bBootstrapMToolAlreadySetup.f_Load())
+			co_return {};
+
+		auto BlockingActorCheckout = fg_BlockingActor();
+		co_await
+			(
+				g_Dispatch(BlockingActorCheckout) / []
+				{
+					CStr SourceDirectory = CFile::fs_GetProgramDirectory();
+					CStr BootstrapVersion = CFile::fs_ReadStringFromFile(SourceDirectory / "Bootstrap.version", true).f_Trim();
+					fg_InstallBinaries(CFile::fs_GetUserHomeDirectory() / (".Malterlib/bootstrap/{}"_f << BootstrapVersion));
+				}
+			)
+		;
+
+		mp_bBootstrapMToolAlreadySetup.f_Exchange(true);
+
+		co_return {};
+	}
 }

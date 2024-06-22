@@ -178,6 +178,7 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_ReleasePackage(EPropertyType_Repository, gc_Str<"ReleasePackage">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_ApplyPolicy(EPropertyType_Repository, gc_Str<"ApplyPolicy">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_ApplyPolicyPretend(EPropertyType_Repository, gc_Str<"ApplyPolicyPretend">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Repository_BootstrapSource(EPropertyType_Repository, gc_Str<"BootstrapSource">);
 
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_ClCompileSuffix(EPropertyType_Target, gc_Str<"ClCompileSuffix">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_DependencyFile(EPropertyType_Target, gc_Str<"DependencyFile">);
@@ -415,6 +416,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_ReleasePackage);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_ApplyPolicy);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_ApplyPolicyPretend);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_BootstrapSource);
 
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_ClCompileSuffix);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_DependencyFile);

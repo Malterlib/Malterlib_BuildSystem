@@ -177,6 +177,7 @@ namespace NMib::NBuildSystem
 	extern CPropertyKeyReference const gc_ConstKey_Repository_ReleasePackage;
 	extern CPropertyKeyReference const gc_ConstKey_Repository_ApplyPolicy;
 	extern CPropertyKeyReference const gc_ConstKey_Repository_ApplyPolicyPretend;
+	extern CPropertyKeyReference const gc_ConstKey_Repository_BootstrapSource;
 
 	extern CPropertyKeyReference const gc_ConstKey_Target_ClCompileSuffix;
 	extern CPropertyKeyReference const gc_ConstKey_Target_DependencyFile;
