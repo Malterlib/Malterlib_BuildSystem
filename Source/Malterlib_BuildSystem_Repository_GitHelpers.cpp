@@ -334,7 +334,8 @@ namespace NMib::NBuildSystem::NRepository
 												Promise.f_SetException(DMibErrorInstance(_LaunchResult.f_GetErrorOut().f_Trim()));
 											return;
 										}
-										Remotes[_Remote] = CRemote{_LaunchResult.f_GetStdOut().f_Trim()};
+
+										Remotes[_Remote] = CRemote{.m_Properties = CRemoteProperties{.m_URL = _LaunchResult.f_GetStdOut().f_Trim()}};
 									}
 								)
 							)
