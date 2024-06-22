@@ -542,7 +542,9 @@ namespace NMib::NBuildSystem
 		NConcurrency::TCFuture<void> f_CheckCancelled() const;
 		void f_CheckCancelledException() const;
 		NStorage::TCSharedPointer<NAtomic::TCAtomic<bool>> f_GetCancelledPointer() const;
-		
+
+		NConcurrency::TCFuture<void> f_SetupGlobalMTool() const;
+
 		constexpr static uint32 mc_MToolVersion = 2;
 
 	private:
@@ -1060,12 +1062,15 @@ namespace NMib::NBuildSystem
 		mutable NContainer::TCMap<NStr::CStr, NStr::CStr> mp_CMakeGeneratedContents;
 		mutable NAtomic::TCAtomic<mint> mp_LogSequence;
 
+		mutable NConcurrency::CSequencer mp_SetupGlobalMToolSequencer{"Setup global MTool"};
+
 		NFile::EFileAttrib mp_SupportedAttributes = NFile::CFile::fs_GetSupportedAttributes();
 		NFile::EFileAttrib mp_ValidAttributes = NFile::CFile::fs_GetValidAttributes();
 		bool mp_bDebugFileLocks = fg_GetSys()->f_GetEnvironmentVariable("MalterlibBuildSystemDebugFileLocks", "false") == gc_ConstString_true.m_String;
 		NCommandLine::EAnsiEncodingFlag mp_AnsiFlags = NCommandLine::EAnsiEncodingFlag_None;
 		bool mp_bEnablePositions = false;
 		bool mp_bEnableValues = false;
+		mutable NAtomic::TCAtomic<bool> mp_bGlobalMToolAlreadySetup = false;
 
 		NStorage::TCSharedPointer<NAtomic::TCAtomic<bool>> mp_pCancelled;
 	};
