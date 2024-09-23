@@ -79,7 +79,6 @@ Property.MalterlibBuildSystemEmbedCMake: bool?
 		%Dependency "Lib_bzip2_cmbzip2"
 		%Dependency "Lib_CMake_cmexpat"
 		%Dependency "Lib_zstd_cmzstd"
-		%Dependency "Lib_CURL_cmcurl"
 		%Dependency "Lib_librhash_cmlibrhash"
 		%Dependency "Lib_cmsys_cmsys"
 	}
