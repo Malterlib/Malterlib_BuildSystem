@@ -1981,10 +1981,9 @@ fi
 	{
 		// Merge attributes.
 		TCSet<CXMLNode *> AlreadyMerged;
-		if (auto *pElement = _pExistingNode->ToElement()) // All nodes are guaranteed to be the same here
+		if (auto const *pExistingElement = _pExistingNode->ToElement()) // All nodes are guaranteed to be the same here
 		{
 			// Find or create the corresponding element at this level
-			CXMLElement const *pExistingElement = _pExistingNode->ToElement();
 			CXMLElement const *pPrevElement = _pPrevNode->ToElement();
 			CXMLElement *pNewElement = _pNewNode->ToElement();
 
