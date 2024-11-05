@@ -149,7 +149,7 @@ namespace NMib::NBuildSystem
 		CEvaluatedProperties m_EvaluatedProperties;
 
 #if defined(DMibBuildSystem_DebugReferences)
-		DMibRefCountDebuggingOnly(NStorage::CRefCountDebugReference m_DebugSelfRef);
+		DIfRefCountDebugging(NStorage::CRefCountDebugReference m_DebugSelfRef);
 #endif
 
 #if defined(DMibBuildSystem_DebugReferences) && defined(DMibBuildSystem_DebugReferencesAdvanced)

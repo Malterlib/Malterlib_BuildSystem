@@ -30,7 +30,7 @@ namespace NMib::NBuildSystem
 			mp_DebugSet[this];
 		}
 #endif
-		this->m_RefCount.f_Increase(DMibRefCountDebuggingOnly(m_DebugSelfRef));
+		this->m_RefCount.f_Increase(DIfRefCountDebugging(m_DebugSelfRef));
 #endif
 	}
 
@@ -49,7 +49,7 @@ namespace NMib::NBuildSystem
 			mp_DebugSet[this];
 		}
 #endif
-		this->m_RefCount.f_Increase(DMibRefCountDebuggingOnly(m_DebugSelfRef));
+		this->m_RefCount.f_Increase(DIfRefCountDebugging(m_DebugSelfRef));
 #endif
 	}
 
@@ -72,7 +72,7 @@ namespace NMib::NBuildSystem
 			}
 		}
 		m_ChildEntitiesMap.f_Clear();
-		mint RefCount = this->m_RefCount.f_Decrease(DMibRefCountDebuggingOnly(m_DebugSelfRef));
+		mint RefCount = this->m_RefCount.f_Decrease(DIfRefCountDebugging(m_DebugSelfRef));
 #if DMibConfig_RefCountDebugging
 		if (RefCount != 1)
 		{
@@ -123,7 +123,7 @@ namespace NMib::NBuildSystem
 			mp_DebugSet[this];
 		}
 #endif
-		this->m_RefCount.f_Increase(DMibRefCountDebuggingOnly(m_DebugSelfRef));
+		this->m_RefCount.f_Increase(DIfRefCountDebugging(m_DebugSelfRef));
 #endif
 
 		if (!(_CopyFlags & EEntityCopyFlag_NoCheckTypes))
