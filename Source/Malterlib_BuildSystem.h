@@ -413,20 +413,20 @@ namespace NMib::NBuildSystem
 
 		bool f_SingleThreaded() const;
 
-		static NConcurrency::TCFuture<ERetry> fs_RunBuildSystem
+		static NConcurrency::TCUnsafeFuture<ERetry> fs_RunBuildSystem
 			(
-				NFunction::TCFunctionMovable<NConcurrency::TCFuture<CBuildSystem::ERetry> (CBuildSystem &_BuildSystem)> _fCommand
+				NFunction::TCFunctionMovable<NConcurrency::TCFuture<CBuildSystem::ERetry> (CBuildSystem *_pBuildSystem)> _fCommand
 				, NStorage::TCSharedPointer<NConcurrency::CCommandLineControl> const &_pCommandLine
 				, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
 				, CGenerateOptions const &_GenerateOptions
 			)
 		;
 
-		NConcurrency::TCFuture<bool> f_Action_Generate(CGenerateOptions const &_GenerateOptions, ERetry &o_Retry);
-		NConcurrency::TCFuture<ERetry> f_Action_Create(CGenerateOptions const &_GenerateOptions);
+		NConcurrency::TCUnsafeFuture<bool> f_Action_Generate(CGenerateOptions const &_GenerateOptions, ERetry &o_Retry);
+		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Create(CGenerateOptions const &_GenerateOptions);
 
-		NConcurrency::TCFuture<ERetry> f_Action_Repository_Update(CGenerateOptions const &_GenerateOptions);
-		NConcurrency::TCFuture<ERetry> f_Action_Repository_Status
+		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_Update(CGenerateOptions const &_GenerateOptions);
+		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_Status
 			(
 				CGenerateOptions const &_GenerateOptions
 				, CRepoFilter const &_Filter
@@ -435,7 +435,7 @@ namespace NMib::NBuildSystem
 				, NStorage::TCSharedPointer<NConcurrency::CCommandLineControl> const &_pCommandLine
 			)
 		;
-		NConcurrency::TCFuture<ERetry> f_Action_Repository_ForEachRepo
+		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_ForEachRepo
 			(
 				CGenerateOptions const &_GenerateOptions
 				, CRepoFilter const &_Filter
@@ -450,12 +450,12 @@ namespace NMib::NBuildSystem
 			NStr::CStr m_Application;
 			bool m_bParallel = true;
 		};
-		NConcurrency::TCFuture<ERetry> f_Action_Repository_ForEachRepoDir(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, CForEachRepoDirOptions const &_Options);
+		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_ForEachRepoDir(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, CForEachRepoDirOptions const &_Options);
 
-		NConcurrency::TCFuture<ERetry> f_Action_Repository_Branch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, NStr::CStr const &_Branch, ERepoBranchFlag _Flags);
-		NConcurrency::TCFuture<ERetry> f_Action_Repository_Unbranch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoBranchFlag _Flags);
+		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_Branch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, NStr::CStr const &_Branch, ERepoBranchFlag _Flags);
+		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_Unbranch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoBranchFlag _Flags);
 
-		NConcurrency::TCFuture<ERetry> f_Action_Repository_CleanupBranches
+		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_CleanupBranches
 			(
 				CGenerateOptions const &_GenerateOptions
 				, CRepoFilter const &_Filter
@@ -463,7 +463,7 @@ namespace NMib::NBuildSystem
 				, NContainer::TCVector<NStr::CStr> const &_Branches
 			)
 		;
-		NConcurrency::TCFuture<ERetry> f_Action_Repository_CleanupTags
+		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_CleanupTags
 			(
 				CGenerateOptions const &_GenerateOptions
 				, CRepoFilter const &_Filter
@@ -471,16 +471,23 @@ namespace NMib::NBuildSystem
 				, NContainer::TCVector<NStr::CStr> const &_Tags
 			)
 		;
-		NConcurrency::TCFuture<ERetry> f_Action_Repository_Push(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, NContainer::TCVector<NStr::CStr> const &_Remotes, ERepoPushFlag _PushFlags);
+		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_Push
+			(
+				CGenerateOptions const &_GenerateOptions
+				, CRepoFilter const &_Filter
+				, NContainer::TCVector<NStr::CStr> const &_Remotes
+				, ERepoPushFlag _PushFlags
+			)
+		;
 
-		NConcurrency::TCFuture<ERetry> f_Action_Repository_ListCommits
+		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_ListCommits
 			(
 				CGenerateOptions const &_GenerateOptions
 				, CRepoFilter const &_Filter
 				, NStr::CStr const &_From
 				, NStr::CStr const &_To
 				, ERepoListCommitsFlag _Flags
-				, NContainer::TCVector<CWildcardColumn> const &_ColumnWildcards
+				, NContainer::TCVector<CWildcardColumn> const &_WildcardColumns
 				, NStr::CStr const &_Prefix
 				, uint32 _MaxCommitsMainRepo
 				, uint32 _MaxCommits
@@ -489,7 +496,7 @@ namespace NMib::NBuildSystem
 			)
 		;
 
-		NConcurrency::TCFuture<ERetry> f_Action_Repository_ReleasePackage
+		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_ReleasePackage
 			(
 				CGenerateOptions const &_GenerateOptions
 				, CRepoFilter const &_Filter
@@ -656,7 +663,7 @@ namespace NMib::NBuildSystem
 		struct CApplyAccessorsHelper;
 
 	private:
-		NConcurrency::TCFuture<ERetry> fp_GeneratePrepare
+		NConcurrency::TCUnsafeFuture<ERetry> fp_GeneratePrepare
 			(
 				CGenerateOptions const &_GenerateOptions
 				, CGenerateEphemeralState &_GenerateState
@@ -963,7 +970,7 @@ namespace NMib::NBuildSystem
 		;
 		void fp_TracePropertyEval(bool _bSuccess, CEntity const &_Entity, CPropertyKey const &_PropertyKey, CProperty const &_Property, NEncoding::CEJSONSorted const &_Value) const;
 
-		NConcurrency::TCFuture<ERetry> fp_HandleRepositories(NContainer::TCMap<CPropertyKey, NEncoding::CEJSONSorted> const &_Values);
+		NConcurrency::TCUnsafeFuture<ERetry> fp_HandleRepositories(NContainer::TCMap<CPropertyKey, NEncoding::CEJSONSorted> const &_Values);
 
 		void fp_SaveEnvironment();
 

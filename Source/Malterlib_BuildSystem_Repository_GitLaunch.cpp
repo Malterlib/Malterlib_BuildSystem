@@ -47,7 +47,7 @@ namespace NMib::NBuildSystem::NRepository
 	{
 		auto &State = *m_pState;
 		if (State.m_CheckAbortTimer)
-			fg_Exchange(State.m_CheckAbortTimer, nullptr)->f_Destroy() > fg_DiscardResult();
+			fg_Exchange(State.m_CheckAbortTimer, nullptr)->f_Destroy().f_DiscardResult();
 	}
 
 	CGitLaunches::CGitLaunches(CGitLaunches const &_Other)
@@ -174,7 +174,7 @@ namespace NMib::NBuildSystem::NRepository
 		for (auto &RepoOutput : m_DeferredOutput)
 			fOutputSection(m_DeferredOutput.fs_GetKey(RepoOutput), RepoOutput);
 
-		fg_Move(m_LaunchSequencer).f_Destroy() > fg_DiscardResult();
+		fg_Move(m_LaunchSequencer).f_Destroy().f_DiscardResult();
 	}
 
 	void CGitLaunches::CState::f_OutputState() const
@@ -263,10 +263,8 @@ namespace NMib::NBuildSystem::NRepository
 	};
 #endif
 
-	TCFuture<CAsyncDestroyAwaiter> CGitLaunches::f_Init()
+	TCUnsafeFuture<CAsyncDestroyAwaiter> CGitLaunches::f_Init()
 	{
-		co_await ECoroutineFlag_AllowReferences;
-
 		auto pState = m_pState;
 		auto &State = *pState;
 
@@ -294,7 +292,7 @@ namespace NMib::NBuildSystem::NRepository
 							if (!bAborted)
 							{
 								bAborted = true;
-								Launch(&CProcessLaunchActor::f_StopProcess) > fg_DiscardResult();
+								Launch(&CProcessLaunchActor::f_StopProcess).f_DiscardResult();
 							}
 						}
 					}
@@ -428,71 +426,54 @@ namespace NMib::NBuildSystem::NRepository
 		}
 	}
 
-	TCFuture<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::fp_Launch(CProcessLaunchActor::CSimpleLaunch &&_Launch) const
+	TCUnsafeFuture<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::fp_Launch(CProcessLaunchActor::CSimpleLaunch _Launch) const
 	{
-		TCPromise<CProcessLaunchActor::CSimpleLaunchResult> Promise;
 		f_CheckInit();
 		_Launch.m_Params.m_bCreateNewProcessGroup = true;
 
-		auto &State = *m_pState;
+		auto pState = m_pState;
+		auto &State = *pState;
 
 		if (*State.m_pCancelled)
-			return Promise <<= DMibErrorInstance("Aborted");
+			co_return DMibErrorInstance("Aborted");
 
-		State.m_LaunchSequencer.f_RunSequenced
-			(
-				g_ActorFunctorWeak / [=, pState = m_pState, Launch = fg_Move(_Launch)](CActorSubscription &&_DoneSubscription) mutable -> TCFuture<CProcessLaunchActor::CSimpleLaunchResult>
+		auto DoneSubscription = co_await State.m_LaunchSequencer.f_Sequence();
+
+		if (*State.m_pCancelled)
+			co_return DMibErrorInstance("Aborted");
+
+		TCActor<CProcessLaunchActor> LaunchActor = fg_Construct();
+		mint LaunchID;
+		{
+			DLock(State.m_Lock);
+			LaunchID = State.m_LaunchID++;
+			State.m_Launches[LaunchID] = LaunchActor;
+		}
+
+		auto Result = co_await LaunchActor(&CProcessLaunchActor::f_LaunchSimple, fg_Move(_Launch));
+
+		{
+			TCActor<CProcessLaunchActor> LaunchActor;
+			{
+				DLock(State.m_Lock);
+				auto pLaunchActor = State.m_Launches.f_FindEqual(LaunchID);
+				if (pLaunchActor)
 				{
-					auto &State = *pState;
-					TCPromise<CProcessLaunchActor::CSimpleLaunchResult> Promise;
-
-					if (*State.m_pCancelled)
-						return Promise <<= DMibErrorInstance("Aborted");
-
-					TCActor<CProcessLaunchActor> LaunchActor = fg_Construct();
-					mint LaunchID;
-					{
-						DLock(State.m_Lock);
-						LaunchID = State.m_LaunchID++;
-						State.m_Launches[LaunchID] = LaunchActor;
-					}
-					LaunchActor(&CProcessLaunchActor::f_LaunchSimple, fg_Move(Launch))
-						> [=, pState = fg_Move(pState), DoneSubscription = fg_Move(_DoneSubscription)](TCAsyncResult<CProcessLaunchActor::CSimpleLaunchResult> &&_Result) mutable
-						{
-							auto &State = *pState;
-							TCActor<CProcessLaunchActor> LaunchActor;
-							{
-								DLock(State.m_Lock);
-								auto pLaunchActor = State.m_Launches.f_FindEqual(LaunchID);
-								if (pLaunchActor)
-								{
-									LaunchActor = *pLaunchActor;
-									State.m_Launches.f_Remove(LaunchID);
-								}
-							}
-							if (!LaunchActor)
-							{
-								pState.f_Clear();
-								Promise.f_SetResult(fg_Move(_Result));
-								return;
-							}
-
-							LaunchActor.f_Destroy() > [=, Result = fg_Move(_Result), pState = fg_Move(pState), DoneSubscription = fg_Move(DoneSubscription)](auto &&) mutable
-								{
-									pState.f_Clear();
-									Promise.f_SetResult(fg_Move(Result));
-									return;
-								}
-							;
-						}
-					;
-					return Promise.f_MoveFuture();
+					LaunchActor = *pLaunchActor;
+					State.m_Launches.f_Remove(LaunchID);
 				}
-			)
-			> Promise
-		;
+			}
+			if (!LaunchActor)
+			{
+				pState.f_Clear();
+				co_return fg_Move(Result);
+			}
+		}
 
-		return Promise.f_MoveFuture();
+		co_await fg_Move(LaunchActor).f_Destroy();
+		pState.f_Clear();
+
+		co_return fg_Move(Result);
 	}
 
 	TCFuture<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::f_Launch
@@ -541,7 +522,7 @@ namespace NMib::NBuildSystem::NRepository
 		return fp_Launch(fg_Move(LaunchParams));
 	}
 
-	TCFuture<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::f_OpenRepoEditor(CRepoEditor const &_Editor, CStr const &_Repo) const
+	TCFuture<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::f_OpenRepoEditor(CRepoEditor _Editor, CStr _Repo) const
 	{
 		auto Params = _Editor.m_Params;
 #ifdef DPlatformFamily_Windows
@@ -555,24 +536,12 @@ namespace NMib::NBuildSystem::NRepository
 		CProcessLaunchActor::CSimpleLaunch LaunchParams{_Editor.m_Application, Params};
 		LaunchParams.m_Params.m_WorkingDirectory = _Editor.m_WorkingDir ? _Editor.m_WorkingDir : _Repo;
 
-		TCPromise<CProcessLaunchActor::CSimpleLaunchResult> Promise;
-		fp_Launch(fg_Move(LaunchParams)) > [=](TCAsyncResult<CProcessLaunchActor::CSimpleLaunchResult> &&_Result)
-			{
-				if (!_Editor.m_Sleep)
-				{
-					Promise.f_SetResult(fg_Move(_Result));
-					return;
-				}
+		auto Result = co_await fp_Launch(fg_Move(LaunchParams)).f_Wrap();
 
-				fg_Timeout(_Editor.m_Sleep) > Promise / [=, Result = fg_Move(_Result)]() mutable
-					{
-						Promise.f_SetResult(fg_Move(Result));
-					}
-				;
-			}
-		;
+		if (_Editor.m_Sleep)
+			co_await fg_Timeout(_Editor.m_Sleep);
 
-		return Promise.f_MoveFuture();
+		co_return fg_Move(Result);
 	}
 
 	uint32 CGitLaunches::fs_MaxProcesses()
@@ -584,17 +553,18 @@ namespace NMib::NBuildSystem::NRepository
 #endif
 	}
 
-	TCFuture<void> CGitLaunches::f_Launch
+	TCUnsafeFuture<void> CGitLaunches::f_Launch
 		(
-			CRepository const &_Repo
-			, TCVector<CStr> const &_Params
-			, TCFunctionMovable<CStr (CProcessLaunchActor::CSimpleLaunchResult const &_Result)> &&_fHandleResult
-			, CStr const &_Prefix
-			, TCMap<CStr, CStr> const &_Environment
-			, CStr const &_Application
+			CRepository _Repo
+			, TCVector<CStr> _Params
+			, TCFunctionMovable<CStr (CProcessLaunchActor::CSimpleLaunchResult const &_Result)> _fHandleResult
+			, CStr _Prefix
+			, TCMap<CStr, CStr> _Environment
+			, CStr _Application
 		) const
 	{
-		auto &State = *m_pState;
+		auto This = *this;
+		auto &State = *This.m_pState;
 
 		TCVector<CStr> CommandLineParams;
 		if (_Application == "git")
@@ -607,35 +577,31 @@ namespace NMib::NBuildSystem::NRepository
 		if (_Application != "git")
 			LaunchParams.m_Params.m_WorkingDirectory = _Repo.m_Location;
 
-		TCPromise<void> Result;
-		fp_Launch(fg_Move(LaunchParams)) > State.m_OutputActor / [Result, _Prefix, This = *this, _Repo, fHandleResult = fg_Move(_fHandleResult)]
-			(TCAsyncResult<CProcessLaunchActor::CSimpleLaunchResult> &&_Result) mutable
-			{
-				bool bIsError = !_Result || _Result->m_ExitCode;
+		auto Result = co_await fp_Launch(fg_Move(LaunchParams)).f_Wrap();
 
-				if (_Result)
-				{
-					CStr Output = fHandleResult(*_Result);
+		co_await fg_ContinueRunningOnActor(State.m_OutputActor);
 
-					if (!Output.f_IsEmpty())
-						This.f_Output(bIsError ? EOutputType_Error : EOutputType_Normal, _Repo, Output, _Prefix);
-				}
+		bool bIsError = !Result || Result->m_ExitCode;
 
-				if (!_Result)
-				{
-					This.f_Output(EOutputType_Error, _Repo, "Failed: {}\n"_f << _Result.f_GetExceptionStr(), _Prefix);
-					Result.f_SetException(_Result);
-				}
-				else if (_Result->m_ExitCode)
-				{
-					This.f_Output(EOutputType_Error, _Repo, "Failed with exit code: {}\n"_f << _Result->m_ExitCode, _Prefix);
-					Result.f_SetException(DMibErrorInstance("Error status"));
-				}
-				else
-					Result.f_SetResult();
-			}
-		;
+		if (Result)
+		{
+			CStr Output = _fHandleResult(*Result);
 
-		return Result.f_MoveFuture();
+			if (!Output.f_IsEmpty())
+				This.f_Output(bIsError ? EOutputType_Error : EOutputType_Normal, _Repo, Output, _Prefix);
+		}
+
+		if (!Result)
+		{
+			This.f_Output(EOutputType_Error, _Repo, "Failed: {}\n"_f << Result.f_GetExceptionStr(), _Prefix);
+			co_return Result.f_GetException();
+		}
+		else if (Result->m_ExitCode)
+		{
+			This.f_Output(EOutputType_Error, _Repo, "Failed with exit code: {}\n"_f << Result->m_ExitCode, _Prefix);
+			co_return DMibErrorInstance("Error status");
+		}
+
+		co_return {};
 	}
 }

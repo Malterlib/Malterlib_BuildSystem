@@ -6,15 +6,15 @@
 
 namespace NMib::NBuildSystem
 {
-	TCFuture<CBuildSystem::ERetry> DMibWorkaroundUBSanSectionErrors CBuildSystem::fs_RunBuildSystem
+	TCUnsafeFuture<CBuildSystem::ERetry> DMibWorkaroundUBSanSectionErrors CBuildSystem::fs_RunBuildSystem
 		(
-			NFunction::TCFunctionMovable<TCFuture<CBuildSystem::ERetry> (CBuildSystem &_BuildSystem)> _fCommand
+			NFunction::TCFunctionMovable<TCFuture<CBuildSystem::ERetry> (CBuildSystem *_pBuildSystem)> _fCommand
 			, NStorage::TCSharedPointer<CCommandLineControl> const &_pCommandLine
 			, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
 			, CGenerateOptions const &_GenerateOptions
 		)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 		TCSharedPointer<TCAtomic<bool>> pCancelled = fg_Construct();
 
@@ -61,7 +61,7 @@ namespace NMib::NBuildSystem
 			else if (Retry == CBuildSystem::ERetry_Again_EnablePositions)
 				BuildSystem.f_SetEnablePositions();
 
-			auto RetryResult = co_await _fCommand(BuildSystem).f_Wrap();
+			auto RetryResult = co_await _fCommand(&BuildSystem).f_Wrap();
 			if (!RetryResult)
 			{
 				if (RetryResult.f_HasExceptionType<NStr::CExceptionParse>() && !BuildSystem.f_EnablePositions() && _GenerateOptions.m_DetailedPositions == EDetailedPositions_OnDemand)
@@ -123,9 +123,9 @@ namespace NMib::NBuildSystem
 		return Filter;
 	}
 
-	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Update(CGenerateOptions const &_GenerateOptions)
+	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Update(CGenerateOptions const &_GenerateOptions)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 		
 		CGenerateEphemeralState GenerateState;
 		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)

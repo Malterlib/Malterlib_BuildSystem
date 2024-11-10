@@ -394,8 +394,8 @@ namespace NMib::NBuildSystem::NXcode
 		CStr f_GetExpandedPath(CStr const &_Path, CStr const &_Base) const override;
 		CSystemEnvironment f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const override;
 
-		TCFuture<void> f_GenerateProjectFile(CProject &_Project, CStr const &_OutputDir, TCMap<CConfiguration, TCSet<CStr>> &_Runnables, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable) const;
-		TCFuture<void> f_GenerateWorkspaceFile(CSolution &_Solution, CStr const &_OutputDir) const;
+		TCUnsafeFuture<void> f_GenerateProjectFile(CProject &_Project, CStr const &_OutputDir, TCMap<CConfiguration, TCSet<CStr>> &_Runnables, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable) const;
+		TCUnsafeFuture<void> f_GenerateWorkspaceFile(CSolution &_Solution, CStr const &_OutputDir) const;
 
 		// Members
 		CBuildSystem const &m_BuildSystem;
@@ -522,9 +522,9 @@ namespace NMib::NBuildSystem::NXcode
 
 		// Values
 
-		TCFuture<void> fp_EvaluateFiles(CProjectState &_ProjectState, CProject &_Project) const;
-		TCFuture<void> fp_EvaluateFileTypeCompileFlags(CProjectState &_ProjectState, CProject& _Project) const;
-		TCFuture<void> fp_EvaluateTargetSettings(CProjectState &_ProjectState, CProject& _Project) const;
+		TCUnsafeFuture<void> fp_EvaluateFiles(CProjectState &_ProjectState, CProject &_Project) const;
+		TCUnsafeFuture<void> fp_EvaluateFileTypeCompileFlags(CProjectState &_ProjectState, CProject& _Project) const;
+		TCUnsafeFuture<void> fp_EvaluateTargetSettings(CProjectState &_ProjectState, CProject& _Project) const;
 		void fp_EvaluateDependencies(CProject& _Project) const;
 
 		static CStr fs_EscapeCommandLineArgument(CStr const &_String);

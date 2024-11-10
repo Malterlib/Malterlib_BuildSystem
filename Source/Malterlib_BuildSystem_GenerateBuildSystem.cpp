@@ -797,8 +797,19 @@ namespace NMib::NBuildSystem
 						ExpandState.m_bEnabled = true;
 					}
 
-					auto fFindFiles = [&](this auto &&_fThis, CEntity &_Entity, CGroupInfo *_pParentGroup) -> void
+					auto fFindFiles = [&]
+						(
+#ifndef DCompiler_Workaround_Apple_clang
+							this
+#endif
+							auto &&_fThis
+							, CEntity &_Entity
+							, CGroupInfo *_pParentGroup
+						) -> void
 						{
+#ifdef DCompiler_Workaround_Apple_clang
+#define _fThis(...) _fThis(_fThis, __VA_ARGS__)
+#endif
 							for (auto iEntity = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iEntity; ++iEntity)
 							{
 								auto &ChildEntity = *iEntity;
@@ -894,6 +905,9 @@ namespace NMib::NBuildSystem
 							}
 						}
 					;
+#ifdef DCompiler_Workaround_Apple_clang
+#define fFindFiles(...) fFindFiles(fFindFiles, __VA_ARGS__)
+#endif
 					fFindFiles(*_Target.m_pOuterEntity, nullptr);
 
 					_Target.m_RootGroup.fr_PruneEmpty();
@@ -937,7 +951,7 @@ namespace NMib::NBuildSystem
 			co_await fg_ParallelForEach
 				(
 					*o_pConfigurations
-					, [&](TCUniquePointer<CConfiguraitonData> &o_pConfig) -> TCFuture<void>
+					, [&](TCUniquePointer<CConfiguraitonData> &o_pConfig) -> TCUnsafeFuture<void>
 					{
 						o_pConfig->m_Evaluated.m_MutableSourceFiles = SourceFiles;
 						co_return {};
@@ -950,9 +964,9 @@ namespace NMib::NBuildSystem
 		co_await fg_ParallelForEach
 			(
 				*o_pConfigurations
-				, [&](TCUniquePointer<CConfiguraitonData> &o_pConfig) -> TCFuture<void>
+				, [&](TCUniquePointer<CConfiguraitonData> &o_pConfig) -> TCUnsafeFuture<void>
 				{
-					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
 					co_await f_CheckCancelled();
 
 					auto &ConfigData = *o_pConfig;

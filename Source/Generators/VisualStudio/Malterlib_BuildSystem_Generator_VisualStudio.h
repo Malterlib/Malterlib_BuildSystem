@@ -462,13 +462,13 @@ namespace NMib::NBuildSystem::NVisualStudio
 		CStr const &f_GetToolsVersion() const;
 		CEJSONSorted const &f_GetVisualStudioRoot() const;
 
-		TCFuture<void> f_GenerateProjectFile(CProject &_Project, CStr const &_OutputDir) const;
-		TCFuture<void> f_GenerateSolutionFile(CSolution &_Solution, CStr const &_OutputDir) const;
+		TCUnsafeFuture<void> f_GenerateProjectFile(CProject &_Project, CStr const &_OutputDir) const;
+		TCUnsafeFuture<void> f_GenerateSolutionFile(CSolution &_Solution, CStr const &_OutputDir) const;
 
-		TCFuture<TCMap<CStr, CCompileType>> f_GenerateProjectFile_File(CProject &_Project, CProjectState &_ProjectState) const;
+		TCUnsafeFuture<TCMap<CStr, CCompileType>> f_GenerateProjectFile_File(CProject &_Project, CProjectState &_ProjectState) const;
 		void f_GenerateProjectFile_AddPrefixHeaders(CProject &_Project, CProjectState &_ProjectState) const;
-		TCFuture<void> f_GenerateProjectFile_Dependency(CProject &_Project, CProjectState &_ProjectState) const;
-		TCFuture<TCMap<CStr, CGeneratorSettingsVSType>> f_GenerateProjectFile_FileTypes
+		TCUnsafeFuture<void> f_GenerateProjectFile_Dependency(CProject &_Project, CProjectState &_ProjectState) const;
+		TCUnsafeFuture<TCMap<CStr, CGeneratorSettingsVSType>> f_GenerateProjectFile_FileTypes
 			(
 				CProject &_Project
 				, CProjectState &_ProjectState

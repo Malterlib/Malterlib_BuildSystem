@@ -371,7 +371,7 @@ namespace NMib::NBuildSystem
 			}
 		}
 
-		TCFuture<bool> DMibWorkaroundUBSanSectionErrors fg_HandleRepository
+		TCUnsafeFuture<bool> DMibWorkaroundUBSanSectionErrors fg_HandleRepository
 			(
 				CGitLaunches &_Launches
 				, CStr const &_ReposDirectory
@@ -383,7 +383,7 @@ namespace NMib::NBuildSystem
 				, mint _MaxRepoWidth
 			)
 		{
-			co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+			co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 			CColors Colors(o_StateHandler.f_AnsiFlags());
 
@@ -397,9 +397,9 @@ namespace NMib::NBuildSystem
 
 			bool bChanged = false;
 
-			auto fLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir, TCMap<CStr, CStr> const &_Environment = {}) -> TCFuture<CStr>
+			auto fLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir, TCMap<CStr, CStr> const &_Environment = {}) -> TCUnsafeFuture<CStr>
 				{
-					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 					TCVector<CStr> CommandLineParams{"-C", _WorkingDir};
 					CommandLineParams.f_Insert(_Params);
@@ -408,9 +408,9 @@ namespace NMib::NBuildSystem
 					co_return Return.f_GetStdOut();
 				}
 			;
-			auto fLaunchGitQuestion = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir, bool _bErrorOnStdErr) -> TCFuture<bool>
+			auto fLaunchGitQuestion = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir, bool _bErrorOnStdErr) -> TCUnsafeFuture<bool>
 				{
-					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 					auto Return = co_await _Launches.f_Launch(_WorkingDir, _Params);
 
@@ -421,9 +421,9 @@ namespace NMib::NBuildSystem
 					co_return Return.m_ExitCode == 0;
 				}
 			;
-			auto fLaunchGitNonEmpty = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir) -> TCFuture<bool>
+			auto fLaunchGitNonEmpty = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir) -> TCUnsafeFuture<bool>
 				{
-					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 					auto Return = co_await _Launches.f_Launch(_WorkingDir, _Params);
 
@@ -433,9 +433,9 @@ namespace NMib::NBuildSystem
 					co_return !Return.f_GetStdOut().f_IsEmpty();
 				}
 			;
-			auto fTryLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir) -> TCFuture<CStr>
+			auto fTryLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir) -> TCUnsafeFuture<CStr>
 				{
-					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 					auto Return = co_await _Launches.f_Launch(_WorkingDir, _Params);
 
@@ -532,9 +532,9 @@ namespace NMib::NBuildSystem
 				{
 					auto Result = co_await fg_CallSafe
 						(
-							[&]() -> TCFuture<void>
+							[&]() -> TCUnsafeFuture<void>
 							{
-								co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+								co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 								TCVector<CStr> CloneParams{"clone"};
 
@@ -580,9 +580,9 @@ namespace NMib::NBuildSystem
 					CStr RelativeLocation = CFile::fs_MakePathRelative(Location, GitRoot);
 					auto Result = co_await fg_CallSafe
 						(
-							[&]() -> TCFuture<void>
+							[&]() -> TCUnsafeFuture<void>
 							{
-								co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+								co_await ECoroutineFlag_CaptureMalterlibExceptions;
 								DLock(*g_SubmoduleAddLock); // Currently git has race issues with submodule adds
 								co_await fLaunchGit
 									(
@@ -638,9 +638,9 @@ namespace NMib::NBuildSystem
 				co_await fLaunchGit({"config", "--local", "user.email", _Repo.m_UserEmail}, Location);
 			}
 
-			auto fSetupLfsReleaseStorage = [&, bDidSetup = false]() -> TCFuture<void>
+			auto fSetupLfsReleaseStorage = [&, bDidSetup = false]() -> TCUnsafeFuture<void>
 				{
-					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 					if (bDidSetup)
 						co_return {};
@@ -827,9 +827,9 @@ namespace NMib::NBuildSystem
 				bool bPassException = false;
 				auto Result = co_await fg_CallSafe
 					(
-						[&]() -> TCFuture<void>
+						[&]() -> TCUnsafeFuture<void>
 						{
-							co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+							co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 							if (HeadHash != ConfigHash)
 							{
@@ -996,9 +996,9 @@ namespace NMib::NBuildSystem
 									for (auto &pRepository : _AllRepositories)
 										AllConfigFiles[pRepository->m_ConfigFile];
 
-									auto fResolveConflicts = [&](CStr const &_ConflictingFiles) -> TCFuture<bool>
+									auto fResolveConflicts = [&](CStr const &_ConflictingFiles) -> TCUnsafeFuture<bool>
 										{
-											co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+											co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 											bool bAllResolved = true;
 											for (auto &File : _ConflictingFiles.f_SplitLine<true>())
@@ -1492,9 +1492,9 @@ namespace NMib::NBuildSystem
 
 	using namespace NRepository;
 
-	TCFuture<CBuildSystem::ERetry> CBuildSystem::fp_HandleRepositories(TCMap<CPropertyKey, CEJSONSorted> const &_Values)
+	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::fp_HandleRepositories(TCMap<CPropertyKey, CEJSONSorted> const &_Values)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 		f_InitEntityForEvaluation(mp_Data.m_RootEntity, _Values);
 		f_ExpandRepositoryEntities(mp_Data);
@@ -1600,9 +1600,9 @@ namespace NMib::NBuildSystem
 			co_await fg_ParallelForEach
 				(
 					Repos
-					, [&](auto &_Repos) mutable -> TCFuture<void>
+					, [&](auto &_Repos) mutable -> TCUnsafeFuture<void>
 					{
-						co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+						co_await ECoroutineFlag_CaptureMalterlibExceptions;
 						co_await f_CheckCancelled();
 
 						CStr ReposDirectory = _Repos.f_GetPath();
@@ -1654,9 +1654,9 @@ namespace NMib::NBuildSystem
 						co_await fg_ParallelForEach
 							(
 								_Repos.m_Repositories
-								, [&](auto &_Repo) -> TCFuture<void>
+								, [&](auto &_Repo) -> TCUnsafeFuture<void>
 								{
-									co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+									co_await ECoroutineFlag_CaptureMalterlibExceptions;
 									co_await f_CheckCancelled();
 
 									if

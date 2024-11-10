@@ -45,8 +45,18 @@ namespace NMib::NBuildSystem
 			pParent = pParent->m_pParent;
 		}
 
-		auto fGenerateFile = [&](this auto &&_fThis, CEntity &_Entity) -> void
+		auto fGenerateFile = [&]
+			(
+#ifndef DCompiler_Workaround_Apple_clang
+				this
+#endif
+				auto &&_fThis
+				, CEntity &_Entity
+			) -> void
 			{
+#ifdef DCompiler_Workaround_Apple_clang
+#define _fThis(...) _fThis(_fThis, __VA_ARGS__)
+#endif
 				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; ++iChild)
 				{
 					auto &Key = iChild->f_GetKey();
@@ -453,6 +463,9 @@ namespace NMib::NBuildSystem
 			}
 		;
 
+#ifdef DCompiler_Workaround_Apple_clang
+#define fGenerateFile(...) fGenerateFile(fGenerateFile, __VA_ARGS__)
+#endif
 		fGenerateFile(_Entity);
 
 		return bChanged;

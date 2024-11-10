@@ -50,8 +50,18 @@ namespace NMib::NBuildSystem
 {
 	void CBuildSystem::f_ExpandDynamicImports(CBuildSystemData &_BuildSystemData) const
 	{
-		auto fExpandEntities = [&](this auto &&_fThis, CEntity &_Entity) -> void
+		auto fExpandEntities = [&]
+			(
+#ifndef DCompiler_Workaround_Apple_clang
+				this
+#endif
+				auto &&_fThis
+				, CEntity &_Entity
+			) -> void
 			{
+#ifdef DCompiler_Workaround_Apple_clang
+#define _fThis(...) _fThis(_fThis, __VA_ARGS__)
+#endif
 				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
 				{
 					auto &Child = *iChild;
@@ -81,9 +91,19 @@ namespace NMib::NBuildSystem
 				}
 			}
 		;
+#ifdef DCompiler_Workaround_Apple_clang
+#define fExpandEntities(...) fExpandEntities(fExpandEntities, __VA_ARGS__)
+#endif
 		fExpandEntities(_BuildSystemData.m_RootEntity);
 
-		auto fExpandImports = [&](this auto &&_fThis, CEntity &_Entity) -> void
+		auto fExpandImports = [&]
+			(
+#ifndef DCompiler_Workaround_Apple_clang
+				this
+#endif
+				auto &&_fThis
+				, CEntity &_Entity
+			) -> void
 			{
 				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
 				{
@@ -104,6 +124,9 @@ namespace NMib::NBuildSystem
 			}
 		;
 
+#ifdef DCompiler_Workaround_Apple_clang
+#define fExpandImports(...) fExpandImports(fExpandImports, __VA_ARGS__)
+#endif
 		fExpandImports(_BuildSystemData.m_RootEntity);
 		{
 			DMibLock(mp_SourceFilesLock);

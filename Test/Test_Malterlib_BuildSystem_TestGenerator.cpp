@@ -133,9 +133,9 @@ namespace
 			return Values;
 		}
 
-		TCFuture<void> f_Generate(CBuildSystem const *_pBuildSystem, CBuildSystemData const *_pBuildSystemData, CStr _OutputDir, TCMap<CStr, uint32> &o_NumWorkspaceTargets) override
+		TCUnsafeFuture<void> f_Generate(CBuildSystem const *_pBuildSystem, CBuildSystemData const *_pBuildSystemData, CStr _OutputDir, TCMap<CStr, uint32> &o_NumWorkspaceTargets) override
 		{
-			co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+			co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 			_pBuildSystem->f_StringCache().f_AddString(gc_TestGeneratorDependencyFiles, gc_TestGeneratorDependencyFiles.f_Hash());
 

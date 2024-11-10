@@ -7,7 +7,7 @@
 
 namespace NMib::NBuildSystem::NRepository
 {
-	TCFuture<CFilteredRepos> DMibWorkaroundUBSanSectionErrors fg_GetFilteredRepos
+	TCUnsafeFuture<CFilteredRepos> DMibWorkaroundUBSanSectionErrors fg_GetFilteredRepos
 		(
 			CBuildSystem::CRepoFilter const &_Filter
 			, CBuildSystem &_BuildSystem
@@ -16,7 +16,7 @@ namespace NMib::NBuildSystem::NRepository
 			, EFilterRepoFlag _Flags
 		)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 		CGitLaunches Launches{_BuildSystem.f_GetBaseDir(), "Filtering repos", _BuildSystem.f_AnsiFlags(), _BuildSystem.f_OutputConsoleFunctor(), _BuildSystem.f_GetCancelledPointer()};
 		auto DestroyLaunchs = co_await co_await Launches.f_Init();
@@ -25,7 +25,7 @@ namespace NMib::NBuildSystem::NRepository
 		FilteredRepos.m_ReposOrdered = fg_GetRepos(_BuildSystem, _Data, _GetRepoFlags);
 		TCMap<mint, TCVector<CRepository *>> FilteredPerStage;
 
-		TCActorResultMap<mint, TCMap<CRepository *, TCAsyncResult<bool>>> DeferredResultsOrdered;
+		TCFutureMap<mint, TCMap<CRepository *, TCAsyncResult<bool>>> DeferredResultsOrdered;
 
 		CStr BaseDir = _BuildSystem.f_GetBaseDir();
 
@@ -33,7 +33,7 @@ namespace NMib::NBuildSystem::NRepository
 		mint iStage = 0;
 		for (auto &Repos : FilteredRepos.m_ReposOrdered)
 		{
-			TCActorResultMap<CRepository *, bool> DeferredResults;
+			TCFutureMap<CRepository *, bool> DeferredResults;
 			for (auto &RepoLocation : Repos)
 			{
 				for (auto &Repo : RepoLocation.m_Repositories)
@@ -67,11 +67,11 @@ namespace NMib::NBuildSystem::NRepository
 							{
 								Launches.f_SetNumRepos(nLaunchRepos);
 							}
-							> fg_DiscardResult()
+							> g_DiscardResult
 						;
-						TCPromise<bool> ChangedDonePromise;
-						ChangedDonePromise.f_Future() > DeferredResults.f_AddResult(&Repo);
-						fg_RepoIsChanged(Launches, Repo, _Flags) > [Launches, ChangedDonePromise](TCAsyncResult<bool> &&_bChanged)
+						TCPromiseFuturePair<bool> ChangedDonePromise;
+						fg_Move(ChangedDonePromise.m_Future) > DeferredResults[&Repo];
+						fg_RepoIsChanged(Launches, Repo, _Flags) > [Launches, ChangedDonePromise = fg_Move(ChangedDonePromise.m_Promise)](TCAsyncResult<bool> &&_bChanged)
 							{
 								Launches.f_RepoDone();
 								ChangedDonePromise.f_SetResult(_bChanged);
@@ -83,11 +83,11 @@ namespace NMib::NBuildSystem::NRepository
 					FilteredPerStage[iStage].f_Insert(&Repo);
 				}
 			}
-			DeferredResults.f_GetResults() > DeferredResultsOrdered.f_AddResult(iStage);
+			fg_AllDoneWrapped(DeferredResults) > DeferredResultsOrdered[iStage];
 			++iStage;
 		}
 
-		auto SyncedResults = co_await (co_await DeferredResultsOrdered.f_GetResults() | g_Unwrap);
+		auto SyncedResults = co_await fg_AllDone(DeferredResultsOrdered);
 
 		for (auto &Repos : SyncedResults)
 		{

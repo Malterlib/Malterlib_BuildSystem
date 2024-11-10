@@ -35,7 +35,7 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_ListCommits
+	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_ListCommits
 		(
 			CGenerateOptions const &_GenerateOptions
 			, CRepoFilter const &_Filter
@@ -50,7 +50,7 @@ namespace NMib::NBuildSystem
 			, NStorage::TCSharedPointer<CCommandLineControl> const &_pCommandLine
 		)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 		
 		CGenerateEphemeralState GenerateState;
 		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
@@ -97,7 +97,7 @@ namespace NMib::NBuildSystem
 
 		for (auto &Repos : FilteredRepositories.m_FilteredRepositories)
 		{
-			TCActorResultVector<void> Results;
+			TCFutureVector<void> Results;
 			for (auto *pRepo : Repos)
 				RepositoryByLocation[pRepo->m_Location] = pRepo;
 		}
@@ -242,8 +242,8 @@ namespace NMib::NBuildSystem
 
 		auto &State = *pState;
 
-		TCActorResultMap<CStr, TCVector<CLogEntryFull>> CommitsResults;
-		TCActorResultMap<CStr, TCVector<CLogEntryFull>> ReverseCommitsResults;
+		TCFutureMap<CStr, TCVector<CLogEntryFull>> CommitsResults;
+		TCFutureMap<CStr, TCVector<CLogEntryFull>> ReverseCommitsResults;
 
 		TCSet<CStr> NoCommits;
 		TCSet<CStr> NoStartCommits;
@@ -267,25 +267,25 @@ namespace NMib::NBuildSystem
 					NoEndCommits[Location];
 
 				{
-					TCPromise<TCVector<CLogEntryFull>> Result;
-					Result.f_SetResult(TCVector<CLogEntryFull>());
-					Result.f_MoveFuture() > CommitsResults.f_AddResult(Location);
+					TCPromiseFuturePair<TCVector<CLogEntryFull>> Result;
+					Result.m_Promise.f_SetResult(TCVector<CLogEntryFull>());
+					fg_Move(Result.m_Future) > CommitsResults[Location];
 				}
 
 				{
-					TCPromise<TCVector<CLogEntryFull>> Result;
-					Result.f_SetResult(TCVector<CLogEntryFull>());
-					Result.f_MoveFuture() > ReverseCommitsResults.f_AddResult(Location);
+					TCPromiseFuturePair<TCVector<CLogEntryFull>> Result;
+					Result.m_Promise.f_SetResult(TCVector<CLogEntryFull>());
+					fg_Move(Result.m_Future) > ReverseCommitsResults[Location];
 				}
 				continue;
 			}
 
-			fg_GetLogEntriesFull(Launches, *pRepository, *pStartCommit, *pEndCommit) > CommitsResults.f_AddResult(Location);
-			fg_GetLogEntriesFull(Launches, *pRepository, *pEndCommit, *pStartCommit) > ReverseCommitsResults.f_AddResult(Location);
+			fg_GetLogEntriesFull(Launches, *pRepository, *pStartCommit, *pEndCommit) > CommitsResults[Location];
+			fg_GetLogEntriesFull(Launches, *pRepository, *pEndCommit, *pStartCommit) > ReverseCommitsResults[Location];
 		}
 
-		auto LogEntriesPerRepo = co_await (co_await CommitsResults.f_GetResults() | g_Unwrap);
-		auto ReverseLogEntriesPerRepo = co_await (co_await ReverseCommitsResults.f_GetResults() | g_Unwrap);
+		auto LogEntriesPerRepo = co_await fg_AllDone(CommitsResults);
+		auto ReverseLogEntriesPerRepo = co_await fg_AllDone(ReverseCommitsResults);
 
 		struct CWildcardColumn
 		{

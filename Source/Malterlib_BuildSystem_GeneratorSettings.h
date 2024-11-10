@@ -24,7 +24,7 @@ namespace NMib::NBuildSystem
 
 	struct CGeneratorSettings
 	{
-		NConcurrency::TCFuture<void> f_PopulateSettings
+		NConcurrency::TCUnsafeFuture<void> f_PopulateSettings
 			(
 				CPropertyKeyReference const &_GeneratorSetting
 				, EPropertyType _PropertyType

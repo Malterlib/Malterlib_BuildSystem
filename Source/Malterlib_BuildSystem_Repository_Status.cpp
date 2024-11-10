@@ -230,7 +230,7 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Status
+	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Status
 		(
 			CGenerateOptions const &_GenerateOptions
 			, CRepoFilter const &_Filter
@@ -239,7 +239,7 @@ namespace NMib::NBuildSystem
 			, TCSharedPointer<CCommandLineControl> const &_pCommandLine
 		)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 		TCSharedPointer<CGenerateEphemeralState> pGenerateState = fg_Construct();
 
@@ -269,7 +269,7 @@ namespace NMib::NBuildSystem
 		bool bUseDefaultUpstream = _Flags & ERepoStatusFlag_UseDefaultUpstreamBranch;
 		bool bIsVerbose = _Flags & ERepoStatusFlag_Verbose;
 
-		TCActorResultVector<CRepoResult> RepoResults;
+		TCFutureVector<CRepoResult> RepoResults;
 
 		auto AllRepos = FilteredRepositories.f_GetAllRepos();
 
@@ -302,14 +302,14 @@ namespace NMib::NBuildSystem
 					else if (!State.m_LocalBranches.m_Current.f_IsEmpty())
 						Branches = {State.m_LocalBranches.m_Current};
 
-					TCActorResultVector<CBranchResult> BranchResults;
+					TCFutureVector<CBranchResult> BranchResults;
 					for (auto &Branch : Branches)
 					{
 						g_Dispatch / [=]() -> TCFuture<CBranchResult>
 							{
 								CBranchResult BranchResult;
-								TCActorResultMap<CStr, TCVector<CLogEntry>> ToPush;
-								TCActorResultMap<CStr, TCVector<CLogEntry>> ToPull;
+								TCFutureMap<CStr, TCVector<CLogEntry>> ToPush;
+								TCFutureMap<CStr, TCVector<CLogEntry>> ToPull;
 								TCSet<CStr> ToPushMissing;
 								TCSet<CStr> ToPullAdded;
 
@@ -346,14 +346,14 @@ namespace NMib::NBuildSystem
 									else
 									{
 										if (State.f_HasRemoteBranch(RemoteBranch))
-											fg_GetLogEntries(Launches, Repo, RemoteBranch, Branch) > ToPush.f_AddResult(Remote);
+											fg_GetLogEntries(Launches, Repo, RemoteBranch, Branch) > ToPush[Remote];
 										else if ((Remote == "origin" && Branch == Repo.m_OriginProperties.m_DefaultBranch) || !State.f_HasRemoteBranch(MissingRemoteBranch))
 											ToPushMissing[Remote];
 
 										if (State.f_HasRemoteBranch(PullRemoteBranch))
 										{
 											if (ToPullAdded(PullRemoteBranchName).f_WasCreated())
-												fg_GetLogEntries(Launches, Repo, Branch, PullRemoteBranch) > ToPull.f_AddResult(PullRemoteBranchName);
+												fg_GetLogEntries(Launches, Repo, Branch, PullRemoteBranch) > ToPull[PullRemoteBranchName];
 										}
 									}
 
@@ -367,19 +367,14 @@ namespace NMib::NBuildSystem
 										CStr ExtraRemoteBranch = "{}/{}"_f << Remote << DefaultBranch;
 										if (State.f_HasRemoteBranch(ExtraRemoteBranch))
 										{
-											fg_GetLogEntries(Launches, Repo, ExtraRemoteBranch, Branch) > ToPush.f_AddResult(AgainstDefaultName);
+											fg_GetLogEntries(Launches, Repo, ExtraRemoteBranch, Branch) > ToPush[AgainstDefaultName];
 											if (ToPullAdded(AgainstDefaultName).f_WasCreated())
-												fg_GetLogEntries(Launches, Repo, Branch, ExtraRemoteBranch) > ToPull.f_AddResult(AgainstDefaultName);
+												fg_GetLogEntries(Launches, Repo, Branch, ExtraRemoteBranch) > ToPull[AgainstDefaultName];
 										}
 									}
 								}
 
-								auto [ToPushResults, ToPullResults] = co_await
-									(
-										ToPush.f_GetResults()
-										+ ToPull.f_GetResults()
-									)
-								;
+								auto [ToPushResults, ToPullResults] = co_await (fg_AllDoneWrapped(ToPush) + fg_AllDoneWrapped(ToPull));
 
 								TCMap<CStr, TCVector<CLogEntry>> ToRemotePush;
 								TCMap<CStr, TCVector<CLogEntry>> ToLocalPull;
@@ -866,11 +861,11 @@ namespace NMib::NBuildSystem
 
 								co_return fg_Move(BranchResult);
 							}
-							> BranchResults.f_AddResult()
+							> BranchResults
 						;
 					}
 
-					auto Results = co_await BranchResults.f_GetUnwrappedResults();
+					auto Results = co_await fg_AllDone(BranchResults);
 
 					CRepoResult ReturnResult{.m_RepoName = Launches.f_GetRepoName(Repo), .m_Repo = Repo, .m_iSequence = iSequence};
 
@@ -888,11 +883,11 @@ namespace NMib::NBuildSystem
 					Launches.f_RepoDone();
 					co_return fg_Move(ReturnResult);
 				}
-				> RepoResults.f_AddResult()
+				> RepoResults
 			;
 		}
 
-		auto Results = co_await (co_await RepoResults.f_GetResults() | g_Unwrap);
+		auto Results = co_await fg_AllDone(RepoResults);
 
 		co_await fg_OutputStatusTable({.m_pCommandLine = _pCommandLine, .m_Results = Results, .m_bIsVerbose = bIsVerbose});
 
@@ -917,12 +912,12 @@ namespace NMib::NBuildSystem
 
 				for (auto &EditorLaunches : EditorsToLaunch)
 				{
-					TCActorResultVector<void> EditorLaunchResults;
+					TCFutureVector<void> EditorLaunchResults;
 					for (auto &Repo : EditorLaunches)
 					{
 						EditorLaunchSequencer.f_RunSequenced
 							(
-								g_ActorFunctorWeak / [=](CActorSubscription &&_Subscription) -> TCFuture<void>
+								g_ActorFunctorWeak / [=](CActorSubscription _Subscription) -> TCFuture<void>
 								{
 									auto Result = co_await Launches.f_OpenRepoEditor(RepoEditor, Repo.m_Location);
 									if (Result.m_ExitCode)
@@ -942,11 +937,11 @@ namespace NMib::NBuildSystem
 									co_return {};
 								}
 							)
-							> EditorLaunchResults.f_AddResult();
+							> EditorLaunchResults;
 						;
 
 					}
-					co_await (co_await EditorLaunchResults.f_GetResults() | g_Unwrap);
+					co_await fg_AllDone(EditorLaunchResults);
 				}
 			}
 

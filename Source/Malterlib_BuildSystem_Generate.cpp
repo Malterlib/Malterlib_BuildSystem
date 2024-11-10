@@ -83,14 +83,14 @@ namespace NMib::NBuildSystem
 		return mp_bSingleThreaded;
 	}
 
-	TCFuture<CBuildSystem::ERetry> CBuildSystem::fp_GeneratePrepare
+	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::fp_GeneratePrepare
 		(
 			CGenerateOptions const &_GenerateOptions
 			, CGenerateEphemeralState &_GenerateState
 			, TCFunction<TCFuture<bool> ()> &&_fPreParse
 		)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 		auto &GenerateSettings = _GenerateOptions.m_Settings;
 
@@ -393,9 +393,9 @@ namespace NMib::NBuildSystem
 			{
 				auto Result = co_await fg_CallSafe
 					(
-						[&]() -> TCFuture<ERetry>
+						[&]() -> TCUnsafeFuture<ERetry>
 						{
-							co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+							co_await ECoroutineFlag_CaptureMalterlibExceptions;
 							if (!bTryParsed)
 							{
 								try
@@ -448,9 +448,9 @@ namespace NMib::NBuildSystem
 		co_return ERetry_None;
 	}
 
-	TCFuture<bool> CBuildSystem::f_Action_Generate(CGenerateOptions const &_GenerateOptions, ERetry &o_Retry)
+	TCUnsafeFuture<bool> CBuildSystem::f_Action_Generate(CGenerateOptions const &_GenerateOptions, ERetry &o_Retry)
 	{
-		co_await (ECoroutineFlag_CaptureMalterlibExceptions | ECoroutineFlag_AllowReferences);
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 		if (_GenerateOptions.m_Settings.m_Action == "Clean")
 			co_return false; // For now we don't support clean
@@ -463,9 +463,9 @@ namespace NMib::NBuildSystem
 			(
 				_GenerateOptions
 				, GenerateState
-				, [&]() -> TCFuture<bool>
+				, [&]() -> TCUnsafeFuture<bool>
 				{
-					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 					co_await f_CheckCancelled();
 
@@ -594,9 +594,9 @@ namespace NMib::NBuildSystem
 								co_await fg_ParallelForEach
 									(
 										ToProcess
-										, [&](auto &&_fToProcess) -> TCFuture<void>
+										, [&](auto &&_fToProcess) -> TCUnsafeFuture<void>
 										{
-											co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+											co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 											_fToProcess();
 
@@ -774,7 +774,7 @@ namespace NMib::NBuildSystem
 					CStr const *m_pPath;
 					NTime::CTime *m_pWriteTime;
 				};
-				TCActorResultVector<void> Results;
+				TCFutureVector<void> Results;
 				TCVector<CToEdit> CurrentInsert;
 				TCVector<TCVector<CToEdit>> ToProcess;
 
@@ -795,7 +795,7 @@ namespace NMib::NBuildSystem
 				co_await fg_ParallelForEach
 					(
 						ToProcess
-						, [&](auto &o_Files) -> TCFuture<void>
+						, [&](auto &o_Files) -> TCUnsafeFuture<void>
 						{
 							for (auto &File : o_Files)
 							{

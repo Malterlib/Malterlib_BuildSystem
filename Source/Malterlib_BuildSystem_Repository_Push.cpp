@@ -11,46 +11,42 @@ namespace NMib::NBuildSystem
 
 	namespace
 	{
-		TCFuture<void> fg_Fetch(CBuildSystem const &_BuildSystem, CGitLaunches const &_Launches, CRepository const &_Repo)
+		TCFuture<void> fg_Fetch(CBuildSystem *_pBuildSystem, CGitLaunches _Launches, CRepository _Repo)
 		{
 			TCVector<CStr> FetchParams = {"fetch", "--all", "--prune", "--tags", "-q"};
 
-			if (_BuildSystem.f_GetGenerateOptions().m_bForceUpdateRemotes)
+			if (_pBuildSystem->f_GetGenerateOptions().m_bForceUpdateRemotes)
 				FetchParams.f_Insert("--force");
 
-			TCPromise<void> Promise;
-			_Launches.f_Launch
+			auto Result = co_await _Launches.f_Launch
 				(
 					_Repo
 					, FetchParams
-					, fg_FetchEnvironment(_BuildSystem)
+					, fg_FetchEnvironment(*_pBuildSystem)
 				)
-				> Promise / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
-				{
-					if (_Result.m_ExitCode)
-					{
-						_Launches.f_Output
-							(
-								EOutputType_Error
-								, _Repo
-								, "Error fetching remotes: {}\n"_f
-								<< _Result.f_GetCombinedOut().f_Trim()
-							)
-						;
-						Promise.f_SetException(DMibErrorInstance("Could not fetch remote"));
-						return;
-					}
-					Promise.f_SetResult();
-				}
 			;
-			return Promise.f_MoveFuture();
+
+			if (Result.m_ExitCode)
+			{
+				_Launches.f_Output
+					(
+						EOutputType_Error
+						, _Repo
+						, "Error fetching remotes: {}\n"_f
+						<< Result.f_GetCombinedOut().f_Trim()
+					)
+				;
+				co_return DMibErrorInstance("Could not fetch remote");
+			}
+
+			co_return {};
 		}
 
 		TCFuture<TCSet<CStr>> DMibWorkaroundUBSanSectionErrors fg_CanPush(CGitLaunches _Launches, CRepository _Repo, TCVector<CStr> _Remotes, CGitBranches _Branches, bool _bForce)
 		{
 			CColors Colors(_Launches.m_pState->m_AnsiFlags);
 
-			TCActorResultMap<CStr, CProcessLaunchActor::CSimpleLaunchResult> CanPushResultsMap;
+			TCFutureMap<CStr, CProcessLaunchActor::CSimpleLaunchResult> CanPushResultsMap;
 
 			for (auto &Remote : _Remotes)
 			{
@@ -59,11 +55,11 @@ namespace NMib::NBuildSystem
 						_Repo
 						, {"merge-base", "--is-ancestor", "{}/{}"_f << Remote << _Branches.m_Current, _Branches.m_Current}
 					)
-					> CanPushResultsMap.f_AddResult(Remote)
+					> CanPushResultsMap[Remote]
 				;
 			}
 
-			auto CanPushResults = co_await (co_await CanPushResultsMap.f_GetResults() | g_Unwrap);
+			auto CanPushResults = co_await fg_AllDone(CanPushResultsMap);
 
 			TCSet<CStr> NewPush;
 			bool bAllFastForward = true;
@@ -123,12 +119,12 @@ namespace NMib::NBuildSystem
 
 		TCFuture<TCSet<CStr>> DMibWorkaroundUBSanSectionErrors fg_NeedPush(CGitLaunches _Launches, CRepository _Repo, TCVector<CStr> _Remotes, CGitBranches _Branches)
 		{
-			TCActorResultMap<CStr, TCVector<CLogEntry>> NeedPushResults;
+			TCFutureMap<CStr, TCVector<CLogEntry>> NeedPushResults;
 
 			for (auto &Remote : _Remotes)
-				fg_GetLogEntries(_Launches, _Repo, "{}/{}"_f << Remote << _Branches.m_Current, _Branches.m_Current, false) > NeedPushResults.f_AddResult(Remote);
+				fg_GetLogEntries(_Launches, _Repo, "{}/{}"_f << Remote << _Branches.m_Current, _Branches.m_Current, false) > NeedPushResults[Remote];
 
-			auto ResultsUnwrapped = co_await (co_await NeedPushResults.f_GetResults() | g_Unwrap);
+			auto ResultsUnwrapped = co_await fg_AllDone(NeedPushResults);
 
 			TCSet<CStr> NeedPush;
 			for (auto &Commits : ResultsUnwrapped)
@@ -141,7 +137,7 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	TCFuture<CBuildSystem::ERetry> DMibWorkaroundUBSanSectionErrors CBuildSystem::f_Action_Repository_Push
+	TCUnsafeFuture<CBuildSystem::ERetry> DMibWorkaroundUBSanSectionErrors CBuildSystem::f_Action_Repository_Push
 		(
 			CGenerateOptions const &_GenerateOptions
 			, CRepoFilter const &_Filter
@@ -149,7 +145,7 @@ namespace NMib::NBuildSystem
 			, ERepoPushFlag _PushFlags
 		)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 		TCSharedPointer<CGenerateEphemeralState> pGenerateState = fg_Construct();
 
@@ -170,7 +166,7 @@ namespace NMib::NBuildSystem
 		mint PushOrderGroup = 0;
 		for (auto &Repos : FilteredRepositories.m_FilteredRepositories.f_Reverse())
 		{
-			TCActorResultVector<bool> Results;
+			TCFutureVector<bool> Results;
 			TCSet<CStr> OutputOrderSet;
 			for (auto *pRepo : Repos)
 			{
@@ -214,11 +210,11 @@ namespace NMib::NBuildSystem
 							co_return false;
 
 						if (!(_PushFlags & ERepoPushFlag_Force))
-							co_await fg_Fetch(*this, Launches, Repo);
+							co_await fg_Fetch(this, Launches, Repo);
 
 						auto NewPush = co_await fg_CanPush(Launches, Repo, Remotes, Branches, _PushFlags & ERepoPushFlag_Force);
 
-						TCActorResultVector<void> PushResults;
+						TCFutureVector<void> PushResults;
 
 						for (auto &Remote : Remotes)
 						{
@@ -270,19 +266,19 @@ namespace NMib::NBuildSystem
 								}
 							}
 							else if (NeedRemotes.f_FindEqual(Remote))
-								Launches.f_Launch(Repo, Params, fg_LogAllFunctor()) > PushResults.f_AddResult();
+								Launches.f_Launch(Repo, Params, fg_LogAllFunctor()) > PushResults;
 						}
 
-						co_await (co_await PushResults.f_GetResults() | g_Unwrap);
+						co_await fg_AllDone(PushResults);
 
 						co_return true;
 					}
-					> Results.f_AddResult()
+					> Results
 				;
 			}
 
 			bool bDidPush = false;
-			for (auto ResultsUnwrapped = co_await (co_await Results.f_GetResults() | g_Unwrap); auto &bResult : ResultsUnwrapped)
+			for (auto ResultsUnwrapped = co_await fg_AllDone(Results); auto &bResult : ResultsUnwrapped)
 				bDidPush = bDidPush || bResult;
 
 			if (bDidPush)

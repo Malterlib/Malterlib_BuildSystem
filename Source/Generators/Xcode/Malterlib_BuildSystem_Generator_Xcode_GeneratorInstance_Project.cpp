@@ -8,7 +8,7 @@
 
 namespace NMib::NBuildSystem::NXcode
 {
-	TCFuture<void> CGeneratorInstance::f_GenerateProjectFile
+	TCUnsafeFuture<void> CGeneratorInstance::f_GenerateProjectFile
 		(
 			CProject &_Project
 			, CStr const &_OutputDir
@@ -16,7 +16,7 @@ namespace NMib::NBuildSystem::NXcode
 			, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable
 		) const
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 		CProjectState ProjectState;
 
@@ -367,9 +367,9 @@ fi
 
 	}
 
-	TCFuture<void> CGeneratorInstance::fp_EvaluateFileTypeCompileFlags(CProjectState &_ProjectState, CProject &_Project) const
+	TCUnsafeFuture<void> CGeneratorInstance::fp_EvaluateFileTypeCompileFlags(CProjectState &_ProjectState, CProject &_Project) const
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 		for (auto Iter = _ProjectState.m_EvaluatedTypesInUse.f_GetIterator(); Iter; ++Iter)
 		{
@@ -411,9 +411,9 @@ fi
 			co_await fg_ParallelForEach
 				(
 					Results
-					, [&](CConfigResultCompile &o_Result) -> TCFuture<void>
+					, [&](CConfigResultCompile &o_Result) -> TCUnsafeFuture<void>
 					{
-						co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+						co_await ECoroutineFlag_CaptureMalterlibExceptions;
 						co_await m_BuildSystem.f_CheckCancelled();
 
 						auto &Config = TCMap<CConfiguration, CConfigResultCompile>::fs_GetKey(o_Result);
@@ -480,9 +480,9 @@ fi
 		}
 	}
 
-	TCFuture<void> CGeneratorInstance::fp_EvaluateFiles(CProjectState &_ProjectState, CProject &_Project) const
+	TCUnsafeFuture<void> CGeneratorInstance::fp_EvaluateFiles(CProjectState &_ProjectState, CProject &_Project) const
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 		for (auto &File : _Project.m_Files)
 		{
@@ -493,9 +493,9 @@ fi
 		co_await fg_ParallelForEach
 			(
 				_Project.m_EnabledProjectConfigs
-				, [&](auto &_ProjectEntity) -> TCFuture<void>
+				, [&](auto &_ProjectEntity) -> TCUnsafeFuture<void>
 				{
-					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
 					co_await m_BuildSystem.f_CheckCancelled();
 
 					auto &Config = _Project.m_EnabledProjectConfigs.fs_GetKey(_ProjectEntity);

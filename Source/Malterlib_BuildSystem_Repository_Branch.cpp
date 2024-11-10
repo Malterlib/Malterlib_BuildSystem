@@ -11,9 +11,9 @@ namespace NMib::NBuildSystem
 {
 	using namespace NRepository;
 
-	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Branch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, CStr const &_Branch, ERepoBranchFlag _Flags)
+	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Branch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, CStr const &_Branch, ERepoBranchFlag _Flags)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 		CGenerateEphemeralState GenerateState;
 		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
@@ -30,7 +30,7 @@ namespace NMib::NBuildSystem
 
 		for (auto &Repos : FilteredRepositories.m_FilteredRepositories)
 		{
-			TCActorResultVector<void> Results;
+			TCFutureVector<void> Results;
 			for (auto *pRepo : Repos)
 			{
 				auto &Repo = *pRepo;
@@ -51,18 +51,22 @@ namespace NMib::NBuildSystem
 					Launches.f_Output(EOutputType_Normal, Repo, "git {}"_f << CProcessLaunchParams::fs_GetParams(ParamsCheckout));
 				else
 				{
-					TCPromise<void> LaunchResult;
-					Launches.f_Launch(Repo, ParamsCheckout, fg_LogAllFunctor()) > [=](TCAsyncResult<void> &&_Result)
-						{
-							Launches.f_RepoDone();
-							LaunchResult.f_SetResult(fg_Move(_Result));
-						}
+					fg_DirectDispatch
+						(
+							[=]() -> TCFuture<void>
+							{
+								auto Result = co_await Launches.f_Launch(Repo, ParamsCheckout, fg_LogAllFunctor()).f_Wrap();
+								Launches.f_RepoDone();
+
+								co_return fg_Move(Result);
+							}
+						)
+						> Results
 					;
-					LaunchResult.f_MoveFuture() > Results.f_AddResult();
 				}
 			}
 
-			LaunchResults.f_Insert(co_await Results.f_GetResults());
+			LaunchResults.f_Insert(co_await fg_AllDoneWrapped(Results));
 			if (*mp_pCancelled)
 				break;
 		}
@@ -74,9 +78,9 @@ namespace NMib::NBuildSystem
 		co_return ERetry_None;
 	}
 
-	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Unbranch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoBranchFlag _Flags)
+	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Unbranch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoBranchFlag _Flags)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 		CGenerateEphemeralState GenerateState;
 		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
@@ -93,7 +97,7 @@ namespace NMib::NBuildSystem
 
 		for (auto &Repos : FilteredRepositories.m_FilteredRepositories)
 		{
-			TCActorResultVector<void> Results;
+			TCFutureVector<void> Results;
 			for (auto *pRepo : Repos)
 			{
 				auto &Repo = *pRepo;
@@ -115,19 +119,23 @@ namespace NMib::NBuildSystem
 					Launches.f_Output(EOutputType_Normal, Repo, "git {}"_f << CProcessLaunchParams::fs_GetParams(ParamsCheckout));
 				else
 				{
-					TCPromise<void> LaunchResult;
-					Launches.f_Launch(Repo, ParamsCheckout, fg_LogAllFunctor()) > [Launches, LaunchResult](TCAsyncResult<void> &&_Result)
-						{
-							Launches.f_RepoDone();
-							LaunchResult.f_SetResult(fg_Move(_Result));
-						}
+					fg_DirectDispatch
+						(
+							[=]() -> TCFuture<void>
+							{
+								auto Result = co_await Launches.f_Launch(Repo, ParamsCheckout, fg_LogAllFunctor()).f_Wrap();
+								Launches.f_RepoDone();
+
+								co_return fg_Move(Result);
+							}
+						)
+						> Results
 					;
-					LaunchResult.f_MoveFuture() > Results.f_AddResult();
 				}
 
 			}
 
-			LaunchResults.f_Insert(co_await Results.f_GetResults());
+			LaunchResults.f_Insert(co_await fg_AllDoneWrapped(Results));
 			if (*mp_pCancelled)
 				break;
 		}
@@ -138,7 +146,7 @@ namespace NMib::NBuildSystem
 		co_return ERetry_None;
 	}
 
-	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_CleanupBranches
+	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_CleanupBranches
 		(
 			CGenerateOptions const &_GenerateOptions
 			, CRepoFilter const &_Filter
@@ -146,7 +154,7 @@ namespace NMib::NBuildSystem
 			, TCVector<CStr> const &_Branches
 		)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 		CGenerateEphemeralState GenerateState;
 		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
@@ -164,7 +172,7 @@ namespace NMib::NBuildSystem
 
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
 
-		TCActorResultVector<void> LaunchResults;
+		TCFutureVector<void> LaunchResults;
 
 		TCMap<CRepository *, CSequencer> DeleteLaunchSequencers;
 
@@ -174,12 +182,12 @@ namespace NMib::NBuildSystem
 				{
 					auto DeleteLaunchSequencersToDestroy = fg_Move(DeleteLaunchSequencers);
 
-					TCActorResultVector<void> DestroyResults;
+					TCFutureVector<void> DestroyResults;
 
 					for (auto &ToDestory : DeleteLaunchSequencersToDestroy)
-						fg_Move(ToDestory).f_Destroy() > DestroyResults.f_AddResult();
+						fg_Move(ToDestory).f_Destroy() > DestroyResults;
 
-					co_await DestroyResults.f_GetUnwrappedResults();
+					co_await fg_AllDone(DestroyResults);
 
 					co_return {};
 				}
@@ -192,225 +200,218 @@ namespace NMib::NBuildSystem
 			auto *pRepo = &Repo;
 
 			auto CurrentBranch = fg_GetBranch(Repo);
-
-			TCPromise<void> Promise;
-
-			TCVector<CStr> Params = {"branch", "--format", "%(refname:short)"};
-
-			TCFuture<TCVector<CStr>> RemotesFuture;
-
-			if (_Flags & ERepoCleanupBranchesFlag_AllRemotes)
-			{
-				Params.f_Insert("-a");
-				RemotesFuture = fg_GetRemotes(Launches, Repo);
-			}
-			else
-				RemotesFuture = TCPromise<TCVector<CStr>>() <<= g_Void;
-
 			auto &DeleteLaunchSequencer = *DeleteLaunchSequencers(pRepo, "BuildSystem Action Repository CleanupBranches DeleteLaunchSequencer {}"_f << Repo.f_GetName());
-
 			auto RepoDoneScope = Launches.f_RepoDoneScope();
 
-			Launches.f_Launch(Repo, Params) + fg_Move(RemotesFuture)
-				> Promise / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result, TCVector<CStr> &&_Remotes) mutable
-				{
-					TCActorResultVector<void> Results;
-
-					TCSet<CStr> Remotes;
-					Remotes.f_AddContainer(_Remotes);
-
-					auto FullBranches = _Result.f_GetStdOut().f_SplitLine<true>();
-
-					TCSet<CStr> LoggedRemote;
-
-					for (auto &FullBranch : _Result.f_GetStdOut().f_SplitLine<true>())
+			fg_DirectDispatch
+				(
+					[=]() mutable -> TCFuture<void>
 					{
-						if (FullBranch.f_IsEmpty())
-							continue;
+						TCVector<CStr> Params = {"branch", "--format", "%(refname:short)"};
 
-						auto Components = FullBranch.f_Split<true>("/");
+						TCFuture<TCVector<CStr>> RemotesFuture;
 
-						CStr Remote;
-						CStr Branch;
-						if ((_Flags & ERepoCleanupBranchesFlag_AllRemotes) && Remotes.f_FindEqual(Components[0]))
+						if (_Flags & ERepoCleanupBranchesFlag_AllRemotes)
 						{
-							Remote = Components[0];
-							Components.f_Remove(0);
-							Branch = CStr::fs_Join(Components, "/");
+							Params.f_Insert("-a");
+							RemotesFuture = fg_GetRemotes(Launches, Repo);
 						}
 						else
-							Branch = FullBranch;
+							RemotesFuture = TCVector<CStr>();
 
-						if (!_Branches.f_IsEmpty())
+						auto [LaunchResult, RemotesVector] = co_await (Launches.f_Launch(Repo, Params) + fg_Move(RemotesFuture));
+
+						auto Remotes = TCSet<CStr>::fs_FromContainer(fg_Move(RemotesVector));
+
+						TCFutureVector<void> Results;
+
+						auto FullBranches = LaunchResult.f_GetStdOut().f_SplitLine<true>();
+
+						TCSet<CStr> LoggedRemote;
+
+						for (auto &FullBranch : FullBranches)
 						{
-							bool bMatchedBranch = false;
-							for (auto &BranchWildcard : _Branches)
+							if (FullBranch.f_IsEmpty())
+								continue;
+
+							auto Components = FullBranch.f_Split<true>("/");
+
+							CStr Remote;
+							CStr Branch;
+							if ((_Flags & ERepoCleanupBranchesFlag_AllRemotes) && Remotes.f_FindEqual(Components[0]))
+							{
+								Remote = Components[0];
+								Components.f_Remove(0);
+								Branch = CStr::fs_Join(Components, "/");
+							}
+							else
+								Branch = FullBranch;
+
+							if (!_Branches.f_IsEmpty())
+							{
+								bool bMatchedBranch = false;
+								for (auto &BranchWildcard : _Branches)
+								{
+									if (fg_StrMatchWildcard(Branch.f_GetStr(), BranchWildcard.f_GetStr()) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
+									{
+										bMatchedBranch = true;
+										break;
+									}
+								}
+
+								if (!bMatchedBranch)
+									continue;
+							}
+
+							if (Branch == "HEAD")
+								continue;
+
+							CStr CompareRemote = Remote ? Remote : CStr("origin");
+
+							if (Remote && (_Flags & ERepoCleanupBranchesFlag_AllRemotes))
+							{
+								if (Remote != "origin")
+								{
+									auto pRemote = Repo.m_Remotes.f_FindEqual(Remote);
+									if (!pRemote)
+									{
+										if (_Flags & ERepoCleanupBranchesFlag_Verbose)
+										{
+											if (LoggedRemote(Remote).f_WasCreated())
+												Launches.f_Output(EOutputType_Normal, Repo, "{}/* - remote not in build system"_f << Remote);
+										}
+										continue;
+									}
+									if (!pRemote->m_bCanPush)
+									{
+										if (_Flags & ERepoCleanupBranchesFlag_Verbose)
+										{
+											if (LoggedRemote(Remote).f_WasCreated())
+												Launches.f_Output(EOutputType_Normal, Repo, "{}/* - no write access to remote"_f << Remote);
+										}
+										continue;
+									}
+								}
+							}
+
+							if (Remote && Branch == fg_GetRemoteHead(Repo, Remote))
+							{
+								if (_Flags & ERepoCleanupBranchesFlag_Verbose)
+									Launches.f_Output(EOutputType_Normal, Repo, "{} - default remote branch protected"_f << FullBranch);
+								continue;
+							}
+
+							if (Branch == Repo.m_OriginProperties.m_DefaultBranch)
+							{
+								if (_Flags & ERepoCleanupBranchesFlag_Verbose)
+									Launches.f_Output(EOutputType_Normal, Repo, "{} - default branch protected"_f << FullBranch);
+								continue;
+							}
+
+							if (Branch == CurrentBranch)
+							{
+								if (_Flags & ERepoCleanupBranchesFlag_Verbose)
+									Launches.f_Output(EOutputType_Normal, Repo, "{} - current branch protected"_f << FullBranch);
+								continue;
+							}
+
+							bool bIsProtected = false;
+							for (auto &BranchWildcard : Repo.m_ProtectedBranches)
 							{
 								if (fg_StrMatchWildcard(Branch.f_GetStr(), BranchWildcard.f_GetStr()) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
 								{
-									bMatchedBranch = true;
+									bIsProtected = true;
 									break;
 								}
 							}
 
-							if (!bMatchedBranch)
+							if (bIsProtected)
+							{
+								if (_Flags & ERepoCleanupBranchesFlag_Verbose)
+									Launches.f_Output(EOutputType_Normal, Repo, "{} - branch protected by Repository.ProtectedBranches"_f << FullBranch);
 								continue;
-						}
-
-						if (Branch == "HEAD")
-							continue;
-
-						CStr CompareRemote = Remote ? Remote : CStr("origin");
-
-						if (Remote && (_Flags & ERepoCleanupBranchesFlag_AllRemotes))
-						{
-							if (Remote != "origin")
-							{
-								auto pRemote = Repo.m_Remotes.f_FindEqual(Remote);
-								if (!pRemote)
-								{
-									if (_Flags & ERepoCleanupBranchesFlag_Verbose)
-									{
-										if (LoggedRemote(Remote).f_WasCreated())
-											Launches.f_Output(EOutputType_Normal, Repo, "{}/* - remote not in build system"_f << Remote);
-									}
-									continue;
-								}
-								if (!pRemote->m_bCanPush)
-								{
-									if (_Flags & ERepoCleanupBranchesFlag_Verbose)
-									{
-										if (LoggedRemote(Remote).f_WasCreated())
-											Launches.f_Output(EOutputType_Normal, Repo, "{}/* - no write access to remote"_f << Remote);
-									}
-									continue;
-								}
 							}
-						}
 
-						if (Remote && Branch == fg_GetRemoteHead(Repo, Remote))
-						{
-							if (_Flags & ERepoCleanupBranchesFlag_Verbose)
-								Launches.f_Output(EOutputType_Normal, Repo, "{} - default remote branch protected"_f << FullBranch);
-							continue;
-						}
-
-						if (Branch == Repo.m_OriginProperties.m_DefaultBranch)
-						{
-							if (_Flags & ERepoCleanupBranchesFlag_Verbose)
-								Launches.f_Output(EOutputType_Normal, Repo, "{} - default branch protected"_f << FullBranch);
-							continue;
-						}
-
-						if (Branch == CurrentBranch)
-						{
-							if (_Flags & ERepoCleanupBranchesFlag_Verbose)
-								Launches.f_Output(EOutputType_Normal, Repo, "{} - current branch protected"_f << FullBranch);
-							continue;
-						}
-
-						bool bIsProtected = false;
-						for (auto &BranchWildcard : Repo.m_ProtectedBranches)
-						{
-							if (fg_StrMatchWildcard(Branch.f_GetStr(), BranchWildcard.f_GetStr()) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
-							{
-								bIsProtected = true;
-								break;
-							}
-						}
-
-						if (bIsProtected)
-						{
-							if (_Flags & ERepoCleanupBranchesFlag_Verbose)
-								Launches.f_Output(EOutputType_Normal, Repo, "{} - branch protected by Repository.ProtectedBranches"_f << FullBranch);
-							continue;
-						}
-
-						TCPromise<void> Promise;
-
-						Launches.f_Launch(Repo, {"merge-base", "--is-ancestor", FullBranch, "{}/{}"_f << CompareRemote << Repo.m_OriginProperties.m_DefaultBranch})
-							+ Launches.f_Launch(Repo, {"log", "--oneline", "--cherry", "{}/{}...{}"_f << CompareRemote << Repo.m_OriginProperties.m_DefaultBranch << FullBranch})
-							> Promise / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result, CProcessLaunchActor::CSimpleLaunchResult &&_ResultRebase) mutable
-							{
-								bool bIsInDefault = _Result.m_ExitCode == 0;
-								CStr DeleteReason = "[ancestor]";
-								if (!bIsInDefault)
-								{
-									bool bAllEquals = true;
-									for (auto &Line : _ResultRebase.f_GetStdOut().f_Trim().f_SplitLine<true>())
+							fg_DirectDispatch
+								(
+									[=]() mutable -> TCFuture<void>
 									{
-										if (!Line.f_StartsWith("= "))
-											bAllEquals = false;
-									}
-									if (bAllEquals)
-									{
-										DeleteReason = "[rebased]";
-										bIsInDefault = true;
-									}
-								}
-								if (!bIsInDefault && !(_Flags & ERepoCleanupBranchesFlag_Force))
-								{
-									Launches.f_Output(EOutputType_Error, Repo, "{} - not fully merged"_f << FullBranch);
-									Promise.f_SetResult();
-									return;
-								}
+										auto [MergeResult, RebaseResult] = co_await
+											(
+												Launches.f_Launch(Repo, {"merge-base", "--is-ancestor", FullBranch, "{}/{}"_f << CompareRemote << Repo.m_OriginProperties.m_DefaultBranch})
+												+ Launches.f_Launch
+												(
+													Repo
+													, {"log", "--oneline", "--cherry", "{}/{}...{}"_f << CompareRemote << Repo.m_OriginProperties.m_DefaultBranch << FullBranch}
+												)
+											)
+										;
 
-								if (!bIsInDefault)
-									DeleteReason = "({}WARNING{} - forced)"_f << Colors.f_StatusError() << Colors.f_Default();
-
-								if (_Flags & ERepoCleanupBranchesFlag_Pretend)
-								{
-									Launches.f_Output(EOutputType_Warning, Repo, "{} - would have deleted {}"_f << FullBranch << DeleteReason);
-									Promise.f_SetResult();
-									return;
-								}
-
-								DeleteLaunchSequencer.f_RunSequenced
-									( 
-										g_ActorFunctorWeak / [=](CActorSubscription &&_Subscription) -> TCFuture<void>
+										bool bIsInDefault = MergeResult.m_ExitCode == 0;
+										CStr DeleteReason = "[ancestor]";
+										if (!bIsInDefault)
 										{
-											Launches.f_Output(EOutputType_Warning, Repo, "{} - deleting {}"_f << FullBranch << DeleteReason);
-
-											if (Remote)
-												co_await Launches.f_Launch(Repo, {"push", Remote, "--delete", "refs/heads/{}"_f << Branch}, fg_LogAllFunctor());
-											else
-												co_await Launches.f_Launch(Repo, {"branch", "-D", FullBranch}, fg_LogAllFunctor());
-
-											(void)_Subscription;
-
+											bool bAllEquals = true;
+											for (auto &Line : RebaseResult.f_GetStdOut().f_Trim().f_SplitLine<true>())
+											{
+												if (!Line.f_StartsWith("= "))
+													bAllEquals = false;
+											}
+											if (bAllEquals)
+											{
+												DeleteReason = "[rebased]";
+												bIsInDefault = true;
+											}
+										}
+										if (!bIsInDefault && !(_Flags & ERepoCleanupBranchesFlag_Force))
+										{
+											Launches.f_Output(EOutputType_Error, Repo, "{} - not fully merged"_f << FullBranch);
 											co_return {};
 										}
-									)
-									> Promise;
-								;
-							}
-						;
 
-						Promise.f_MoveFuture() > Results.f_AddResult();
-					}
+										if (!bIsInDefault)
+											DeleteReason = "({}WARNING{} - forced)"_f << Colors.f_StatusError() << Colors.f_Default();
 
-					Results.f_GetResults() > Promise / [=](TCVector<TCAsyncResult<void>> &&_Results)
-						{
-							if (!fg_CombineResults(Promise, fg_Move(_Results)))
-								return;
+										if (_Flags & ERepoCleanupBranchesFlag_Pretend)
+										{
+											Launches.f_Output(EOutputType_Warning, Repo, "{} - would have deleted {}"_f << FullBranch << DeleteReason);
+											co_return {};
+										}
 
-							(void)RepoDoneScope;
-							Promise.f_SetResult();
+										auto DeleteSubscription = co_await DeleteLaunchSequencer.f_Sequence();
+
+										Launches.f_Output(EOutputType_Warning, Repo, "{} - deleting {}"_f << FullBranch << DeleteReason);
+
+										if (Remote)
+											co_await Launches.f_Launch(Repo, {"push", Remote, "--delete", "refs/heads/{}"_f << Branch}, fg_LogAllFunctor());
+										else
+											co_await Launches.f_Launch(Repo, {"branch", "-D", FullBranch}, fg_LogAllFunctor());
+
+										co_return {};
+									}
+								)
+								> Results
+							;
 						}
-					;
-				}
-			;
 
-			Promise.f_MoveFuture() > LaunchResults.f_AddResult();
+						co_await fg_AllDone(Results);
+
+						(void)RepoDoneScope;
+
+						co_return {};
+					}
+				)
+				> LaunchResults
+			;
 		}
 
-		co_await (co_await LaunchResults.f_GetResults() | g_Unwrap);
+		co_await fg_AllDone(LaunchResults);
 		co_await f_CheckCancelled();
 
 		co_return ERetry_None;
 	}
 
-	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_CleanupTags
+	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_CleanupTags
 		(
 			CGenerateOptions const &_GenerateOptions
 			, CRepoFilter const &_Filter
@@ -418,7 +419,7 @@ namespace NMib::NBuildSystem
 			, TCVector<CStr> const &_Tags
 		)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 		
 		CGenerateEphemeralState GenerateState;
 		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
@@ -436,7 +437,7 @@ namespace NMib::NBuildSystem
 
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
 
-		TCActorResultVector<void> LaunchResults;
+		TCFutureVector<void> LaunchResults;
 
 		TCMap<CRepository *, CSequencer> DeleteLaunchSequencers;
 
@@ -446,12 +447,12 @@ namespace NMib::NBuildSystem
 				{
 					auto DeleteLaunchSequencersToDestroy = fg_Move(DeleteLaunchSequencers);
 
-					TCActorResultVector<void> DestroyResults;
+					TCFutureVector<void> DestroyResults;
 
 					for (auto &ToDestory : DeleteLaunchSequencersToDestroy)
-						fg_Move(ToDestory).f_Destroy() > DestroyResults.f_AddResult();
+						fg_Move(ToDestory).f_Destroy() > DestroyResults;
 
-					co_await DestroyResults.f_GetUnwrappedResults();
+					co_await fg_AllDone(DestroyResults);
 
 					co_return {};
 				}
@@ -463,173 +464,178 @@ namespace NMib::NBuildSystem
 			auto &Repo = RepoBound;
 			auto *pRepo = &Repo;
 
-			TCPromise<void> Promise;
-
-			TCFuture<TCVector<CStr>> RemotesFuture;
-
-			if (_Flags & ERepoCleanupTagsFlag_AllRemotes)
-				RemotesFuture = fg_GetRemotes(Launches, Repo);
-			else
-				RemotesFuture = TCPromise<TCVector<CStr>>() <<= g_Void;
-
 			auto &DeleteLaunchSequencer = *DeleteLaunchSequencers(pRepo, "BuildSystem Action Repository CleanupTags DeleteLaunchSequencer {}"_f << Repo.f_GetName());
 
 			auto RepoDoneScope = Launches.f_RepoDoneScope();
 
-			Launches.f_Launch(Repo, {"tag"}) + fg_Move(RemotesFuture)
-				> Promise / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result, TCVector<CStr> &&_Remotes) mutable
-				{
-					TCSet<CStr> Remotes;
-					Remotes.f_AddContainer(_Remotes);
+			fg_DirectDispatch
+				(
+					[=]() mutable -> TCFuture<void>
+					{
+						TCFuture<TCVector<CStr>> RemotesFuture;
 
-					auto FullTags = _Result.f_GetStdOut().f_SplitLine<true>();
+						if (_Flags & ERepoCleanupTagsFlag_AllRemotes)
+							RemotesFuture = fg_GetRemotes(Launches, Repo);
+						else
+							RemotesFuture = TCVector<CStr>();
 
-					TCActorResultMap<CStr, CProcessLaunchActor::CSimpleLaunchResult> RemoteTagsResults;
-					for (auto &Remote : Remotes)
-						Launches.f_Launch(Repo, {"ls-remote", "--tags", Remote}) > RemoteTagsResults.f_AddResult(Remote);
+						auto [TagResult, RemotesVector] = co_await (Launches.f_Launch(Repo, {"tag"}) + fg_Move(RemotesFuture));
 
-					RemoteTagsResults.f_GetResults() > Promise / [=](TCMap<CStr, TCAsyncResult<CProcessLaunchActor::CSimpleLaunchResult>> &&_RemoteTags)
+						auto Remotes = TCSet<CStr>::fs_FromContainer(fg_Move(RemotesVector));
+
+						auto FullTags = TagResult.f_GetStdOut().f_SplitLine<true>();
+
+						TCFutureMap<CStr, CProcessLaunchActor::CSimpleLaunchResult> RemoteTagsResults;
+						for (auto &Remote : Remotes)
+							Launches.f_Launch(Repo, {"ls-remote", "--tags", Remote}) > RemoteTagsResults[Remote];
+
+						auto RemoteTags = co_await fg_AllDoneWrapped(RemoteTagsResults);
+
+						TCSet<CStr> LoggedRemote;
+
+						struct CTag
 						{
-							TCActorResultVector<void> Results;
-
-							TCSet<CStr> LoggedRemote;
-
-							struct CTag
+							CStr f_GetName() const
 							{
-								CStr f_GetName() const
-								{
-									if (!m_Remote)
-										return m_Tag;
-									return "{}/{}"_f << m_Remote << m_Tag;
-								}
-
-								CStr f_GetRef() const
-								{
-									if (m_Hash)
-										return m_Hash;
-									return "refs/tags/{}"_f << m_Tag;
-								}
-
-								auto operator <=> (CTag const &_Right) const
-								{
-									return fg_TupleReferences(m_Remote, m_Tag) <=> fg_TupleReferences(_Right.m_Remote, _Right.m_Tag);
-								}
-
-								CStr m_Remote;
-								CStr m_Tag;
-								CStr m_Hash;
-							};
-
-							TCSet<CTag> AllTags;
-
-							TCSet<CStr> ReferencedTags;
-
-							for (auto &LaunchResult : _RemoteTags)
-							{
-								auto &Remote = _RemoteTags.fs_GetKey(LaunchResult);
-								if (!LaunchResult)
-								{
-									Launches.f_Output(EOutputType_Error, Repo, "{} - Failed to query tags: {}"_f << Remote << LaunchResult.f_GetExceptionStr());
-									continue;
-								}
-
-								bool bWritable = true;
-								if (Remote && Remote != "origin")
-								{
-									auto pRemote = Repo.m_Remotes.f_FindEqual(Remote);
-									if (!pRemote)
-									{
-										if (_Flags & ERepoCleanupTagsFlag_Verbose)
-											Launches.f_Output(EOutputType_Normal, Repo, "{}/* - remote not in build system"_f << Remote);
-										bWritable = false;
-									}
-									else if (!pRemote->m_bCanPush)
-									{
-										if (_Flags & ERepoCleanupTagsFlag_Verbose)
-											Launches.f_Output(EOutputType_Normal, Repo, "{}/* - no write access to remote"_f << Remote);
-										bWritable = false;
-									}
-								}
-
-								for (auto &Line : (*LaunchResult).f_GetStdOut().f_SplitLine<true>())
-								{
-									CStr Hash;
-									CStr Tag;
-									aint nParsed = 0;
-									(CStr::CParse("{}	refs/tags/{}") >> Hash >> Tag).f_Parse(Line, nParsed);
-									if (nParsed == 2)
-									{
-										if (Tag.f_EndsWith("^{}"))
-											Tag = Tag.f_Left(Tag.f_GetLen() - 3);
-
-										if (bWritable)
-											AllTags[CTag{.m_Remote = Remote, .m_Tag = Tag, .m_Hash = Hash}];
-										else
-											ReferencedTags[Tag];
-									}
-								}
+								if (!m_Remote)
+									return m_Tag;
+								return "{}/{}"_f << m_Remote << m_Tag;
 							}
 
-							for (auto &Tag : _Result.f_GetStdOut().f_SplitLine<true>())
+							CStr f_GetRef() const
 							{
-								if (ReferencedTags.f_FindEqual(Tag))
+								if (m_Hash)
+									return m_Hash;
+								return "refs/tags/{}"_f << m_Tag;
+							}
+
+							auto operator <=> (CTag const &_Right) const
+							{
+								return fg_TupleReferences(m_Remote, m_Tag) <=> fg_TupleReferences(_Right.m_Remote, _Right.m_Tag);
+							}
+
+							CStr m_Remote;
+							CStr m_Tag;
+							CStr m_Hash;
+						};
+
+						TCSet<CTag> AllTags;
+
+						TCSet<CStr> ReferencedTags;
+
+						for (auto &LaunchResult : RemoteTags)
+						{
+							auto &Remote = RemoteTags.fs_GetKey(LaunchResult);
+							if (!LaunchResult)
+							{
+								Launches.f_Output(EOutputType_Error, Repo, "{} - Failed to query tags: {}"_f << Remote << LaunchResult.f_GetExceptionStr());
+								continue;
+							}
+
+							bool bWritable = true;
+							if (Remote && Remote != "origin")
+							{
+								auto pRemote = Repo.m_Remotes.f_FindEqual(Remote);
+								if (!pRemote)
 								{
 									if (_Flags & ERepoCleanupTagsFlag_Verbose)
-										Launches.f_Output(EOutputType_Normal, Repo, "{} - referenced by remote"_f << Tag);
-									continue;
+										Launches.f_Output(EOutputType_Normal, Repo, "{}/* - remote not in build system"_f << Remote);
+									bWritable = false;
 								}
-								AllTags[CTag{"", Tag}];
+								else if (!pRemote->m_bCanPush)
+								{
+									if (_Flags & ERepoCleanupTagsFlag_Verbose)
+										Launches.f_Output(EOutputType_Normal, Repo, "{}/* - no write access to remote"_f << Remote);
+									bWritable = false;
+								}
 							}
 
-							for (auto &Tag : AllTags)
+							for (auto &Line : (*LaunchResult).f_GetStdOut().f_SplitLine<true>())
 							{
-								CStr CompareRemote = Tag.m_Remote ? Tag.m_Remote : CStr("origin");
-
-								if (!_Tags.f_IsEmpty())
+								CStr Hash;
+								CStr Tag;
+								aint nParsed = 0;
+								(CStr::CParse("{}	refs/tags/{}") >> Hash >> Tag).f_Parse(Line, nParsed);
+								if (nParsed == 2)
 								{
-									bool bMatchedTag = false;
-									for (auto &TagWildcard : _Tags)
-									{
-										if (fg_StrMatchWildcard(Tag.m_Tag.f_GetStr(), TagWildcard.f_GetStr()) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
-										{
-											bMatchedTag = true;
-											break;
-										}
-									}
+									if (Tag.f_EndsWith("^{}"))
+										Tag = Tag.f_Left(Tag.f_GetLen() - 3);
 
-									if (!bMatchedTag)
-										continue;
+									if (bWritable)
+										AllTags[CTag{.m_Remote = Remote, .m_Tag = Tag, .m_Hash = Hash}];
+									else
+										ReferencedTags[Tag];
 								}
+							}
+						}
 
-								bool bIsProtected = false;
-								for (auto &TagWildcard : Repo.m_ProtectedTags)
+						for (auto &Tag : FullTags)
+						{
+							if (ReferencedTags.f_FindEqual(Tag))
+							{
+								if (_Flags & ERepoCleanupTagsFlag_Verbose)
+									Launches.f_Output(EOutputType_Normal, Repo, "{} - referenced by remote"_f << Tag);
+								continue;
+							}
+							AllTags[CTag{"", Tag}];
+						}
+
+						TCFutureVector<void> Results;
+
+						for (auto &Tag : AllTags)
+						{
+							CStr CompareRemote = Tag.m_Remote ? Tag.m_Remote : CStr("origin");
+
+							if (!_Tags.f_IsEmpty())
+							{
+								bool bMatchedTag = false;
+								for (auto &TagWildcard : _Tags)
 								{
 									if (fg_StrMatchWildcard(Tag.m_Tag.f_GetStr(), TagWildcard.f_GetStr()) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
 									{
-										bIsProtected = true;
+										bMatchedTag = true;
 										break;
 									}
 								}
 
-								if (bIsProtected)
-								{
-									if (_Flags & ERepoCleanupTagsFlag_Verbose)
-										Launches.f_Output(EOutputType_Normal, Repo, "{} - tag protected by Repository.ProtectedTags"_f << Tag.f_GetName());
+								if (!bMatchedTag)
 									continue;
+							}
+
+							bool bIsProtected = false;
+							for (auto &TagWildcard : Repo.m_ProtectedTags)
+							{
+								if (fg_StrMatchWildcard(Tag.m_Tag.f_GetStr(), TagWildcard.f_GetStr()) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
+								{
+									bIsProtected = true;
+									break;
 								}
+							}
 
-								TCPromise<void> Promise;
+							if (bIsProtected)
+							{
+								if (_Flags & ERepoCleanupTagsFlag_Verbose)
+									Launches.f_Output(EOutputType_Normal, Repo, "{} - tag protected by Repository.ProtectedTags"_f << Tag.f_GetName());
+								continue;
+							}
 
-								Launches.f_Launch(Repo, {"merge-base", "--is-ancestor", Tag.f_GetRef(), "{}/{}"_f << CompareRemote << Repo.m_OriginProperties.m_DefaultBranch})
-									+ Launches.f_Launch(Repo, {"log", "--oneline", "--cherry", "{}/{}...{}"_f << CompareRemote << Repo.m_OriginProperties.m_DefaultBranch << Tag.f_GetRef()})
-									> Promise / [=](CProcessLaunchActor::CSimpleLaunchResult &&_Result, CProcessLaunchActor::CSimpleLaunchResult &&_ResultRebase) mutable
+							fg_DirectDispatch
+								(
+									[=]() mutable -> TCFuture<void>
 									{
-										bool bIsInDefault = _Result.m_ExitCode == 0;
+										auto [MergeResult, RebaseResult] = co_await
+											(
+												Launches.f_Launch(Repo, {"merge-base", "--is-ancestor", Tag.f_GetRef(), "{}/{}"_f << CompareRemote << Repo.m_OriginProperties.m_DefaultBranch})
+												+ Launches.f_Launch(Repo, {"log", "--oneline", "--cherry", "{}/{}...{}"_f << CompareRemote << Repo.m_OriginProperties.m_DefaultBranch << Tag.f_GetRef()})
+											)
+										;
+
+										bool bIsInDefault = MergeResult.m_ExitCode == 0;
 										CStr DeleteReason = "[ancestor]";
 										if (!bIsInDefault)
 										{
 											bool bAllEquals = true;
-											for (auto &Line : _ResultRebase.f_GetStdOut().f_Trim().f_SplitLine<true>())
+											for (auto &Line : RebaseResult.f_GetStdOut().f_Trim().f_SplitLine<true>())
 											{
 												if (!Line.f_StartsWith("= "))
 													bAllEquals = false;
@@ -643,8 +649,7 @@ namespace NMib::NBuildSystem
 										if (!bIsInDefault && !(_Flags & ERepoCleanupTagsFlag_Force))
 										{
 											Launches.f_Output(EOutputType_Error, Repo, "{} - not fully merged"_f << Tag.f_GetName());
-											Promise.f_SetResult();
-											return;
+											co_return {};
 										}
 
 										if (!bIsInDefault)
@@ -653,52 +658,36 @@ namespace NMib::NBuildSystem
 										if (_Flags & ERepoCleanupTagsFlag_Pretend)
 										{
 											Launches.f_Output(EOutputType_Warning, Repo, "{} - would have deleted {}"_f << Tag.f_GetName() << DeleteReason);
-											Promise.f_SetResult();
-											return;
+											co_return {};
 										}
 
-										DeleteLaunchSequencer.f_RunSequenced
-											(
-												g_ActorFunctorWeak / [=](CActorSubscription &&_Subscription) -> TCFuture<void>
-												{
-													Launches.f_Output(EOutputType_Warning, Repo, "{} - deleting {}"_f << Tag.f_GetName() << DeleteReason);
+										auto DeleteSubscription = co_await DeleteLaunchSequencer.f_Sequence();
 
-													if (Tag.m_Remote)
-														co_await Launches.f_Launch(Repo, {"push", Tag.m_Remote, "--delete", "refs/tags/{}"_f << Tag.m_Tag}, fg_LogAllFunctor());
-													else
-														co_await Launches.f_Launch(Repo, {"tag", "-d", Tag.m_Tag}, fg_LogAllFunctor());
+										Launches.f_Output(EOutputType_Warning, Repo, "{} - deleting {}"_f << Tag.f_GetName() << DeleteReason);
 
-													(void)_Subscription;
+										if (Tag.m_Remote)
+											co_await Launches.f_Launch(Repo, {"push", Tag.m_Remote, "--delete", "refs/tags/{}"_f << Tag.m_Tag}, fg_LogAllFunctor());
+										else
+											co_await Launches.f_Launch(Repo, {"tag", "-d", Tag.m_Tag}, fg_LogAllFunctor());
 
-													co_return {};
-												}
-											)
-											> Promise;
-										;
+										co_return {};
 									}
-								;
-
-								Promise.f_MoveFuture() > Results.f_AddResult();
-							}
-
-							Results.f_GetResults() > Promise / [=](TCVector<TCAsyncResult<void>> &&_Results)
-								{
-									if (!fg_CombineResults(Promise, fg_Move(_Results)))
-										return;
-
-									(void)RepoDoneScope;
-									Promise.f_SetResult();
-								}
+								)
+								> Results;
 							;
 						}
-					;
-				}
-			;
 
-			Promise.f_MoveFuture() > LaunchResults.f_AddResult();
+						co_await fg_AllDone(Results);
+						(void)RepoDoneScope;
+
+						co_return {};
+					}
+				)
+				> LaunchResults
+			;
 		}
 
-		co_await (co_await LaunchResults.f_GetResults() | g_Unwrap);
+		co_await fg_AllDone(LaunchResults);
 		co_await f_CheckCancelled();
 
 		co_return ERetry_None;

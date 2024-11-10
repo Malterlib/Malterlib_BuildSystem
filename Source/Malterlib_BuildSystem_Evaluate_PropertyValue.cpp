@@ -417,8 +417,18 @@ namespace NMib::NBuildSystem
 
 		auto *pType = fp_GetCanonicalType(_Context, &pTypeWithPosition->m_Type, pTypePosition);
 
-		auto fGetCanonicalType = [&](this auto &&_fThis, CBuildSystemSyntax::CType const *_pType) -> CBuildSystemSyntax::CType const *
+		auto fGetCanonicalType = [&]
+			(
+#ifndef DCompiler_Workaround_Apple_clang
+				this
+#endif
+				auto &&_fThis
+				, CBuildSystemSyntax::CType const *_pType
+			) -> CBuildSystemSyntax::CType const *
 			{
+#ifdef DCompiler_Workaround_Apple_clang
+#define _fThis(...) _fThis(_fThis, __VA_ARGS__)
+#endif
 				auto pType = fp_GetCanonicalType(_Context, _pType, pTypePosition);
 
 				if (pType->m_Type.f_IsOfType<CBuildSystemSyntax::CFunctionType>())
@@ -451,6 +461,9 @@ namespace NMib::NBuildSystem
 			}
 		;
 
+#ifdef DCompiler_Workaround_Apple_clang
+#define fGetCanonicalType(...) fGetCanonicalType(fGetCanonicalType, __VA_ARGS__)
+#endif
 		pType = fGetCanonicalType(pType);
 
 		TCOptional<CValuePotentiallyByRef> OriginalEvaluatedValue;

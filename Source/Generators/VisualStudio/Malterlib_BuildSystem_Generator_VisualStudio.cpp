@@ -49,9 +49,9 @@ namespace NMib::NBuildSystem
 			return Values;
 		}
 
-		TCFuture<void> f_Generate(CBuildSystem const *_pBuildSystem, CBuildSystemData const *_pBuildSystemData, CStr _OutputDir, TCMap<CStr, uint32> &o_NumWorkspaceTargets) override
+		TCUnsafeFuture<void> f_Generate(CBuildSystem const *_pBuildSystem, CBuildSystemData const *_pBuildSystemData, CStr _OutputDir, TCMap<CStr, uint32> &o_NumWorkspaceTargets) override
 		{
-			co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+			co_await (ECoroutineFlag_CaptureMalterlibExceptions);
 
 			CClock Clock;
 			Clock.f_Start();
@@ -212,9 +212,9 @@ namespace NMib::NBuildSystem
 			co_await fg_ParallelForEach
 				(
 					SortedWorkspaces
-					, [&](TCUniquePointer<CSolution> &_pSolution) -> TCFuture<void>
+					, [&](TCUniquePointer<CSolution> &_pSolution) -> TCUnsafeFuture<void>
 					{
-						co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+						co_await (ECoroutineFlag_CaptureMalterlibExceptions);
 						co_await BuildSystem.f_CheckCancelled();
 
 						CClock Timer{true};
@@ -246,9 +246,9 @@ namespace NMib::NBuildSystem
 						co_await fg_ParallelForEach
 							(
 								InfosToProcess
-								, [&](CGenerateWorkspaceInfo &_WorkspaceInfo) -> TCFuture<void>
+								, [&](CGenerateWorkspaceInfo &_WorkspaceInfo) -> TCUnsafeFuture<void>
 								{
-									co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+									co_await (ECoroutineFlag_CaptureMalterlibExceptions);
 									co_await BuildSystem.f_CheckCancelled();
 
 									auto Start = Timer.f_GetTime();

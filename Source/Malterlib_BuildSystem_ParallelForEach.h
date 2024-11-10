@@ -6,9 +6,9 @@
 namespace NMib::NBuildSystem
 {
 	template <typename tf_CContainer, typename tf_CFunctor>
-	NConcurrency::TCFuture<void> DMibWorkaroundUBSanSectionErrorsDisable fg_ParallelForEach(tf_CContainer &&_Container, tf_CFunctor &&_fFunctor, bool _bSingleThreaded)
+	NConcurrency::TCUnsafeFuture<void> DMibWorkaroundUBSanSectionErrorsDisable fg_ParallelForEach(tf_CContainer &&_Container, tf_CFunctor &&_fFunctor, bool _bSingleThreaded)
 	{
-		co_await (NConcurrency::ECoroutineFlag_AllowReferences | NConcurrency::ECoroutineFlag_CaptureMalterlibExceptions);
+		co_await NConcurrency::ECoroutineFlag_CaptureMalterlibExceptions;
 
 		if (_Container.f_IsEmpty())
 			co_return {};
@@ -16,11 +16,11 @@ namespace NMib::NBuildSystem
 		mint nConcurrency = NConcurrency::fg_ConcurrencyManager().f_GetConcurrency();
 		if (nConcurrency <= 1 || _bSingleThreaded)
 		{
-			NConcurrency::TCActorResultVector<void> Results;
+			NConcurrency::TCFutureVector<void> Results;
 			for (auto &Value : _Container)
-				_fFunctor(Value) > Results.f_AddResult();
+				_fFunctor(Value) > Results;
 
-			auto Result = fg_UnwrapFirst(co_await Results.f_GetResults());
+			auto Result = fg_UnwrapFirst(co_await fg_AllDoneWrapped(Results));
 			if (!Result)
 				co_return fg_Move(Result).f_GetException();
 
@@ -29,7 +29,7 @@ namespace NMib::NBuildSystem
 
 		mint iValue = 0;
 
-		NConcurrency::TCActorResultVector<void> Results;
+		NConcurrency::TCFutureVector<void> Results;
 
 		for (auto &Value : _Container)
 		{
@@ -47,7 +47,7 @@ namespace NMib::NBuildSystem
 				{
 					return _fFunctor(*pValue);
 				}
-				> Results.f_AddResult();
+				> Results;
 			;
 		}
 
@@ -55,13 +55,13 @@ namespace NMib::NBuildSystem
 		for (auto &Value : _Container)
 		{
 			if (iValue == 0)
-				_fFunctor(Value) > Results.f_AddResult();;
+				_fFunctor(Value) > Results;
 
 			if (++iValue == nConcurrency)
 				iValue = 0;
 		}
 
-		auto Result = fg_UnwrapFirst(co_await Results.f_GetResults());
+		auto Result = fg_UnwrapFirst(co_await fg_AllDoneWrapped(Results));
 		if (!Result)
 			co_return fg_Move(Result).f_GetException();
 

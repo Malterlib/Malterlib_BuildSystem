@@ -200,7 +200,7 @@ namespace NMib::NBuildSystem::NRepository
 		CGitLaunches(CGitLaunches const &_Other);
 		CGitLaunches(CGitLaunches &&_Other) = default;
 
-		TCFuture<CAsyncDestroyAwaiter> f_Init();
+		TCUnsafeFuture<CAsyncDestroyAwaiter> f_Init();
 
 		void f_CheckInit() const;
 		void f_SetNumRepos(mint _nRepos, bool _bReport = true);
@@ -223,17 +223,17 @@ namespace NMib::NBuildSystem::NRepository
 				, CStr const &_Application = "git"
 			) const
 		;
-		TCFuture<void> f_Launch
+		TCUnsafeFuture<void> f_Launch
 			(
-				CRepository const &_Repo
-				, TCVector<CStr> const &_Params
-				, TCFunctionMovable<CStr (CProcessLaunchActor::CSimpleLaunchResult const &_Result)> &&_fHandleResult
-				, CStr const &_Prefix = {}
-				, TCMap<CStr, CStr> const &_Environment = {}
-				, CStr const &_Application = "git"
+				CRepository _Repo
+				, TCVector<CStr> _Params
+				, TCFunctionMovable<CStr (CProcessLaunchActor::CSimpleLaunchResult const &_Result)> _fHandleResult
+				, CStr _Prefix = {}
+				, TCMap<CStr, CStr> _Environment = {}
+				, CStr _Application = "git"
 			) const
 		;
-		TCFuture<CProcessLaunchActor::CSimpleLaunchResult> f_OpenRepoEditor(CRepoEditor const &_Editor, CStr const &_Repo) const;
+		TCFuture<CProcessLaunchActor::CSimpleLaunchResult> f_OpenRepoEditor(CRepoEditor _Editor, CStr _Repo) const;
 
 		struct CDeferredOutput
 		{
@@ -314,7 +314,7 @@ namespace NMib::NBuildSystem::NRepository
 		TCSharedPointer<COwner> m_pOwner;
 
 	private:
-		TCFuture<CProcessLaunchActor::CSimpleLaunchResult> fp_Launch(CProcessLaunchActor::CSimpleLaunch &&_Launch) const;
+		TCUnsafeFuture<CProcessLaunchActor::CSimpleLaunchResult> fp_Launch(CProcessLaunchActor::CSimpleLaunch _Launch) const;
 	};
 
 	struct CFilteredRepos
@@ -444,7 +444,7 @@ namespace NMib::NBuildSystem::NRepository
 		, mc_IncludeReleasePackage = DMibBit(0)
 	};
 
-	TCFuture<CGitVersion> fg_GetGitVersion(CGitLaunches &_Launches);
+	TCUnsafeFuture<CGitVersion> fg_GetGitVersion(CGitLaunches &_Launches);
 	CStr fg_GetGitRoot(CStr const &_Directory);
 	CStr fg_GetGitDataDir(CStr const &_GitRoot, CFilePosition const &_Position);
 	CStr fg_GetGitHeadHash(CStr const &_GitRoot, CFilePosition const &_Position);
@@ -455,22 +455,22 @@ namespace NMib::NBuildSystem::NRepository
 
 	TCFunctionMovable<CStr (CProcessLaunchActor::CSimpleLaunchResult const &_Result)> fg_LogAllFunctor();
 
-	TCFuture<bool> fg_RepoIsChanged(CGitLaunches const &_GitLaunches, CRepository const &_Repo, EFilterRepoFlag _Flags);
-	TCFuture<TCVector<CLocalFileChange>> fg_GetLocalFileChanges(CGitLaunches const &_GitLaunches, CRepository const &_Repo, bool _bIncludeUntracked);
-	TCFuture<CGitBranches> fg_GetBranches(CGitLaunches const &_GitLaunches, CRepository const &_Repo, bool _bRemote);
-	TCFuture<TCVector<CStr>> fg_GetRemotes(CGitLaunches const &_GitLaunches, CRepository const &_Repo);
-	TCFuture<TCMap<CStr, CRemote>> fg_GetPushRemotes(CGitLaunches const &_GitLaunches, CRepository const &_Repo, TCVector<CStr> const &_Remotes);
-	TCFuture<TCVector<CLogEntry>> fg_GetLogEntries(CGitLaunches const &_GitLaunches, CRepository const &_Repo, CStr const &_From, CStr const &_To, bool _bReportBadRevision = true);
-	TCFuture<TCVector<CLogEntryFull>> fg_GetLogEntriesFull(CGitLaunches const &_GitLaunches, CRepository const &_Repo, CStr const &_From, CStr const &_To);
+	TCFuture<bool> fg_RepoIsChanged(CGitLaunches _GitLaunches, CRepository _Repo, EFilterRepoFlag _Flags);
+	TCFuture<TCVector<CLocalFileChange>> fg_GetLocalFileChanges(CGitLaunches _GitLaunches, CRepository _Repo, bool _bIncludeUntracked);
+	TCFuture<CGitBranches> fg_GetBranches(CGitLaunches _GitLaunches, CRepository _Repo, bool _bRemote);
+	TCFuture<TCVector<CStr>> fg_GetRemotes(CGitLaunches _GitLaunches, CRepository _Repo);
+	TCFuture<TCMap<CStr, CRemote>> fg_GetPushRemotes(CGitLaunches _GitLaunches, CRepository _Repo, TCVector<CStr> _Remotes);
+	TCFuture<TCVector<CLogEntry>> fg_GetLogEntries(CGitLaunches _GitLaunches, CRepository _Repo, CStr _From, CStr _To, bool _bReportBadRevision = true);
+	TCFuture<TCVector<CLogEntryFull>> fg_GetLogEntriesFull(CGitLaunches _GitLaunches, CRepository _Repo, CStr _From, CStr _To);
 
 	bool fg_BranchExists(CRepository const &_Repo, CStr const &_Branch);
 	CStr fg_GetBranch(CRepository const &_Repo);
 	CStr fg_GetRemoteHead(CRepository const &_Repo, CStr const &_Remote);
 
-	TCFuture<void> fg_UpdateRemotes(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage = {});
+	TCUnsafeFuture<void> fg_UpdateRemotes(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage = {});
 	TCMap<CStr, CStr> fg_FetchEnvironment(CBuildSystem const &_BuildSystem);
 
-	TCFuture<CFilteredRepos> fg_GetFilteredRepos
+	TCUnsafeFuture<CFilteredRepos> fg_GetFilteredRepos
 		(
 			CBuildSystem::CRepoFilter const &_Filter
 			, CBuildSystem &_BuildSystem

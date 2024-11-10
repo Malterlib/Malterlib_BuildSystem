@@ -22,17 +22,17 @@ namespace
 
 	struct CCommandLineControlActorTest : public ICCommandLineControl
 	{
-		TCFuture<TCActorSubscriptionWithID<>> f_RegisterForStdInBinary(FOnBinaryInput &&_fOnInput, NProcess::EStdInReaderFlag _Flags) override
+		TCFuture<TCActorSubscriptionWithID<>> f_RegisterForStdInBinary(FOnBinaryInput _fOnInput, NProcess::EStdInReaderFlag _Flags) override
 		{
 			co_return {};
 		}
 
-		TCFuture<TCActorSubscriptionWithID<>> f_RegisterForStdIn(FOnInput &&_fOnInput, NProcess::EStdInReaderFlag _Flags) override
+		TCFuture<TCActorSubscriptionWithID<>> f_RegisterForStdIn(FOnInput _fOnInput, NProcess::EStdInReaderFlag _Flags) override
 		{
 			co_return {};
 		}
 
-		TCFuture<TCActorSubscriptionWithID<>> f_RegisterForCancellation(FOnCancel &&_fOnCancel) override
+		TCFuture<TCActorSubscriptionWithID<>> f_RegisterForCancellation(FOnCancel _fOnCancel) override
 		{
 			co_return {};
 		}
@@ -47,7 +47,7 @@ namespace
 			co_return {};
 		}
 
-		TCFuture<NStr::CStrSecure> f_ReadPrompt(NProcess::CStdInReaderPromptParams const &_Params) override
+		TCFuture<NStr::CStrSecure> f_ReadPrompt(NProcess::CStdInReaderPromptParams _Params) override
 		{
 			co_return {};
 		}
@@ -57,17 +57,17 @@ namespace
 			co_return {};
 		}
 
-		TCFuture<void> f_StdOut(NStr::CStrSecure const &_Output) override
+		TCFuture<void> f_StdOut(NStr::CStrSecure _Output) override
 		{
 			co_return {};
 		}
 
-		TCFuture<void> f_StdOutBinary(NContainer::CSecureByteVector const &_Output) override
+		TCFuture<void> f_StdOutBinary(NContainer::CSecureByteVector _Output) override
 		{
 			co_return {};
 		}
 
-		TCFuture<void> f_StdErr(NStr::CStrSecure const &_Output) override
+		TCFuture<void> f_StdErr(NStr::CStrSecure _Output) override
 		{
 			co_return {};
 		}
@@ -132,18 +132,18 @@ namespace
 				pCommandLineControl->m_ControlActor = pCommandLineControlActor->f_ShareInterface<ICCommandLineControl>();
 
 				(
-					g_Dispatch / [&]() -> TCFuture<void>
+					g_Dispatch / [&]() -> TCUnsafeFuture<void>
 					{
-						co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+						co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 						Retry = co_await CBuildSystem::fs_RunBuildSystem
 							(
-								[&](NBuildSystem::CBuildSystem &_BuildSystem) -> TCFuture<CBuildSystem::ERetry>
+								[&](NBuildSystem::CBuildSystem *_pBuildSystem) -> TCUnsafeFuture<CBuildSystem::ERetry>
 								{
-									co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+									co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 									CBuildSystem::ERetry Retry = CBuildSystem::ERetry_None;
-									if (co_await _BuildSystem.f_Action_Generate(GenerateOptions, Retry))
+									if (co_await _pBuildSystem->f_Action_Generate(GenerateOptions, Retry))
 										bChanged = true;
 									co_return Retry;
 								}

@@ -288,14 +288,14 @@ namespace NMib::NBuildSystem
 	}
 
 	using namespace NRepository;
-	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_ReleasePackage
+	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_ReleasePackage
 		(
 			CGenerateOptions const &_GenerateOptions
 			, CRepoFilter const &_Filter
 			, NStorage::TCSharedPointer<CCommandLineControl> const &_pCommandLine
 		)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 		auto fOutput = this->f_OutputConsoleFunctor();
 
@@ -308,7 +308,7 @@ namespace NMib::NBuildSystem
 
 		for (auto &Repos : FilteredRepositories.m_FilteredRepositories)
 		{
-			TCActorResultVector<void> Results;
+			TCFutureVector<void> Results;
 			for (auto *pRepo : Repos)
 			{
 				auto &Repo = *pRepo;

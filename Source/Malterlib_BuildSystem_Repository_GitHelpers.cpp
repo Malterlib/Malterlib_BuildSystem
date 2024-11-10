@@ -147,20 +147,18 @@ namespace NMib::NBuildSystem::NRepository
 		return CFile::fs_FileExists(GitDirectory, EFileAttrib_File);
 	}
 
-	TCFuture<bool> fg_RepoIsChanged(CGitLaunches const &_GitLaunches, CRepository const &_Repo, EFilterRepoFlag _Flags)
+	TCFuture<bool> fg_RepoIsChanged(CGitLaunches _GitLaunches, CRepository _Repo, EFilterRepoFlag _Flags)
 	{
-		TCPromise<bool> Promise;
-
 		CStr GitDirectory = fg_GetGitDataDir(_Repo.m_Location, _Repo.m_Position);
 
 		CStr HeadRef = CFile::fs_ReadStringFromFile(GitDirectory + "/HEAD", true).f_TrimRight("\n");
 		if (HeadRef.f_StartsWith("ref: "))
 		{
 			if (HeadRef != ("ref: refs/heads/{}"_f << _Repo.m_OriginProperties.m_DefaultBranch).f_GetStr())
-				return Promise <<= true;
+				co_return true;
 		}
 		else
-			return Promise <<= true;
+			co_return true;
 
 		CStr RepoName = _Repo.f_GetName();
 
@@ -169,327 +167,247 @@ namespace NMib::NBuildSystem::NRepository
 		if (_Flags & EFilterRepoFlag_OnlyTracked)
 			Params.f_Insert("-uno");
 
-		_GitLaunches.f_Launch(_Repo, Params) > Promise / [Promise, RepoName, _Flags](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
-			{
-				auto StdOut = _Result.f_GetStdOut().f_Trim();
-				CStr OriginalStdOut = StdOut;
-				CStr BranchLine = fg_GetStrLineSep(StdOut);
+		auto StdOut = (co_await _GitLaunches.f_Launch(_Repo, Params)).f_GetStdOut().f_Trim();
 
-				if (BranchLine.f_StartsWith("## HEAD "))
-					return Promise.f_SetResult(true); // Detached head
-				else if (BranchLine.f_StartsWith("## "))
-				{
-					if (BranchLine.f_Find(gc_ConstString_Symbol_Ellipsis.m_String) < 0)
-						return Promise.f_SetResult(true); // Non-pushed branch
+		CStr OriginalStdOut = StdOut;
+		CStr BranchLine = fg_GetStrLineSep(StdOut);
 
-					CStr LocalRef;
-					CStr RemoteRef;
-					CStr Changes;
-					(CStr::CParse("## {}...{} [{}]") >> LocalRef >> RemoteRef >> Changes).f_Parse(BranchLine);
+		if (BranchLine.f_StartsWith("## HEAD "))
+			co_return true; // Detached head
+		else if (BranchLine.f_StartsWith("## "))
+		{
+			if (BranchLine.f_Find(gc_ConstString_Symbol_Ellipsis.m_String) < 0)
+				co_return true; // Non-pushed branch
 
-					if ((_Flags & EFilterRepoFlag_IncludePull) && !Changes.f_IsEmpty())
-						return Promise.f_SetResult(true); // Non-pushed or pulled changes
-					else if (Changes.f_Find("ahead") >= 0)
-						return Promise.f_SetResult(true); // Non-pushed changes
-				}
+			CStr LocalRef;
+			CStr RemoteRef;
+			CStr Changes;
+			(CStr::CParse("## {}...{} [{}]") >> LocalRef >> RemoteRef >> Changes).f_Parse(BranchLine);
 
-				Promise.f_SetResult(!StdOut.f_IsEmpty()); // Local changes
-			}
-		;
+			if ((_Flags & EFilterRepoFlag_IncludePull) && !Changes.f_IsEmpty())
+				co_return true; // Non-pushed or pulled changes
+			else if (Changes.f_Find("ahead") >= 0)
+				co_return true; // Non-pushed changes
+		}
 
-		return Promise.f_MoveFuture();
+		co_return !StdOut.f_IsEmpty(); // Local changes
 	}
 
-	TCFuture<TCVector<CLocalFileChange>> fg_GetLocalFileChanges(CGitLaunches const &_GitLaunches, CRepository const &_Repo, bool _bIncludeUntracked)
+	TCFuture<TCVector<CLocalFileChange>> fg_GetLocalFileChanges(CGitLaunches _GitLaunches, CRepository _Repo, bool _bIncludeUntracked)
 	{
-		TCPromise<TCVector<CLocalFileChange>> Promise;
-
 		TCVector<CStr> Params = {"status", "-s"};
 
 		if (!_bIncludeUntracked)
 			Params.f_Insert("-uno");
 
-		_GitLaunches.f_Launch(_Repo, Params) > Promise / [Promise](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
-			{
-				if (_Result.m_ExitCode)
-				{
-					Promise.f_SetException(DMibErrorInstance(_Result.f_GetErrorOut().f_Trim()));
-					return;
-				}
+		auto Result = co_await _GitLaunches.f_Launch(_Repo, Params);
 
-				TCVector<CLocalFileChange> Changes;
+		if (Result.m_ExitCode)
+			co_return DMibErrorInstance(Result.f_GetErrorOut().f_Trim());
 
-				for (auto &Line : _Result.f_GetStdOut().f_SplitLine<true>())
-				{
-					auto &Change = Changes.f_Insert();
-					Change.m_ChangeType = Line.f_Left(2).f_Trim();
-					if (Change.m_ChangeType == "??")
-						Change.m_ChangeType = "?";
-					Change.m_File = Line.f_Extract(3);
-				}
+		TCVector<CLocalFileChange> Changes;
 
-				Promise.f_SetResult(fg_Move(Changes));
-			}
-		;
+		for (auto &Line : Result.f_GetStdOut().f_SplitLine<true>())
+		{
+			auto &Change = Changes.f_Insert();
+			Change.m_ChangeType = Line.f_Left(2).f_Trim();
+			if (Change.m_ChangeType == "??")
+				Change.m_ChangeType = "?";
+			Change.m_File = Line.f_Extract(3);
+		}
 
-		return Promise.f_MoveFuture();
+		co_return fg_Move(Changes);
 	}
 
-	TCFuture<CGitBranches> fg_GetBranches(CGitLaunches const &_GitLaunches, CRepository const &_Repo, bool _bRemote)
+	TCFuture<CGitBranches> fg_GetBranches(CGitLaunches _GitLaunches, CRepository _Repo, bool _bRemote)
 	{
-		TCPromise<CGitBranches> Promise;
-
 		TCVector<CStr> Params = {"branch"};
 		if (_bRemote)
 			Params.f_Insert("-r");
 
-		_GitLaunches.f_Launch(_Repo, Params) > Promise / [Promise](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
-			{
-				if (_Result.m_ExitCode)
-				{
-					Promise.f_SetException(DMibErrorInstance(_Result.f_GetErrorOut().f_Trim()));
-					return;
-				}
+		auto Result = co_await _GitLaunches.f_Launch(_Repo, Params);
 
-				CGitBranches GitBranches;
+		if (Result.m_ExitCode)
+			co_return DMibErrorInstance(Result.f_GetErrorOut().f_Trim());
 
-				for (auto &Line : _Result.f_GetStdOut().f_SplitLine<true>())
-				{
-					CStr Branch = Line.f_Extract(2);
-					if (Branch.f_IsEmpty())
-						continue;
+		CGitBranches GitBranches;
 
-					if (Branch.f_StartsWith("(HEAD detached"))
-						Branch = "HEAD";
+		for (auto &Line : Result.f_GetStdOut().f_SplitLine<true>())
+		{
+			CStr Branch = Line.f_Extract(2);
+			if (Branch.f_IsEmpty())
+				continue;
 
-					GitBranches.m_Branches[Branch];
+			if (Branch.f_StartsWith("(HEAD detached"))
+				Branch = "HEAD";
 
-					if (Line.f_StartsWith("* "))
-						GitBranches.m_Current = Branch;
-				}
+			GitBranches.m_Branches[Branch];
 
-				Promise.f_SetResult(fg_Move(GitBranches));
-			}
-		;
+			if (Line.f_StartsWith("* "))
+				GitBranches.m_Current = Branch;
+		}
 
-		return Promise.f_MoveFuture();
+		co_return fg_Move(GitBranches);
 	}
 
-	TCFuture<TCVector<CStr>> fg_GetRemotes(CGitLaunches const &_GitLaunches, CRepository const &_Repo)
+	TCFuture<TCVector<CStr>> fg_GetRemotes(CGitLaunches _GitLaunches, CRepository _Repo)
 	{
-		TCPromise<TCVector<CStr>> Promise;
+		auto Result = co_await _GitLaunches.f_Launch(_Repo, {"remote"});
 
-		_GitLaunches.f_Launch(_Repo, {"remote"}) > Promise / [Promise](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
-			{
-				if (_Result.m_ExitCode)
-				{
-					Promise.f_SetException(DMibErrorInstance(_Result.f_GetErrorOut().f_Trim()));
-					return;
-				}
+		if (Result.m_ExitCode)
+			co_return DMibErrorInstance(Result.f_GetErrorOut().f_Trim());
 
-				TCVector<CStr> Remotes;
+		TCVector<CStr> Remotes;
 
-				for (auto &Line : _Result.f_GetStdOut().f_SplitLine<true>())
-					Remotes.f_Insert(Line);
+		for (auto &Line : Result.f_GetStdOut().f_SplitLine<true>())
+			Remotes.f_Insert(Line);
 
-				Promise.f_SetResult(fg_Move(Remotes));
-			}
-		;
-
-		return Promise.f_MoveFuture();
+		co_return fg_Move(Remotes);
 	}
 
-	TCFuture<TCMap<CStr, CRemote>> fg_GetPushRemotes(CGitLaunches const &_GitLaunches, CRepository const &_Repo, TCVector<CStr> const &_Remotes)
+	TCFuture<TCMap<CStr, CRemote>> fg_GetPushRemotes(CGitLaunches _GitLaunches, CRepository _Repo, TCVector<CStr> _Remotes)
 	{
-		TCPromise<TCMap<CStr, CRemote>> Promise;
+		auto Result = co_await _GitLaunches.f_Launch(_Repo, {"remote"});
 
-		_GitLaunches.f_Launch(_Repo, {"remote"}) > Promise / [Promise, &_GitLaunches, &_Repo](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
-			{
-				if (_Result.m_ExitCode)
-				{
-					Promise.f_SetException(DMibErrorInstance(_Result.f_GetErrorOut().f_Trim()));
-					return;
-				}
+		if (Result.m_ExitCode)
+			co_return DMibErrorInstance(Result.f_GetErrorOut().f_Trim());
 
-				TCActorResultMap<CStr, CProcessLaunchActor::CSimpleLaunchResult> UrlResults;
+		TCFutureMap<CStr, CProcessLaunchActor::CSimpleLaunchResult> UrlResults;
 
-				for (auto &Remote : _Result.f_GetStdOut().f_SplitLine<true>())
-					_GitLaunches.f_Launch(_Repo, {"remote", "get-url", Remote, "--push"}) > UrlResults.f_AddResult(Remote);
+		for (auto &Remote : Result.f_GetStdOut().f_SplitLine<true>())
+			_GitLaunches.f_Launch(_Repo, {"remote", "get-url", Remote, "--push"}) > UrlResults[Remote];
 
-				UrlResults.f_GetResults() > Promise / [Promise](TCMap<CStr, TCAsyncResult<CProcessLaunchActor::CSimpleLaunchResult>> &&_Results)
-					{
-						TCMap<CStr, CRemote> Remotes;
+		auto LaunchResults = co_await fg_AllDone(UrlResults);
 
-						if
-							(
-								!fg_CombineResults
-								(
-									Promise
-									, fg_Move(_Results)
-									, [&](CStr const &_Remote, CProcessLaunchActor::CSimpleLaunchResult const &_LaunchResult)
-									{
-										if (_LaunchResult.m_ExitCode)
-										{
-											if (!Promise.f_IsSet())
-												Promise.f_SetException(DMibErrorInstance(_LaunchResult.f_GetErrorOut().f_Trim()));
-											return;
-										}
+		TCMap<CStr, CRemote> Remotes;
 
-										Remotes[_Remote] = CRemote{.m_Properties = CRemoteProperties{.m_URL = _LaunchResult.f_GetStdOut().f_Trim()}};
-									}
-								)
-							)
-						{
-							return;
-						}
+		for (auto &LaunchResult : LaunchResults.f_Entries())
+		{
+			if (LaunchResult.f_Value().m_ExitCode)
+				co_return DMibErrorInstance(LaunchResult.f_Value().f_GetErrorOut().f_Trim());
 
-						if (!Promise.f_IsSet())
-							Promise.f_SetResult(fg_Move(Remotes));
-					}
-				;
+			Remotes[LaunchResult.f_Key()] = CRemote{.m_Properties = CRemoteProperties{.m_URL = LaunchResult.f_Value().f_GetStdOut().f_Trim()}};
+		}
 
-			}
-		;
-
-		return Promise.f_MoveFuture();
+		co_return fg_Move(Remotes);
 	}
 
-	TCFuture<TCVector<CLogEntry>> fg_GetLogEntries(CGitLaunches const &_GitLaunches, CRepository const &_Repo, CStr const &_From, CStr const &_To, bool _bReportBadRevision)
+	TCFuture<TCVector<CLogEntry>> fg_GetLogEntries(CGitLaunches _GitLaunches, CRepository _Repo, CStr _From, CStr _To, bool _bReportBadRevision)
 	{
-		TCPromise<TCVector<CLogEntry>> Promise;
+		auto LaunchResult = co_await _GitLaunches.f_Launch(_Repo, {"log", "{}..{}"_f << _From << _To, "--oneline", "--"});
 
-		_GitLaunches.f_Launch(_Repo, {"log", "{}..{}"_f << _From << _To, "--oneline", "--"})
-			> Promise / [Promise, _bReportBadRevision](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
+		if (LaunchResult.m_ExitCode)
+		{
+			CStr Output = LaunchResult.f_GetCombinedOut().f_Trim();
+			if (!_bReportBadRevision && Output.f_StartsWith("fatal: bad revision "))
 			{
-				if (_Result.m_ExitCode)
-				{
-					CStr Output = _Result.f_GetCombinedOut().f_Trim();
-					if (!_bReportBadRevision && Output.f_StartsWith("fatal: bad revision "))
-					{
-						TCVector<CLogEntry> LogEntries;
-						auto &DummyEntry = LogEntries.f_Insert();
-						DummyEntry.m_Description = Output;
-						Promise.f_SetResult(fg_Move(LogEntries));
-						return;
-					}
-					if (Output.f_IsEmpty())
-						Output = "Error status from git: {}"_f << _Result.m_ExitCode;
-					Promise.f_SetException(DMibErrorInstance(Output));
-					return;
-				}
-
 				TCVector<CLogEntry> LogEntries;
-
-				for (auto &Line : _Result.f_GetStdOut().f_SplitLine<true>())
-				{
-					auto &LogEntry = LogEntries.f_Insert();
-					LogEntry.m_Description = Line;
-					LogEntry.m_Hash = fg_GetStrSep(LogEntry.m_Description, " ");
-				}
-
-				Promise.f_SetResult(fg_Move(LogEntries));
+				auto &DummyEntry = LogEntries.f_Insert();
+				DummyEntry.m_Description = Output;
+				co_return fg_Move(LogEntries);
 			}
-		;
+			if (Output.f_IsEmpty())
+				Output = "Error status from git: {}"_f << LaunchResult.m_ExitCode;
+			co_return DMibErrorInstance(Output);
+		}
 
-		return Promise.f_MoveFuture();
+		TCVector<CLogEntry> LogEntries;
+
+		for (auto &Line : LaunchResult.f_GetStdOut().f_SplitLine<true>())
+		{
+			auto &LogEntry = LogEntries.f_Insert();
+			LogEntry.m_Description = Line;
+			LogEntry.m_Hash = fg_GetStrSep(LogEntry.m_Description, " ");
+		}
+
+		co_return fg_Move(LogEntries);
 	}
 
-	TCFuture<TCVector<CLogEntryFull>> fg_GetLogEntriesFull(CGitLaunches const &_GitLaunches, CRepository const &_Repo, CStr const &_From, CStr const &_To)
+	TCFuture<TCVector<CLogEntryFull>> fg_GetLogEntriesFull(CGitLaunches _GitLaunches, CRepository _Repo, CStr _From, CStr _To)
 	{
-		TCPromise<TCVector<CLogEntryFull>> Promise;
+		auto LogResult = co_await _GitLaunches.f_Launch(_Repo, {"log", "{}..{}"_f << _From << _To, "--pretty=raw", "--"});
+		if (LogResult.m_ExitCode)
+			co_return DMibErrorInstance(LogResult.f_GetErrorOut().f_Trim());
 
-		_GitLaunches.f_Launch(_Repo, {"log", "{}..{}"_f << _From << _To, "--pretty=raw", "--"})
-			> Promise / [Promise](CProcessLaunchActor::CSimpleLaunchResult &&_Result)
+		TCVector<CLogEntryFull> LogEntries;
+
+		auto fParseDate = [](CStr const &_String, CTime &o_Time) -> CStr
 			{
-				if (_Result.m_ExitCode)
+				ch8 const *pParseStart = _String.f_GetStr();
+				ch8 const *pParse = pParseStart + _String.f_GetLen() - 1;
+				while (pParse >= pParseStart && *pParse != ' ')
+					--pParse;
+				--pParse;
+				while (pParse >= pParseStart && *pParse != ' ')
+					--pParse;
+
+				if (pParse >= pParseStart)
 				{
-					Promise.f_SetException(DMibErrorInstance(_Result.f_GetErrorOut().f_Trim()));
-					return;
-				}
+					CStr User(pParseStart, pParse - pParseStart);
 
-				TCVector<CLogEntryFull> LogEntries;
+					++pParse;
+					CStr TimeZone = pParse;
+					CStr Date = fg_GetStrSep(TimeZone, " ");
 
-				auto fParseDate = [](CStr const &_String, CTime &o_Time) -> CStr
-					{
-						ch8 const *pParseStart = _String.f_GetStr();
-						ch8 const *pParse = pParseStart + _String.f_GetLen() - 1;
-						while (pParse >= pParseStart && *pParse != ' ')
-							--pParse;
-						--pParse;
-						while (pParse >= pParseStart && *pParse != ' ')
-							--pParse;
-
-						if (pParse >= pParseStart)
-						{
-							CStr User(pParseStart, pParse - pParseStart);
-
-							++pParse;
-							CStr TimeZone = pParse;
-							CStr Date = fg_GetStrSep(TimeZone, " ");
-
-							if (TimeZone.f_GetLen() != 5)
-								return _String;
-
-							o_Time = CTimeConvert::fs_FromUnixSeconds(Date.f_ToInt());
-
-							bool bNegative = TimeZone[0] != '+';
-							auto TimeSpan = CTimeSpanConvert::fs_CreateHourSpan(TimeZone.f_Extract(1, 2).f_ToInt());
-							TimeSpan += CTimeSpanConvert::fs_CreateMinuteSpan(TimeZone.f_Extract(3, 2).f_ToInt());
-
-							if (bNegative)
-								o_Time -= TimeSpan;
-							else
-								o_Time += TimeSpan;
-
-							return User;
-						}
-
+					if (TimeZone.f_GetLen() != 5)
 						return _String;
-					}
-				;
 
-				CLogEntryFull *pCurrentEntry = nullptr;
-				for (auto &Line : _Result.f_GetStdOut().f_SplitLine<true>())
-				{
-					if (Line.f_StartsWith("commit "))
-					{
-						pCurrentEntry = &LogEntries.f_Insert();
-						pCurrentEntry->m_Commit = Line.f_Extract(7);
-						continue;
-					}
+					o_Time = CTimeConvert::fs_FromUnixSeconds(Date.f_ToInt());
 
-					if (!pCurrentEntry)
-						continue;
+					bool bNegative = TimeZone[0] != '+';
+					auto TimeSpan = CTimeSpanConvert::fs_CreateHourSpan(TimeZone.f_Extract(1, 2).f_ToInt());
+					TimeSpan += CTimeSpanConvert::fs_CreateMinuteSpan(TimeZone.f_Extract(3, 2).f_ToInt());
 
-					auto &LogEntry = *pCurrentEntry;
+					if (bNegative)
+						o_Time -= TimeSpan;
+					else
+						o_Time += TimeSpan;
 
-					if (Line.f_StartsWith("tree "))
-						LogEntry.m_Tree = Line.f_Extract(5);
-					else if (Line.f_StartsWith("parent "))
-						LogEntry.m_Parent = Line.f_Extract(7);
-					else if (Line.f_StartsWith("author "))
-						LogEntry.m_Author = fParseDate(Line.f_Extract(7), LogEntry.m_AuthorDate);
-					else if (Line.f_StartsWith("committer "))
-						LogEntry.m_Committer = fParseDate(Line.f_Extract(10), LogEntry.m_CommitterDate);
-					else if (Line.f_StartsWith("    "))
-					{
-						if (LogEntry.m_FirstLine.f_IsEmpty())
-						{
-							if (Line.f_IsEmpty())
-								continue;
-							LogEntry.m_FirstLine = Line.f_Extract(4);
-							LogEntry.m_Message = LogEntry.m_FirstLine;
-						}
-						else
-							fg_AddStrSep(LogEntry.m_Message, Line.f_Extract(4), "\n");
-					}
+					return User;
 				}
 
-				Promise.f_SetResult(fg_Move(LogEntries));
+				return _String;
 			}
 		;
 
-		return Promise.f_MoveFuture();
+		CLogEntryFull *pCurrentEntry = nullptr;
+		for (auto &Line : LogResult.f_GetStdOut().f_SplitLine<true>())
+		{
+			if (Line.f_StartsWith("commit "))
+			{
+				pCurrentEntry = &LogEntries.f_Insert();
+				pCurrentEntry->m_Commit = Line.f_Extract(7);
+				continue;
+			}
+
+			if (!pCurrentEntry)
+				continue;
+
+			auto &LogEntry = *pCurrentEntry;
+
+			if (Line.f_StartsWith("tree "))
+				LogEntry.m_Tree = Line.f_Extract(5);
+			else if (Line.f_StartsWith("parent "))
+				LogEntry.m_Parent = Line.f_Extract(7);
+			else if (Line.f_StartsWith("author "))
+				LogEntry.m_Author = fParseDate(Line.f_Extract(7), LogEntry.m_AuthorDate);
+			else if (Line.f_StartsWith("committer "))
+				LogEntry.m_Committer = fParseDate(Line.f_Extract(10), LogEntry.m_CommitterDate);
+			else if (Line.f_StartsWith("    "))
+			{
+				if (LogEntry.m_FirstLine.f_IsEmpty())
+				{
+					if (Line.f_IsEmpty())
+						continue;
+					LogEntry.m_FirstLine = Line.f_Extract(4);
+					LogEntry.m_Message = LogEntry.m_FirstLine;
+				}
+				else
+					fg_AddStrSep(LogEntry.m_Message, Line.f_Extract(4), "\n");
+			}
+		}
+
+		co_return fg_Move(LogEntries);
 	}
 
 	bool fg_BranchExists(CRepository const &_Repo, CStr const &_Branch)
@@ -578,9 +496,9 @@ namespace NMib::NBuildSystem::NRepository
 		return {{"GIT_HTTP_CONNECT_TIMEOUT", CStr::fs_ToStr(Options.m_GitFetchTimeout)}};
 	}
 
-	TCFuture<void> DMibWorkaroundUBSanSectionErrors fg_UpdateRemotes(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage)
+	TCUnsafeFuture<void> DMibWorkaroundUBSanSectionErrors fg_UpdateRemotes(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+		co_await (ECoroutineFlag_CaptureMalterlibExceptions);
 
 		CGitLaunches Launches
 			{
@@ -596,7 +514,7 @@ namespace NMib::NBuildSystem::NRepository
 		
 		Launches.f_MeasureRepos(_FilteredRepositories.m_FilteredRepositories);
 
-		TCActorResultVector<void> Results;
+		TCFutureVector<void> Results;
 
 		auto AllRepos = _FilteredRepositories.f_GetAllRepos();
 
@@ -621,7 +539,7 @@ namespace NMib::NBuildSystem::NRepository
 
 			g_Dispatch / [&_BuildSystem, Launches, Repo, FetchEnvironment]() DMibWorkaroundUBSanSectionErrors -> TCFuture<void>
 				{
-					TCActorResultMap<CStr, void> RemoteQueryResults;
+					TCFutureMap<CStr, void> RemoteQueryResults;
 					TCSharedPointer<TCMap<CStr, CBranchState>> pRemoteHeadBranches = fg_Construct();
 
 					auto RepoDoneScope = Launches.f_RepoDoneScope();
@@ -656,7 +574,7 @@ namespace NMib::NBuildSystem::NRepository
 								, {}
 								, FetchEnvironment
 							)
-							> RemoteQueryResults.f_AddResult(Remote.f_Name())
+							> RemoteQueryResults[Remote.f_Name()]
 						;
 					}
 
@@ -667,7 +585,7 @@ namespace NMib::NBuildSystem::NRepository
 					auto [FetchResult, RemoteHeadResults, TrackingResult] = co_await
 						(
 							Launches.f_Launch(Repo, FetchParams, fg_LogAllFunctor(), {}, FetchEnvironment)
-							+ RemoteQueryResults.f_GetResults()
+							+ fg_AllDoneWrapped(RemoteQueryResults)
 							+ Launches.f_Launch(Repo, {"for-each-ref", "--format=%(upstream:short)", "refs/heads/{}"_f << Repo.m_OriginProperties.m_DefaultBranch})
 						).f_Wrap()
 					;
@@ -677,14 +595,14 @@ namespace NMib::NBuildSystem::NRepository
 					co_await (fg_Move(FetchResult) | g_Unwrap);
 					co_await ((co_await (fg_Move(RemoteHeadResults) | g_Unwrap)) | g_Unwrap);
 
-					TCActorResultVector<void> SetHeadResults;
+					TCFutureVector<void> SetHeadResults;
 
 					CStr ExpectedTracking = "origin/{}"_f << Repo.m_OriginProperties.m_DefaultBranch;
 					CStr CurrentTracking = TrackingResult ? TrackingResult->f_GetStdOut().f_Trim() : CStr();
 					if (CurrentTracking != ExpectedTracking)
 					{
 						Launches.f_Output(EOutputType_Normal, Repo, "Updating default branch remote tracking branch from {} to {}"_f << CurrentTracking << ExpectedTracking);
-						Launches.f_Launch(Repo, {"branch", "-u", ExpectedTracking, Repo.m_OriginProperties.m_DefaultBranch}, fg_LogAllFunctor()) > SetHeadResults.f_AddResult();
+						Launches.f_Launch(Repo, {"branch", "-u", ExpectedTracking, Repo.m_OriginProperties.m_DefaultBranch}, fg_LogAllFunctor()) > SetHeadResults;
 					}
 
 					for (auto &Remote : *pRemoteHeadBranches)
@@ -693,26 +611,26 @@ namespace NMib::NBuildSystem::NRepository
 						if (Remote.m_LocalBranch != Remote.m_RemoteBranch && Remote.m_RemoteBranch)
 						{
 							Launches.f_Output(EOutputType_Normal, Repo, "Updating remote HEAD to {} on {}"_f << Remote.m_RemoteBranch << RemoteName);
-							Launches.f_Launch(Repo, {"remote", "set-head", RemoteName, Remote.m_RemoteBranch}, fg_LogAllFunctor()) > SetHeadResults.f_AddResult();
+							Launches.f_Launch(Repo, {"remote", "set-head", RemoteName, Remote.m_RemoteBranch}, fg_LogAllFunctor()) > SetHeadResults;
 						}
 					}
 
-					co_await (co_await SetHeadResults.f_GetResults() | g_Unwrap);
+					co_await fg_AllDone(SetHeadResults);
 
 					co_return {};
 				}
-				> Results.f_AddResult();
+				> Results;
 			;
 		}
 
-		co_await (co_await Results.f_GetResults() | g_Unwrap);
+		co_await fg_AllDone(Results);
 
 		co_return {};
 	}
 
-	TCFuture<CGitVersion> DMibWorkaroundUBSanSectionErrors fg_GetGitVersion(CGitLaunches &_Launches)
+	TCUnsafeFuture<CGitVersion> DMibWorkaroundUBSanSectionErrors fg_GetGitVersion(CGitLaunches &_Launches)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 		static CGitVersion GitVersion;
 		static constinit CLowLevelLockAggregate Lock;

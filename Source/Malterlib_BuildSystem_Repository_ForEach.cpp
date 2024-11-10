@@ -9,7 +9,7 @@ namespace NMib::NBuildSystem
 {
 	using namespace NRepository;
 
-	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_ForEachRepo
+	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_ForEachRepo
 		(
 			CGenerateOptions const &_GenerateOptions
 			, CRepoFilter const &_Filter
@@ -17,7 +17,7 @@ namespace NMib::NBuildSystem
 			, TCVector<CStr> const &_Params
 		)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 		
 		CGenerateEphemeralState GenerateState;
 		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
@@ -34,26 +34,26 @@ namespace NMib::NBuildSystem
 
 		for (auto &Repos : FilteredRepositories.m_FilteredRepositories)
 		{
-			TCActorResultVector<void> Results;
+			TCFutureVector<void> Results;
 			for (auto *pRepo : Repos)
 			{
 				auto &Repo = *pRepo;
 
-				TCPromise<void> Result;
-				Launches.f_Launch(Repo, _Params, fg_LogAllFunctor()) > [=](TCAsyncResult<void> &&_Result)
+				TCPromiseFuturePair<void> Result;
+				Launches.f_Launch(Repo, _Params, fg_LogAllFunctor()) > [=, ResultPromise = fg_Move(Result.m_Promise)](TCAsyncResult<void> &&_Result)
 					{
-						Result.f_SetResult(fg_Move(_Result));
+						ResultPromise.f_SetResult(fg_Move(_Result));
 						Launches.f_RepoDone();
 					}
 				;
 
 				if (_bParallel)
-					Result.f_MoveFuture() > Results.f_AddResult();
+					fg_Move(Result.m_Future) > Results;
 				else
-					co_await Result.f_MoveFuture();
+					co_await fg_Move(Result.m_Future);
 			}
 
-			LaunchResults.f_Insert(co_await Results.f_GetResults());
+			LaunchResults.f_Insert(co_await fg_AllDoneWrapped(Results));
 		}
 
 		co_await (fg_Move(LaunchResults) | g_Unwrap);
@@ -61,14 +61,14 @@ namespace NMib::NBuildSystem
 		co_return ERetry_None;
 	}
 
-	TCFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_ForEachRepoDir
+	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_ForEachRepoDir
 		(
 			CGenerateOptions const &_GenerateOptions
 			, CRepoFilter const &_Filter
 			, CForEachRepoDirOptions const &_Options
 		)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 		CGenerateEphemeralState GenerateState;
 		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
@@ -85,26 +85,26 @@ namespace NMib::NBuildSystem
 
 		for (auto &Repos : FilteredRepositories.m_FilteredRepositories)
 		{
-			TCActorResultVector<void> Results;
+			TCFutureVector<void> Results;
 			for (auto *pRepo : Repos)
 			{
 				auto &Repo = *pRepo;
 
-				TCPromise<void> Result;
-				Launches.f_Launch(Repo, _Options.m_Params, fg_LogAllFunctor(), {}, {}, _Options.m_Application) > [=](TCAsyncResult<void> &&_Result)
+				TCPromiseFuturePair<void> Result;
+				Launches.f_Launch(Repo, _Options.m_Params, fg_LogAllFunctor(), {}, {}, _Options.m_Application) > [=, ResultPromise = fg_Move(Result.m_Promise)](TCAsyncResult<void> &&_Result)
 					{
-						Result.f_SetResult(fg_Move(_Result));
+						ResultPromise.f_SetResult(fg_Move(_Result));
 						Launches.f_RepoDone();
 					}
 				;
 
 				if (_Options.m_bParallel)
-					Result.f_MoveFuture() > Results.f_AddResult();
+					fg_Move(Result.m_Future) > Results;
 				else
-					co_await Result.f_MoveFuture();
+					co_await fg_Move(Result.m_Future);
 			}
 
-			LaunchResults.f_Insert(co_await Results.f_GetResults());
+			LaunchResults.f_Insert(co_await fg_AllDoneWrapped(Results));
 		}
 
 		co_await (fg_Move(LaunchResults) | g_Unwrap);

@@ -79,14 +79,7 @@ namespace NMib::NBuildSystem
 			co_return {};
 
 		auto BlockingActorCheckout = fg_BlockingActor();
-		co_await
-			(
-				g_Dispatch(BlockingActorCheckout) / []
-				{
-					fg_InstallBinaries(CFile::fs_GetUserHomeDirectory() / ".Malterlib/bin");
-				}
-			)
-		;
+		co_await BlockingActorCheckout.f_Actor().f_Bind<fg_InstallBinaries>(CFile::fs_GetUserHomeDirectory() / ".Malterlib/bin");
 
 		mp_bGlobalMToolAlreadySetup.f_Exchange(true);
 

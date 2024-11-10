@@ -7,9 +7,9 @@
 
 namespace NMib::NBuildSystem::NVisualStudio
 {
-	auto CGeneratorInstance::f_GenerateProjectFile_File(CProject &_Project, CProjectState &_ProjectState) const -> TCFuture<TCMap<CStr, CCompileType>>
+	auto CGeneratorInstance::f_GenerateProjectFile_File(CProject &_Project, CProjectState &_ProjectState) const -> TCUnsafeFuture<TCMap<CStr, CCompileType>>
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 		for (auto &File : _Project.m_Files)
 		{
@@ -25,9 +25,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 		co_await fg_ParallelForEach
 			(
 				_Project.m_EnabledProjectConfigs
-				, [&](auto &_ProjectEntity) -> TCFuture<void>
+				, [&](auto &_ProjectEntity) -> TCUnsafeFuture<void>
 				{
-					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
 					co_await m_BuildSystem.f_CheckCancelled();
 
 					auto &Config = _Project.m_EnabledProjectConfigs.fs_GetKey(_ProjectEntity);

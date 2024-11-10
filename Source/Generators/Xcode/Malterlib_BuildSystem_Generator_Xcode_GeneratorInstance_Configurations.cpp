@@ -70,9 +70,9 @@ namespace NMib::NBuildSystem
 			}
 		}
 
-		TCFuture<void> CGeneratorInstance::fp_EvaluateTargetSettings(CProjectState &_ProjectState, CProject& _Project) const
+		TCUnsafeFuture<void> CGeneratorInstance::fp_EvaluateTargetSettings(CProjectState &_ProjectState, CProject& _Project) const
 		{
-			co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+			co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 			for (auto &Entity : _Project.m_EnabledProjectConfigs)
 			{
@@ -83,9 +83,9 @@ namespace NMib::NBuildSystem
 			co_await fg_ParallelForEach
 				(
 					_ProjectState.m_EvaluatedTargetSettings
-					, [&](CConfigResultTarget &o_Result) -> TCFuture<void>
+					, [&](CConfigResultTarget &o_Result) -> TCUnsafeFuture<void>
 					{
-						co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+						co_await ECoroutineFlag_CaptureMalterlibExceptions;
 						co_await m_BuildSystem.f_CheckCancelled();
 
 						auto &Config = TCMap<CConfiguration, CConfigResultTarget>::fs_GetKey(o_Result);

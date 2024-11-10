@@ -18,9 +18,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 		return f_GetNativePlatform(_ProjectState.m_LanguageType, _Platform);
 	}
 
-	TCFuture<void> CGeneratorInstance::f_GenerateProjectFile(CProject &_Project, CStr const &_OutputDir) const
+	TCUnsafeFuture<void> CGeneratorInstance::f_GenerateProjectFile(CProject &_Project, CStr const &_OutputDir) const
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureMalterlibExceptions);
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 		CGeneratorSettings TargetSettings;
 		co_await TargetSettings.f_PopulateSettings(gc_ConstKey_GeneratorSetting_Target, EPropertyType_Target, m_BuildSystem, _Project.m_EnabledProjectConfigs);

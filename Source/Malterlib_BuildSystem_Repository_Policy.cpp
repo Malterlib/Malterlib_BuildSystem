@@ -37,7 +37,7 @@ namespace NMib::NBuildSystem::NRepository
 			{
 				.m_Repository = _Options.m_Repository
 				, .m_HostingProvider = _Options.m_HostingProvider
-				, .m_fOnCreate = g_ActorFunctor / [=](CStr &&_Name, CStr &&_CreatedValues) -> TCFuture<void>
+				, .m_fOnCreate = g_ActorFunctor / [=](CStr _Name, CStr _CreatedValues) -> TCFuture<void>
 				{
 					_Options.m_fOutputInfo
 						(
@@ -50,7 +50,7 @@ namespace NMib::NBuildSystem::NRepository
 
 					co_return {};
 				}
-				, .m_fOnUpdate = g_ActorFunctor / [=](CStr &&_Name, CStr &&_UpdatedValues) -> TCFuture<void>
+				, .m_fOnUpdate = g_ActorFunctor / [=](CStr _Name, CStr _UpdatedValues) -> TCFuture<void>
 				{
 					_Options.m_fOutputInfo
 						(
@@ -83,7 +83,7 @@ namespace NMib::NBuildSystem::NRepository
 			{
 				.m_Repository = _Options.m_Repository
 				, .m_HostingProvider = _Options.m_HostingProvider
-				, .m_fOnCreate = g_ActorFunctor / [=](CStr &&_Name, CStr &&_CreatedValues) -> TCFuture<void>
+				, .m_fOnCreate = g_ActorFunctor / [=](CStr _Name, CStr _CreatedValues) -> TCFuture<void>
 				{
 					_Options.m_fOutputInfo
 						(
@@ -97,7 +97,7 @@ namespace NMib::NBuildSystem::NRepository
 
 					co_return {};
 				}
-				, .m_fOnUpdate = g_ActorFunctor / [=](CStr &&_Name, CStr &&_UpdatedValues) -> TCFuture<void>
+				, .m_fOnUpdate = g_ActorFunctor / [=](CStr _Name, CStr _UpdatedValues) -> TCFuture<void>
 				{
 					_Options.m_fOutputInfo
 						(
@@ -111,7 +111,7 @@ namespace NMib::NBuildSystem::NRepository
 
 					co_return {};
 				}
-				, .m_fOnDelete = g_ActorFunctor / [=](CStr &&_Name, CStr &&_DeletedValues) -> TCFuture<void>
+				, .m_fOnDelete = g_ActorFunctor / [=](CStr _Name, CStr _DeletedValues) -> TCFuture<void>
 				{
 					_Options.m_fOutputInfo
 						(
@@ -143,7 +143,7 @@ namespace NMib::NBuildSystem::NRepository
 			{
 				.m_Repository = _Options.m_Repository
 				, .m_HostingProvider = _Options.m_HostingProvider
-				, .m_fOnCreate = g_ActorFunctor / [=](CStr &&_Name, CStr &&_CreatedValues) -> TCFuture<void>
+				, .m_fOnCreate = g_ActorFunctor / [=](CStr _Name, CStr _CreatedValues) -> TCFuture<void>
 				{
 					_Options.m_fOutputInfo
 						(
@@ -157,7 +157,7 @@ namespace NMib::NBuildSystem::NRepository
 
 					co_return {};
 				}
-				, .m_fOnUpdate = g_ActorFunctor / [=](CStr &&_Name, CStr &&_UpdatedValues) -> TCFuture<void>
+				, .m_fOnUpdate = g_ActorFunctor / [=](CStr _Name, CStr _UpdatedValues) -> TCFuture<void>
 				{
 					_Options.m_fOutputInfo
 						(
@@ -190,7 +190,7 @@ namespace NMib::NBuildSystem::NRepository
 			{
 				.m_Repository = _Options.m_Repository
 				, .m_HostingProvider = _Options.m_HostingProvider
-				, .m_fOnCreate = g_ActorFunctor / [=](CStr &&_Name, CStr &&_CreatedValues) -> TCFuture<void>
+				, .m_fOnCreate = g_ActorFunctor / [=](CStr _Name, CStr _CreatedValues) -> TCFuture<void>
 				{
 					_Options.m_fOutputInfo
 						(
@@ -204,7 +204,7 @@ namespace NMib::NBuildSystem::NRepository
 
 					co_return {};
 				}
-				, .m_fOnUpdate = g_ActorFunctor / [=](CStr &&_Name, CStr &&_UpdatedValues) -> TCFuture<void>
+				, .m_fOnUpdate = g_ActorFunctor / [=](CStr _Name, CStr _UpdatedValues) -> TCFuture<void>
 				{
 					_Options.m_fOutputInfo
 						(
@@ -237,7 +237,7 @@ namespace NMib::NBuildSystem::NRepository
 			{
 				.m_Repository = _Options.m_Repository
 				, .m_HostingProvider = _Options.m_HostingProvider
-				, .m_fOnUpdate = g_ActorFunctor / [=](CStr &&_Name, CStr &&_UpdatedValues) -> TCFuture<void>
+				, .m_fOnUpdate = g_ActorFunctor / [=](CStr _Name, CStr _UpdatedValues) -> TCFuture<void>
 				{
 					_Options.m_fOutputInfo
 						(

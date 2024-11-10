@@ -55,7 +55,7 @@ namespace NMib::NBuildSystem
 		;
 	}
 
-	TCFuture<void> CGeneratorSettings::f_PopulateSettings
+	TCUnsafeFuture<void> CGeneratorSettings::f_PopulateSettings
 		(
 			CPropertyKeyReference const &_GeneratorSetting
 			, EPropertyType _PropertyType
@@ -63,7 +63,7 @@ namespace NMib::NBuildSystem
 			, TCMap<CConfiguration, CEntityMutablePointer> const &_EntitiesPerConfig
 		)
 	{
-		co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+		co_await ECoroutineFlag_CaptureExceptions;
 
 		f_ConstructSettings();
 
@@ -75,9 +75,9 @@ namespace NMib::NBuildSystem
 		co_await fg_ParallelForEach
 			(
 				Settings
-				, [&](CGeneratorSetting &o_Result) -> TCFuture<void>
+				, [&](CGeneratorSetting &o_Result) -> TCUnsafeFuture<void>
 				{
-					co_await (ECoroutineFlag_AllowReferences | ECoroutineFlag_CaptureExceptions);
+					co_await ECoroutineFlag_CaptureExceptions;
 					co_await _BuildSystem.f_CheckCancelled();
 
 					auto &Config = Settings.fs_GetKey(o_Result);
