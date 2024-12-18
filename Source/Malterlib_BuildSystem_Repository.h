@@ -267,7 +267,7 @@ namespace NMib::NBuildSystem::NRepository
 
 			CMutual m_Lock;
 			CStr m_BaseDir;
-			TCActor<> m_OutputActor = fg_ConcurrentActor();
+			TCActor<> m_OutputActor{fg_Construct()};
 			TCMap<mint, TCActor<CProcessLaunchActor>> m_Launches;
 			TCMap<mint, zbool> m_LaunchesAborted;
 			TCMap<CStr, CStr> m_RepoNames;
