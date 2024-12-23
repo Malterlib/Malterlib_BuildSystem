@@ -471,7 +471,7 @@ namespace NMib::NBuildSystem::NRepository
 		co_return fg_Move(Result);
 	}
 
-	TCFuture<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::f_Launch
+	TCUnsafeFuture<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::f_Launch
 		(
 			CStr const &_Directory
 			, TCVector<CStr> const &_Params
@@ -495,7 +495,7 @@ namespace NMib::NBuildSystem::NRepository
 		return fp_Launch(fg_Move(LaunchParams));
 	}
 
-	TCFuture<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::f_Launch
+	TCUnsafeFuture<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::f_Launch
 		(
 			CRepository const &_Repo
 			, TCVector<CStr> const &_Params

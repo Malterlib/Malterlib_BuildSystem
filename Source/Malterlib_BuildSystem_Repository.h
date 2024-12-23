@@ -206,7 +206,7 @@ namespace NMib::NBuildSystem::NRepository
 		void f_SetNumRepos(mint _nRepos, bool _bReport = true);
 		void f_MeasureRepos(TCVector<TCVector<CRepository *>> const &_FilteredRepositories, bool _bReport = true);
 
-		TCFuture<CProcessLaunchActor::CSimpleLaunchResult> f_Launch
+		TCUnsafeFuture<CProcessLaunchActor::CSimpleLaunchResult> f_Launch
 			(
 				CRepository const &_Repo
 				, TCVector<CStr> const &_Params
@@ -214,7 +214,7 @@ namespace NMib::NBuildSystem::NRepository
 				, CStr const &_Application = "git"
 			) const
 		;
-		TCFuture<CProcessLaunchActor::CSimpleLaunchResult> f_Launch
+		TCUnsafeFuture<CProcessLaunchActor::CSimpleLaunchResult> f_Launch
 			(
 				CStr const &_Directory
 				, TCVector<CStr> const &_Params
