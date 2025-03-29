@@ -233,6 +233,7 @@ namespace NMib::NBuildSystem
 									CProcessLaunchParams LaunchParams;
 									LaunchParams.m_bShowLaunched = false;
 									LaunchParams.m_bCreateNewProcessGroup = true;
+									++_This.mp_nExecuteLaunches;
 									Ret = CProcessLaunch::fs_LaunchTool(Executable, FunctionParams, LaunchParams);
 								}
 								catch (CException const &_Exception)

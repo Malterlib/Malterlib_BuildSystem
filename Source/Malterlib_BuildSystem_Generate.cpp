@@ -844,6 +844,7 @@ namespace NMib::NBuildSystem
 			f_OutputConsole("{} file searches{\n}"_f << nFileSearches);
 			f_OutputConsole("{} referenced files{\n}"_f << nReferencedFiles);
 			f_OutputConsole("{} generated files{\n}"_f << nGeneratedFiles);
+			f_OutputConsole("{} executable launches{\n}"_f << mp_nExecuteLaunches.f_Load());
 
 			for (auto iEnv = mp_UsedExternals.f_GetIterator(); iEnv; ++iEnv)
 			{

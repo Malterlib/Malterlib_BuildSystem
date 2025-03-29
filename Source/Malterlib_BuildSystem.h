@@ -1114,6 +1114,8 @@ namespace NMib::NBuildSystem
 		mutable NAtomic::TCAtomic<bool> mp_bGlobalMToolAlreadySetup = false;
 		mutable NAtomic::TCAtomic<bool> mp_bBootstrapMToolAlreadySetup = false;
 
+		mutable NAtomic::TCAtomic<mint> mp_nExecuteLaunches;
+
 		NStorage::TCSharedPointer<NAtomic::TCAtomic<bool>> mp_pCancelled;
 	};
 }
