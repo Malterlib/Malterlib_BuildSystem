@@ -354,6 +354,26 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString__8BC9CEB8_8B4A_11D0_8D11_00A0C91BC942_;
 	extern CStringAndHash const gc_ConstString__FAE04EC0_301F_11D3_BF4B_00C04F79EFBC_;
 	extern CStringAndHash const gc_ConstString__Automatic;
+	extern CStringAndHash const gc_ConstString_StringBase64Encode;
+	extern CStringAndHash const gc_ConstString_StringBase64Decode;
+	extern CStringAndHash const gc_ConstString_StringHexEncode;
+	extern CStringAndHash const gc_ConstString_StringHexDecode;
+	extern CStringAndHash const gc_ConstString_StringCompress;
+	extern CStringAndHash const gc_ConstString_StringDecompress;
+
+	extern CStringAndHash const gc_ConstString_Base64Encode;
+	extern CStringAndHash const gc_ConstString_Base64Decode;
+	extern CStringAndHash const gc_ConstString_HexEncode;
+	extern CStringAndHash const gc_ConstString_HexDecode;
+	extern CStringAndHash const gc_ConstString_Compress;
+	extern CStringAndHash const gc_ConstString_Decompress;
+
+	extern CStringAndHash const gc_ConstString_Extract;
+	extern CStringAndHash const gc_ConstString_TrimLeft;
+	extern CStringAndHash const gc_ConstString_TrimRight;
+	extern CStringAndHash const gc_ConstString_UpperCase;
+	extern CStringAndHash const gc_ConstString_LowerCase;
+	extern CStringAndHash const gc_ConstString_Indent;
 
 	extern CStringAndHash const gc_ConstString_Array;
 	extern CStringAndHash const gc_ConstString_Binary;
@@ -455,6 +475,7 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString__SearchFor;
 	extern CStringAndHash const gc_ConstString__SearchForCharacters;
 	extern CStringAndHash const gc_ConstString__SplitBy;
+	extern CStringAndHash const gc_ConstString__Start;
 	extern CStringAndHash const gc_ConstString__StateFile;
 	extern CStringAndHash const gc_ConstString__StringToFind;
 	extern CStringAndHash const gc_ConstString__StringToRemove;

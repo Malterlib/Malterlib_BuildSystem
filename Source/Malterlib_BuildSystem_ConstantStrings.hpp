@@ -354,6 +354,26 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString__8BC9CEB8_8B4A_11D0_8D11_00A0C91BC942_ = gc_Str<"{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}">;
 	constexpr CStringAndHash const gc_ConstString__FAE04EC0_301F_11D3_BF4B_00C04F79EFBC_ = gc_Str<"{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}">;
 	constexpr CStringAndHash const gc_ConstString__Automatic = gc_Str<"~Automatic">;
+	constexpr CStringAndHash const gc_ConstString_StringBase64Encode = gc_Str<"StringBase64Encode">;
+	constexpr CStringAndHash const gc_ConstString_StringBase64Decode = gc_Str<"StringBase64Decode">;
+	constexpr CStringAndHash const gc_ConstString_StringHexEncode = gc_Str<"StringHexEncode">;
+	constexpr CStringAndHash const gc_ConstString_StringHexDecode = gc_Str<"StringHexDecode">;
+	constexpr CStringAndHash const gc_ConstString_StringCompress = gc_Str<"StringCompress">;
+	constexpr CStringAndHash const gc_ConstString_StringDecompress = gc_Str<"StringDecompress">;
+
+	constexpr CStringAndHash const gc_ConstString_Base64Encode = gc_Str<"Base64Encode">;
+	constexpr CStringAndHash const gc_ConstString_Base64Decode = gc_Str<"Base64Decode">;
+	constexpr CStringAndHash const gc_ConstString_HexEncode = gc_Str<"HexEncode">;
+	constexpr CStringAndHash const gc_ConstString_HexDecode = gc_Str<"HexDecode">;
+	constexpr CStringAndHash const gc_ConstString_Compress = gc_Str<"Compress">;
+	constexpr CStringAndHash const gc_ConstString_Decompress = gc_Str<"Decompress">;
+
+	constexpr CStringAndHash const gc_ConstString_Extract = gc_Str<"Extract">;
+	constexpr CStringAndHash const gc_ConstString_TrimLeft = gc_Str<"TrimLeft">;
+	constexpr CStringAndHash const gc_ConstString_TrimRight = gc_Str<"TrimRight">;
+	constexpr CStringAndHash const gc_ConstString_UpperCase = gc_Str<"UpperCase">;
+	constexpr CStringAndHash const gc_ConstString_LowerCase = gc_Str<"LowerCase">;
+	constexpr CStringAndHash const gc_ConstString_Indent = gc_Str<"Indent">;
 
 	constexpr CStringAndHash const gc_ConstString_Array = gc_Str<"Array">;
 	constexpr CStringAndHash const gc_ConstString_Binary = gc_Str<"Binary">;
@@ -455,6 +475,7 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString__SearchFor = gc_Str<"_SearchFor">;
 	constexpr CStringAndHash const gc_ConstString__SearchForCharacters = gc_Str<"_SearchForCharacters">;
 	constexpr CStringAndHash const gc_ConstString__SplitBy = gc_Str<"_SplitBy">;
+	constexpr CStringAndHash const gc_ConstString__Start = gc_Str<"_Start">;
 	constexpr CStringAndHash const gc_ConstString__StateFile = gc_Str<"_StateFile">;
 	constexpr CStringAndHash const gc_ConstString__StringToFind = gc_Str<"_StringToFind">;
 	constexpr CStringAndHash const gc_ConstString__StringToRemove = gc_Str<"_StringToRemove">;
@@ -839,6 +860,27 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString__FAE04EC0_301F_11D3_BF4B_00C04F79EFBC_);
 		o_StringCache.f_AddConstantString(gc_ConstString__Automatic);
 
+		o_StringCache.f_AddConstantString(gc_ConstString_StringBase64Encode);
+		o_StringCache.f_AddConstantString(gc_ConstString_StringBase64Decode);
+		o_StringCache.f_AddConstantString(gc_ConstString_StringHexEncode);
+		o_StringCache.f_AddConstantString(gc_ConstString_StringHexDecode);
+		o_StringCache.f_AddConstantString(gc_ConstString_StringCompress);
+		o_StringCache.f_AddConstantString(gc_ConstString_StringDecompress);
+
+		o_StringCache.f_AddConstantString(gc_ConstString_Base64Encode);
+		o_StringCache.f_AddConstantString(gc_ConstString_Base64Decode);
+		o_StringCache.f_AddConstantString(gc_ConstString_HexEncode);
+		o_StringCache.f_AddConstantString(gc_ConstString_HexDecode);
+		o_StringCache.f_AddConstantString(gc_ConstString_Compress);
+		o_StringCache.f_AddConstantString(gc_ConstString_Decompress);
+
+		o_StringCache.f_AddConstantString(gc_ConstString_Extract);
+		o_StringCache.f_AddConstantString(gc_ConstString_TrimLeft);
+		o_StringCache.f_AddConstantString(gc_ConstString_TrimRight);
+		o_StringCache.f_AddConstantString(gc_ConstString_UpperCase);
+		o_StringCache.f_AddConstantString(gc_ConstString_LowerCase);
+		o_StringCache.f_AddConstantString(gc_ConstString_Indent);
+
 		o_StringCache.f_AddConstantStringWithoutHash(CEJSONConstStrings::mc_Date);
 		o_StringCache.f_AddConstantStringWithoutHash(CEJSONConstStrings::mc_Binary);
 		o_StringCache.f_AddConstantStringWithoutHash(CEJSONConstStrings::mc_Type);
@@ -945,6 +987,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString__SearchFor);
 		o_StringCache.f_AddConstantString(gc_ConstString__SearchForCharacters);
 		o_StringCache.f_AddConstantString(gc_ConstString__SplitBy);
+		o_StringCache.f_AddConstantString(gc_ConstString__Start);
 		o_StringCache.f_AddConstantString(gc_ConstString__StateFile);
 		o_StringCache.f_AddConstantString(gc_ConstString__StringToFind);
 		o_StringCache.f_AddConstantString(gc_ConstString__StringToRemove);

@@ -5,6 +5,7 @@
 #include "Malterlib_BuildSystem_Evaluate_BuiltinFunctions.h"
 
 #include <Mib/Process/ProcessLaunch>
+#include <Mib/Compression/Zstandard>
 
 namespace NMib::NBuildSystem
 {
@@ -678,6 +679,321 @@ namespace NMib::NBuildSystem
 									DMibNeverGetHere;
 
 								return fg_Move(Return);
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
+						gc_ConstString_StringBase64Encode
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Source))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							{
+								return fg_Base64Encode(_Params[0].f_String());
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
+						gc_ConstString_StringBase64Decode
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Source))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							{
+								return fg_Base64Decode(_Params[0].f_String());
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
+						gc_ConstString_StringHexEncode
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Source))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							{
+								CStr EncodedString;
+								uint8 CharValue = 0;
+								CStr::CFormat Format("{nfh,sj2,sf0}");
+								Format << CharValue;
+
+								for (auto &Char : _Params[0].f_String())
+								{
+									CharValue = Char;
+									EncodedString += Format;
+								}
+
+								return EncodedString;
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
+						gc_ConstString_StringHexDecode
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Source))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							{
+								auto *pParse = _Params[0].f_String().f_GetStr();
+								auto *pParseEnd = pParse + _Params[0].f_String().f_GetLen();
+
+								CStr OutString;
+								{
+									CStr::CAppender OutStringAppender(OutString);
+
+									while ((pParse + 2) <= pParseEnd)
+									{
+										auto Value = fg_StrToIntParseHexNoSign(pParse, 2, uint8(0));
+										OutStringAppender += (ch8)Value;
+									}
+								}
+
+								return OutString;
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
+						gc_ConstString_StringCompress
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_Binary, fg_FunctionParam(g_String, gc_ConstString__Source))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							{
+								return NCompression::fg_CompressZstandard(CByteVector::fs_FromString(_Params[0].f_String()));
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
+						gc_ConstString_StringDecompress
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_String, fg_FunctionParam(g_Binary, gc_ConstString__Source))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							{
+								return NCompression::fg_DecompressZstandard(_Params[0].f_Binary()).f_ToString();
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
+						gc_ConstString_Base64Encode
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_String, fg_FunctionParam(g_Binary, gc_ConstString__Source))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							{
+								return fg_Base64Encode(_Params[0].f_Binary());
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
+						gc_ConstString_Base64Decode
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_Binary, fg_FunctionParam(g_String, gc_ConstString__Source))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							{
+								return fg_Base64Decode(_Params[0].f_String());
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
+						gc_ConstString_HexEncode
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_String, fg_FunctionParam(g_Binary, gc_ConstString__Source))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							{
+								CStr EncodedString;
+								uint8 CharValue = 0;
+								CStr::CFormat Format("{nfh,sj2,sf0}");
+								Format << CharValue;
+
+								for (auto &Char : _Params[0].f_Binary())
+								{
+									CharValue = Char;
+									EncodedString += Format;
+								}
+
+								return EncodedString;
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
+						gc_ConstString_HexDecode
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_Binary, fg_FunctionParam(g_String, gc_ConstString__Source))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							{
+								auto *pParse = _Params[0].f_String().f_GetStr();
+								auto *pParseEnd = pParse + _Params[0].f_String().f_GetLen();
+
+								CByteVector Out;
+								while ((pParse + 2) <= pParseEnd)
+								{
+									auto Value = fg_StrToIntParseHexNoSign(pParse, 2, uint8(0));
+									Out.f_Insert(Value);
+								}
+
+								return Out;
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
+						gc_ConstString_Compress
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_Binary, fg_FunctionParam(g_Binary, gc_ConstString__Source))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							{
+								return NCompression::fg_CompressZstandard(_Params[0].f_Binary());
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
+						gc_ConstString_Decompress
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_Binary, fg_FunctionParam(g_Binary, gc_ConstString__Source))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							{
+								return NCompression::fg_DecompressZstandard(_Params[0].f_Binary());
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
+						gc_ConstString_TrimLeft
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Source))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							{
+								return _Params[0].f_String().f_TrimLeft();
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
+						gc_ConstString_TrimRight
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Source))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							{
+								return _Params[0].f_String().f_TrimRight();
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
+						gc_ConstString_UpperCase
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Source))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							{
+								return _Params[0].f_String().f_UpperCase();
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
+						gc_ConstString_LowerCase
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Source))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							{
+								return _Params[0].f_String().f_LowerCase();
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
+						gc_ConstString_Left
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Source), fg_FunctionParam(g_Integer, gc_ConstString__Length))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							{
+								return _Params[0].f_String().f_Left(_Params[1].f_Integer());
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
+						gc_ConstString_Right
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Source), fg_FunctionParam(g_Integer, gc_ConstString__Length))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							{
+								return _Params[0].f_String().f_Right(_Params[1].f_Integer());
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
+						gc_ConstString_Extract
+						, CBuiltinFunction
+						{
+							fg_FunctionType
+							(
+								g_String
+								, fg_FunctionParam(g_String, gc_ConstString__Source)
+								, fg_FunctionParam(g_Integer, gc_ConstString__Start)
+								, fg_FunctionParam(fg_Optional(g_Integer), gc_ConstString__Length, g_Optional)
+							)
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							{
+								if (_Params[2].f_IsValid())
+									return _Params[0].f_String().f_Extract(_Params[1].f_Integer(), _Params[2].f_Integer());
+								else
+									return _Params[0].f_String().f_Extract(_Params[1].f_Integer());
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
+						gc_ConstString_Indent
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Source), fg_FunctionParam(g_String, gc_ConstString__String))
+							, [](CBuildSystem const& _This, CBuildSystem::CEvalPropertyValueContext& _Context, TCVector<CEJSONSorted>&& _Params) -> CEJSONSorted
+							{
+								return _Params[0].f_String().f_Indent(_Params[1].f_String());
 							}
 							, DMibBuildSystemFilePosition
 						}
