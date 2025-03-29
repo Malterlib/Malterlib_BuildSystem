@@ -27,6 +27,7 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_HostPlatformFamily(EPropertyType_Property, gc_Str<"HostPlatformFamily">);
 	constexpr CPropertyKeyReference const gc_ConstKey_HostArchitecture(EPropertyType_Property, gc_Str<"HostArchitecture">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Configuration(EPropertyType_Property, gc_Str<"Configuration">);
+	constexpr CPropertyKeyReference const gc_ConstKey_AllRepositories(EPropertyType_Property, gc_Str<"AllRepositories">);
 
 	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_GeneratedFiles(EPropertyType_Builtin, gc_Str<"GeneratedFiles">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Builtin_SourceFiles(EPropertyType_Builtin, gc_Str<"SourceFiles">);
@@ -266,6 +267,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_HostPlatformFamily);
 		o_StringCache.f_AddConstantString(gc_ConstKey_HostArchitecture);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Configuration);
+		o_StringCache.f_AddConstantString(gc_ConstKey_AllRepositories);
 
 		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_GeneratedFiles);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Builtin_SourceFiles);

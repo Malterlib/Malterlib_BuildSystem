@@ -26,6 +26,7 @@ namespace NMib::NBuildSystem
 	extern CPropertyKeyReference const gc_ConstKey_HostPlatformFamily;
 	extern CPropertyKeyReference const gc_ConstKey_HostArchitecture;
 	extern CPropertyKeyReference const gc_ConstKey_Configuration;
+	extern CPropertyKeyReference const gc_ConstKey_AllRepositories;
 
 	extern CPropertyKeyReference const gc_ConstKey_Builtin_GeneratedFiles;
 	extern CPropertyKeyReference const gc_ConstKey_Builtin_SourceFiles;

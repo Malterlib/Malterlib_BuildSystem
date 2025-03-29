@@ -222,6 +222,7 @@ namespace NMib::NBuildSystem
 		NStr::CStr const &f_GetBaseDir() const;
 		bool f_AddGeneratedFile(NStr::CStr const &_File, NStr::CStr const &_Data, NStr::CStr const &_Workspace, bool &_bWasCreated, EGeneratedFileFlag _Flags = EGeneratedFileFlag_None) const;
 		void f_GenerateGlobalFiles(CBuildSystemData &_BuildSystemData, bool _bBeforeImports) const;
+		void f_PopulateAllRepositories(CBuildSystemData &_BuildSystemData) const;
 		void f_GenerateWorkspaceFiles(CBuildSystemData &_BuildSystemData, CEntity &_Target) const;
 		bool f_GenerateTargetFiles(CBuildSystemData &_BuildSystemData, CEntity &_Target) const;
 		void f_ExpandRepositoryEntities(CBuildSystemData &_BuildSystemData) const;

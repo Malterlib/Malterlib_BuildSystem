@@ -25,6 +25,8 @@ namespace NMib::NBuildSystem
 		Workspace.m_pEvaluated = fg_Construct(_ConfigData.m_Evaluated);
 		auto &Evaluated = *Workspace.m_pEvaluated;
 
+		f_PopulateAllRepositories(Evaluated);
+
 		CEntityKey Key;
 		Key.m_Type = EEntityType_Workspace;
 		Key.m_Name = CBuildSystemSyntax::CValue{_pWorkspace->m_EntityName};
@@ -980,11 +982,13 @@ namespace NMib::NBuildSystem
 					}
 
 					f_EvaluateDataMain(ConfigData.m_Evaluated, ConfigValues);
+					f_PopulateAllRepositories(ConfigData.m_Evaluated);
 					f_GenerateGlobalFiles(ConfigData.m_Evaluated, true);
 					f_ExpandDynamicImports(ConfigData.m_Evaluated);
 					f_ExpandGlobalTargetsAndWorkspaces(ConfigData.m_Evaluated);
 					f_EvalGlobalWorkspaces(ConfigData.m_Evaluated, ConfigData.m_Targets);
 					f_ExpandGlobalEntities(ConfigData.m_Evaluated);
+					f_PopulateAllRepositories(ConfigData.m_Evaluated);
 					f_GenerateGlobalFiles(ConfigData.m_Evaluated, false);
 
 					// Find workspaces

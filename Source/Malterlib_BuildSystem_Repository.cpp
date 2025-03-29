@@ -1492,6 +1492,32 @@ namespace NMib::NBuildSystem
 
 	using namespace NRepository;
 
+	void CBuildSystem::f_PopulateAllRepositories(CBuildSystemData &_BuildSystemData) const
+	{
+		CEJSONSorted Repositories = EJSONType_Array;
+
+		for (auto &ChildEntity : _BuildSystemData.m_RootEntity.m_ChildEntitiesOrdered)
+		{
+			if (ChildEntity.f_GetKey().m_Type != EEntityType_Repository)
+				continue;
+
+			auto &ChildEntityData = ChildEntity.f_Data();
+
+			if (!f_EvalCondition(ChildEntity, ChildEntityData.m_Condition, ChildEntityData.m_DebugFlags & EPropertyFlag_TraceCondition))
+				continue;
+
+			Repositories.f_Insert(ChildEntity.f_GetPathForGetProperty());
+		}
+
+		f_AddExternalProperty
+			(
+				fg_RemoveQualifiers(_BuildSystemData.m_RootEntity)
+				, gc_ConstKey_AllRepositories
+				, fg_Move(Repositories)
+			)
+		;
+	}
+
 	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::fp_HandleRepositories(TCMap<CPropertyKey, CEJSONSorted> const &_Values)
 	{
 		co_await ECoroutineFlag_CaptureMalterlibExceptions;

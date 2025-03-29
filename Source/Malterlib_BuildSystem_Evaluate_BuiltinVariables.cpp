@@ -67,6 +67,8 @@ namespace NMib::NBuildSystem
 					, {CPropertyKey(gc_ConstKey_Architecture), DMibBuildSystemTypeWithPosition(fg_Optional(g_String))}
 					, {CPropertyKey(gc_ConstKey_Configuration), DMibBuildSystemTypeWithPosition(fg_Optional(g_String))}
 
+					, {CPropertyKey(gc_ConstKey_AllRepositories), DMibBuildSystemTypeWithPosition(g_StringArray)}
+
 					, {CPropertyKey(gc_ConstKey_MalterlibRepositoryEditor), DMibBuildSystemTypeWithPosition(g_String)}
 					, {CPropertyKey(gc_ConstKey_MalterlibRepositoryEditorSequential),  DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					, {CPropertyKey(gc_ConstKey_MalterlibRepositoryEditorSleep), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_FloatingPoint, 0.0))}
