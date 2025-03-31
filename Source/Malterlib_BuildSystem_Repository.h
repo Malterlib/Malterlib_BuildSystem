@@ -233,7 +233,7 @@ namespace NMib::NBuildSystem::NRepository
 				, CStr _Application = "git"
 			) const
 		;
-		TCFuture<CProcessLaunchActor::CSimpleLaunchResult> f_OpenRepoEditor(CRepoEditor _Editor, CStr _Repo) const;
+		TCUnsafeFuture<CProcessLaunchActor::CSimpleLaunchResult> f_OpenRepoEditor(CRepoEditor _Editor, CStr _Repo) const;
 
 		struct CDeferredOutput
 		{

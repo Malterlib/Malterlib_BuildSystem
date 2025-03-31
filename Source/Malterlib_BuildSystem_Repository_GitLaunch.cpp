@@ -522,7 +522,7 @@ namespace NMib::NBuildSystem::NRepository
 		return fp_Launch(fg_Move(LaunchParams));
 	}
 
-	TCFuture<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::f_OpenRepoEditor(CRepoEditor _Editor, CStr _Repo) const
+	TCUnsafeFuture<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::f_OpenRepoEditor(CRepoEditor _Editor, CStr _Repo) const
 	{
 		auto Params = _Editor.m_Params;
 #ifdef DPlatformFamily_Windows
