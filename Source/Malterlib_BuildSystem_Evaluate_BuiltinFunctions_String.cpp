@@ -998,6 +998,37 @@ namespace NMib::NBuildSystem
 							, DMibBuildSystemFilePosition
 						}
 					}
+					,
+					{
+						gc_ConstString_ChunkString
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_StringArray, fg_FunctionParam(g_String, gc_ConstString__Source), fg_FunctionParam(g_Integer, gc_ConstString__Length))
+							, [](CBuildSystem const& _This, CBuildSystem::CEvalPropertyValueContext& _Context, TCVector<CEJSONSorted>&& _Params) -> CEJSONSorted
+							{
+								CUStr SourceString = _Params[0].f_String();
+
+								mint ChunkLength = _Params[1].f_Integer();
+								mint SourceLength = SourceString.f_GetLen();
+
+								CEJSONSorted Output = EJSONType_Array;
+
+								if (SourceLength < ChunkLength)
+									Output.f_Insert(CStr(SourceString));
+								else
+								{
+									for (mint i = 0; i < SourceLength; i += ChunkLength)
+									{
+										DMibConOut2("{} -> {}: \n", i, ChunkLength, SourceString.f_Extract(i, ChunkLength).f_GetLen());
+										Output.f_Insert(CStr(SourceString.f_Extract(i, ChunkLength)));
+									}
+								}
+
+								return Output;
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
 				}
 			)
 		;

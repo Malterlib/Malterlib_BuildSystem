@@ -374,6 +374,7 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_UpperCase;
 	extern CStringAndHash const gc_ConstString_LowerCase;
 	extern CStringAndHash const gc_ConstString_Indent;
+	extern CStringAndHash const gc_ConstString_ChunkString;	
 
 	extern CStringAndHash const gc_ConstString_Array;
 	extern CStringAndHash const gc_ConstString_Binary;

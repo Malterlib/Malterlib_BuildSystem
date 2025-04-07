@@ -374,6 +374,7 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_UpperCase = gc_Str<"UpperCase">;
 	constexpr CStringAndHash const gc_ConstString_LowerCase = gc_Str<"LowerCase">;
 	constexpr CStringAndHash const gc_ConstString_Indent = gc_Str<"Indent">;
+	constexpr CStringAndHash const gc_ConstString_ChunkString = gc_Str<"ChunkString">;
 
 	constexpr CStringAndHash const gc_ConstString_Array = gc_Str<"Array">;
 	constexpr CStringAndHash const gc_ConstString_Binary = gc_Str<"Binary">;
@@ -880,6 +881,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_UpperCase);
 		o_StringCache.f_AddConstantString(gc_ConstString_LowerCase);
 		o_StringCache.f_AddConstantString(gc_ConstString_Indent);
+		o_StringCache.f_AddConstantString(gc_ConstString_ChunkString);		
 
 		o_StringCache.f_AddConstantStringWithoutHash(CEJSONConstStrings::mc_Date);
 		o_StringCache.f_AddConstantStringWithoutHash(CEJSONConstStrings::mc_Binary);
