@@ -1018,10 +1018,7 @@ namespace NMib::NBuildSystem
 								else
 								{
 									for (mint i = 0; i < SourceLength; i += ChunkLength)
-									{
-										DMibConOut2("{} -> {}: \n", i, ChunkLength, SourceString.f_Extract(i, ChunkLength).f_GetLen());
 										Output.f_Insert(CStr(SourceString.f_Extract(i, ChunkLength)));
-									}
 								}
 
 								return Output;
