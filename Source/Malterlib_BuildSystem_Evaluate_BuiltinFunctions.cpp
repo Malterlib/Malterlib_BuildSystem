@@ -47,8 +47,8 @@ namespace NMib::NBuildSystem
 	CBuildSystemSyntax::CType g_AnyArray{CBuildSystemSyntax::CArrayType{CBuildSystemSyntax::CType{g_Any}}};
 	CBuildSystemSyntax::CType g_ObjectWithAny{CBuildSystemSyntax::CClassType{{}, {CBuildSystemSyntax::CType{g_Any}}}};
 
-	CBuildSystemSyntax::CType g_StringArrayDefaultedEmpty = fg_Defaulted(g_StringArray, _[_]);
-	CBuildSystemSyntax::CType g_AnyArrayDefaultedEmpty = fg_Defaulted(g_AnyArray, _[_]);
+	CBuildSystemSyntax::CType g_StringArrayDefaultedEmpty = fg_Defaulted(g_StringArray, _[]);
+	CBuildSystemSyntax::CType g_AnyArrayDefaultedEmpty = fg_Defaulted(g_AnyArray, _[]);
 
 	CBuildSystemSyntax::CType g_Position
 		{

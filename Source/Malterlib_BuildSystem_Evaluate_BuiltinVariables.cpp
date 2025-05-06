@@ -104,12 +104,12 @@ namespace NMib::NBuildSystem
 					,
 					{
 						CPropertyKey(gc_ConstKey_Target_LinkWithLibraries)
-						, DMibBuildSystemTypeWithPosition(fg_Defaulted(fg_Array(fg_OneOf(g_StringArray, g_String)), _[_]))
+						, DMibBuildSystemTypeWithPosition(fg_Defaulted(fg_Array(fg_OneOf(g_StringArray, g_String)), _[]))
 					}
-					, {CPropertyKey(gc_ConstKey_Target_PostBuildScriptOutputs), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, _[_]))}
-					, {CPropertyKey(gc_ConstKey_Target_PostBuildScriptInputs), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, _[_]))}
-					, {CPropertyKey(gc_ConstKey_Target_PreBuildScriptOutputs), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, _[_]))}
-					, {CPropertyKey(gc_ConstKey_Target_PreBuildScriptInputs), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, _[_]))}
+					, {CPropertyKey(gc_ConstKey_Target_PostBuildScriptOutputs), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, _[]))}
+					, {CPropertyKey(gc_ConstKey_Target_PostBuildScriptInputs), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, _[]))}
+					, {CPropertyKey(gc_ConstKey_Target_PreBuildScriptOutputs), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, _[]))}
+					, {CPropertyKey(gc_ConstKey_Target_PreBuildScriptInputs), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, _[]))}
 
 					, {CPropertyKey(gc_ConstKey_Dependency_Indirect), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					, {CPropertyKey(gc_ConstKey_Dependency_IndirectOrdered), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
@@ -206,7 +206,7 @@ namespace NMib::NBuildSystem
 										, {}
 									}
 								)
-								, _[_]
+								, _[]
 							)
 						)
 					}
@@ -231,7 +231,7 @@ namespace NMib::NBuildSystem
 										, {}
 									}
 								)
-								, _[_]
+								, _[]
 							)
 						)
 					}
@@ -264,7 +264,7 @@ namespace NMib::NBuildSystem
 										, {}
 									}
 								)
-								, _[_]
+								, _[]
 							)
 						)
 					}
@@ -300,7 +300,7 @@ namespace NMib::NBuildSystem
 										, {}
 									}
 								)
-								, _[_]
+								, _[]
 							)
 						)
 					}
@@ -371,7 +371,7 @@ namespace NMib::NBuildSystem
 										, {}
 									}
 								)
-								, _[_]
+								, _[]
 							)
 						)
 					}

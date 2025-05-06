@@ -4,7 +4,6 @@
 #include "Malterlib_BuildSystem_Generator_Xcode.h"
 #include "../../Malterlib_BuildSystem_DefinedProperties.hpp"
 #include <Mib/XML/XML>
-#include <Mib/Encoding/JSONShortcuts>
 
 namespace NMib::NBuildSystem::NXcode
 {

@@ -305,7 +305,7 @@ namespace
 			DMibAssertTrue(Value.f_IsOfType<NEncoding::CEJSONSorted>());
 			auto &Array = Value.f_GetAsType<NEncoding::CEJSONSorted>();
 
-			DMibExpect(Array, ==, NEncoding::CEJSONSorted({1, 2, 3}));
+			DMibExpect(Array, ==, (_[1, 2, 3]));
 		}
 
 		void f_TestObjectStatic()
@@ -320,7 +320,7 @@ namespace
 
 			auto &Object = Value.f_GetAsType<NEncoding::CEJSONSorted>();
 
-			DMibExpect(Object, ==, NEncoding::CEJSONSorted({"doubleQuote"_= 1, "singleQuote"_= 2, "noQuote"_= 3}));
+			DMibExpect(Object, ==, (_={"doubleQuote"_= 1, "singleQuote"_= 2, "noQuote"_= 3}));
 		}
 
 		void f_TestArrayDynamic()
@@ -766,7 +766,7 @@ namespace
 				auto &Param = FunctionCall.m_Params[0].m_Param;
 				DMibAssertTrue(Param.f_IsOfType<NEncoding::CEJSONSorted>());
 				auto &Object = Param.f_GetAsType<NEncoding::CEJSONSorted>();
-				DMibExpect(Object, ==, NEncoding::CEJSONSorted({"Test"_= 5}));
+				DMibExpect(Object, ==, _={"Test"_= 5});
 			}
 			{
 				DMibTestPath("Array");
@@ -781,7 +781,7 @@ namespace
 				auto &Param = FunctionCall.m_Params[0].m_Param;
 				DMibAssertTrue(Param.f_IsOfType<NEncoding::CEJSONSorted>());
 				auto &Array = Param.f_GetAsType<NEncoding::CEJSONSorted>();
-				DMibExpect(Array, ==, NEncoding::CEJSONSorted({5}));
+				DMibExpect(Array, ==, _[5]);
 			}
 			{
 				DMibTestPath("WildcardString");

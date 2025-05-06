@@ -3,7 +3,6 @@
 
 #include "Malterlib_BuildSystem_Registry.h"
 
-#include <Mib/Encoding/JSONShortcuts>
 #include <Mib/Encoding/EJSONParse>
 
 namespace NMib::NContainer

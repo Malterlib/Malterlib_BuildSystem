@@ -6,7 +6,6 @@
 #include <Mib/Concurrency/DistributedActorTestHelpers>
 #include <Mib/File/ExeFS>
 #include <Mib/File/VirtualFSs/MalterlibFS>
-#include <Mib/Encoding/JSONShortcuts>
 #include <Mib/Test/Exception>
 
 namespace

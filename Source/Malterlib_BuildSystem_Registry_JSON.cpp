@@ -3,8 +3,6 @@
 
 #include "Malterlib_BuildSystem_Registry.h"
 
-#include <Mib/Encoding/JSONShortcuts>
-
 namespace NMib::NContainer
 {
 #ifndef DDocumentation_Doxygen

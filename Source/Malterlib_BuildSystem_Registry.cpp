@@ -4,8 +4,6 @@
 #include "Malterlib_BuildSystem_Registry.h"
 #include "Malterlib_BuildSystem_FilePosition.h"
 
-#include <Mib/Encoding/JSONShortcuts>
-
 namespace NMib::NContainer
 {
 #ifndef DDocumentation_Doxygen
