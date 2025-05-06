@@ -227,14 +227,16 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 <dict>
 	<key>BuildLocationStyle</key>
 	<string>CustomLocation</string>
-	<key>CustomBuildLocationType</key>
-	<string>Absolute</string>
-	<key>DerivedDataLocationStyle</key>
-	<string>Default</string>
 	<key>CustomBuildIntermediatesPath</key>
 	<string>{}</string>
 	<key>CustomBuildProductsPath</key>
 	<string>{}</string>
+	<key>CustomBuildLocationType</key>
+	<string>Absolute</string>
+	<key>DerivedDataCustomLocation</key>
+	<string>{}</string>
+	<key>DerivedDataLocationStyle</key>
+	<string>AbsolutePath</string>
 	<key>IssueFilterStyle</key>
 	<string>ShowActiveSchemeOnly</string>
 	<key>LiveSourceIssuesEnabled</key>
@@ -246,7 +248,9 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 )xxx"_f
 				<< IntermediatePath
 				<< OutputPath
+				<< (CFile::fs_GetPath(IntermediatePath) / "Derived")
 			;
+
 			CStr FileName = _OutputDir / ("xcuserdata/{}.xcuserdatad/WorkspaceSettings.xcsettings"_f << NProcess::NPlatform::fg_Process_GetUserName());
 
 			bool bUpdated = fWriteSchemeFile(FileName + ".generated", DocumentData);
