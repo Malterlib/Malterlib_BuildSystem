@@ -233,7 +233,13 @@ namespace NMib::NBuildSystem::NXcode
 	CStr CElement::f_GetCombinedValue() const
 	{
 		if (m_bUseValues)
-			return CStr::fs_Join(f_ValueArray(), " ");
+		{
+			CStr Return;
+			for (auto &Value : f_ValueArray())
+				fg_AddStrSepEscaped(Return, Value, ' ');
+
+			return Return;
+		}
 
 		return m_Value;
 	}

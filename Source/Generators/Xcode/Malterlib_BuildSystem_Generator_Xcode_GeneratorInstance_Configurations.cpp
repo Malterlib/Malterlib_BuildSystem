@@ -909,7 +909,7 @@ namespace NMib::NBuildSystem
 					else if (!bDoneAdditionalLibraries && iElement->f_GetProperty() == gc_ConstString_OTHER_LDFLAGS.m_String)
 						bAdditionalLibraries = true;
 					else if (!bDoneAdditionalLibraries && iElement->f_GetProperty() == gc_ConstString_LDFlagsFirst.m_String)
-						LDFlagsFirst = CStr::fs_Join(iElement->f_ValueArray(), " ");
+						LDFlagsFirst = iElement->f_GetCombinedValue();
 					else if (!bDoneAdditionalLibraries && iElement->f_GetProperty() == gc_ConstString_OTHER_LIBTOOLFLAGS.m_String && m_XcodeVersion >= 6)
 						bAdditionalLibraries = true;
 
