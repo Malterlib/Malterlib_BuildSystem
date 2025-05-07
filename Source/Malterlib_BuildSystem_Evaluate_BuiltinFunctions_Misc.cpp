@@ -10,7 +10,7 @@ namespace NMib::NBuildSystem
 {
 	constexpr CUniversallyUniqueIdentifier const g_GeneratorFunctionUUIDHashUUIDNamespace(0x010669A0, 0x1AEC, 0x48C9, 0x878A, 0xCFC5FFD996C6_uint64);
 
-	CStr fg_FormatJSONValue(CEJSONSorted const &_Value, bool _bSingleLine)
+	CStr fg_FormatJsonValue(CEJsonSorted const &_Value, bool _bSingleLine)
 	{
 		bool bSingleLine = _bSingleLine;
 		if (!bSingleLine)
@@ -19,10 +19,10 @@ namespace NMib::NBuildSystem
 				bSingleLine = true;
 		}
 
-		return _Value.f_ToString(bSingleLine ? nullptr : "\t", EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat).f_Trim();
+		return _Value.f_ToString(bSingleLine ? nullptr : "\t", EJsonDialectFlag_AllowUndefined | EJsonDialectFlag_AllowInvalidFloat).f_Trim();
 	}
 
-	CStr fg_FormatJSONArray(TCVector<CEJSONSorted> const &_Array, bool _bSingleLine)
+	CStr fg_FormatJsonArray(TCVector<CEJsonSorted> const &_Array, bool _bSingleLine)
 	{
 		if (_Array.f_GetLen() == 1 && _Array[0].f_IsString())
 			return _Array[0].f_String();
@@ -40,13 +40,13 @@ namespace NMib::NBuildSystem
 
 			if (bFirst)
 			{
-				ToOutput += Param.f_ToString(bSingleLine ? nullptr : "\t", EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat).f_Trim();
+				ToOutput += Param.f_ToString(bSingleLine ? nullptr : "\t", EJsonDialectFlag_AllowUndefined | EJsonDialectFlag_AllowInvalidFloat).f_Trim();
 				bFirst = false;
 			}
 			else
 			{
 				ToOutput += " ";
-				ToOutput += Param.f_ToString(bSingleLine ? nullptr : "\t", EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat).f_Trim();
+				ToOutput += Param.f_ToString(bSingleLine ? nullptr : "\t", EJsonDialectFlag_AllowUndefined | EJsonDialectFlag_AllowInvalidFloat).f_Trim();
 			}
 		}
 
@@ -60,7 +60,7 @@ namespace NMib::NBuildSystem
 		, ESwitchType_Error
 	};
 
-	CEJSONSorted fg_SwitchValues(ESwitchType _Type, CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params)
+	CEJsonSorted fg_SwitchValues(ESwitchType _Type, CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params)
 	{
 		mint iParam = 0;
 		auto &Value = _Params[iParam];
@@ -104,9 +104,9 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_Void, fg_FunctionParam(g_Any, gc_ConstString_p_ErrorValues, g_Ellipsis))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
-								fs_ThrowError(_Context, fg_FormatJSONArray(_Params[0].f_Array(), false));
+								fs_ThrowError(_Context, fg_FormatJsonArray(_Params[0].f_Array(), false));
 							}
 							, DMibBuildSystemFilePosition
 						}
@@ -122,12 +122,12 @@ namespace NMib::NBuildSystem
 								, fg_FunctionParam(fg_Array(fg_TempCopy(g_Position)), gc_ConstString__Positions)
 								, fg_FunctionParam(g_Any, gc_ConstString_p_ErrorValues, g_Ellipsis)
 							)
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								if (!_Params[0].f_Array().f_IsEmpty())
-									fs_ThrowError(_Context, CBuildSystemUniquePositions::fs_FromJson(_Params[0]), fg_FormatJSONArray(_Params[1].f_Array(), false));
+									fs_ThrowError(_Context, CBuildSystemUniquePositions::fs_FromJson(_Params[0]), fg_FormatJsonArray(_Params[1].f_Array(), false));
 								else
-									fs_ThrowError(_Context, fg_FormatJSONArray(_Params[1].f_Array(), false));
+									fs_ThrowError(_Context, fg_FormatJsonArray(_Params[1].f_Array(), false));
 							}
 							, DMibBuildSystemFilePosition
 						}
@@ -138,12 +138,12 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_Any, fg_FunctionParam(g_Any, gc_ConstString__ToReturn), fg_FunctionParam(g_Any, gc_ConstString_p_LogValues, g_Ellipsis))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								if (_Params[1].f_Array().f_IsEmpty())
-									_This.f_OutputConsole("{}\n"_f << fg_FormatJSONValue(_Params[0], false));
+									_This.f_OutputConsole("{}\n"_f << fg_FormatJsonValue(_Params[0], false));
 								else
-									_This.f_OutputConsole("{}\n"_f << fg_FormatJSONArray(_Params[1].f_Array(), false));
+									_This.f_OutputConsole("{}\n"_f << fg_FormatJsonArray(_Params[1].f_Array(), false));
 
 								return fg_Move(_Params[0]);
 							}
@@ -156,12 +156,12 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_Any, fg_FunctionParam(g_Any, gc_ConstString__ToReturn), fg_FunctionParam(g_Any, gc_ConstString_p_LogValues, g_Ellipsis))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								if (_Params[1].f_Array().f_IsEmpty())
-									_This.f_OutputConsole("{}: {}\n"_f << _This.mp_LogSequence.f_FetchAdd(1) << fg_FormatJSONValue(_Params[0], false));
+									_This.f_OutputConsole("{}: {}\n"_f << _This.mp_LogSequence.f_FetchAdd(1) << fg_FormatJsonValue(_Params[0], false));
 								else
-									_This.f_OutputConsole("{}: {}\n"_f << _This.mp_LogSequence.f_FetchAdd(1) << fg_FormatJSONArray(_Params[1].f_Array(), false));
+									_This.f_OutputConsole("{}: {}\n"_f << _This.mp_LogSequence.f_FetchAdd(1) << fg_FormatJsonArray(_Params[1].f_Array(), false));
 
 								return fg_Move(_Params[0]);
 							}
@@ -174,12 +174,12 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_Any, fg_FunctionParam(g_Any, gc_ConstString__ToReturn), fg_FunctionParam(g_Any, gc_ConstString_p_LogValues, g_Ellipsis))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								if (_Params[1].f_Array().f_IsEmpty())
-									_This.f_OutputConsole("{}\n"_f << fg_FormatJSONValue(_Params[0], false), true);
+									_This.f_OutputConsole("{}\n"_f << fg_FormatJsonValue(_Params[0], false), true);
 								else
-									_This.f_OutputConsole("{}\n"_f << fg_FormatJSONArray(_Params[1].f_Array(), false), true);
+									_This.f_OutputConsole("{}\n"_f << fg_FormatJsonArray(_Params[1].f_Array(), false), true);
 
 								return fg_Move(_Params[0]);
 							}
@@ -192,7 +192,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__FormatString))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								if (_Params.f_GetLen() != 1 || !_Params[0].f_IsString())
 									fs_ThrowError(_Context, "MalterlibTime takes one string parameter");
@@ -209,7 +209,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__FormatString), fg_FunctionParam(fg_Optional(g_Date), gc_ConstString__Time, g_Optional))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								CStr Format = _Params[0].f_String();
 
@@ -282,7 +282,7 @@ namespace NMib::NBuildSystem
 									, g_Optional
 								)
 							)
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								EUniversallyUniqueIdentifierFormat UUIDFormat = EUniversallyUniqueIdentifierFormat_Registry;
 
@@ -322,7 +322,7 @@ namespace NMib::NBuildSystem
 								, fg_FunctionParam(g_String, gc_ConstString__StringToHash)
 								, fg_FunctionParam(fg_Optional(g_Integer), gc_ConstString__Length, g_Optional)
 							)
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								mint HashLen = 64;
 								if (_Params[1].f_IsValid())
@@ -349,7 +349,7 @@ namespace NMib::NBuildSystem
 								g_Boolean
 								, fg_FunctionParam(g_String, gc_ConstString__Property)
 							)
-							, [this](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [this](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								CPropertyKey PropertyKey = CPropertyKey::fs_FromString(mp_StringCache, _Params[0].f_String(), _Context);
 
@@ -370,7 +370,7 @@ namespace NMib::NBuildSystem
 								, fg_FunctionParam(g_Any, gc_ConstString__Value)
 								, fg_FunctionParam(g_Any, gc_ConstString_p_SwitchValues, g_Ellipsis)
 							)
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								return fg_SwitchValues(ESwitchType_Bare, _This, _Context, fg_Move(_Params));
 							}
@@ -389,7 +389,7 @@ namespace NMib::NBuildSystem
 								, fg_FunctionParam(g_String, gc_ConstString__Error)
 								, fg_FunctionParam(g_Any, gc_ConstString_p_SwitchValues, g_Ellipsis)
 							)
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								return fg_SwitchValues(ESwitchType_Error, _This, _Context, fg_Move(_Params));
 							}
@@ -408,7 +408,7 @@ namespace NMib::NBuildSystem
 								, fg_FunctionParam(g_Any, gc_ConstString__Default)
 								, fg_FunctionParam(g_Any, gc_ConstString_p_SwitchValues, g_Ellipsis)
 							)
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								return fg_SwitchValues(ESwitchType_Default, _This, _Context, fg_Move(_Params));
 							}

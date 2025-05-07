@@ -2,7 +2,7 @@
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem.h"
-#include <Mib/Encoding/EJSON>
+#include <Mib/Encoding/EJson>
 
 namespace NMib::NBuildSystem
 {
@@ -105,7 +105,7 @@ namespace NMib::NBuildSystem
 		co_return CBuildSystem::ERetry_None;
 	}
 
-	CBuildSystem::CRepoFilter CBuildSystem::CRepoFilter::fs_ParseParams(NEncoding::CEJSONSorted const &_Params)
+	CBuildSystem::CRepoFilter CBuildSystem::CRepoFilter::fs_ParseParams(NEncoding::CEJsonSorted const &_Params)
 	{
 		CBuildSystem::CRepoFilter Filter;
 

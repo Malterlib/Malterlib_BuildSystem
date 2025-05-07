@@ -16,7 +16,7 @@ namespace NMib::NBuildSystem::NXcode
 		(
 			CBuildSystem const &_BuildSystem
 			, CBuildSystemData const &_BuildSystemData
-			, TCMap<CPropertyKey, CEJSONSorted> const &_InitialValues
+			, TCMap<CPropertyKey, CEJsonSorted> const &_InitialValues
 			, CStr const &_OutputDir
 		)
 		: m_BuildSystem(_BuildSystem)
@@ -87,7 +87,7 @@ namespace NMib::NBuildSystem::NXcode
 			return &m_Builtin_Inherit;
 		}
 
-		return CEJSONSorted();
+		return CEJsonSorted();
 	}
 	
 	void CGeneratorInstance::CSharedState::f_CreateDirectory(CStr const &_Path)

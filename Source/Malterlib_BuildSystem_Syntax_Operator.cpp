@@ -6,9 +6,9 @@
 
 namespace NMib::NBuildSystem
 {
-	NEncoding::CEJSONSorted CBuildSystemSyntax::COperator::f_ToJson() const
+	NEncoding::CEJsonSorted CBuildSystemSyntax::COperator::f_ToJson() const
 	{
-		CEJSONSorted Return;
+		CEJsonSorted Return;
 		auto &UserType = Return.f_UserType();
 		UserType.m_Type = gc_ConstString_BuildSystemToken;
 
@@ -35,9 +35,9 @@ namespace NMib::NBuildSystem
 		return Return;
 	}
 
-	auto CBuildSystemSyntax::COperator::fs_FromJson(CStringCache &o_StringCache, NEncoding::CEJSONSorted const &_JSON, CFilePosition const &_Position, bool _bAppendAllowed) -> COperator
+	auto CBuildSystemSyntax::COperator::fs_FromJson(CStringCache &o_StringCache, NEncoding::CEJsonSorted const &_Json, CFilePosition const &_Position, bool _bAppendAllowed) -> COperator
 	{
-		auto pOperator = _JSON.f_GetMember(gc_ConstString_Operator, EJSONType_String);
+		auto pOperator = _Json.f_GetMember(gc_ConstString_Operator, EJsonType_String);
 		if (!pOperator)
 			CBuildSystem::fs_ThrowError(_Position, "Operator token has no valid Operator member");
 
@@ -68,7 +68,7 @@ namespace NMib::NBuildSystem
 		else
 			CBuildSystem::fs_ThrowError(_Position, "Operator token has unknown operator {}"_f << Operator);
 
-		auto pRight = _JSON.f_GetMember(gc_ConstString_Right);
+		auto pRight = _Json.f_GetMember(gc_ConstString_Right);
 		if (!pOperator)
 			CBuildSystem::fs_ThrowError(_Position, "Operator token has no valid Right member");
 
@@ -77,9 +77,9 @@ namespace NMib::NBuildSystem
 		return Return;
 	}
 
-	NEncoding::CEJSONSorted CBuildSystemSyntax::CBinaryOperator::f_ToJson() const
+	NEncoding::CEJsonSorted CBuildSystemSyntax::CBinaryOperator::f_ToJson() const
 	{
-		CEJSONSorted Return;
+		CEJsonSorted Return;
 		auto &UserType = Return.f_UserType();
 		UserType.m_Type = gc_ConstString_BuildSystemToken;
 
@@ -118,35 +118,35 @@ namespace NMib::NBuildSystem
 		return Return;
 	}
 
-	auto CBuildSystemSyntax::CBinaryOperator::fs_FromJson(CStringCache &o_StringCache, CJSONSorted const &_JSON, CFilePosition const &_Position) -> CBinaryOperator
+	auto CBuildSystemSyntax::CBinaryOperator::fs_FromJson(CStringCache &o_StringCache, CJsonSorted const &_Json, CFilePosition const &_Position) -> CBinaryOperator
 	{
 		CBinaryOperator BinaryOperator;
 
-		auto pOperator = _JSON.f_GetMember(gc_ConstString_Operator);
+		auto pOperator = _Json.f_GetMember(gc_ConstString_Operator);
 		if (!pOperator)
 			CBuildSystem::fs_ThrowError(_Position, "BinaryOperator token does not have valid Operator member");
 
-		auto pLeft = _JSON.f_GetMember(gc_ConstString_Left);
+		auto pLeft = _Json.f_GetMember(gc_ConstString_Left);
 		if (!pLeft)
 			CBuildSystem::fs_ThrowError(_Position, "BinaryOperator token does not have valid Left member");
 
-		auto pRight = _JSON.f_GetMember(gc_ConstString_Right);
+		auto pRight = _Json.f_GetMember(gc_ConstString_Right);
 		if (!pRight)
 			CBuildSystem::fs_ThrowError(_Position, "BinaryOperator token does not have valid Right member");
 
-		auto fParseParam = [&](CEJSONSorted const &_JSON) -> CParam
+		auto fParseParam = [&](CEJsonSorted const &_Json) -> CParam
 			{
-				if (!_JSON.f_IsUserType())
-					return CParam::fs_FromJson(o_StringCache, _JSON, _Position, {}, true);
+				if (!_Json.f_IsUserType())
+					return CParam::fs_FromJson(o_StringCache, _Json, _Position, {}, true);
 
-				auto &UserType = _JSON.f_UserType();
+				auto &UserType = _Json.f_UserType();
 				auto &Value = UserType.m_Value;
 
-				auto pType = Value.f_GetMember(gc_ConstString_Type, EJSONType_String);
+				auto pType = Value.f_GetMember(gc_ConstString_Type, EJsonType_String);
 				if (!pType)
 					CBuildSystem::fs_ThrowError(_Position, "Param does not have valid Type member");
 
-				return CParam::fs_FromJson(o_StringCache, _JSON, _Position, pType->f_String(), true);
+				return CParam::fs_FromJson(o_StringCache, _Json, _Position, pType->f_String(), true);
 			}
 		;
 
@@ -197,15 +197,15 @@ namespace NMib::NBuildSystem
 		else
 			CBuildSystem::fs_ThrowError(_Position, "BinaryOperator token has unknown operator {}"_f << Operator);
 
-		BinaryOperator.m_Left = fParseParam(CEJSONSorted::fs_FromJson(*pLeft));
-		BinaryOperator.m_Right = fParseParam(CEJSONSorted::fs_FromJson(*pRight));
+		BinaryOperator.m_Left = fParseParam(CEJsonSorted::fs_FromJson(*pLeft));
+		BinaryOperator.m_Right = fParseParam(CEJsonSorted::fs_FromJson(*pRight));
 
 		return BinaryOperator;
 	}
 
-	NEncoding::CEJSONSorted CBuildSystemSyntax::CPrefixOperator::f_ToJson() const
+	NEncoding::CEJsonSorted CBuildSystemSyntax::CPrefixOperator::f_ToJson() const
 	{
-		CEJSONSorted Return;
+		CEJsonSorted Return;
 		auto &UserType = Return.f_UserType();
 		UserType.m_Type = gc_ConstString_BuildSystemToken;
 
@@ -227,31 +227,31 @@ namespace NMib::NBuildSystem
 		return Return;
 	}
 
-	auto CBuildSystemSyntax::CPrefixOperator::fs_FromJson(CStringCache &o_StringCache, CJSONSorted const &_JSON, CFilePosition const &_Position) -> CPrefixOperator
+	auto CBuildSystemSyntax::CPrefixOperator::fs_FromJson(CStringCache &o_StringCache, CJsonSorted const &_Json, CFilePosition const &_Position) -> CPrefixOperator
 	{
 		CPrefixOperator PrefixOperator;
 
-		auto pOperator = _JSON.f_GetMember(gc_ConstString_Operator);
+		auto pOperator = _Json.f_GetMember(gc_ConstString_Operator);
 		if (!pOperator)
 			CBuildSystem::fs_ThrowError(_Position, "PrefixOperator token does not have valid Operator member");
 
-		auto pRight = _JSON.f_GetMember(gc_ConstString_Right);
+		auto pRight = _Json.f_GetMember(gc_ConstString_Right);
 		if (!pRight)
 			CBuildSystem::fs_ThrowError(_Position, "PrefixOperator token does not have valid Right member");
 
-		auto fParseParam = [&](CEJSONSorted const &_JSON) -> CParam
+		auto fParseParam = [&](CEJsonSorted const &_Json) -> CParam
 			{
-				if (!_JSON.f_IsUserType())
-					return CParam::fs_FromJson(o_StringCache, _JSON, _Position, {}, true);
+				if (!_Json.f_IsUserType())
+					return CParam::fs_FromJson(o_StringCache, _Json, _Position, {}, true);
 
-				auto &UserType = _JSON.f_UserType();
+				auto &UserType = _Json.f_UserType();
 				auto &Value = UserType.m_Value;
 
-				auto pType = Value.f_GetMember(gc_ConstString_Type, EJSONType_String);
+				auto pType = Value.f_GetMember(gc_ConstString_Type, EJsonType_String);
 				if (!pType)
 					CBuildSystem::fs_ThrowError(_Position, "Param does not have valid Type member");
 
-				return CParam::fs_FromJson(o_StringCache, _JSON, _Position, pType->f_String(), true);
+				return CParam::fs_FromJson(o_StringCache, _Json, _Position, pType->f_String(), true);
 			}
 		;
 
@@ -268,7 +268,7 @@ namespace NMib::NBuildSystem
 		else
 			CBuildSystem::fs_ThrowError(_Position, "PrefixOperator token has unknown operator {}"_f << Operator);
 
-		PrefixOperator.m_Right = fParseParam(CEJSONSorted::fs_FromJson(*pRight));
+		PrefixOperator.m_Right = fParseParam(CEJsonSorted::fs_FromJson(*pRight));
 
 		return PrefixOperator;
 	}

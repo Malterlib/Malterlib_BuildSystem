@@ -445,7 +445,7 @@ namespace NMib::NBuildSystem
 			auto &Type = AllFiles.fs_GetKey(Files);
 
 			Files.f_Sort();
-			CEJSONSorted AllFilesArray;
+			CEJsonSorted AllFilesArray;
 			for (auto &File : Files)
 				AllFilesArray.f_Insert(fg_Move(File));
 
@@ -697,7 +697,7 @@ namespace NMib::NBuildSystem
 		if (EntityData.m_ExpandedOrGeneratedFrom)
 			return nullptr;
 
-		TCVector<CEJSONSorted> Entities;
+		TCVector<CEJsonSorted> Entities;
 
 		CEvaluatedProperties TempProperties;
 		TempProperties.m_pParentProperties = &_Entity.m_EvaluatedProperties;
@@ -753,11 +753,11 @@ namespace NMib::NBuildSystem
 
 			if (SourceEntity.f_IsObject())
 			{
-				auto *pName = SourceEntity.f_GetMember(gc_ConstString_Name, EJSONType_String);
+				auto *pName = SourceEntity.f_GetMember(gc_ConstString_Name, EJsonType_String);
 				if (!pName)
 					fs_ThrowError(EntityData.m_Position, "Expected a 'Name' for string type in entity object");
 
-				auto *pProperties = SourceEntity.f_GetMember("Properties", EJSONType_Object);
+				auto *pProperties = SourceEntity.f_GetMember("Properties", EJsonType_Object);
 				if (!pProperties)
 					fs_ThrowError(EntityData.m_Position, "Expected a 'Properties' of object type in entity object");
 

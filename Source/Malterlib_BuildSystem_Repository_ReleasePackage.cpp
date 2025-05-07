@@ -6,7 +6,7 @@
 #include <Mib/CommandLine/AnsiEncodingParse>
 #include <Mib/CommandLine/TableRenderer>
 #include <Mib/Concurrency/AsyncDestroy>
-#include <Mib/Encoding/JSONShortcuts>
+#include <Mib/Encoding/JsonShortcuts>
 #include <Mib/Git/Helpers/Credentials>
 #include <Mib/Git/HostingProvider>
 #include <Mib/Git/Policy>
@@ -215,7 +215,7 @@ namespace NMib::NBuildSystem
 			auto DestroyHostingProvider = co_await fg_AsyncDestroy(HostingProvider);
 
 			if (HostingProviderToken)
-				co_await HostingProvider(&CGitHostingProvider::f_Login, CEJSONSorted{"Token"_= HostingProviderToken});
+				co_await HostingProvider(&CGitHostingProvider::f_Login, CEJsonSorted{"Token"_= HostingProviderToken});
 
 			CStr GitRepository = CStr::fs_Join(Url.f_GetPath(), "/").f_RemoveSuffix(".git");
 

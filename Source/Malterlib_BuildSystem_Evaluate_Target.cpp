@@ -90,15 +90,15 @@ namespace NMib::NBuildSystem
 
 		Dependencies.f_Sort();
 		
-		CEJSONSorted DependenciesJSON = EJSONType_Array;
+		CEJsonSorted DependenciesJson = EJsonType_Array;
 		for (auto &Dependency : Dependencies)
-			DependenciesJSON.f_Insert(Dependency);
+			DependenciesJson.f_Insert(Dependency);
 
 		f_AddExternalProperty
 			(
 				*_pTargetOuterEntity
 				, gc_ConstKey_Target_DependenciesNames
-				, fg_Move(DependenciesJSON)
+				, fg_Move(DependenciesJson)
 			)
 		;
 	}

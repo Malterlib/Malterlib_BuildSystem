@@ -58,7 +58,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 			template <typename tf_CStr>
 			void f_Format(tf_CStr &o_String) const;
-			static void fs_FromJson(CVS_SettingShared &o_Value, NEncoding::CEJSONSorted &&_JSON);
+			static void fs_FromJson(CVS_SettingShared &o_Value, NEncoding::CEJsonSorted &&_Json);
 
 			CStr m_Key;
 			CStr m_Value;
@@ -70,7 +70,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 			template <typename tf_CStr>
 			void f_Format(tf_CStr &o_String) const;
-			static CVS_Setting_PropertyGroup fs_FromJson(NEncoding::CEJSONSorted &&_JSON);
+			static CVS_Setting_PropertyGroup fs_FromJson(NEncoding::CEJsonSorted &&_Json);
 
 			// Type: one_of("PropertyGroup")
 			CStr m_Label;
@@ -82,7 +82,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 			template <typename tf_CStr>
 			void f_Format(tf_CStr &o_String) const;
-			static CVS_Setting_ItemDefinitionGroup fs_FromJson(NEncoding::CEJSONSorted &&_JSON);
+			static CVS_Setting_ItemDefinitionGroup fs_FromJson(NEncoding::CEJsonSorted &&_Json);
 
 			// Type: one_of("ItemDefinitionGroup")
 			CStr m_Name;
@@ -449,7 +449,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			(
 				CBuildSystem const &_BuildSystem
 				, CBuildSystemData const &_BuildSystemData
-				, TCMap<CPropertyKey, CEJSONSorted> const &_InitialValues
+				, TCMap<CPropertyKey, CEJsonSorted> const &_InitialValues
 				, CStr const &_OutputDir
 			)
 		;
@@ -460,7 +460,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		virtual CSystemEnvironment f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const override;
 
 		CStr const &f_GetToolsVersion() const;
-		CEJSONSorted const &f_GetVisualStudioRoot() const;
+		CEJsonSorted const &f_GetVisualStudioRoot() const;
 
 		TCUnsafeFuture<void> f_GenerateProjectFile(CProject &_Project, CStr const &_OutputDir) const;
 		TCUnsafeFuture<void> f_GenerateSolutionFile(CSolution &_Solution, CStr const &_OutputDir) const;
@@ -486,16 +486,16 @@ namespace NMib::NBuildSystem::NVisualStudio
 		CBuildSystemData const &m_BuildSystemData;
 
 		CGeneratorState m_State;
-		CEJSONSorted m_OutputDir;
-		CEJSONSorted m_RelativeBasePath;
-		CEJSONSorted m_RelativeBasePathAbsolute;
+		CEJsonSorted m_OutputDir;
+		CEJsonSorted m_RelativeBasePath;
+		CEJsonSorted m_RelativeBasePathAbsolute;
 
-		CEJSONSorted m_Builtin_ProjectPath = ".";
-		CEJSONSorted m_Builtin_Inherit = gc_ConstString_Symbol_Inherit;
+		CEJsonSorted m_Builtin_ProjectPath = ".";
+		CEJsonSorted m_Builtin_Inherit = gc_ConstString_Symbol_Inherit;
 
 		mutable CLowLevelLock m_VisualStudioRootLock;
 		mutable TCAtomic<bool> m_VisualStudioRootCached;
-		mutable CEJSONSorted m_VisualStudioRoot;
+		mutable CEJsonSorted m_VisualStudioRoot;
 
 		CStr m_Win32Platfrom;
 

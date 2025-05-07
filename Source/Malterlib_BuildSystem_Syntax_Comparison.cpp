@@ -150,32 +150,32 @@ namespace NMib::NBuildSystem
 		return true;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CJSONSubscript::operator <=> (CJSONSubscript const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CJsonSubscript::operator <=> (CJsonSubscript const &_Right) const
 	{
 		return m_Index <=> _Right.m_Index;
 	}
 
-	bool CBuildSystemSyntax::CJSONSubscript::operator == (CJSONSubscript const &_Right) const
+	bool CBuildSystemSyntax::CJsonSubscript::operator == (CJsonSubscript const &_Right) const
 	{
 		return m_Index == _Right.m_Index;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CJSONAccessorEntry::operator <=> (CJSONAccessorEntry const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CJsonAccessorEntry::operator <=> (CJsonAccessorEntry const &_Right) const
 	{
 		return m_Accessor <=> _Right.m_Accessor;
 	}
 
-	bool CBuildSystemSyntax::CJSONAccessorEntry::operator == (CJSONAccessorEntry const &_Right) const
+	bool CBuildSystemSyntax::CJsonAccessorEntry::operator == (CJsonAccessorEntry const &_Right) const
 	{
 		return m_Accessor == _Right.m_Accessor;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CJSONAccessor::operator <=> (CJSONAccessor const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CJsonAccessor::operator <=> (CJsonAccessor const &_Right) const
 	{
 		return fg_TupleReferences(m_Param, m_Accessors) <=> fg_TupleReferences(_Right.m_Param, _Right.m_Accessors);
 	}
 
-	bool CBuildSystemSyntax::CJSONAccessor::operator == (CJSONAccessor const &_Right) const
+	bool CBuildSystemSyntax::CJsonAccessor::operator == (CJsonAccessor const &_Right) const
 	{
 		return fg_TupleReferences(m_Param, m_Accessors) == fg_TupleReferences(_Right.m_Param, _Right.m_Accessors);
 	}

@@ -41,7 +41,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Path))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								CStr WholePath = _This.mp_GeneratorInterface->f_GetExpandedPath(_Params[0].f_String(), CFile::fs_GetPath(_Context.m_Position.m_File));
 								return CFile::fs_MakePathRelative(WholePath, _This.f_GetBaseDir());
@@ -55,7 +55,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Path), fg_FunctionParam(g_Integer, gc_ConstString__NumPaths))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								CStr Path = _Params[0].f_String();
 
@@ -81,7 +81,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_String, fg_FunctionParam(g_String, "_Path"), fg_FunctionParam(g_Integer, "_NumPaths"))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								CStr Path = _Params[0].f_String();
 
@@ -102,7 +102,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Path))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								return CFile::fs_GetPath(_Params[0].f_String());
 							}
@@ -115,7 +115,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Path))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								return CFile::fs_GetFile(_Params[0].f_String());
 							}
@@ -128,7 +128,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Path))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								return CFile::fs_GetExtension(_Params[0].f_String());
 							}
@@ -141,7 +141,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Path))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								return CFile::fs_GetFileNoExt(_Params[0].f_String());
 							}
@@ -154,7 +154,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Path))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								return CFile::fs_GetDrive(_Params[0].f_String());
 							}
@@ -167,7 +167,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Path), fg_FunctionParam(g_String, gc_ConstString_p_Paths, g_Ellipsis))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								CStr OutputPath = _Params[0].f_String();
 
@@ -185,7 +185,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Path), fg_FunctionParam(g_String, gc_ConstString__Base))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								CStr WholePath = _This.mp_GeneratorInterface->f_GetExpandedPath(_Params[0].f_String(), CFile::fs_GetPath(_Context.m_Position.m_File));
 								CStr WholePathBase = _This.mp_GeneratorInterface->f_GetExpandedPath(_Params[1].f_String(), CFile::fs_GetPath(_Context.m_Position.m_File));
@@ -200,7 +200,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Path), fg_FunctionParam(fg_Optional(g_String), gc_ConstString__Base, g_Optional))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								if (_Params[1].f_IsValid())
 									return _This.mp_GeneratorInterface->f_GetExpandedPath(_Params[0].f_String(), _Params[1].f_String());
@@ -216,7 +216,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_Boolean, fg_FunctionParam(g_String, gc_ConstString__Path))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								return CFile::fs_IsPathAbsolute(_Params[0].f_String());
 							}
@@ -229,7 +229,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Path))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								return _Params[0].f_String().f_ReplaceChar('/', '\\');
 							}
@@ -242,7 +242,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Path))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								return _Params[0].f_String().f_ReplaceChar('\\', '/');
 							}
@@ -255,7 +255,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Path))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 #ifdef DPlatformFamily_Windows
 								return _Params[0].f_String().f_ReplaceChar('/', '\\');
@@ -272,7 +272,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Path))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								auto Return = fg_Move(_Params[0].f_String());
 #ifdef DPlatformFamily_Windows

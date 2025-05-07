@@ -84,7 +84,7 @@ namespace
 
 	class CGenerate_Tests : public NMib::NTest::CTest
 	{
-		CEJSONSorted fp_Generate(CStr const &_TestName, TCOptional<TCMap<CStr, CStr>> const &_Environment)
+		CEJsonSorted fp_Generate(CStr const &_TestName, TCOptional<TCMap<CStr, CStr>> const &_Environment)
 		{
 			CExeFS SourceFS;
 			if (!fg_OpenExeFS(SourceFS))
@@ -164,7 +164,7 @@ namespace
 
 			auto GeneratorFile = OutputDirectory / "BuildSystemData.json";
 
-			return CEJSONSorted::fs_FromString(CFile::fs_ReadStringFromFile(GeneratorFile), GeneratorFile);
+			return CEJsonSorted::fs_FromString(CFile::fs_ReadStringFromFile(GeneratorFile), GeneratorFile);
 		}
 
 		struct CTestGenerate
@@ -172,7 +172,7 @@ namespace
 			CStr m_OutputDirectory;
 			CStr m_SourceDirectory;
 			CStr m_ExpectedContents;
-			CEJSONSorted m_BuildSystemData;
+			CEJsonSorted m_BuildSystemData;
 		};
 
 		CTestGenerate fp_TestGenerate(CStr const &_TestName, TCOptional<TCMap<CStr, CStr>> const &_Environment = {})
@@ -191,7 +191,7 @@ namespace
 			StringContents = StringContents.f_Replace(("/Deploy/Tests/BuildSystemTests/{}/"_f << _TestName).f_GetStr(), ("{}/"_f << TestGenerate.m_SourceDirectory).f_GetStr());
 			StringContents = StringContents.f_Replace(("/Deploy/Tests/BuildSystemTestsOutput/{}/"_f << _TestName).f_GetStr(), ("{}/"_f << TestGenerate.m_OutputDirectory).f_GetStr());
 
-			CEJSONSorted ExpectedBuildSystemData = CEJSONSorted::fs_FromString(StringContents, BuildSystemDataFile);
+			CEJsonSorted ExpectedBuildSystemData = CEJsonSorted::fs_FromString(StringContents, BuildSystemDataFile);
 			DMibAssert(BuildSystemData, ==, ExpectedBuildSystemData)(ETestFlag_Aggregated);
 			TestGenerate.m_BuildSystemData = fg_Move(ExpectedBuildSystemData);
 			CStr ExpectedContentsFile = TestGenerate.m_SourceDirectory / "ExpectedContents.txt";

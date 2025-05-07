@@ -71,9 +71,9 @@ namespace NMib::NBuildSystem
 		return CPropertyKeyReference(CAssertAddedToStringCache(), f_PropertyTypeConstant(), ConstantName.m_String, ConstantName.m_Hash);
 	}
 
-	NEncoding::CEJSONSorted CBuildSystemSyntax::CIdentifierReference::f_ToJson() const
+	NEncoding::CEJsonSorted CBuildSystemSyntax::CIdentifierReference::f_ToJson() const
 	{
-		CEJSONSorted Return;
+		CEJsonSorted Return;
 
 		auto &UserType = Return.f_UserType();
 		UserType.m_Type = gc_ConstString_BuildSystemToken;
@@ -85,9 +85,9 @@ namespace NMib::NBuildSystem
 		return Return;
 	}
 	
-	NEncoding::CEJSONSorted CBuildSystemSyntax::CIdentifier::f_ToJson() const
+	NEncoding::CEJsonSorted CBuildSystemSyntax::CIdentifier::f_ToJson() const
 	{
-		CEJSONSorted Return;
+		CEJsonSorted Return;
 		auto &UserType = Return.f_UserType();
 		UserType.m_Type = gc_ConstString_BuildSystemToken;
 
@@ -124,18 +124,18 @@ namespace NMib::NBuildSystem
 		return Return;
 	}
 	
-	auto CBuildSystemSyntax::CIdentifier::fs_FromJson(CStringCache &o_StringCache, CEJSONSorted const &_JSON, CFilePosition const &_Position) -> CIdentifier
+	auto CBuildSystemSyntax::CIdentifier::fs_FromJson(CStringCache &o_StringCache, CEJsonSorted const &_Json, CFilePosition const &_Position) -> CIdentifier
 	{
 		CIdentifier Return;
 
-		if (!_JSON.f_IsUserType())
+		if (!_Json.f_IsUserType())
 			CBuildSystem::fs_ThrowError(_Position, "Invalid type for identifier");
 
-		auto &Token = _JSON.f_UserType();
+		auto &Token = _Json.f_UserType();
 		if (Token.m_Type != gc_ConstString_BuildSystemToken.m_String)
 			CBuildSystem::fs_ThrowError(_Position, "Invalid type for identifier");
 
-		auto pEntityType = Token.m_Value.f_GetMember(gc_ConstString_EntityType, EJSONType_String);
+		auto pEntityType = Token.m_Value.f_GetMember(gc_ConstString_EntityType, EJsonType_String);
 		if (!pEntityType)
 			CBuildSystem::fs_ThrowError(_Position, "Identifier token does not have valid EntityType member");
 
@@ -146,7 +146,7 @@ namespace NMib::NBuildSystem
 		if (pName->f_IsString())
 			Return.m_Name = CStringAndHash(o_StringCache, pName->f_String(), pName->f_String().f_Hash());
 		else if (pName->f_IsArray())
-			Return.m_Name = CEvalString::fs_FromJson(o_StringCache, CEJSONSorted::fs_FromJson(*pName), _Position);
+			Return.m_Name = CEvalString::fs_FromJson(o_StringCache, CEJsonSorted::fs_FromJson(*pName), _Position);
 		else
 			CBuildSystem::fs_ThrowError(_Position, "Identifier token does not have valid Name member");
 
@@ -170,7 +170,7 @@ namespace NMib::NBuildSystem
 				CBuildSystem::fs_ThrowError(_Position, "Unknown property type: {}"_f << *pPropertyType);
 		}
 		else if (pPropertyType->f_IsArray())
-			Return.m_PropertyType = CEvalString::fs_FromJson(o_StringCache, CEJSONSorted::fs_FromJson(*pPropertyType), _Position);
+			Return.m_PropertyType = CEvalString::fs_FromJson(o_StringCache, CEJsonSorted::fs_FromJson(*pPropertyType), _Position);
 		else
 			CBuildSystem::fs_ThrowError(_Position, "Identifier token does not have valid PropertyType member");
 

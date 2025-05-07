@@ -34,8 +34,8 @@ namespace NMib::NBuildSystem
 
 	bool CBuildSystem::fsp_CompareValueRecursive
 		(
-			CEJSONSorted const &_Left
-			, CEJSONSorted const &_Right
+			CEJsonSorted const &_Left
+			, CEJsonSorted const &_Right
 			, EConditionType _ConditionType
 			, NFunction::TCFunctionNoAlloc<void (NStr::CStr const &_Error)> const &_fOnError
 		) const
@@ -298,9 +298,9 @@ namespace NMib::NBuildSystem
 						"{sj*}         {} {} {}{\n}"_f
 						<< ""
 						<< _TraceDepth * 3
-						<< LeftValueRef.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat | EJSONDialectFlag_TrimWhitespace)
+						<< LeftValueRef.f_ToString(nullptr, EJsonDialectFlag_AllowUndefined | EJsonDialectFlag_AllowInvalidFloat | EJsonDialectFlag_TrimWhitespace)
 						<< CCondition::fs_ConditionTypeToStr(_ConditionType)
-						<< RightValueRef.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat | EJSONDialectFlag_TrimWhitespace)
+						<< RightValueRef.f_ToString(nullptr, EJsonDialectFlag_AllowUndefined | EJsonDialectFlag_AllowInvalidFloat | EJsonDialectFlag_TrimWhitespace)
 					)
 				;
 			}
@@ -311,9 +311,9 @@ namespace NMib::NBuildSystem
 						"{sj*}       ! {} {} {}{\n}"_f
 						<< ""
 						<< _TraceDepth * 3
-						<< LeftValueRef.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat | EJSONDialectFlag_TrimWhitespace)
+						<< LeftValueRef.f_ToString(nullptr, EJsonDialectFlag_AllowUndefined | EJsonDialectFlag_AllowInvalidFloat | EJsonDialectFlag_TrimWhitespace)
 						<< CCondition::fs_ConditionTypeToStr(_ConditionType)
-						<< RightValueRef.f_ToString(nullptr, EJSONDialectFlag_AllowUndefined | EJSONDialectFlag_AllowInvalidFloat | EJSONDialectFlag_TrimWhitespace)
+						<< RightValueRef.f_ToString(nullptr, EJsonDialectFlag_AllowUndefined | EJsonDialectFlag_AllowInvalidFloat | EJsonDialectFlag_TrimWhitespace)
 					)
 				;
 			}

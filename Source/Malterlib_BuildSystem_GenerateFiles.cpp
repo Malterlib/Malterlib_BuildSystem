@@ -90,7 +90,7 @@ namespace NMib::NBuildSystem
 					CEvaluatedProperties TempProperties;
 					TempProperties.m_pParentProperties = &ToGenerate.m_EvaluatedProperties;
 
-					TCVector<CEJSONSorted> Identities;
+					TCVector<CEJsonSorted> Identities;
 					CBuildSystemUniquePositions Positions;
 					{
 						CEvaluationContext EvalContext(&TempProperties);
@@ -115,7 +115,7 @@ namespace NMib::NBuildSystem
 
 						if (IdentityObject.f_IsObject())
 						{
-							auto *pName = IdentityObject.f_GetMember(gc_ConstString_Name, EJSONType_String);
+							auto *pName = IdentityObject.f_GetMember(gc_ConstString_Name, EJsonType_String);
 							if (!pName)
 								fs_ThrowError(Positions, "Expected a 'Name' for string type in generate file object");
 
@@ -141,7 +141,7 @@ namespace NMib::NBuildSystem
 
 						if (IdentityObject.f_IsObject())
 						{
-							auto *pProperties = IdentityObject.f_GetMember("Properties", EJSONType_Object);
+							auto *pProperties = IdentityObject.f_GetMember("Properties", EJsonType_Object);
 							if (!pProperties)
 								fs_ThrowError(Positions, "Expected a 'Properties' of object type in generate file object");
 
@@ -435,7 +435,7 @@ namespace NMib::NBuildSystem
 
 						if (IdentityObject.f_IsObject())
 						{
-							auto *pProperties = IdentityObject.f_GetMember("Properties", EJSONType_Object);
+							auto *pProperties = IdentityObject.f_GetMember("Properties", EJsonType_Object);
 							if (!pProperties)
 								fs_ThrowError(Positions, "Expected a 'Properties' of object type in generate file object");
 

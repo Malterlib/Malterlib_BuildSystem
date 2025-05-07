@@ -215,7 +215,7 @@ namespace NMib::NBuildSystem
 				TCSet<CTargetInfo *> NewTargetsToProcess;
 
 				auto fGetTarget
-					= [&](CStr const &_EntityName, CStr const &_TargetName, CFilePosition const &_Position, CEJSONSorted &&_Properties) -> CTargetInfo *
+					= [&](CStr const &_EntityName, CStr const &_TargetName, CFilePosition const &_Position, CEJsonSorted &&_Properties) -> CTargetInfo *
 					{
 						CTargetInfo *pDependentTarget;
 						bool bTargetEntity;
@@ -603,7 +603,7 @@ namespace NMib::NBuildSystem
 												(
 													ChildEntity
 													, gc_ConstKey_Dependency_TargetProperties
-													, CEJSONSorted(EJSONType_Object)
+													, CEJsonSorted(EJsonType_Object)
 												)
 											;
 
@@ -712,7 +712,7 @@ namespace NMib::NBuildSystem
 
 							auto fAddNameList = [&](CPropertyKeyReference const &_Key, TCVector<CStr> &&_Names) -> bool
 								{
-									CEJSONSorted NameListArray = EJSONType_Array;
+									CEJsonSorted NameListArray = EJsonType_Array;
 
 									for (auto &Name : _Names)
 										NameListArray.f_Insert(fg_Move(Name));
@@ -764,7 +764,7 @@ namespace NMib::NBuildSystem
 
 			{
 				AllTargets.f_Sort();
-				CEJSONSorted AllTargetsArray;
+				CEJsonSorted AllTargetsArray;
 				for (auto &Target : AllTargets)
 					AllTargetsArray.f_Insert(Target);
 
@@ -826,7 +826,7 @@ namespace NMib::NBuildSystem
 									break;
 								case EEntityType_Group:
 									{
-										CEJSONSorted Hidden = f_GetExternalProperty
+										CEJsonSorted Hidden = f_GetExternalProperty
 											(
 												ChildEntity
 												, gc_ConstKey_HiddenGroup
@@ -940,7 +940,7 @@ namespace NMib::NBuildSystem
 	TCFuture<void> CBuildSystem::f_GenerateBuildSystem
 		(
 			TCMap<CConfiguration, TCUniquePointer<CConfiguraitonData>> *o_pConfigurations
-			, TCMap<CPropertyKey, CEJSONSorted> const *_pValues
+			, TCMap<CPropertyKey, CEJsonSorted> const *_pValues
 		) const
 	{
 		{
@@ -972,13 +972,13 @@ namespace NMib::NBuildSystem
 					co_await f_CheckCancelled();
 
 					auto &ConfigData = *o_pConfig;
-					TCMap<CPropertyKey, CEJSONSorted> ConfigValues = *_pValues;
+					TCMap<CPropertyKey, CEJsonSorted> ConfigValues = *_pValues;
 					for (auto iTuple = ConfigData.m_Tuples.f_GetIterator(); iTuple; ++iTuple)
 					{
 						if (iTuple->m_Name)
 							ConfigValues[CPropertyKey(mp_StringCache, iTuple->m_Type)] = iTuple->m_Name;
 						else
-							ConfigValues[CPropertyKey(mp_StringCache, iTuple->m_Type)] = CEJSONSorted{};
+							ConfigValues[CPropertyKey(mp_StringCache, iTuple->m_Type)] = CEJsonSorted{};
 					}
 
 					f_EvaluateDataMain(ConfigData.m_Evaluated, ConfigValues);

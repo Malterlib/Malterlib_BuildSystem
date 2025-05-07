@@ -8,7 +8,7 @@ namespace NMib::NBuildSystem
 	CEntity const *CBuildSystem::f_EvaluateData
 		(
 			CBuildSystemData &_Destination
-			, TCMap<CPropertyKey, CEJSONSorted> const &_InitialValues
+			, TCMap<CPropertyKey, CEJsonSorted> const &_InitialValues
 			, CEntity const *_pStartEntity
 			, bool _bCopyTree
 		) const
@@ -28,7 +28,7 @@ namespace NMib::NBuildSystem
 	CEntity const *CBuildSystem::f_EvaluateDataMain
 		(
 			CBuildSystemData &_Destination
-			, TCMap<CPropertyKey, CEJSONSorted> const &_InitialValues
+			, TCMap<CPropertyKey, CEJsonSorted> const &_InitialValues
 		) const
 	{
 		auto pRet = fp_EvaluateData
@@ -91,7 +91,7 @@ namespace NMib::NBuildSystem
 	CEntity const *CBuildSystem::fp_EvaluateData
 		(
 			CBuildSystemData &_Destination
-			, TCMap<CPropertyKey, CEJSONSorted> const &_InitialValues
+			, TCMap<CPropertyKey, CEJsonSorted> const &_InitialValues
 			, CEntity const *_pStartEntity
 			, bool _bCopyTree
 			, bool _bAllChildren

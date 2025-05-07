@@ -21,7 +21,7 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	void CBuildSystem::fp_TracePropertyEval(bool _bSuccess, CEntity const &_Entity, CPropertyKey const &_PropertyKey, CProperty const &_Property, CEJSONSorted const &_Value) const
+	void CBuildSystem::fp_TracePropertyEval(bool _bSuccess, CEntity const &_Entity, CPropertyKey const &_PropertyKey, CProperty const &_Property, CEJsonSorted const &_Value) const
 	{
 		if (_Property.m_Flags & EPropertyFlag_TraceEval)
 		{

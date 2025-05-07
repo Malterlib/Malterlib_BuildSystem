@@ -2,7 +2,7 @@
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_GenerateSettings.h"
-#include <Mib/Encoding/EJSON>
+#include <Mib/Encoding/EJson>
 
 namespace NMib::NBuildSystem
 {
@@ -23,7 +23,7 @@ namespace NMib::NBuildSystem
 		return true;
 	}
 
-	void CGenerateOptions::f_ParseReconcileActions(NEncoding::CEJSONSorted const &_Params)
+	void CGenerateOptions::f_ParseReconcileActions(NEncoding::CEJsonSorted const &_Params)
 	{
 		m_bReconcileForce = _Params[gc_ConstString_ReconcileForce].f_Boolean();
 		m_bReconcileNoOptions = _Params[gc_ConstString_ReconcileNoOptions].f_Boolean();

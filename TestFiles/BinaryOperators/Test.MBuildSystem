@@ -23,7 +23,7 @@
 		Value2: float = 2.5
 		Value3: float = 6.0
 		Value4: [string]?
-		TestValueString: string = `@((Value1 / Value2)->EJSONToString(""))`
+		TestValueString: string = `@((Value1 / Value2)->EJsonToString(""))`
 		TestValue: float = Value1 / Value2 + Value3
 		TestValue2: float = Value1 / Value2 + 7.0
 		TestValue3: string = "Path0" / "Path1"
@@ -74,50 +74,50 @@
 		Name BuildSystemOutputDir / "TestGenerateFile.txt"
 		Contents	`Generate File Contents:\n`\
 					`@(TestValueString)\n`\
-					`@(TestValue->EJSONToString(""))\n`\
-					`@(TestValue2->EJSONToString(""))\n`\
+					`@(TestValue->EJsonToString(""))\n`\
+					`@(TestValue2->EJsonToString(""))\n`\
 					`@(TestValue3)\n`\
-					`@(TestValue4->EJSONToString(""))\n`\
-					`@(TestValue5->EJSONToString(""))\n`\
-					`@(TestValue6->EJSONToString(""))\n`\
-					`@(TestValue7->EJSONToString(""))\n`\
-					`@(TestValue8->EJSONToString(""))\n`\
-					`@(TestValue9->EJSONToString(""))\n`\
-					`@(TestValue10->EJSONToString(""))\n`\
-					`@(TestValue11->EJSONToString(""))\n`\
-					`@(TestValue12->EJSONToString(""))\n`\
-					`@(TestValue13->EJSONToString(""))\n`\
-					`@(TestValue14->EJSONToString(""))\n`\
-					`@(TestValue15->EJSONToString(""))\n`\
-					`@(TestValue16->EJSONToString(""))\n`\
-					`@(TestValue17->EJSONToString(""))\n`\
-					`@(TestValue18->EJSONToString(""))\n`\
-					`@(TestValue19->EJSONToString(""))\n`\
-					`@(TestValue20->EJSONToString(""))\n`\
-					`@(TestValue21->EJSONToString(""))\n`\
-					`@(TestValue22->EJSONToString(""))\n`\
-					`@(TestValue23->EJSONToString(""))\n`\
-					`@(TestValue24->EJSONToString(""))\n`\
-					`@(TestValue25->EJSONToString(""))\n`\
-					`@(TestValue26->EJSONToString(""))\n`\
-					`@(TestValue27->EJSONToString(""))\n`\
-					`@(TestValue28->EJSONToString(""))\n`\
-					`@(TestValue29->EJSONToString(""))\n`\
-					`@(TestValue30->EJSONToString(""))\n`\
-					`@(TestValue31->EJSONToString(""))\n`\
-					`@(TestValue32->EJSONToString(""))\n`\
-					`@(TestValue33->EJSONToString(""))\n`\
-					`@(TestValue34->EJSONToString(""))\n`\
-					`@(TestValue35->EJSONToString(""))\n`\
-					`@(TestValue36->EJSONToString(""))\n`\
-					`@(TestValue37->EJSONToString(""))\n`\
-					`@(TestValue38->EJSONToString(""))\n`\
-					`@(TestValue39->EJSONToString(""))\n`\
-					`@(TestValue40->EJSONToString(""))\n`\
-					`@(TestValue41->EJSONToString(""))\n`\
-					`@(TestValue42->EJSONToString(""))\n`\
-					`@(TestValue43->EJSONToString(""))\n`\
-					`@(TestValue44->EJSONToString(""))\n`
+					`@(TestValue4->EJsonToString(""))\n`\
+					`@(TestValue5->EJsonToString(""))\n`\
+					`@(TestValue6->EJsonToString(""))\n`\
+					`@(TestValue7->EJsonToString(""))\n`\
+					`@(TestValue8->EJsonToString(""))\n`\
+					`@(TestValue9->EJsonToString(""))\n`\
+					`@(TestValue10->EJsonToString(""))\n`\
+					`@(TestValue11->EJsonToString(""))\n`\
+					`@(TestValue12->EJsonToString(""))\n`\
+					`@(TestValue13->EJsonToString(""))\n`\
+					`@(TestValue14->EJsonToString(""))\n`\
+					`@(TestValue15->EJsonToString(""))\n`\
+					`@(TestValue16->EJsonToString(""))\n`\
+					`@(TestValue17->EJsonToString(""))\n`\
+					`@(TestValue18->EJsonToString(""))\n`\
+					`@(TestValue19->EJsonToString(""))\n`\
+					`@(TestValue20->EJsonToString(""))\n`\
+					`@(TestValue21->EJsonToString(""))\n`\
+					`@(TestValue22->EJsonToString(""))\n`\
+					`@(TestValue23->EJsonToString(""))\n`\
+					`@(TestValue24->EJsonToString(""))\n`\
+					`@(TestValue25->EJsonToString(""))\n`\
+					`@(TestValue26->EJsonToString(""))\n`\
+					`@(TestValue27->EJsonToString(""))\n`\
+					`@(TestValue28->EJsonToString(""))\n`\
+					`@(TestValue29->EJsonToString(""))\n`\
+					`@(TestValue30->EJsonToString(""))\n`\
+					`@(TestValue31->EJsonToString(""))\n`\
+					`@(TestValue32->EJsonToString(""))\n`\
+					`@(TestValue33->EJsonToString(""))\n`\
+					`@(TestValue34->EJsonToString(""))\n`\
+					`@(TestValue35->EJsonToString(""))\n`\
+					`@(TestValue36->EJsonToString(""))\n`\
+					`@(TestValue37->EJsonToString(""))\n`\
+					`@(TestValue38->EJsonToString(""))\n`\
+					`@(TestValue39->EJsonToString(""))\n`\
+					`@(TestValue40->EJsonToString(""))\n`\
+					`@(TestValue41->EJsonToString(""))\n`\
+					`@(TestValue42->EJsonToString(""))\n`\
+					`@(TestValue43->EJsonToString(""))\n`\
+					`@(TestValue44->EJsonToString(""))\n`
 
 		Executable false
 		UnixLineEnds true

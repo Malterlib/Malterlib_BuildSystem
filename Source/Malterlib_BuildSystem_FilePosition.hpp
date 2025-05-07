@@ -61,7 +61,7 @@ namespace NMib::NBuildSystem
 		if (pPositions)
 			m_Positions = CBuildSystemUniquePositions::fs_FromJson(*pPositions);
 
-		if constexpr (NTraits::TCIsSame<t_CType, NEncoding::CEJSONSorted>::mc_Value)
+		if constexpr (NTraits::TCIsSame<t_CType, NEncoding::CEJsonSorted>::mc_Value)
 			m_Value = fg_Forward<tf_CValue>(pMember->f_GetMemberValue(gc_ConstString_Value, fg_Move(_DefaultValue)));
 		else if constexpr (NTraits::TCIsSame<t_CType, NStr::CStr>::mc_Value)
 			m_Value = fg_ForwardAs<tf_CValue>(pMember->f_GetMemberValue(gc_ConstString_Value, fg_Move(_DefaultValue)).f_String());
@@ -97,7 +97,7 @@ namespace NMib::NBuildSystem
 		if (!pValue)
 			CBuildSystem::fs_ThrowError(_PropertyInfo, m_Positions, "Missing Value member for '{}'"_f << _Name);
 
-		if constexpr (NTraits::TCIsSame<t_CType, NEncoding::CEJSONSorted>::mc_Value)
+		if constexpr (NTraits::TCIsSame<t_CType, NEncoding::CEJsonSorted>::mc_Value)
 			m_Value = fg_Forward<tf_CValue>(*pValue);
 		else if constexpr (NTraits::TCIsSame<t_CType, NStr::CStr>::mc_Value)
 		{

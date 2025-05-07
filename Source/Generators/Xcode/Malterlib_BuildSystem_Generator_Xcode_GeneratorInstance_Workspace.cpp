@@ -170,7 +170,7 @@ namespace NMib::NBuildSystem::NXcode
 
 		{
 			ch8 const *pDocumentData;
-			auto Value = fp_GetSingleConfigValue(_Solution.m_EnabledConfigs, gc_ConstKey_Workspace_XcodeNewBuildSystem, EEJSONType_Boolean, true);
+			auto Value = fp_GetSingleConfigValue(_Solution.m_EnabledConfigs, gc_ConstKey_Workspace_XcodeNewBuildSystem, EEJsonType_Boolean, true);
 
 			if (Value.m_Value.f_Get().f_IsValid() && Value.m_Value.f_Get().f_Boolean())
 			{
@@ -217,8 +217,8 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 		}
 
 		{
-			auto IntermediatePath = fp_GetSingleConfigValue(_Solution.m_EnabledConfigs, gc_ConstKey_Workspace_IntermediateDirectory, EEJSONType_String, "").m_Value.f_Get().f_String() / "";
-			auto OutputPath = fp_GetSingleConfigValue(_Solution.m_EnabledConfigs, gc_ConstKey_Workspace_OutputDirectory, EEJSONType_String, "").m_Value.f_Get().f_String() / "";
+			auto IntermediatePath = fp_GetSingleConfigValue(_Solution.m_EnabledConfigs, gc_ConstKey_Workspace_IntermediateDirectory, EEJsonType_String, "").m_Value.f_Get().f_String() / "";
+			auto OutputPath = fp_GetSingleConfigValue(_Solution.m_EnabledConfigs, gc_ConstKey_Workspace_OutputDirectory, EEJsonType_String, "").m_Value.f_Get().f_String() / "";
 
 			CStr DocumentData =
 R"xxx(<?xml version="1.0" encoding="UTF-8"?>

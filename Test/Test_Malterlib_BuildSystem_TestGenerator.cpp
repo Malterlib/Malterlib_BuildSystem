@@ -30,7 +30,7 @@ namespace
 					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.BasePathRelativeProject")->f_AddValue(Result, false);
 
 				o_bSuccess = true;
-				return CEJSONSorted(Result);
+				return CEJsonSorted(Result);
 			}
 			else if (_Value == "BasePath")
 			{
@@ -39,7 +39,7 @@ namespace
 					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.BasePath")->f_AddValue(Result, false);
 
 				o_bSuccess = true;
-				return CEJSONSorted(Result);
+				return CEJsonSorted(Result);
 			}
 			else if (_Value == "GeneratedBuildSystemDir")
 			{
@@ -48,7 +48,7 @@ namespace
 					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.GeneratedBuildSystemDir")->f_AddValue(Result, false);
 
 				o_bSuccess = true;
-				return CEJSONSorted(Result);
+				return CEJsonSorted(Result);
 			}
 			else if (_Value == "ProjectPath")
 			{
@@ -57,7 +57,7 @@ namespace
 					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.ProjectPath")->f_AddValue(Result, false);
 
 				o_bSuccess = true;
-				return CEJSONSorted(Result);
+				return CEJsonSorted(Result);
 			}
 			else if (_Value == "Inherit")
 			{
@@ -66,7 +66,7 @@ namespace
 					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.Inherit")->f_AddValue(Result, false);
 
 				o_bSuccess = true;
-				return CEJSONSorted(Result);
+				return CEJsonSorted(Result);
 			}
 			else if (_Value == "IntermediateDirectory")
 			{
@@ -75,7 +75,7 @@ namespace
 					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.IntermediateDirectory")->f_AddValue(Result, false);
 
 				o_bSuccess = true;
-				return CEJSONSorted(Result);
+				return CEJsonSorted(Result);
 			}
 			else if (_Value == "OutputDirectory")
 			{
@@ -84,7 +84,7 @@ namespace
 					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.OutputDirectory")->f_AddValue(Result, false);
 
 				o_bSuccess = true;
-				return CEJSONSorted(Result);
+				return CEJsonSorted(Result);
 			}
 			else if (_Value == "SourceFileName")
 			{
@@ -93,10 +93,10 @@ namespace
 					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.SourceFileName")->f_AddValue(Result, false);
 
 				o_bSuccess = true;
-				return CEJSONSorted(Result);
+				return CEJsonSorted(Result);
 			}
 			
-			return CEJSONSorted();
+			return CEJsonSorted();
 		}
 
 		NStr::CStr f_GetExpandedPath(NStr::CStr const &_Path, NStr::CStr const &_Base) const override
@@ -113,9 +113,9 @@ namespace
 		CStr mp_BaseDir;
 
 	public:
-		TCMap<CPropertyKey, CEJSONSorted> f_GetValues(CBuildSystem const &_BuildSystem, CStr const &_OutputDir) override
+		TCMap<CPropertyKey, CEJsonSorted> f_GetValues(CBuildSystem const &_BuildSystem, CStr const &_OutputDir) override
 		{
-			TCMap<CPropertyKey, CEJSONSorted> Values;
+			TCMap<CPropertyKey, CEJsonSorted> Values;
 
 			Values[CPropertyKey(_BuildSystem.f_StringCache(), "MToolVersion")] = CBuildSystem::mc_MToolVersion;
 			Values[CPropertyKey(_BuildSystem.f_StringCache(), "Generator")] = _BuildSystem.f_GetGenerateSettings().m_Generator;
@@ -155,7 +155,7 @@ namespace
 			CStr SolutionDir = _OutputDir;
 			CStr BuildSystemBase = BuildSystem.f_GetBaseDir();
 
-			TCMap<CPropertyKey, CEJSONSorted> Values = f_GetValues(BuildSystem, _OutputDir);
+			TCMap<CPropertyKey, CEJsonSorted> Values = f_GetValues(BuildSystem, _OutputDir);
 
 			TCMap<CConfiguration, TCUniquePointer<CConfiguraitonData>> Configurations;
 
@@ -208,11 +208,11 @@ namespace
 
 			co_await BuildSystem.f_GenerateBuildSystem(&Configurations, &Values);
 
-			CEJSONSorted BuildSystemData;
+			CEJsonSorted BuildSystemData;
 
 			auto &OutWorkspace = BuildSystemData["Workspaces"].f_Object();
 
-			auto fCopyGroups = [&](CEJSONSorted::CObject &o_Groups, TCMap<CStr, CGroupInfo> const &_Groups, TCMap<CGroupInfo const *, CEJSONSorted::CObject *> &o_Mapping)
+			auto fCopyGroups = [&](CEJsonSorted::CObject &o_Groups, TCMap<CStr, CGroupInfo> const &_Groups, TCMap<CGroupInfo const *, CEJsonSorted::CObject *> &o_Mapping)
 				{
 					for (auto iGroup = _Groups.f_GetIterator(); iGroup; ++iGroup)
 					{
@@ -235,7 +235,7 @@ namespace
 				}
 			;
 
-			auto fStorePosition = [&](CEJSONSorted &o_Position, CFilePosition const &_Position)
+			auto fStorePosition = [&](CEJsonSorted &o_Position, CFilePosition const &_Position)
 				{
 					o_Position["File"] = _Position.m_File;
 					o_Position["Character"] = _Position.m_Character;
@@ -261,7 +261,7 @@ namespace
 					Workspace["Name"] = WorkspaceInfo.m_EntityName;
 					Workspace["EnabledConfigs"][Config.f_GetFullName()] = true;
 
-					TCMap<CGroupInfo const *, CEJSONSorted::CObject *> WorkspaceGroupMapping;
+					TCMap<CGroupInfo const *, CEJsonSorted::CObject *> WorkspaceGroupMapping;
 					fCopyGroups(Workspace["Groups"].f_Object(), WorkspaceInfo.m_Groups, WorkspaceGroupMapping);
 
 					for (auto iTarget = WorkspaceInfo.m_Targets.f_GetIterator(); iTarget; ++iTarget)
@@ -294,7 +294,7 @@ namespace
 							Dependency["PerConfig"][Config.f_GetFullName()]["Link"] = DependencyInfo.m_bLink;
 						}
 
-						TCMap<CGroupInfo const *, CEJSONSorted::CObject *> TargetGroupMapping;
+						TCMap<CGroupInfo const *, CEJsonSorted::CObject *> TargetGroupMapping;
 						fCopyGroups(Target["Groups"].f_Object(), TargetInfo.m_Groups, TargetGroupMapping);
 
 						for (auto iFile = TargetInfo.m_Files.f_GetIterator(); iFile; ++iFile)

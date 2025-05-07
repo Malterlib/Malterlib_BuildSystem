@@ -53,7 +53,7 @@ namespace NMib::NBuildSystem
 
 	struct CGenerateOptions
 	{
-		void f_ParseReconcileActions(NEncoding::CEJSONSorted const &_Params);
+		void f_ParseReconcileActions(NEncoding::CEJsonSorted const &_Params);
 
 		CGenerateSettings m_Settings;
 		NContainer::TCMap<NStr::CStr, EHandleRepositoryAction> m_ReconcileActions;

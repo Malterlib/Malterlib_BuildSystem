@@ -45,26 +45,26 @@ Property
 	{
 		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
 		Contents	`Generate File Contents:\n`\
-					`@(TestString->EJSONToString()->Trim())\n`\
-					`@(TestBoolTRUE->EJSONToString()->Trim())\n`\
-					`@(TestBoolFALSE->EJSONToString()->Trim())\n`\
-					`@(TestBool1->EJSONToString()->Trim())\n`\
-					`@(TestBool0->EJSONToString()->Trim())\n`\
-					`@(TestBool_true->EJSONToString()->Trim())\n`\
-					`@(TestBool_false->EJSONToString()->Trim())\n`\
-					`@(TestInt0->EJSONToString()->Trim())\n`\
-					`@(TestInt50->EJSONToString()->Trim())\n`\
-					`@(TestIntNeg50->EJSONToString()->Trim())\n`\
-					`@(TestFloat0->EJSONToString()->Trim())\n`\
-					`@(TestFloat55_5->EJSONToString()->Trim())\n`\
-					`@(TestFloatNeg55_5->EJSONToString()->Trim())\n`\
-					`@(TestFloatInf->EJSONToString()->Trim())\n`\
-					`@(TestDate->EJSONToString()->Trim())\n`\
-					`@(TestBinary->EJSONToString()->Trim())\n`\
-					`@(TestArrayString->EJSONToString()->Trim())\n`\
-					`@(TestArrayInt->EJSONToString()->Trim())\n`\
-					`@(TestObject->EJSONToString()->Trim())\n`\
-					`@(TestOneOf->EJSONToString()->Trim())\n`
+					`@(TestString->EJsonToString()->Trim())\n`\
+					`@(TestBoolTRUE->EJsonToString()->Trim())\n`\
+					`@(TestBoolFALSE->EJsonToString()->Trim())\n`\
+					`@(TestBool1->EJsonToString()->Trim())\n`\
+					`@(TestBool0->EJsonToString()->Trim())\n`\
+					`@(TestBool_true->EJsonToString()->Trim())\n`\
+					`@(TestBool_false->EJsonToString()->Trim())\n`\
+					`@(TestInt0->EJsonToString()->Trim())\n`\
+					`@(TestInt50->EJsonToString()->Trim())\n`\
+					`@(TestIntNeg50->EJsonToString()->Trim())\n`\
+					`@(TestFloat0->EJsonToString()->Trim())\n`\
+					`@(TestFloat55_5->EJsonToString()->Trim())\n`\
+					`@(TestFloatNeg55_5->EJsonToString()->Trim())\n`\
+					`@(TestFloatInf->EJsonToString()->Trim())\n`\
+					`@(TestDate->EJsonToString()->Trim())\n`\
+					`@(TestBinary->EJsonToString()->Trim())\n`\
+					`@(TestArrayString->EJsonToString()->Trim())\n`\
+					`@(TestArrayInt->EJsonToString()->Trim())\n`\
+					`@(TestObject->EJsonToString()->Trim())\n`\
+					`@(TestOneOf->EJsonToString()->Trim())\n`
 
 		Executable false
 		UnixLineEnds true

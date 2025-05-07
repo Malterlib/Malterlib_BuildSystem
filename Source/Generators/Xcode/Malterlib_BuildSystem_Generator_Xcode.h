@@ -384,7 +384,7 @@ namespace NMib::NBuildSystem::NXcode
 			(
 				CBuildSystem const &_BuildSystem
 				, CBuildSystemData const &_BuildSystemData
-				, TCMap<CPropertyKey, CEJSONSorted> const &_InitialValues
+				, TCMap<CPropertyKey, CEJsonSorted> const &_InitialValues
 				, CStr const &_OutputDir
 			)
 		;
@@ -404,13 +404,13 @@ namespace NMib::NBuildSystem::NXcode
 		CBuildSystemData m_GeneratorSettingsData;
 
 		CGeneratorState m_State;
-		CEJSONSorted m_OutputDir;
-		CEJSONSorted m_RelativeBasePathAbsolute;
-		CEJSONSorted m_RelativeBasePath;
+		CEJsonSorted m_OutputDir;
+		CEJsonSorted m_RelativeBasePathAbsolute;
+		CEJsonSorted m_RelativeBasePath;
 		uint32 m_XcodeVersion;
 
-		CEJSONSorted m_Builtin_ProjectPath = ".";
-		CEJSONSorted m_Builtin_Inherit = "";
+		CEJsonSorted m_Builtin_ProjectPath = ".";
+		CEJsonSorted m_Builtin_Inherit = "";
 
 	private:
 		struct CValueConfigs
@@ -548,7 +548,7 @@ namespace NMib::NBuildSystem::NXcode
 			(
 				TCMap<CConfiguration, CEntityMutablePointer> const &_Configs
 				, CPropertyKeyReference const &_PropertyKey
-				, EEJSONType _ExpectedType
+				, EEJsonType _ExpectedType
 				, bool _bOptional
 			) const
 		;
@@ -557,7 +557,7 @@ namespace NMib::NBuildSystem::NXcode
 				TCMap<CConfiguration, CEntityMutablePointer> const &_Configs
 				, CConfiguration const &_Configuration
 				, CPropertyKeyReference const &_PropertyKey
-				, EEJSONType _ExpectedType
+				, EEJsonType _ExpectedType
 				, bool _bOptional
 			) const
 		;
@@ -565,7 +565,7 @@ namespace NMib::NBuildSystem::NXcode
 			(
 				TCMap<CConfiguration, CEntityMutablePointer> const &_Configs
 				, CPropertyKeyReference const &_PropertyKey
-				, EEJSONType _ExpectedType
+				, EEJsonType _ExpectedType
 				, bool _bOptional
 			) const
 		;

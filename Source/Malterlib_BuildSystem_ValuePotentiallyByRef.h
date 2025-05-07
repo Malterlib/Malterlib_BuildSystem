@@ -9,10 +9,10 @@ namespace NMib::NBuildSystem
 {
 	struct CValuePotentiallyByRef
 	{
-		CValuePotentiallyByRef(NEncoding::CEJSONSorted const &_Value) = delete;
-		CValuePotentiallyByRef(NEncoding::CEJSONSorted const *_pValue);
-		CValuePotentiallyByRef(NEncoding::CEJSONSorted *_pValue, bool _bConfirm);
-		CValuePotentiallyByRef(NEncoding::CEJSONSorted &&_Value);
+		CValuePotentiallyByRef(NEncoding::CEJsonSorted const &_Value) = delete;
+		CValuePotentiallyByRef(NEncoding::CEJsonSorted const *_pValue);
+		CValuePotentiallyByRef(NEncoding::CEJsonSorted *_pValue, bool _bConfirm);
+		CValuePotentiallyByRef(NEncoding::CEJsonSorted &&_Value);
 
 		CValuePotentiallyByRef(CValuePotentiallyByRef const &);
 		CValuePotentiallyByRef(CValuePotentiallyByRef &&);
@@ -20,15 +20,15 @@ namespace NMib::NBuildSystem
 		CValuePotentiallyByRef &operator = (CValuePotentiallyByRef const &) = delete;
 		CValuePotentiallyByRef &operator = (CValuePotentiallyByRef &&) = delete;
 
-		inline_always NEncoding::CEJSONSorted *f_MakeMutable();
-		inline_always NEncoding::CEJSONSorted const &f_Get() const;
-		inline_always NEncoding::CEJSONSorted f_Move();
-		inline_always CValuePotentiallyByRef f_GetSubObject(NEncoding::CEJSONSorted const &_SubObject);
-		inline_always NContainer::TCVector<NEncoding::CEJSONSorted> f_MoveArray();
+		inline_always NEncoding::CEJsonSorted *f_MakeMutable();
+		inline_always NEncoding::CEJsonSorted const &f_Get() const;
+		inline_always NEncoding::CEJsonSorted f_Move();
+		inline_always CValuePotentiallyByRef f_GetSubObject(NEncoding::CEJsonSorted const &_SubObject);
+		inline_always NContainer::TCVector<NEncoding::CEJsonSorted> f_MoveArray();
 		inline_always NContainer::TCVector<NStr::CStr> f_MoveStringArray();
 		inline_always NStr::CStr f_MoveString();
 
-		void f_Set(NEncoding::CEJSONSorted &&_Other);
+		void f_Set(NEncoding::CEJsonSorted &&_Other);
 
 		template <typename tf_CStr>
 		void f_Format(tf_CStr &o_Str) const
@@ -38,6 +38,6 @@ namespace NMib::NBuildSystem
 
 
 	private:
-		NStorage::TCVariant<NEncoding::CEJSONSorted const *, NEncoding::CEJSONSorted *, NEncoding::CEJSONSorted> mp_ValueVariant;
+		NStorage::TCVariant<NEncoding::CEJsonSorted const *, NEncoding::CEJsonSorted *, NEncoding::CEJsonSorted> mp_ValueVariant;
 	};
 }

@@ -7,13 +7,13 @@
 
 namespace NMib::NBuildSystem
 {
-	inline_always NEncoding::CEJSONSorted *CValuePotentiallyByRef::f_MakeMutable()
+	inline_always NEncoding::CEJsonSorted *CValuePotentiallyByRef::f_MakeMutable()
 	{
 		switch (mp_ValueVariant.f_GetTypeID())
 		{
 		case 0:
 			{
-				NEncoding::CEJSONSorted NewValue = *mp_ValueVariant.f_Get<0>();
+				NEncoding::CEJsonSorted NewValue = *mp_ValueVariant.f_Get<0>();
 				mp_ValueVariant = fg_Move(NewValue);
 				return &mp_ValueVariant.f_Get<2>();
 			}
@@ -26,7 +26,7 @@ namespace NMib::NBuildSystem
 		return &mp_ValueVariant.f_Get<2>();
 	}
 
-	inline_always NEncoding::CEJSONSorted const &CValuePotentiallyByRef::f_Get() const
+	inline_always NEncoding::CEJsonSorted const &CValuePotentiallyByRef::f_Get() const
 	{
 		switch (mp_ValueVariant.f_GetTypeID())
 		{
@@ -36,7 +36,7 @@ namespace NMib::NBuildSystem
 		return mp_ValueVariant.f_Get<2>();
 	}
 
-	inline_always NEncoding::CEJSONSorted CValuePotentiallyByRef::f_Move()
+	inline_always NEncoding::CEJsonSorted CValuePotentiallyByRef::f_Move()
 	{
 		switch (mp_ValueVariant.f_GetTypeID())
 		{
@@ -46,7 +46,7 @@ namespace NMib::NBuildSystem
 		return fg_Move(mp_ValueVariant.f_Get<2>());
 	}
 
-	inline_always CValuePotentiallyByRef CValuePotentiallyByRef::f_GetSubObject(NEncoding::CEJSONSorted const &_SubObject)
+	inline_always CValuePotentiallyByRef CValuePotentiallyByRef::f_GetSubObject(NEncoding::CEJsonSorted const &_SubObject)
 	{
 		switch (mp_ValueVariant.f_GetTypeID())
 		{
@@ -57,7 +57,7 @@ namespace NMib::NBuildSystem
 		return fg_Move(fg_RemoveQualifiers(_SubObject));
 	}
 
-	inline_always NContainer::TCVector<NEncoding::CEJSONSorted> CValuePotentiallyByRef::f_MoveArray()
+	inline_always NContainer::TCVector<NEncoding::CEJsonSorted> CValuePotentiallyByRef::f_MoveArray()
 	{
 		DMibFastCheck(f_Get().f_IsArray());
 

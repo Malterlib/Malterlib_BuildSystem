@@ -322,12 +322,12 @@ fi
 			TargetConfigs[Configuration] = _Project.m_EnabledProjectConfigs[Configuration];
 		}
 
-		auto Extension = fp_GetConfigValues(TargetConfigs, gc_ConstKey_Target_FileExtension, EEJSONType_String, false);
-		auto FileName = fp_GetConfigValues(TargetConfigs, gc_ConstKey_Target_FileName, EEJSONType_String, false);
-		auto OutputDirectory = fp_GetConfigValues(TargetConfigs, gc_ConstKey_Target_OutputDirectory, EEJSONType_String, false);
-		_Dependency.m_Type = fp_GetSingleConfigValue(TargetConfigs, gc_ConstKey_GeneratorSetting_Xcode_TargetType, EEJSONType_String, false).m_Value.f_Get().f_String();
-		auto EnableLinkerGroups = fp_GetConfigValues(TargetConfigs, gc_ConstKey_Target_EnableLinkerGroups, EEJSONType_Boolean, false);
-		auto LinkerGroup = fp_GetConfigValues(TargetConfigs, gc_ConstKey_Target_LinkerGroup, EEJSONType_String, true);
+		auto Extension = fp_GetConfigValues(TargetConfigs, gc_ConstKey_Target_FileExtension, EEJsonType_String, false);
+		auto FileName = fp_GetConfigValues(TargetConfigs, gc_ConstKey_Target_FileName, EEJsonType_String, false);
+		auto OutputDirectory = fp_GetConfigValues(TargetConfigs, gc_ConstKey_Target_OutputDirectory, EEJsonType_String, false);
+		_Dependency.m_Type = fp_GetSingleConfigValue(TargetConfigs, gc_ConstKey_GeneratorSetting_Xcode_TargetType, EEJsonType_String, false).m_Value.f_Get().f_String();
+		auto EnableLinkerGroups = fp_GetConfigValues(TargetConfigs, gc_ConstKey_Target_EnableLinkerGroups, EEJsonType_Boolean, false);
+		auto LinkerGroup = fp_GetConfigValues(TargetConfigs, gc_ConstKey_Target_LinkerGroup, EEJsonType_String, true);
 
 		for (auto &Entity : _EnabledConfigurations)
 		{
@@ -377,7 +377,7 @@ fi
 
 			CStr Type = Iter.f_GetKey();
 
-			TCMap<CPropertyKey, CEJSONSorted> StartValuesCompile;
+			TCMap<CPropertyKey, CEJsonSorted> StartValuesCompile;
 			StartValuesCompile[gc_ConstKey_Compile_Type] = Type;
 
 			TCVector<CEntity *> ToRemove;
@@ -529,18 +529,18 @@ fi
 			if ((nFiles % 100) == 0)
 				co_await g_Yield;
 
-			auto Value = fp_GetSingleConfigValue(File.m_EnabledConfigs, gc_ConstKey_Compile_Type, EEJSONType_String, true);
+			auto Value = fp_GetSingleConfigValue(File.m_EnabledConfigs, gc_ConstKey_Compile_Type, EEJsonType_String, true);
 			auto &ValueRef = Value.m_Value.f_Get();
 
-			auto CustomCommandLines = fp_GetConfigValues(File.m_EnabledConfigs, gc_ConstKey_Compile_Custom_CommandLine, EEJSONType_String, true);
+			auto CustomCommandLines = fp_GetConfigValues(File.m_EnabledConfigs, gc_ConstKey_Compile_Custom_CommandLine, EEJsonType_String, true);
 
 			CStr Type = ValueRef.f_IsValid() ? ValueRef.f_String() : CStr();
-			auto CompileTypValue = fp_GetSingleConfigValue(File.m_EnabledConfigs, gc_ConstKey_Compile_GenericCompileType, EEJSONType_String, true);
+			auto CompileTypValue = fp_GetSingleConfigValue(File.m_EnabledConfigs, gc_ConstKey_Compile_GenericCompileType, EEJsonType_String, true);
 			auto &CompileTypValueRef = CompileTypValue.m_Value.f_Get();
 
 			CStr CompileType = CompileTypValueRef.f_IsValid() ? CompileTypValueRef.f_String() : CStr();
 
-			auto DisabledConfigs = fp_GetConfigValues(File.m_EnabledConfigs, gc_ConstKey_Compile_Disabled, EEJSONType_Boolean, true);
+			auto DisabledConfigs = fp_GetConfigValues(File.m_EnabledConfigs, gc_ConstKey_Compile_Disabled, EEJsonType_Boolean, true);
 			{
 				bool bWasCustom = false;
 				bool bFirst = true;
@@ -623,7 +623,7 @@ fi
 						|| File.m_Type == gc_ConstString_Assembler.m_String
 					)
 				{
-					auto InitEarly = fp_GetSingleConfigValue(File.m_EnabledConfigs, gc_ConstKey_Compile_InitEarly, EEJSONType_Boolean, true);
+					auto InitEarly = fp_GetSingleConfigValue(File.m_EnabledConfigs, gc_ConstKey_Compile_InitEarly, EEJsonType_Boolean, true);
 					auto &InitEarlyRef = InitEarly.m_Value.f_Get();
 
 					if (InitEarlyRef.f_IsValid() && InitEarlyRef.f_Boolean())
@@ -714,12 +714,12 @@ fi
 								File.m_EnabledConfigs
 								, Configuration
 								, gc_ConstKey_Compile_Custom_WorkingDirectory
-								, EEJSONType_String
+								, EEJsonType_String
 								, false
 							).m_Value.f_Get().f_String()
 						;
 
-						auto InputsJson = fp_GetConfigValue(File.m_EnabledConfigs, Configuration, gc_ConstKey_Compile_Custom_Inputs, EEJSONType_Array, false);
+						auto InputsJson = fp_GetConfigValue(File.m_EnabledConfigs, Configuration, gc_ConstKey_Compile_Custom_Inputs, EEJsonType_Array, false);
 						auto &InputsJsonRef = InputsJson.m_Value.f_Get();
 						if (!InputsJsonRef.f_IsStringArray())
 							m_BuildSystem.fs_ThrowError(CustomCommandLine.m_Positions, "You need to Custom_Inputs as a string array");
@@ -728,7 +728,7 @@ fi
 						for (auto &Input : InputsJsonRef.f_Array())
 							Inputs.f_Insert(fReplaceVariables(Input.f_String()));
 
-						auto OutputsJson = fp_GetConfigValue(File.m_EnabledConfigs, Configuration, gc_ConstKey_Compile_Custom_Outputs, EEJSONType_Array, false);
+						auto OutputsJson = fp_GetConfigValue(File.m_EnabledConfigs, Configuration, gc_ConstKey_Compile_Custom_Outputs, EEJsonType_Array, false);
 						auto &OutputsJsonRef = OutputsJson.m_Value.f_Get();
 						if (!OutputsJsonRef.f_IsStringArray())
 							m_BuildSystem.fs_ThrowError(CustomCommandLine.m_Positions, "You need to Custom_Outputs as a string array");
@@ -762,7 +762,7 @@ fi
 								auto *pFile = _Project.m_Files.f_FindSmallestGreaterThanEqual(FileKey);
 								if (pFile && pFile->f_GetName() == Output)
 								{
-									CStr OutputType = fp_GetConfigValue(pFile->m_EnabledConfigs, Configuration, gc_ConstKey_Compile_Type, EEJSONType_String, false)
+									CStr OutputType = fp_GetConfigValue(pFile->m_EnabledConfigs, Configuration, gc_ConstKey_Compile_Type, EEJsonType_String, false)
 										.m_Value.f_Get().f_String()
 									;
 									Script.m_OutputTypes[OutputType];
@@ -777,7 +777,7 @@ fi
 								{
 									CEntityKey EntityKey;
 									EntityKey.m_Type = EEntityType_File;
-									EntityKey.m_Name = {CEJSONSorted(Output)};
+									EntityKey.m_Name = {CEJsonSorted(Output)};
 
 									auto pEntity = File.m_EnabledConfigs.f_FindEqual(Configuration);
 									auto pParent = (*pEntity)->m_pParent;
@@ -795,7 +795,7 @@ fi
 										TCMap<CConfiguration, CEntityMutablePointer> EnabledConfigs;
 										EnabledConfigs[Configuration] = fg_Explicit(pNewEntity);
 
-										CStr OutputType = fp_GetConfigValue(EnabledConfigs, Configuration, gc_ConstKey_Compile_Type, EEJSONType_String, false)
+										CStr OutputType = fp_GetConfigValue(EnabledConfigs, Configuration, gc_ConstKey_Compile_Type, EEJsonType_String, false)
 											.m_Value.f_Get().f_String()
 										;
 										Script.m_OutputTypes[OutputType];

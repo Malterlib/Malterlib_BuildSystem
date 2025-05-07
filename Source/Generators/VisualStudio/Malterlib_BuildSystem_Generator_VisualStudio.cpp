@@ -28,9 +28,9 @@ namespace NMib::NBuildSystem
 	class CBuildSystemGenerator_VisualStudio : public CBuildSystemGenerator, public CAllowUnsafeThis
 	{
 	public:
-		TCMap<CPropertyKey, CEJSONSorted> f_GetValues(CBuildSystem const &_BuildSystem, CStr const &_OutputDir) override
+		TCMap<CPropertyKey, CEJsonSorted> f_GetValues(CBuildSystem const &_BuildSystem, CStr const &_OutputDir) override
 		{
-			TCMap<CPropertyKey, CEJSONSorted> Values;
+			TCMap<CPropertyKey, CEJsonSorted> Values;
 
 			Values[CPropertyKey(gc_ConstKey_Generator)] = _BuildSystem.f_GetGenerateSettings().m_Generator;
 			Values[CPropertyKey(gc_ConstKey_GeneratorFamily)] = gc_ConstString_VisualStudio;
@@ -63,7 +63,7 @@ namespace NMib::NBuildSystem
 			CStr SolutionDir = _OutputDir;
 			CStr BuildSystemBase = BuildSystem.f_GetBaseDir();
 			// Disable &apos; encoding in output XML
-			TCMap<CPropertyKey, CEJSONSorted> Values = f_GetValues(BuildSystem, _OutputDir);
+			TCMap<CPropertyKey, CEJsonSorted> Values = f_GetValues(BuildSystem, _OutputDir);
 
 			TCMap<CConfiguration, TCUniquePointer<CConfiguraitonData>> Configurations;
 

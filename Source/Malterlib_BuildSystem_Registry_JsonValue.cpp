@@ -3,13 +3,13 @@
 
 #include "Malterlib_BuildSystem_Registry.h"
 
-#include <Mib/Encoding/EJSONParse>
+#include <Mib/Encoding/EJsonParse>
 
 namespace NMib::NContainer
 {
 #ifndef DDocumentation_Doxygen
 	using namespace NEncoding;
-	using namespace NEncoding::NJSON;
+	using namespace NEncoding::NJson;
 	using namespace NBuildSystem;
 	using namespace NStr;
 
@@ -19,7 +19,7 @@ namespace NMib::NContainer
 		constexpr ch8 const g_PrefixOperatorCharactersStart[] = "<>=";
 	}
 
-	NTime::CTime TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext::f_ParseDate(uch8 const * &o_pParse, bool _bWithinParenthesis)
+	NTime::CTime TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::f_ParseDate(uch8 const * &o_pParse, bool _bWithinParenthesis)
 	{
 		using namespace NStr;
 
@@ -121,7 +121,7 @@ namespace NMib::NContainer
 		return NTime::CTimeConvert::fs_CreateTime(Year, Month, Day, Hour, Minute, Second, Fraction);
 	}
 
-	NContainer::CByteVector TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext::f_ParseBinary(uch8 const * &o_pParse, bool _bWithinParenthesis)
+	NContainer::CByteVector TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::f_ParseBinary(uch8 const * &o_pParse, bool _bWithinParenthesis)
 	{
 		if (_bWithinParenthesis)
 			o_pParse += 7;
@@ -151,42 +151,42 @@ namespace NMib::NContainer
 		return Data;
 	}
 
-	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext::f_ParseAfterValue(CJSONSorted &o_Value, uch8 const *&o_pParse)
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::f_ParseAfterValue(CJsonSorted &o_Value, uch8 const *&o_pParse)
 	{
 	}
 
-	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext::f_PreParse(CJSONSorted &o_Value, uch8 const *&o_pParse)
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::f_PreParse(CJsonSorted &o_Value, uch8 const *&o_pParse)
 	{
 	}
 
-	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext::f_PostParse(CJSONSorted &o_Value, uch8 const *&o_pParse)
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::f_PostParse(CJsonSorted &o_Value, uch8 const *&o_pParse)
 	{
 	}
 
-	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext::f_ParseValue(CJSONSorted &o_Value, uch8 const *&o_pParse)
+	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::f_ParseValue(CJsonSorted &o_Value, uch8 const *&o_pParse)
 	{
 		auto pParse = o_pParse;
 		if (NStr::fg_StrStartsWith(pParse, "date("))
 		{
 			auto Date = f_ParseDate(pParse, true);
 			if (!Date.f_IsValid())
-				o_Value[CEJSONConstStrings::mc_Date] = nullptr;
+				o_Value[CEJsonConstStrings::mc_Date] = nullptr;
 			else
-				o_Value[CEJSONConstStrings::mc_Date] = NTime::CTimeConvert(Date).f_UnixMilliseconds();
+				o_Value[CEJsonConstStrings::mc_Date] = NTime::CTimeConvert(Date).f_UnixMilliseconds();
 			o_pParse = pParse;
 			return true;
 		}
 		else if (NStr::fg_StrStartsWith(pParse, "binary("))
 		{
 			auto Binary = f_ParseBinary(pParse, true);
-			o_Value[CEJSONConstStrings::mc_Binary] = fg_Base64Encode(Binary);
+			o_Value[CEJsonConstStrings::mc_Binary] = fg_Base64Encode(Binary);
 			o_pParse = pParse;
 			return true;
 		}
 		return false;
 	}
 
-	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext::fs_IsBinaryOperator(uch8 const *_pParse)
+	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::fs_IsBinaryOperator(uch8 const *_pParse)
 	{
 		auto pParse = _pParse;
 
@@ -201,7 +201,7 @@ namespace NMib::NContainer
 		return fg_CharIsWhiteSpace(*pParse) || *pParse == '{';
 	}
 
-	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext::fs_IsPrefixOperator(uch8 const *_pParse)
+	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::fs_IsPrefixOperator(uch8 const *_pParse)
 	{
 		auto pParse = _pParse;
 
@@ -211,17 +211,17 @@ namespace NMib::NContainer
 		return true;
 	}
 
-	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_PreParse(CJSONSorted &o_Value, uch8 const *&o_pParse)
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_PreParse(CJsonSorted &o_Value, uch8 const *&o_pParse)
 	{
 		++m_ParseDepth;
 	}
 
-	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_PostParse(CJSONSorted &o_Value, uch8 const *&o_pParse)
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_PostParse(CJsonSorted &o_Value, uch8 const *&o_pParse)
 	{
 		--m_ParseDepth;
 	}
 
-	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseAfterValue(CJSONSorted &o_Value, uch8 const *&o_pParse)
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseAfterValue(CJsonSorted &o_Value, uch8 const *&o_pParse)
 	{
 		if (!m_bParseAfterValue)
 			return;
@@ -244,11 +244,11 @@ namespace NMib::NContainer
 					|| (*pParse == '<' && !fg_CharIsWhiteSpace(pParse[1]))
 				)
 			{
-				CJSONSorted FirstParam = fg_Move(o_Value);
+				CJsonSorted FirstParam = fg_Move(o_Value);
 
 				auto &Object = o_Value.f_Object();
-				Object[CEJSONConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
-				Object[CEJSONConstStrings::mc_Value] = f_ParseExpression(pParse, EParseExpressionFlag_SupportAppend | EParseExpressionFlag_NoParentheses, &FirstParam);
+				Object[CEJsonConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
+				Object[CEJsonConstStrings::mc_Value] = f_ParseExpression(pParse, EParseExpressionFlag_SupportAppend | EParseExpressionFlag_NoParentheses, &FirstParam);
 				o_pParse = pParse;
 				fg_ParseWhiteSpaceNoLines(pParse);
 				if (fg_StrStartsWith(pParse, "//") || fg_StrStartsWith(pParse, "/*"))
@@ -257,9 +257,9 @@ namespace NMib::NContainer
 		}
 	}
 
-	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::f_ParseValue(CJSONSorted &o_Value, uch8 const *&o_pParse)
+	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseValue(CJsonSorted &o_Value, uch8 const *&o_pParse)
 	{
-		if (CEJSONParseContext::f_ParseValue(o_Value, o_pParse))
+		if (CEJsonParseContext::f_ParseValue(o_Value, o_pParse))
 			return true;
 
 		auto pParse = o_pParse;
@@ -283,8 +283,8 @@ namespace NMib::NContainer
 						&& !fg_StrStartsWith(pParse, "/*")
 					)
 				{
-					CJSONSorted *pFirstParam = nullptr;
-					CJSONSorted FirstParam;
+					CJsonSorted *pFirstParam = nullptr;
+					CJsonSorted FirstParam;
 
 					if (o_Value.f_IsValid())
 					{
@@ -293,8 +293,8 @@ namespace NMib::NContainer
 					}
 
 					auto &Object = o_Value.f_Object();
-					Object[CEJSONConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
-					Object[CEJSONConstStrings::mc_Value] = f_ParseExpression(pParse, EParseExpressionFlag_SupportAppend | EParseExpressionFlag_NoParentheses | ExpressionFlags, pFirstParam);
+					Object[CEJsonConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
+					Object[CEJsonConstStrings::mc_Value] = f_ParseExpression(pParse, EParseExpressionFlag_SupportAppend | EParseExpressionFlag_NoParentheses | ExpressionFlags, pFirstParam);
 					o_pParse = pParse;
 					return true;
 				}
@@ -324,7 +324,7 @@ namespace NMib::NContainer
 			m_bParsingNamespace = false;
 
 			CStr Name = CStr::fs_Join(AllNamespaces, "::");
-			Name.f_SetUserData(EJSONStringType_NoQuote);
+			Name.f_SetUserData(EJsonStringType_NoQuote);
 			o_Value = Name;
 			o_pParse = pParse;
 
@@ -334,11 +334,11 @@ namespace NMib::NContainer
 		{
 			++pParse;
 
-			CJSONSorted Value = f_ParseWildcardStringToken(pParse);
+			CJsonSorted Value = f_ParseWildcardStringToken(pParse);
 
 			auto &Object = o_Value.f_Object();
-			Object[CEJSONConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
-			Object[CEJSONConstStrings::mc_Value] = fg_Move(Value);
+			Object[CEJsonConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
+			Object[CEJsonConstStrings::mc_Value] = fg_Move(Value);
 
 			o_pParse = pParse;
 
@@ -352,23 +352,23 @@ namespace NMib::NContainer
 			if (*pParse != '<')
 				f_ThrowError("Expected < to start JSON accessor", pParse);
 
-			auto Accessor = f_ParseJSONAccessor(pParse, nullptr);
+			auto Accessor = f_ParseJsonAccessor(pParse, nullptr);
 			fg_ParseWhiteSpaceNoLines(pParse);
 
 			if (fg_CharIsNewLine(*pParse))
 				f_ThrowError("Expected constant or expression", pParse);
 
-			CJSONSorted RightValue;
+			CJsonSorted RightValue;
 			auto Cleanup = f_EnableBinaryOperators();
-			fg_ParseJSONValue(RightValue, pParse, *this);
+			fg_ParseJsonValue(RightValue, pParse, *this);
 
 			auto &Object = o_Value.f_Object();
-			Object[CEJSONConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
+			Object[CEJsonConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
 
-			auto &ValueObject = Object[CEJSONConstStrings::mc_Value].f_Object();
+			auto &ValueObject = Object[CEJsonConstStrings::mc_Value].f_Object();
 			ValueObject[gc_ConstString_Type] = gc_ConstString_RootValue;
 			ValueObject[gc_ConstString_Value] = fg_Move(RightValue);
-			ValueObject[gc_ConstString_Accessors] = fg_Move(Accessor[CEJSONConstStrings::mc_Value][gc_ConstString_Accessors]);
+			ValueObject[gc_ConstString_Accessors] = fg_Move(Accessor[CEJsonConstStrings::mc_Value][gc_ConstString_Accessors]);
 
 			o_pParse = pParse;
 			return true;
@@ -377,7 +377,7 @@ namespace NMib::NContainer
 		{
 			++pParse;
 
-			CJSONSorted Identifier;
+			CJsonSorted Identifier;
 
 			if (fs_CharIsStartIdentifier(*pParse) || *pParse == '@')
 				Identifier = f_ParseIdentifierToken(pParse);
@@ -385,9 +385,9 @@ namespace NMib::NContainer
 				f_ThrowError("Expected started of identifier", pParse);
 
 			auto &Object = o_Value.f_Object();
-			Object[CEJSONConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
+			Object[CEJsonConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
 
-			auto &ValueObject = Object[CEJSONConstStrings::mc_Value].f_Object();
+			auto &ValueObject = Object[CEJsonConstStrings::mc_Value].f_Object();
 			ValueObject[gc_ConstString_Type] = gc_ConstString_IdentifierReference;
 			ValueObject[gc_ConstString_Identifier] = fg_Move(Identifier);
 
@@ -423,14 +423,14 @@ namespace NMib::NContainer
 				f_ThrowError("Invalid operator: {}"_f << Operator, pParseStart);
 			}
 
-			CJSONSorted RightValue;
+			CJsonSorted RightValue;
 			auto Cleanup = f_EnableBinaryOperators();
-			fg_ParseJSONValue(RightValue, pParse, *this);
+			fg_ParseJsonValue(RightValue, pParse, *this);
 
 			auto &Object = o_Value.f_Object();
-			Object[CEJSONConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
+			Object[CEJsonConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
 
-			auto &ValueObject = Object[CEJSONConstStrings::mc_Value].f_Object();
+			auto &ValueObject = Object[CEJsonConstStrings::mc_Value].f_Object();
 			ValueObject[gc_ConstString_Type] = gc_ConstString_Operator;
 			ValueObject[gc_ConstString_Operator] = fg_Move(Operator);
 			ValueObject[gc_ConstString_Right] = fg_Move(RightValue);
@@ -440,11 +440,11 @@ namespace NMib::NContainer
 		}
 		else if (*pParse == '`')
 		{
-			CJSONSorted Value = f_ParseEvalStringToken(pParse);
+			CJsonSorted Value = f_ParseEvalStringToken(pParse);
 
 			auto &Object = o_Value.f_Object();
-			Object[CEJSONConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
-			Object[CEJSONConstStrings::mc_Value] = fg_Move(Value);
+			Object[CEJsonConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
+			Object[CEJsonConstStrings::mc_Value] = fg_Move(Value);
 
 			o_pParse = pParse;
 
@@ -463,8 +463,8 @@ namespace NMib::NContainer
 			auto pTestParse = pParse;
 
 			auto &Object = o_Value.f_Object();
-			Object[CEJSONConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
-			Object[CEJSONConstStrings::mc_Value] = f_ParseDefine(pTestParse, false);
+			Object[CEJsonConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
+			Object[CEJsonConstStrings::mc_Value] = f_ParseDefine(pTestParse, false);
 
 			o_pParse = pTestParse;
 
@@ -482,8 +482,8 @@ namespace NMib::NContainer
 					f_ThrowError("Recursive define statements not supported", pParse);
 
 				auto &Object = o_Value.f_Object();
-				Object[CEJSONConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
-				Object[CEJSONConstStrings::mc_Value] = f_ParseDefine(pTestParse, true);
+				Object[CEJsonConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
+				Object[CEJsonConstStrings::mc_Value] = f_ParseDefine(pTestParse, true);
 
 				o_pParse = pTestParse;
 			}
@@ -493,8 +493,8 @@ namespace NMib::NContainer
 					f_ThrowError("Recursive function statements not supported", pParse);
 
 				auto &Object = o_Value.f_Object();
-				Object[CEJSONConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
-				Object[CEJSONConstStrings::mc_Value] = f_ParseFunctionType(pTestParse);
+				Object[CEJsonConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
+				Object[CEJsonConstStrings::mc_Value] = f_ParseFunctionType(pTestParse);
 
 				o_pParse = pTestParse;
 			}
@@ -504,8 +504,8 @@ namespace NMib::NContainer
 					f_ThrowError("Type can only be used inside define statements"_f << Identifier, pParse);
 
 				auto &Object = o_Value.f_Object();
-				Object[CEJSONConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
-				Object[CEJSONConstStrings::mc_Value] = f_ParseType(pTestParse);
+				Object[CEJsonConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
+				Object[CEJsonConstStrings::mc_Value] = f_ParseType(pTestParse);
 
 				o_pParse = pTestParse;
 			}
@@ -515,8 +515,8 @@ namespace NMib::NContainer
 					f_ThrowError("one_of can only be used inside define statements"_f << Identifier, pParse);
 
 				auto &Object = o_Value.f_Object();
-				Object[CEJSONConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
-				Object[CEJSONConstStrings::mc_Value] = f_ParseOneOf(pTestParse);
+				Object[CEJsonConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
+				Object[CEJsonConstStrings::mc_Value] = f_ParseOneOf(pTestParse);
 
 				o_pParse = pTestParse;
 			}
@@ -537,8 +537,8 @@ namespace NMib::NContainer
 					f_ThrowError("Type '{}' can only be used inside define statements"_f << Identifier, pParse);
 
 				auto &Object = o_Value.f_Object();
-				Object[CEJSONConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
-				Object[CEJSONConstStrings::mc_Value] = f_ParseDefaultType(Identifier);
+				Object[CEJsonConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
+				Object[CEJsonConstStrings::mc_Value] = f_ParseDefaultType(Identifier);
 
 				o_pParse = pTestParse;
 			}
@@ -569,7 +569,7 @@ namespace NMib::NContainer
 		}
 
 		CStr::CAppender Appender(o_Output);
-		fg_GenerateJSONValue<CJSONParseContext>(Appender, _Value.f_ToJson().f_ToJson(), _Level, "\t", gc_BuildSystemJSONParseFlags);
+		fg_GenerateJsonValue<CJsonParseContext>(Appender, _Value.f_ToJson().f_ToJson(), _Level, "\t", gc_BuildSystemJsonParseFlags);
 	}
 
 	template <>
@@ -590,20 +590,20 @@ namespace NMib::NContainer
 		}
 
 		CStr::CAppender Appender(o_Output);
-		fg_GenerateJSONValue<CJSONParseContext>(Appender, _Value.f_ToJson().f_ToJson(), _Level, "\t", gc_BuildSystemJSONParseFlags);
+		fg_GenerateJsonValue<CJsonParseContext>(Appender, _Value.f_ToJson().f_ToJson(), _Level, "\t", gc_BuildSystemJsonParseFlags);
 	}
 
 	template <typename tf_CParseContext, typename tf_CStr>
-	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext::fs_GenerateValue
+	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::fs_GenerateValue
 		(
 			tf_CStr &o_String
-			, CJSONSorted const &_Value
+			, CJsonSorted const &_Value
 			, mint _Depth
 			, ch8 const *_pPrettySeparator
-			, EJSONDialectFlag _Flags
+			, EJsonDialectFlag _Flags
 		)
 	{
-		// TODO: Handle without converting to EJSON
+		// TODO: Handle without converting to EJson
 		if (_Value.f_IsObject())
 		{
 			auto iMember = _Value.f_Object().f_OrderedIterator();
@@ -615,12 +615,12 @@ namespace NMib::NContainer
 				++iMember;
 				if (!iMember)
 				{
-					if (Name == CEJSONConstStrings::mc_Date)
+					if (Name == CEJsonConstStrings::mc_Date)
 					{
 						CTime Time;
 						if (Value.f_IsNull())
 							Time = NTime::CTime();
-						else if (Value.f_Type() != EJSONType_Integer)
+						else if (Value.f_Type() != EJsonType_Integer)
 							DMibError("Invalid EJSON: $date value must be an integer");
 
 						Time = NTime::CTimeConvert::fs_FromUnixMilliseconds(Value.f_Integer());
@@ -646,9 +646,9 @@ namespace NMib::NContainer
 						}
 						return true;
 					}
-					else if (Name == CEJSONConstStrings::mc_Binary)
+					else if (Name == CEJsonConstStrings::mc_Binary)
 					{
-						if (Value.f_Type() != EJSONType_String)
+						if (Value.f_Type() != EJsonType_String)
 							DMibError("Invalid EJSON: $binary value must be a string");
 
 						{
@@ -660,7 +660,7 @@ namespace NMib::NContainer
 				}
 			}
 		}
-		else if (_Value.f_IsString() && _Value.f_String().f_GetUserData() == EJSONStringType_NoQuote)
+		else if (_Value.f_IsString() && _Value.f_String().f_GetUserData() == EJsonStringType_NoQuote)
 		{
 			o_String += _Value.f_String();
 			return true;
@@ -670,16 +670,16 @@ namespace NMib::NContainer
 	}
 	
 	template <typename tf_CParseContext, typename tf_CStr>
-	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateValue
+	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::fs_GenerateValue
 		(
 			tf_CStr &o_String
-			, CJSONSorted const &_Value
+			, CJsonSorted const &_Value
 			, mint _Depth
 			, ch8 const *_pPrettySeparator
-			, EJSONDialectFlag _Flags
+			, EJsonDialectFlag _Flags
 		)
 	{
-		if (CEJSONParseContext::fs_GenerateValue<CEJSONParseContext>(o_String, _Value, _Depth, _pPrettySeparator, _Flags))
+		if (CEJsonParseContext::fs_GenerateValue<CEJsonParseContext>(o_String, _Value, _Depth, _pPrettySeparator, _Flags))
 			return true;
 
 		if (_Value.f_IsObject())
@@ -695,23 +695,23 @@ namespace NMib::NContainer
 				{
 					if
 						(
-							(Name == CEJSONConstStrings::mc_Type && iMember->f_Name() == CEJSONConstStrings::mc_Value)
-							|| (Name == CEJSONConstStrings::mc_Value && iMember->f_Name() == CEJSONConstStrings::mc_Type)
+							(Name == CEJsonConstStrings::mc_Type && iMember->f_Name() == CEJsonConstStrings::mc_Value)
+							|| (Name == CEJsonConstStrings::mc_Value && iMember->f_Name() == CEJsonConstStrings::mc_Type)
 						)
 					{
 						++iMember;
 						if (!iMember)
 						{
-							auto *pType = _Value.f_GetMember(CEJSONConstStrings::mc_Type);
-							auto *pValue = _Value.f_GetMember(CEJSONConstStrings::mc_Value);
+							auto *pType = _Value.f_GetMember(CEJsonConstStrings::mc_Type);
+							auto *pValue = _Value.f_GetMember(CEJsonConstStrings::mc_Value);
 							DMibCheck(pType);
 							DMibCheck(pValue);
-							if (pType->f_Type() != EJSONType_String)
+							if (pType->f_Type() != EJsonType_String)
 								DMibError("Invalid EJSON: $type value must be a string");
 
 							if (pType->f_String() == gc_ConstString_BuildSystemToken.m_String)
 							{
-								CJSONParseContext::fs_GenerateExpression(o_String, *pValue, true, _Depth);
+								CJsonParseContext::fs_GenerateExpression(o_String, *pValue, true, _Depth);
 								return true;
 							}
 						}
@@ -723,58 +723,58 @@ namespace NMib::NContainer
 		return false;
 	}
 
-	template bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateValue
+	template bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::fs_GenerateValue
 		<
-			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext
+			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext
 			, NStr::CStr::CAppender
 		>
 		(
 			CStr::CAppender &o_String
-			, CJSONSorted const &_Value
+			, CJsonSorted const &_Value
 			, mint _Depth
 			, ch8 const *_pPrettySeparator
-			, EJSONDialectFlag _Flags
+			, EJsonDialectFlag _Flags
 		)
 	;
-	template bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::fs_GenerateValue
+	template bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::fs_GenerateValue
 		<
-			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext
+			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext
 			, NStr::CStrNonTracked::CAppender
 		>
 		(
 			CStrNonTracked::CAppender &o_String
-			, CJSONSorted const &_Value
+			, CJsonSorted const &_Value
 			, mint _Depth
 			, ch8 const *_pPrettySeparator
-			, EJSONDialectFlag _Flags
+			, EJsonDialectFlag _Flags
 		)
 	;
 
-	template bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext::fs_GenerateValue
+	template bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::fs_GenerateValue
 		<
 			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey
-			, CBuildSystemSyntax::CRootValue>::CEJSONParseContext
+			, CBuildSystemSyntax::CRootValue>::CEJsonParseContext
 			, CStr::CAppender
 		>
 		(
 			CStr::CAppender &o_String
-			, CJSONSorted const &_Value
+			, CJsonSorted const &_Value
 			, mint _Depth
 			, ch8 const *_pPrettySeparator
-			, EJSONDialectFlag _Flags
+			, EJsonDialectFlag _Flags
 		)
 	;
-	template bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext::fs_GenerateValue
+	template bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::fs_GenerateValue
 		<
-			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext
+			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext
 			, NStr::CStrNonTracked::CAppender
 		>
 		(
 			CStrNonTracked::CAppender &o_String
-			, CJSONSorted const &_Value
+			, CJsonSorted const &_Value
 			, mint _Depth
 			, ch8 const *_pPrettySeparator
-			, EJSONDialectFlag _Flags
+			, EJsonDialectFlag _Flags
 		)
 	;
 #endif

@@ -10,16 +10,16 @@ namespace NMib::NContainer
 	using namespace NEncoding;
 	using namespace NBuildSystem;
 
-	TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJSONParseContext::CEJSONParseContext()
+	TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::CEJsonParseContext()
 	{
 		m_bConvertNullToSpace = false;
-		m_Flags = gc_BuildSystemJSONParseFlags;
+		m_Flags = gc_BuildSystemJsonParseFlags;
 	}
 
-	TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext::CJSONParseContext()
+	TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::CJsonParseContext()
 	{
 		m_bConvertNullToSpace = false;
-		m_Flags = gc_BuildSystemJSONParseFlags;
+		m_Flags = gc_BuildSystemJsonParseFlags;
 	}
 
 	NTime::CTime TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_ParseDate(ch8 const * &o_pParse)
@@ -164,18 +164,18 @@ namespace NMib::NContainer
 
 		uch8 const *pParse = (uch8 const *)(o_pParse);
 
-		auto fParseValue = [&]() -> NEncoding::CJSONSorted
+		auto fParseValue = [&]() -> NEncoding::CJsonSorted
 			{
-				NEncoding::CJSONSorted Value;
+				NEncoding::CJsonSorted Value;
 
-				CJSONParseContext Context;
+				CJsonParseContext Context;
 				Context.m_pStartParse = (uch8 const *)o_ParseContext.f_GetStartParse();
 				if (!Context.m_pStartParse)
 					Context.m_pStartParse = pParse;
 				Context.m_FileName = o_ParseContext.m_File;
 				Context.m_bSupportBinaryOperators = false;
 
-				NEncoding::NJSON::fg_ParseJSONValue(Value, pParse, Context);
+				NEncoding::NJson::fg_ParseJsonValue(Value, pParse, Context);
 
 				return Value;
 			}
@@ -183,7 +183,7 @@ namespace NMib::NContainer
 
 		auto fParsePrefixOperator = [&](CStr const &_Operator)
 			{
-				CEJSONSorted Temp;
+				CEJsonSorted Temp;
 				auto &UserType = Temp.f_UserType();
 				UserType.m_Type = gc_ConstString_BuildSystemToken;
 
@@ -204,7 +204,7 @@ namespace NMib::NContainer
 					DMibError(NStr::CStr::CFormat("{}Didn't expect anything after {} operator") << o_ParseContext.f_FormatLocation(ParseLocation) << _Operator);
 				}
 
-				CEJSONSorted Temp;
+				CEJsonSorted Temp;
 				auto &UserType = Temp.f_UserType();
 				UserType.m_Type = gc_ConstString_BuildSystemToken;
 
@@ -219,7 +219,7 @@ namespace NMib::NContainer
 		if (fg_StrStartsWith(pParse, gc_ConstString_namespace.m_String) && fg_CharIsWhiteSpaceNoLines(pParse[9]))
 		{
 			pParse += 9;
-			CEJSONSorted Temp;
+			CEJsonSorted Temp;
 			auto &UserType = Temp.f_UserType();
 			UserType.m_Type = gc_ConstString_BuildSystemToken;
 
@@ -269,7 +269,7 @@ namespace NMib::NContainer
 			fParsePrefixOperator(gc_ConstString_Symbol_PragmaPrefix);
 		}
 		else
-			o_Key = NBuildSystem::CBuildSystemSyntax::CRootKey::fs_FromJson(o_ParseContext.m_StringCache, CEJSONSorted::fs_FromJson(fParseValue()), _Location);
+			o_Key = NBuildSystem::CBuildSystemSyntax::CRootKey::fs_FromJson(o_ParseContext.m_StringCache, CEJsonSorted::fs_FromJson(fParseValue()), _Location);
 
 		o_pParse = (ch8 const *)(pParse);
 	}
@@ -284,25 +284,25 @@ namespace NMib::NContainer
 	{
 		o_bWasEscaped = false;
 
-		NEncoding::CJSONSorted Output;
+		NEncoding::CJsonSorted Output;
 
 		uch8 const *pParse = (uch8 const *)(o_pParse);
 
-		CJSONParseContext Context;
+		CJsonParseContext Context;
 		Context.m_pStartParse = (uch8 const *)o_ParseContext.f_GetStartParse();
 		if (!Context.m_pStartParse)
 			Context.m_pStartParse = pParse;
 		Context.m_FileName = o_ParseContext.m_File;
 		Context.m_bParsingNamespace = o_ParseContext.m_bParsingNamespace;
 
-		NEncoding::NJSON::fg_ParseJSONValue(Output, pParse, Context);
+		NEncoding::NJson::fg_ParseJsonValue(Output, pParse, Context);
 
 		auto ParseLocation = o_ParseContext.f_GetLocation(o_pParse);
 
 		o_pParse = (ch8 const *)(pParse);
 		o_ParseContext.m_bParsingNamespace = Context.m_bParsingNamespace;
 
-		return NBuildSystem::CBuildSystemSyntax::CRootValue::fs_FromJson(o_ParseContext.m_StringCache, NEncoding::CEJSONSorted::fs_FromJson(fg_Move(Output)), ParseLocation, true);
+		return NBuildSystem::CBuildSystemSyntax::CRootValue::fs_FromJson(o_ParseContext.m_StringCache, NEncoding::CEJsonSorted::fs_FromJson(fg_Move(Output)), ParseLocation, true);
 	}
 
 	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_ValueIsEmpty(NBuildSystem::CBuildSystemSyntax::CRootValue const &_Value, bool _bForceEscape)

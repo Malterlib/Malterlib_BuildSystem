@@ -80,7 +80,7 @@ namespace NMib::NBuildSystem
 								, fg_FunctionParam(g_String, gc_ConstString__Executable)
 								, fg_FunctionParam(g_String, gc_ConstString_p_Params, g_Ellipsis)
 							)
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								constexpr static auto c_ByDigest = gc_Str<"ByDigest:">.m_Str;
 

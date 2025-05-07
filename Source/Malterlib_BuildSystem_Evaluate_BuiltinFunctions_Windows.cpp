@@ -26,7 +26,7 @@ namespace NMib::NBuildSystem
 								, fg_FunctionParam(g_String, gc_ConstString__Key)
 								, fg_FunctionParam(g_String, gc_ConstString__ValueName)
 							)
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 		#ifdef DPlatformFamily_Windows
 								if (_Params.f_GetLen() != 3 || !_Params[0].f_IsString() || !_Params[1].f_IsString() || !_Params[2].f_IsString())

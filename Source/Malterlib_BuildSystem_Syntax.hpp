@@ -57,8 +57,8 @@ namespace NMib::NBuildSystem
 			(
 				[&](auto const &_Value)
 				{
-					if constexpr (NTraits::TCIsSameDereferencedUnqualified<decltype(_Value), NEncoding::CEJSONSorted>::mc_Value)
-						o_Str += typename tf_CStr::CFormat("{}") << _Value.f_ToString("\t", gc_BuildSystemJSONParseFlags);
+					if constexpr (NTraits::TCIsSameDereferencedUnqualified<decltype(_Value), NEncoding::CEJsonSorted>::mc_Value)
+						o_Str += typename tf_CStr::CFormat("{}") << _Value.f_ToString("\t", gc_BuildSystemJsonParseFlags);
 					else
 						o_Str += typename tf_CStr::CFormat("{}") << _Value;
 				}
@@ -184,7 +184,7 @@ namespace NMib::NBuildSystem
 	}
 
 	template <typename tf_CStr>
-	void CBuildSystemSyntax::CJSONSubscript::f_Format(tf_CStr &o_Str) const
+	void CBuildSystemSyntax::CJsonSubscript::f_Format(tf_CStr &o_Str) const
 	{
 		o_Str += "[";
 		m_Index.f_Visit
@@ -199,7 +199,7 @@ namespace NMib::NBuildSystem
 	}
 
 	template <typename tf_CStr>
-	void CBuildSystemSyntax::CJSONAccessorEntry::f_Format(tf_CStr &o_Str) const
+	void CBuildSystemSyntax::CJsonAccessorEntry::f_Format(tf_CStr &o_Str) const
 	{
 		if (m_bOptional)
 			o_Str += "?.";
@@ -219,13 +219,13 @@ namespace NMib::NBuildSystem
 	}
 
 	template <typename tf_CStr>
-	void CBuildSystemSyntax::CJSONAccessor::fs_FormatAccessors(tf_CStr &o_Str, NContainer::TCVector<CJSONAccessorEntry> const &_Accessors)
+	void CBuildSystemSyntax::CJsonAccessor::fs_FormatAccessors(tf_CStr &o_Str, NContainer::TCVector<CJsonAccessorEntry> const &_Accessors)
 	{
 		o_Str += "<";
 		bool bFirst = true;
 		for (auto &Accessor : _Accessors)
 		{
-			if (!bFirst && !Accessor.m_Accessor.f_IsOfType<CJSONSubscript>())
+			if (!bFirst && !Accessor.m_Accessor.f_IsOfType<CJsonSubscript>())
 				o_Str += ".";
 
 			o_Str += typename tf_CStr::CFormat("{}") << Accessor;
@@ -236,7 +236,7 @@ namespace NMib::NBuildSystem
 	}
 
 	template <typename tf_CStr>
-	void CBuildSystemSyntax::CJSONAccessor::f_Format(tf_CStr &o_Str) const
+	void CBuildSystemSyntax::CJsonAccessor::f_Format(tf_CStr &o_Str) const
 	{
 		o_Str += typename tf_CStr::CFormat("{}") << m_Param;
 		fs_FormatAccessors(o_Str, m_Accessors);
@@ -494,8 +494,8 @@ namespace NMib::NBuildSystem
 				(
 					[&](auto const &_Value)
 					{
-						if constexpr (NTraits::TCIsSameDereferencedUnqualified<decltype(_Value), NEncoding::CEJSONSorted>::mc_Value)
-							NEncoding::NJSON::fg_GenerateJSONValue<CBuildSystemParseContext>(Appender, _Value.f_ToJson(), 0, "\t", gc_BuildSystemJSONParseFlags);
+						if constexpr (NTraits::TCIsSameDereferencedUnqualified<decltype(_Value), NEncoding::CEJsonSorted>::mc_Value)
+							NEncoding::NJson::fg_GenerateJsonValue<CBuildSystemParseContext>(Appender, _Value.f_ToJson(), 0, "\t", gc_BuildSystemJsonParseFlags);
 						else
 							Appender.f_Commit().m_String += typename tf_CStr::CFormat("{}") << _Value;
 					}
@@ -578,10 +578,10 @@ namespace NMib::NBuildSystem
 			(
 				[&](auto const &_Value)
 				{
-					if constexpr (NTraits::TCIsSameDereferencedUnqualified<decltype(_Value), NEncoding::CEJSONSorted>::mc_Value)
+					if constexpr (NTraits::TCIsSameDereferencedUnqualified<decltype(_Value), NEncoding::CEJsonSorted>::mc_Value)
 					{
 						typename tf_CStr::CAppender Appender(o_Str);
-						NEncoding::NJSON::fg_GenerateJSONValue<CBuildSystemParseContext>(Appender, _Value.f_ToJson(), 0, "\t", gc_BuildSystemJSONParseFlags);
+						NEncoding::NJson::fg_GenerateJsonValue<CBuildSystemParseContext>(Appender, _Value.f_ToJson(), 0, "\t", gc_BuildSystemJsonParseFlags);
 					}
 					else
 						o_Str += typename tf_CStr::CFormat("{}") << _Value;
@@ -596,7 +596,7 @@ namespace NMib::NBuildSystem
 		if (!m_Accessors.f_IsEmpty())
 		{
 			o_Str += "#";
-			CJSONAccessor::fs_FormatAccessors(o_Str, m_Accessors);
+			CJsonAccessor::fs_FormatAccessors(o_Str, m_Accessors);
 			o_Str += " ";
 		}
 

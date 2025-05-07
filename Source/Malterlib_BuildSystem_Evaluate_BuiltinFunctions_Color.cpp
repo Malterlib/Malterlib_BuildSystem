@@ -17,7 +17,7 @@ namespace NMib::NBuildSystem
 				{
 					auto &Function = Functions[_Name];
 					Function.m_Type = fg_FunctionType(g_String);
-					Function.m_fFunction = [fRun = fg_Move(_fRun)](CBuildSystem const &_This, auto &_Context, auto &&_Params) -> CEJSONSorted
+					Function.m_fFunction = [fRun = fg_Move(_fRun)](CBuildSystem const &_This, auto &_Context, auto &&_Params) -> CEJsonSorted
 						{
 							CAnsiEncoding Encoding(_This.f_AnsiFlags());
 							return fRun(Encoding);
@@ -51,7 +51,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_Boolean)
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								CAnsiEncoding Encoding(_This.f_AnsiFlags());
 								return Encoding.f_Color();
@@ -65,7 +65,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_String, fg_FunctionParam(g_Integer, gc_Str<"_ColorID">))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								CAnsiEncoding Encoding(_This.f_AnsiFlags());
 								return Encoding.f_Foreground16(fg_Clamp(_Params[0].f_Integer(), 0, 15));
@@ -79,7 +79,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_String, fg_FunctionParam(g_Integer, gc_Str<"_ColorID">))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								CAnsiEncoding Encoding(_This.f_AnsiFlags());
 								return Encoding.f_Background16(fg_Clamp(_Params[0].f_Integer(), 0, 15));
@@ -93,7 +93,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_String, fg_FunctionParam(g_Integer, gc_Str<"_ColorID">))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								CAnsiEncoding Encoding(_This.f_AnsiFlags());
 								return Encoding.f_Foreground256(fg_Clamp(_Params[0].f_Integer(), 0, 255));
@@ -107,7 +107,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_String, fg_FunctionParam(g_Integer, gc_Str<"_ColorID">))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								CAnsiEncoding Encoding(_This.f_AnsiFlags());
 								return Encoding.f_Background256(fg_Clamp(_Params[0].f_Integer(), 0, 255));
@@ -125,7 +125,7 @@ namespace NMib::NBuildSystem
 								g_String
 								, fg_FunctionParam(g_Integer, gc_Str<"_ColorR">), fg_FunctionParam(g_Integer, gc_Str<"_ColorG">), fg_FunctionParam(g_Integer, gc_Str<"_ColorB">)
 							)
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								CAnsiEncoding Encoding(_This.f_AnsiFlags());
 								return Encoding.f_ForegroundRGB(fg_Clamp(_Params[0].f_Integer(), 0, 255), fg_Clamp(_Params[1].f_Integer(), 0, 255), fg_Clamp(_Params[2].f_Integer(), 0, 255));
@@ -143,7 +143,7 @@ namespace NMib::NBuildSystem
 								g_String
 								, fg_FunctionParam(g_Integer, gc_Str<"_ColorR">), fg_FunctionParam(g_Integer, gc_Str<"_ColorG">), fg_FunctionParam(g_Integer, gc_Str<"_ColorB">)
 							)
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								CAnsiEncoding Encoding(_This.f_AnsiFlags());
 								return Encoding.f_BackgroundRGB(fg_Clamp(_Params[0].f_Integer(), 0, 255), fg_Clamp(_Params[1].f_Integer(), 0, 255), fg_Clamp(_Params[2].f_Integer(), 0, 255));
@@ -161,7 +161,7 @@ namespace NMib::NBuildSystem
 								g_String
 								, fg_FunctionParam(g_String, gc_Str<"_String">)
 							)
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								return CAnsiEncodingParse::fs_StripEncoding(_Params[0].f_String());
 							}

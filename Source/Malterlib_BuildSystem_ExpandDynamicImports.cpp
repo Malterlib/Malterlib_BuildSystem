@@ -203,7 +203,7 @@ namespace NMib::NBuildSystem
 
 		{
 			CStr::CAppender Appender(EvalString);
-			NJSON::fg_GenerateJSONString<'`', CBuildSystemParseContext, true>(Appender, EscapedString);
+			NJson::fg_GenerateJsonString<'`', CBuildSystemParseContext, true>(Appender, EscapedString);
 		}
 		try
 		{
@@ -381,11 +381,11 @@ namespace NMib::NBuildSystem
 		CStr FullRebuildVersion = "{}-{}"_f << f_EvaluateEntityPropertyString(_Entity, gc_ConstKey_Import_CMake_FullRebuildVersion) << GeneratorFullRebuildVersion;
 		TCVector<CStr> CacheExcludePatterns = f_EvaluateEntityPropertyStringArray(_Entity, gc_ConstKey_Import_CMake_CacheExcludePatterns, TCVector<CStr>());
 		TCVector<CStr> CacheExcludeDependenciesPatterns = f_EvaluateEntityPropertyStringArray(_Entity, gc_ConstKey_Import_CMake_CacheExcludeDependenciesPatterns, TCVector<CStr>());
-		CEJSONSorted CacheReplaceContents = f_EvaluateEntityProperty(_Entity, gc_ConstKey_Import_CMake_CacheReplaceContents).f_Move();
-		CEJSONSorted CacheDuplicateLines = f_EvaluateEntityProperty(_Entity, gc_ConstKey_Import_CMake_CacheDuplicateLines).f_Move();
-		CEJSONSorted CmakeEnvironmentContents = f_EvaluateEntityProperty(_Entity, gc_ConstKey_Import_CMake_Environment).f_Move();
+		CEJsonSorted CacheReplaceContents = f_EvaluateEntityProperty(_Entity, gc_ConstKey_Import_CMake_CacheReplaceContents).f_Move();
+		CEJsonSorted CacheDuplicateLines = f_EvaluateEntityProperty(_Entity, gc_ConstKey_Import_CMake_CacheDuplicateLines).f_Move();
+		CEJsonSorted CmakeEnvironmentContents = f_EvaluateEntityProperty(_Entity, gc_ConstKey_Import_CMake_Environment).f_Move();
 		TCVector<CStr> CacheIgnoreInputs = f_EvaluateEntityPropertyStringArray(_Entity, gc_ConstKey_Import_CMake_CacheIgnoreInputs, TCVector<CStr>());
-		CEJSONSorted CmakeLanguages = f_EvaluateEntityProperty(_Entity, gc_ConstKey_Import_CMake_Languages).f_Move();
+		CEJsonSorted CmakeLanguages = f_EvaluateEntityProperty(_Entity, gc_ConstKey_Import_CMake_Languages).f_Move();
 		CStr CmakeConfig = f_EvaluateEntityPropertyString(_Entity, gc_ConstKey_Import_CMake_Config);
 		CStr IntermediateName = f_EvaluateEntityPropertyString(_Entity, gc_ConstKey_Import_CMake_IntermediateName);
 		CStr IntermediateNamePrefix = "/{}"_f << IntermediateName;
@@ -452,7 +452,7 @@ namespace NMib::NBuildSystem
 		CStr CmakeCompilerTarget = f_EvaluateEntityPropertyString(_Entity, gc_ConstKey_Import_CMake_CCompilerTarget, CStr());
 		CStr CmakeCxxCompiler = f_EvaluateEntityPropertyString(_Entity, gc_ConstKey_Import_CMake_CxxCompiler, CStr());
 		CStr CmakeCxxCompilerTarget = f_EvaluateEntityPropertyString(_Entity, gc_ConstKey_Import_CMake_CxxCompilerTarget, CStr());
-		CEJSONSorted CmakeReplacePrefixes = f_EvaluateEntityProperty(_Entity, gc_ConstKey_Import_CMake_ReplacePrefixes).f_Move();
+		CEJsonSorted CmakeReplacePrefixes = f_EvaluateEntityProperty(_Entity, gc_ConstKey_Import_CMake_ReplacePrefixes).f_Move();
 
 		auto fInitConfigHash = [&](CHash_SHA512 &o_DependenciesHash)
 			{
@@ -1329,13 +1329,13 @@ namespace NMib::NBuildSystem
 											continue;
 
 										auto &Param = FunctionCall.m_Params[0];
-										if (!Param.m_Param.f_IsOfType<CEJSONSorted>())
+										if (!Param.m_Param.f_IsOfType<CEJsonSorted>())
 											continue;
 
 										if (!Param.f_IsJson() || !Param.f_Json().f_IsString())
 											continue;
 
-										auto &ParamValue = Param.m_Param.f_GetAsType<CEJSONSorted>();
+										auto &ParamValue = Param.m_Param.f_GetAsType<CEJsonSorted>();
 										WorkingDirectorySource = ParamValue.f_String();
 									}
 
@@ -1695,7 +1695,7 @@ namespace NMib::NBuildSystem
 															{
 																CBuildSystemSyntax::CParam
 																{
-																	CEJSONSorted(RelativePath)
+																	CEJsonSorted(RelativePath)
 																}
 															}
 															, CPropertyKey(mp_StringCache, EPropertyType_Property, gc_ConstString_MakeAbsolute)

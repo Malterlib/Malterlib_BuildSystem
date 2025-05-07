@@ -22,7 +22,7 @@ namespace NMib::NBuildSystem
 								, fg_FunctionParam(g_Identifier, gc_ConstString__ExplodeFunction)
 								, fg_FunctionParam(fg_Optional(g_ObjectWithAny), gc_ConstString__Properties, g_Optional)
 							)
-							, [this](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [this](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								CBuildSystemSyntax::CIdentifier Identifier = CBuildSystem::fp_IdentifierFromJson(_Context, _Params[1], false);
 
@@ -98,12 +98,12 @@ namespace NMib::NBuildSystem
 										if (pFunctionProperty)
 											FunctionCall.m_Params.f_Insert(CBuildSystemSyntax::CParam{pFunctionProperty->m_Value});
 										else
-											FunctionCall.m_Params.f_Insert(CBuildSystemSyntax::CParam{CEJSONSorted{}});
+											FunctionCall.m_Params.f_Insert(CBuildSystemSyntax::CParam{CEJsonSorted{}});
 									}
 
 									if (FunctionType.m_Parameters.f_GetLen() >= 3)
 									{
-										CEJSONSorted Stack = EJSONType_Array;
+										CEJsonSorted Stack = EJsonType_Array;
 										for (auto &Entry : _Context.m_EvalContext.m_ExplodeListStack)
 										{
 											auto &Object = Stack.f_Insert().f_Object();
@@ -157,7 +157,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_Boolean, fg_FunctionParam(g_AnyArray, gc_ConstString__ArrayToSearch), fg_FunctionParam(g_Any, gc_ConstString__ElementToFind))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								for (auto &Value : _Params[0].f_Array())
 								{
@@ -176,7 +176,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_Boolean, fg_FunctionParam(fg_OneOf(g_AnyArray, g_String), gc_ConstString__Array))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								auto &ToCheck = _Params[0];
 								if (ToCheck.f_IsString())
@@ -193,7 +193,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_Boolean, fg_FunctionParam(fg_OneOf(g_AnyArray, g_String), gc_ConstString__Array))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								auto &ToCheck = _Params[0];
 								if (ToCheck.f_IsString())
@@ -210,11 +210,11 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_AnyArray, fg_FunctionParam(g_AnyArray, gc_ConstString__Array))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
-								CEJSONSorted Return;
+								CEJsonSorted Return;
 								auto &ReturnArray = Return.f_Array();
-								TCSet<CEJSONSorted> Added;
+								TCSet<CEJsonSorted> Added;
 								for (auto &Value : _Params[0].f_Array())
 								{
 									if (Added(Value).f_WasCreated())
@@ -232,11 +232,11 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_AnyArray, fg_FunctionParam(g_AnyArray, gc_ConstString__Array), fg_FunctionParam(g_Any, gc_ConstString__Value))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								auto &ToUniqueValue = _Params[1];
 
-								CEJSONSorted Return;
+								CEJsonSorted Return;
 								auto &ReturnArray = Return.f_Array();
 								mint iLastLocation = TCLimitsInt<mint>::mc_Max;
 								mint iLocation = 0;
@@ -265,9 +265,9 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_AnyArray, fg_FunctionParam(g_AnyArray, gc_ConstString__Array))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
-								TCVector<CEJSONSorted> Return = fg_Move(_Params[0].f_Array());
+								TCVector<CEJsonSorted> Return = fg_Move(_Params[0].f_Array());
 								Return.f_Sort();
 								return fg_Move(Return);
 							}
@@ -280,9 +280,9 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_AnyArray, fg_FunctionParam(g_AnyArray, gc_ConstString_p_ToConcat, g_Ellipsis))
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJSONSorted> &&_Params) -> CEJSONSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
-								CEJSONSorted Return;
+								CEJsonSorted Return;
 
 								auto &ReturnArray = Return.f_Array();
 								for (auto &ToConcat : _Params[0].f_Array())

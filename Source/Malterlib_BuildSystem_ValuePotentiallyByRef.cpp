@@ -7,16 +7,16 @@
 
 namespace NMib::NBuildSystem
 {
-	CValuePotentiallyByRef::CValuePotentiallyByRef(NEncoding::CEJSONSorted const *_pValue)
+	CValuePotentiallyByRef::CValuePotentiallyByRef(NEncoding::CEJsonSorted const *_pValue)
 		: mp_ValueVariant(_pValue)
 	{
 	}
 
-	CValuePotentiallyByRef::CValuePotentiallyByRef(NEncoding::CEJSONSorted *_pValue, bool _bConfirm)
+	CValuePotentiallyByRef::CValuePotentiallyByRef(NEncoding::CEJsonSorted *_pValue, bool _bConfirm)
 		: mp_ValueVariant(_pValue)
 	{
 	}
-	CValuePotentiallyByRef::CValuePotentiallyByRef(NEncoding::CEJSONSorted &&_Value)
+	CValuePotentiallyByRef::CValuePotentiallyByRef(NEncoding::CEJsonSorted &&_Value)
 		: mp_ValueVariant(fg_Move(_Value))
 	{
 	}
@@ -25,7 +25,7 @@ namespace NMib::NBuildSystem
 
 	CValuePotentiallyByRef::CValuePotentiallyByRef(CValuePotentiallyByRef &&) = default;
 
-	void CValuePotentiallyByRef::f_Set(NEncoding::CEJSONSorted &&_Other)
+	void CValuePotentiallyByRef::f_Set(NEncoding::CEJsonSorted &&_Other)
 	{
 		DMibFastCheck(f_Get().f_IsString());
 

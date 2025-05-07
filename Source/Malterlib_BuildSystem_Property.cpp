@@ -145,8 +145,8 @@ namespace NMib::NBuildSystem
 	void CBuildSystem::f_CheckPropertyTypeValue
 		(
 			CPropertyKeyReference const &_PropertyKey
-			, CEJSONSorted const &_Value
-			, EEJSONType _ExpectedType
+			, CEJsonSorted const &_Value
+			, EEJsonType _ExpectedType
 			, CBuildSystemUniquePositions const &_Positions
 			, bool _bOptional
 		) const
@@ -158,8 +158,8 @@ namespace NMib::NBuildSystem
 					_Positions
 					, "Wrong type for '{}'. Got {}, expected {}"_f
 					<< _PropertyKey
-					<< fg_EJSONTypeToString(_Value.f_EType())
-					<< fg_EJSONTypeToString(_ExpectedType)
+					<< fg_EJsonTypeToString(_Value.f_EType())
+					<< fg_EJsonTypeToString(_ExpectedType)
 				)
 			;
 		}

@@ -4,7 +4,7 @@
 #include "Malterlib_BuildSystem.h"
 #include "Malterlib_BuildSystem_Evaluate_BuiltinFunctions.h"
 
-#include <Mib/Encoding/JSONShortcuts>
+#include <Mib/Encoding/JsonShortcuts>
 
 namespace NMib::NBuildSystem
 {
@@ -60,7 +60,7 @@ namespace NMib::NBuildSystem
 					, {CPropertyKey(gc_ConstKey_HostPlatformFamily), DMibBuildSystemTypeWithPosition(g_String)}
 					, {CPropertyKey(gc_ConstKey_HostArchitecture), DMibBuildSystemTypeWithPosition(g_String)}
 					, {CPropertyKey(gc_ConstKey_HiddenGroup), DMibBuildSystemTypeWithPosition(g_Boolean)}
-					, {CPropertyKey(gc_ConstKey_ExcludeFiles), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, EJSONType_Array))}
+					, {CPropertyKey(gc_ConstKey_ExcludeFiles), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, EJsonType_Array))}
 					, {CPropertyKey(gc_ConstKey_FullConfiguration), DMibBuildSystemTypeWithPosition(g_String)}
 
 					, {CPropertyKey(gc_ConstKey_Platform), DMibBuildSystemTypeWithPosition(fg_Optional(g_String))}
@@ -75,7 +75,7 @@ namespace NMib::NBuildSystem
 					, {CPropertyKey(gc_ConstKey_MalterlibRepositoryEditorWorkingDir), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
 
 					, {CPropertyKey(gc_ConstKey_Workspace_Name), DMibBuildSystemTypeWithPosition(g_String)}
-					, {CPropertyKey(gc_ConstKey_Workspace_AllTargets), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, EJSONType_Array))}
+					, {CPropertyKey(gc_ConstKey_Workspace_AllTargets), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, EJsonType_Array))}
 					, {CPropertyKey(gc_ConstKey_Workspace_ExtraGroups), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
 					, {CPropertyKey(gc_ConstKey_Workspace_Enabled), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, true))}
 
@@ -122,7 +122,7 @@ namespace NMib::NBuildSystem
 					,
 					{
 						CPropertyKey(gc_ConstKey_Dependency_TargetProperties)
-						, DMibBuildSystemTypeWithPosition(fg_Defaulted(g_ObjectWithAny, EJSONType_Object))
+						, DMibBuildSystemTypeWithPosition(fg_Defaulted(g_ObjectWithAny, EJsonType_Object))
 					}
 
 					, {CPropertyKey(gc_ConstKey_Compile_Type), DMibBuildSystemTypeWithPosition(fg_Optional(g_String))}
@@ -199,8 +199,8 @@ namespace NMib::NBuildSystem
 										{
 											{gc_ConstString_Find, CBuildSystemSyntax::CClassType::CMember{g_String}}
 											, {gc_ConstString_Replace, CBuildSystemSyntax::CClassType::CMember{g_String}}
-											, {gc_ConstString_FilePatterns, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_StringArray, EJSONType_Array)}}
-											, {gc_ConstString_ExcludeFilePatterns, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_StringArray, EJSONType_Array)}}
+											, {gc_ConstString_FilePatterns, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_StringArray, EJsonType_Array)}}
+											, {gc_ConstString_ExcludeFilePatterns, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_StringArray, EJsonType_Array)}}
 											, {gc_ConstString_ApplyToPaths, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_Boolean, false)}}
 										}
 										, {}
@@ -225,8 +225,8 @@ namespace NMib::NBuildSystem
 											{gc_ConstString_Match, CBuildSystemSyntax::CClassType::CMember{g_String}}
 											, {gc_ConstString_Find, CBuildSystemSyntax::CClassType::CMember{g_String}}
 											, {gc_ConstString_Replace, CBuildSystemSyntax::CClassType::CMember{g_String}}
-											, {gc_ConstString_FilePatterns, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_StringArray, EJSONType_Array)}}
-											, {gc_ConstString_ExcludeFilePatterns, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_StringArray, EJSONType_Array)}}
+											, {gc_ConstString_FilePatterns, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_StringArray, EJsonType_Array)}}
+											, {gc_ConstString_ExcludeFilePatterns, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_StringArray, EJsonType_Array)}}
 										}
 										, {}
 									}
@@ -238,14 +238,14 @@ namespace NMib::NBuildSystem
 					,
 					{
 						CPropertyKey(gc_ConstKey_Import_CMake_Environment)
-						, DMibBuildSystemTypeWithPosition(fg_Defaulted(CBuildSystemSyntax::CType{CBuildSystemSyntax::CClassType({}, g_String)}, EJSONType_Object))
+						, DMibBuildSystemTypeWithPosition(fg_Defaulted(CBuildSystemSyntax::CType{CBuildSystemSyntax::CClassType({}, g_String)}, EJsonType_Object))
 					}
 					,
 					{
 						CPropertyKey(gc_ConstKey_Import_CMake_CacheIgnoreInputs)
-						, DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, EJSONType_Array))
+						, DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, EJsonType_Array))
 					}
-					, {CPropertyKey(gc_ConstKey_Import_CMake_IncludeInHash), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, EJSONType_Array))}
+					, {CPropertyKey(gc_ConstKey_Import_CMake_IncludeInHash), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, EJsonType_Array))}
 					,
 					{
 						CPropertyKey(gc_ConstKey_Import_CMake_Languages)

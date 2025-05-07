@@ -123,10 +123,10 @@ namespace NMib::NBuildSystem
 				TCMap<CConfiguration, CEntityMutablePointer> EnabledConfigs;
 				EnabledConfigs[Configuration] = *pEnabledConfig;
 
-				NativeTarget.m_ScriptExport = fp_GetSingleConfigValue(EnabledConfigs, gc_ConstKey_Target_ExportScriptEnvironmentContents, EEJSONType_String, false)
+				NativeTarget.m_ScriptExport = fp_GetSingleConfigValue(EnabledConfigs, gc_ConstKey_Target_ExportScriptEnvironmentContents, EEJsonType_String, false)
 					.m_Value.f_MoveString()
 				;
-				NativeTarget.m_bGenerateScheme = fp_GetSingleConfigValue(EnabledConfigs, gc_ConstKey_Target_GenerateScheme, EEJSONType_Boolean, false).m_Value.f_Get().f_Boolean();
+				NativeTarget.m_bGenerateScheme = fp_GetSingleConfigValue(EnabledConfigs, gc_ConstKey_Target_GenerateScheme, EEJsonType_Boolean, false).m_Value.f_Get().f_Boolean();
 
 				// Build scripts
 				{

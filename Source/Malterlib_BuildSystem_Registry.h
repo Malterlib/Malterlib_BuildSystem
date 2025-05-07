@@ -4,9 +4,9 @@
 #pragma once
 
 #include <Mib/Core/Core>
-#include <Mib/Encoding/EJSON>
-#include <Mib/Encoding/JSONParse>
-#include <Mib/Encoding/JSONGenerate>
+#include <Mib/Encoding/EJson>
+#include <Mib/Encoding/JsonParse>
+#include <Mib/Encoding/JsonGenerate>
 #include <Mib/Container/Registry>
 
 #include "Malterlib_BuildSystem_Syntax.h"

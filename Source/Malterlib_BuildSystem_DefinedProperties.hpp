@@ -6,7 +6,7 @@
 namespace NMib::NBuildSystem
 {
 	template <bool tf_bFile>
-	CEJSONSorted CBuildSystem::f_GetDefinedProperties(CEntity &_Entity, EPropertyType _PropertyType, bool &o_bIsFullEval) const
+	CEJsonSorted CBuildSystem::f_GetDefinedProperties(CEntity &_Entity, EPropertyType _PropertyType, bool &o_bIsFullEval) const
 	{
 		using namespace NStr;
 		
@@ -29,7 +29,7 @@ namespace NMib::NBuildSystem
 			o_bIsFullEval = bFullFileSettings;
 		}
 
-		CEJSONSorted GeneratorSettings;
+		CEJsonSorted GeneratorSettings;
 		auto &GeneratorSettingsArray = GeneratorSettings.f_Array();
 
 		TCSet<CPropertyKey> AddedProperties;

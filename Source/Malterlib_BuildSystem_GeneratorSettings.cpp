@@ -16,7 +16,7 @@ namespace NMib::NBuildSystem
 	{
 		bool bIsFile = _Entity.f_GetKey().m_Type == EEntityType_File;
 
-		CEJSONSorted DefinedProperties;
+		CEJsonSorted DefinedProperties;
 		if (bIsFile)
 			DefinedProperties = _BuildSystem.f_GetDefinedProperties<true>(_Entity, _PropertyType, o_Result.m_bIsFullEval);
 		else

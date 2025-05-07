@@ -16,7 +16,7 @@ namespace NMib::NBuildSystem::NXcode
 	{
 		auto pTopConfig = _Config.f_Get();
 
-		CEJSONSorted GeneratorSettings;
+		CEJsonSorted GeneratorSettings;
 
 		bool bIsFullEval = false;
 		if (_bFile)
@@ -51,7 +51,7 @@ namespace NMib::NBuildSystem::NXcode
 
 			o_Result.m_Type.f_SetFrom(fg_Move(ValueMove), gc_ConstString_Type, PropertyInfo);
 
-			if (auto pReference = ValueMove.f_GetMember(gc_ConstString_PBXFileReference, EJSONType_Object))
+			if (auto pReference = ValueMove.f_GetMember(gc_ConstString_PBXFileReference, EJsonType_Object))
 			{
 				o_Result.m_PBXFileReference.m_LastKnownFileType.f_SetFrom(fg_Move(*pReference), gc_ConstString_lastKnownFileType, PropertyInfo, CStr());
 				o_Result.m_PBXFileReference.m_ExplicitFileType.f_SetFrom(fg_Move(*pReference), gc_ConstString_explicitFileType, PropertyInfo, CStr());
@@ -61,7 +61,7 @@ namespace NMib::NBuildSystem::NXcode
 				o_Result.m_PBXFileReference.m_IndentWidth.f_SetFrom(fg_Move(*pReference), gc_ConstString_indentWidth, PropertyInfo, 0);
 			}
 
-			if (auto pXCConfigs = ValueMove.f_GetMember(gc_ConstString_XCConfigs, EEJSONType_Object))
+			if (auto pXCConfigs = ValueMove.f_GetMember(gc_ConstString_XCConfigs, EEJsonType_Object))
 			{
 				for (auto &Member : pXCConfigs->f_Object())
 				{
@@ -98,7 +98,7 @@ namespace NMib::NBuildSystem::NXcode
 				}
 			}
 
-			if (auto pFlags = ValueMove.f_GetMember(gc_ConstString_Flags, EEJSONType_Object))
+			if (auto pFlags = ValueMove.f_GetMember(gc_ConstString_Flags, EEJsonType_Object))
 			{
 				for (auto &Object : pFlags->f_Object())
 				{
@@ -147,7 +147,7 @@ namespace NMib::NBuildSystem::NXcode
 		auto pTopConfig = pConfig;
 
 		bool bIsFullEval = false;
-		CEJSONSorted GeneratorSettings = m_BuildSystem.f_GetDefinedProperties<false>(*pTopConfig, EPropertyType_Target, bIsFullEval);
+		CEJsonSorted GeneratorSettings = m_BuildSystem.f_GetDefinedProperties<false>(*pTopConfig, EPropertyType_Target, bIsFullEval);
 
 		{
 			{
@@ -178,7 +178,7 @@ namespace NMib::NBuildSystem::NXcode
 			o_Result.m_ProductType.f_SetFrom(fg_Move(ValueMove), gc_ConstString_ProductType, PropertyInfo);
 			o_Result.m_Name.f_SetFrom(fg_Move(ValueMove), gc_ConstString_Name, PropertyInfo);
 
-			if (auto pXCConfigs = ValueMove.f_GetMember(gc_ConstString_XCConfigs, EEJSONType_Object))
+			if (auto pXCConfigs = ValueMove.f_GetMember(gc_ConstString_XCConfigs, EEJsonType_Object))
 			{
 				for (auto &Member : pXCConfigs->f_Object())
 				{
@@ -256,7 +256,7 @@ namespace NMib::NBuildSystem::NXcode
 		(
 			TCMap<CConfiguration, CEntityMutablePointer> const &_Configs
 			, CPropertyKeyReference const &_PropertyKey
-			, EEJSONType _ExpectedType
+			, EEJsonType _ExpectedType
 			, bool _bOptional
 		) const
 		-> TCMap<CConfiguration, CSingleValue>
@@ -277,7 +277,7 @@ namespace NMib::NBuildSystem::NXcode
 					Ret.m_Positions.f_AddPosition((*iConfig)->f_Data().m_Position, gc_ConstString_Entity);
 			}
 
-			if (_ExpectedType != EEJSONType_Invalid)
+			if (_ExpectedType != EEJsonType_Invalid)
 				m_BuildSystem.f_CheckPropertyTypeValue(_PropertyKey, Ret.m_Value.f_Get(), _ExpectedType, Ret.m_Positions, _bOptional);
 		}
 
@@ -289,7 +289,7 @@ namespace NMib::NBuildSystem::NXcode
 			TCMap<CConfiguration, CEntityMutablePointer> const &_Configs
 			, CConfiguration const &_Configuration
 			, CPropertyKeyReference const &_PropertyKey
-			, EEJSONType _ExpectedType
+			, EEJsonType _ExpectedType
 			, bool _bOptional
 		) const
 		-> CSingleValue
@@ -328,7 +328,7 @@ namespace NMib::NBuildSystem::NXcode
 		(
 			TCMap<CConfiguration, CEntityMutablePointer> const &_Configs
 			, CPropertyKeyReference const &_PropertyKey
-			, EEJSONType _ExpectedType
+			, EEJsonType _ExpectedType
 			, bool _bOptional
 		) const
 	{

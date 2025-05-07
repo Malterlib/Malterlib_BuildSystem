@@ -5,7 +5,7 @@
 #include "Malterlib_BuildSystem_Repository.h"
 
 #include <Mib/Concurrency/AsyncDestroy>
-#include <Mib/Encoding/EJSON>
+#include <Mib/Encoding/EJson>
 #include <Mib/Git/LfsReleaseStore>
 #include <Mib/Process/ProcessLaunch>
 #include <Mib/Process/ProcessLaunchActor>
@@ -264,7 +264,7 @@ namespace NMib::NBuildSystem
 
 			if (_Contents.f_StartsWith("{"))
 			{
-				auto RegistryJson = CJSONSorted::fs_FromString(_Contents, _FileName);
+				auto RegistryJson = CJsonSorted::fs_FromString(_Contents, _FileName);
 
 				for (auto &Repo : fg_Const(RegistryJson).f_Object())
 				{
@@ -328,15 +328,15 @@ namespace NMib::NBuildSystem
 			if (!CFile::fs_FileExists(RepositoryStateFile))
 				return {};
 
-			CEJSONSorted StateFile = CEJSONSorted::fs_FromString(CFile::fs_ReadStringFromFile(RepositoryStateFile, true), RepositoryStateFile);
+			CEJsonSorted StateFile = CEJsonSorted::fs_FromString(CFile::fs_ReadStringFromFile(RepositoryStateFile, true), RepositoryStateFile);
 
 			TCSet<CStr> SeenRepositories;
 
-			if (auto *pSeenReposJSON = StateFile.f_GetMember("SeenRepositories", EEJSONType_Object))
+			if (auto *pSeenReposJson = StateFile.f_GetMember("SeenRepositories", EEJsonType_Object))
 			{
-				for (auto &SeenJSON : pSeenReposJSON->f_Object())
+				for (auto &SeenJson : pSeenReposJson->f_Object())
 				{
-					SeenRepositories[SeenJSON.f_Name()];
+					SeenRepositories[SeenJson.f_Name()];
 				}
 			}
 
@@ -1279,7 +1279,7 @@ namespace NMib::NBuildSystem
 								(
 									ChildEntity
 									, gc_ConstKey_Repository_Policy
-									, CEJSONSorted(EJSONType_Object)
+									, CEJsonSorted(EJsonType_Object)
 								)
 								.f_Move()
 							;
@@ -1287,7 +1287,7 @@ namespace NMib::NBuildSystem
 						}
 					}
 
-					auto fParseReleasePackage = [](CEJSONSorted const &_Value) -> CReleasePackage
+					auto fParseReleasePackage = [](CEJsonSorted const &_Value) -> CReleasePackage
 						{
 							CReleasePackage ReleasePackage;
 							ReleasePackage.m_ReleaseName = _Value["ReleaseName"].f_String();
@@ -1310,7 +1310,7 @@ namespace NMib::NBuildSystem
 
 					if (bIncludeReleasePackage)
 					{
-						auto ReleasePackageJson = _BuildSystem.f_EvaluateEntityPropertyObject(ChildEntity, gc_ConstKey_Repository_ReleasePackage, CEJSONSorted()).f_Move();
+						auto ReleasePackageJson = _BuildSystem.f_EvaluateEntityPropertyObject(ChildEntity, gc_ConstKey_Repository_ReleasePackage, CEJsonSorted()).f_Move();
 						if (ReleasePackageJson.f_IsValid())
 							Repo.m_OriginProperties.m_ReleasePackage = fParseReleasePackage(ReleasePackageJson);
 					}
@@ -1349,14 +1349,14 @@ namespace NMib::NBuildSystem
 							OutRemote.m_Properties.m_bApplyPolicy = Remote.f_GetMemberValue(gc_ConstKey_Repository_ApplyPolicy.m_Name, false).f_Boolean();
 							if (OutRemote.m_Properties.m_bApplyPolicy)
 							{
-								OutRemote.m_Properties.m_Policy = Remote.f_GetMemberValue(gc_ConstKey_Repository_Policy.m_Name, CEJSONSorted(EJSONType_Object));
+								OutRemote.m_Properties.m_Policy = Remote.f_GetMemberValue(gc_ConstKey_Repository_Policy.m_Name, CEJsonSorted(EJsonType_Object));
 								OutRemote.m_Properties.m_bApplyPolicyPretend = Remote.f_GetMemberValue(gc_ConstKey_Repository_ApplyPolicyPretend.m_Name, false).f_Boolean();
 							}
 						}
 
 						if (bIncludeReleasePackage)
 						{
-							auto ReleasePackageJson = Remote.f_GetMemberValue(gc_ConstKey_Repository_ReleasePackage.m_Name, CEJSONSorted());
+							auto ReleasePackageJson = Remote.f_GetMemberValue(gc_ConstKey_Repository_ReleasePackage.m_Name, CEJsonSorted());
 							if (ReleasePackageJson.f_IsValid())
 								OutRemote.m_Properties.m_ReleasePackage = fParseReleasePackage(ReleasePackageJson);
 						}
@@ -1494,7 +1494,7 @@ namespace NMib::NBuildSystem
 
 	void CBuildSystem::f_PopulateAllRepositories(CBuildSystemData &_BuildSystemData) const
 	{
-		CEJSONSorted Repositories = EJSONType_Array;
+		CEJsonSorted Repositories = EJsonType_Array;
 
 		for (auto &ChildEntity : _BuildSystemData.m_RootEntity.m_ChildEntitiesOrdered)
 		{
@@ -1518,7 +1518,7 @@ namespace NMib::NBuildSystem
 		;
 	}
 
-	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::fp_HandleRepositories(TCMap<CPropertyKey, CEJSONSorted> const &_Values)
+	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::fp_HandleRepositories(TCMap<CPropertyKey, CEJsonSorted> const &_Values)
 	{
 		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
@@ -1749,7 +1749,7 @@ namespace NMib::NBuildSystem
 			}
 			else
 			{
-				CJSONSorted StateJson;
+				CJsonSorted StateJson;
 
 				for (auto iConfig = File.m_Configs.f_GetIterator(); iConfig; ++iConfig)
 				{
@@ -1809,12 +1809,12 @@ namespace NMib::NBuildSystem
 			{
 				CStr RepositoryStateFile = mp_OutputDir / "RepositoryState.json";
 
-				CEJSONSorted StateFile;
+				CEJsonSorted StateFile;
 
-				auto &SeenRepositoriesJSON = StateFile["SeenRepositories"];
-				SeenRepositoriesJSON = EJSONType_Object;
+				auto &SeenRepositoriesJson = StateFile["SeenRepositories"];
+				SeenRepositoriesJson = EJsonType_Object;
 				for (auto &LastSeen : SeenRepositories)
-					SeenRepositoriesJSON[LastSeen] = 1;
+					SeenRepositoriesJson[LastSeen] = 1;
 
 				CStr FileContents = StateFile.f_ToString();
 

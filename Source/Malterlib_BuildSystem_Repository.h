@@ -6,7 +6,7 @@
 #include "Malterlib_BuildSystem.h"
 #include <Mib/Process/ProcessLaunch>
 #include <Mib/Process/ProcessLaunchActor>
-#include <Mib/Encoding/EJSON>
+#include <Mib/Encoding/EJson>
 #include <Mib/Concurrency/ActorSequencerActor>
 #include <Mib/CommandLine/AnsiEncoding>
 #include <Mib/Concurrency/AsyncDestroy>
@@ -63,7 +63,7 @@ namespace NMib::NBuildSystem::NRepository
 	{
 		CStr m_URL;
 		CStr m_DefaultBranch;
-		CEJSONSorted m_Policy;
+		CEJsonSorted m_Policy;
 		TCOptional<CReleasePackage> m_ReleasePackage;
 		bool m_bLfsReleaseStore = false;
 		bool m_bApplyPolicy = false;
@@ -480,5 +480,5 @@ namespace NMib::NBuildSystem::NRepository
 		)
 	;
 
-	TCFuture<void> fg_ApplyPolicies(CStr _Url, CStr _RepoDir, CEJSONSorted _Policy, EApplyPolicyFlag _Flags, TCFunction<void (EOutputType _OutputType, CStr const &_String)> _fOutputInfo);
+	TCFuture<void> fg_ApplyPolicies(CStr _Url, CStr _RepoDir, CEJsonSorted _Policy, EApplyPolicyFlag _Flags, TCFunction<void (EOutputType _OutputType, CStr const &_String)> _fOutputInfo);
 }

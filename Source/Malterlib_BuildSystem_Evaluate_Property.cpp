@@ -105,7 +105,7 @@ namespace NMib::NBuildSystem
 		return fp_EvaluateEntityProperty(_Entity, _Entity, _PropertyKey, EvalContext, o_PropertyInfo, o_PropertyInfo.f_FallbackPosition(), nullptr, false);
 	}
 
-	NEncoding::CEJSONSorted CBuildSystem::f_EvaluateEntityPropertyUncached
+	NEncoding::CEJsonSorted CBuildSystem::f_EvaluateEntityPropertyUncached
 		(
 			CEntity &_Entity
 			, CPropertyKeyReference const &_PropertyKey
@@ -176,7 +176,7 @@ namespace NMib::NBuildSystem
 		return f_EvaluateEntityProperty(_Entity, _PropertyKey, PropertyInfo);
 	}
 
-	CValuePotentiallyByRef CBuildSystem::f_EvaluateEntityPropertyObject(CEntity &_Entity, CPropertyKeyReference const &_PropertyKey, NStorage::TCOptional<CEJSONSorted> &&_Default) const
+	CValuePotentiallyByRef CBuildSystem::f_EvaluateEntityPropertyObject(CEntity &_Entity, CPropertyKeyReference const &_PropertyKey, NStorage::TCOptional<CEJsonSorted> &&_Default) const
 	{
 		CBuildSystemPropertyInfo PropertyInfo;
 		auto Value = f_EvaluateEntityProperty(_Entity, _PropertyKey, PropertyInfo);
@@ -185,7 +185,7 @@ namespace NMib::NBuildSystem
 		if (!ValueRef.f_IsValid())
 		{
 			if (_Default)
-				return CEJSONSorted(fg_Move(*_Default));
+				return CEJsonSorted(fg_Move(*_Default));
 			else
 				fs_ThrowError(_Entity.f_Data().m_Position, "No value found for {}"_f << _PropertyKey);
 		}
@@ -476,7 +476,7 @@ namespace NMib::NBuildSystem
 					return &pValue->m_Value;
 			}
 
-			return CEJSONSorted();
+			return CEJsonSorted();
 		}
 
 		auto Cleanup
@@ -508,7 +508,7 @@ namespace NMib::NBuildSystem
 			{
 				auto &PropertyKey = _Entity.f_Data().m_Properties.fs_GetKey(*pToEval);
 				//DMibCheck(pContext != &_Entity);
-				CEJSONSorted Value;
+				CEJsonSorted Value;
 				CFilePosition const *pLastPropertyPosition = nullptr;
 				bool bTypeAlreadyChecked = false;
 				for (auto &Prop : *pToEval)

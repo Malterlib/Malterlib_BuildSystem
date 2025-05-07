@@ -17,7 +17,7 @@ namespace NMib::NBuildSystem
 			o_Str += typename tf_CStr::CFormat("{}") << m_Value;
 		}
 
-		NEncoding::CEJSONSorted m_Value;
+		NEncoding::CEJsonSorted m_Value;
 		CBuildSystemPropertyInfo m_PropertyInfo;
 		bool m_bIsFullEval = false;
 	};

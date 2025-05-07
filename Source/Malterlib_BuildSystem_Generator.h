@@ -15,7 +15,7 @@ namespace NMib::NBuildSystem
 	{
 	public:
 		virtual ~CBuildSystemGenerator();
-		virtual NContainer::TCMap<CPropertyKey, NEncoding::CEJSONSorted> f_GetValues(CBuildSystem const &_BuildSystem, NStr::CStr const &_OutputDir) = 0;
+		virtual NContainer::TCMap<CPropertyKey, NEncoding::CEJsonSorted> f_GetValues(CBuildSystem const &_BuildSystem, NStr::CStr const &_OutputDir) = 0;
 		virtual NConcurrency::TCUnsafeFuture<void> f_Generate
 			(
 				CBuildSystem const *_pBuildSystem

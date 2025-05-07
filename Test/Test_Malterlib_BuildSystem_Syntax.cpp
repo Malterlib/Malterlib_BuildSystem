@@ -5,7 +5,7 @@
 #include <Mib/Test/Exception>
 #include <Mib/BuildSystem/Registry>
 #include <Mib/BuildSystem/BuildSystem>
-#include <Mib/Encoding/JSONShortcuts>
+#include <Mib/Encoding/JsonShortcuts>
 
 #ifdef DPlatformFamily_Windows
 #define DPrefixLocation_1_7 "Test.MHeader(1,7):"
@@ -46,59 +46,59 @@ namespace
 			return RegistryTest.f_GetChildren().f_GetRoot()->f_GetThisValue();
 		}
 
-		void f_TestJSON()
+		void f_TestJson()
 		{
 			DMibTestSuite("String")
 			{
 				auto const &Value = fs_ParseString("\"String\"").m_Value.m_Value;
-				DMibAssertTrue(Value.f_IsOfType<CEJSONSorted>());
-				DMibAssertTrue(Value.f_GetAsType<CEJSONSorted>().f_IsString());
-				DMibExpect(Value.f_GetAsType<CEJSONSorted>().f_String(), ==, "String");
-				DMibExpect(Value.f_GetAsType<CEJSONSorted>().f_String().f_GetUserData(), ==, EJSONStringType_DoubleQuote);
+				DMibAssertTrue(Value.f_IsOfType<CEJsonSorted>());
+				DMibAssertTrue(Value.f_GetAsType<CEJsonSorted>().f_IsString());
+				DMibExpect(Value.f_GetAsType<CEJsonSorted>().f_String(), ==, "String");
+				DMibExpect(Value.f_GetAsType<CEJsonSorted>().f_String().f_GetUserData(), ==, EJsonStringType_DoubleQuote);
 			};
 			DMibTestSuite("SingleQuoteString")
 			{
 				auto const &Value = fs_ParseString("'String'").m_Value.m_Value;
-				DMibAssertTrue(Value.f_IsOfType<CEJSONSorted>());
-				DMibAssertTrue(Value.f_GetAsType<CEJSONSorted>().f_IsString());
-				DMibExpect(Value.f_GetAsType<CEJSONSorted>().f_String(), ==, "String");
-				DMibExpect(Value.f_GetAsType<CEJSONSorted>().f_String().f_GetUserData(), ==, EJSONStringType_SingleQuote);
+				DMibAssertTrue(Value.f_IsOfType<CEJsonSorted>());
+				DMibAssertTrue(Value.f_GetAsType<CEJsonSorted>().f_IsString());
+				DMibExpect(Value.f_GetAsType<CEJsonSorted>().f_String(), ==, "String");
+				DMibExpect(Value.f_GetAsType<CEJsonSorted>().f_String().f_GetUserData(), ==, EJsonStringType_SingleQuote);
 			};
 			DMibTestSuite("Integer")
 			{
 				auto const &Value = fs_ParseString("55").m_Value.m_Value;
-				DMibAssertTrue(Value.f_IsOfType<CEJSONSorted>());
-				DMibAssertTrue(Value.f_GetAsType<CEJSONSorted>().f_IsInteger());
-				DMibExpect(Value.f_GetAsType<CEJSONSorted>().f_Integer(), ==, 55);
+				DMibAssertTrue(Value.f_IsOfType<CEJsonSorted>());
+				DMibAssertTrue(Value.f_GetAsType<CEJsonSorted>().f_IsInteger());
+				DMibExpect(Value.f_GetAsType<CEJsonSorted>().f_Integer(), ==, 55);
 			};
 			DMibTestSuite("Float")
 			{
 				auto const &Value = fs_ParseString("55.5").m_Value.m_Value;
-				DMibAssertTrue(Value.f_IsOfType<CEJSONSorted>());
-				DMibAssertTrue(Value.f_GetAsType<CEJSONSorted>().f_IsFloat());
-				DMibExpect(Value.f_GetAsType<CEJSONSorted>().f_Float(), ==, 55.5);
+				DMibAssertTrue(Value.f_IsOfType<CEJsonSorted>());
+				DMibAssertTrue(Value.f_GetAsType<CEJsonSorted>().f_IsFloat());
+				DMibExpect(Value.f_GetAsType<CEJsonSorted>().f_Float(), ==, 55.5);
 			};
 			DMibTestSuite("Null")
 			{
 				auto const &Value = fs_ParseString("null").m_Value.m_Value;
-				DMibAssertTrue(Value.f_IsOfType<CEJSONSorted>());
-				DMibAssertTrue(Value.f_GetAsType<CEJSONSorted>().f_IsNull());
+				DMibAssertTrue(Value.f_IsOfType<CEJsonSorted>());
+				DMibAssertTrue(Value.f_GetAsType<CEJsonSorted>().f_IsNull());
 			};
 			DMibTestSuite("Boolean")
 			{
 				auto const &Value = fs_ParseString("true").m_Value.m_Value;
-				DMibAssertTrue(Value.f_IsOfType<CEJSONSorted>());
-				DMibAssertTrue(Value.f_GetAsType<CEJSONSorted>().f_IsBoolean());
-				DMibExpect(Value.f_GetAsType<CEJSONSorted>().f_Boolean(), ==, true);
+				DMibAssertTrue(Value.f_IsOfType<CEJsonSorted>());
+				DMibAssertTrue(Value.f_GetAsType<CEJsonSorted>().f_IsBoolean());
+				DMibExpect(Value.f_GetAsType<CEJsonSorted>().f_Boolean(), ==, true);
 			};
 		}
 
 		void f_TestDate()
 		{
 			auto const &Value = fs_ParseString("date(2019-05-29)").m_Value.m_Value;
-			DMibAssertTrue(Value.f_IsOfType<CEJSONSorted>());
-			DMibAssertTrue(Value.f_GetAsType<CEJSONSorted>().f_IsDate());
-			DMibExpect(Value.f_GetAsType<CEJSONSorted>().f_Date(), ==, CTimeConvert::fs_CreateTime(2019, 05, 29));
+			DMibAssertTrue(Value.f_IsOfType<CEJsonSorted>());
+			DMibAssertTrue(Value.f_GetAsType<CEJsonSorted>().f_IsDate());
+			DMibExpect(Value.f_GetAsType<CEJsonSorted>().f_Date(), ==, CTimeConvert::fs_CreateTime(2019, 05, 29));
 			DMibExpectException
 				(
 					fs_ParseString("date(-1900-11-15)")
@@ -165,9 +165,9 @@ namespace
 		void f_TestDateMinute()
 		{
 			auto const &Value = fs_ParseString("date(2019-05-29 11:11)").m_Value.m_Value;
-			DMibAssertTrue(Value.f_IsOfType<CEJSONSorted>());
-			DMibAssertTrue(Value.f_GetAsType<CEJSONSorted>().f_IsDate());
-			DMibExpect(Value.f_GetAsType<CEJSONSorted>().f_Date(), ==, CTimeConvert::fs_CreateTime(2019, 05, 29, 11, 11));
+			DMibAssertTrue(Value.f_IsOfType<CEJsonSorted>());
+			DMibAssertTrue(Value.f_GetAsType<CEJsonSorted>().f_IsDate());
+			DMibExpect(Value.f_GetAsType<CEJsonSorted>().f_Date(), ==, CTimeConvert::fs_CreateTime(2019, 05, 29, 11, 11));
 
 			DMibExpectException
 				(
@@ -194,9 +194,9 @@ namespace
 		void f_TestDateSecond()
 		{
 			auto const &Value = fs_ParseString("date(2019-05-29 11:11:06)").m_Value.m_Value;
-			DMibAssertTrue(Value.f_IsOfType<CEJSONSorted>());
-			DMibAssertTrue(Value.f_GetAsType<CEJSONSorted>().f_IsDate());
-			DMibExpect(Value.f_GetAsType<CEJSONSorted>().f_Date(), ==, CTimeConvert::fs_CreateTime(2019, 05, 29, 11, 11, 06));
+			DMibAssertTrue(Value.f_IsOfType<CEJsonSorted>());
+			DMibAssertTrue(Value.f_GetAsType<CEJsonSorted>().f_IsDate());
+			DMibExpect(Value.f_GetAsType<CEJsonSorted>().f_Date(), ==, CTimeConvert::fs_CreateTime(2019, 05, 29, 11, 11, 06));
 			DMibExpectException
 				(
 					fs_ParseString("date(2019-11-15 13:50:62)")
@@ -212,9 +212,9 @@ namespace
 		void f_TestDateSecondFraction()
 		{
 			auto const &Value = fs_ParseString("date(2019-05-29 11:00:05.545)").m_Value.m_Value;
-			DMibAssertTrue(Value.f_IsOfType<CEJSONSorted>());
-			DMibAssertTrue(Value.f_GetAsType<CEJSONSorted>().f_IsDate());
-			DMibExpect(Value.f_GetAsType<CEJSONSorted>().f_Date(), ==, CTimeConvert::fs_CreateTime(2019, 05, 29, 11, 00, 05, 0.545));
+			DMibAssertTrue(Value.f_IsOfType<CEJsonSorted>());
+			DMibAssertTrue(Value.f_GetAsType<CEJsonSorted>().f_IsDate());
+			DMibExpect(Value.f_GetAsType<CEJsonSorted>().f_Date(), ==, CTimeConvert::fs_CreateTime(2019, 05, 29, 11, 00, 05, 0.545));
 			DMibExpectException
 				(
 					fs_ParseString("date(2019-11-15 13:50:50.o56)")
@@ -240,9 +240,9 @@ namespace
 		void f_TestBinary()
 		{
 			auto const &Value = fs_ParseString("binary(VGhpcyBpcyBpdAo=)").m_Value.m_Value;
-			DMibAssertTrue(Value.f_IsOfType<CEJSONSorted>());
-			DMibAssertTrue(Value.f_GetAsType<CEJSONSorted>().f_IsBinary());
-			DMibExpect(Value.f_GetAsType<CEJSONSorted>().f_Binary(), ==, (CByteVector{'T', 'h', 'i', 's', ' ', 'i', 's', ' ', 'i', 't', '\n'}));
+			DMibAssertTrue(Value.f_IsOfType<CEJsonSorted>());
+			DMibAssertTrue(Value.f_GetAsType<CEJsonSorted>().f_IsBinary());
+			DMibExpect(Value.f_GetAsType<CEJsonSorted>().f_Binary(), ==, (CByteVector{'T', 'h', 'i', 's', ' ', 'i', 's', ' ', 'i', 't', '\n'}));
 			DMibExpectException
 				(
 					fs_ParseString("binary(156..6)")
@@ -287,7 +287,7 @@ namespace
 			auto &AppendArray = AppendArrayValue.m_Value.f_GetAsType<CBuildSystemSyntax::CArray>();
 			DMibAssert(AppendArray.m_Array.f_GetLen(), ==, 3);
 
-			DMibExpectTrue(AppendArray.m_Array[0].f_Get().m_Value.f_IsOfType<NEncoding::CEJSONSorted>());
+			DMibExpectTrue(AppendArray.m_Array[0].f_Get().m_Value.f_IsOfType<NEncoding::CEJsonSorted>());
 			DMibExpectTrue(AppendArray.m_Array[1].f_Get().m_Value.f_IsOfType<CBuildSystemSyntax::CExpression>());
 			DMibExpectTrue(AppendArray.m_Array[2].f_Get().m_Value.f_IsOfType<CBuildSystemSyntax::CExpressionAppend>());
 
@@ -302,8 +302,8 @@ namespace
 		void f_TestArrayStatic()
 		{
 			auto const &Value = fs_ParseString("[1, 2, 3]").m_Value.m_Value;
-			DMibAssertTrue(Value.f_IsOfType<NEncoding::CEJSONSorted>());
-			auto &Array = Value.f_GetAsType<NEncoding::CEJSONSorted>();
+			DMibAssertTrue(Value.f_IsOfType<NEncoding::CEJsonSorted>());
+			auto &Array = Value.f_GetAsType<NEncoding::CEJsonSorted>();
 
 			DMibExpect(Array, ==, (_[1, 2, 3]));
 		}
@@ -316,9 +316,9 @@ namespace
 				)
 				.m_Value.m_Value
 			;
-			DMibAssertTrue(Value.f_IsOfType<NEncoding::CEJSONSorted>());
+			DMibAssertTrue(Value.f_IsOfType<NEncoding::CEJsonSorted>());
 
-			auto &Object = Value.f_GetAsType<NEncoding::CEJSONSorted>();
+			auto &Object = Value.f_GetAsType<NEncoding::CEJsonSorted>();
 
 			DMibExpect(Object, ==, (_={"doubleQuote"_= 1, "singleQuote"_= 2, "noQuote"_= 3}));
 		}
@@ -330,13 +330,13 @@ namespace
 			auto &Object = Value.f_GetAsType<CBuildSystemSyntax::CArray>();
 
 			DMibAssert(Object.m_Array.f_GetLen(), ==, 3);
-			DMibAssertTrue(Object.m_Array[0].f_Get().m_Value.f_IsOfType<CEJSONSorted>());
-			DMibAssertTrue(Object.m_Array[1].f_Get().m_Value.f_IsOfType<CEJSONSorted>());
+			DMibAssertTrue(Object.m_Array[0].f_Get().m_Value.f_IsOfType<CEJsonSorted>());
+			DMibAssertTrue(Object.m_Array[1].f_Get().m_Value.f_IsOfType<CEJsonSorted>());
 			DMibAssertTrue(Object.m_Array[2].f_Get().m_Value.f_IsOfType<CBuildSystemSyntax::CExpression>());
-			DMibAssertTrue(Object.m_Array[0].f_Get().m_Value.f_GetAsType<CEJSONSorted>().f_IsInteger());
-			DMibAssertTrue(Object.m_Array[1].f_Get().m_Value.f_GetAsType<CEJSONSorted>().f_IsInteger());
-			DMibAssert(Object.m_Array[0].f_Get().m_Value.f_GetAsType<CEJSONSorted>().f_Integer(), ==, 1);
-			DMibAssert(Object.m_Array[1].f_Get().m_Value.f_GetAsType<CEJSONSorted>().f_Integer(), ==, 2);
+			DMibAssertTrue(Object.m_Array[0].f_Get().m_Value.f_GetAsType<CEJsonSorted>().f_IsInteger());
+			DMibAssertTrue(Object.m_Array[1].f_Get().m_Value.f_GetAsType<CEJsonSorted>().f_IsInteger());
+			DMibAssert(Object.m_Array[0].f_Get().m_Value.f_GetAsType<CEJsonSorted>().f_Integer(), ==, 1);
+			DMibAssert(Object.m_Array[1].f_Get().m_Value.f_GetAsType<CEJsonSorted>().f_Integer(), ==, 2);
 		}
 
 		void f_TestEvalString()
@@ -404,9 +404,9 @@ namespace
 				DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CExpression>());
 				auto &Expression = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
 
-				DMibAssertTrue(Expression.f_IsOfType<NStorage::TCIndirection<CBuildSystemSyntax::CJSONAccessor>>());
-				auto &JSONAccessor = Expression.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CJSONAccessor>>().f_Get();
-				auto &Param = JSONAccessor.m_Param.m_Param;
+				DMibAssertTrue(Expression.f_IsOfType<NStorage::TCIndirection<CBuildSystemSyntax::CJsonAccessor>>());
+				auto &JsonAccessor = Expression.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CJsonAccessor>>().f_Get();
+				auto &Param = JsonAccessor.m_Param.m_Param;
 
 				DMibAssertTrue(Param.f_IsOfType<TCIndirection<CBuildSystemSyntax::CIdentifier>>());
 				auto &Identifier = Param.f_GetAsType<TCIndirection<CBuildSystemSyntax::CIdentifier>>().f_Get();
@@ -415,15 +415,15 @@ namespace
 				DMibExpect(Identifier.m_EntityType, ==, EEntityType_Workspace);
 				DMibExpect(Identifier.m_PropertyType, ==, EPropertyType_Target);
 
-				DMibAssert(JSONAccessor.m_Accessors.f_GetLen(), ==, 5);
-				DMibExpectTrue(JSONAccessor.m_Accessors[0].m_Accessor.f_IsOfType<CBuildSystemSyntax::CExpression>());
-				DMibExpectTrue(JSONAccessor.m_Accessors[1].m_Accessor.f_IsOfType<CStr>());
-				DMibAssertTrue(JSONAccessor.m_Accessors[2].m_Accessor.f_IsOfType<CBuildSystemSyntax::CJSONSubscript>());
-				DMibAssertTrue(JSONAccessor.m_Accessors[2].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJSONSubscript>().m_Index.f_IsOfType<uint32>());
-				DMibExpect(JSONAccessor.m_Accessors[2].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJSONSubscript>().m_Index.f_GetAsType<uint32>(), ==, 2);
-				DMibExpectTrue(JSONAccessor.m_Accessors[3].m_Accessor.f_IsOfType<CStr>());
-				DMibExpectTrue(JSONAccessor.m_Accessors[4].m_Accessor.f_IsOfType<CBuildSystemSyntax::CJSONSubscript>());
-				DMibAssertTrue(JSONAccessor.m_Accessors[4].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJSONSubscript>().m_Index.f_IsOfType<CBuildSystemSyntax::CExpression>());
+				DMibAssert(JsonAccessor.m_Accessors.f_GetLen(), ==, 5);
+				DMibExpectTrue(JsonAccessor.m_Accessors[0].m_Accessor.f_IsOfType<CBuildSystemSyntax::CExpression>());
+				DMibExpectTrue(JsonAccessor.m_Accessors[1].m_Accessor.f_IsOfType<CStr>());
+				DMibAssertTrue(JsonAccessor.m_Accessors[2].m_Accessor.f_IsOfType<CBuildSystemSyntax::CJsonSubscript>());
+				DMibAssertTrue(JsonAccessor.m_Accessors[2].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJsonSubscript>().m_Index.f_IsOfType<uint32>());
+				DMibExpect(JsonAccessor.m_Accessors[2].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJsonSubscript>().m_Index.f_GetAsType<uint32>(), ==, 2);
+				DMibExpectTrue(JsonAccessor.m_Accessors[3].m_Accessor.f_IsOfType<CStr>());
+				DMibExpectTrue(JsonAccessor.m_Accessors[4].m_Accessor.f_IsOfType<CBuildSystemSyntax::CJsonSubscript>());
+				DMibAssertTrue(JsonAccessor.m_Accessors[4].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJsonSubscript>().m_Index.f_IsOfType<CBuildSystemSyntax::CExpression>());
 			}
 			{
 				DMibTestPath("IdentifierArrayAccessor");
@@ -431,9 +431,9 @@ namespace
 				DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CExpression>());
 				auto &Expression = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
 
-				DMibAssertTrue(Expression.f_IsOfType<NStorage::TCIndirection<CBuildSystemSyntax::CJSONAccessor>>());
-				auto &JSONAccessor = Expression.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CJSONAccessor>>().f_Get();
-				auto &Param = JSONAccessor.m_Param.m_Param;
+				DMibAssertTrue(Expression.f_IsOfType<NStorage::TCIndirection<CBuildSystemSyntax::CJsonAccessor>>());
+				auto &JsonAccessor = Expression.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CJsonAccessor>>().f_Get();
+				auto &Param = JsonAccessor.m_Param.m_Param;
 
 				DMibAssertTrue(Param.f_IsOfType<TCIndirection<CBuildSystemSyntax::CIdentifier>>());
 				auto &Identifier = Param.f_GetAsType<TCIndirection<CBuildSystemSyntax::CIdentifier>>().f_Get();
@@ -442,9 +442,9 @@ namespace
 				DMibExpect(Identifier.m_EntityType, ==, EEntityType_Workspace);
 				DMibExpect(Identifier.m_PropertyType, ==, EPropertyType_Target);
 
-				DMibExpect(JSONAccessor.m_Accessors.f_GetLen(), ==, 1);
-				DMibAssertTrue(JSONAccessor.m_Accessors[0].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJSONSubscript>().m_Index.f_IsOfType<uint32>());
-				DMibExpect(JSONAccessor.m_Accessors[0].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJSONSubscript>().m_Index.f_GetAsType<uint32>(), ==, 0);
+				DMibExpect(JsonAccessor.m_Accessors.f_GetLen(), ==, 1);
+				DMibAssertTrue(JsonAccessor.m_Accessors[0].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJsonSubscript>().m_Index.f_IsOfType<uint32>());
+				DMibExpect(JsonAccessor.m_Accessors[0].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJsonSubscript>().m_Index.f_GetAsType<uint32>(), ==, 0);
 			}
 			{
 				DMibTestPath("DynamicExpression");
@@ -513,8 +513,8 @@ namespace
 				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
-				DMibAssertTrue(Param.f_IsOfType<CEJSONSorted>());
-				auto &String = Param.f_GetAsType<CEJSONSorted>();
+				DMibAssertTrue(Param.f_IsOfType<CEJsonSorted>());
+				auto &String = Param.f_GetAsType<CEJsonSorted>();
 				DMibAssertTrue(String.f_IsString());
 				DMibExpect(String.f_String(), ==, "Test");
 			}
@@ -529,8 +529,8 @@ namespace
 				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
-				DMibAssertTrue(Param.f_IsOfType<CEJSONSorted>());
-				auto &String = Param.f_GetAsType<CEJSONSorted>();
+				DMibAssertTrue(Param.f_IsOfType<CEJsonSorted>());
+				auto &String = Param.f_GetAsType<CEJsonSorted>();
 				DMibAssertTrue(String.f_IsString());
 				DMibExpect(String.f_String(), ==, "Test");
 			}
@@ -545,8 +545,8 @@ namespace
 				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
-				DMibAssertTrue(Param.f_IsOfType<CEJSONSorted>());
-				auto &String = Param.f_GetAsType<CEJSONSorted>();
+				DMibAssertTrue(Param.f_IsOfType<CEJsonSorted>());
+				auto &String = Param.f_GetAsType<CEJsonSorted>();
 				DMibAssertTrue(String.f_IsInteger());
 				DMibExpect(String.f_Integer(), ==, 5);
 			}
@@ -561,8 +561,8 @@ namespace
 				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
-				DMibAssertTrue(Param.f_IsOfType<CEJSONSorted>());
-				auto &String = Param.f_GetAsType<CEJSONSorted>();
+				DMibAssertTrue(Param.f_IsOfType<CEJsonSorted>());
+				auto &String = Param.f_GetAsType<CEJsonSorted>();
 				DMibAssertTrue(String.f_IsFloat());
 				DMibExpect(String.f_Float(), ==, 5.5);
 			}
@@ -577,8 +577,8 @@ namespace
 				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
-				DMibAssertTrue(Param.f_IsOfType<CEJSONSorted>());
-				auto &String = Param.f_GetAsType<CEJSONSorted>();
+				DMibAssertTrue(Param.f_IsOfType<CEJsonSorted>());
+				auto &String = Param.f_GetAsType<CEJsonSorted>();
 				DMibAssertTrue(String.f_IsNull());
 			}
 			{
@@ -592,8 +592,8 @@ namespace
 				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
-				DMibAssertTrue(Param.f_IsOfType<CEJSONSorted>());
-				auto &String = Param.f_GetAsType<CEJSONSorted>();
+				DMibAssertTrue(Param.f_IsOfType<CEJsonSorted>());
+				auto &String = Param.f_GetAsType<CEJsonSorted>();
 				DMibAssertTrue(String.f_IsBoolean());
 				DMibExpect(String.f_Boolean(), ==, true);
 			}
@@ -661,9 +661,9 @@ namespace
 				DMibAssertTrue(FunctionParam.f_IsOfType<NStorage::TCIndirection<CBuildSystemSyntax::CExpression>>());
 				auto &Expression = FunctionParam.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CExpression>>().f_Get().m_Expression;
 
-				DMibAssertTrue(Expression.f_IsOfType<NStorage::TCIndirection<CBuildSystemSyntax::CJSONAccessor>>());
-				auto &JSONAccessor = Expression.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CJSONAccessor>>().f_Get();
-				auto &Param = JSONAccessor.m_Param.m_Param;
+				DMibAssertTrue(Expression.f_IsOfType<NStorage::TCIndirection<CBuildSystemSyntax::CJsonAccessor>>());
+				auto &JsonAccessor = Expression.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CJsonAccessor>>().f_Get();
+				auto &Param = JsonAccessor.m_Param.m_Param;
 
 				DMibAssertTrue(Param.f_IsOfType<TCIndirection<CBuildSystemSyntax::CIdentifier>>());
 				auto &Identifier = Param.f_GetAsType<TCIndirection<CBuildSystemSyntax::CIdentifier>>().f_Get();
@@ -671,27 +671,27 @@ namespace
 				DMibExpect(Identifier.m_EntityType, ==, EEntityType_Workspace);
 				DMibExpect(Identifier.m_PropertyType, ==, EPropertyType_Target);
 
-				DMibExpect(JSONAccessor.m_Accessors.f_GetLen(), ==, 5);
-				DMibExpectTrue(JSONAccessor.m_Accessors[0].m_Accessor.f_IsOfType<CBuildSystemSyntax::CExpression>());
-				DMibExpectTrue(JSONAccessor.m_Accessors[1].m_Accessor.f_IsOfType<CStr>());
-				DMibAssertTrue(JSONAccessor.m_Accessors[2].m_Accessor.f_IsOfType<CBuildSystemSyntax::CJSONSubscript>());
-				DMibAssertTrue(JSONAccessor.m_Accessors[2].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJSONSubscript>().m_Index.f_IsOfType<uint32>());
-				DMibExpect(JSONAccessor.m_Accessors[2].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJSONSubscript>().m_Index.f_GetAsType<uint32>(), ==, 2);
-				DMibExpectTrue(JSONAccessor.m_Accessors[3].m_Accessor.f_IsOfType<CStr>());
-				DMibExpectTrue(JSONAccessor.m_Accessors[4].m_Accessor.f_IsOfType<CBuildSystemSyntax::CJSONSubscript>());
-				DMibAssertTrue(JSONAccessor.m_Accessors[4].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJSONSubscript>().m_Index.f_IsOfType<CBuildSystemSyntax::CExpression>());
+				DMibExpect(JsonAccessor.m_Accessors.f_GetLen(), ==, 5);
+				DMibExpectTrue(JsonAccessor.m_Accessors[0].m_Accessor.f_IsOfType<CBuildSystemSyntax::CExpression>());
+				DMibExpectTrue(JsonAccessor.m_Accessors[1].m_Accessor.f_IsOfType<CStr>());
+				DMibAssertTrue(JsonAccessor.m_Accessors[2].m_Accessor.f_IsOfType<CBuildSystemSyntax::CJsonSubscript>());
+				DMibAssertTrue(JsonAccessor.m_Accessors[2].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJsonSubscript>().m_Index.f_IsOfType<uint32>());
+				DMibExpect(JsonAccessor.m_Accessors[2].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJsonSubscript>().m_Index.f_GetAsType<uint32>(), ==, 2);
+				DMibExpectTrue(JsonAccessor.m_Accessors[3].m_Accessor.f_IsOfType<CStr>());
+				DMibExpectTrue(JsonAccessor.m_Accessors[4].m_Accessor.f_IsOfType<CBuildSystemSyntax::CJsonSubscript>());
+				DMibAssertTrue(JsonAccessor.m_Accessors[4].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJsonSubscript>().m_Index.f_IsOfType<CBuildSystemSyntax::CExpression>());
 			}
 			{
 				DMibTestPath("PostFunctionAccessor");
 				auto const &Value = fs_ParseString("Workspace:Target.Test->Func()<@(DynamicProp).ArrayProp[2].Prop2[SubscriptProp]>").m_Value.m_Value;
 				DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CExpression>());
 
-				auto &JSONAccessorExpression = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
-				DMibAssertTrue(JSONAccessorExpression.f_IsOfType<NStorage::TCIndirection<CBuildSystemSyntax::CJSONAccessor>>());
-				auto &JSONAccessor = JSONAccessorExpression.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CJSONAccessor>>().f_Get();
+				auto &JsonAccessorExpression = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
+				DMibAssertTrue(JsonAccessorExpression.f_IsOfType<NStorage::TCIndirection<CBuildSystemSyntax::CJsonAccessor>>());
+				auto &JsonAccessor = JsonAccessorExpression.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CJsonAccessor>>().f_Get();
 
-				DMibAssertTrue(JSONAccessor.m_Param.m_Param.f_IsOfType<NStorage::TCIndirection<CBuildSystemSyntax::CExpression>>());
-				auto &Function = JSONAccessor.m_Param.m_Param.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CExpression>>().f_Get().m_Expression;
+				DMibAssertTrue(JsonAccessor.m_Param.m_Param.f_IsOfType<NStorage::TCIndirection<CBuildSystemSyntax::CExpression>>());
+				auto &Function = JsonAccessor.m_Param.m_Param.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CExpression>>().f_Get().m_Expression;
 
 				DMibAssertTrue(Function.f_IsOfType<CBuildSystemSyntax::CFunctionCall>());
 
@@ -708,27 +708,27 @@ namespace
 				DMibExpect(Identifier.m_EntityType, ==, EEntityType_Workspace);
 				DMibExpect(Identifier.m_PropertyType, ==, EPropertyType_Target);
 
-				DMibExpect(JSONAccessor.m_Accessors.f_GetLen(), ==, 5);
-				DMibExpectTrue(JSONAccessor.m_Accessors[0].m_Accessor.f_IsOfType<CBuildSystemSyntax::CExpression>());
-				DMibExpectTrue(JSONAccessor.m_Accessors[1].m_Accessor.f_IsOfType<CStr>());
-				DMibAssertTrue(JSONAccessor.m_Accessors[2].m_Accessor.f_IsOfType<CBuildSystemSyntax::CJSONSubscript>());
-				DMibAssertTrue(JSONAccessor.m_Accessors[2].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJSONSubscript>().m_Index.f_IsOfType<uint32>());
-				DMibExpect(JSONAccessor.m_Accessors[2].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJSONSubscript>().m_Index.f_GetAsType<uint32>(), ==, 2);
-				DMibExpectTrue(JSONAccessor.m_Accessors[3]. m_Accessor.f_IsOfType<CStr>());
-				DMibExpectTrue(JSONAccessor.m_Accessors[4].m_Accessor.f_IsOfType<CBuildSystemSyntax::CJSONSubscript>());
-				DMibAssertTrue(JSONAccessor.m_Accessors[4].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJSONSubscript>().m_Index.f_IsOfType<CBuildSystemSyntax::CExpression>());
+				DMibExpect(JsonAccessor.m_Accessors.f_GetLen(), ==, 5);
+				DMibExpectTrue(JsonAccessor.m_Accessors[0].m_Accessor.f_IsOfType<CBuildSystemSyntax::CExpression>());
+				DMibExpectTrue(JsonAccessor.m_Accessors[1].m_Accessor.f_IsOfType<CStr>());
+				DMibAssertTrue(JsonAccessor.m_Accessors[2].m_Accessor.f_IsOfType<CBuildSystemSyntax::CJsonSubscript>());
+				DMibAssertTrue(JsonAccessor.m_Accessors[2].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJsonSubscript>().m_Index.f_IsOfType<uint32>());
+				DMibExpect(JsonAccessor.m_Accessors[2].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJsonSubscript>().m_Index.f_GetAsType<uint32>(), ==, 2);
+				DMibExpectTrue(JsonAccessor.m_Accessors[3]. m_Accessor.f_IsOfType<CStr>());
+				DMibExpectTrue(JsonAccessor.m_Accessors[4].m_Accessor.f_IsOfType<CBuildSystemSyntax::CJsonSubscript>());
+				DMibAssertTrue(JsonAccessor.m_Accessors[4].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJsonSubscript>().m_Index.f_IsOfType<CBuildSystemSyntax::CExpression>());
 			}
 			{
 				DMibTestPath("FunctionAccessor");
 				auto const &Value = fs_ParseString("Func(5)<@(DynamicProp).ArrayProp[2].Prop2[SubscriptProp]>").m_Value.m_Value;
 				DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CExpression>());
 
-				auto &JSONAccessorExpression = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
-				DMibAssertTrue(JSONAccessorExpression.f_IsOfType<NStorage::TCIndirection<CBuildSystemSyntax::CJSONAccessor>>());
-				auto &JSONAccessor = JSONAccessorExpression.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CJSONAccessor>>().f_Get();
+				auto &JsonAccessorExpression = Value.f_GetAsType<CBuildSystemSyntax::CExpression>().m_Expression;
+				DMibAssertTrue(JsonAccessorExpression.f_IsOfType<NStorage::TCIndirection<CBuildSystemSyntax::CJsonAccessor>>());
+				auto &JsonAccessor = JsonAccessorExpression.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CJsonAccessor>>().f_Get();
 
-				DMibAssertTrue(JSONAccessor.m_Param.m_Param.f_IsOfType<NStorage::TCIndirection<CBuildSystemSyntax::CExpression>>());
-				auto &Function = JSONAccessor.m_Param.m_Param.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CExpression>>().f_Get().m_Expression;
+				DMibAssertTrue(JsonAccessor.m_Param.m_Param.f_IsOfType<NStorage::TCIndirection<CBuildSystemSyntax::CExpression>>());
+				auto &Function = JsonAccessor.m_Param.m_Param.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CExpression>>().f_Get().m_Expression;
 
 				DMibAssertTrue(Function.f_IsOfType<CBuildSystemSyntax::CFunctionCall>());
 
@@ -739,19 +739,19 @@ namespace
 
 				auto &Param = FunctionCall.m_Params[0].m_Param;
 
-				DMibAssertTrue(Param.f_IsOfType<CEJSONSorted>());
-				auto &Constant = Param.f_GetAsType<CEJSONSorted>();
-				DMibExpect(Constant, ==, CEJSONSorted(5));
+				DMibAssertTrue(Param.f_IsOfType<CEJsonSorted>());
+				auto &Constant = Param.f_GetAsType<CEJsonSorted>();
+				DMibExpect(Constant, ==, CEJsonSorted(5));
 
-				DMibExpect(JSONAccessor.m_Accessors.f_GetLen(), ==, 5);
-				DMibExpectTrue(JSONAccessor.m_Accessors[0].m_Accessor.f_IsOfType<CBuildSystemSyntax::CExpression>());
-				DMibExpectTrue(JSONAccessor.m_Accessors[1].m_Accessor.f_IsOfType<CStr>());
-				DMibAssertTrue(JSONAccessor.m_Accessors[2].m_Accessor.f_IsOfType<CBuildSystemSyntax::CJSONSubscript>());
-				DMibAssertTrue(JSONAccessor.m_Accessors[2].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJSONSubscript>().m_Index.f_IsOfType<uint32>());
-				DMibExpect(JSONAccessor.m_Accessors[2].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJSONSubscript>().m_Index.f_GetAsType<uint32>(), ==, 2);
-				DMibExpectTrue(JSONAccessor.m_Accessors[3]. m_Accessor.f_IsOfType<CStr>());
-				DMibExpectTrue(JSONAccessor.m_Accessors[4].m_Accessor.f_IsOfType<CBuildSystemSyntax::CJSONSubscript>());
-				DMibAssertTrue(JSONAccessor.m_Accessors[4].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJSONSubscript>().m_Index.f_IsOfType<CBuildSystemSyntax::CExpression>());
+				DMibExpect(JsonAccessor.m_Accessors.f_GetLen(), ==, 5);
+				DMibExpectTrue(JsonAccessor.m_Accessors[0].m_Accessor.f_IsOfType<CBuildSystemSyntax::CExpression>());
+				DMibExpectTrue(JsonAccessor.m_Accessors[1].m_Accessor.f_IsOfType<CStr>());
+				DMibAssertTrue(JsonAccessor.m_Accessors[2].m_Accessor.f_IsOfType<CBuildSystemSyntax::CJsonSubscript>());
+				DMibAssertTrue(JsonAccessor.m_Accessors[2].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJsonSubscript>().m_Index.f_IsOfType<uint32>());
+				DMibExpect(JsonAccessor.m_Accessors[2].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJsonSubscript>().m_Index.f_GetAsType<uint32>(), ==, 2);
+				DMibExpectTrue(JsonAccessor.m_Accessors[3]. m_Accessor.f_IsOfType<CStr>());
+				DMibExpectTrue(JsonAccessor.m_Accessors[4].m_Accessor.f_IsOfType<CBuildSystemSyntax::CJsonSubscript>());
+				DMibAssertTrue(JsonAccessor.m_Accessors[4].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJsonSubscript>().m_Index.f_IsOfType<CBuildSystemSyntax::CExpression>());
 			}
 			{
 				DMibTestPath("Object");
@@ -764,8 +764,8 @@ namespace
 				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
-				DMibAssertTrue(Param.f_IsOfType<NEncoding::CEJSONSorted>());
-				auto &Object = Param.f_GetAsType<NEncoding::CEJSONSorted>();
+				DMibAssertTrue(Param.f_IsOfType<NEncoding::CEJsonSorted>());
+				auto &Object = Param.f_GetAsType<NEncoding::CEJsonSorted>();
 				DMibExpect(Object, ==, _={"Test"_= 5});
 			}
 			{
@@ -779,8 +779,8 @@ namespace
 				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Property);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
-				DMibAssertTrue(Param.f_IsOfType<NEncoding::CEJSONSorted>());
-				auto &Array = Param.f_GetAsType<NEncoding::CEJSONSorted>();
+				DMibAssertTrue(Param.f_IsOfType<NEncoding::CEJsonSorted>());
+				auto &Array = Param.f_GetAsType<NEncoding::CEJsonSorted>();
 				DMibExpect(Array, ==, _[5]);
 			}
 			{
@@ -942,8 +942,8 @@ namespace
 				DMibExpect(FunctionCall.m_PropertyKey.f_GetType(), ==, EPropertyType_Compile);
 				DMibAssert(FunctionCall.m_Params.f_GetLen(), ==, 1);
 				auto &Param = FunctionCall.m_Params[0].m_Param;
-				DMibAssertTrue(Param.f_IsOfType<CEJSONSorted>());
-				auto &String = Param.f_GetAsType<CEJSONSorted>();
+				DMibAssertTrue(Param.f_IsOfType<CEJsonSorted>());
+				auto &String = Param.f_GetAsType<CEJsonSorted>();
 				DMibAssertTrue(String.f_IsString());
 				DMibExpect(String.f_String(), ==, "Test");
 			}
@@ -1060,8 +1060,8 @@ namespace
 				auto &DefaultType = Defaulted.m_Type.f_Get().m_Type.f_GetAsType<CBuildSystemSyntax::CDefaultType>().m_Type;
 				DMibExpect(DefaultType, ==, CBuildSystemSyntax::CDefaultType::EType_Integer);
 
-				DMibAssertTrue(Defaulted.m_DefaultValue.m_Param.f_IsOfType<NEncoding::CEJSONSorted>());
-				DMibExpect(Defaulted.m_DefaultValue.m_Param.f_GetAsType<NEncoding::CEJSONSorted>(), ==, CEJSONSorted(5));
+				DMibAssertTrue(Defaulted.m_DefaultValue.m_Param.f_IsOfType<NEncoding::CEJsonSorted>());
+				DMibExpect(Defaulted.m_DefaultValue.m_Param.f_GetAsType<NEncoding::CEJsonSorted>(), ==, CEJsonSorted(5));
 			}
 		}
 
@@ -1111,8 +1111,8 @@ namespace
 			DMibAssertTrue(Type1.f_IsOfType<CBuildSystemSyntax::CDefaultType>());
 			DMibExpect(Type1.f_GetAsType<CBuildSystemSyntax::CDefaultType>().m_Type, ==, CBuildSystemSyntax::CDefaultType::EType_FloatingPoint);
 
-			DMibAssertTrue(OneOf[2].f_IsOfType<CEJSONSorted>());
-			auto &Type2 = OneOf[2].f_GetAsType<CEJSONSorted>();
+			DMibAssertTrue(OneOf[2].f_IsOfType<CEJsonSorted>());
+			auto &Type2 = OneOf[2].f_GetAsType<CEJsonSorted>();
 			DMibAssertTrue(Type2.f_IsInteger());
 			DMibExpect(Type2.f_Integer(), ==, 5);
 		}
@@ -1215,9 +1215,9 @@ namespace
 			DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::COperator>());
 			auto &Operator = Value.f_GetAsType<CBuildSystemSyntax::COperator>();
 			DMibAssert(Operator.m_Operator, ==, CBuildSystemSyntax::COperator::EOperator_LessThan);
-			DMibAssertTrue(Operator.m_Right.f_Get().m_Value.f_IsOfType<CEJSONSorted>());
-			DMibAssertTrue(Operator.m_Right.f_Get().m_Value.f_GetAsType<CEJSONSorted>().f_IsInteger());
-			DMibExpect(Operator.m_Right.f_Get().m_Value.f_GetAsType<CEJSONSorted>().f_Integer(), ==, 5);
+			DMibAssertTrue(Operator.m_Right.f_Get().m_Value.f_IsOfType<CEJsonSorted>());
+			DMibAssertTrue(Operator.m_Right.f_Get().m_Value.f_GetAsType<CEJsonSorted>().f_IsInteger());
+			DMibExpect(Operator.m_Right.f_Get().m_Value.f_GetAsType<CEJsonSorted>().f_Integer(), ==, 5);
 		}
 
 		void f_TestOperatorAppend()
@@ -1226,9 +1226,9 @@ namespace
 			DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::COperator>());
 			auto &Operator = Value.f_GetAsType<CBuildSystemSyntax::COperator>();
 			DMibAssert(Operator.m_Operator, ==, CBuildSystemSyntax::COperator::EOperator_Append);
-			DMibAssertTrue(Operator.m_Right.f_Get().m_Value.f_IsOfType<CEJSONSorted>());
-			DMibAssertTrue(Operator.m_Right.f_Get().m_Value.f_GetAsType<CEJSONSorted>().f_IsInteger());
-			DMibExpect(Operator.m_Right.f_Get().m_Value.f_GetAsType<CEJSONSorted>().f_Integer(), ==, 5);
+			DMibAssertTrue(Operator.m_Right.f_Get().m_Value.f_IsOfType<CEJsonSorted>());
+			DMibAssertTrue(Operator.m_Right.f_Get().m_Value.f_GetAsType<CEJsonSorted>().f_IsInteger());
+			DMibExpect(Operator.m_Right.f_Get().m_Value.f_GetAsType<CEJsonSorted>().f_Integer(), ==, 5);
 		}
 
 		void f_TestOperatorPrepend()
@@ -1237,9 +1237,9 @@ namespace
 			DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::COperator>());
 			auto &Operator = Value.f_GetAsType<CBuildSystemSyntax::COperator>();
 			DMibAssert(Operator.m_Operator, ==, CBuildSystemSyntax::COperator::EOperator_Prepend);
-			DMibAssertTrue(Operator.m_Right.f_Get().m_Value.f_IsOfType<CEJSONSorted>());
-			DMibAssertTrue(Operator.m_Right.f_Get().m_Value.f_GetAsType<CEJSONSorted>().f_IsInteger());
-			DMibExpect(Operator.m_Right.f_Get().m_Value.f_GetAsType<CEJSONSorted>().f_Integer(), ==, 5);
+			DMibAssertTrue(Operator.m_Right.f_Get().m_Value.f_IsOfType<CEJsonSorted>());
+			DMibAssertTrue(Operator.m_Right.f_Get().m_Value.f_GetAsType<CEJsonSorted>().f_IsInteger());
+			DMibExpect(Operator.m_Right.f_Get().m_Value.f_GetAsType<CEJsonSorted>().f_Integer(), ==, 5);
 		}
 
 		void f_TestDefine()
@@ -1384,8 +1384,8 @@ namespace
 			DMibAssertTrue(ReturnTypeDefaulted.f_IsOfType<CBuildSystemSyntax::CTypeDefaulted>());
 
 			auto &Defaulted = ReturnTypeDefaulted.f_GetAsType<CBuildSystemSyntax::CTypeDefaulted>();
-			DMibAssertTrue(Defaulted.m_DefaultValue.m_Param.f_IsOfType<NEncoding::CEJSONSorted>());
-			DMibExpect(Defaulted.m_DefaultValue.m_Param.f_GetAsType<NEncoding::CEJSONSorted>(), ==, CEJSONSorted(5));
+			DMibAssertTrue(Defaulted.m_DefaultValue.m_Param.f_IsOfType<NEncoding::CEJsonSorted>());
+			DMibExpect(Defaulted.m_DefaultValue.m_Param.f_GetAsType<NEncoding::CEJsonSorted>(), ==, CEJsonSorted(5));
 
 			auto &ReturnType = Defaulted.m_Type.f_Get().m_Type;
 			DMibAssertTrue(ReturnType.f_IsOfType<CBuildSystemSyntax::CDefaultType>());
@@ -1405,8 +1405,8 @@ namespace
 			DMibAssertTrue(OptionalParamType1.f_IsOfType<CBuildSystemSyntax::CTypeDefaulted>());
 
 			auto &DefaultedParam = OptionalParamType1.f_GetAsType<CBuildSystemSyntax::CTypeDefaulted>();
-			DMibAssertTrue(DefaultedParam.m_DefaultValue.m_Param.f_IsOfType<NEncoding::CEJSONSorted>());
-			DMibExpect(DefaultedParam.m_DefaultValue.m_Param.f_GetAsType<NEncoding::CEJSONSorted>(), ==, CEJSONSorted(5.5));
+			DMibAssertTrue(DefaultedParam.m_DefaultValue.m_Param.f_IsOfType<NEncoding::CEJsonSorted>());
+			DMibExpect(DefaultedParam.m_DefaultValue.m_Param.f_GetAsType<NEncoding::CEJsonSorted>(), ==, CEJsonSorted(5.5));
 
 			auto &ParamType1 = DefaultedParam.m_Type.f_Get().m_Type;
 			DMibAssertTrue(ParamType1.f_IsOfType<CBuildSystemSyntax::CDefaultType>());
@@ -1610,7 +1610,7 @@ namespace
 
 		void f_DoTests()
 		{
-			f_TestJSON();
+			f_TestJson();
 
 			DMibTestSuite("Date")
 			{

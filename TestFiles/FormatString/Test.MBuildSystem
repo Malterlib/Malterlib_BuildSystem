@@ -22,17 +22,17 @@
 		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
 		Contents	`Generate File Contents:\n`\
 					`@('Testing " 123'->ToString())\n`\
-					`@('Testing " 123'->EJSONToString())\n`\
-					`@('Testing " 123'->EJSONToString(""))\n`\
+					`@('Testing " 123'->EJsonToString())\n`\
+					`@('Testing " 123'->EJsonToString(""))\n`\
 					`@(ToString('Testing " 123'))\n`\
-					`@(['Testing " 123']->EJSONToString())\n`\
-					`@(['Testing " 123']->EJSONToString(""))\n`\
+					`@(['Testing " 123']->EJsonToString())\n`\
+					`@(['Testing " 123']->EJsonToString(""))\n`\
 					`@(ToString('Testing " 123', 'Testing " 456'))\n`\
-					`@(['Testing " 123', 'Testing " 456']->EJSONToString())\n`\
-					`@(['Testing " 123', 'Testing " 456']->EJSONToString(""))\n`\
+					`@(['Testing " 123', 'Testing " 456']->EJsonToString())\n`\
+					`@(['Testing " 123', 'Testing " 456']->EJsonToString(""))\n`\
 					`@({'Testing " 123': 'Testing " 456'}->ToString())\n`\
-					`@({'Testing " 123': 'Testing " 456'}->EJSONToString())\n`\
-					`@({'Testing " 123': 'Testing " 456'}->EJSONToString(""))\n`
+					`@({'Testing " 123': 'Testing " 456'}->EJsonToString())\n`\
+					`@({'Testing " 123': 'Testing " 456'}->EJsonToString(""))\n`
 
 		Executable false
 		UnixLineEnds true

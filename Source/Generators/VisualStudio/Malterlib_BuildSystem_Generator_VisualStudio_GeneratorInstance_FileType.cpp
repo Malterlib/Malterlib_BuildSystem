@@ -52,7 +52,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 						if (!pResult)
 							continue;
 
-						TCMap<CPropertyKey, CEJSONSorted> StartValuesCompile;
+						TCMap<CPropertyKey, CEJsonSorted> StartValuesCompile;
 						StartValuesCompile[gc_ConstKey_Compile_Type] = Type;
 
 						TCVector<CEntity *> ToRemove;

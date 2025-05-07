@@ -98,7 +98,7 @@ namespace NMib::NBuildSystem
 
 		if (pValue)
 		{
-			if constexpr (NTraits::TCIsSame<CType, NEncoding::CEJSONSorted>::mc_Value)
+			if constexpr (NTraits::TCIsSame<CType, NEncoding::CEJsonSorted>::mc_Value)
 				ReturnValue = fg_Move(fg_RemoveQualifiers(*pValue));
 			else if constexpr (NTraits::TCIsSame<CType, NStr::CStr>::mc_Value)
 			{

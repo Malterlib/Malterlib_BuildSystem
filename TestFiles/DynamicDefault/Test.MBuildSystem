@@ -36,7 +36,7 @@
 		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
 		Contents	`Generate File Contents:\n`\
 					`@(TestDefaulted)\n`\
-					`@(TestDefaultedObject->EJSONToString())\n`\
+					`@(TestDefaultedObject->EJsonToString())\n`\
 					`@(TestDefaultedString)\n`\
 					`@(TestDefaultedFunction("Param"))\n`\
 					`@(TestDefaultDynamicString)\n`

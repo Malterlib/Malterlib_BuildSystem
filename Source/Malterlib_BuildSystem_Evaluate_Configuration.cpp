@@ -192,7 +192,7 @@ namespace NMib::NBuildSystem
 		;
 	}
 
-	TCVector<TCVector<CConfigurationTuple>> CBuildSystem::fp_EvaluateConfigurationTuples(TCMap<CPropertyKey, CEJSONSorted> const &_InitialValues) const
+	TCVector<TCVector<CConfigurationTuple>> CBuildSystem::fp_EvaluateConfigurationTuples(TCMap<CPropertyKey, CEJsonSorted> const &_InitialValues) const
 	{
 		TCSet<CConfigTuple> Tuples;
 
@@ -418,7 +418,7 @@ namespace NMib::NBuildSystem
 				CPropertyKey Key(mp_StringCache, EPropertyType_Property, iKey.f_GetKey().m_ConfigType);
 				auto &Evaluated = TupleEntity.m_EvaluatedProperties.m_Properties[Key];
 				if ((*iKey)->f_GetName().f_IsEmpty())
-					Evaluated.m_Value = CEJSONSorted{};
+					Evaluated.m_Value = CEJsonSorted{};
 				else
 					Evaluated.m_Value = (*iKey)->f_GetName();
 				Evaluated.m_Type = EEvaluatedPropertyType_External;

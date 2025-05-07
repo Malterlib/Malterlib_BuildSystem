@@ -7,7 +7,7 @@
 #ifdef DPlatformFamily_Windows
 #include <Mib/Core/PlatformSpecific/WindowsRegistry>
 #endif
-#include <Mib/Encoding/JSONShortcuts>
+#include <Mib/Encoding/JsonShortcuts>
 
 namespace NMib::NBuildSystem
 {
@@ -76,7 +76,7 @@ namespace NMib::NBuildSystem
 		return CBuildSystemSyntax::CType{CBuildSystemSyntax::CArrayType{fg_Move(_Type)}};
 	}
 
-	CBuildSystemSyntax::CType fg_Defaulted(CBuildSystemSyntax::CType const &_Type, CEJSONSorted &&_Default)
+	CBuildSystemSyntax::CType fg_Defaulted(CBuildSystemSyntax::CType const &_Type, CEJsonSorted &&_Default)
 	{
 		return CBuildSystemSyntax::CType{CBuildSystemSyntax::CBuildSystemSyntax::CTypeDefaulted{.m_Type = {_Type}, .m_DefaultValue = {fg_Move(_Default)}}};
 	}

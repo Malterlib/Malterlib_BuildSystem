@@ -4,7 +4,7 @@
 #include "Malterlib_BuildSystem_Repository.h"
 
 #include <Mib/Concurrency/AsyncDestroy>
-#include <Mib/Encoding/JSONShortcuts>
+#include <Mib/Encoding/JsonShortcuts>
 #include <Mib/Git/Helpers/Credentials>
 #include <Mib/Git/HostingProvider>
 #include <Mib/Git/Policy>
@@ -28,7 +28,7 @@ namespace NMib::NBuildSystem::NRepository
 		EApplyPolicyFlag m_Flags = EApplyPolicyFlag::mc_None;
 	};
 
-	TCFuture<bool> fg_ApplyPolicies_RepositorySettings(CApplyPolicyOptions _Options, CEJSONSorted _Policy)
+	TCFuture<bool> fg_ApplyPolicies_RepositorySettings(CApplyPolicyOptions _Options, CEJsonSorted _Policy)
 	{
 		TCActor<CGitPolicyActor> PolicyActor = fg_Construct();
 		auto DestroyPolicyActor = co_await fg_AsyncDestroy(PolicyActor);
@@ -72,7 +72,7 @@ namespace NMib::NBuildSystem::NRepository
 		co_return co_await PolicyActor(&CGitPolicyActor::f_ApplyPolicy_Repository, fg_Move(Context), fg_Move(_Policy));
 	}
 
-	TCFuture<void> fg_ApplyPolicies_Permissions(CApplyPolicyOptions _Options, CEJSONSorted _Policy)
+	TCFuture<void> fg_ApplyPolicies_Permissions(CApplyPolicyOptions _Options, CEJsonSorted _Policy)
 	{
 		co_await ECoroutineFlag_CaptureExceptions;
 
@@ -134,7 +134,7 @@ namespace NMib::NBuildSystem::NRepository
 		co_return {};
 	}
 
-	TCFuture<void> fg_ApplyPolicies_BranchProtection(CApplyPolicyOptions _Options, CEJSONSorted _Policy)
+	TCFuture<void> fg_ApplyPolicies_BranchProtection(CApplyPolicyOptions _Options, CEJsonSorted _Policy)
 	{
 		TCActor<CGitPolicyActor> PolicyActor = fg_Construct();
 		auto DestroyPolicyActor = co_await fg_AsyncDestroy(PolicyActor);
@@ -181,7 +181,7 @@ namespace NMib::NBuildSystem::NRepository
 		co_return {};
 	}
 
-	TCFuture<void> fg_ApplyPolicies_GenericRules(CApplyPolicyOptions _Options, CEJSONSorted _Policy)
+	TCFuture<void> fg_ApplyPolicies_GenericRules(CApplyPolicyOptions _Options, CEJsonSorted _Policy)
 	{
 		TCActor<CGitPolicyActor> PolicyActor = fg_Construct();
 		auto DestroyPolicyActor = co_await fg_AsyncDestroy(PolicyActor);
@@ -228,7 +228,7 @@ namespace NMib::NBuildSystem::NRepository
 		co_return {};
 	}
 
-	TCFuture<void> fg_ApplyPolicies_ActionsSettings(CApplyPolicyOptions _Options, CEJSONSorted _Policy)
+	TCFuture<void> fg_ApplyPolicies_ActionsSettings(CApplyPolicyOptions _Options, CEJsonSorted _Policy)
 	{
 		TCActor<CGitPolicyActor> PolicyActor = fg_Construct();
 		auto DestroyPolicyActor = co_await fg_AsyncDestroy(PolicyActor);
@@ -260,7 +260,7 @@ namespace NMib::NBuildSystem::NRepository
 		co_return {};
 	}
 	
-	TCFuture<void> fg_ApplyPolicies(CStr _Url, CStr _RepoDir, CEJSONSorted _Policy, EApplyPolicyFlag _Flags, TCFunction<void (EOutputType _OutputType, CStr const &_String)> _fOutputInfo)
+	TCFuture<void> fg_ApplyPolicies(CStr _Url, CStr _RepoDir, CEJsonSorted _Policy, EApplyPolicyFlag _Flags, TCFunction<void (EOutputType _OutputType, CStr const &_String)> _fOutputInfo)
 	{
 		co_await ECoroutineFlag_CaptureExceptions;
 
@@ -278,7 +278,7 @@ namespace NMib::NBuildSystem::NRepository
 		auto DestroyHostingProvider = co_await fg_AsyncDestroy(HostingProvider);
 
 		if (HostingProviderToken)
-			co_await HostingProvider(&CGitHostingProvider::f_Login, CEJSONSorted{"Token"_= HostingProviderToken});
+			co_await HostingProvider(&CGitHostingProvider::f_Login, CEJsonSorted{"Token"_= HostingProviderToken});
 
 		CApplyPolicyOptions Options
 			{

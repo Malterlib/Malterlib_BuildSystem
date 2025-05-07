@@ -6,7 +6,7 @@
 
 #include <Mib/XML/XML>
 #include <Mib/Process/ProcessLaunch>
-#include <Mib/Encoding/JSON>
+#include <Mib/Encoding/Json>
 #ifdef DPlatformFamily_Windows
 #include <Mib/Core/PlatformSpecific/WindowsRegistry>
 #include <Mib/Core/PlatformSpecific/WindowsFilePath>
@@ -26,7 +26,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		DError("Implement this (CGeneratorInstance::f_GetToolsVersion)");
 	}
 
-	CEJSONSorted const &CGeneratorInstance::f_GetVisualStudioRoot() const
+	CEJsonSorted const &CGeneratorInstance::f_GetVisualStudioRoot() const
 	{
 		if (m_VisualStudioRootCached.f_Load())
 			return m_VisualStudioRoot;
@@ -36,7 +36,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		if (m_VisualStudioRoot.f_IsValid())
 			return m_VisualStudioRoot;
 
-		CEJSONSorted VisualStudioRoot;
+		CEJsonSorted VisualStudioRoot;
 		
 		switch (m_Version)
 		{
@@ -76,7 +76,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 					{
 						CStr JsonContents = CFile::fs_ReadStringFromFile(StateFile);
 
-						CJSONSorted const Json = CJSONSorted::fs_FromString(JsonContents, StateFile);
+						CJsonSorted const Json = CJsonSorted::fs_FromString(JsonContents, StateFile);
 						auto Version = fParseVersion(Json["installationVersion"].f_String());
 						if (Version[0] == ExpectedVersion && Version > BestVersion)
 						{
@@ -112,7 +112,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		(
 			CBuildSystem const &_BuildSystem
 			, CBuildSystemData const &_BuildSystemData
-			, TCMap<CPropertyKey, CEJSONSorted> const &_InitialValues
+			, TCMap<CPropertyKey, CEJsonSorted> const &_InitialValues
 			, CStr const &_OutputDir
 		)
 		: m_BuildSystem(_BuildSystem)
@@ -298,6 +298,6 @@ namespace NMib::NBuildSystem::NVisualStudio
 			o_bSuccess = true;
 			return &f_GetVisualStudioRoot();
 		}
-		return CEJSONSorted();
+		return CEJsonSorted();
 	}
 }

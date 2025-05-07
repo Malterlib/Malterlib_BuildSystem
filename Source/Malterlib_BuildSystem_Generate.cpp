@@ -8,7 +8,7 @@
 
 #include <Mib/Core/RuntimeType>
 #include <Mib/Cryptography/UUID>
-#include <Mib/Encoding/EJSON>
+#include <Mib/Encoding/EJson>
 
 namespace NMib::NBuildSystem
 {
@@ -30,9 +30,9 @@ namespace NMib::NBuildSystem
 					if (_pStorePositions)
 						_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.GeneratedBuildSystemDir")->f_AddValue(m_OutputDir, false);
 					o_bSuccess = true;
-					return CEJSONSorted(m_OutputDir);
+					return CEJsonSorted(m_OutputDir);
 				}
-				return CEJSONSorted();
+				return CEJsonSorted();
 			}
 
 			CStr f_GetExpandedPath(CStr const &_Path, CStr const &_Base) const override
@@ -53,12 +53,12 @@ namespace NMib::NBuildSystem
 	{
 		try
 		{
-			CEJSONSorted JSON;
+			CEJsonSorted Json;
 			for (auto &EnvVar : mp_SaveEnvironment)
-				JSON[mp_SaveEnvironment.fs_GetKey(EnvVar)] = EnvVar;
+				Json[mp_SaveEnvironment.fs_GetKey(EnvVar)] = EnvVar;
 
 			CByteVector FileData;
-			CFile::fs_WriteStringToVector(FileData, JSON.f_ToString(), false);
+			CFile::fs_WriteStringToVector(FileData, Json.f_ToString(), false);
 
 			CStr EnvironmentStateFile = mp_OutputDir / "Environment.json";
 
@@ -168,8 +168,8 @@ namespace NMib::NBuildSystem
 			mp_Environment.f_Clear();
 			try
 			{
-				auto EnvironmentJSON = CEJSONSorted::fs_FromString(CFile::fs_ReadStringFromFile(_GenerateState.m_EnvironmentStateFile, true), _GenerateState.m_EnvironmentStateFile);
-				for (auto &EnvVar : EnvironmentJSON.f_Object())
+				auto EnvironmentJson = CEJsonSorted::fs_FromString(CFile::fs_ReadStringFromFile(_GenerateState.m_EnvironmentStateFile, true), _GenerateState.m_EnvironmentStateFile);
+				for (auto &EnvVar : EnvironmentJson.f_Object())
 					mp_Environment[EnvVar.f_Name()] = EnvVar.f_Value().f_String();
 			}
 			catch (NException::CException const &_Exception)
@@ -187,8 +187,8 @@ namespace NMib::NBuildSystem
 			{
 				try
 				{
-					auto EnvironmentJSON = CEJSONSorted::fs_FromString(CFile::fs_ReadStringFromFile(OverrideEnvironmentFile, true), OverrideEnvironmentFile);
-					for (auto &EnvVar : EnvironmentJSON.f_Object())
+					auto EnvironmentJson = CEJsonSorted::fs_FromString(CFile::fs_ReadStringFromFile(OverrideEnvironmentFile, true), OverrideEnvironmentFile);
+					for (auto &EnvVar : EnvironmentJson.f_Object())
 						mp_Environment[EnvVar.f_Name()] = EnvVar.f_Value().f_String();
 				}
 				catch (NException::CException const &_Exception)
@@ -318,13 +318,13 @@ namespace NMib::NBuildSystem
 
 			switch (Value.f_EType())
 			{
-			case EEJSONType_Null:
-			case EEJSONType_String:
-			case EEJSONType_Integer:
-			case EEJSONType_Float:
-			case EEJSONType_Boolean:
-			case EEJSONType_Object:
-			case EEJSONType_Array:
+			case EEJsonType_Null:
+			case EEJsonType_String:
+			case EEJsonType_Integer:
+			case EEJsonType_Float:
+			case EEJsonType_Boolean:
+			case EEJsonType_Object:
+			case EEJsonType_Array:
 				PreprocessorEnvironment(Key.m_Name, Value.f_AsString());
 			default:
 				continue;

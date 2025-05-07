@@ -127,14 +127,14 @@ namespace NMib::NBuildSystem::NVisualStudio
 						NewData.m_Properties.f_Remove(gc_ConstKey_Compile_Type);
 					}
 					NewData.m_Position = FilePos;
-					TCMap<CPropertyKey, CEJSONSorted> Values;
+					TCMap<CPropertyKey, CEJsonSorted> Values;
 					Values[gc_ConstKey_Compile_Type] = CompileType;
 					m_BuildSystem.f_InitEntityForEvaluationNoEnv(NewEntity, Values, EEvaluatedPropertyType_External);
 					{
 						NewEntity.f_AddProperty
 							(
 								gc_ConstKey_Compile_PrecompilePrefixHeader
-								, CBuildSystemSyntax::CRootValue{CBuildSystemSyntax::CValue{CEJSONSorted(gc_ConstString_XInternalCreate)}}
+								, CBuildSystemSyntax::CRootValue{CBuildSystemSyntax::CValue{CEJsonSorted(gc_ConstString_XInternalCreate)}}
 								, FilePos
 							)
 						;
@@ -143,7 +143,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 						NewEntity.f_AddProperty
 							(
 								gc_ConstKey_Compile_XInternalPrecompiledHeaderOutputFile
-								, CBuildSystemSyntax::CRootValue{CBuildSystemSyntax::CValue{CEJSONSorted(PCHFile)}}
+								, CBuildSystemSyntax::CRootValue{CBuildSystemSyntax::CValue{CEJsonSorted(PCHFile)}}
 								, FilePos
 							)
 						;

@@ -50,7 +50,7 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_EntityPath = gc_Str<"EntityPath">;
 	constexpr CStringAndHash const gc_ConstString_InnerType = gc_Str<"InnerType">;
 	constexpr CStringAndHash const gc_ConstString_int = gc_Str<"int">;
-	constexpr CStringAndHash const gc_ConstString_JSONAccessor = gc_Str<"JSONAccessor">;
+	constexpr CStringAndHash const gc_ConstString_JsonAccessor = gc_Str<"JsonAccessor">;
 	constexpr CStringAndHash const gc_ConstString_KeyLogicalOperator = gc_Str<"KeyLogicalOperator">;
 	constexpr CStringAndHash const gc_ConstString_KeyPrefixOperator = gc_Str<"KeyPrefixOperator">;
 	constexpr CStringAndHash const gc_ConstString_Namespace = gc_Str<"Namespace">;
@@ -79,11 +79,11 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_Subscript = gc_Str<"Subscript">;
 	constexpr CStringAndHash const gc_ConstString_Symbol_AccessObject = gc_Str<"->">;
 	constexpr CStringAndHash const gc_ConstString_Symbol_AppendObject = gc_Str<"<<">;
-	constexpr CStringAndHash const gc_ConstString_Symbol_AppendObjectNoQuote = gc_Str<TCStrConstData("<<", EJSONStringType_NoQuote)>;
+	constexpr CStringAndHash const gc_ConstString_Symbol_AppendObjectNoQuote = gc_Str<TCStrConstData("<<", EJsonStringType_NoQuote)>;
 	constexpr CStringAndHash const gc_ConstString_Symbol_BitwiseNot = gc_Str<"~">;
 	constexpr CStringAndHash const gc_ConstString_Symbol_ConfigurationPrefix = gc_Str<"*">;
 	constexpr CStringAndHash const gc_ConstString_Symbol_Ellipsis = gc_Str<"...">;
-	constexpr CStringAndHash const gc_ConstString_Symbol_EllipsisNoQuote = gc_Str<TCStrConstData("...", EJSONStringType_NoQuote)>;
+	constexpr CStringAndHash const gc_ConstString_Symbol_EllipsisNoQuote = gc_Str<TCStrConstData("...", EJsonStringType_NoQuote)>;
 	constexpr CStringAndHash const gc_ConstString_Symbol_EntityPrefix = gc_Str<"%">;
 	constexpr CStringAndHash const gc_ConstString_Symbol_LogicalAnd = gc_Str<"&">;
 	constexpr CStringAndHash const gc_ConstString_Symbol_LogicalNot = gc_Str<"!">;
@@ -242,6 +242,7 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_ContainsListElement = gc_Str<"ContainsListElement">;
 	constexpr CStringAndHash const gc_ConstString_Context = gc_Str<"Context">;
 	constexpr CStringAndHash const gc_ConstString_DateTime = gc_Str<"DateTime">;
+	constexpr CStringAndHash const gc_ConstString_EJsonToString = gc_Str<"EJsonToString">;
 	constexpr CStringAndHash const gc_ConstString_EJSONToString = gc_Str<"EJSONToString">;
 	constexpr CStringAndHash const gc_ConstString_EndsWith = gc_Str<"EndsWith">;
 	constexpr CStringAndHash const gc_ConstString_Equal = gc_Str<"Equal">;
@@ -294,6 +295,7 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_IsUserType = gc_Str<"IsUserType">;
 	constexpr CStringAndHash const gc_ConstString_IsValid = gc_Str<"IsValid">;
 	constexpr CStringAndHash const gc_ConstString_ItemDefinitionGroup = gc_Str<"ItemDefinitionGroup">;
+	constexpr CStringAndHash const gc_ConstString_JsonToString = gc_Str<"JsonToString">;
 	constexpr CStringAndHash const gc_ConstString_JSONToString = gc_Str<"JSONToString">;
 	constexpr CStringAndHash const gc_ConstString_Join = gc_Str<"Join">;
 	constexpr CStringAndHash const gc_ConstString_Label = gc_Str<"Label">;
@@ -311,8 +313,10 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_Or = gc_Str<"Or">;
 	constexpr CStringAndHash const gc_ConstString_OverridingType = gc_Str<"OverridingType">;
 	constexpr CStringAndHash const gc_ConstString_Parse = gc_Str<"Parse">;
+	constexpr CStringAndHash const gc_ConstString_ParseEJson = gc_Str<"ParseEJson">;
 	constexpr CStringAndHash const gc_ConstString_ParseEJSON = gc_Str<"ParseEJSON">;
 	constexpr CStringAndHash const gc_ConstString_ParseFormatString = gc_Str<"ParseFormatString">;
+	constexpr CStringAndHash const gc_ConstString_ParseJson = gc_Str<"ParseJson">;
 	constexpr CStringAndHash const gc_ConstString_ParseJSON = gc_Str<"ParseJSON">;
 	constexpr CStringAndHash const gc_ConstString_PreProject = gc_Str<"PreProject">;
 	constexpr CStringAndHash const gc_ConstString_PrecompiledHeaderOutputFile = gc_Str<"PrecompiledHeaderOutputFile">;
@@ -454,7 +458,7 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString__Base = gc_Str<"_Base">;
 	constexpr CStringAndHash const gc_ConstString__Boolean = gc_Str<"_Boolean">;
 	constexpr CStringAndHash const gc_ConstString__Default = gc_Str<"_Default">;
-	constexpr CStringAndHash const gc_ConstString__EJSON = gc_Str<"_EJSON">;
+	constexpr CStringAndHash const gc_ConstString__EJson = gc_Str<"_EJson">;
 	constexpr CStringAndHash const gc_ConstString__EntityType = gc_Str<"_EntityType">;
 	constexpr CStringAndHash const gc_ConstString__Error = gc_Str<"_Error">;
 	constexpr CStringAndHash const gc_ConstString__ExcludeWildcards = gc_Str<"_ExcludeWildcards">;
@@ -462,7 +466,7 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString__ExplodeFunction = gc_Str<"_ExplodeFunction">;
 	constexpr CStringAndHash const gc_ConstString__Format = gc_Str<"_Format">;
 	constexpr CStringAndHash const gc_ConstString__Inputs = gc_Str<"_Inputs">;
-	constexpr CStringAndHash const gc_ConstString__JSON = gc_Str<"_JSON">;
+	constexpr CStringAndHash const gc_ConstString__Json = gc_Str<"_Json">;
 	constexpr CStringAndHash const gc_ConstString__Key = gc_Str<"_Key">;
 	constexpr CStringAndHash const gc_ConstString__Length = gc_Str<"_Length">;
 	constexpr CStringAndHash const gc_ConstString__Member = gc_Str<"_Member">;
@@ -558,7 +562,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_EntityPath);
 		o_StringCache.f_AddConstantString(gc_ConstString_InnerType);
 		o_StringCache.f_AddConstantString(gc_ConstString_int);
-		o_StringCache.f_AddConstantString(gc_ConstString_JSONAccessor);
+		o_StringCache.f_AddConstantString(gc_ConstString_JsonAccessor);
 		o_StringCache.f_AddConstantString(gc_ConstString_KeyLogicalOperator);
 		o_StringCache.f_AddConstantString(gc_ConstString_KeyPrefixOperator);
 		o_StringCache.f_AddConstantString(gc_ConstString_Namespace);
@@ -748,6 +752,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_ContainsListElement);
 		o_StringCache.f_AddConstantString(gc_ConstString_Context);
 		o_StringCache.f_AddConstantString(gc_ConstString_DateTime);
+		o_StringCache.f_AddConstantString(gc_ConstString_EJsonToString);
 		o_StringCache.f_AddConstantString(gc_ConstString_EJSONToString);
 		o_StringCache.f_AddConstantString(gc_ConstString_EndsWith);
 		o_StringCache.f_AddConstantString(gc_ConstString_Equal);
@@ -800,6 +805,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_IsUserType);
 		o_StringCache.f_AddConstantString(gc_ConstString_IsValid);
 		o_StringCache.f_AddConstantString(gc_ConstString_ItemDefinitionGroup);
+		o_StringCache.f_AddConstantString(gc_ConstString_JsonToString);
 		o_StringCache.f_AddConstantString(gc_ConstString_JSONToString);
 		o_StringCache.f_AddConstantString(gc_ConstString_Join);
 		o_StringCache.f_AddConstantString(gc_ConstString_Label);
@@ -817,8 +823,10 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_Or);
 		o_StringCache.f_AddConstantString(gc_ConstString_OverridingType);
 		o_StringCache.f_AddConstantString(gc_ConstString_Parse);
+		o_StringCache.f_AddConstantString(gc_ConstString_ParseEJson);
 		o_StringCache.f_AddConstantString(gc_ConstString_ParseEJSON);
 		o_StringCache.f_AddConstantString(gc_ConstString_ParseFormatString);
+		o_StringCache.f_AddConstantString(gc_ConstString_ParseJson);
 		o_StringCache.f_AddConstantString(gc_ConstString_ParseJSON);
 		o_StringCache.f_AddConstantString(gc_ConstString_PreProject);
 		o_StringCache.f_AddConstantString(gc_ConstString_PrecompiledHeaderOutputFile);
@@ -883,11 +891,11 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_Indent);
 		o_StringCache.f_AddConstantString(gc_ConstString_ChunkString);		
 
-		o_StringCache.f_AddConstantStringWithoutHash(CEJSONConstStrings::mc_Date);
-		o_StringCache.f_AddConstantStringWithoutHash(CEJSONConstStrings::mc_Binary);
-		o_StringCache.f_AddConstantStringWithoutHash(CEJSONConstStrings::mc_Type);
-		o_StringCache.f_AddConstantStringWithoutHash(CEJSONConstStrings::mc_Value);
-		o_StringCache.f_AddConstantStringWithoutHash(CEJSONConstStrings::mc_Escape);
+		o_StringCache.f_AddConstantStringWithoutHash(CEJsonConstStrings::mc_Date);
+		o_StringCache.f_AddConstantStringWithoutHash(CEJsonConstStrings::mc_Binary);
+		o_StringCache.f_AddConstantStringWithoutHash(CEJsonConstStrings::mc_Type);
+		o_StringCache.f_AddConstantStringWithoutHash(CEJsonConstStrings::mc_Value);
+		o_StringCache.f_AddConstantStringWithoutHash(CEJsonConstStrings::mc_Escape);
 
 		o_StringCache.f_AddConstantString(gc_ConstString_Array);
 		o_StringCache.f_AddConstantString(gc_ConstString_Binary);
@@ -967,7 +975,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString__Base);
 		o_StringCache.f_AddConstantString(gc_ConstString__Boolean);
 		o_StringCache.f_AddConstantString(gc_ConstString__Default);
-		o_StringCache.f_AddConstantString(gc_ConstString__EJSON);
+		o_StringCache.f_AddConstantString(gc_ConstString__EJson);
 		o_StringCache.f_AddConstantString(gc_ConstString__EntityType);
 		o_StringCache.f_AddConstantString(gc_ConstString__Error);
 		o_StringCache.f_AddConstantString(gc_ConstString__ExcludeWildcards);
@@ -975,7 +983,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString__ExplodeFunction);
 		o_StringCache.f_AddConstantString(gc_ConstString__Format);
 		o_StringCache.f_AddConstantString(gc_ConstString__Inputs);
-		o_StringCache.f_AddConstantString(gc_ConstString__JSON);
+		o_StringCache.f_AddConstantString(gc_ConstString__Json);
 		o_StringCache.f_AddConstantString(gc_ConstString__Key);
 		o_StringCache.f_AddConstantString(gc_ConstString__Length);
 		o_StringCache.f_AddConstantString(gc_ConstString__Member);

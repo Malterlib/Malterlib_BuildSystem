@@ -291,9 +291,9 @@ namespace NMib::NBuildSystem
 		mp_FileChanged = true;
 	}
 
-	TCMap<CPropertyKey, NEncoding::CEJSONSorted> CBuildSystem::f_GetExternalValues(CEntity const &_Entity) const
+	TCMap<CPropertyKey, NEncoding::CEJsonSorted> CBuildSystem::f_GetExternalValues(CEntity const &_Entity) const
 	{
-		TCMap<CPropertyKey, NEncoding::CEJSONSorted> Ret;
+		TCMap<CPropertyKey, NEncoding::CEJsonSorted> Ret;
 
 		for (auto &Property : _Entity.m_EvaluatedProperties.m_Properties)
 		{
@@ -303,7 +303,7 @@ namespace NMib::NBuildSystem
 		return Ret;
 	}
 
-	NEncoding::CEJSONSorted CBuildSystem::f_GetExternalProperty(CEntity &_Entity, CPropertyKeyReference const &_Key) const
+	NEncoding::CEJsonSorted CBuildSystem::f_GetExternalProperty(CEntity &_Entity, CPropertyKeyReference const &_Key) const
 	{
 		auto pEvaluated = _Entity.m_EvaluatedProperties.m_Properties.f_FindEqual(_Key);
 		if (pEvaluated)
@@ -311,7 +311,7 @@ namespace NMib::NBuildSystem
 		return {};
 	}
 
-	bool CBuildSystem::f_AddExternalProperty(CEntity &_Entity, CPropertyKeyReference const &_Key, NEncoding::CEJSONSorted &&_Value) const
+	bool CBuildSystem::f_AddExternalProperty(CEntity &_Entity, CPropertyKeyReference const &_Key, NEncoding::CEJsonSorted &&_Value) const
 	{
 		auto Mapped = _Entity.m_EvaluatedProperties.m_Properties(_Key);
 		auto &Evaluated = *Mapped;
@@ -326,7 +326,7 @@ namespace NMib::NBuildSystem
 		return bChanged;
 	}
 
-	void CBuildSystem::f_InitEntityForEvaluationNoEnv(CEntity &_Entity, TCMap<CPropertyKey, CEJSONSorted> const &_InitialValues, EEvaluatedPropertyType _Type) const
+	void CBuildSystem::f_InitEntityForEvaluationNoEnv(CEntity &_Entity, TCMap<CPropertyKey, CEJsonSorted> const &_InitialValues, EEvaluatedPropertyType _Type) const
 	{
 		for (auto iValue = _InitialValues.f_GetIterator(); iValue; ++iValue)
 		{
@@ -368,9 +368,9 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	void CBuildSystem::f_InitEntityForEvaluation(CEntity &_Entity, TCMap<CPropertyKey, CEJSONSorted> const &_InitialValues) const
+	void CBuildSystem::f_InitEntityForEvaluation(CEntity &_Entity, TCMap<CPropertyKey, CEJsonSorted> const &_InitialValues) const
 	{
-		TCMap<CPropertyKey, CEJSONSorted> EnvironmentValues;
+		TCMap<CPropertyKey, CEJsonSorted> EnvironmentValues;
 
 		for (auto iEnv = mp_Environment.f_GetIterator(); iEnv; ++iEnv)
 		{
@@ -384,7 +384,7 @@ namespace NMib::NBuildSystem
 		f_InitEntityForEvaluationNoEnv(_Entity, EnvironmentValues, EEvaluatedPropertyType_ExternalEnvironment);
 	}
 
-	TCVector<TCVector<CConfigurationTuple>> CBuildSystem::f_EvaluateConfigurationTuples(TCMap<CPropertyKey, CEJSONSorted> const &_InitialValues) const
+	TCVector<TCVector<CConfigurationTuple>> CBuildSystem::f_EvaluateConfigurationTuples(TCMap<CPropertyKey, CEJsonSorted> const &_InitialValues) const
 	{
 		return fp_EvaluateConfigurationTuples(_InitialValues);
 	}

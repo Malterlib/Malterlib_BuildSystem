@@ -1,28 +1,28 @@
 // Copyright © 2021 Favro Holding AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
-#include <Mib/Encoding/JSONParse>
+#include <Mib/Encoding/JsonParse>
 
 #include "Malterlib_BuildSystem_Syntax.h"
 #include "Malterlib_BuildSystem.h"
 
 namespace NMib::NBuildSystem
 {
-	NEncoding::CEJSONSorted CBuildSystemSyntax::CArray::f_ToJson() const
+	NEncoding::CEJsonSorted CBuildSystemSyntax::CArray::f_ToJson() const
 	{
-		CEJSONSorted Return;
+		CEJsonSorted Return;
 		auto &Array = Return.f_Array();
 		for (auto &Value : m_Array)
 			Array.f_Insert(Value.f_Get().f_ToJson());
 		return Return;
 	}
 
-	auto CBuildSystemSyntax::CArray::fs_FromJson(CStringCache &o_StringCache, NEncoding::CEJSONSorted const &_JSON, CFilePosition const &_Position, bool _bAppendAllowed)
-		-> NStorage::TCVariant<NEncoding::CEJSONSorted, CArray>
+	auto CBuildSystemSyntax::CArray::fs_FromJson(CStringCache &o_StringCache, NEncoding::CEJsonSorted const &_Json, CFilePosition const &_Position, bool _bAppendAllowed)
+		-> NStorage::TCVariant<NEncoding::CEJsonSorted, CArray>
 	{
 		CArray Array;
 		bool bAllConstant = true;
-		for (auto &Element : _JSON.f_Array())
+		for (auto &Element : _Json.f_Array())
 		{
 			auto &Value = Array.m_Array.f_Insert(CValue::fs_FromJson(o_StringCache, Element, _Position, _bAppendAllowed));
 			if (!Value.f_Get().f_IsConstant())
@@ -31,11 +31,11 @@ namespace NMib::NBuildSystem
 
 		if (bAllConstant)
 		{
-			NEncoding::CEJSONSorted Return;
+			NEncoding::CEJsonSorted Return;
 			auto &ReturnArray = Return.f_Array();
 
 			for (auto &Entry : Array.m_Array)
-				ReturnArray.f_Insert(fg_Move(Entry.f_Get().m_Value.f_GetAsType<NEncoding::CEJSONSorted>()));
+				ReturnArray.f_Insert(fg_Move(Entry.f_Get().m_Value.f_GetAsType<NEncoding::CEJsonSorted>()));
 
 			return Return;
 		}
@@ -57,9 +57,9 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	NEncoding::CEJSONSorted CBuildSystemSyntax::CObject::f_ToJson() const
+	NEncoding::CEJsonSorted CBuildSystemSyntax::CObject::f_ToJson() const
 	{
-		CEJSONSorted Return;
+		CEJsonSorted Return;
 		auto &Object = Return.f_Object();
 		for (auto &Value : m_ObjectSorted)
 		{
@@ -76,7 +76,7 @@ namespace NMib::NBuildSystem
 			case 1:
 				{
 					Key.m_Key.f_Get<1>().f_Format(OutKey, false);
-					OutKey.f_SetUserData(EJSONStringType_Custom);
+					OutKey.f_SetUserData(EJsonStringType_Custom);
 				}
 				break;
 			case 2:
@@ -91,25 +91,25 @@ namespace NMib::NBuildSystem
 		return Return;
 	}
 	
-	auto CBuildSystemSyntax::CObject::fs_FromJson(CStringCache &o_StringCache, NEncoding::CEJSONSorted const &_JSON, CFilePosition const &_Position, bool _bAppendAllowed)
-		-> NStorage::TCVariant<NEncoding::CEJSONSorted, CObject>
+	auto CBuildSystemSyntax::CObject::fs_FromJson(CStringCache &o_StringCache, NEncoding::CEJsonSorted const &_Json, CFilePosition const &_Position, bool _bAppendAllowed)
+		-> NStorage::TCVariant<NEncoding::CEJsonSorted, CObject>
 	{
 		CObject Object;
 		bool bAllConstant = true;
-		for (auto &Member : _JSON.f_Object())
+		for (auto &Member : _Json.f_Object())
 		{
 			CObjectKey Key;
 			auto &Name = Member.f_Name();
 			bool bVerifyAppendObject = false;
-			switch (EJSONStringType(Name.f_GetUserData()))
+			switch (EJsonStringType(Name.f_GetUserData()))
 			{
-			case EJSONStringType_DoubleQuote:
-			case EJSONStringType_SingleQuote:
+			case EJsonStringType_DoubleQuote:
+			case EJsonStringType_SingleQuote:
 				{
 					Key.m_Key = Name;
 				}
 				break;
-			case EJSONStringType_NoQuote:
+			case EJsonStringType_NoQuote:
 				{
 					if (Name == gc_ConstString_Symbol_AppendObject.m_String)
 					{
@@ -125,11 +125,11 @@ namespace NMib::NBuildSystem
 						Key.m_Key = Name;
 				}
 				break;
-			case EJSONStringType_Custom:
+			case EJsonStringType_Custom:
 				{
 					bAllConstant = false;
 
-					TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJSONParseContext ParseContext;
+					TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext ParseContext;
 					ParseContext.m_FileName = _Position.m_File;
 					ParseContext.m_StartLine = _Position.m_Line;
 					ParseContext.m_StartColumn = _Position.m_Column;
@@ -138,12 +138,12 @@ namespace NMib::NBuildSystem
 					ParseContext.m_pStartParse = (uch8 const *)Name.f_GetStr();
 					auto pParse = ParseContext.m_pStartParse;
 
-					Key.m_Key = CEvalString::fs_FromJson(o_StringCache, CEJSONSorted::fs_FromJson(ParseContext.f_ParseEvalStringToken(pParse))[gc_ConstString_Value], _Position);
+					Key.m_Key = CEvalString::fs_FromJson(o_StringCache, CEJsonSorted::fs_FromJson(ParseContext.f_ParseEvalStringToken(pParse))[gc_ConstString_Value], _Position);
 				}
 				break;
 			}
 
-			DMibCheck(Name.f_GetUserData() <= EJSONStringType_Custom);
+			DMibCheck(Name.f_GetUserData() <= EJsonStringType_Custom);
 
 			auto &ObjectValue = Object.m_Object[Key];
 			Object.m_ObjectSorted.f_Insert(ObjectValue);
@@ -194,13 +194,13 @@ namespace NMib::NBuildSystem
 
 		if (bAllConstant)
 		{
-			NEncoding::CEJSONSorted Return;
+			NEncoding::CEJsonSorted Return;
 			auto &ReturnObject = Return.f_Object();
 
 			for (auto &Entry : Object.m_Object)
 			{
 				auto &Key = Object.m_Object.fs_GetKey(Entry);
-				ReturnObject[Key.m_Key.f_GetAsType<NStr::CStr>()] = fg_Move(Entry.m_Value.f_Get().m_Value.f_GetAsType<NEncoding::CEJSONSorted>());
+				ReturnObject[Key.m_Key.f_GetAsType<NStr::CStr>()] = fg_Move(Entry.m_Value.f_Get().m_Value.f_GetAsType<NEncoding::CEJsonSorted>());
 			}
 
 			return Return;

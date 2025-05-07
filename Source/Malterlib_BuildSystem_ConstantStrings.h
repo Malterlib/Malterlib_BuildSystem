@@ -49,7 +49,7 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_EntityPath;
 	extern CStringAndHash const gc_ConstString_InnerType;
 	extern CStringAndHash const gc_ConstString_int;
-	extern CStringAndHash const gc_ConstString_JSONAccessor;
+	extern CStringAndHash const gc_ConstString_JsonAccessor;
 	extern CStringAndHash const gc_ConstString_KeyLogicalOperator;
 	extern CStringAndHash const gc_ConstString_KeyPrefixOperator;
 	extern CStringAndHash const gc_ConstString_Namespace;
@@ -242,6 +242,7 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_ContainsListElement;
 	extern CStringAndHash const gc_ConstString_Context;
 	extern CStringAndHash const gc_ConstString_DateTime;
+	extern CStringAndHash const gc_ConstString_EJsonToString;
 	extern CStringAndHash const gc_ConstString_EJSONToString;
 	extern CStringAndHash const gc_ConstString_EndsWith;
 	extern CStringAndHash const gc_ConstString_Equal;
@@ -294,6 +295,7 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_IsUserType;
 	extern CStringAndHash const gc_ConstString_IsValid;
 	extern CStringAndHash const gc_ConstString_ItemDefinitionGroup;
+	extern CStringAndHash const gc_ConstString_JsonToString;
 	extern CStringAndHash const gc_ConstString_JSONToString;
 	extern CStringAndHash const gc_ConstString_Join;
 	extern CStringAndHash const gc_ConstString_Label;
@@ -311,8 +313,10 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_Or;
 	extern CStringAndHash const gc_ConstString_OverridingType;
 	extern CStringAndHash const gc_ConstString_Parse;
+	extern CStringAndHash const gc_ConstString_ParseEJson;
 	extern CStringAndHash const gc_ConstString_ParseEJSON;
 	extern CStringAndHash const gc_ConstString_ParseFormatString;
+	extern CStringAndHash const gc_ConstString_ParseJson;
 	extern CStringAndHash const gc_ConstString_ParseJSON;
 	extern CStringAndHash const gc_ConstString_PreProject;
 	extern CStringAndHash const gc_ConstString_PrecompiledHeaderOutputFile;
@@ -454,7 +458,7 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString__Base;
 	extern CStringAndHash const gc_ConstString__Boolean;
 	extern CStringAndHash const gc_ConstString__Default;
-	extern CStringAndHash const gc_ConstString__EJSON;
+	extern CStringAndHash const gc_ConstString__EJson;
 	extern CStringAndHash const gc_ConstString__EntityType;
 	extern CStringAndHash const gc_ConstString__Error;
 	extern CStringAndHash const gc_ConstString__ExcludeWildcards;
@@ -462,7 +466,7 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString__ExplodeFunction;
 	extern CStringAndHash const gc_ConstString__Format;
 	extern CStringAndHash const gc_ConstString__Inputs;
-	extern CStringAndHash const gc_ConstString__JSON;
+	extern CStringAndHash const gc_ConstString__Json;
 	extern CStringAndHash const gc_ConstString__Key;
 	extern CStringAndHash const gc_ConstString__Length;
 	extern CStringAndHash const gc_ConstString__Member;

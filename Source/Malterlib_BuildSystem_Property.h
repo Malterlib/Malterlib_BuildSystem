@@ -86,7 +86,7 @@ namespace NMib::NBuildSystem
 			o_Str += typename tf_CStr::CFormat("{}") << m_Value;
 		}
 
-		NEncoding::CEJSONSorted m_Value;
+		NEncoding::CEJsonSorted m_Value;
 		EEvaluatedPropertyType m_Type;
 		NStorage::TCPointer<CProperty const> m_pProperty;
 		NStorage::TCSharedPointer<CBuildSystemUniquePositions> m_pPositions;

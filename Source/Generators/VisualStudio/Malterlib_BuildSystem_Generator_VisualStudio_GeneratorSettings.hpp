@@ -117,7 +117,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		{
 			auto &Configuration = Settings.fs_GetKey(Setting);
 
-			auto pVSSettings = Setting.m_Value.f_GetMember(gc_ConstString_VSSettings, EEJSONType_Object);
+			auto pVSSettings = Setting.m_Value.f_GetMember(gc_ConstString_VSSettings, EEJsonType_Object);
 
 			if (!pVSSettings)
 				continue;
@@ -128,14 +128,14 @@ namespace NMib::NBuildSystem::NVisualStudio
 			{
 				auto &SettingName = VSSetting.f_Name();
 
-				auto &JSON = VSSetting.f_Value();
+				auto &Json = VSSetting.f_Value();
 
-				CBuildSystemUniquePositions Positions = CBuildSystemUniquePositions::fs_FromJson(fg_Move(JSON[gc_ConstString_Positions]));
+				CBuildSystemUniquePositions Positions = CBuildSystemUniquePositions::fs_FromJson(fg_Move(Json[gc_ConstString_Positions]));
 				TCVector<CVS_Setting> VSSettingsVector;
 
 				if constexpr (tf_bIsItem)
 				{
-					JSON[gc_ConstString_Settings].f_Object().f_ExtractAll
+					Json[gc_ConstString_Settings].f_Object().f_ExtractAll
 						(
 							[&](auto &&_Key, auto &&_Value)
 							{
@@ -146,13 +146,13 @@ namespace NMib::NBuildSystem::NVisualStudio
 				}
 				else
 				{
-					for (auto &SettingJSON : JSON[gc_ConstString_Settings].f_Array())
+					for (auto &SettingJson : Json[gc_ConstString_Settings].f_Array())
 					{
-						auto &Type = SettingJSON[gc_ConstString_Type].f_String();
+						auto &Type = SettingJson[gc_ConstString_Type].f_String();
 						if (Type == gc_ConstString_PropertyGroup.m_String)
-							VSSettingsVector.f_Insert(CVS_Setting_PropertyGroup::fs_FromJson(fg_Move(SettingJSON)));
+							VSSettingsVector.f_Insert(CVS_Setting_PropertyGroup::fs_FromJson(fg_Move(SettingJson)));
 						else if (Type == gc_ConstString_ItemDefinitionGroup.m_String)
-							VSSettingsVector.f_Insert(CVS_Setting_ItemDefinitionGroup::fs_FromJson(fg_Move(SettingJSON)));
+							VSSettingsVector.f_Insert(CVS_Setting_ItemDefinitionGroup::fs_FromJson(fg_Move(SettingJson)));
 						else
 							CBuildSystem::fs_ThrowError(Setting.m_PropertyInfo, CStr::CFormat("Unsupported VSSetting type: {}") << Type);
 					}

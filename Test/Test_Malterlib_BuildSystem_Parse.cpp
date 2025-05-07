@@ -75,7 +75,7 @@ namespace
 	} // Comment
 	TestFunction function(int _Param0, float _Param1) float // Comment
 	TestFunctionDefaulted function(int _Param0, float _Param1 = 5.05) float = 10.0 // Comment
-	TestFunctionDefaultedDynamic function(int _Param0, float _Param1 = 5.05) string = `@(TestStr) suffix @(_Param0->JSONToString()) @(_Param1->JSONToString())` // Comment
+	TestFunctionDefaultedDynamic function(int _Param0, float _Param1 = 5.05) string = `@(TestStr) suffix @(_Param0->JsonToString()) @(_Param1->JsonToString())` // Comment
 	TestFunctionDefaultedEquals function(int _Param0, float _Param1 = 5.05) float = 10.0 // Comment
 	TestFunctionDefaultedObj function(int _Param0, type(CObject) _Param1 = {
 		Test: "Testing",
@@ -217,9 +217,9 @@ namespace
 			Target:Compile.AppendObjectArray...
 		],
 		`@(DynamicValue)`: Other->Function('Str', "Str2", Other3, `@(Other4) Test`, {
-			"JSON": "Value"
+			"Json": "Value"
 		}, [
-			"JSON",
+			"Json",
 			"Array"
 		]),
 		`@(Test) Test`: "Evaluated",

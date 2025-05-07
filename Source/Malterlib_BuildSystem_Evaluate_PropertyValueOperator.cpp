@@ -69,7 +69,7 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	bool fg_IsFalsy(CEJSONSorted const &_Value)
+	bool fg_IsFalsy(CEJsonSorted const &_Value)
 	{
 		if (!_Value.f_IsValid())
 			return true;
@@ -87,7 +87,7 @@ namespace NMib::NBuildSystem
 		return false;
 	}
 
-	bool fg_IsTruthy(CEJSONSorted const &_Value)
+	bool fg_IsTruthy(CEJsonSorted const &_Value)
 	{
 		return !fg_IsFalsy(_Value);
 	}
@@ -144,7 +144,7 @@ namespace NMib::NBuildSystem
 			case COp::EOperator_GreaterThan:
 			case COp::EOperator_LessThanEqual:
 			case COp::EOperator_GreaterThanEqual:
-				return CEJSONSorted
+				return CEJsonSorted
 					(
 						fsp_CompareValueRecursive
 						(
@@ -171,7 +171,7 @@ namespace NMib::NBuildSystem
 				case COp::EOperator_Divide:
 				case COp::EOperator_Multiply:
 				case COp::EOperator_Modulus:
-					Right.f_Set(CEJSONSorted(RightRef.f_AsFloat()));
+					Right.f_Set(CEJsonSorted(RightRef.f_AsFloat()));
 					break;
 				default:
 					break;
@@ -186,7 +186,7 @@ namespace NMib::NBuildSystem
 				case COp::EOperator_Divide:
 				case COp::EOperator_Multiply:
 				case COp::EOperator_Modulus:
-					Left.f_Set(CEJSONSorted(LeftRef.f_AsFloat()));
+					Left.f_Set(CEJsonSorted(LeftRef.f_AsFloat()));
 					break;
 				default:
 					break;
@@ -212,7 +212,7 @@ namespace NMib::NBuildSystem
 
 					for (auto &Member : RightRef.f_Object())
 					{
-						if (Member.f_Name().f_GetUserData() == EJSONStringType_NoQuote)
+						if (Member.f_Name().f_GetUserData() == EJsonStringType_NoQuote)
 						{
 							auto *pObject = &NewValue;
 							for (auto &Component : Member.f_Name().f_Split("."))
@@ -256,8 +256,8 @@ namespace NMib::NBuildSystem
 		{
 			switch (_Value.m_Operator)
 			{
-			case COp::EOperator_Add: return CEJSONSorted(LeftRef.f_String() + RightRef.f_String());
-			case COp::EOperator_Divide: return CEJSONSorted(LeftRef.f_String() / RightRef.f_String());
+			case COp::EOperator_Add: return CEJsonSorted(LeftRef.f_String() + RightRef.f_String());
+			case COp::EOperator_Divide: return CEJsonSorted(LeftRef.f_String() / RightRef.f_String());
 			default:
 				fs_ThrowError(_Context, "Strings are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << LeftRef << RightRef);
 				break;
@@ -267,16 +267,16 @@ namespace NMib::NBuildSystem
 		{
 			switch (_Value.m_Operator)
 			{
-			case COp::EOperator_Add: return CEJSONSorted(LeftRef.f_Integer() + RightRef.f_Integer());
-			case COp::EOperator_Subtract: return CEJSONSorted(LeftRef.f_Integer() - RightRef.f_Integer());
-			case COp::EOperator_Divide: return CEJSONSorted(LeftRef.f_Integer() / RightRef.f_Integer());
-			case COp::EOperator_Multiply: return CEJSONSorted(LeftRef.f_Integer() * RightRef.f_Integer());
-			case COp::EOperator_Modulus: return CEJSONSorted(LeftRef.f_Integer() % RightRef.f_Integer());
-			case COp::EOperator_BitwiseLeftShift: return CEJSONSorted(LeftRef.f_Integer() << RightRef.f_Integer());
-			case COp::EOperator_BitwiseRightShift: return CEJSONSorted(LeftRef.f_Integer() >> RightRef.f_Integer());
-			case COp::EOperator_BitwiseAnd: return CEJSONSorted(LeftRef.f_Integer() & RightRef.f_Integer());
-			case COp::EOperator_BitwiseXor: return CEJSONSorted(LeftRef.f_Integer() ^ RightRef.f_Integer());
-			case COp::EOperator_BitwiseOr: return CEJSONSorted(LeftRef.f_Integer() | RightRef.f_Integer());
+			case COp::EOperator_Add: return CEJsonSorted(LeftRef.f_Integer() + RightRef.f_Integer());
+			case COp::EOperator_Subtract: return CEJsonSorted(LeftRef.f_Integer() - RightRef.f_Integer());
+			case COp::EOperator_Divide: return CEJsonSorted(LeftRef.f_Integer() / RightRef.f_Integer());
+			case COp::EOperator_Multiply: return CEJsonSorted(LeftRef.f_Integer() * RightRef.f_Integer());
+			case COp::EOperator_Modulus: return CEJsonSorted(LeftRef.f_Integer() % RightRef.f_Integer());
+			case COp::EOperator_BitwiseLeftShift: return CEJsonSorted(LeftRef.f_Integer() << RightRef.f_Integer());
+			case COp::EOperator_BitwiseRightShift: return CEJsonSorted(LeftRef.f_Integer() >> RightRef.f_Integer());
+			case COp::EOperator_BitwiseAnd: return CEJsonSorted(LeftRef.f_Integer() & RightRef.f_Integer());
+			case COp::EOperator_BitwiseXor: return CEJsonSorted(LeftRef.f_Integer() ^ RightRef.f_Integer());
+			case COp::EOperator_BitwiseOr: return CEJsonSorted(LeftRef.f_Integer() | RightRef.f_Integer());
 			default:
 				fs_ThrowError(_Context, "Integers are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << LeftRef << RightRef);
 				break;
@@ -286,11 +286,11 @@ namespace NMib::NBuildSystem
 		{
 			switch (_Value.m_Operator)
 			{
-			case COp::EOperator_Add: return CEJSONSorted(LeftRef.f_Float() + RightRef.f_Float());
-			case COp::EOperator_Subtract: return CEJSONSorted(LeftRef.f_Float() - RightRef.f_Float());
-			case COp::EOperator_Divide: return CEJSONSorted(LeftRef.f_Float() / RightRef.f_Float());
-			case COp::EOperator_Multiply: return CEJSONSorted(LeftRef.f_Float() * RightRef.f_Float());
-			case COp::EOperator_Modulus: return CEJSONSorted(LeftRef.f_Float().f_Mod(RightRef.f_Float()));
+			case COp::EOperator_Add: return CEJsonSorted(LeftRef.f_Float() + RightRef.f_Float());
+			case COp::EOperator_Subtract: return CEJsonSorted(LeftRef.f_Float() - RightRef.f_Float());
+			case COp::EOperator_Divide: return CEJsonSorted(LeftRef.f_Float() / RightRef.f_Float());
+			case COp::EOperator_Multiply: return CEJsonSorted(LeftRef.f_Float() * RightRef.f_Float());
+			case COp::EOperator_Modulus: return CEJsonSorted(LeftRef.f_Float().f_Mod(RightRef.f_Float()));
 			default:
 				fs_ThrowError(_Context, "Floats are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << LeftRef << RightRef);
 				break;
@@ -310,10 +310,10 @@ namespace NMib::NBuildSystem
 		else
 			fs_ThrowError(_Context, "Value type not supported for binary operator {}:\n{}\n{}"_f << LeftRef.f_UserType().m_Type << fg_OperatorName(_Value.m_Operator) << LeftRef << RightRef);
 
-		return CEJSONSorted();
+		return CEJsonSorted();
 	}
 
-	CEJSONSorted CBuildSystem::fp_EvaluatePropertyValuePrefixOperator(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CPrefixOperator const &_Value) const
+	CEJsonSorted CBuildSystem::fp_EvaluatePropertyValuePrefixOperator(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CPrefixOperator const &_Value) const
 	{
 		using COp = CBuildSystemSyntax::CPrefixOperator;
 
