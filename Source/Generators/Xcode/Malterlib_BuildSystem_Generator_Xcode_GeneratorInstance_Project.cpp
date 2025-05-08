@@ -171,11 +171,44 @@ namespace NMib::NBuildSystem::NXcode
 				PerConfig.m_CalculatedDependencyName = DependentTarget.m_XcodeProductName;
 				PerConfig.m_CalculatedPath = "{}.{}"_f << PerConfig.m_CalculatedDependencyName << PerConfig.m_CalculatedDependencyExtension;
 
+				auto fConvertEnvVars = [](CStr const &_String)
+					{
+						CStr Output;
+						{
+							CStr::CAppender OutputAppender(Output);
+							auto *pParse = _String.f_GetStr();
+							while (*pParse)
+							{
+								if (fg_StrStartsWith(pParse, "$("))
+								{
+									pParse += 2;
+									OutputAppender += "${";
+									auto *pParseStart = pParse;
+									while (*pParse && *pParse != ')')
+										++pParse;
+									OutputAppender.f_AddString(pParseStart, pParse - pParseStart);
+									if (*pParse == ')')
+									{
+										OutputAppender += '}';
+										++pParse;
+									}
+								}
+								else
+								{
+									OutputAppender += *pParse;
+									++pParse;
+								}
+							}
+						}
+
+						return Output;
+					}
+				;
 				CStr Arch = EvaluatedSettings.m_Element[gc_ConstString_NATIVE_ARCH_ACTUAL.m_String].f_GetValue();
-				CStr BuildDir = EvaluatedSettings.m_Element[gc_ConstString_BUILD_DIR.m_String].f_GetValue();
-				CStr ObjectPath = "{}/$MalterlibXcodeObjectFileDirName/{}"_f << BuildDir << Arch;
+				CStr ObjectDir = fConvertEnvVars(EvaluatedSettings.m_Element[gc_ConstString_CONFIGURATION_TEMP_DIR.m_String].f_GetValue());
+				CStr ObjectPath = "{}/${{MalterlibXcodeObjectFileDirName}/{}"_f << ObjectDir << Arch;
 				CStr DummyPath = "{}/Dummy.o"_f << ObjectPath;
-				CStr LibraryPath = "{}/{}"_f << PerConfig.m_SearchPath << PerConfig.m_CalculatedPath;
+				CStr LibraryPath = "{}/{}"_f << fConvertEnvVars(PerConfig.m_SearchPath) << PerConfig.m_CalculatedPath;
 
 				auto &PreBuildScript = NativeTarget.m_BuildScripts[gc_ConstString_PreBuildScript.m_String];
 				PreBuildScript.m_Inputs.f_Insert(LibraryPath);
