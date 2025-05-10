@@ -251,12 +251,7 @@ namespace NMib::NBuildSystem::NRepository
 			if (m_bLastAlive)
 			{
 				DMibLock(g_TimerDestructionTrackerLock);
-				g_TimerDestructionTrackerCallstack.m_CallstackLen = NSys::fg_System_GetStackTrace
-					(
-						g_TimerDestructionTrackerCallstack.m_Callstack
-						, sizeof(g_TimerDestructionTrackerCallstack.m_Callstack) / sizeof(g_TimerDestructionTrackerCallstack.m_Callstack[0])
-					)
-				;
+				g_TimerDestructionTrackerCallstack.f_Capture();
 			}
 		}
 		bool m_bLastAlive = true;
