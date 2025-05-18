@@ -202,8 +202,6 @@ namespace NMib::NBuildSystem
 								InfosToProcess.f_Insert(CGenerateWorkspaceInfo{Config, pWorkspaceInfo.f_Get()});
 							}
 
-							auto StartGenerate = Timer.f_GetTime();
-
 							co_await fg_ParallelForEach
 								(
 									InfosToProcess
@@ -243,8 +241,6 @@ namespace NMib::NBuildSystem
 							o_NumWorkspaceTargets[Workspace.f_GetName()] = nTotalTargets;
 
 							co_await g_Yield;
-
-							auto StopGenerate = Timer.f_GetTime();
 
 							fp64 GenerateTime = 0.0;
 

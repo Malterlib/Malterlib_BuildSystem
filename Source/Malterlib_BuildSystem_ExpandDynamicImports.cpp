@@ -998,7 +998,6 @@ namespace NMib::NBuildSystem
 
 			for (auto &File : FoundFiles)
 			{
-				auto StartTime = Clock.f_GetTime();
 				CStr Extension = CFile::fs_GetExtension(File.m_Path);
 				CStr FileDirectory = CFile::fs_GetPath(File.m_Path);
 				bool bIsMHeader = Extension == "MHeader";
