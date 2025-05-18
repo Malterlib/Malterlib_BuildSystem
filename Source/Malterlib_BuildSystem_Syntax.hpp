@@ -14,8 +14,8 @@ namespace NMib::NBuildSystem
 			(
 				[&](auto const &_Value)
 				{
-					using CValueType = typename NTraits::TCRemoveReferenceAndQualifiers<decltype(_Value)>::CType;
-					if constexpr (NTraits::TCIsSame<CValueType, NStorage::TCIndirection<CExpression>>::mc_Value)
+					using CValueType = NTraits::TCRemoveReferenceAndQualifiers<decltype(_Value)>;
+					if constexpr (NTraits::cIsSame<CValueType, NStorage::TCIndirection<CExpression>>)
 					{
 						o_Str += "@";
 						o_Str += typename tf_CStr::CFormat("{}") << _Value;
@@ -57,7 +57,7 @@ namespace NMib::NBuildSystem
 			(
 				[&](auto const &_Value)
 				{
-					if constexpr (NTraits::TCIsSameDereferencedUnqualified<decltype(_Value), NEncoding::CEJsonSorted>::mc_Value)
+					if constexpr (NTraits::cIsSameDereferencedUnqualified<decltype(_Value), NEncoding::CEJsonSorted>)
 						o_Str += typename tf_CStr::CFormat("{}") << _Value.f_ToString("\t", gc_BuildSystemJsonParseFlags);
 					else
 						o_Str += typename tf_CStr::CFormat("{}") << _Value;
@@ -208,8 +208,8 @@ namespace NMib::NBuildSystem
 			(
 				[&](auto const &_Value)
 				{
-					using CValueType = typename NTraits::TCRemoveReferenceAndQualifiers<decltype(_Value)>::CType;
-					if constexpr (NTraits::TCIsSame<CValueType, CExpression>::mc_Value)
+					using CValueType = NTraits::TCRemoveReferenceAndQualifiers<decltype(_Value)>;
+					if constexpr (NTraits::cIsSame<CValueType, CExpression>)
 						o_Str += "@";
 
 					o_Str += typename tf_CStr::CFormat("{}") << _Value;
@@ -263,10 +263,10 @@ namespace NMib::NBuildSystem
 				(
 					[&](auto const &_Value)
 					{
-						using CValueType = typename NTraits::TCRemoveReferenceAndQualifiers<decltype(_Value)>::CType;
+						using CValueType = NTraits::TCRemoveReferenceAndQualifiers<decltype(_Value)>;
 						typename tf_CStr::CAppender Appender(o_Str);
 
-						if constexpr (NTraits::TCIsSame<CValueType, EPropertyType>::mc_Value)
+						if constexpr (NTraits::cIsSame<CValueType, EPropertyType>)
 							Appender += fg_PropertyTypeToStr(_Value);
 						else
 						{
@@ -276,8 +276,8 @@ namespace NMib::NBuildSystem
 									(
 										[&](auto const &_Value)
 										{
-											using CValueType = typename NTraits::TCRemoveReferenceAndQualifiers<decltype(_Value)>::CType;
-											if constexpr (NTraits::TCIsSame<CValueType, NStr::CStr>::mc_Value)
+											using CValueType = NTraits::TCRemoveReferenceAndQualifiers<decltype(_Value)>;
+											if constexpr (NTraits::cIsSame<CValueType, NStr::CStr>)
 												NContainer::TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_GenerateIdentifier(Appender, _Value);
 											else
 												Appender.f_Commit().m_String += typename tf_CStr::CFormat("@{}") << _Value;
@@ -297,10 +297,10 @@ namespace NMib::NBuildSystem
 			(
 				[&](auto const &_Value)
 				{
-					using CValueType = typename NTraits::TCRemoveReferenceAndQualifiers<decltype(_Value)>::CType;
+					using CValueType = NTraits::TCRemoveReferenceAndQualifiers<decltype(_Value)>;
 					typename tf_CStr::CAppender Appender(o_Str);
 
-					if constexpr (NTraits::TCIsSame<CValueType, CStringAndHash>::mc_Value)
+					if constexpr (NTraits::cIsSame<CValueType, CStringAndHash>)
 						NContainer::TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_GenerateIdentifier(Appender, _Value.m_String);
 					else
 					{
@@ -310,8 +310,8 @@ namespace NMib::NBuildSystem
 								(
 									[&](auto const &_Value)
 									{
-										using CValueType = typename NTraits::TCRemoveReferenceAndQualifiers<decltype(_Value)>::CType;
-										if constexpr (NTraits::TCIsSame<CValueType, NStr::CStr>::mc_Value)
+										using CValueType = NTraits::TCRemoveReferenceAndQualifiers<decltype(_Value)>;
+										if constexpr (NTraits::cIsSame<CValueType, NStr::CStr>)
 											NContainer::TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_GenerateIdentifier(Appender, _Value);
 										else
 											Appender.f_Commit().m_String += typename tf_CStr::CFormat("@{}") << _Value;
@@ -344,7 +344,7 @@ namespace NMib::NBuildSystem
 			(
 				[&](auto const &_Value)
 				{
-					if constexpr (NTraits::TCIsSameDereferencedUnqualified<decltype(_Value), NStr::CStr>::mc_Value)
+					if constexpr (NTraits::cIsSameDereferencedUnqualified<decltype(_Value), NStr::CStr>)
 						CBuildSystemSyntax::fs_FormatKeyString(o_Str, _Value);
 					else
 						o_Str += typename tf_CStr::CFormat("{}") << _Value;
@@ -494,7 +494,7 @@ namespace NMib::NBuildSystem
 				(
 					[&](auto const &_Value)
 					{
-						if constexpr (NTraits::TCIsSameDereferencedUnqualified<decltype(_Value), NEncoding::CEJsonSorted>::mc_Value)
+						if constexpr (NTraits::cIsSameDereferencedUnqualified<decltype(_Value), NEncoding::CEJsonSorted>)
 							NEncoding::NJson::fg_GenerateJsonValue<CBuildSystemParseContext>(Appender, _Value.f_ToJson(), 0, "\t", gc_BuildSystemJsonParseFlags);
 						else
 							Appender.f_Commit().m_String += typename tf_CStr::CFormat("{}") << _Value;
@@ -578,7 +578,7 @@ namespace NMib::NBuildSystem
 			(
 				[&](auto const &_Value)
 				{
-					if constexpr (NTraits::TCIsSameDereferencedUnqualified<decltype(_Value), NEncoding::CEJsonSorted>::mc_Value)
+					if constexpr (NTraits::cIsSameDereferencedUnqualified<decltype(_Value), NEncoding::CEJsonSorted>)
 					{
 						typename tf_CStr::CAppender Appender(o_Str);
 						NEncoding::NJson::fg_GenerateJsonValue<CBuildSystemParseContext>(Appender, _Value.f_ToJson(), 0, "\t", gc_BuildSystemJsonParseFlags);

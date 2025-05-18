@@ -98,30 +98,30 @@ namespace NMib::NBuildSystem
 
 		if (pValue)
 		{
-			if constexpr (NTraits::TCIsSame<CType, NEncoding::CEJsonSorted>::mc_Value)
+			if constexpr (NTraits::cIsSame<CType, NEncoding::CEJsonSorted>)
 				ReturnValue = fg_Move(fg_RemoveQualifiers(*pValue));
-			else if constexpr (NTraits::TCIsSame<CType, NStr::CStr>::mc_Value)
+			else if constexpr (NTraits::cIsSame<CType, NStr::CStr>)
 			{
 				if (!pValue->f_IsString())
 					CBuildSystem::fs_ThrowError(m_PropertyInfo, "Expected value to be string for '{}'"_f << _Name);
 
 				ReturnValue = fg_Move(fg_RemoveQualifiers(pValue->f_String()));
 			}
-			else if constexpr (NTraits::TCIsSame<CType, NContainer::TCVector<NStr::CStr>>::mc_Value)
+			else if constexpr (NTraits::cIsSame<CType, NContainer::TCVector<NStr::CStr>>)
 			{
 				if (!pValue->f_IsStringArray())
 					CBuildSystem::fs_ThrowError(m_PropertyInfo, "Expected value to be a string array for '{}'"_f << _Name);
 
 				ReturnValue = fg_Move(fg_RemoveQualifiers(pValue->f_StringArray()));
 			}
-			else if constexpr (NTraits::TCIsSame<CType, int32>::mc_Value)
+			else if constexpr (NTraits::cIsSame<CType, int32>)
 			{
 				if (!pValue->f_IsInteger())
 					CBuildSystem::fs_ThrowError(m_PropertyInfo, "Expected value to be integer for '{}'"_f << _Name);
 
 				ReturnValue = pValue->f_Integer();
 			}
-			else if constexpr (NTraits::TCIsSame<CType, bool>::mc_Value)
+			else if constexpr (NTraits::cIsSame<CType, bool>)
 			{
 				if (!pValue->f_IsBoolean())
 					CBuildSystem::fs_ThrowError(m_PropertyInfo, "Expected value to be boolean for '{}'"_f << _Name);
@@ -129,7 +129,7 @@ namespace NMib::NBuildSystem
 				ReturnValue = pValue->f_Boolean();
 			}
 			else
-				static_assert(NTraits::TCIsSame<CType, CVoidTag>::mc_Value, "Unsupported type");
+				static_assert(NTraits::cIsSame<CType, CVoidTag>, "Unsupported type");
 		}
 
 		return ReturnValue;

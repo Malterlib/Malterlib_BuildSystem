@@ -418,15 +418,15 @@ namespace NMib::NBuildSystem::NVisualStudio
 								Value = _Setting.m_Value;
 								pSetting = &_Setting;
 
-								using CType = typename NTraits::TCRemoveReferenceAndQualifiers<decltype(_Setting)>::CType;
-								if constexpr (TCIsSame<CType, CVS_Setting_Item>::mc_Value)
+								using CType = NTraits::TCRemoveReferenceAndQualifiers<decltype(_Setting)>;
+								if constexpr (cIsSame<CType, CVS_Setting_Item>)
 								{
 									if constexpr (tf_bCompile || tf_bIsItem)
 										Value = Value.f_Replace(gc_ConstString_Symbol_Inherit.m_String, (CFStr128::CFormat("%({})") << _Setting.m_Key).f_GetStr());
 									else
 										DMibNeverGetHere; // Only supported for compile
 								}
-								else if constexpr (TCIsSame<CType, CVS_Setting_PropertyGroup>::mc_Value)
+								else if constexpr (cIsSame<CType, CVS_Setting_PropertyGroup>)
 								{
 									if constexpr (tf_bCompile || tf_bIsItem)
 										DMibNeverGetHere; // not supported for compile
@@ -456,7 +456,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 										}
 									}
 								}
-								else if constexpr (TCIsSame<CType, CVS_Setting_ItemDefinitionGroup>::mc_Value)
+								else if constexpr (cIsSame<CType, CVS_Setting_ItemDefinitionGroup>)
 								{
 									if constexpr (tf_bCompile || tf_bIsItem)
 										DMibNeverGetHere; // not supported for compile
@@ -475,7 +475,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 								}
 								else
 								{
-									static_assert(TCIsSame<CType, void>::mc_Value, "Implement this");
+									static_assert(cIsSame<CType, void>, "Implement this");
 								}
 							}
 						)
