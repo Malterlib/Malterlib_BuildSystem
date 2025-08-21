@@ -789,11 +789,17 @@ namespace NMib::NBuildSystem
 							if (f_ExpandTargetGroups(ExpandState, Evaluated, *_Target.m_pOuterEntity))
 								bDoneSomething = true;
 
+							f_PopulateTargetAllFiles(*_Target.m_pOuterEntity);
+
 							if (f_ExpandTargetFiles(ExpandState, Evaluated, *_Target.m_pOuterEntity))
 								bDoneSomething = true;
 
+							f_PopulateTargetAllFiles(*_Target.m_pOuterEntity);
+
 							if (f_GenerateTargetFiles(Evaluated, *_Target.m_pOuterEntity))
 								bDoneSomething = true;
+
+							f_PopulateTargetAllFiles(*_Target.m_pOuterEntity);
 						}
 
 						ExpandState.m_bEnabled = true;
