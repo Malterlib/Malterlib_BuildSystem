@@ -79,7 +79,13 @@ namespace NMib::NBuildSystem
 			else if (_ConditionType == EConditionType_MatchNotEqual)
 				return true;
 
-			_fOnError("Trying to compare values of different types:\n{}\n{}"_f << _Left << _Right);
+			auto fIndentValue = [](CEJsonSorted const &_Value)
+				{
+					return CStr::fs_ToStr(_Value).f_Indent("    ");
+				}
+			;
+
+			_fOnError("Trying to compare values of different types:\n{}\n{}"_f << fIndentValue(_Left) << fIndentValue(_Right));
 		}
 
 		if (_Left.f_IsObject())

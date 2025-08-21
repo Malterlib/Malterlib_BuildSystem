@@ -92,6 +92,11 @@ namespace NMib::NBuildSystem
 		return !fg_IsFalsy(_Value);
 	}
 
+	CStr fg_IndentValue(CEJsonSorted const &_Value)
+	{
+		return CStr::fs_ToStr(_Value).f_Indent("    ");
+	}
+
 	CValuePotentiallyByRef CBuildSystem::fp_EvaluatePropertyValueBinaryOperator(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CBinaryOperator const &_Value) const
 	{
 		using COp = CBuildSystemSyntax::CBinaryOperator;
@@ -198,7 +203,7 @@ namespace NMib::NBuildSystem
 		auto &RightRef = Right.f_Get();
 
 		if (LeftRef.f_EType() != RightRef.f_EType())
-			fs_ThrowError(_Context, "Trying to operate on values of different types:\n{}\n{}"_f << LeftRef << RightRef);
+			fs_ThrowError(_Context, "Trying to operate on values of different types:\n{}\n{}"_f << fg_IndentValue(LeftRef) << fg_IndentValue(RightRef));
 
 		if (LeftRef.f_IsObject())
 		{
@@ -232,7 +237,12 @@ namespace NMib::NBuildSystem
 				}
 				break;
 			default:
-				fs_ThrowError(_Context, "Objects are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << LeftRef << RightRef);
+				fs_ThrowError
+					(
+						_Context
+						, "Objects are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << fg_IndentValue(LeftRef) << fg_IndentValue(RightRef)
+					)
+				;
 				break;
 			}
 		}
@@ -248,7 +258,12 @@ namespace NMib::NBuildSystem
 				}
 				break;
 			default:
-				fs_ThrowError(_Context, "Arrays are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << LeftRef << RightRef);
+				fs_ThrowError
+					(
+						_Context
+						, "Arrays are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << fg_IndentValue(LeftRef) << fg_IndentValue(RightRef)
+					)
+				;
 				break;
 			}
 		}
@@ -259,7 +274,12 @@ namespace NMib::NBuildSystem
 			case COp::EOperator_Add: return CEJsonSorted(LeftRef.f_String() + RightRef.f_String());
 			case COp::EOperator_Divide: return CEJsonSorted(LeftRef.f_String() / RightRef.f_String());
 			default:
-				fs_ThrowError(_Context, "Strings are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << LeftRef << RightRef);
+				fs_ThrowError
+					(
+						_Context
+						, "Strings are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << fg_IndentValue(LeftRef) << fg_IndentValue(RightRef)
+					)
+				;
 				break;
 			}
 		}
@@ -278,7 +298,12 @@ namespace NMib::NBuildSystem
 			case COp::EOperator_BitwiseXor: return CEJsonSorted(LeftRef.f_Integer() ^ RightRef.f_Integer());
 			case COp::EOperator_BitwiseOr: return CEJsonSorted(LeftRef.f_Integer() | RightRef.f_Integer());
 			default:
-				fs_ThrowError(_Context, "Integers are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << LeftRef << RightRef);
+				fs_ThrowError
+					(
+						_Context
+						, "Integers are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << fg_IndentValue(LeftRef) << fg_IndentValue(RightRef)
+					)
+				;
 				break;
 			}
 		}
@@ -292,23 +317,50 @@ namespace NMib::NBuildSystem
 			case COp::EOperator_Multiply: return CEJsonSorted(LeftRef.f_Float() * RightRef.f_Float());
 			case COp::EOperator_Modulus: return CEJsonSorted(LeftRef.f_Float().f_Mod(RightRef.f_Float()));
 			default:
-				fs_ThrowError(_Context, "Floats are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << LeftRef << RightRef);
+				fs_ThrowError
+					(
+						_Context
+						, "Floats are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << fg_IndentValue(LeftRef) << fg_IndentValue(RightRef)
+					)
+				;
 				break;
 			}
 		}
 		else if (LeftRef.f_IsBoolean())
-			fs_ThrowError(_Context, "Booleans are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << LeftRef << RightRef);
+		{
+			fs_ThrowError
+				(
+					_Context
+					, "Booleans are not supported for binary operator {}:\n{}\n{}"_f << fg_OperatorName(_Value.m_Operator) << fg_IndentValue(LeftRef) << fg_IndentValue(RightRef)
+				)
+			;
+		}
 		else if (LeftRef.f_IsUserType())
 		{
 			fs_ThrowError
 				(
 					_Context
-					, "User types ({}) not supported for binary operator {}:\n{}\n{}"_f << LeftRef.f_UserType().m_Type << fg_OperatorName(_Value.m_Operator) << LeftRef << RightRef
+					, "User types ({}) not supported for binary operator {}:\n{}\n{}"_f
+					<< LeftRef.f_UserType().m_Type
+					<< fg_OperatorName(_Value.m_Operator)
+					<< fg_IndentValue(LeftRef)
+					<< fg_IndentValue(RightRef)
 				)
 			;
 		}
 		else
-			fs_ThrowError(_Context, "Value type not supported for binary operator {}:\n{}\n{}"_f << LeftRef.f_UserType().m_Type << fg_OperatorName(_Value.m_Operator) << LeftRef << RightRef);
+		{
+			fs_ThrowError
+				(
+					_Context
+					, "Value type not supported for binary operator {}:\n{}\n{}"_f
+					<< LeftRef.f_UserType().m_Type
+					<< fg_OperatorName(_Value.m_Operator)
+					<< fg_IndentValue(LeftRef)
+					<< fg_IndentValue(RightRef)
+				)
+			;
+		}
 
 		return CEJsonSorted();
 	}
@@ -321,11 +373,11 @@ namespace NMib::NBuildSystem
 		auto &RightRef = Right.f_Get();
 
 		if (RightRef.f_IsObject())
-			fs_ThrowError(_Context, "Objects not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << RightRef);
+			fs_ThrowError(_Context, "Objects not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << fg_IndentValue(RightRef));
 		else if (RightRef.f_IsArray())
-			fs_ThrowError(_Context, "Arrays not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << RightRef);
+			fs_ThrowError(_Context, "Arrays not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << fg_IndentValue(RightRef));
 		else if (RightRef.f_IsString())
-			fs_ThrowError(_Context, "Arrays not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << RightRef);
+			fs_ThrowError(_Context, "Arrays not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << fg_IndentValue(RightRef));
 		else if (RightRef.f_IsInteger())
 		{
 			switch (_Value.m_Operator)
@@ -335,7 +387,7 @@ namespace NMib::NBuildSystem
 			case COp::EOperator_UnaryPlus: return +RightRef.f_Integer();
 			case COp::EOperator_UnaryMinus: return -RightRef.f_Integer();
 			default:
-				fs_ThrowError(_Context, "Integers not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << RightRef);
+				fs_ThrowError(_Context, "Integers not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << fg_IndentValue(RightRef));
 				break;
 			}
 		}
@@ -346,7 +398,7 @@ namespace NMib::NBuildSystem
 			case COp::EOperator_UnaryPlus: return +RightRef.f_Float();
 			case COp::EOperator_UnaryMinus: return -RightRef.f_Float();
 			default:
-				fs_ThrowError(_Context, "Floats not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << RightRef);
+				fs_ThrowError(_Context, "Floats not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << fg_IndentValue(RightRef));
 				break;
 			}
 		}
@@ -356,14 +408,28 @@ namespace NMib::NBuildSystem
 			{
 			case COp::EOperator_LogicalNot: return !RightRef.f_Boolean();
 			default:
-				fs_ThrowError(_Context, "Floats not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << RightRef);
+				fs_ThrowError(_Context, "Floats not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << fg_IndentValue(RightRef));
 				break;
 			}
 		}
 		else if (RightRef.f_IsUserType())
-			fs_ThrowError(_Context, "User types ({}) not supported for prefix operator {}:\n{}"_f << RightRef.f_UserType().m_Type << fg_OperatorName(_Value.m_Operator) << RightRef);
+		{
+			fs_ThrowError
+				(
+					_Context
+					, "User types ({}) not supported for prefix operator {}:\n{}"_f << RightRef.f_UserType().m_Type << fg_OperatorName(_Value.m_Operator) << fg_IndentValue(RightRef)
+				)
+			;
+		}
 		else
-			fs_ThrowError(_Context, "Value type not supported for prefix operator {}:\n{}"_f << RightRef.f_UserType().m_Type << fg_OperatorName(_Value.m_Operator) << RightRef);
+		{
+			fs_ThrowError
+				(
+					_Context
+					, "Value type not supported for prefix operator {}:\n{}"_f << RightRef.f_UserType().m_Type << fg_OperatorName(_Value.m_Operator) << fg_IndentValue(RightRef)
+				)
+			;
+		}
 
 		return {};
 	}
