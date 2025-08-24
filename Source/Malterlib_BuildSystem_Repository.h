@@ -65,6 +65,7 @@ namespace NMib::NBuildSystem::NRepository
 		CStr m_DefaultBranch;
 		CEJsonSorted m_Policy;
 		TCOptional<CReleasePackage> m_ReleasePackage;
+		TCVector<CStr> m_ExtraFetchSpecs;
 		bool m_bLfsReleaseStore = false;
 		bool m_bApplyPolicy = false;
 		bool m_bApplyPolicyPretend = false;

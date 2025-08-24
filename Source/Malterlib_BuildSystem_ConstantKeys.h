@@ -174,6 +174,7 @@ namespace NMib::NBuildSystem
 	extern CPropertyKeyReference const gc_ConstKey_Repository_UserEmail;
 	extern CPropertyKeyReference const gc_ConstKey_Repository_UserName;
 	extern CPropertyKeyReference const gc_ConstKey_Repository_LfsReleaseStore;
+	extern CPropertyKeyReference const gc_ConstKey_Repository_ExtraFetchSpecs;
 	extern CPropertyKeyReference const gc_ConstKey_Repository_Policy;
 	extern CPropertyKeyReference const gc_ConstKey_Repository_ReleasePackage;
 	extern CPropertyKeyReference const gc_ConstKey_Repository_ApplyPolicy;

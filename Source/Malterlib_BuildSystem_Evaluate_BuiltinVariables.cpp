@@ -342,6 +342,7 @@ namespace NMib::NBuildSystem
 					, {CPropertyKey(gc_ConstKey_Repository_BootstrapSource), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					, {CPropertyKey(gc_ConstKey_Repository_NoPushRemotes), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
 					, {CPropertyKey(gc_ConstKey_Repository_LfsReleaseStore), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(gc_ConstKey_Repository_ExtraFetchSpecs), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
 					,
 					{
 						CPropertyKey(gc_ConstKey_Repository_Remotes)
@@ -359,10 +360,11 @@ namespace NMib::NBuildSystem
 											, {gc_ConstString_Write, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_Boolean, false)}}
 											, {gc_ConstString_DefaultBranch, CBuildSystemSyntax::CClassType::CMember{g_String, true}}
 											, {gc_ConstString_LfsReleaseStore, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_Boolean, false)}}
+											, {gc_ConstString_ExtraFetchSpecs, CBuildSystemSyntax::CClassType::CMember{g_StringArrayDefaultedEmpty, true}}
 											, {gc_ConstKey_Repository_ApplyPolicy.m_Name, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_Boolean, false)}}
 											, {gc_ConstKey_Repository_ApplyPolicyPretend.m_Name, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_Boolean, false)}}
 											, {gc_ConstKey_Repository_Policy.m_Name, CBuildSystemSyntax::CClassType::CMember{fg_UserType(gc_ConstString_CRepositoryPolicy), true}}
-											, 
+											,
 											{
 												gc_ConstKey_Repository_ReleasePackage.m_Name
 												, CBuildSystemSyntax::CClassType::CMember{fg_UserType(gc_ConstString_CRepositoryReleasePackage), true}

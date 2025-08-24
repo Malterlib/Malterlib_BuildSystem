@@ -510,6 +510,9 @@ namespace NMib::NBuildSystem
 						Params.f_Insert({"--config", "remote.origin.malterlib-lfs-setup=true"});
 					}
 
+					for (auto &FetchSpec : _Repo.m_OriginProperties.m_ExtraFetchSpecs)
+						Params.f_Insert({"--config", "remote.origin.fetch={}"_f << FetchSpec});
+
 					if (_Repo.m_UserName)
 						Params.f_Insert({"--config", "user.name={}"_f << _Repo.m_UserName});
 
@@ -724,10 +727,48 @@ namespace NMib::NBuildSystem
 							}
 						}
 
+						TCVector<CStr> WantedFetchSpecs;
+
+						WantedFetchSpecs.f_Insert("+refs/heads/*:refs/remotes/{}/*"_f << RemoteName);
+
+						if (Remote.m_Properties.m_bLfsReleaseStore)
+						{
+							WantedFetchSpecs.f_Insert(gc_Str<"^refs/heads/lfs">);
+							WantedFetchSpecs.f_Insert(gc_Str<"^refs/tags/lfs/*">);
+						}
+
+						for (auto &FetchSpec : Remote.m_Properties.m_ExtraFetchSpecs)
+							WantedFetchSpecs.f_Insert(FetchSpec);
+
+						if (pCurrentRemote->m_Fetch != WantedFetchSpecs)
+						{
+							fOutputInfo(EOutputType_Normal, "Updating fetch specs for remote '{}'"_f << RemoteName);
+
+							CStr RemoteConfigName = "remote.{}.fetch"_f << RemoteName;
+
+							co_await fLaunchGit({"config", "--local", "--unset-all", RemoteConfigName}, Location);
+
+							for (auto &FetchSpec : WantedFetchSpecs)
+								co_await fLaunchGit({"config", "--local", "--add", RemoteConfigName, FetchSpec}, Location);
+						}
+
 						continue;
 					}
 					fOutputInfo(EOutputType_Normal, "Adding remote '{}={}'"_f << RemoteName << Remote.m_Properties.m_URL);
 					co_await fLaunchGit({"remote", "add", RemoteName, Remote.m_Properties.m_URL}, Location);
+
+					if (Remote.m_Properties.m_bLfsReleaseStore)
+					{
+						co_await fSetupLfsReleaseStorage();
+
+						co_await fLaunchGit({"config", "--local", "lfs.{}.standalonetransferagent"_f << Remote.m_Properties.m_URL, "malterlib-release"}, Location);
+						co_await fLaunchGit({"config", "--local", "--add", "remote.{}.fetch"_f << RemoteName, "^refs/heads/lfs"}, Location);
+						co_await fLaunchGit({"config", "--local", "--add", "remote.{}.fetch"_f << RemoteName, "^refs/tags/lfs/*"}, Location);
+						co_await fLaunchGit({"config", "--local", "remote.{}.malterlib-lfs-setup"_f << RemoteName, "true"}, Location);
+					}
+
+					for (auto &FetchSpec : Remote.m_Properties.m_ExtraFetchSpecs)
+						co_await fLaunchGit({"config", "--local", "--add", "remote.{}.fetch"_f << RemoteName, FetchSpec}, Location);
 
 					if (_BuildSystem.f_GetGenerateOptions().m_bForceUpdateRemotes)
 						co_await fLaunchGit({"fetch", "--tags", "--force", RemoteName}, Location);
@@ -760,7 +801,7 @@ namespace NMib::NBuildSystem
 					{
 						auto &RemoteName = iRemote.f_GetKey();
 						auto &Remote = *iRemote;
-	
+
 						if (!Remote.m_Properties.m_bLfsReleaseStore)
 							continue;
 
@@ -1217,6 +1258,7 @@ namespace NMib::NBuildSystem
 					auto bExcludeFromSeen = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_ExcludeFromSeen, false);
 					auto bLfsReleaseStore = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_LfsReleaseStore, false);
 					auto bBootstrapSource = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_BootstrapSource, false);
+					auto ExtraFetchSpecs = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, gc_ConstKey_Repository_ExtraFetchSpecs, TCVector<CStr>());
 
 					TCVector<CStr> NoPushRemotes = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, gc_ConstKey_Repository_NoPushRemotes, TCVector<CStr>());
 
@@ -1334,6 +1376,12 @@ namespace NMib::NBuildSystem
 
 						if (auto pValue = Remote.f_GetMember(gc_ConstString_LfsReleaseStore))
 							OutRemote.m_Properties.m_bLfsReleaseStore = pValue->f_Boolean();
+
+						if (auto pValue = Remote.f_GetMember(gc_ConstString_ExtraFetchSpecs))
+						{
+							for (auto &FetchSpec : pValue->f_Array())
+								OutRemote.m_Properties.m_ExtraFetchSpecs.f_Insert(FetchSpec.f_String());
+						}
 
 						for (auto &Wildcard : NoPushRemotes)
 						{
@@ -1659,7 +1707,7 @@ namespace NMib::NBuildSystem
 						if (mp_bDebugFileLocks)
 							f_OutputConsole("{} File locked: {}\n"_f << pLockFile.f_Get() << LockFileName, true);
 
-						auto CleanupLock = g_BlockingActorSubscription 
+						auto CleanupLock = g_BlockingActorSubscription
 							/ [LockFileName, bDebugFileLocks = mp_bDebugFileLocks, pLockFile = fg_Move(pLockFile), fOutputConsole = mp_fOutputConsole]
 							() mutable -> TCFuture<void>
 							{
