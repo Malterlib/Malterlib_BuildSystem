@@ -7,6 +7,7 @@
 #include <Mib/Concurrency/AsyncDestroy>
 #include <Mib/Encoding/EJson>
 #include <Mib/Git/LfsReleaseStore>
+#include <Mib/Git/Helpers/ConfigParser>
 #include <Mib/Process/ProcessLaunch>
 #include <Mib/Process/ProcessLaunchActor>
 
@@ -224,15 +225,61 @@ namespace NMib::NBuildSystem
 			return Files;
 		}
 
-		void CStateHandler::f_AddGitIgnore(CStr const &_FileName, CBuildSystem const &_BuildSystem)
+		bool CStateHandler::f_AddGitIgnore(CStr const &_FileName, CBuildSystem const &_BuildSystem, EGitIgnoreType _GitIgnoreType)
 		{
 			DLock(mp_Lock);
 			if (!mp_GitIgnores(_FileName).f_WasCreated())
-				return;
-			CStr GitIgnoreFile = CFile::fs_GetPath(_FileName) + "/.gitignore";
+				return false;
+
+			CStr IgnoreFile;
+			CStr GitRoot;
+
+			if (_GitIgnoreType == EGitIgnoreType::mc_GitInfoExclude || _GitIgnoreType == EGitIgnoreType::mc_CoreExcludesFile)
+			{
+				CStr CurrentPath = CFile::fs_GetPath(_FileName);
+				while (!CurrentPath.f_IsEmpty())
+				{
+					CStr GitDir = CurrentPath / ".git";
+					if (CFile::fs_FileExists(GitDir, EFileAttrib_Directory))
+					{
+						GitRoot = CurrentPath;
+						if (_GitIgnoreType == EGitIgnoreType::mc_GitInfoExclude)
+						{
+							CStr InfoDir = GitDir / "info";
+							if (!CFile::fs_FileExists(InfoDir, EFileAttrib_Directory))
+								CFile::fs_CreateDirectory(InfoDir);
+							IgnoreFile = InfoDir / "exclude";
+						}
+						else
+						{
+							CStr BuildSystemDir = mp_BasePath / "BuildSystem";
+							if (!CFile::fs_FileExists(BuildSystemDir, EFileAttrib_Directory))
+								CFile::fs_CreateDirectory(BuildSystemDir);
+							IgnoreFile = BuildSystemDir / ".localgitignore";
+						}
+						break;
+					}
+
+					CStr ParentPath = CFile::fs_GetPath(CurrentPath);
+					if (ParentPath == CurrentPath)
+						break;
+
+					CurrentPath = ParentPath;
+				}
+
+				// Fall back to .gitignore if no .git directory found
+				if (IgnoreFile.f_IsEmpty())
+				{
+					IgnoreFile = CFile::fs_GetPath(_FileName) / ".gitignore";
+					GitRoot.f_Clear();
+				}
+			}
+			else
+				IgnoreFile = CFile::fs_GetPath(_FileName) / ".gitignore";
+
 			CStr IgnoreContents;
-			if (CFile::fs_FileExists(GitIgnoreFile))
-				IgnoreContents = CFile::fs_ReadStringFromFile(GitIgnoreFile, true);
+			if (CFile::fs_FileExists(IgnoreFile))
+				IgnoreContents = CFile::fs_ReadStringFromFile(IgnoreFile, true);
 
 			ch8 const *pParse = IgnoreContents;
 			fg_ParseToEndOfLine(pParse);
@@ -240,14 +287,21 @@ namespace NMib::NBuildSystem
 			if (*pParse == '\r')
 				pLineEnd = "\r\n";
 
-			CStr IgnoreLine = fg_Format("/{}{}", CFile::fs_GetFile(_FileName), pLineEnd);
+			CStr IgnoreLine;
+			if (!GitRoot.f_IsEmpty() && (_GitIgnoreType == EGitIgnoreType::mc_GitInfoExclude || _GitIgnoreType == EGitIgnoreType::mc_CoreExcludesFile))
+				IgnoreLine = "/{}{}"_f << CFile::fs_MakePathRelative(_FileName, GitRoot) << pLineEnd;
+			else
+				IgnoreLine = "/{}{}"_f << CFile::fs_GetFile(_FileName) << pLineEnd;
+
 			if (IgnoreContents.f_Find(IgnoreLine) < 0)
 			{
 				IgnoreContents += IgnoreLine;
 				CByteVector FileData;
 				CFile::fs_WriteStringToVector(FileData, CStr(IgnoreContents), false);
-				_BuildSystem.f_WriteFile(FileData, GitIgnoreFile);
+				return _BuildSystem.f_WriteFile(FileData, IgnoreFile);
 			}
+
+			return false;
 		}
 
 		CConfigFile CStateHandler::fs_ParseConfigFile(CStr const &_Contents, CStr const &_FileName)
@@ -618,7 +672,47 @@ namespace NMib::NBuildSystem
 			{
 				CStr GitRoot = fg_GetGitRoot(Location);
 				if (GitRoot.f_IsEmpty() || !_Repo.m_bSubmodule)
-					o_StateHandler.f_AddGitIgnore(Location, _BuildSystem);
+				{
+					bool bIgnoreFileChanged = o_StateHandler.f_AddGitIgnore(Location, _BuildSystem, _Repo.m_GitIgnoreType);
+
+					if (bIgnoreFileChanged && _Repo.m_GitIgnoreType == EGitIgnoreType::mc_CoreExcludesFile)
+					{
+						CStr ConfigRepoRoot;
+						CStr CurrentPath = CFile::fs_GetPath(Location);
+						while (!CurrentPath.f_IsEmpty())
+						{
+							if (CFile::fs_FileExists(CurrentPath + "/.git", EFileAttrib_Directory))
+							{
+								ConfigRepoRoot = CurrentPath;
+								break;
+							}
+
+							CStr ParentPath = CFile::fs_GetPath(CurrentPath);
+							if (ParentPath == CurrentPath)
+								break;
+
+							CurrentPath = ParentPath;
+						}
+
+						if (!ConfigRepoRoot.f_IsEmpty())
+						{
+							bool bNeedUpdate = true;
+							CStr ConfigFile = ConfigRepoRoot + "/.git/config";
+							if (CFile::fs_FileExists(ConfigFile))
+							{
+								CStr ConfigContents = CFile::fs_ReadStringFromFile(ConfigFile, true);
+								auto Config = CGitConfigParser::fs_Parse(ConfigContents);
+
+								CStr const *pCurrentExcludesFile = Config.f_GetValue("core", "excludesFile");
+								if (pCurrentExcludesFile && *pCurrentExcludesFile == "BuildSystem/.localgitignore")
+									bNeedUpdate = false;
+							}
+
+							if (bNeedUpdate)
+								co_await fLaunchGit({"config", "core.excludesFile", "BuildSystem/.localgitignore"}, ConfigRepoRoot);
+						}
+					}
+				}
 			}
 
 			bool bForceReset = fg_GetSys()->f_GetEnvironmentVariable("MalterlibRepositoryHardReset", "") == gc_ConstString_true.m_String;
@@ -1179,7 +1273,7 @@ namespace NMib::NBuildSystem
 			CStr GitHeadHash = fg_GetGitHeadHash(Location, _Repo.m_Position);
 			o_StateHandler.f_SetHash(_Repo.m_StateFile, Location, GitHeadHash, _Repo.m_Identity, true);
 			o_StateHandler.f_SetHash(_Repo.m_ConfigFile, Location, GitHeadHash, _Repo.m_Identity, false);
-			o_StateHandler.f_AddGitIgnore(_Repo.m_StateFile, _BuildSystem);
+			o_StateHandler.f_AddGitIgnore(_Repo.m_StateFile, _BuildSystem, EGitIgnoreType::mc_GitIgnore);
 
 			co_return bChanged;
 		}
@@ -1258,6 +1352,7 @@ namespace NMib::NBuildSystem
 					auto bExcludeFromSeen = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_ExcludeFromSeen, false);
 					auto bLfsReleaseStore = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_LfsReleaseStore, false);
 					auto bBootstrapSource = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_BootstrapSource, false);
+					auto GitIgnoreTypeStr = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, gc_ConstKey_Repository_GitIgnoreType, CStr());
 					auto ExtraFetchSpecs = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, gc_ConstKey_Repository_ExtraFetchSpecs, TCVector<CStr>());
 
 					TCVector<CStr> NoPushRemotes = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, gc_ConstKey_Repository_NoPushRemotes, TCVector<CStr>());
@@ -1307,6 +1402,13 @@ namespace NMib::NBuildSystem
 					Repo.m_bUpdateSubmodules = bUpdateSubmodules;
 					Repo.m_bExcludeFromSeen = bExcludeFromSeen;
 					Repo.m_bBootstrapSource = bBootstrapSource;
+
+					if (GitIgnoreTypeStr == "GitInfoExclude")
+						Repo.m_GitIgnoreType = EGitIgnoreType::mc_GitInfoExclude;
+					else if (GitIgnoreTypeStr == "CoreExcludesFile")
+						Repo.m_GitIgnoreType = EGitIgnoreType::mc_CoreExcludesFile;
+					else
+						Repo.m_GitIgnoreType = EGitIgnoreType::mc_GitIgnore; // Default
 
 					Repo.m_OriginProperties.m_URL = URL;
 					Repo.m_OriginProperties.m_DefaultBranch = DefaultBranch;
@@ -1690,7 +1792,7 @@ namespace NMib::NBuildSystem
 									g_Dispatch(BlockingActorCheckout) / [&]()
 									{
 										CFile::fs_CreateDirectory(ReposDirectory);
-										StateHandler.f_AddGitIgnore(ReposDirectory + "/RepoLock.MRepoState", *this);
+										StateHandler.f_AddGitIgnore(ReposDirectory + "/RepoLock.MRepoState", *this, EGitIgnoreType::mc_GitIgnore);
 										TCUniquePointer<CLockFile> pLockFile = fg_Construct(LockFileName);
 
 										if (mp_bDebugFileLocks)

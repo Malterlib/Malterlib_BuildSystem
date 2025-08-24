@@ -340,6 +340,11 @@ namespace NMib::NBuildSystem
 					, {CPropertyKey(gc_ConstKey_Repository_ProtectedTags), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
 					, {CPropertyKey(gc_ConstKey_Repository_UpdateSubmodules), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					, {CPropertyKey(gc_ConstKey_Repository_BootstrapSource), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					,
+					{
+						CPropertyKey(gc_ConstKey_Repository_GitIgnoreType)
+						, DMibBuildSystemTypeWithPosition(fg_Defaulted(fg_OneOf("GitIgnore", "GitInfoExclude", "CoreExcludesFile"), "GitIgnore"))
+					}
 					, {CPropertyKey(gc_ConstKey_Repository_NoPushRemotes), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
 					, {CPropertyKey(gc_ConstKey_Repository_LfsReleaseStore), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					, {CPropertyKey(gc_ConstKey_Repository_ExtraFetchSpecs), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}

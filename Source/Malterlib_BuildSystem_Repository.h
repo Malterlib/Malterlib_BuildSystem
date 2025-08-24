@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #pragma once
@@ -82,6 +82,13 @@ namespace NMib::NBuildSystem::NRepository
 		bool m_bCanPush = true;
 	};
 
+	enum class EGitIgnoreType : uint32
+	{
+		mc_GitIgnore,         // Use .gitignore in parent directory
+		mc_GitInfoExclude,    // Use .git/info/exclude
+		mc_CoreExcludesFile   // Use core.excludesFile (BuildSystem/.localgitignore)
+	};
+
 	struct CRepository
 	{
 		CRepository(CStr const &_Name)
@@ -123,6 +130,7 @@ namespace NMib::NBuildSystem::NRepository
 		bool m_bExcludeFromSeen = false;
 		bool m_bBootstrapSource = false;
 		bool m_bUpdateSubmodules = false;
+		EGitIgnoreType m_GitIgnoreType = EGitIgnoreType::mc_GitIgnore;
 	};
 
 	struct CReposLocation
@@ -144,7 +152,7 @@ namespace NMib::NBuildSystem::NRepository
 	struct CConfigFile
 	{
 		CRepositoryConfig const *f_GetConfig(CRepository const &_Repo, CStr const &_BasePath);
-		
+
 		TCMap<CStr, CRepositoryConfig> m_Configs;
 		CStr m_LineEndings = "\n";
 		bool m_bIsStateFile = false;
@@ -165,7 +173,7 @@ namespace NMib::NBuildSystem::NRepository
 		CStr f_GetHash(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Identifier, bool _bIsStateFile);
 		TCMap<CStr, CConfigFile> const &f_GetNewFiles();
 		TCMap<CStr, CConfigFile> f_GetMergedFiles();
-		void f_AddGitIgnore(CStr const &_FileName, CBuildSystem const &_BuildSystem);
+		bool f_AddGitIgnore(CStr const &_FileName, CBuildSystem const &_BuildSystem, EGitIgnoreType _GitIgnoreType);
 		static CConfigFile fs_ParseConfigFile(CStr const &_Contents, CStr const &_FileName);
 		CMutual &f_ConsoleOutputLock();
 		void f_ConsoleOutput(CStr const &_Output, bool _bError = false);
