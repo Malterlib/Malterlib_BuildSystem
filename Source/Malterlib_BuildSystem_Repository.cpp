@@ -153,6 +153,17 @@ namespace NMib::NBuildSystem
 			return mp_AnsiFlags;
 		}
 
+		TCFuture<CActorSubscription> CStateHandler::f_SequenceConfigChanges(CStr const &_Path)
+		{
+			return (*mp_GitConfigSequencers(_Path, CStr("Git Config for: "_f << _Path))).f_Sequence();
+		}
+
+		bool CStateHandler::f_UpdateCoreExcludesFileLocation(CStr const &_Path)
+		{
+			DLock(mp_CoreExcludesFileLocationLock);
+			return mp_CoreExcludesFileLocationUpdated(_Path).f_WasCreated();
+		}
+
 		CMutual &CStateHandler::f_ConsoleOutputLock()
 		{
 			return mp_ConsoleOutputLock;
@@ -602,6 +613,8 @@ namespace NMib::NBuildSystem
 
 								if (_Repo.m_OriginProperties.m_bLfsReleaseStore)
 								{
+									auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(Location);
+
 									co_await fLaunchGit({"update-ref", "-d", "refs/remotes/origin/lfs"}, Location);
 									co_await fLaunchGit({"config", "--local", "--unset", "remote.origin.tagOpt"}, Location);
 									co_await fLaunchGit({"fetch"}, Location);
@@ -635,6 +648,7 @@ namespace NMib::NBuildSystem
 				else
 				{
 					CStr RelativeLocation = CFile::fs_MakePathRelative(Location, GitRoot);
+					auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(Location);
 					auto Result = co_await fg_CallSafe
 						(
 							[&]() -> TCUnsafeFuture<void>
@@ -673,9 +687,9 @@ namespace NMib::NBuildSystem
 				CStr GitRoot = fg_GetGitRoot(Location);
 				if (GitRoot.f_IsEmpty() || !_Repo.m_bSubmodule)
 				{
-					bool bIgnoreFileChanged = o_StateHandler.f_AddGitIgnore(Location, _BuildSystem, _Repo.m_GitIgnoreType);
+					o_StateHandler.f_AddGitIgnore(Location, _BuildSystem, _Repo.m_GitIgnoreType);
 
-					if (bIgnoreFileChanged && _Repo.m_GitIgnoreType == EGitIgnoreType::mc_CoreExcludesFile)
+					if (_Repo.m_GitIgnoreType == EGitIgnoreType::mc_CoreExcludesFile)
 					{
 						CStr ConfigRepoRoot;
 						CStr CurrentPath = CFile::fs_GetPath(Location);
@@ -694,22 +708,33 @@ namespace NMib::NBuildSystem
 							CurrentPath = ParentPath;
 						}
 
-						if (!ConfigRepoRoot.f_IsEmpty())
+						if (!ConfigRepoRoot.f_IsEmpty() && o_StateHandler.f_UpdateCoreExcludesFileLocation(ConfigRepoRoot))
 						{
-							bool bNeedUpdate = true;
-							CStr ConfigFile = ConfigRepoRoot + "/.git/config";
-							if (CFile::fs_FileExists(ConfigFile))
+							auto ExpectedExcludeFile = BaseDir / "BuildSystem/.localgitignore";
+
+							auto fNeedUpdate = [&]
+								{
+									CStr ConfigFile = ConfigRepoRoot / ".git/config";
+									if (CFile::fs_FileExists(ConfigFile))
+									{
+										CStr ConfigContents = CFile::fs_ReadStringFromFile(ConfigFile, true);
+										auto Config = CGitConfigParser::fs_Parse(ConfigContents);
+
+										CStr const *pCurrentExcludesFile = Config.f_GetValue("core", "excludesfile");
+										if (pCurrentExcludesFile && *pCurrentExcludesFile == ExpectedExcludeFile)
+											return false;
+									}
+
+									return true;
+								}
+							;
+
+							if (fNeedUpdate())
 							{
-								CStr ConfigContents = CFile::fs_ReadStringFromFile(ConfigFile, true);
-								auto Config = CGitConfigParser::fs_Parse(ConfigContents);
+								auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(ConfigRepoRoot);
 
-								CStr const *pCurrentExcludesFile = Config.f_GetValue("core", "excludesFile");
-								if (pCurrentExcludesFile && *pCurrentExcludesFile == "BuildSystem/.localgitignore")
-									bNeedUpdate = false;
+								co_await fLaunchGit({"config", "core.excludesFile", ExpectedExcludeFile}, ConfigRepoRoot);
 							}
-
-							if (bNeedUpdate)
-								co_await fLaunchGit({"config", "core.excludesFile", "BuildSystem/.localgitignore"}, ConfigRepoRoot);
 						}
 					}
 				}
@@ -725,12 +750,16 @@ namespace NMib::NBuildSystem
 
 			if (_Repo.m_UserName && GitConfig.m_UserName != _Repo.m_UserName)
 			{
+				auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(Location);
+
 				fOutputInfo(EOutputType_Normal, "Changing user name '{}' -> '{}'"_f << GitConfig.m_UserName << _Repo.m_UserName);
 				co_await fLaunchGit({"config", "--local", "user.name", _Repo.m_UserName}, Location);
 			}
 
 			if (_Repo.m_UserEmail && GitConfig.m_UserEmail != _Repo.m_UserEmail)
 			{
+				auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(Location);
+
 				fOutputInfo(EOutputType_Normal, "Changing user email '{}' -> '{}'"_f << GitConfig.m_UserEmail << _Repo.m_UserEmail);
 				co_await fLaunchGit({"config", "--local", "user.email", _Repo.m_UserEmail}, Location);
 			}
@@ -751,18 +780,21 @@ namespace NMib::NBuildSystem
 
 					if (CustomTransfer.m_Path != GlobalMibExecutable)
 					{
+						auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(Location);
 						bChangedConfig = true;
 						co_await fLaunchGit({"config", "--local", "lfs.customtransfer.malterlib-release.path", GlobalMibExecutable}, Location);
 					}
 
 					if (CustomTransfer.m_Arguments != "lfs-release-store")
 					{
+						auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(Location);
 						bChangedConfig = true;
 						co_await fLaunchGit({"config", "--local", "lfs.customtransfer.malterlib-release.args", "lfs-release-store"}, Location);
 					}
 
 					if (!CustomTransfer.m_bConcurrent)
 					{
+						auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(Location);
 						bChangedConfig = true;
 						co_await fLaunchGit({"config", "--local", "lfs.customtransfer.malterlib-release.concurrent", "true"}, Location);
 					}
@@ -798,6 +830,7 @@ namespace NMib::NBuildSystem
 							{
 								fOutputInfo(EOutputType_Normal, "Adding Malterlib Release LFS transfer agent");
 
+								auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(Location);
 								co_await fLaunchGit({"config", "--local", "lfs.{}.standalonetransferagent"_f << Remote.m_Properties.m_URL, "malterlib-release"}, Location);
 							}
 
@@ -805,6 +838,7 @@ namespace NMib::NBuildSystem
 							{
 								fOutputInfo(EOutputType_Normal, "Setting up LFS fetch exclusions");
 
+								auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(Location);
 								co_await fLaunchGit({"config", "--local", "--add", "remote.{}.fetch"_f << RemoteName, "^refs/heads/lfs"}, Location);
 								co_await fLaunchGit({"config", "--local", "--add", "remote.{}.fetch"_f << RemoteName, "^refs/tags/lfs/*"}, Location);
 								co_await fLaunchGit({"config", "--local", "remote.{}.malterlib-lfs-setup"_f << RemoteName, "true"}, Location);
@@ -817,6 +851,7 @@ namespace NMib::NBuildSystem
 							{
 								fOutputInfo(EOutputType_Normal, "Removing Malterlib Release LFS transfer agent");
 
+								auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(Location);
 								co_await fLaunchGit({"config", "--local", "--unset", "lfs.{}.standalonetransferagent"_f << Remote.m_Properties.m_URL}, Location);
 							}
 						}
@@ -839,6 +874,8 @@ namespace NMib::NBuildSystem
 							fOutputInfo(EOutputType_Normal, "Updating fetch specs for remote '{}'"_f << RemoteName);
 
 							CStr RemoteConfigName = "remote.{}.fetch"_f << RemoteName;
+
+							auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(Location);
 
 							co_await fLaunchGit({"config", "--local", "--unset-all", RemoteConfigName}, Location);
 

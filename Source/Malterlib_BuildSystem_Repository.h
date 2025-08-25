@@ -179,6 +179,8 @@ namespace NMib::NBuildSystem::NRepository
 		void f_ConsoleOutput(CStr const &_Output, bool _bError = false);
 		TCSet<CStr> f_GetLastSeenRepositories();
 		EAnsiEncodingFlag f_AnsiFlags() const;
+		TCFuture<CActorSubscription> f_SequenceConfigChanges(CStr const &_Path);
+		bool f_UpdateCoreExcludesFileLocation(CStr const &_Path);
 
 	private:
 		CConfigFile const &fp_GetConfigFile(CStr const &_FileName, bool _bIsStateFile);
@@ -193,6 +195,10 @@ namespace NMib::NBuildSystem::NRepository
 		CMutual mp_ConsoleOutputLock;
 		EAnsiEncodingFlag mp_AnsiFlags;
 		NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> mp_fOutputConsole;
+		TCMap<CStr, CSequencer> mp_GitConfigSequencers;
+
+		CMutual mp_CoreExcludesFileLocationLock;
+		TCSet<CStr> mp_CoreExcludesFileLocationUpdated;
 	};
 
 	struct CGitLaunches
