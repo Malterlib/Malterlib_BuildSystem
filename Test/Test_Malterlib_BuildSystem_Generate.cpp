@@ -75,6 +75,16 @@ namespace
 		{
 		}
 
+		TCFuture<CU2FRegister::CResult> f_U2F_Register(CU2FRegister _Register) override
+		{
+			co_return {};
+		}
+
+		TCFuture<CU2FAuthenticate::CResult> f_U2F_Authenticate(CU2FAuthenticate _Authenticate) override
+		{
+			co_return {};
+		}
+
 	private:
 		TCFuture<void> fp_Destroy() override
 		{
@@ -303,7 +313,7 @@ namespace
 						, {"Contributing values", {}, 1, true}
 						, {"Contributing to value", {BuildSystemFile, 1, 44, 13}, 2}
 						, {"Context contributing values", {}, 1, true}
-						, 
+						,
 						{
 							"Property.CalcValue\n"
 							"    {\n"
@@ -316,14 +326,14 @@ namespace
 							, {BuildSystemFile, 1, 44, 13}
 							, 2
 						}
-						, 
+						,
 						{
 							"Property.GetDefaulted\n"
 							"    \"Default\""
 							, {BuildSystemFile, 1, 35, 16}
 							, 2
 						}
-						, 
+						,
 						{
 							"Condition\n"
 							"    true"
@@ -337,7 +347,7 @@ namespace
 						, {"Parent contexts", {}, 1, true}
 						, {"Context", {BuildSystemFile, 1, 60, 12}, 2}
 						, {"Parent context contributing values", {}, 2, true}
-						, 
+						,
 						{
 							"Call builtin 'ToString'"
 							, fp_GetLocationInFile("Malterlib_BuildSystem_Evaluate_BuiltinFunctions_String.cpp", "DMibBuildSystemFilePosition // ToString")
@@ -378,20 +388,20 @@ namespace
 			{
 				CStr TempDirectory = CFile::fs_GetProgramDirectory() / "BuildSystemTests/FunctionCallWithCondition";
 				CStr BuildSystemFile = TempDirectory / "Test.MBuildSystem";
-				TCVector<CParseError> ExpectedParseErrors = 
+				TCVector<CParseError> ExpectedParseErrors =
 					{
 						{"error: No such function: Property.TestFunction", {BuildSystemFile, 1, 32, 12}, 0}
 						, {"Contributing values", {}, 1, true}
 						, {"Contributing to value", {BuildSystemFile, 1, 32, 12}, 2}
 						, {"Context contributing values", {}, 1, true}
-						, 
+						,
 						{
 							"Condition\n"
 							"    false"
 							, {BuildSystemFile, 1, 26, 11}
 							, 2
 						}
-						, 
+						,
 						{
 							"Apply default\n"
 							"    false"
@@ -412,13 +422,13 @@ namespace
 #ifdef DPlatformFamily_Windows
 				BuildSystemSourceDir = BuildSystemSourceDir.f_ReplaceChar('/', '\\');
 #endif
-				TCVector<CParseError> ExpectedParseErrors = 
+				TCVector<CParseError> ExpectedParseErrors =
 					{
 						{"error: Could not find user type of name 'CTest'", {BuildSystemFile, 1, 40, 12}, 0}
 						, {"Contributing values", {}, 1, true}
 						, {"Contributing to value", {BuildSystemFile, 1, 40, 12}, 2}
 						, {"Context contributing values", {}, 1, true}
-						, 
+						,
 						{
 							"Apply default\n"
 							"    {\n"
@@ -427,14 +437,14 @@ namespace
 							, {BuildSystemFile, 1, 35, 16}
 							, 2
 						}
-						, 
+						,
 						{
 							"Condition\n"
 							"    false"
 							, {BuildSystemFile, 1, 25, 15}
 							, 2
 						}
-						, 
+						,
 						{
 							"Initial value: Property.Platform\n"
 							"    \"TestPlatform\""
