@@ -230,6 +230,7 @@ namespace NMib::NBuildSystem
 
 	constexpr CStringAndHash const gc_ConstString_Settings = gc_Str<"Settings">;
 	constexpr CStringAndHash const gc_ConstString_17_0 = gc_Str<"17.0">;
+	constexpr CStringAndHash const gc_ConstString_18_0 = gc_Str<"18.0">;
 	constexpr CStringAndHash const gc_ConstString_And = gc_Str<"And">;
 	constexpr CStringAndHash const gc_ConstString_AppendPath = gc_Str<"AppendPath">;
 	constexpr CStringAndHash const gc_ConstString_AsBoolean = gc_Str<"AsBoolean">;
@@ -621,7 +622,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_Symbol_OperatorMultiply);
 		o_StringCache.f_AddConstantString(gc_ConstString_Symbol_OperatorNotEqual);
 		o_StringCache.f_AddConstantString(gc_ConstString_Symbol_OperatorOr);
-		o_StringCache.f_AddConstantString(gc_ConstString_Symbol_OperatorNullishCoalescing);		
+		o_StringCache.f_AddConstantString(gc_ConstString_Symbol_OperatorNullishCoalescing);
 		o_StringCache.f_AddConstantString(gc_ConstString_Symbol_OperatorPrepend);
 		o_StringCache.f_AddConstantString(gc_ConstString_Symbol_OperatorSubtract);
 		o_StringCache.f_AddConstantString(gc_ConstString_Symbol_Optional);
@@ -666,7 +667,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_usesTabs);
 		o_StringCache.f_AddConstantString(gc_ConstString_indentWidth);
 		o_StringCache.f_AddConstantString(gc_ConstString_XCConfigs);
-		o_StringCache.f_AddConstantString(gc_ConstString_VSSettings);		
+		o_StringCache.f_AddConstantString(gc_ConstString_VSSettings);
 		o_StringCache.f_AddConstantString(gc_ConstString_YES);
 		o_StringCache.f_AddConstantString(gc_ConstString_NO);
 		o_StringCache.f_AddConstantString(gc_ConstString_Flags);
@@ -741,6 +742,7 @@ namespace NMib::NBuildSystem
 
 		o_StringCache.f_AddConstantString(gc_ConstString_Settings);
 		o_StringCache.f_AddConstantString(gc_ConstString_17_0);
+		o_StringCache.f_AddConstantString(gc_ConstString_18_0);
 		o_StringCache.f_AddConstantString(gc_ConstString_And);
 		o_StringCache.f_AddConstantString(gc_ConstString_AppendPath);
 		o_StringCache.f_AddConstantString(gc_ConstString_AsBoolean);
@@ -891,7 +893,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_UpperCase);
 		o_StringCache.f_AddConstantString(gc_ConstString_LowerCase);
 		o_StringCache.f_AddConstantString(gc_ConstString_Indent);
-		o_StringCache.f_AddConstantString(gc_ConstString_ChunkString);		
+		o_StringCache.f_AddConstantString(gc_ConstString_ChunkString);
 
 		o_StringCache.f_AddConstantStringWithoutHash(CEJsonConstStrings::mc_Date);
 		o_StringCache.f_AddConstantStringWithoutHash(CEJsonConstStrings::mc_Binary);

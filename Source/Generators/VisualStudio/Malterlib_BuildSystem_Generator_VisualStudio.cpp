@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Generator_VisualStudio.h"
@@ -15,7 +15,7 @@ namespace NMib::NBuildSystem
 		m_FileExistsCache[_Path] = bExists;
 		return bExists;
 	}
-	
+
 	void NVisualStudio::CGeneratorInstance::CProjectState::f_CreateDirectory(CStr const &_Path)
 	{
 		auto Mapped = m_CreateDirectoryCache(_Path);
@@ -58,7 +58,7 @@ namespace NMib::NBuildSystem
 
 			auto &BuildSystem = *_pBuildSystem;
 			auto &BuildSystemData = *_pBuildSystemData;
-			
+
 			using namespace NVisualStudio;
 			CStr SolutionDir = _OutputDir;
 			CStr BuildSystemBase = BuildSystem.f_GetBaseDir();
@@ -71,7 +71,7 @@ namespace NMib::NBuildSystem
 			CGeneratorState &GeneratorState = GeneratorInstance.m_State;
 
 			TCVector<TCVector<CConfigurationTuple>> Tuples = BuildSystem.f_EvaluateConfigurationTuples(Values);
-			
+
 			fp64 Time1 = Clock.f_GetTime();
 			BuildSystem.f_OutputConsole("Evaluated config tuples {fe2} s{\n}"_f << Time1);
 
@@ -116,26 +116,26 @@ namespace NMib::NBuildSystem
 					ExtraConfigText += ")";
 				}
 
-				
+
 				CConfiguration ConfigToInsert;
 				if (Platform.f_IsEmpty())
 					ConfigToInsert.m_Platform = Arch;
 				else
 					ConfigToInsert.m_Platform = Platform + " " + Arch;
 				ConfigToInsert.m_Configuration = Config;
-				
+
 				if (!ExtraConfigText.f_IsEmpty())
 					ConfigToInsert.m_Configuration += ExtraConfigText;
-				
+
 				{
 					TCUniquePointer<CLocalConfiguraitonData> NewConfig = fg_Construct();
-					
+
 					auto &ConfigData = *NewConfig;
 					ConfigData.m_Tuples = *iTuple;
 					ConfigData.m_FullConfiguration = CStr::CFormat("{} - {} - {}{}") << Platform << Arch << Config << ExtraConfigText;
 					ConfigData.m_SolutionPlatform = CStr::CFormat("{} - {}") << Platform << Arch;
 					ConfigData.m_SolutionConfiguration = CStr::CFormat("{}{}") << Config << ExtraConfigText;
-					
+
 					*(Configurations[ConfigToInsert] = fg_Move(NewConfig));
 				}
 			}
@@ -151,7 +151,7 @@ namespace NMib::NBuildSystem
 				++nConfigs;
 				auto Config = iConfig.f_GetKey();
 				auto &ConfigData = *((CLocalConfiguraitonData *)(&**iConfig));
-				
+
 				for (auto iWorkspace = ConfigData.m_Workspaces.f_GetIterator(); iWorkspace; ++iWorkspace)
 				{
 					auto &WorkspaceName = iWorkspace.f_GetKey();
@@ -161,7 +161,7 @@ namespace NMib::NBuildSystem
 				}
 				ConfigData.m_Workspaces.f_Clear();
 			}
-			
+
 			fp64 Time2 = Clock.f_GetTime();
 			BuildSystem.f_OutputConsole("Extracted workspaces, projects and files for {} configurations {fe2} s{\n}"_f << nConfigs << (Time2 - Time1));
 
@@ -208,7 +208,7 @@ namespace NMib::NBuildSystem
 					}
 				)
 			;
-			
+
 			co_await fg_ParallelForEach
 				(
 					SortedWorkspaces
@@ -424,9 +424,14 @@ namespace NMib::NBuildSystem
 
 	DMibRuntimeClass(CBuildSystemGenerator, CBuildSystemGenerator_VisualStudio2022);
 
+	using CBuildSystemGenerator_VisualStudio2026 = CBuildSystemGenerator_VisualStudio;
+
+	DMibRuntimeClass(CBuildSystemGenerator, CBuildSystemGenerator_VisualStudio2026);
+
 	void fg_Malterlib_BuildSystem_MakeActive_VisualStudio()
 	{
 		DMibRuntimeClassMakeActive(CBuildSystemGenerator_VisualStudio2022);
+		DMibRuntimeClassMakeActive(CBuildSystemGenerator_VisualStudio2026);
 	}
 }
 

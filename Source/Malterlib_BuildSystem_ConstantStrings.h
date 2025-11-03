@@ -230,6 +230,7 @@ namespace NMib::NBuildSystem
 
 	extern CStringAndHash const gc_ConstString_Settings;
 	extern CStringAndHash const gc_ConstString_17_0;
+	extern CStringAndHash const gc_ConstString_18_0;
 	extern CStringAndHash const gc_ConstString_And;
 	extern CStringAndHash const gc_ConstString_AppendPath;
 	extern CStringAndHash const gc_ConstString_AsBoolean;
@@ -379,7 +380,7 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_UpperCase;
 	extern CStringAndHash const gc_ConstString_LowerCase;
 	extern CStringAndHash const gc_ConstString_Indent;
-	extern CStringAndHash const gc_ConstString_ChunkString;	
+	extern CStringAndHash const gc_ConstString_ChunkString;
 
 	extern CStringAndHash const gc_ConstString_Array;
 	extern CStringAndHash const gc_ConstString_Binary;

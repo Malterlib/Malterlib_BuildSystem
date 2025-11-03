@@ -200,6 +200,12 @@ namespace NMib::NBuildSystem
 			NStorage::TCSharedPointer<NCryptography::CHashDigest_SHA256> m_pDigest;
 		};
 
+		struct CVisualStudioVersion
+		{
+			NStr::CStr m_FullVersion;
+			NStr::CStr m_RootPath;
+		};
+
 		void f_SetGeneratorInterface(ICGeneratorInterface *_pInterface) const;
 		NConcurrency::TCFuture<void> f_GenerateBuildSystem
 			(
@@ -576,6 +582,8 @@ namespace NMib::NBuildSystem
 
 		NConcurrency::TCFuture<void> f_SetupGlobalMTool() const;
 		NConcurrency::TCFuture<void> f_SetupBootstrapMTool() const;
+
+		static NContainer::TCMap<uint32, CVisualStudioVersion> fs_GetVisualStudioVersions(NStr::CStr &o_Errors, NStr::CStr _ProgramData = fg_GetSys()->f_GetEnvironmentVariable("ProgramData"));
 
 		constexpr static uint32 mc_MToolVersion = 2;
 

@@ -12,6 +12,69 @@
 #include <Mib/Core/PlatformSpecific/WindowsFilePath>
 #endif
 
+namespace NMib::NBuildSystem
+{
+	auto CBuildSystem::fs_GetVisualStudioVersions(NStr::CStr &o_Errors, CStr _ProgramData) -> NContainer::TCMap<uint32, CVisualStudioVersion>
+	{
+#ifdef DPlatformFamily_Windows
+		CStr CachePath = _ProgramData / "Microsoft/VisualStudio/Packages";
+
+		if (NMib::NPlatform::CWin32_Registry Registry; auto Path = Registry.f_Read_Str("SOFTWARE\\Microsoft\\VisualStudio\\Setup", "CachePath", ""))
+			CachePath = NMib::NFile::NPlatform::fg_ConvertFromWindowsPath(Path);
+
+		CStr InstancesPath = CachePath / "_Instances";
+
+		CStr Errors;
+
+		auto fParseVersion = [&](CStr const &_String) -> TCVector<uint32>
+			{
+				TCVector<uint32> VersionVector;
+				for (auto &String : _String.f_Split("."))
+					VersionVector.f_Insert(String.f_ToInt(uint32(0)));
+				VersionVector.f_SetLen(4);
+				return VersionVector;
+			}
+		;
+
+		CStr BestPath;
+
+		TCMap<uint32, CBuildSystem::CVisualStudioVersion> Versions;
+		TCMap<uint32, TCVector<zuint32>> BestVersions;
+
+		for (auto &InstanceDir : CFile::fs_FindFiles(InstancesPath / "*", EFileAttrib_Directory))
+		{
+			CStr StateFile = InstanceDir / "state.json";
+			try
+			{
+				CStr JsonContents = CFile::fs_ReadStringFromFile(StateFile);
+
+				CJsonSorted const Json = CJsonSorted::fs_FromString(JsonContents, StateFile);
+				auto FullVersion = Json["installationVersion"].f_String();
+				auto Version = fParseVersion(FullVersion);
+				auto MajorVersion = Version[0];
+				auto &BestVersion = BestVersions[MajorVersion];
+
+				if (Version > BestVersion)
+				{
+					BestVersion = Version;
+					auto &OutVersion = Versions[MajorVersion];
+					OutVersion.m_FullVersion = FullVersion;
+					OutVersion.m_RootPath = NMib::NFile::NPlatform::fg_ConvertFromWindowsPath(Json["installationPath"].f_String());
+				}
+			}
+			catch (CException const &_Exception)
+			{
+				fg_AddStrSep(o_Errors, _Exception.f_GetErrorStr(), "\n");
+			}
+		}
+
+		return Versions;
+#else
+		return {};
+#endif
+	}
+}
+
 namespace NMib::NBuildSystem::NVisualStudio
 {
 	CGeneratorInstance::~CGeneratorInstance()
@@ -23,6 +86,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 	{
 		if (m_Version == 2022)
 			return gc_ConstString_17_0;
+		else if (m_Version == 2026)
+			return gc_ConstString_18_0;
 		DError("Implement this (CGeneratorInstance::f_GetToolsVersion)");
 	}
 
@@ -37,63 +102,26 @@ namespace NMib::NBuildSystem::NVisualStudio
 			return m_VisualStudioRoot;
 
 		CEJsonSorted VisualStudioRoot;
-		
+
 		switch (m_Version)
 		{
 		case 2022:
+		case 2026:
 			{
 #ifdef DPlatformFamily_Windows
-				CStr ProgramData = m_BuildSystem.f_GetEnvironmentVariable("ProgramData");
-				CStr CachePath = ProgramData / "Microsoft/VisualStudio/Packages";
-
-				if (NMib::NPlatform::CWin32_Registry Registry; auto Path = Registry.f_Read_Str("SOFTWARE\\Microsoft\\VisualStudio\\Setup", "CachePath", ""))
-					CachePath = NMib::NFile::NPlatform::fg_ConvertFromWindowsPath(Path);
-
-				CStr InstancesPath = CachePath / "_Instances";
-
 				CStr Errors;
-
-				auto fParseVersion = [&](CStr const &_String) -> TCVector<uint32>
-					{
-						TCVector<uint32> VersionVector;
-						for (auto &String : _String.f_Split("."))
-							VersionVector.f_Insert(String.f_ToInt(uint32(0)));
-						VersionVector.f_SetLen(4);
-						return VersionVector;
-					}
-				;
-
-				TCVector<zuint32> BestVersion;
-				BestVersion.f_SetLen(4);
-				CStr BestPath;
+				auto Versions = CBuildSystem::fs_GetVisualStudioVersions(Errors, m_BuildSystem.f_GetEnvironmentVariable("ProgramData"));
 
 				uint32 ExpectedVersion = 17;
+				if (m_Version == 2026)
+					ExpectedVersion = 18;
 
-				for (auto &InstanceDir : CFile::fs_FindFiles(InstancesPath / "*", EFileAttrib_Directory))
-				{
-					CStr StateFile = InstanceDir / "state.json";
-					try
-					{
-						CStr JsonContents = CFile::fs_ReadStringFromFile(StateFile);
+				auto *pVersion = Versions.f_FindEqual(ExpectedVersion);
 
-						CJsonSorted const Json = CJsonSorted::fs_FromString(JsonContents, StateFile);
-						auto Version = fParseVersion(Json["installationVersion"].f_String());
-						if (Version[0] == ExpectedVersion && Version > BestVersion)
-						{
-							BestVersion = Version;
-							BestPath = NMib::NFile::NPlatform::fg_ConvertFromWindowsPath(Json["installationPath"].f_String());
-						}
-					}
-					catch (CException const &_Exception)
-					{
-						fg_AddStrSep(Errors, _Exception.f_GetErrorStr(), "\n");
-					}
-				}
-
-				if (BestPath.f_IsEmpty())
+				if (!pVersion)
 					DError("Failed to find Visual Studio {} path. {}\n"_f << m_Version << Errors);
 
-				VisualStudioRoot = BestPath;
+				VisualStudioRoot = pVersion->m_RootPath;
 #else
 				VisualStudioRoot = "/opt/VisualStudio{}"_f << m_Version;
 #endif

@@ -23,7 +23,14 @@ namespace NMib::NBuildSystem::NVisualStudio
 		CStr FileData;
 
 		FileData += "\r\n";
-		if (m_Version == 2022)
+		if (m_Version == 2026)
+		{
+			FileData += "Microsoft Visual Studio Solution File, Format Version 12.00\r\n";
+			FileData += "# Visual Studio Version 18\r\n";
+			FileData += "VisualStudioVersion = 18.0.11123.170\r\n";
+			FileData += "MinimumVisualStudioVersion = 10.0.40219.1\r\n";
+		}
+		else if (m_Version == 2022)
 		{
 			FileData += "Microsoft Visual Studio Solution File, Format Version 12.00\r\n";
 			FileData += "# Visual Studio Version 17\r\n";
