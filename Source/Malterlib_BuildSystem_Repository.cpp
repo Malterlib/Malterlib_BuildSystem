@@ -155,6 +155,7 @@ namespace NMib::NBuildSystem
 
 		TCFuture<CActorSubscription> CStateHandler::f_SequenceConfigChanges(CStr const &_Path)
 		{
+			DLock(mp_GitConfigSequencersLock);
 			return (*mp_GitConfigSequencers(_Path, CStr("Git Config for: "_f << _Path))).f_Sequence();
 		}
 
@@ -164,7 +165,7 @@ namespace NMib::NBuildSystem
 			return mp_CoreExcludesFileLocationUpdated(_Path).f_WasCreated();
 		}
 
-		CMutual &CStateHandler::f_ConsoleOutputLock()
+		CLowLevelRecursiveLock &CStateHandler::f_ConsoleOutputLock()
 		{
 			return mp_ConsoleOutputLock;
 		}

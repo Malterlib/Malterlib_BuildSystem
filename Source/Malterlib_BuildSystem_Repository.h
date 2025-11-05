@@ -175,7 +175,7 @@ namespace NMib::NBuildSystem::NRepository
 		TCMap<CStr, CConfigFile> f_GetMergedFiles();
 		bool f_AddGitIgnore(CStr const &_FileName, CBuildSystem const &_BuildSystem, EGitIgnoreType _GitIgnoreType);
 		static CConfigFile fs_ParseConfigFile(CStr const &_Contents, CStr const &_FileName);
-		CMutual &f_ConsoleOutputLock();
+		CLowLevelRecursiveLock &f_ConsoleOutputLock();
 		void f_ConsoleOutput(CStr const &_Output, bool _bError = false);
 		TCSet<CStr> f_GetLastSeenRepositories();
 		EAnsiEncodingFlag f_AnsiFlags() const;
@@ -187,17 +187,19 @@ namespace NMib::NBuildSystem::NRepository
 
 		CStr const mp_BasePath;
 		CStr const mp_OutputDir;
-		CMutual mp_Lock;
+		CLowLevelRecursiveLock mp_Lock;
 		TCMap<CStr, CConfigFile> mp_ConfigFiles;
 		TCMap<CStr, CConfigFile> mp_NewConfigFiles;
 		TCSet<CStr> mp_GitIgnores;
 		TCMap<CStr, CStr> mp_LastSeenRepositories;
-		CMutual mp_ConsoleOutputLock;
+		CLowLevelRecursiveLock mp_ConsoleOutputLock;
 		EAnsiEncodingFlag mp_AnsiFlags;
 		NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> mp_fOutputConsole;
+
+		CLowLevelRecursiveLock mp_GitConfigSequencersLock;
 		TCMap<CStr, CSequencer> mp_GitConfigSequencers;
 
-		CMutual mp_CoreExcludesFileLocationLock;
+		CLowLevelRecursiveLock mp_CoreExcludesFileLocationLock;
 		TCSet<CStr> mp_CoreExcludesFileLocationUpdated;
 	};
 
