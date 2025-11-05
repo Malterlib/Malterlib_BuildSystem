@@ -376,7 +376,7 @@ namespace NMib::NBuildSystem
 
 		// Dependent variables
 		CStr GeneratorVersion = "40";
-		CStr GeneratorFullRebuildVersion = "8";
+		CStr GeneratorFullRebuildVersion = "9";
 
 		CStr FullRebuildVersion = "{}-{}"_f << f_EvaluateEntityPropertyString(_Entity, gc_ConstKey_Import_CMake_FullRebuildVersion) << GeneratorFullRebuildVersion;
 		TCVector<CStr> CacheExcludePatterns = f_EvaluateEntityPropertyStringArray(_Entity, gc_ConstKey_Import_CMake_CacheExcludePatterns, TCVector<CStr>());
