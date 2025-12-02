@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Repository.h"
@@ -11,6 +11,43 @@ namespace NMib::NBuildSystem
 
 	namespace
 	{
+		struct CCanPushResult
+		{
+			TCSet<CStr> m_NewPush;
+			TCSet<CStr> m_ForcePush;
+		};
+
+		TCFuture<TCOptional<CStr>> fg_GetRemoteCommitHash(CGitLaunches _Launches, CRepository _Repo, CStr _Remote, CStr _Branch)
+		{
+			using namespace NStr;
+
+			auto Result = co_await _Launches.f_Launch(_Repo, {"ls-remote", _Remote, "refs/heads/{}"_f << _Branch});
+			if (Result.m_ExitCode != 0)
+				co_return {};
+
+			CStr Output = Result.f_GetStdOut().f_Trim();
+			if (Output.f_IsEmpty())
+				co_return {};
+
+			// Parse: "<hash>\trefs/heads/<branch>"
+			CStr Hash;
+			aint nParsed = 0;
+			(CStr::CParse("{}\t") >> Hash).f_Parse(Output, nParsed);
+			if (nParsed == 1 && !Hash.f_IsEmpty())
+				co_return Hash;
+
+			co_return {};
+		}
+
+		TCFuture<CStr> fg_GetShortHash(CGitLaunches _Launches, CRepository _Repo, CStr _FullHash)
+		{
+			auto Result = co_await _Launches.f_Launch(_Repo, {"rev-parse", "--short", _FullHash});
+			if (Result.m_ExitCode != 0)
+				co_return _FullHash;
+
+			co_return Result.f_GetStdOut().f_Trim();
+		}
+
 		TCFuture<void> fg_Fetch(CBuildSystem *_pBuildSystem, CGitLaunches _Launches, CRepository _Repo)
 		{
 			TCVector<CStr> FetchParams = {"fetch", "--all", "--prune", "--tags", "-q"};
@@ -42,8 +79,10 @@ namespace NMib::NBuildSystem
 			co_return {};
 		}
 
-		TCFuture<TCSet<CStr>> DMibWorkaroundUBSanSectionErrors fg_CanPush(CGitLaunches _Launches, CRepository _Repo, TCVector<CStr> _Remotes, CGitBranches _Branches, bool _bForce)
+		TCFuture<CCanPushResult> DMibWorkaroundUBSanSectionErrors fg_CanPush(CGitLaunches _Launches, CRepository _Repo, TCVector<CStr> _Remotes, CGitBranches _Branches, bool _bForce)
 		{
+			using namespace NStr;
+
 			CColors Colors(_Launches.m_pState->m_AnsiFlags);
 
 			TCFutureMap<CStr, CProcessLaunchActor::CSimpleLaunchResult> CanPushResultsMap;
@@ -61,13 +100,14 @@ namespace NMib::NBuildSystem
 
 			auto CanPushResults = co_await fg_AllDone(CanPushResultsMap);
 
-			TCSet<CStr> NewPush;
+			CCanPushResult PushResult;
 			bool bAllFastForward = true;
 			for (auto &Result : CanPushResults)
 			{
 				auto &Remote = CanPushResults.fs_GetKey(Result);
 				if (Result.m_ExitCode == 1)
 				{
+					PushResult.m_ForcePush[Remote];
 					if (!_bForce)
 					{
 						_Launches.f_Output
@@ -88,7 +128,7 @@ namespace NMib::NBuildSystem
 				{
 					CStr Output = Result.f_GetCombinedOut().f_Trim();
 					if (Output == CStr{"fatal: Not a valid object name {}/{}"_f << Remote << _Branches.m_Current})
-						NewPush[Remote];
+						PushResult.m_NewPush[Remote];
 					else
 					{
 						if (!_bForce)
@@ -114,7 +154,7 @@ namespace NMib::NBuildSystem
 			if (!bAllFastForward)
 				co_return DMibErrorInstance("Could not fast-forward against all remotes, please resolve.");
 
-			co_return fg_Move(NewPush);
+			co_return fg_Move(PushResult);
 		}
 
 		TCFuture<TCSet<CStr>> DMibWorkaroundUBSanSectionErrors fg_NeedPush(CGitLaunches _Launches, CRepository _Repo, TCVector<CStr> _Remotes, CGitBranches _Branches)
@@ -212,12 +252,65 @@ namespace NMib::NBuildSystem
 						if (!(_PushFlags & ERepoPushFlag_Force))
 							co_await fg_Fetch(this, Launches, Repo);
 
-						auto NewPush = co_await fg_CanPush(Launches, Repo, Remotes, Branches, _PushFlags & ERepoPushFlag_Force);
+						auto CanPushResult = co_await fg_CanPush(Launches, Repo, Remotes, Branches, _PushFlags & ERepoPushFlag_Force);
+
+						struct CTagInfo
+						{
+							CStr m_RemoteHash;
+							CStr m_TagName;
+						};
+
+						TCMap<CStr, CTagInfo> TagInfos;
+
+						if (_PushFlags & ERepoPushFlag_Force)
+						{
+							TCFutureMap<CStr, TCOptional<CStr>> RemoteHashFutures;
+							for (auto &Remote : Remotes)
+							{
+								CRemoteProperties const *pRemoteProps = nullptr;
+								if (auto pRemote = PushRemotes.f_FindEqual(Remote))
+									pRemoteProps = &pRemote->m_Properties;
+								if (!pRemoteProps && Remote == "origin")
+									pRemoteProps = &Repo.m_OriginProperties;
+
+								if (!pRemoteProps || !pRemoteProps->m_bTagPreviousOnForcePush)
+									continue;
+
+								CStr const &DefaultBranch = !pRemoteProps->m_DefaultBranch.f_IsEmpty() ? pRemoteProps->m_DefaultBranch : Repo.m_OriginProperties.m_DefaultBranch;
+								if (Branches.m_Current != DefaultBranch)
+									continue;
+
+								if (CanPushResult.m_ForcePush.f_FindEqual(Remote))
+									fg_GetRemoteCommitHash(Launches, Repo, Remote, Branches.m_Current) > RemoteHashFutures[Remote];
+							}
+							auto RemoteHashes = co_await fg_AllDone(RemoteHashFutures);
+
+							TCFutureMap<CStr, CStr> ShortHashFutures;
+							for (auto &RemoteHash : RemoteHashes)
+							{
+								if (RemoteHash)
+									fg_GetShortHash(Launches, Repo, *RemoteHash) > ShortHashFutures[RemoteHashes.fs_GetKey(RemoteHash)];
+							}
+							auto ShortHashes = co_await fg_AllDone(ShortHashFutures);
+
+							for (auto &RemoteHashEntry : RemoteHashes.f_Entries())
+							{
+								auto &Remote = RemoteHashEntry.f_Key();
+								if (RemoteHashEntry.f_Value())
+								{
+									auto &TagInfo = TagInfos[Remote];
+									TagInfo.m_RemoteHash = *RemoteHashEntry.f_Value();
+									TagInfo.m_TagName = "{}_{}"_f << Branches.m_Current << ShortHashes[Remote];
+								}
+							}
+						}
 
 						TCFutureVector<void> PushResults;
 
 						for (auto &Remote : Remotes)
 						{
+							CTagInfo const *pTagInfo = TagInfos.f_FindEqual(Remote);
+
 							TCVector<CStr> Params;
 
 							Params = {"push", Remote, Branches.m_Current};
@@ -233,7 +326,35 @@ namespace NMib::NBuildSystem
 
 							if (_PushFlags & ERepoPushFlag_Pretend)
 							{
-								if (NewPush.f_FindEqual(Remote))
+								if (pTagInfo)
+								{
+									Launches.f_Output
+										(
+											EOutputType_Normal
+											, Repo
+											, "Tag previous {3}{}{4} commit as {3}{}{4}: git {}"_f
+											<< Branches.m_Current
+											<< pTagInfo->m_TagName
+											<< CProcessLaunchParams::fs_GetParams({"tag", pTagInfo->m_TagName, pTagInfo->m_RemoteHash})
+											<< Colors.f_RepositoryName()
+											<< Colors.f_Default()
+										)
+									;
+									Launches.f_Output
+										(
+											EOutputType_Normal
+											, Repo
+											, "Push tag {3}{}{4} on {3}{}{4}: git {}"_f
+											<< pTagInfo->m_TagName
+											<< Remote
+											<< CProcessLaunchParams::fs_GetParams({"push", Remote, "refs/tags/{}"_f << pTagInfo->m_TagName})
+											<< Colors.f_RepositoryName()
+											<< Colors.f_Default()
+										)
+									;
+								}
+
+								if (CanPushResult.m_NewPush.f_FindEqual(Remote))
 								{
 									Launches.f_Output
 										(
@@ -266,7 +387,86 @@ namespace NMib::NBuildSystem
 								}
 							}
 							else if (NeedRemotes.f_FindEqual(Remote))
-								Launches.f_Launch(Repo, Params, fg_LogAllFunctor()) > PushResults;
+							{
+								if (pTagInfo)
+								{
+ 									g_Dispatch / [Launches, Repo, TagInfo = *pTagInfo, Colors, Remote, CurrentBranch = Branches.m_Current, Params]() -> TCFuture<void>
+										{
+											auto TagResult = co_await Launches.f_Launch(Repo, {"tag", TagInfo.m_TagName, TagInfo.m_RemoteHash});
+
+											if (TagResult.m_ExitCode == 0)
+											{
+												Launches.f_Output
+													(
+														EOutputType_Normal
+														, Repo
+														, "Created previous {3}{}{4} commit as tag {3}{}{4}:\n{}\n"_f
+														<< CurrentBranch
+														<< TagInfo.m_TagName
+														<< TagResult.f_GetCombinedOut().f_Trim()
+														<< Colors.f_RepositoryName()
+														<< Colors.f_Default()
+													)
+												;
+
+												auto TagPushResult = co_await Launches.f_Launch(Repo, {"push", Remote, "refs/tags/{}"_f << TagInfo.m_TagName});
+
+												if (TagPushResult.m_ExitCode == 0)
+												{
+													Launches.f_Output
+														(
+															EOutputType_Normal
+															, Repo
+															, "Pushed previous {4}{}{5} commit as {4}{}{5} on remote {4}{}{5}:\n{}\n"_f
+															<< CurrentBranch
+															<< TagInfo.m_TagName
+															<< Remote
+															<< TagPushResult.f_GetCombinedOut().f_Trim()
+															<< Colors.f_RepositoryName()
+															<< Colors.f_Default()
+														)
+													;
+												}
+												else
+												{
+													Launches.f_Output
+														(
+															EOutputType_Error
+															, Repo
+															, "Failed to push tag {}: {}"_f
+															<< TagInfo.m_TagName
+															<< TagPushResult.f_GetCombinedOut().f_Trim()
+														)
+													;
+
+													co_return DMibErrorInstance("Error status");
+												}
+											}
+											else if (TagResult.f_GetCombinedOut().f_Find("already exists") < 0)
+											{
+												Launches.f_Output
+													(
+														EOutputType_Error
+														, Repo
+														, "Failed to create tag {}: {}"_f
+														<< TagInfo.m_TagName
+														<< TagResult.f_GetCombinedOut().f_Trim()
+													)
+												;
+
+												co_return DMibErrorInstance("Error status");
+											}
+
+											co_await Launches.f_Launch(Repo, Params, fg_LogAllFunctor());
+
+											co_return {};
+										}
+										> PushResults
+									;
+								}
+								else
+									Launches.f_Launch(Repo, Params, fg_LogAllFunctor()) > PushResults;
+							}
 						}
 
 						co_await fg_AllDone(PushResults);

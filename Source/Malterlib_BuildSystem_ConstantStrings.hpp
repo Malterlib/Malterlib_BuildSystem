@@ -227,6 +227,7 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_XcodeGeneratorDependencyFiles = gc_Str<"XcodeGeneratorDependencyFiles">;
 	constexpr CStringAndHash const gc_ConstString_LfsReleaseStore = gc_Str<"LfsReleaseStore">;
 	constexpr CStringAndHash const gc_ConstString_ExtraFetchSpecs = gc_Str<"ExtraFetchSpecs">;
+	constexpr CStringAndHash const gc_ConstString_TagPreviousOnForcePush = gc_Str<"TagPreviousOnForcePush">;
 
 	constexpr CStringAndHash const gc_ConstString_Settings = gc_Str<"Settings">;
 	constexpr CStringAndHash const gc_ConstString_17_0 = gc_Str<"17.0">;
@@ -739,6 +740,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_XcodeGeneratorDependencyFiles);
 		o_StringCache.f_AddConstantString(gc_ConstString_LfsReleaseStore);
 		o_StringCache.f_AddConstantString(gc_ConstString_ExtraFetchSpecs);
+		o_StringCache.f_AddConstantString(gc_ConstString_TagPreviousOnForcePush);
 
 		o_StringCache.f_AddConstantString(gc_ConstString_Settings);
 		o_StringCache.f_AddConstantString(gc_ConstString_17_0);

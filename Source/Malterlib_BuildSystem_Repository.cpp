@@ -1389,6 +1389,7 @@ namespace NMib::NBuildSystem
 					auto bUpdateSubmodules = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_UpdateSubmodules, false);
 					auto bExcludeFromSeen = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_ExcludeFromSeen, false);
 					auto bLfsReleaseStore = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_LfsReleaseStore, false);
+					auto bTagPreviousOnForcePush = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_TagPreviousOnForcePush, true);
 					auto bBootstrapSource = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_BootstrapSource, false);
 					auto GitIgnoreTypeStr = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, gc_ConstKey_Repository_GitIgnoreType, CStr());
 					auto ExtraFetchSpecs = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, gc_ConstKey_Repository_ExtraFetchSpecs, TCVector<CStr>());
@@ -1451,6 +1452,7 @@ namespace NMib::NBuildSystem
 					Repo.m_OriginProperties.m_URL = URL;
 					Repo.m_OriginProperties.m_DefaultBranch = DefaultBranch;
 					Repo.m_OriginProperties.m_bLfsReleaseStore = bLfsReleaseStore;
+					Repo.m_OriginProperties.m_bTagPreviousOnForcePush = bTagPreviousOnForcePush;
 
 					if (bIncludePolicy)
 					{
@@ -1516,6 +1518,9 @@ namespace NMib::NBuildSystem
 
 						if (auto pValue = Remote.f_GetMember(gc_ConstString_LfsReleaseStore))
 							OutRemote.m_Properties.m_bLfsReleaseStore = pValue->f_Boolean();
+
+						if (auto pValue = Remote.f_GetMember(gc_ConstString_TagPreviousOnForcePush))
+							OutRemote.m_Properties.m_bTagPreviousOnForcePush = pValue->f_Boolean();
 
 						if (auto pValue = Remote.f_GetMember(gc_ConstString_ExtraFetchSpecs))
 						{

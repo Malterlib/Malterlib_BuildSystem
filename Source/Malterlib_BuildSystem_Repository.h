@@ -69,6 +69,7 @@ namespace NMib::NBuildSystem::NRepository
 		bool m_bLfsReleaseStore = false;
 		bool m_bApplyPolicy = false;
 		bool m_bApplyPolicyPretend = false;
+		bool m_bTagPreviousOnForcePush = true;
 	};
 
 	struct CRemote
