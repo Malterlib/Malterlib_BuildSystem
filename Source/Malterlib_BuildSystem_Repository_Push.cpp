@@ -318,7 +318,9 @@ namespace NMib::NBuildSystem
 							if (_PushFlags & ERepoPushFlag_FollowTags)
 								Params.f_InsertAfter(0, "--follow-tags");
 
-							if (_PushFlags & ERepoPushFlag_Force)
+							bool bDoForcePush = (_PushFlags & ERepoPushFlag_Force) && CanPushResult.m_ForcePush.f_FindEqual(Remote);
+
+							if (bDoForcePush)
 								Params.f_InsertAfter(0, "--force-with-lease");
 
 							if (Remote == "origin")
@@ -376,7 +378,7 @@ namespace NMib::NBuildSystem
 											EOutputType_Normal
 											, Repo
 											, "{} {4}{}{5} on {4}{}{5}: git {}"_f
-											<< ((_PushFlags & ERepoPushFlag_Force) ? "Force update" : "Update")
+											<< (bDoForcePush ? "Force update" : "Update")
 											<< Branches.m_Current
 											<< Remote
 											<< CProcessLaunchParams::fs_GetParams(Params)
