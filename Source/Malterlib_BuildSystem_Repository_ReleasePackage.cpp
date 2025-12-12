@@ -239,7 +239,7 @@ namespace NMib::NBuildSystem
 				CStr SourceFile;
 				CStr CompressedFileName;
 				if (Package.m_bCompress)
-					CompressedFileName = CFile::fs_GetUserHomeDirectory() / ".Malterlib/temp" / fg_RandomID() / Package.m_PackageName;
+					CompressedFileName = CFile::fs_GetUserHomeDirectory() / ".Malterlib/temp" / fg_FastRandomID() / Package.m_PackageName;
 
 				auto CleanupFile = g_BlockingActorSubscription / [CompressedFileName]
 					{
