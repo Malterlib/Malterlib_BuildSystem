@@ -1600,8 +1600,16 @@ fi
 					// Output files used in script here
 					_Output += "\t\t\t);\n\t\t\tinputPaths = (\n";
 
+					// Build set of outputs to filter from inputs
+					TCSet<CStr> Outputs;
+					for (CStr const &Output : _Script.m_Outputs)
+						Outputs.f_Insert(Output);
+
 					for (CStr const &Input : _Script.m_Inputs)
-						_Output += CStr::CFormat("\t\t\t\t\"{}\",\n") << Input;
+					{
+						if (!Outputs.f_FindEqual(Input))
+							_Output += CStr::CFormat("\t\t\t\t\"{}\",\n") << Input;
+					}
 
 					_Output += CStr::CFormat("\t\t\t);\n\t\t\tname = {};\n\t\t\toutputPaths = (\n") << fg_EscapeXcodeProjectVar(_Script.m_Name);
 
