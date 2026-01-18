@@ -629,6 +629,22 @@ namespace NMib::NBuildSystem
 												)
 											;
 
+											f_AddExternalProperty
+												(
+													*Dep.m_pEntity
+													, gc_ConstKey_Dependency_IndirectEvaluated
+													, Dep.m_bIndirect
+												)
+											;
+
+											f_AddExternalProperty
+												(
+													*Dep.m_pEntity
+													, gc_ConstKey_Dependency_IndirectOrderedEvaluated
+													, Dep.m_bIndirectOrdered
+												)
+											;
+
 											bool bFollowIndirectDependencies = f_EvaluateEntityPropertyBool(*pDependentTarget->m_pInnerEntity, gc_ConstKey_Target_FollowIndirectDependencies, false);
 
 											if (!bFollowIndirectDependencies)
@@ -707,7 +723,16 @@ namespace NMib::NBuildSystem
 									}
 
 								}
-								DependencyTargets.f_Insert(pDependentTarget->m_pInnerEntity->f_GetPathForGetProperty());
+								auto TargetPropertyPath = pDependentTarget->m_pInnerEntity->f_GetPathForGetProperty();
+								DependencyTargets.f_Insert(TargetPropertyPath);
+
+								f_AddExternalProperty
+									(
+										*Dependency.m_pEntity
+										, gc_ConstKey_Dependency_TargetPropertyPath
+										, TargetPropertyPath
+									)
+								;
 							}
 
 							auto fAddNameList = [&](CPropertyKeyReference const &_Key, TCVector<CStr> &&_Names) -> bool

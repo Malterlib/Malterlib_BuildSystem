@@ -86,6 +86,9 @@ namespace NMib::NBuildSystem
 
 	extern CPropertyKeyReference const gc_ConstKey_Dependency_Indirect;
 	extern CPropertyKeyReference const gc_ConstKey_Dependency_IndirectOrdered;
+	extern CPropertyKeyReference const gc_ConstKey_Dependency_IndirectEvaluated;
+	extern CPropertyKeyReference const gc_ConstKey_Dependency_IndirectOrderedEvaluated;
+	extern CPropertyKeyReference const gc_ConstKey_Dependency_TargetPropertyPath;
 	extern CPropertyKeyReference const gc_ConstKey_Dependency_Link;
 	extern CPropertyKeyReference const gc_ConstKey_Dependency_Type;
 	extern CPropertyKeyReference const gc_ConstKey_Dependency_Name;

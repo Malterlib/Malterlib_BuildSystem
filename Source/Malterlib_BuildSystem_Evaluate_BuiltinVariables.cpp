@@ -113,6 +113,9 @@ namespace NMib::NBuildSystem
 
 					, {CPropertyKey(gc_ConstKey_Dependency_Indirect), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					, {CPropertyKey(gc_ConstKey_Dependency_IndirectOrdered), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(gc_ConstKey_Dependency_IndirectEvaluated), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(gc_ConstKey_Dependency_IndirectOrderedEvaluated), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(gc_ConstKey_Dependency_TargetPropertyPath), DMibBuildSystemTypeWithPosition(g_String)}
 					, {CPropertyKey(gc_ConstKey_Dependency_Link), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, true))}
 					, {CPropertyKey(gc_ConstKey_Dependency_Target), DMibBuildSystemTypeWithPosition(fg_Optional(g_String))}
 					, {CPropertyKey(gc_ConstKey_Dependency_ObjectLibrary), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}

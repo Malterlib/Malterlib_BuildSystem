@@ -87,6 +87,9 @@ namespace NMib::NBuildSystem
 
 	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_Indirect(EPropertyType_Dependency, gc_Str<"Indirect">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_IndirectOrdered(EPropertyType_Dependency, gc_Str<"IndirectOrdered">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_IndirectEvaluated(EPropertyType_Dependency, gc_Str<"IndirectEvaluated">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_IndirectOrderedEvaluated(EPropertyType_Dependency, gc_Str<"IndirectOrderedEvaluated">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_TargetPropertyPath(EPropertyType_Dependency, gc_Str<"TargetPropertyPath">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_Link(EPropertyType_Dependency, gc_Str<"Link">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_Type(EPropertyType_Dependency, gc_Str<"Type">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_Name(EPropertyType_Dependency, gc_Str<"Name">);
@@ -330,6 +333,9 @@ namespace NMib::NBuildSystem
 
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_Indirect);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_IndirectOrdered);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_IndirectEvaluated);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_IndirectOrderedEvaluated);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_TargetPropertyPath);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_Link);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_Type);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_Name);
