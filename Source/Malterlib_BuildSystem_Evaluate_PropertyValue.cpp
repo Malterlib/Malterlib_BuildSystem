@@ -541,7 +541,7 @@ namespace NMib::NBuildSystem
 			if (!bHandled)
 			{
 				auto TempRight = RightRef;
-				if 
+				if
 				(
 					fp_DoesValueConformToType
 					(
@@ -928,7 +928,7 @@ namespace NMib::NBuildSystem
 			return Return;
 		}
 	}
-	
+
 	bool CBuildSystem::fp_DoesValueConformToType
 		(
 			CEvalPropertyValueContext &_Context
@@ -1602,7 +1602,7 @@ namespace NMib::NBuildSystem
 				}
 				return true;
 			}
-			
+
 			return false;
 		}
 		return true;
@@ -1642,7 +1642,7 @@ namespace NMib::NBuildSystem
 				fs_ThrowError(_Context, TypePositions, "Found no type for {}"_f << _Property);
 			}
 		}
-		
+
 		fp_CheckValueConformToType
 			(
 				_Context
@@ -1844,7 +1844,7 @@ namespace NMib::NBuildSystem
 		CStr const *pPropertyName;
 		CStr PropertyNameHolder;
 		uint32 PropertyNameHash;
-		
+
 		if (_Value.f_IsNameConstantString())
 		{
 			pPropertyName = &_Value.f_NameConstantString();
@@ -1935,21 +1935,21 @@ namespace NMib::NBuildSystem
 			{
 				if (_Context.m_pStorePositions)
 					_Context.m_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.BuildSystemSource")->f_AddValue(mp_FileLocationFile, f_EnableValues());
-				
+
 				return &mp_FileLocationFile;
 			}
 			else if (PropertyName == gc_ConstKey_Builtin_GeneratorStateFile.m_Name)
 			{
 				if (_Context.m_pStorePositions)
 					_Context.m_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.GeneratorStateFile")->f_AddValue(mp_GeneratorStateFileName, f_EnableValues());
-				
+
 				return &mp_GeneratorStateFileName;
 			}
 			else if (PropertyName == gc_ConstKey_Builtin_BasePathAbsolute.m_Name)
 			{
 				if (_Context.m_pStorePositions)
 					_Context.m_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.BasePathAbsolute")->f_AddValue(f_GetBaseDir(), f_EnableValues());
-				
+
 				return &mp_BaseDir;
 			}
 			else if (PropertyName == gc_ConstKey_Builtin_MToolExe.m_Name)

@@ -308,7 +308,7 @@ namespace NMib::NBuildSystem
 		}
 
 		_GenerateState.m_GeneratorValues = _GenerateState.m_pGenerator->f_GetValues(*this, _GenerateState.m_OutputDir);
-				
+
 		TCMap<CStr, CStr> PreprocessorEnvironment = mp_Environment;
 		for (auto &Value : _GenerateState.m_GeneratorValues)
 		{
@@ -328,7 +328,7 @@ namespace NMib::NBuildSystem
 				PreprocessorEnvironment(Key.m_Name, Value.f_AsString());
 			default:
 				continue;
-			}			
+			}
 		}
 
 		{

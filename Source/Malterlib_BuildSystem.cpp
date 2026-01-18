@@ -90,7 +90,7 @@ namespace NMib::NBuildSystem
 		{
 			DMibLock(mp_CachedFilesLock);
 			pCachedFile = &mp_CachedFiles[_File];
-		}		
+		}
 
 		DMibLock(pCachedFile->m_Lock);
 
@@ -110,7 +110,7 @@ namespace NMib::NBuildSystem
 		{
 			DMibLock(mp_CachedFilesLock);
 			pCachedFile = &mp_CachedFiles[_File];
-		}		
+		}
 
 		DMibLock(pCachedFile->m_Lock);
 		if (!pCachedFile->m_bRead)
@@ -120,7 +120,7 @@ namespace NMib::NBuildSystem
 
 			if (!pCachedFile->m_pDigest)
 				pCachedFile->m_pDigest = fg_Construct(CHash_SHA256::fs_DigestFromData(FileContents));
-			
+
 			pCachedFile->m_bRead = true;
 		}
 		else if (!pCachedFile->m_pDigest)
@@ -144,7 +144,7 @@ namespace NMib::NBuildSystem
 		{
 			DMibLock(mp_CachedFilesLock);
 			pCachedFile = &mp_CachedFiles[_File];
-		}		
+		}
 
 		DMibLock(pCachedFile->m_Lock);
 		if (!pCachedFile->m_bRead)

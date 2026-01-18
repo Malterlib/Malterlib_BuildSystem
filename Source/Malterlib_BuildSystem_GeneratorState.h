@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #pragma once
@@ -19,7 +19,7 @@ namespace NMib::NBuildSystem
 
 	struct CGeneratorArchiveState
 	{
-		enum 
+		enum
 		{
 			EFileVersion = 0x122
 		};
@@ -27,7 +27,7 @@ namespace NMib::NBuildSystem
 		struct CProcessedFile
 		{
 			CProcessedFile();
-			
+
 			inline_always NStr::CStr const &f_GetFileName() const;
 			template <typename tf_CStream>
 			void f_Feed(tf_CStream &_Stream) const;
@@ -41,14 +41,14 @@ namespace NMib::NBuildSystem
 			NStorage::TCSharedPointer<NCryptography::CHashDigest_SHA256> m_pDigest;
 			EGeneratedFileFlag m_Flags = EGeneratedFileFlag_None;
 		};
-		
+
 		CGeneratorArchiveState();
 
 		template <typename tf_CStream>
 		void f_Feed(tf_CStream &_Stream) const;
 		template <typename tf_CStream>
 		void f_Consume(tf_CStream &_Stream);
-		
+
 		NContainer::TCMap<NStr::CStr, CProcessedFile> m_ExeFile;
 		NContainer::TCMap<NStr::CStr, CProcessedFile> m_SourceFiles;
 		NContainer::TCMap<NStr::CStr, CProcessedFile> m_ReferencedFiles;

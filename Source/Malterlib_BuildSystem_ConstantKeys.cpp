@@ -89,10 +89,10 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_IndirectOrdered(EPropertyType_Dependency, gc_Str<"IndirectOrdered">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_Link(EPropertyType_Dependency, gc_Str<"Link">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_Type(EPropertyType_Dependency, gc_Str<"Type">);
-	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_Name(EPropertyType_Dependency, gc_Str<"Name">);	
+	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_Name(EPropertyType_Dependency, gc_Str<"Name">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_Target(EPropertyType_Dependency, gc_Str<"Target">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_TargetProperties(EPropertyType_Dependency, gc_Str<"TargetProperties">);
-	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_ObjectLibrary(EPropertyType_Dependency, gc_Str<"ObjectLibrary">);	
+	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_ObjectLibrary(EPropertyType_Dependency, gc_Str<"ObjectLibrary">);
 
 	constexpr CPropertyKeyReference const gc_ConstKey_GenerateFile_BeforeImports(EPropertyType_GenerateFile, gc_Str<"BeforeImports">);
 	constexpr CPropertyKeyReference const gc_ConstKey_GenerateFile_Contents(EPropertyType_GenerateFile, gc_Str<"Contents">);
@@ -332,7 +332,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_IndirectOrdered);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_Link);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_Type);
-		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_Name);		
+		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_Name);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_Target);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_TargetProperties);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_ObjectLibrary);
@@ -354,7 +354,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_Workspace);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_Target);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_Compile);
-		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_Dependency);		
+		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_Dependency);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_DefinedProperties);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_IsFile);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GeneratorSetting_Xcode_TargetType);

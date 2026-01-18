@@ -668,7 +668,7 @@ namespace NMib::NContainer
 
 		return false;
 	}
-	
+
 	template <typename tf_CParseContext, typename tf_CStr>
 	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::fs_GenerateValue
 		(

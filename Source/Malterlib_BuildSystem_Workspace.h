@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #pragma once
@@ -18,7 +18,7 @@ namespace NMib::NBuildSystem
 		CEntityMutablePointer m_pEntity;
 		NContainer::TCMap<NStr::CStr, CGroupInfo> m_Groups;
 		CGroupInfo m_RootGroup;
-		
+
 		NContainer::TCMap<NStr::CStr, CTargetInfo> m_Targets;
 	};
 }

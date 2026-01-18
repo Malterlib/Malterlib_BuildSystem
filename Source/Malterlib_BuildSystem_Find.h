@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #pragma once
@@ -10,9 +10,9 @@ namespace NMib::NBuildSystem
 	struct CFindOptions
 	{
 		CFindOptions(NStr::CStr const &_Path, NFile::EFileAttrib _Attribs = (NFile::EFileAttrib_File | NFile::EFileAttrib_Directory), bool _bRecursive = false, bool _bFollowLinks = true);
-		
+
 		auto operator <=> (CFindOptions const &_Right) const = default;
-		
+
 		template <typename tf_CStream>
 		void f_Feed(tf_CStream &_Stream) const;
 		template <typename tf_CStream>
@@ -24,26 +24,26 @@ namespace NMib::NBuildSystem
 		uint8 m_bFollowLinks;
 		uint8 m_bExists = false;
 		NContainer::TCSet<NStr::CStr> m_Exclude;
-		
+
 	private:
 		template <typename t_CKey2, typename t_CData2>
 		friend struct NMib::NContainer::TCMapNode;
 
 		CFindOptions();
 	};
-	
+
 	struct CFindCache
 	{
 		CFindCache();
 		~CFindCache();
-		
+
 		NContainer::TCMap<CFindOptions, NContainer::TCVector<NFile::CFile::CFoundFile>> f_GetAllTagged() const;
 		NContainer::TCVector<NFile::CFile::CFoundFile> const &f_FindFiles(CFindOptions const &_Options, bool _bTag) const;
-		void f_AddSourceFile(NStr::CStr const &_FileName, NStorage::TCSharedPointer<NCryptography::CHashDigest_SHA256> &&_pDigest) const;		
+		void f_AddSourceFile(NStr::CStr const &_FileName, NStorage::TCSharedPointer<NCryptography::CHashDigest_SHA256> &&_pDigest) const;
 		NContainer::TCMap<NStr::CStr, NStorage::TCSharedPointer<NCryptography::CHashDigest_SHA256>> f_GetSourceFiles() const;
 		bool f_FileExists(NStr::CStr const &_File, NFile::EFileAttrib _Attributes) const;
 		NStr::CStr f_ResolveSymbolicLink(NStr::CStr const &_File) const;
-		
+
 	private:
 		struct CEntry
 		{

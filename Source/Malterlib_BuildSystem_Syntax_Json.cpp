@@ -90,7 +90,7 @@ namespace NMib::NBuildSystem
 		}
 		return Return;
 	}
-	
+
 	auto CBuildSystemSyntax::CObject::fs_FromJson(CStringCache &o_StringCache, NEncoding::CEJsonSorted const &_Json, CFilePosition const &_Position, bool _bAppendAllowed)
 		-> NStorage::TCVariant<NEncoding::CEJsonSorted, CObject>
 	{

@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem.h"
@@ -40,10 +40,10 @@ namespace NMib::NBuildSystem
 				, false
 			)
 		;
-		
+
 		return pRet;
 	}
-	
+
 	void CBuildSystem::fpr_EvaluateData(CEntity &_Entity, TCSet<CEntity *> &o_Deleted) const
 	{
 		auto &EntityData = _Entity.f_Data();
@@ -61,7 +61,7 @@ namespace NMib::NBuildSystem
 			_Entity.m_pParent->m_ChildEntitiesMap.f_Remove(&_Entity);
 			return;
 		}
-		
+
 		for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild;)
 		{
 			auto &Child = *iChild;
@@ -102,7 +102,7 @@ namespace NMib::NBuildSystem
 		if (_pStartEntity)
 		{
 			TCLinkedList<CEntity const *> Entities;
-			
+
 			CEntity const *pEntity = _pStartEntity;
 
 			while (pEntity)
@@ -142,7 +142,7 @@ namespace NMib::NBuildSystem
 			auto &ChildEntity = *iChild;
 			auto &Key = ChildEntity.f_GetKey();
 			++iChild;
-			if 
+			if
 			(
 				!_bAllChildren
 				&&
@@ -185,10 +185,10 @@ namespace NMib::NBuildSystem
 			{
 				fpr_EvaluateData(*iChild);
 			}
-				
+
 			++iChild;
 		}
-		
+
 		return pRet;
 	}
 }

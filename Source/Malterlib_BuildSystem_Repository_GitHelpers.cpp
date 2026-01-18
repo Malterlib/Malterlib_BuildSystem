@@ -511,7 +511,7 @@ namespace NMib::NBuildSystem::NRepository
 		;
 
 		auto DestroyLaunchs = co_await co_await Launches.f_Init();
-		
+
 		Launches.f_MeasureRepos(_FilteredRepositories.m_FilteredRepositories);
 
 		TCFutureVector<void> Results;

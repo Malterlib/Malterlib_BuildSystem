@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include <Mib/Core/Core>
@@ -21,10 +21,10 @@ namespace NMib::NBuildSystem
 		, m_bFollowLinks(_bFollowLinks)
 	{
 	}
-	
+
 	CFindCache::CFindCache() = default;
 	CFindCache::~CFindCache() = default;
-	
+
 	TCMap<CFindOptions, TCVector<CFile::CFoundFile>> CFindCache::f_GetAllTagged() const
 	{
 		TCMap<CFindOptions, TCVector<CFile::CFoundFile>> Ret;
@@ -73,7 +73,7 @@ namespace NMib::NBuildSystem
 			DLock(mp_Lock);
 			pEntry = &mp_SourceSearches[_Options];
 		}
-		
+
 		if (!pEntry->m_bFinished.f_Load())
 		{
 			DLock(pEntry->m_Lock);
@@ -101,13 +101,13 @@ namespace NMib::NBuildSystem
 			pEntry->m_bTagged.f_Exchange(true);
 		return pEntry->m_FoundFiles;
 	}
-	
+
 	void CFindCache::f_AddSourceFile(CStr const &_FileName, TCSharedPointer<CHashDigest_SHA256> &&_pDigest) const
 	{
 		DLock(mp_SourceFilesLock);
 		mp_SourceFiles[_FileName] = fg_Move(_pDigest);
 	}
-	
+
 	TCMap<CStr, TCSharedPointer<CHashDigest_SHA256>> CFindCache::f_GetSourceFiles() const
 	{
 		DLock(mp_SourceFilesLock);

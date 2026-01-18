@@ -34,7 +34,7 @@ namespace NMib::NBuildSystem
 			{
 				if (_bRawString)
 					return m_Token.f_Get<0>();
-				
+
 				CEJsonSorted Return;
 				auto &ReturnObject = Return.f_Object();
 				ReturnObject[gc_ConstString_Type] = gc_ConstString_String;

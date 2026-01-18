@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Generator_Xcode.h"
@@ -28,7 +28,7 @@ namespace NMib::NBuildSystem::NXcode
 		m_BuildSystem.f_SetGeneratorInterface(this);
 		CStr Generator = _InitialValues[CPropertyKey(gc_ConstKey_Generator)].f_String();
 		m_XcodeVersion = Generator.f_Replace("Xcode", "").f_ToInt(uint32(13));
-		
+
 		_BuildSystem.f_RegisterBuiltinVariables
 			(
 				{
@@ -89,7 +89,7 @@ namespace NMib::NBuildSystem::NXcode
 
 		return CEJsonSorted();
 	}
-	
+
 	void CGeneratorInstance::CSharedState::f_CreateDirectory(CStr const &_Path)
 	{
 		auto Mapped = m_CreateDirectoryCache(_Path);

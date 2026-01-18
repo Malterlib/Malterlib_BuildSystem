@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #pragma once
@@ -10,7 +10,7 @@ namespace NMib::NBuildSystem
 	struct CBuildSystemConfiguration
 	{
 		inline_always NStr::CStr const &f_GetName() const;
-		
+
 		NStr::CStr m_Description;
 		CCondition m_Condition;
 		CFilePosition m_Position;
@@ -22,7 +22,7 @@ namespace NMib::NBuildSystem
 
 		NContainer::TCMap<NStr::CStr, CBuildSystemConfiguration> m_Configurations;
 	};
-	
+
 	struct CConfigurationTuple
 	{
 		NStr::CStr m_Type;

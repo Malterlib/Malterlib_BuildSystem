@@ -420,7 +420,7 @@ namespace NMib::NBuildSystem
 		)
 	{
 		co_await ECoroutineFlag_CaptureMalterlibExceptions;
-		
+
 		CGenerateEphemeralState GenerateState;
 		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
 			co_return Retry;

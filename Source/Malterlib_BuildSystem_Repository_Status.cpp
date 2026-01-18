@@ -277,7 +277,7 @@ namespace NMib::NBuildSystem
 		{
 			g_Dispatch / [=, Repo = Repo, iSequence = iSequence]() -> TCFuture<CRepoResult>
 				{
-					auto [LocalChanges, Remotes, LocalBranches, RemoteBranches] = co_await 
+					auto [LocalChanges, Remotes, LocalBranches, RemoteBranches] = co_await
 						(
 							fg_GetLocalFileChanges(Launches, Repo, !(_Flags & ERepoStatusFlag_OnlyTracked))
 							+ fg_GetRemotes(Launches, Repo)
@@ -326,9 +326,9 @@ namespace NMib::NBuildSystem
 									if (pRemote && pRemote->m_Properties.m_DefaultBranch)
 										DefaultUpstreamBranch = pRemote->m_Properties.m_DefaultBranch;
 
-									if 
+									if
 									(
-										bUseDefaultUpstream 
+										bUseDefaultUpstream
 										&& Branch == Repo.m_OriginProperties.m_DefaultBranch
 										&& !DefaultUpstreamBranch.f_IsEmpty()
 										&& !State.f_HasRemoteBranch(RemoteBranch)

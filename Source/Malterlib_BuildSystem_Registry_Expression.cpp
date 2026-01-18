@@ -239,7 +239,7 @@ namespace NMib::NContainer
 			o_String += *pParse;
 			++pParse;
 		}
-		
+
 		while (*pParse)
 		{
 			if (!fs_CharIsIdentifier(*pParse) || *pParse == '\\')
@@ -1138,7 +1138,7 @@ namespace NMib::NContainer
 
 		if (fg_StrStartsWith(o_pParse, "//") || fg_StrStartsWith(o_pParse, "/*"))
 			return;
-		
+
 		if (*pParse == '?')
 		{
 			++pParse;

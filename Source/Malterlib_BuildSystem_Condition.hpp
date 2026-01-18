@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #pragma once
@@ -15,29 +15,29 @@ namespace NMib::NBuildSystem
 		case EConditionType_And:
 		case EConditionType_Not:
 			{
-				o_Str += tf_CStr::CFormat("{sj*}{}\n") 
-					<< "" 
+				o_Str += tf_CStr::CFormat("{sj*}{}\n")
+					<< ""
 					<< _Depth*3
 					<< CCondition::fs_ConditionTypeToStr(m_Type)
 				;
-				o_Str += tf_CStr::CFormat("{sj*}{{\n") 
-					<< "" 
+				o_Str += tf_CStr::CFormat("{sj*}{{\n")
+					<< ""
 					<< _Depth*3
 				;
 
 				for (auto &Child : m_Children)
 					Child.f_FormatRecursive(o_Str, _Depth + 1);
 
-				o_Str += tf_CStr::CFormat("{sj*}}\n") 
-					<< "" 
+				o_Str += tf_CStr::CFormat("{sj*}}\n")
+					<< ""
 					<< _Depth*3
 				;
 				break;
 			}
 		default:
 			{
-				o_Str += tf_CStr::CFormat("{sj*}{} {} {}\n") 
-					<< "" 
+				o_Str += tf_CStr::CFormat("{sj*}{} {} {}\n")
+					<< ""
 					<< _Depth*3
 					<< m_Left
 					<< CCondition::fs_ConditionTypeToStr(m_Type)

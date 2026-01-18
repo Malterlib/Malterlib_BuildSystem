@@ -87,8 +87,8 @@ namespace NMib::NBuildSystem
 	extern CPropertyKeyReference const gc_ConstKey_Dependency_Indirect;
 	extern CPropertyKeyReference const gc_ConstKey_Dependency_IndirectOrdered;
 	extern CPropertyKeyReference const gc_ConstKey_Dependency_Link;
-	extern CPropertyKeyReference const gc_ConstKey_Dependency_Type;	
-	extern CPropertyKeyReference const gc_ConstKey_Dependency_Name;	
+	extern CPropertyKeyReference const gc_ConstKey_Dependency_Type;
+	extern CPropertyKeyReference const gc_ConstKey_Dependency_Name;
 	extern CPropertyKeyReference const gc_ConstKey_Dependency_Target;
 	extern CPropertyKeyReference const gc_ConstKey_Dependency_TargetProperties;
 	extern CPropertyKeyReference const gc_ConstKey_Dependency_ObjectLibrary;
@@ -113,7 +113,7 @@ namespace NMib::NBuildSystem
 	extern CPropertyKeyReference const gc_ConstKey_GeneratorSetting_Compile;
 
 	extern CPropertyKeyReference const gc_ConstKey_GeneratorSetting_DefinedProperties;
-	extern CPropertyKeyReference const gc_ConstKey_GeneratorSetting_IsFile;	
+	extern CPropertyKeyReference const gc_ConstKey_GeneratorSetting_IsFile;
 	extern CPropertyKeyReference const gc_ConstKey_GeneratorSetting_Xcode_TargetType;
 
 	extern CPropertyKeyReference const gc_ConstKey_Group_HideTargets;;

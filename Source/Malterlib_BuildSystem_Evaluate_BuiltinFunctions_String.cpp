@@ -276,7 +276,7 @@ namespace NMib::NBuildSystem
 
 								if (SourceString.f_StartsWith(gc_ConstString_RawMSBuild_.m_String))
 									return SourceString.f_Extract(11);
-							
+
 								auto pParse = SourceString.f_GetStr();
 
 								CStr Return;

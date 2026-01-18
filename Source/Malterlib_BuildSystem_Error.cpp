@@ -228,7 +228,7 @@ namespace NMib::NBuildSystem
 		CParseErrors ParseErrors;
 
 		CFilePosition FirstPosition = fg_AddMainError(ParseErrors, _Positions, _Error);
-			
+
 		if (_Context.m_Position != FirstPosition)
 		{
 			CSeparator Separator{ParseErrors, "Context"};

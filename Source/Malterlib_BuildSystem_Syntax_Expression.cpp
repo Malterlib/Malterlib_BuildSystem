@@ -536,7 +536,7 @@ namespace NMib::NBuildSystem
 						case CBinaryOperator::EOperator_BitwiseOr: return 13;
 						case CBinaryOperator::EOperator_And: return 14;
 						case CBinaryOperator::EOperator_Or: return 15;
-						case CBinaryOperator::EOperator_NullishCoalescing: return 15;							
+						case CBinaryOperator::EOperator_NullishCoalescing: return 15;
 						}
 						return 0;
 					}
@@ -800,7 +800,7 @@ namespace NMib::NBuildSystem
 	{
 		return static_cast<CExpression const &>(*this).f_ToJson(true);
 	}
-	
+
 	auto CBuildSystemSyntax::CExpressionAppend::fs_FromJson(CStringCache &o_StringCache, CEJsonSorted const &_Json, CFilePosition const &_Position, bool _bParen) -> CExpressionAppend
 	{
 		CExpressionAppend Return;

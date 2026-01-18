@@ -84,7 +84,7 @@ namespace NMib::NBuildSystem
 
 		return Return;
 	}
-	
+
 	NEncoding::CEJsonSorted CBuildSystemSyntax::CIdentifier::f_ToJson() const
 	{
 		CEJsonSorted Return;
@@ -123,7 +123,7 @@ namespace NMib::NBuildSystem
 
 		return Return;
 	}
-	
+
 	auto CBuildSystemSyntax::CIdentifier::fs_FromJson(CStringCache &o_StringCache, CEJsonSorted const &_Json, CFilePosition const &_Position) -> CIdentifier
 	{
 		CIdentifier Return;

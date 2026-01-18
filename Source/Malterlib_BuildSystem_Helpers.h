@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #pragma once
@@ -12,7 +12,7 @@ namespace NMib::NBuildSystem
 		template <typename tf_CFunctor, typename tf_CKey>
 		void f_Add(tf_CKey const &_Key, tf_CFunctor &&_Functor);
 		void f_Perform();
-		
+
 	private:
 		struct CToSortBy
 		{
@@ -20,11 +20,11 @@ namespace NMib::NBuildSystem
 			CToSortBy() = default;
 
 			COrdering_Strong operator <=> (CToSortBy const &_Other) const;
-			
+
 			t_CSortKey m_SortBy;
 			TCFunction<void ()> *m_pFunctor;
 		};
-		
+
 		TCLinkedList<TCFunction<void ()>> m_ToPerform;
 		TCVector<CToSortBy> m_ToSort;
 	};
@@ -47,7 +47,7 @@ namespace NMib::NBuildSystem
 			t_CSortKey *m_pSortBy;
 			TCFunction<void ()> *m_pFunctor;
 		};
-		
+
 		TCLinkedList<TCFunction<void ()>> m_ToPerform;
 		TCVector<CToSortBy> m_ToSort;
 	};

@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem.h"
@@ -126,7 +126,7 @@ namespace NMib::NBuildSystem
 	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Update(CGenerateOptions const &_GenerateOptions)
 	{
 		co_await ECoroutineFlag_CaptureMalterlibExceptions;
-		
+
 		CGenerateEphemeralState GenerateState;
 		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
 			co_return Retry;

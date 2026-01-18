@@ -9,7 +9,7 @@ namespace NMib::NBuildSystem
 	CEJsonSorted CBuildSystem::f_GetDefinedProperties(CEntity &_Entity, EPropertyType _PropertyType, bool &o_bIsFullEval) const
 	{
 		using namespace NStr;
-		
+
 		auto *pTopConfig = &_Entity;
 
 		bool bBelowFileLevel = false;

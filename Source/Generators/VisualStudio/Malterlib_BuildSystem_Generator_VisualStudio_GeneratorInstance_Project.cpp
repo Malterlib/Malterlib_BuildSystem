@@ -199,7 +199,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			auto CompileTypes = co_await f_GenerateProjectFile_File(_Project, ProjectState);
 
 			// Project properties
-			// 
+			//
 
 			if (LanguageType == ELanguageType_Native)
 			{

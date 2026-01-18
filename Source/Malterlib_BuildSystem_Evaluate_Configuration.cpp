@@ -346,7 +346,7 @@ namespace NMib::NBuildSystem
 
 				CStr Description = pParse;
 
-				UserVariablesBySection[CPropertyKey{mp_StringCache, VariableKey.f_GetType(), Section}][VariableKey] 
+				UserVariablesBySection[CPropertyKey{mp_StringCache, VariableKey.f_GetType(), Section}][VariableKey]
 					= {.m_Description = fg_Move(Description), .m_DefaultValue = fg_Move(DefaultValue)}
 				;
 			}

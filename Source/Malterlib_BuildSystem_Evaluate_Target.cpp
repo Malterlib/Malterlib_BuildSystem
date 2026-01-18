@@ -89,7 +89,7 @@ namespace NMib::NBuildSystem
 		fFindDependencies(*_pTargetOuterEntity);
 
 		Dependencies.f_Sort();
-		
+
 		CEJsonSorted DependenciesJson = EJsonType_Array;
 		for (auto &Dependency : Dependencies)
 			DependenciesJson.f_Insert(Dependency);
@@ -292,7 +292,7 @@ namespace NMib::NBuildSystem
 				}
 			}
 		}
-		
+
 		for (auto *pToEval : ToEval)
 			_ToEval.f_Insert(pToEval);
 	}

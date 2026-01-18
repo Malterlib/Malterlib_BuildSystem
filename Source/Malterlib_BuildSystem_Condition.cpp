@@ -206,10 +206,10 @@ namespace NMib::NBuildSystem
 			if (pRightValue->m_Value.f_IsOfType<CBuildSystemSyntax::COperator>())
 			{
 				auto &Operator = pRightValue->m_Value.f_GetAsType<CBuildSystemSyntax::COperator>();
-				
+
 				if (!fg_ConvertOperator(ConditionType, Operator.m_Operator, _Registry))
 					return false;
-				
+
 				pRightValue = &Operator.m_Right.f_Get();
 			}
 			else

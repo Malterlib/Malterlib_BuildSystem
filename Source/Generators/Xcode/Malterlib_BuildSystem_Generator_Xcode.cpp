@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Generator_Xcode.h"
@@ -13,7 +13,7 @@ namespace NMib::NBuildSystem
 		TCMap<CPropertyKey, CEJsonSorted> f_GetValues(CBuildSystem const &_BuildSystem, CStr const &_OutputDir) override
 		{
 			TCMap<CPropertyKey, CEJsonSorted> Values;
-			
+
 			Values[CPropertyKey(gc_ConstKey_Generator)] = _BuildSystem.f_GetGenerateSettings().m_Generator;
 			Values[CPropertyKey(gc_ConstKey_GeneratorFamily)] = gc_ConstString_Xcode;
 			Values[CPropertyKey(gc_ConstKey_BuildSystemBasePath)] = _BuildSystem.f_GetBaseDir();
@@ -44,7 +44,7 @@ namespace NMib::NBuildSystem
 			using namespace NXcode;
 			CStr SolutionDir = _OutputDir;
 			CStr BuildSystemBase = BuildSystem.f_GetBaseDir();
-			
+
 			// Disable &apos; encoding in output XML
 			TCMap<CPropertyKey, CEJsonSorted> Values = f_GetValues(BuildSystem, _OutputDir);
 
@@ -54,7 +54,7 @@ namespace NMib::NBuildSystem
 			CGeneratorState &GeneratorState = GeneratorInstance.m_State;
 
 			TCVector<TCVector<CConfigurationTuple>> Tuples = BuildSystem.f_EvaluateConfigurationTuples(Values);
-			
+
 			fp64 Time1 = Clock.f_GetTime();
 			BuildSystem.f_OutputConsole("Evaluated config tuples {fe2} s{\n}"_f << Time1);
 
@@ -64,7 +64,7 @@ namespace NMib::NBuildSystem
 				CStr Arch;
 				CStr Config;
 				TCVector<CStr> ExtraConfig;
-				
+
 				for (auto iConfig = iTuple->f_GetIterator(); iConfig; ++iConfig)
 				{
 					if (iConfig->m_Type == gc_ConstString_Platform.m_String)
@@ -76,7 +76,7 @@ namespace NMib::NBuildSystem
 					else if (!iConfig->m_Name.f_IsEmpty())
 						ExtraConfig.f_Insert(iConfig->m_Name);
 				}
-				
+
 				CConfiguration ConfigToInsert;
 				if (Platform.f_IsEmpty())
 					ConfigToInsert.m_Platform = Arch;
@@ -84,7 +84,7 @@ namespace NMib::NBuildSystem
 					ConfigToInsert.m_Platform = Platform + " " + Arch;
 				ConfigToInsert.m_Configuration = Config;
 				ConfigToInsert.m_PlatformBase = Platform;
-				
+
 				if (!ExtraConfig.f_IsEmpty())
 				{
 					ConfigToInsert.m_Configuration += " (";
@@ -94,7 +94,7 @@ namespace NMib::NBuildSystem
 					ConfigToInsert.m_Configuration += ExtraConfigs;
 					ConfigToInsert.m_Configuration += ")";
 				}
-				
+
 				{
 					auto &ConfigData = *(Configurations[ConfigToInsert] = fg_Construct());
 					ConfigData.m_Tuples = *iTuple;
@@ -116,7 +116,7 @@ namespace NMib::NBuildSystem
 				++nConfigs;
 				auto Config = iConfig.f_GetKey();
 				auto &ConfigData = **iConfig;
-				
+
 				for (auto iWorkspace = ConfigData.m_Workspaces.f_GetIterator(); iWorkspace; ++iWorkspace)
 				{
 					auto &WorkspaceName = iWorkspace.f_GetKey();
@@ -376,7 +376,7 @@ namespace NMib::NBuildSystem
 			co_return {};
 		}
 	};
-	
+
 	using CBuildSystemGenerator_Xcode4 = CBuildSystemGenerator_Xcode;
 	using CBuildSystemGenerator_Xcode5 = CBuildSystemGenerator_Xcode;
 	using CBuildSystemGenerator_Xcode6 = CBuildSystemGenerator_Xcode;

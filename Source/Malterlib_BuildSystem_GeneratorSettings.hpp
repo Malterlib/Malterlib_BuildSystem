@@ -139,7 +139,7 @@ namespace NMib::NBuildSystem
 	tf_CValue CGeneratorSettings::f_GetSingleSettingWithoutPositions(NStr::CStr const &_Name) const
 	{
 		using namespace NStr;
-		
+
 		tf_CValue ReturnValue;
 		bool bFirst = true;
 		CConfiguration const *pFirstConfig;

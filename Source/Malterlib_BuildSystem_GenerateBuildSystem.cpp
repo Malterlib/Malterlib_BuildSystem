@@ -627,7 +627,7 @@ namespace NMib::NBuildSystem
 													, gc_ConstKey_Dependency_ObjectLibrary
 													, Dep.m_bObjectLibrary
 												)
-											;											
+											;
 
 											bool bFollowIndirectDependencies = f_EvaluateEntityPropertyBool(*pDependentTarget->m_pInnerEntity, gc_ConstKey_Target_FollowIndirectDependencies, false);
 
@@ -716,7 +716,7 @@ namespace NMib::NBuildSystem
 
 									for (auto &Name : _Names)
 										NameListArray.f_Insert(fg_Move(Name));
-									
+
 									return f_AddExternalProperty
 										(
 											fg_RemoveQualifiers(*_pTarget->m_pOuterEntity)
@@ -1028,7 +1028,7 @@ namespace NMib::NBuildSystem
 							;
 						}
 					}
-					
+
 					co_return {};
 				}
 				, mp_bSingleThreaded

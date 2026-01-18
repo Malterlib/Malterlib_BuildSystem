@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #pragma once
@@ -38,13 +38,13 @@ namespace NMib::NBuildSystem::NXcode
 
 		return fs_ValueArray(m_ValueSet);
 	}
-	
+
 	void CElement::f_SetValue(CStr const &_Value)
 	{
 		m_bUseValues = false;
 		m_Value = _Value;
 	}
-	
+
 	bool CElement::f_IsSameValue(CElement const &_Other) const
 	{
 		if (m_bUseValues != _Other.m_bUseValues)
@@ -55,7 +55,7 @@ namespace NMib::NBuildSystem::NXcode
 
 		return m_Value == _Other.m_Value;
 	}
-	
+
 	template <typename tf_CSet0, typename tf_CSet1>
 	bool CGeneratorInstance::fp_IsSameConfig(tf_CSet0 const &_Configs, tf_CSet1 const &_AllConfigs) const
 	{

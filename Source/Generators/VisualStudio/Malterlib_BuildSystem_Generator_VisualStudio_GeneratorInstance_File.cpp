@@ -174,5 +174,5 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 			CGeneratorSettings::fs_AddToXMLFiles<true, true>(_XMLState, _Project, fg_Move(File.m_ParsedSettings), &ItemState);
 		}
-	}	
+	}
 }

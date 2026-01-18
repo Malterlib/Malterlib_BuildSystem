@@ -137,9 +137,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 					fg_AddStrSep
 						(
 							ConfigsDependencyDebug
-							, "{}   Indirect {}   IndirectOrdered {}"_f 
-							<< Debug.f_Key().f_GetFullName() 
-							<< Debug.f_Value().m_bIndirect 
+							, "{}   Indirect {}   IndirectOrdered {}"_f
+							<< Debug.f_Key().f_GetFullName()
+							<< Debug.f_Value().m_bIndirect
 							<< Debug.f_Value().m_bIndirectOrdered
 							, "\n   "
 						)
@@ -198,5 +198,5 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 			CGeneratorSettings::fs_AddToXMLFiles<false, true>(_XMLState, _Project, fg_Move(ParsedSettings), &ItemState);
 		}
-	}	
+	}
 }

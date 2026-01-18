@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Generator_VisualStudio.h"
@@ -20,7 +20,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		CVS_SettingShared::fs_FromJson(Return, fg_Move(_Json));
 		if (auto pValue = _Json.f_GetMember("Label"))
 			Return.m_Label = fg_Move(pValue->f_String());
-				
+
 		return Return;
 	}
 
@@ -29,7 +29,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		CVS_Setting_ItemDefinitionGroup Return;
 		CVS_SettingShared::fs_FromJson(Return, fg_Move(_Json));
 		Return.m_Name = fg_Move(_Json["Name"].f_String());
-				
+
 		return Return;
 	}
 }

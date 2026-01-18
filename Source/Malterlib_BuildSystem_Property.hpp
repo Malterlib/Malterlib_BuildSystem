@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #pragma once
@@ -107,7 +107,7 @@ namespace NMib::NBuildSystem
 			return Compare;
 
 		return _Left.f_GetType() <=> _Right.f_GetType();
-	}	
+	}
 
 	bool CPropertyKey::operator == (CPropertyKey const &_Right) const
 	{

@@ -128,7 +128,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			CBuildSystemUniquePositions m_Positions;
 			TCVector<CVS_Setting> m_VSSettings;
 		};
-		
+
 		struct CParsedGeneratorSetting
 		{
 			TCMap<CStr, CParsedSetting> m_Properties;

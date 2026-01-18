@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #pragma once
@@ -55,7 +55,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 	void CGeneratorSettings::CVSSettingAggregateProperties::f_Format(tf_CStr &o_String) const
 	{
 		o_String += "            Configurations\n";
-				
+
 		for (auto &Configuration : m_Configurations)
 			o_String += typename tf_CStr::CFormat("                {}\n") << Configuration;
 
@@ -263,7 +263,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 					return &Settings;
 			}
 			()
-		;		
+		;
 
 		CVSSettingAggregated AggregatedSettings;
 
@@ -274,7 +274,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		for (auto &Setting : Settings)
 		{
 			auto &Configuration = Settings.fs_GetKey(Setting);
-						
+
 			if constexpr (tf_bIsItem && tf_bCompile)
 			{
 				do
@@ -295,7 +295,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 							auto &OutSettings = OutSetting.m_Settings[Property.m_VSSettings];
 							OutSettings.m_Positions.f_AddPositions(Property.m_Positions);
 							OutSettings.m_Configurations[Configuration];
-						}				
+						}
 					}
 
 					auto pSpecificSettings = pSharedCompileSettings->m_SpecificSettings.f_FindEqual(_Parsed.m_Type);

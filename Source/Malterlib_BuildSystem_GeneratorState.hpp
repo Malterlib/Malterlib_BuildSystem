@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #pragma once
@@ -32,7 +32,7 @@ namespace NMib::NBuildSystem
 			_Stream >> *m_pDigest;
 		}
 	}
-	
+
 	template <typename tf_CStream>
 	void CGeneratorArchiveState::f_Feed(tf_CStream &_Stream) const
 	{

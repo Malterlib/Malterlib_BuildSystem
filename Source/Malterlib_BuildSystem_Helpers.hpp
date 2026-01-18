@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #pragma once
@@ -10,13 +10,13 @@ namespace NMib::NBuildSystem
 		: m_SortBy(_SortKey)
 	{
 	}
-	
+
 	template <typename t_CSortKey>
 	COrdering_Strong TCSortedPerform<t_CSortKey>::CToSortBy::operator <=> (CToSortBy const &_Other) const
 	{
 		return m_SortBy <=> _Other.m_SortBy;
 	}
-	
+
 	template <typename t_CSortKey>
 	template <typename tf_CFunctor, typename tf_CKey>
 	void TCSortedPerform<t_CSortKey>::f_Add(tf_CKey const &_Key, tf_CFunctor &&_Functor)
@@ -24,7 +24,7 @@ namespace NMib::NBuildSystem
 		auto &Inserted = m_ToPerform.f_Insert(fg_Construct(fg_Forward<tf_CFunctor>(_Functor)));
 		m_ToSort.f_Insert(fg_Construct(_Key)).m_pFunctor = &Inserted;
 	}
-	
+
 	template <typename t_CSortKey>
 	void TCSortedPerform<t_CSortKey>::f_Perform()
 	{
@@ -40,13 +40,13 @@ namespace NMib::NBuildSystem
 		: m_pSortBy(&_SortKey)
 	{
 	}
-	
+
 	template <typename t_CSortKey>
 	COrdering_Strong TCSortedPerform<t_CSortKey &>::CToSortBy::operator <=> (CToSortBy const &_Other) const
 	{
 		return *m_pSortBy <=> *_Other.m_pSortBy;
 	}
-	
+
 	template <typename t_CSortKey>
 	template <typename tf_CFunctor, typename tf_CKey>
 	void TCSortedPerform<t_CSortKey &>::f_Add(tf_CKey &&_Key, tf_CFunctor &&_Functor)
@@ -54,7 +54,7 @@ namespace NMib::NBuildSystem
 		auto &Inserted = m_ToPerform.f_Insert(fg_Construct(fg_Forward<tf_CFunctor>(_Functor)));
 		m_ToSort.f_Insert(fg_Construct(_Key)).m_pFunctor = &Inserted;
 	}
-	
+
 	template <typename t_CSortKey>
 	void TCSortedPerform<t_CSortKey &>::f_Perform()
 	{

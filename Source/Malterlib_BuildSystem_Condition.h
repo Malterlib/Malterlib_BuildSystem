@@ -46,7 +46,7 @@ namespace NMib::NBuildSystem
 		bool operator == (CCondition const &_Right) const = default;
 
 		NContainer::TCLinkedList<CCondition> m_Children;
- 
+
 		CBuildSystemSyntax::CValue m_Left;
 		CBuildSystemSyntax::CValue m_Right;
 		EConditionType m_Type = EConditionType_Root;

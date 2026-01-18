@@ -141,7 +141,7 @@ namespace NMib::NBuildSystem
 		case EOperator_BitwiseOr: o_Str += " | "; break;
 		case EOperator_And: o_Str += " && "; break;
 		case EOperator_Or: o_Str += " || "; break;
-		case EOperator_NullishCoalescing: o_Str += " ?? "; break;			
+		case EOperator_NullishCoalescing: o_Str += " ?? "; break;
 		}
 		o_Str += typename tf_CStr::CFormat("{})") << m_Right;
 	}

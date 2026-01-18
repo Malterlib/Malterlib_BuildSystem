@@ -605,7 +605,7 @@ namespace NMib::NBuildSystem
 			fsp_ThrowError(_Registry, "Property groups cannot have a value");
 
 		auto &Identifier = _Identifier.f_NameConstantString();
-		
+
 		EPropertyType Type = fg_PropertyTypeFromStr(Identifier);
 		if (Identifier.f_IsEmpty() || Type == EPropertyType_Invalid)
 			fsp_ThrowError(_Registry, "Unrecognized property type '{}'"_f << _Identifier.m_Name);

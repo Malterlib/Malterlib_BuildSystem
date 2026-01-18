@@ -149,7 +149,7 @@ namespace NMib::NBuildSystem
 									o_Errors.f_Insert(CError{&_Registry, CStr::CFormat("Include file '{}' does not exist") << FullPath});
 								else
 									o_Errors.f_Insert(CError{&_Registry, CStr::CFormat("Import file '{}' does not exist") << FullPath});
-								
+
 								return;
 							}
 							Files.f_Insert(FullPath);

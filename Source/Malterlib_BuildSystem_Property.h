@@ -30,7 +30,7 @@ namespace NMib::NBuildSystem
 		template <mint tf_nChars>
 		constexpr CPropertyKeyReference(EPropertyType _Type, NStr::TCStrConstDataAndStr<tf_nChars, ch8> const &_Name);
 		constexpr CPropertyKeyReference(EPropertyType _Type, CStringAndHash const &_Name);
-		
+
 		inline_always COrdering_Strong operator <=> (CPropertyKey const &_Right) const;
 		inline_always COrdering_Strong operator <=> (CPropertyKeyReference const &_Right) const;
 

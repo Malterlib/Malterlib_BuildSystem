@@ -89,7 +89,7 @@ namespace NMib::NBuildSystem
 	{
 		if (!_bEnabled)
 			return;
-		
+
 		m_Message += "\n{}"_f << _Value.f_ToString("    ", EJsonDialectFlag_All).f_Trim().f_Indent("    ");
 	}
 

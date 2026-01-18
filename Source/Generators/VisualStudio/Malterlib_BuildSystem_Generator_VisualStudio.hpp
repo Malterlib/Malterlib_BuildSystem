@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #pragma once
@@ -14,7 +14,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		: m_Validity(EPropertyValidity_Any)
 	{
 	}
-	
+
 	COrdering_Strong CGeneratorInstance::CConfigValue::operator <=> (CConfigValue const &_Right) const
 	{
 		return fg_TupleReferences(m_Parent, m_Entity, m_Property, m_Value) <=> fg_TupleReferences(_Right.m_Parent, _Right.m_Entity, _Right.m_Property, _Right.m_Value);

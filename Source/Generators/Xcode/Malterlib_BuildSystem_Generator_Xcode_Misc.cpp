@@ -1,4 +1,4 @@
-// Copyright © 2015 Hansoft AB 
+// Copyright © 2015 Hansoft AB
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Generator_Xcode.h"
@@ -109,12 +109,12 @@ namespace NMib::NBuildSystem::NXcode
 	{
 		return CFile::fs_GetFile(m_Path);
 	}
-	
+
 	CStr CBuildConfiguration::f_GetFileNoExt() const
 	{
 		return CFile::fs_GetFileNoExt(m_Path);
 	}
-	
+
 	CStr const &CBuildConfiguration::f_GetGUID() const
 	{
 		if (!mp_GUID.f_IsEmpty())
@@ -177,19 +177,19 @@ namespace NMib::NBuildSystem::NXcode
 	{
 		return TCMap<CFileKey, CProjectFile>::fs_GetKey(*this).m_FileName;
 	}
-	
+
 	CStr const &CProjectFile::f_GetNameGroupPath() const
 	{
 		return TCMap<CFileKey, CProjectFile>::fs_GetKey(*this).m_GroupPath;
 	}
-	
+
 	CStr CProjectFile::f_GetGroupPath() const
 	{
 		if (m_pGroup)
 			return m_pGroup->f_GetPath();
 		return CStr();
 	}
-	
+
 	CStr const &CProjectFile::f_GetFileRefGUID()
 	{
 		if (!mp_FileRefGUID.f_IsEmpty())
@@ -223,7 +223,7 @@ namespace NMib::NBuildSystem::NXcode
 	{
 		if (!m_LastKnownFileType.f_IsEmpty())
 			return m_LastKnownFileType;
-			
+
 		return m_LastKnownFileType;
 	}
 

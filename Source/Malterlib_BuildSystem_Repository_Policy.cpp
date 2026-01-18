@@ -259,7 +259,7 @@ namespace NMib::NBuildSystem::NRepository
 
 		co_return {};
 	}
-	
+
 	TCFuture<void> fg_ApplyPolicies(CStr _Url, CStr _RepoDir, CEJsonSorted _Policy, EApplyPolicyFlag _Flags, TCFunction<void (EOutputType _OutputType, CStr const &_String)> _fOutputInfo)
 	{
 		co_await ECoroutineFlag_CaptureExceptions;
