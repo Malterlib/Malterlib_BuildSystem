@@ -26,7 +26,7 @@ namespace NMib::NBuildSystem::NXcode
 		m_RelativeBasePath = CFile::fs_MakePathRelative(m_BuildSystem.f_GetBaseDir(), m_OutputDir.f_String() + "/Files/Temp");
 		m_RelativeBasePathAbsolute = "$SRCROOT/" + m_RelativeBasePath.f_String();
 		m_BuildSystem.f_SetGeneratorInterface(this);
-		CStr Generator = _InitialValues[CPropertyKey(gc_ConstKey_Generator)].f_String();
+		CStr Generator = _InitialValues[gc_ConstKey_Generator].f_String();
 		m_XcodeVersion = Generator.f_Replace("Xcode", "").f_ToInt(uint32(13));
 
 		_BuildSystem.f_RegisterBuiltinVariables
