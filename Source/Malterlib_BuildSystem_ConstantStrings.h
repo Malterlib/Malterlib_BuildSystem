@@ -302,6 +302,7 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_JsonToString;
 	extern CStringAndHash const gc_ConstString_JSONToString;
 	extern CStringAndHash const gc_ConstString_Join;
+	extern CStringAndHash const gc_ConstString_JoinEscaped;
 	extern CStringAndHash const gc_ConstString_Label;
 	extern CStringAndHash const gc_ConstString_Length;
 	extern CStringAndHash const gc_ConstString_LessThan;

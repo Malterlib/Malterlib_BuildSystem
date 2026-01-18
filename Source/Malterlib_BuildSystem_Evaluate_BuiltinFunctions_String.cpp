@@ -223,6 +223,23 @@ namespace NMib::NBuildSystem
 					}
 					,
 					{
+						gc_ConstString_JoinEscaped
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_String, fg_FunctionParam(g_StringArray, gc_ConstString__Strings), fg_FunctionParam(g_String, gc_ConstString__JoinBy))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
+							{
+								auto const &JoinString = _Params[1].f_String();
+								if (JoinString.f_GetLen() != 1)
+									fs_ThrowError(_Context, "Joining escaped the join by string needs to be exactly 1 character");
+
+								return CStr::fs_JoinEscaped(_Params[0].f_StringArray(), JoinString[0]);
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
 						gc_ConstString_Escape
 						, CBuiltinFunction
 						{

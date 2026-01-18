@@ -302,6 +302,7 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_JsonToString = gc_Str<"JsonToString">;
 	constexpr CStringAndHash const gc_ConstString_JSONToString = gc_Str<"JSONToString">;
 	constexpr CStringAndHash const gc_ConstString_Join = gc_Str<"Join">;
+	constexpr CStringAndHash const gc_ConstString_JoinEscaped = gc_Str<"JoinEscaped">;
 	constexpr CStringAndHash const gc_ConstString_Label = gc_Str<"Label">;
 	constexpr CStringAndHash const gc_ConstString_Length = gc_Str<"Length">;
 	constexpr CStringAndHash const gc_ConstString_LessThan = gc_Str<"LessThan">;
@@ -816,6 +817,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_JsonToString);
 		o_StringCache.f_AddConstantString(gc_ConstString_JSONToString);
 		o_StringCache.f_AddConstantString(gc_ConstString_Join);
+		o_StringCache.f_AddConstantString(gc_ConstString_JoinEscaped);
 		o_StringCache.f_AddConstantString(gc_ConstString_Label);
 		o_StringCache.f_AddConstantString(gc_ConstString_Length);
 		o_StringCache.f_AddConstantString(gc_ConstString_LessThan);
