@@ -391,9 +391,10 @@ namespace NMib::NBuildSystem
 		;
 	}
 
-	void CBuildSystem::f_PopulateTargetAllFiles(CEntity &o_Target) const
+	void CBuildSystem::f_PopulateTargetAllFiles(CExpandEntityState &_ExpandState, CEntity &o_Target) const
 	{
 		TCMap<CStr, TCVector<CStr>> AllFiles;
+		TCVector<CStr> AllFilesCombined;
 		auto fFindFiles = [&]
 			(
 #ifndef DCompiler_Workaround_Apple_clang
@@ -413,7 +414,7 @@ namespace NMib::NBuildSystem
 					case EEntityType_Import:
 					case EEntityType_Group:
 						{
-							if (!ChildEntity.f_GetKey().m_Name.f_IsConstantString())
+							if (!ChildEntity.f_GetKey().m_Name.f_IsConstantString() || _ExpandState.m_OldEntitiesToRemove.f_FindEqual(&ChildEntity))
 								continue;
 
 							_fThis( ChildEntity);
@@ -421,12 +422,14 @@ namespace NMib::NBuildSystem
 						break;
 					case EEntityType_File:
 						{
-							if (!ChildEntity.f_GetKey().m_Name.f_IsConstantString())
+							if (!ChildEntity.f_GetKey().m_Name.f_IsConstantString() || _ExpandState.m_OldEntitiesToRemove.f_FindEqual(&ChildEntity))
 								continue;
 
 							CStr CompileType = f_EvaluateEntityPropertyString(ChildEntity, gc_ConstKey_Compile_Type, CStr());
 
-							AllFiles[CompileType].f_Insert(ChildEntity.f_GetPathForGetProperty());
+							auto FilePath = ChildEntity.f_GetPathForGetProperty();
+							AllFiles[CompileType].f_Insert(FilePath);
+							AllFilesCombined.f_Insert(fg_Move(FilePath));
 						}
 						break;
 					default:
@@ -452,6 +455,15 @@ namespace NMib::NBuildSystem
 			CPropertyKey PropertyKey(mp_StringCache, EPropertyType_Target, "AllFiles_{}"_f << Type);
 
 			f_AddExternalProperty(o_Target, PropertyKey.f_Reference(), fg_Move(AllFilesArray));
+		}
+
+		{
+			AllFilesCombined.f_Sort();
+			CEJsonSorted AllFilesArray;
+			for (auto &File : AllFilesCombined)
+				AllFilesArray.f_Insert(fg_Move(File));
+
+			f_AddExternalProperty(o_Target, gc_ConstKey_Target_AllFiles, fg_Move(AllFilesArray));
 		}
 	}
 

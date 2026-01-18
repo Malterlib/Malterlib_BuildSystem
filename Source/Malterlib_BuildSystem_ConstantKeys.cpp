@@ -211,6 +211,7 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_DependenciesNames(EPropertyType_Target, gc_Str<"DependenciesNames">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_Dependencies(EPropertyType_Target, gc_Str<"Dependencies">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_DependencyTargets(EPropertyType_Target, gc_Str<"DependencyTargets">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Target_AllFiles(EPropertyType_Target, gc_Str<"AllFiles">);
 
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_Type(EPropertyType_Target, gc_Str<"Type">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_Language(EPropertyType_Target, gc_Str<"Language">);
@@ -463,6 +464,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_PreBuildScriptOutputs);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_PreBuildScriptInputs);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_LinkWithLibraries);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Target_AllFiles);
 
 		o_StringCache.f_AddConstantString(gc_ConstKey_Workspace_Enabled);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Workspace_ExtraGroups);

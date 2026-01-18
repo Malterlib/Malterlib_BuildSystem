@@ -243,7 +243,7 @@ namespace NMib::NBuildSystem
 		bool f_ExpandTargetFiles(CExpandEntityState &_ExpandState, CBuildSystemData &_BuildSystemData, CEntity const &_Target) const;
 		void f_ExpandWorkspaceTargets(CBuildSystemData &_BuildSystemData, CEntity const &_Target) const;
 		void f_ExpandWorkspaceEntities(CBuildSystemData &_BuildSystemData, CEntity const &_Target) const;
-		void f_PopulateTargetAllFiles(CEntity &o_Target) const;
+		void f_PopulateTargetAllFiles(CExpandEntityState &_ExpandState, CEntity &o_Target) const;
 		bool f_WriteFile(NContainer::CByteVector const &_FileData, NStr::CStr const &_File, NFile::EFileAttrib _AddAttribs = NFile::EFileAttrib_None) const;
 		void f_SetFileChanged(NStr::CStr const &_File) const;
 		NContainer::TCMap<NStr::CStr, NStorage::TCSharedPointer<NCryptography::CHashDigest_SHA256>> f_GetSourceFiles() const;

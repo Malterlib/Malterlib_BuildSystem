@@ -218,6 +218,7 @@ namespace NMib::NBuildSystem
 	extern CPropertyKeyReference const gc_ConstKey_Target_PreBuildScriptOutputs;
 	extern CPropertyKeyReference const gc_ConstKey_Target_PreBuildScriptInputs;
 	extern CPropertyKeyReference const gc_ConstKey_Target_LinkWithLibraries;
+	extern CPropertyKeyReference const gc_ConstKey_Target_AllFiles;
 
 	extern CPropertyKeyReference const gc_ConstKey_Workspace_Enabled;
 	extern CPropertyKeyReference const gc_ConstKey_Workspace_ExtraGroups;
