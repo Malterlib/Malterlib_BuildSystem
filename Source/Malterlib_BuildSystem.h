@@ -147,6 +147,7 @@ namespace NMib::NBuildSystem
 		struct CExplodeStackEntry
 		{
 			NEncoding::CEJsonSorted const *m_pExplodedValue;
+			NEncoding::CEJsonSorted m_Key;
 			NEncoding::CEJsonSorted m_Value;
 		};
 

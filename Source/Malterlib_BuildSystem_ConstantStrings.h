@@ -122,6 +122,7 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_TypeName;
 	extern CStringAndHash const gc_ConstString_URL;
 	extern CStringAndHash const gc_ConstString_Value;
+	extern CStringAndHash const gc_ConstString_Key;
 	extern CStringAndHash const gc_ConstString_void;
 	extern CStringAndHash const gc_ConstString_WildcardString;
 	extern CStringAndHash const gc_ConstString_Write;
@@ -453,7 +454,7 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_Win64_Classes;
 	extern CStringAndHash const gc_ConstString_Win64_CurrentUser;
 	extern CStringAndHash const gc_ConstString_Win64_LocalMachine;
-	extern CStringAndHash const gc_ConstString__ArrayToExplode;
+	extern CStringAndHash const gc_ConstString__ArrayOrObjectToExplode;
 	extern CStringAndHash const gc_ConstString__ArrayToSearch;
 	extern CStringAndHash const gc_ConstString__IndentString;
 	extern CStringAndHash const gc_ConstString__JoinBy;

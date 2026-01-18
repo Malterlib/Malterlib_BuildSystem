@@ -18,7 +18,7 @@ namespace NMib::NBuildSystem
 							fg_FunctionType
 							(
 								g_Any
-								, fg_FunctionParam(g_AnyArray, gc_ConstString__ArrayToExplode)
+								, fg_FunctionParam(CBuildSystemSyntax::CType{CBuildSystemSyntax::COneOf{{g_AnyArray, g_ObjectWithAny}}}, gc_ConstString__ArrayOrObjectToExplode)
 								, fg_FunctionParam(g_Identifier, gc_ConstString__ExplodeFunction)
 								, fg_FunctionParam(fg_Optional(g_ObjectWithAny), gc_ConstString__Properties, g_Optional)
 							)
@@ -80,70 +80,156 @@ namespace NMib::NBuildSystem
 									}
 								;
 
-
-								auto &Array = _Params[0].f_Array();
-
-								for (auto &Value : Array)
+								if (_Params[0].f_IsArray())
 								{
-									ExplodeStackEntry.m_Value = Value;
-									if (pFunctionProperty)
-										ExplodeStackEntry.m_pExplodedValue = &pFunctionProperty->m_Value;
+									auto &Array = _Params[0].f_Array();
 
-									CBuildSystemSyntax::CFunctionCall FunctionCall;
-									FunctionCall.m_PropertyKey = CPropertyKey(FunctionPropertyKey);
-									FunctionCall.m_Params.f_Insert(CBuildSystemSyntax::CParam{Value});
-
-									if (FunctionType.m_Parameters.f_GetLen() >= 2)
+									for (auto &Value : Array)
 									{
+										ExplodeStackEntry.m_Value = Value;
 										if (pFunctionProperty)
-											FunctionCall.m_Params.f_Insert(CBuildSystemSyntax::CParam{pFunctionProperty->m_Value});
-										else
-											FunctionCall.m_Params.f_Insert(CBuildSystemSyntax::CParam{CEJsonSorted{}});
-									}
+											ExplodeStackEntry.m_pExplodedValue = &pFunctionProperty->m_Value;
 
-									if (FunctionType.m_Parameters.f_GetLen() >= 3)
-									{
-										CEJsonSorted Stack = EJsonType_Array;
-										for (auto &Entry : _Context.m_EvalContext.m_ExplodeListStack)
+										CBuildSystemSyntax::CFunctionCall FunctionCall;
+										FunctionCall.m_PropertyKey = CPropertyKey(FunctionPropertyKey);
+
+										// Params:
+										// 0: Array value
+										// 1: The current value of the function return
+										// 2: An array of objects with previous ForEach current key and values and current returns
+
+										FunctionCall.m_Params.f_Insert(CBuildSystemSyntax::CParam{Value});
+
+										if (FunctionType.m_Parameters.f_GetLen() >= 2)
 										{
-											auto &Object = Stack.f_Insert().f_Object();
-											Object[gc_ConstString_Value] = Entry.m_Value;
-											Object[gc_ConstString_Return] = *Entry.m_pExplodedValue;
+											if (pFunctionProperty)
+												FunctionCall.m_Params.f_Insert(CBuildSystemSyntax::CParam{pFunctionProperty->m_Value});
+											else
+												FunctionCall.m_Params.f_Insert(CBuildSystemSyntax::CParam{CEJsonSorted{}});
 										}
 
-										FunctionCall.m_Params.f_Insert(CBuildSystemSyntax::CParam{fg_Move(Stack)});
-									}
-
-									fMapProperty()->m_Value = fp_EvaluatePropertyValueFunctionCall(_Context, FunctionCall, true);
-								}
-
-								if (Array.f_IsEmpty())
-								{
-									CEvalPropertyValueContext Context
+										if (FunctionType.m_Parameters.f_GetLen() >= 3)
 										{
-											_Context.m_Context
-											, _Context.m_OriginalContext
-											, *pTypePosition
-											, _Context.m_EvalContext
-											, &_Context
-											, _Context.m_pStorePositions
-										}
-									;
-
-									fp_CheckValueConformToType
-										(
-											Context
-											, FunctionType.m_Return.f_Get()
-											, fMapProperty()->m_Value
-											, *pTypePosition
-											, *pTypePosition
-											, [&]() -> CStr
+											CEJsonSorted Stack = EJsonType_Array;
+											for (auto &Entry : _Context.m_EvalContext.m_ExplodeListStack)
 											{
-												return "{}"_f << FunctionPropertyKey;
+												auto &Object = Stack.f_Insert().f_Object();
+												Object[gc_ConstString_Key] = Entry.m_Key;
+												Object[gc_ConstString_Value] = Entry.m_Value;
+												Object[gc_ConstString_Return] = *Entry.m_pExplodedValue;
 											}
-											, EDoesValueConformToTypeFlag_None
-										)
-									;
+
+											FunctionCall.m_Params.f_Insert(CBuildSystemSyntax::CParam{fg_Move(Stack)});
+										}
+
+										fMapProperty()->m_Value = fp_EvaluatePropertyValueFunctionCall(_Context, FunctionCall, true);
+									}
+
+									if (Array.f_IsEmpty())
+									{
+										CEvalPropertyValueContext Context
+											{
+												_Context.m_Context
+												, _Context.m_OriginalContext
+												, *pTypePosition
+												, _Context.m_EvalContext
+												, &_Context
+												, _Context.m_pStorePositions
+											}
+										;
+
+										fp_CheckValueConformToType
+											(
+												Context
+												, FunctionType.m_Return.f_Get()
+												, fMapProperty()->m_Value
+												, *pTypePosition
+												, *pTypePosition
+												, [&]() -> CStr
+												{
+													return "{}"_f << FunctionPropertyKey;
+												}
+												, EDoesValueConformToTypeFlag_None
+											)
+										;
+									}
+								}
+								else
+								{
+									auto &Object = _Params[0].f_Object();
+
+									for (auto &Entry : Object)
+									{
+										ExplodeStackEntry.m_Key = Entry.f_Name();
+										ExplodeStackEntry.m_Value = Entry.f_Value();
+										if (pFunctionProperty)
+											ExplodeStackEntry.m_pExplodedValue = &pFunctionProperty->m_Value;
+
+										CBuildSystemSyntax::CFunctionCall FunctionCall;
+										FunctionCall.m_PropertyKey = CPropertyKey(FunctionPropertyKey);
+
+										// Params:
+										// 0: Object entry key
+										// 1: Object entry value
+										// 2: The current value of the function return
+										// 3: An array of objects with previous ForEach current key and values and current returns
+
+										FunctionCall.m_Params.f_Insert(CBuildSystemSyntax::CParam{Entry.f_Name()});
+										FunctionCall.m_Params.f_Insert(CBuildSystemSyntax::CParam{Entry.f_Value()});
+
+										if (FunctionType.m_Parameters.f_GetLen() >= 3)
+										{
+											if (pFunctionProperty)
+												FunctionCall.m_Params.f_Insert(CBuildSystemSyntax::CParam{pFunctionProperty->m_Value});
+											else
+												FunctionCall.m_Params.f_Insert(CBuildSystemSyntax::CParam{CEJsonSorted{}});
+										}
+
+										if (FunctionType.m_Parameters.f_GetLen() >= 4)
+										{
+											CEJsonSorted Stack = EJsonType_Array;
+											for (auto &Entry : _Context.m_EvalContext.m_ExplodeListStack)
+											{
+												auto &Object = Stack.f_Insert().f_Object();
+												Object[gc_ConstString_Key] = Entry.m_Key;
+												Object[gc_ConstString_Value] = Entry.m_Value;
+												Object[gc_ConstString_Return] = *Entry.m_pExplodedValue;
+											}
+
+											FunctionCall.m_Params.f_Insert(CBuildSystemSyntax::CParam{fg_Move(Stack)});
+										}
+
+										fMapProperty()->m_Value = fp_EvaluatePropertyValueFunctionCall(_Context, FunctionCall, true);
+									}
+
+									if (Object.f_IsEmpty())
+									{
+										CEvalPropertyValueContext Context
+											{
+												_Context.m_Context
+												, _Context.m_OriginalContext
+												, *pTypePosition
+												, _Context.m_EvalContext
+												, &_Context
+												, _Context.m_pStorePositions
+											}
+										;
+
+										fp_CheckValueConformToType
+											(
+												Context
+												, FunctionType.m_Return.f_Get()
+												, fMapProperty()->m_Value
+												, *pTypePosition
+												, *pTypePosition
+												, [&]() -> CStr
+												{
+													return "{}"_f << FunctionPropertyKey;
+												}
+												, EDoesValueConformToTypeFlag_None
+											)
+										;
+									}
 								}
 
 								return fMapProperty()->m_Value;

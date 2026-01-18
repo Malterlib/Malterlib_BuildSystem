@@ -123,6 +123,7 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_TypeName = gc_Str<"TypeName">;
 	constexpr CStringAndHash const gc_ConstString_URL = gc_Str<"URL">;
 	constexpr CStringAndHash const gc_ConstString_Value = gc_Str<"Value">;
+	constexpr CStringAndHash const gc_ConstString_Key = gc_Str<"Key">;
 	constexpr CStringAndHash const gc_ConstString_void = gc_Str<"void">;
 	constexpr CStringAndHash const gc_ConstString_WildcardString = gc_Str<"WildcardString">;
 	constexpr CStringAndHash const gc_ConstString_Write = gc_Str<"Write">;
@@ -453,7 +454,7 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_Win64_Classes = gc_Str<"Win64_Classes">;
 	constexpr CStringAndHash const gc_ConstString_Win64_CurrentUser = gc_Str<"Win64_CurrentUser">;
 	constexpr CStringAndHash const gc_ConstString_Win64_LocalMachine = gc_Str<"Win64_LocalMachine">;
-	constexpr CStringAndHash const gc_ConstString__ArrayToExplode = gc_Str<"_ArrayToExplode">;
+	constexpr CStringAndHash const gc_ConstString__ArrayOrObjectToExplode = gc_Str<"_ArrayOrObjectToExplode">;
 	constexpr CStringAndHash const gc_ConstString__ArrayToSearch = gc_Str<"_ArrayToSearch">;
 	constexpr CStringAndHash const gc_ConstString__IndentString = gc_Str<"_IndentString">;
 	constexpr CStringAndHash const gc_ConstString__JoinBy = gc_Str<"_JoinBy">;
@@ -636,6 +637,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_TypeName);
 		o_StringCache.f_AddConstantString(gc_ConstString_URL);
 		o_StringCache.f_AddConstantString(gc_ConstString_Value);
+		o_StringCache.f_AddConstantString(gc_ConstString_Key);
 		o_StringCache.f_AddConstantString(gc_ConstString_void);
 		o_StringCache.f_AddConstantString(gc_ConstString_WildcardString);
 		o_StringCache.f_AddConstantString(gc_ConstString_Write);
@@ -973,7 +975,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_Win64_Classes);
 		o_StringCache.f_AddConstantString(gc_ConstString_Win64_CurrentUser);
 		o_StringCache.f_AddConstantString(gc_ConstString_Win64_LocalMachine);
-		o_StringCache.f_AddConstantString(gc_ConstString__ArrayToExplode);
+		o_StringCache.f_AddConstantString(gc_ConstString__ArrayOrObjectToExplode);
 		o_StringCache.f_AddConstantString(gc_ConstString__ArrayToSearch);
 		o_StringCache.f_AddConstantString(gc_ConstString__IndentString);
 		o_StringCache.f_AddConstantString(gc_ConstString__JoinBy);
