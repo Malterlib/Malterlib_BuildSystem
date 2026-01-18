@@ -407,13 +407,6 @@ namespace NMib::NBuildSystem::NVisualStudio
 			inline COrdering_Strong operator <=> (CConfigValue const &_Right) const;
 		};
 
-		struct CValueConfigs
-		{
-			TCMap<CConfiguration, TCPointer<CPrefixHeader>> m_Configurations;
-			TCMap<CStr, TCLinkedList<CConfiguration>> m_ByPlatform;
-			TCSet<CStr> m_OriginalValues;
-		};
-
 		struct CConfigResult
 		{
 			CXMLElement *m_pElement;

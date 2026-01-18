@@ -413,13 +413,6 @@ namespace NMib::NBuildSystem::NXcode
 		CEJsonSorted m_Builtin_Inherit = "";
 
 	private:
-		struct CValueConfigs
-		{
-			TCSet<CConfiguration> m_Configurations;
-			TCMap<CStr, TCLinkedList<CConfiguration>> m_ByPlatform;
-			TCSet<CStr> m_OriginalValues;
-		};
-
 		struct CConfigResultTarget
 		{
 			template <typename tf_CStr>
