@@ -528,6 +528,12 @@ namespace
 				DMibAssertTrue(CFile::fs_FileExists(TestGenerate.m_OutputDirectory / "TestGenerateFile.txt"));
 				DMibExpect(CFile::fs_ReadStringFromFile(TestGenerate.m_OutputDirectory / "TestGenerateFile.txt"), ==, TestGenerate.m_ExpectedContents);
 			};
+			DMibTestSuite("SwitchLazy")
+			{
+				auto TestGenerate = fp_TestGenerate("SwitchLazy");
+				DMibAssertTrue(CFile::fs_FileExists(TestGenerate.m_OutputDirectory / "TestGenerateFile.txt"));
+				DMibExpect(CFile::fs_ReadStringFromFile(TestGenerate.m_OutputDirectory / "TestGenerateFile.txt"), ==, TestGenerate.m_ExpectedContents);
+			};
 		}
 	};
 }

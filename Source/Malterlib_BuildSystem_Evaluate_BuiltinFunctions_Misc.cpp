@@ -53,45 +53,177 @@ namespace NMib::NBuildSystem
 		return ToOutput;
 	}
 
-	enum ESwitchType
+	CEJsonSorted CBuildSystem::fp_SwitchValuesLazy(ESwitchType _Type, CBuildSystem::CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CFunctionCall const &_FunctionCall) const
 	{
-		ESwitchType_Bare
-		, ESwitchType_Default
-		, ESwitchType_Error
-	};
+		using namespace NStr;
+		auto const &Params = _FunctionCall.m_Params;
+		auto iParam = Params.f_GetIterator();
 
-	CEJsonSorted fg_SwitchValues(ESwitchType _Type, CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params)
-	{
-		mint iParam = 0;
-		auto &Value = _Params[iParam];
-		++iParam;
+		TCVector<CEJsonSorted> ExpandedArrayStorage;
+		CEJsonSorted *pExpandedArray = nullptr;
+		CEJsonSorted *pExpandedArrayEnd = nullptr;
+
+		auto fTryExpandAppendParam = [&](CBuildSystemSyntax::CParam const &_Param) -> bool
+			{
+				if (!_Param.m_Param.f_IsOfType<TCIndirection<CBuildSystemSyntax::CExpressionAppend>>())
+					return false;
+
+				auto &Expression = _Param.m_Param.f_GetAsType<TCIndirection<CBuildSystemSyntax::CExpressionAppend>>().f_Get();
+				auto ToAppend = fp_EvaluatePropertyValueExpression(_Context, Expression);
+				auto &ToAppendRef = ToAppend.f_Get();
+				if (ToAppendRef.f_IsArray())
+				{
+					ExpandedArrayStorage = ToAppend.f_MoveArray();
+					pExpandedArray = ExpandedArrayStorage.f_GetArray();
+					pExpandedArrayEnd = pExpandedArray + ExpandedArrayStorage.f_GetLen();
+				}
+				else if (!ToAppendRef.f_IsValid())
+				{
+					// Undefined values result in empty expansion
+					pExpandedArray = nullptr;
+					pExpandedArrayEnd = nullptr;
+				}
+				else
+				{
+					CBuildSystem::fs_ThrowError(_Context, "Append expressions expects an array to expand. {} resulted in : {}"_f << Expression << ToAppendRef);
+				}
+				return true;
+			}
+		;
+
+		using CNextValueResult = TCVariant<void, CEJsonSorted, CBuildSystemSyntax::CParam const *>;
+		auto fGetNextValue = [&](this auto &_fThis, bool _bEvaluate) -> CNextValueResult
+			{
+				if (pExpandedArray != pExpandedArrayEnd)
+					return fg_Move(*pExpandedArray++);
+
+				pExpandedArray = nullptr;
+				pExpandedArrayEnd = nullptr;
+
+				if (!iParam)
+					return {};
+
+				auto &Param = *iParam;
+				++iParam;
+
+				if (fTryExpandAppendParam(Param))
+				{
+					if (pExpandedArray != pExpandedArrayEnd)
+						return fg_Move(*pExpandedArray++);
+
+					pExpandedArray = nullptr;
+					pExpandedArrayEnd = nullptr;
+					return _fThis(_bEvaluate);
+				}
+
+				if (!_bEvaluate)
+					return &Param;
+
+				return fp_EvaluatePropertyValueParam(_Context, Param).f_Move();
+			}
+		;
+
+		auto fGetFunctionName = [&]() -> CStr
+			{
+				return (_Type == ESwitchType_Bare) ? "Switch" : (_Type == ESwitchType_Error) ? "SwitchWithError" : "SwitchWithDefault";
+			}
+		;
+
+		auto ValueResult = fGetNextValue(true);
+		if (ValueResult.f_IsOfType<void>())
+			CBuildSystem::fs_ThrowError(_Context, "Missing parameters for function '{}'"_f << fGetFunctionName());
+		CEJsonSorted Value = fg_Move(ValueResult.f_GetAsType<CEJsonSorted>());
+
+		CNextValueResult ErrorOrDefaultResult;
+		if (_Type != ESwitchType_Bare)
+		{
+			ErrorOrDefaultResult = fGetNextValue(false);
+			if (ErrorOrDefaultResult.f_IsOfType<void>())
+				CBuildSystem::fs_ThrowError(_Context, "Missing parameters for function '{}'"_f << fGetFunctionName());
+		}
+
+		auto fSkipOneValue = [&]() -> bool
+			{
+				if (pExpandedArray != pExpandedArrayEnd)
+				{
+					++pExpandedArray;
+					return true;
+				}
+
+				pExpandedArray = nullptr;
+				pExpandedArrayEnd = nullptr;
+
+				if (!iParam)
+					return false;
+
+				auto &Param = *iParam;
+				++iParam;
+
+				if (fTryExpandAppendParam(Param))
+				{
+					if (pExpandedArray != pExpandedArrayEnd)
+						++pExpandedArray;
+				}
+
+				return true;
+			}
+		;
+
+		while (true)
+		{
+			auto CaseKeyResult = fGetNextValue(true);
+			if (CaseKeyResult.f_IsOfType<void>())
+				break;
+
+			if (CaseKeyResult.f_GetAsType<CEJsonSorted>() == Value)
+			{
+				auto CaseValueResult = fGetNextValue(true);
+				if (CaseValueResult.f_IsOfType<void>())
+					CBuildSystem::fs_ThrowError(_Context, "Switch values pairs are uneven");
+
+				return fg_Move(CaseValueResult.f_GetAsType<CEJsonSorted>());
+			}
+			else
+			{
+				if (!fSkipOneValue())
+					CBuildSystem::fs_ThrowError(_Context, "Switch values pairs are uneven");
+			}
+		}
 
 		if (_Type != ESwitchType_Bare)
-			++iParam;
-
-		if (!_Params.f_IsPosValid(iParam))
-			CBuildSystem::fs_ThrowError(_Context, "What");
-
-		auto &SwitchValues = _Params[iParam].f_Array();
-		if (SwitchValues.f_GetLen() & 1)
-			CBuildSystem::fs_ThrowError(_Context, "Switch values pairs are uneven");
-
-		mint nSwitchValues = SwitchValues.f_GetLen();
-
-		for (mint iSwitchValue = 0; iSwitchValue < nSwitchValues; iSwitchValue += 2)
 		{
-			if (SwitchValues[iSwitchValue] == Value)
-				return fg_Move(SwitchValues[iSwitchValue + 1]);
+			CEJsonSorted ErrorOrDefault;
+			if (ErrorOrDefaultResult.f_IsOfType<CEJsonSorted>())
+				ErrorOrDefault = fg_Move(ErrorOrDefaultResult.f_GetAsType<CEJsonSorted>());
+			else
+				ErrorOrDefault = fp_EvaluatePropertyValueParam(_Context, *ErrorOrDefaultResult.f_GetAsType<CBuildSystemSyntax::CParam const *>()).f_Move();
+
+			if (_Type == ESwitchType_Error)
+			{
+				fp_CheckValueConformToType
+					(
+						_Context
+						, g_String
+						, ErrorOrDefault
+						, _Context.m_Position
+						, _Context.m_Position
+						, [&]() -> CStr
+						{
+							return "In call to function 'SwitchWithError' parameter _Error (1)"_f;
+						}
+						, EDoesValueConformToTypeFlag_None
+					)
+				;
+				CBuildSystem::fs_ThrowError(_Context, "{}{}"_f << ErrorOrDefault.f_String() << Value);
+			}
+			else // ESwitchType_Default
+			{
+				return fg_Move(ErrorOrDefault);
+			}
 		}
 
-		switch (_Type)
-		{
-		case ESwitchType_Bare: CBuildSystem::fs_ThrowError(_Context, "Value not found in switch: {}"_f << Value); break;
-		case ESwitchType_Error: CBuildSystem::fs_ThrowError(_Context, "{}{}"_f << _Params[1].f_String() << Value ); break;
-		case ESwitchType_Default: break;
-		}
-
-		return fg_Move(_Params[1]);
+		CBuildSystem::fs_ThrowError(_Context, "Value not found in switch: {}"_f << Value);
+		return {};
 	}
 
 	void CBuildSystem::fp_RegisterBuiltinFunctions_Misc()
@@ -370,10 +502,13 @@ namespace NMib::NBuildSystem
 								, fg_FunctionParam(g_Any, gc_ConstString__Value)
 								, fg_FunctionParam(g_Any, gc_ConstString_p_SwitchValues, g_Ellipsis)
 							)
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
-							{
-								return fg_SwitchValues(ESwitchType_Bare, _This, _Context, fg_Move(_Params));
-							}
+							, FEvalPropertyFunctionLazy
+							(
+								[](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CFunctionCall const &_FunctionCall, CBuildSystem::CBuiltinFunction const &_Function) -> CEJsonSorted
+								{
+									return _This.fp_SwitchValuesLazy(ESwitchType_Bare, _Context, _FunctionCall);
+								}
+							)
 							, DMibBuildSystemFilePosition
 						}
 					}
@@ -389,10 +524,13 @@ namespace NMib::NBuildSystem
 								, fg_FunctionParam(g_String, gc_ConstString__Error)
 								, fg_FunctionParam(g_Any, gc_ConstString_p_SwitchValues, g_Ellipsis)
 							)
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
-							{
-								return fg_SwitchValues(ESwitchType_Error, _This, _Context, fg_Move(_Params));
-							}
+							, FEvalPropertyFunctionLazy
+							(
+								[](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CFunctionCall const &_FunctionCall, CBuildSystem::CBuiltinFunction const &_Function) -> CEJsonSorted
+								{
+									return _This.fp_SwitchValuesLazy(ESwitchType_Error, _Context, _FunctionCall);
+								}
+							)
 							, DMibBuildSystemFilePosition
 						}
 					}
@@ -408,10 +546,13 @@ namespace NMib::NBuildSystem
 								, fg_FunctionParam(g_Any, gc_ConstString__Default)
 								, fg_FunctionParam(g_Any, gc_ConstString_p_SwitchValues, g_Ellipsis)
 							)
-							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
-							{
-								return fg_SwitchValues(ESwitchType_Default, _This, _Context, fg_Move(_Params));
-							}
+							, FEvalPropertyFunctionLazy
+							(
+								[](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CFunctionCall const &_FunctionCall, CBuildSystem::CBuiltinFunction const &_Function) -> CEJsonSorted
+								{
+									return _This.fp_SwitchValuesLazy(ESwitchType_Default, _Context, _FunctionCall);
+								}
+							)
 							, DMibBuildSystemFilePosition
 						}
 					}

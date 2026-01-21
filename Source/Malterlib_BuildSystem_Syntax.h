@@ -42,6 +42,13 @@ namespace NMib::NBuildSystem
 		, EPropertyType_Max
 	};
 
+	enum ESwitchType
+	{
+		ESwitchType_Bare
+		, ESwitchType_Default
+		, ESwitchType_Error
+	};
+
 	struct CPropertyKeyTypeAndHash
 	{
 		constexpr CPropertyKeyTypeAndHash()

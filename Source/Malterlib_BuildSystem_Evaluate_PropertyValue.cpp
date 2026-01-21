@@ -2332,35 +2332,47 @@ namespace NMib::NBuildSystem
 		if (_Context.m_pStorePositions)
 			pPosition = _Context.m_pStorePositions->f_AddPosition(_pFunction->m_Position, "Call builtin '{}'"_f << _FunctionCall.m_PropertyKey.m_Name);
 
-		TCVector<CEJsonSorted> Params;
-		TCVector<CEJsonSorted> *pEllipsis = nullptr;
-		fp_EvaluatePropertyValueFunctionCallCollectParams
-			(
-				_Context
-				, _FunctionCall
-				, _pFunction->m_Type
-				, [&](CEJsonSorted &&_Param, CBuildSystemSyntax::CFunctionParameter const &_FunctionParam, bool _bEllipsis, bool _bAddDefault)
-				{
-					if (_bEllipsis)
+		if (_pFunction->m_fFunction.f_IsOfType<FEvalPropertyFunction>())
+		{
+			TCVector<CEJsonSorted> Params;
+			TCVector<CEJsonSorted> *pEllipsis = nullptr;
+			fp_EvaluatePropertyValueFunctionCallCollectParams
+				(
+					_Context
+					, _FunctionCall
+					, _pFunction->m_Type
+					, [&](CEJsonSorted &&_Param, CBuildSystemSyntax::CFunctionParameter const &_FunctionParam, bool _bEllipsis, bool _bAddDefault)
 					{
-						if (!pEllipsis)
-							pEllipsis = &Params.f_Insert(EJsonType_Array).f_Array();
-						if (!_bAddDefault)
-							pEllipsis->f_Insert(fg_Move(_Param));
+						if (_bEllipsis)
+						{
+							if (!pEllipsis)
+								pEllipsis = &Params.f_Insert(EJsonType_Array).f_Array();
+							if (!_bAddDefault)
+								pEllipsis->f_Insert(fg_Move(_Param));
+						}
+						else
+							Params.f_Insert(fg_Move(_Param));
 					}
-					else
-						Params.f_Insert(fg_Move(_Param));
-				}
-				, _pFunction->m_Position
-			)
-		;
+					, _pFunction->m_Position
+				)
+			;
 
-		auto Return = _pFunction->m_fFunction(*this, _Context, fg_Move(Params));
+			auto Return = _pFunction->m_fFunction.f_GetAsType<FEvalPropertyFunction>()(*this, _Context, fg_Move(Params));
 
-		if (pPosition)
-			pPosition->f_AddValue(Return, f_EnableValues());
+			if (pPosition)
+				pPosition->f_AddValue(Return, f_EnableValues());
 
-		return Return;
+			return Return;
+		}
+		else
+		{
+			// Lazy path: pass raw function call to let function evaluate params on-demand
+			auto Return = _pFunction->m_fFunction.f_GetAsType<FEvalPropertyFunctionLazy>()(*this, _Context, _FunctionCall, *_pFunction);
+			if (pPosition)
+				pPosition->f_AddValue(Return, f_EnableValues());
+
+			return Return;
+		}
 	}
 
 	NEncoding::CEJsonSorted CBuildSystem::fp_EvaluatePropertyValueFunctionCall(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CFunctionCall const &_FunctionCall, bool _bMoveCache) const

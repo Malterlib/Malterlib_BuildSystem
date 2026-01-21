@@ -15,15 +15,18 @@ namespace NMib::NBuildSystem
 		{
 			auto fAddFunction = [&](CStr const &_Name, auto &&_fRun)
 				{
-					auto &Function = Functions[_Name];
-					Function.m_Type = fg_FunctionType(g_String);
-					Function.m_fFunction = [fRun = fg_Move(_fRun)](CBuildSystem const &_This, auto &_Context, auto &&_Params) -> CEJsonSorted
-						{
-							CAnsiEncoding Encoding(_This.f_AnsiFlags());
-							return fRun(Encoding);
-						}
+					Functions
+						[
+							_Name
+							, fg_FunctionType(g_String)
+							, [fRun = fg_Move(_fRun)](CBuildSystem const &_This, auto &_Context, auto &&_Params) -> CEJsonSorted
+							{
+								CAnsiEncoding Encoding(_This.f_AnsiFlags());
+								return fRun(Encoding);
+							}
+							, DMibBuildSystemFilePosition
+						]
 					;
-					Function.m_Position = DMibBuildSystemFilePosition;
 				}
 			;
 

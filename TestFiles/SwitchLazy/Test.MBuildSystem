@@ -1,0 +1,148 @@
+
+*Configuration
+{
+	Debug "Debug Config"
+	Release "Release Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
+
+%GenerateFile "TestFile"
+{
+	Property
+	{
+		// ========================================
+		// Test 1: Basic Switch - Match First (lazy: others not evaluated)
+		// ========================================
+		Test1: string = Switch("a", "a", "result_a", "b", Error("Should not evaluate b"))
+
+		// ========================================
+		// Test 2: Basic Switch - Match Middle
+		// ========================================
+		Test2: string = Switch("b", "a", Error("Should not evaluate a"), "b", "result_b", "c", Error("Should not evaluate c"))
+
+		// ========================================
+		// Test 3: Basic Switch - Match Last
+		// ========================================
+		Test3: string = Switch("c", "a", Error("Should not evaluate a"), "b", Error("Should not evaluate b"), "c", "result_c")
+
+		// ========================================
+		// Test 4: SwitchWithDefault - Match Found (default not evaluated)
+		// ========================================
+		Test4: string = SwitchWithDefault("a", Error("Default should not be evaluated"), "a", "result_a", "b", Error("b should not be evaluated"))
+
+		// ========================================
+		// Test 5: SwitchWithDefault - No Match (default evaluated, others not)
+		// ========================================
+		Test5: string = SwitchWithDefault("x", "default_value", "a", Error("a should not be evaluated"), "b", Error("b should not be evaluated"))
+
+		// ========================================
+		// Test 6: SwitchWithError - Match Found (error not evaluated)
+		// ========================================
+		Test6: string = SwitchWithError("a", Error("Error msg should not be evaluated"), "a", "result_a", "b", Error("b should not be evaluated"))
+
+		// ========================================
+		// Test 7: Spread Operator - Array as Cases
+		// ========================================
+		SwitchCases7: [any] = ["a", "result_a_spread", "b", "result_b_spread"]
+		Test7: string = Switch("b", SwitchCases7...)
+
+		// ========================================
+		// Test 8: Spread Operator - Mixed Regular and Spread
+		// ========================================
+		SpreadArray8: [any] = ["b", "result_b_mixed", "c", "result_c_mixed"]
+		Test8: string = Switch("d", "a", Error("a not evaluated mixed"), SpreadArray8..., "d", "result_d_mixed")
+
+		// ========================================
+		// Test 9: Spread with Undefined (ignored)
+		// ========================================
+		UndefinedVar9: [any]?
+		Test9: string = SwitchWithDefault("x", "default_undef", UndefinedVar9..., "a", Error("a should not be evaluated undef"))
+
+		// ========================================
+		// Test 10: Empty Spread Array (handled gracefully)
+		// ========================================
+		EmptyArray10: [any] = []
+		Test10: string = SwitchWithDefault("x", "default_empty", EmptyArray10..., "a", Error("a not evaluated empty"))
+
+		// ========================================
+		// Test 11: Switch with Integer Values
+		// ========================================
+		Test11: string = Switch(2, 1, Error("1 not evaluated"), 2, "result_int_2", 3, Error("3 not evaluated"))
+
+		// ========================================
+		// Test 12: Switch with Boolean Values
+		// ========================================
+		Test12: string = Switch(true, false, Error("false not evaluated"), true, "result_bool_true")
+
+		// ========================================
+		// Test 13: SwitchWithDefault with complex default value
+		// ========================================
+		Test13: string = SwitchWithDefault("notfound", "complex_default_" + "value", "a", Error("a not evaluated complex"))
+
+		// ========================================
+		// Test 14: Switch with multiple spread arrays
+		// ========================================
+		SpreadArray14a: [any] = ["a", "result_a_multi"]
+		SpreadArray14b: [any] = ["b", "result_b_multi", "c", "result_c_multi"]
+		Test14: string = Switch("c", SpreadArray14a..., SpreadArray14b...)
+
+		// ========================================
+		// Test 15: SwitchWithError - No Match (error message shown)
+		// This test verifies that the error message is evaluated when needed
+		// We can't actually test this without failing, so we test the successful case
+		// ========================================
+		Test15: string = SwitchWithError("a", "Error: value not found: ", "a", "result_error_match", "b", Error("b not evaluated error"))
+
+		// ========================================
+		// Test 16: Switch matching empty string
+		// ========================================
+		Test16: string = Switch("", "a", Error("a not evaluated empty str"), "", "result_empty_string", "b", Error("b not evaluated empty str"))
+
+		// ========================================
+		// Test 17: Spread at the beginning (note: spread arrays must be evaluated to know size)
+		// ========================================
+		SpreadArray17: [any] = ["a", "result_a_spread_begin", "b", "result_b_spread_begin"]
+		Test17: string = Switch("c", SpreadArray17..., "c", "result_spread_begin")
+
+		// ========================================
+		// Test 18: Multiple matches - first one wins
+		// ========================================
+		Test18: string = Switch("a", "a", "result_first_match", "a", Error("second a should not be evaluated"))
+	}
+	GenerateFile
+	{
+		Name BuildSystemOutputDir / "TestGenerateFile.txt"
+		Contents	`Test Results:\n`\
+					`Test1: @(Test1)\n`\
+					`Test2: @(Test2)\n`\
+					`Test3: @(Test3)\n`\
+					`Test4: @(Test4)\n`\
+					`Test5: @(Test5)\n`\
+					`Test6: @(Test6)\n`\
+					`Test7: @(Test7)\n`\
+					`Test8: @(Test8)\n`\
+					`Test9: @(Test9)\n`\
+					`Test10: @(Test10)\n`\
+					`Test11: @(Test11)\n`\
+					`Test12: @(Test12)\n`\
+					`Test13: @(Test13)\n`\
+					`Test14: @(Test14)\n`\
+					`Test15: @(Test15)\n`\
+					`Test16: @(Test16)\n`\
+					`Test17: @(Test17)\n`\
+					`Test18: @(Test18)\n`
+
+		Executable false
+		UnixLineEnds true
+		UnicodeBOM false
+	}
+}

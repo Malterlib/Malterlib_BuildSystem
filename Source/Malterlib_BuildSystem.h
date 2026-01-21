@@ -179,10 +179,34 @@ namespace NMib::NBuildSystem
 			>
 		;
 
+		struct CBuiltinFunction;
+
+		using FEvalPropertyFunctionLazy = NFunction::TCFunction
+			<
+				NEncoding::CEJsonSorted (CBuildSystem const &_This, CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CFunctionCall const &_FunctionCall, CBuiltinFunction const &_Function)
+			>
+		;
+
 		struct CBuiltinFunction
 		{
+			CBuiltinFunction() = default;
+			CBuiltinFunction(CBuildSystemSyntax::CFunctionType _Type, FEvalPropertyFunctionLazy &&_fFunction, CFilePosition &&_Position)
+				: m_Type(_Type)
+				, m_fFunction(fg_Move(_fFunction))
+				, m_Position(fg_Move(_Position))
+			{
+			}
+
+			template <typename tf_CFunction>
+			CBuiltinFunction(CBuildSystemSyntax::CFunctionType _Type, tf_CFunction &&_fFunction, CFilePosition &&_Position)
+				: m_Type(_Type)
+				, m_fFunction(FEvalPropertyFunction(fg_Move(_fFunction)))
+				, m_Position(fg_Move(_Position))
+			{
+			}
+
 			CBuildSystemSyntax::CFunctionType m_Type;
-			FEvalPropertyFunction m_fFunction;
+			NStorage::TCVariant<FEvalPropertyFunction, FEvalPropertyFunctionLazy> m_fFunction{FEvalPropertyFunction{}};
 			CFilePosition m_Position;
 		};
 
@@ -1017,6 +1041,8 @@ namespace NMib::NBuildSystem
 				, bool _bType
 			) const
 		;
+
+		NEncoding::CEJsonSorted fp_SwitchValuesLazy(ESwitchType _Type, CBuildSystem::CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CFunctionCall const &_FunctionCall) const;
 
 		struct CCachedFile
 		{
