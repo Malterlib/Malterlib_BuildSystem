@@ -521,5 +521,15 @@ namespace NMib::NBuildSystem
 
 	extern CStringAndHash const gc_ConstString_Symbol_Inherit;
 
+	extern CStringAndHash const gc_ConstString_PhysicalMemoryMiB;
+	extern CStringAndHash const gc_ConstString_VirtualThreads;
+	extern CStringAndHash const gc_ConstString_PhysicalThreads;
+
+	extern CStringAndHash const gc_ConstString_Min;
+	extern CStringAndHash const gc_ConstString_Max;
+	extern CStringAndHash const gc_ConstString_Clamp;
+	extern CStringAndHash const gc_ConstString__Min;
+	extern CStringAndHash const gc_ConstString__Max;
+
 	void fg_CacheConstantStrings(CStringCache &o_StringCache);
 }

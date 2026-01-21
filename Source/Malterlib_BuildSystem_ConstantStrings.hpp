@@ -521,6 +521,16 @@ namespace NMib::NBuildSystem
 
 	constexpr CStringAndHash const gc_ConstString_Symbol_Inherit = gc_Str<"{578185E0-2E2A-4481-A34E-BCC3F64CDCA2}">;
 
+	constexpr CStringAndHash const gc_ConstString_PhysicalMemoryMiB = gc_Str<"PhysicalMemoryMiB">;
+	constexpr CStringAndHash const gc_ConstString_VirtualThreads = gc_Str<"VirtualThreads">;
+	constexpr CStringAndHash const gc_ConstString_PhysicalThreads = gc_Str<"PhysicalThreads">;
+
+	constexpr CStringAndHash const gc_ConstString_Min = gc_Str<"Min">;
+	constexpr CStringAndHash const gc_ConstString_Max = gc_Str<"Max">;
+	constexpr CStringAndHash const gc_ConstString_Clamp = gc_Str<"Clamp">;
+	constexpr CStringAndHash const gc_ConstString__Min = gc_Str<"_Min">;
+	constexpr CStringAndHash const gc_ConstString__Max = gc_Str<"_Max">;
+
 	void fg_CacheConstantStrings(CStringCache &o_StringCache)
 	{
 		o_StringCache.f_AddString(gc_ConstString_Empty, gc_ConstString_Empty.f_Hash());
@@ -1042,5 +1052,15 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_UpdateLfsReleaseIndexesPruneOrphanedAssets);
 
 		o_StringCache.f_AddConstantString(gc_ConstString_Symbol_Inherit);
+
+		o_StringCache.f_AddConstantString(gc_ConstString_PhysicalMemoryMiB);
+		o_StringCache.f_AddConstantString(gc_ConstString_VirtualThreads);
+		o_StringCache.f_AddConstantString(gc_ConstString_PhysicalThreads);
+
+		o_StringCache.f_AddConstantString(gc_ConstString_Min);
+		o_StringCache.f_AddConstantString(gc_ConstString_Max);
+		o_StringCache.f_AddConstantString(gc_ConstString_Clamp);
+		o_StringCache.f_AddConstantString(gc_ConstString__Min);
+		o_StringCache.f_AddConstantString(gc_ConstString__Max);
 	}
 }

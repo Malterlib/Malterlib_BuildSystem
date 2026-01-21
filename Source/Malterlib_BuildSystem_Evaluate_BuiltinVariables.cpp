@@ -5,6 +5,7 @@
 #include "Malterlib_BuildSystem_Evaluate_BuiltinFunctions.h"
 
 #include <Mib/Encoding/JsonShortcuts>
+#include <Mib/Process/Platform>
 
 namespace NMib::NBuildSystem
 {
@@ -59,6 +60,34 @@ namespace NMib::NBuildSystem
 					, {CPropertyKey(gc_ConstKey_HostPlatform), DMibBuildSystemTypeWithPosition(g_String)}
 					, {CPropertyKey(gc_ConstKey_HostPlatformFamily), DMibBuildSystemTypeWithPosition(g_String)}
 					, {CPropertyKey(gc_ConstKey_HostArchitecture), DMibBuildSystemTypeWithPosition(g_String)}
+					,
+					{
+						CPropertyKey(gc_ConstKey_HostSystemInfo)
+						, DMibBuildSystemTypeWithPosition
+						(
+							fg_Defaulted
+							(
+								CBuildSystemSyntax::CType
+								(
+									CBuildSystemSyntax::CClassType
+									{
+										{
+											{gc_ConstString_PhysicalMemoryMiB, CBuildSystemSyntax::CClassType::CMember{g_FloatingPoint}}
+											, {gc_ConstString_VirtualThreads, CBuildSystemSyntax::CClassType::CMember{g_Integer}}
+											, {gc_ConstString_PhysicalThreads, CBuildSystemSyntax::CClassType::CMember{g_Integer}}
+										}
+										, {}
+									}
+								)
+								, CEJsonSorted
+								{
+									"PhysicalMemoryMiB"_= (fp64(NProcess::NPlatform::fg_Process_GetPhysicalMemory()) / (1024.0 * 1024.0))
+									, "VirtualThreads"_= (int64)NSys::fg_Thread_GetVirtualCores()
+									, "PhysicalThreads"_= (int64)NSys::fg_Thread_GetPhysicalCores()
+								}
+							)
+						)
+					}
 					, {CPropertyKey(gc_ConstKey_HiddenGroup), DMibBuildSystemTypeWithPosition(g_Boolean)}
 					, {CPropertyKey(gc_ConstKey_ExcludeFiles), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, EJsonType_Array))}
 					, {CPropertyKey(gc_ConstKey_FullConfiguration), DMibBuildSystemTypeWithPosition(g_String)}
