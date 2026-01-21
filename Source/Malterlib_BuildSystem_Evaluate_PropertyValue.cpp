@@ -135,33 +135,36 @@ namespace NMib::NBuildSystem
 	CStr CBuildSystem::fp_EvaluatePropertyValueEvalString(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CEvalString const &_Value) const
 	{
 		CStr ReturnString;
-
-		for (auto &Token : _Value.m_Tokens)
 		{
-			if (Token.m_Token.f_IsOfType<CStr>())
-				ReturnString += Token.m_Token.f_GetAsType<CStr>();
-			else if (Token.m_Token.f_IsOfType<TCIndirection<CBuildSystemSyntax::CExpression>>())
-			{
-				auto &ExpressionToken = Token.m_Token.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CExpression>>();
-				auto Expression = fp_EvaluatePropertyValueExpression(_Context, ExpressionToken);
-				auto &ExpressionRef = Expression.f_Get();
-				if (!ExpressionRef.f_IsString())
-				{
-					fs_ThrowError
-						(
-							_Context
-							, "Expressions in eval strings needs to evaluate to strings.\n\tExpression: {}\n\tValue: {}\n\tEvaluated string: {}\n"_f
-							<< ExpressionToken
-							<< ExpressionRef.f_ToString(nullptr, EJsonDialectFlag_AllowUndefined)
-							<< ReturnString
-						)
-					;
-				}
+			CStr::CAppender StringAppender(ReturnString);
 
-				ReturnString += ExpressionRef.f_String();
+			for (auto &Token : _Value.m_Tokens)
+			{
+				if (Token.m_Token.f_IsOfType<CStr>())
+					StringAppender += Token.m_Token.f_GetAsType<CStr>();
+				else if (Token.m_Token.f_IsOfType<TCIndirection<CBuildSystemSyntax::CExpression>>())
+				{
+					auto &ExpressionToken = Token.m_Token.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CExpression>>();
+					auto Expression = fp_EvaluatePropertyValueExpression(_Context, ExpressionToken);
+					auto &ExpressionRef = Expression.f_Get();
+					if (!ExpressionRef.f_IsString())
+					{
+						fs_ThrowError
+							(
+								_Context
+								, "Expressions in eval strings needs to evaluate to strings.\n\tExpression: {}\n\tValue: {}\n\tEvaluated string: {}\n"_f
+								<< ExpressionToken
+								<< ExpressionRef.f_ToString(nullptr, EJsonDialectFlag_AllowUndefined)
+								<< StringAppender.f_Commit().m_String
+							)
+						;
+					}
+
+					StringAppender += ExpressionRef.f_String();
+				}
+				else
+					DMibNeverGetHere;
 			}
-			else
-				DMibNeverGetHere;
 		}
 
 		return ReturnString;
