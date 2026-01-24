@@ -84,6 +84,11 @@ namespace NMib::NBuildSystem
 					OutKey = gc_ConstString_Symbol_AppendObjectNoQuote;
 				}
 				break;
+			case 3:
+				{
+					OutKey = gc_ConstString_Symbol_AppendObjectWithoutUndefinedNoQuote;
+				}
+				break;
 			}
 
 			Object[OutKey] = Value.m_Value.f_Get().f_ToJson();
@@ -111,7 +116,15 @@ namespace NMib::NBuildSystem
 				break;
 			case EJsonStringType_NoQuote:
 				{
-					if (Name == gc_ConstString_Symbol_AppendObject.m_String)
+					if (Name == gc_ConstString_Symbol_AppendObjectWithoutUndefined.m_String)
+					{
+						Key.m_Key = CAppendObjectWithoutUndefined();
+
+						bAllConstant = false;
+
+						bVerifyAppendObject = true;
+					}
+					else if (Name == gc_ConstString_Symbol_AppendObject.m_String)
 					{
 						Key.m_Key = CAppendObject();
 

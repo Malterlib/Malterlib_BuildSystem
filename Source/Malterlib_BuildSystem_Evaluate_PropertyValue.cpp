@@ -31,14 +31,31 @@ namespace NMib::NBuildSystem
 				}
 				break;
 			case 2:
+			case 3:
 				{
+					bool bApplyUndefined = Key.m_Key.f_GetTypeID() == 2;
+
 					auto fApplyObject = [&](CEJsonSorted &&_Object)
 						{
 							if (!_Object.f_IsObject())
 								fs_ThrowError(_Context, "Append object expects object arguments");
 
-							for (auto iObject = _Object.f_Object().f_OrderedIterator(); iObject; ++iObject)
-								Object[iObject->f_Name()] = fg_Move(iObject->f_Value());
+							if (bApplyUndefined)
+							{
+								for (auto iObject = fg_Move(_Object.f_Object()).f_OrderedDestructiveIterator(); iObject;)
+									Object.f_InsertOrAssign(iObject.f_ExtractNode());
+							}
+							else
+							{
+								for (auto iObject = fg_Move(_Object.f_Object()).f_OrderedDestructiveIterator(); iObject;)
+								{
+									auto &Value = iObject->f_Value().f_Value();
+									if (Value.f_IsValid())
+										Object.f_InsertOrAssign(iObject.f_ExtractNode());
+									else
+										++iObject;
+								}
+							}
 						}
 					;
 

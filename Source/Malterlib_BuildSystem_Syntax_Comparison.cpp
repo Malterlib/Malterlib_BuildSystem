@@ -320,6 +320,16 @@ namespace NMib::NBuildSystem
 		return true;
 	}
 
+	COrdering_Partial CBuildSystemSyntax::CAppendObjectWithoutUndefined::operator <=> (CAppendObjectWithoutUndefined const &_Right) const
+	{
+		return COrdering_Partial::equivalent;
+	}
+
+	bool CBuildSystemSyntax::CAppendObjectWithoutUndefined::operator == (CAppendObjectWithoutUndefined const &_Right) const
+	{
+		return true;
+	}
+
 	COrdering_Partial CBuildSystemSyntax::CObjectKey::operator <=> (CObjectKey const &_Right) const
 	{
 		return m_Key <=> _Right.m_Key;

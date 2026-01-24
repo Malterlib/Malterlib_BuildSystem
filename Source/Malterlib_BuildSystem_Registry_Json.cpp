@@ -70,6 +70,17 @@ namespace NMib::NContainer
 			f_ParseEvalStringString(o_Key, o_pParse);
 			return;
 		}
+		else if (fg_StrStartsWith(pParse, gc_ConstString_Symbol_AppendObjectWithoutUndefined.m_String))
+		{
+			pParse += 3;
+			fg_ParseWhiteSpace(pParse);
+			if (*pParse == ':')
+			{
+				o_Key = gc_ConstString_Symbol_AppendObjectWithoutUndefinedNoQuote.m_String;
+				o_pParse = pParse;
+				return;
+			}
+		}
 		else if (fg_StrStartsWith(pParse, gc_ConstString_Symbol_AppendObject.m_String))
 		{
 			pParse += 2;

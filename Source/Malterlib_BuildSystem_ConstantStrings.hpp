@@ -80,6 +80,8 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_Symbol_AccessObject = gc_Str<"->">;
 	constexpr CStringAndHash const gc_ConstString_Symbol_AppendObject = gc_Str<"<<">;
 	constexpr CStringAndHash const gc_ConstString_Symbol_AppendObjectNoQuote = gc_Str<TCStrConstData("<<", EJsonStringType_NoQuote)>;
+	constexpr CStringAndHash const gc_ConstString_Symbol_AppendObjectWithoutUndefined = gc_Str<"<<<">;
+	constexpr CStringAndHash const gc_ConstString_Symbol_AppendObjectWithoutUndefinedNoQuote = gc_Str<TCStrConstData("<<<", EJsonStringType_NoQuote)>;
 	constexpr CStringAndHash const gc_ConstString_Symbol_BitwiseNot = gc_Str<"~">;
 	constexpr CStringAndHash const gc_ConstString_Symbol_ConfigurationPrefix = gc_Str<"*">;
 	constexpr CStringAndHash const gc_ConstString_Symbol_Ellipsis = gc_Str<"...">;
@@ -606,6 +608,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_Subscript);
 		o_StringCache.f_AddConstantString(gc_ConstString_Symbol_AccessObject);
 		o_StringCache.f_AddConstantString(gc_ConstString_Symbol_AppendObject);
+		o_StringCache.f_AddConstantString(gc_ConstString_Symbol_AppendObjectWithoutUndefined);
 		o_StringCache.f_AddConstantString(gc_ConstString_Symbol_BitwiseNot);
 		o_StringCache.f_AddConstantString(gc_ConstString_Symbol_ConfigurationPrefix);
 		o_StringCache.f_AddConstantString(gc_ConstString_Symbol_Ellipsis);

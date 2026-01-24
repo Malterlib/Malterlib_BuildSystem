@@ -338,6 +338,12 @@ namespace NMib::NBuildSystem
 	}
 
 	template <typename tf_CStr>
+	void CBuildSystemSyntax::CAppendObjectWithoutUndefined::f_Format(tf_CStr &o_Str) const
+	{
+		o_Str += gc_ConstString_Symbol_AppendObjectWithoutUndefined.m_String;
+	}
+
+	template <typename tf_CStr>
 	void CBuildSystemSyntax::CObjectKey::f_Format(tf_CStr &o_Str) const
 	{
 		m_Key.f_Visit

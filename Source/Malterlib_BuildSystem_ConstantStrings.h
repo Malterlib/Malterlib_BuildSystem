@@ -79,6 +79,8 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_Symbol_AccessObject;
 	extern CStringAndHash const gc_ConstString_Symbol_AppendObject;
 	extern CStringAndHash const gc_ConstString_Symbol_AppendObjectNoQuote;
+	extern CStringAndHash const gc_ConstString_Symbol_AppendObjectWithoutUndefined;
+	extern CStringAndHash const gc_ConstString_Symbol_AppendObjectWithoutUndefinedNoQuote;
 	extern CStringAndHash const gc_ConstString_Symbol_BitwiseNot;
 	extern CStringAndHash const gc_ConstString_Symbol_ConfigurationPrefix;
 	extern CStringAndHash const gc_ConstString_Symbol_Ellipsis;

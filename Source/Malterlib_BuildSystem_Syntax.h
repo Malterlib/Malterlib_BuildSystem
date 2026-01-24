@@ -229,6 +229,14 @@ namespace NMib::NBuildSystem
 			bool operator == (CAppendObject const &_Right) const;
 		};
 
+		struct CAppendObjectWithoutUndefined
+		{
+			template <typename tf_CStr>
+			void f_Format(tf_CStr &o_Str) const;
+			COrdering_Partial operator <=> (CAppendObjectWithoutUndefined const &_Right) const;
+			bool operator == (CAppendObjectWithoutUndefined const &_Right) const;
+		};
+
 		struct CObjectKey
 		{
 			template <typename tf_CStr>
@@ -236,7 +244,7 @@ namespace NMib::NBuildSystem
 			COrdering_Partial operator <=> (CObjectKey const &_Right) const;
 			bool operator == (CObjectKey const &_Right) const;
 
-			NStorage::TCVariant<NStr::CStr, CEvalString, CAppendObject> m_Key;
+			NStorage::TCVariant<NStr::CStr, CEvalString, CAppendObject, CAppendObjectWithoutUndefined> m_Key;
 		};
 
 		struct CObject
