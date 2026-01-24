@@ -137,9 +137,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 				{
 					Json[gc_ConstString_Settings].f_Object().f_ExtractAll
 						(
-							[&](auto &&_Key, auto &&_Value)
+							[&](auto &&_Handle)
 							{
-								VSSettingsVector.f_Insert(CVS_Setting_Item{{.m_Key = fg_Move(_Key), .m_Value = fg_Move(_Value.f_String())}});
+								VSSettingsVector.f_Insert(CVS_Setting_Item{{.m_Key = fg_Move(_Handle.f_Key()), .m_Value = fg_Move(_Handle.f_Value().f_Value().f_String())}});
 							}
 						)
 					;
