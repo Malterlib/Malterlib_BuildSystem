@@ -362,6 +362,47 @@ namespace NMib::NBuildSystem
 					}
 					,
 					{
+						gc_ConstString_Slice
+						, CBuiltinFunction
+						{
+							fg_FunctionType
+							(
+								g_AnyArray
+								, fg_FunctionParam(g_AnyArray, gc_ConstString__Array)
+								, fg_FunctionParam(g_Integer, gc_ConstString__Start)
+								, fg_FunctionParam(fg_Optional(g_Integer), gc_ConstString__End, g_Optional)
+							)
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
+							{
+								auto &SourceArray = _Params[0].f_Array();
+								mint nLen = SourceArray.f_GetLen();
+
+								mint iStart = _Params[1].f_Integer();
+								mint iEnd = _Params[2].f_IsValid() ? _Params[2].f_Integer() : nLen;
+
+								// Handle negative indices (count from end)
+								if (iStart < 0)
+									iStart = fg_Max(nLen + iStart, (mint)0);
+								if (iEnd < 0)
+									iEnd = fg_Max(nLen + iEnd, (mint)0);
+
+								// Clamp to valid range
+								iStart = fg_Min(iStart, nLen);
+								iEnd = fg_Min(iEnd, nLen);
+
+								CEJsonSorted Return;
+								auto &ReturnArray = Return.f_Array();
+
+								for (mint i = iStart; i < iEnd; ++i)
+									ReturnArray.f_Insert(fg_Move(SourceArray[i]));
+
+								return Return;
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
 						gc_ConstString_Concat
 						, CBuiltinFunction
 						{

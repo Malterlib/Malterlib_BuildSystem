@@ -340,6 +340,7 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_ReplaceChars;
 	extern CStringAndHash const gc_ConstString_Sanitize;
 	extern CStringAndHash const gc_ConstString_ShortenPath;
+	extern CStringAndHash const gc_ConstString_Slice;
 	extern CStringAndHash const gc_ConstString_Sort;
 	extern CStringAndHash const gc_ConstString_Split;
 	extern CStringAndHash const gc_ConstString_StartsWith;
@@ -467,6 +468,7 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString__Boolean;
 	extern CStringAndHash const gc_ConstString__Default;
 	extern CStringAndHash const gc_ConstString__EJson;
+	extern CStringAndHash const gc_ConstString__End;
 	extern CStringAndHash const gc_ConstString__EntityType;
 	extern CStringAndHash const gc_ConstString__Error;
 	extern CStringAndHash const gc_ConstString__ExcludeWildcards;

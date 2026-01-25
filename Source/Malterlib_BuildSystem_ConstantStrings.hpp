@@ -340,6 +340,7 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_ReplaceChars = gc_Str<"ReplaceChars">;
 	constexpr CStringAndHash const gc_ConstString_Sanitize = gc_Str<"Sanitize">;
 	constexpr CStringAndHash const gc_ConstString_ShortenPath = gc_Str<"ShortenPath">;
+	constexpr CStringAndHash const gc_ConstString_Slice = gc_Str<"Slice">;
 	constexpr CStringAndHash const gc_ConstString_Sort = gc_Str<"Sort">;
 	constexpr CStringAndHash const gc_ConstString_Split = gc_Str<"Split">;
 	constexpr CStringAndHash const gc_ConstString_StartsWith = gc_Str<"StartsWith">;
@@ -467,6 +468,7 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString__Boolean = gc_Str<"_Boolean">;
 	constexpr CStringAndHash const gc_ConstString__Default = gc_Str<"_Default">;
 	constexpr CStringAndHash const gc_ConstString__EJson = gc_Str<"_EJson">;
+	constexpr CStringAndHash const gc_ConstString__End = gc_Str<"_End">;
 	constexpr CStringAndHash const gc_ConstString__EntityType = gc_Str<"_EntityType">;
 	constexpr CStringAndHash const gc_ConstString__Error = gc_Str<"_Error">;
 	constexpr CStringAndHash const gc_ConstString__ExcludeWildcards = gc_Str<"_ExcludeWildcards">;
@@ -867,6 +869,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_ReplaceChars);
 		o_StringCache.f_AddConstantString(gc_ConstString_Sanitize);
 		o_StringCache.f_AddConstantString(gc_ConstString_ShortenPath);
+		o_StringCache.f_AddConstantString(gc_ConstString_Slice);
 		o_StringCache.f_AddConstantString(gc_ConstString_Sort);
 		o_StringCache.f_AddConstantString(gc_ConstString_Split);
 		o_StringCache.f_AddConstantString(gc_ConstString_StartsWith);
@@ -1001,6 +1004,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString__Boolean);
 		o_StringCache.f_AddConstantString(gc_ConstString__Default);
 		o_StringCache.f_AddConstantString(gc_ConstString__EJson);
+		o_StringCache.f_AddConstantString(gc_ConstString__End);
 		o_StringCache.f_AddConstantString(gc_ConstString__EntityType);
 		o_StringCache.f_AddConstantString(gc_ConstString__Error);
 		o_StringCache.f_AddConstantString(gc_ConstString__ExcludeWildcards);
