@@ -313,6 +313,7 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_LogWithSequence;
 	extern CStringAndHash const gc_ConstString_MakeRelative;
 	extern CStringAndHash const gc_ConstString_MalterlibTime;
+	extern CStringAndHash const gc_ConstString_BuildSystemEnvironment;
 	extern CStringAndHash const gc_ConstString_NativePath;
 	extern CStringAndHash const gc_ConstString_None;
 	extern CStringAndHash const gc_ConstString_Not;

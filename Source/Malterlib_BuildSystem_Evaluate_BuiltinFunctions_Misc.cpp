@@ -337,6 +337,25 @@ namespace NMib::NBuildSystem
 					}
 					,
 					{
+						gc_ConstString_BuildSystemEnvironment
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_ObjectWithAny)
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
+							{
+								CEJsonSorted Environment(EEJsonType_Object);
+
+								auto &EnvironmentObject = Environment.f_Object();
+								for (auto &EnvEntry : _This.mp_Environment.f_Entries())
+									EnvironmentObject[EnvEntry.f_Key()] = EnvEntry.f_Value();
+
+								return Environment;
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
 						gc_ConstString_DateTime
 						, CBuiltinFunction
 						{

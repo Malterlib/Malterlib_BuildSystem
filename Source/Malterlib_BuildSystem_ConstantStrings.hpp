@@ -313,6 +313,7 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_LogWithSequence = gc_Str<"LogWithSequence">;
 	constexpr CStringAndHash const gc_ConstString_MakeRelative = gc_Str<"MakeRelative">;
 	constexpr CStringAndHash const gc_ConstString_MalterlibTime = gc_Str<"MalterlibTime">;
+	constexpr CStringAndHash const gc_ConstString_BuildSystemEnvironment = gc_Str<"BuildSystemEnvironment">;
 	constexpr CStringAndHash const gc_ConstString_NativePath = gc_Str<"NativePath">;
 	constexpr CStringAndHash const gc_ConstString_None = gc_Str<"None">;
 	constexpr CStringAndHash const gc_ConstString_Not = gc_Str<"Not">;
@@ -839,6 +840,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_LogWithSequence);
 		o_StringCache.f_AddConstantString(gc_ConstString_MakeRelative);
 		o_StringCache.f_AddConstantString(gc_ConstString_MalterlibTime);
+		o_StringCache.f_AddConstantString(gc_ConstString_BuildSystemEnvironment);
 		o_StringCache.f_AddConstantString(gc_ConstString_NativePath);
 		o_StringCache.f_AddConstantString(gc_ConstString_None);
 		o_StringCache.f_AddConstantString(gc_ConstString_Not);
