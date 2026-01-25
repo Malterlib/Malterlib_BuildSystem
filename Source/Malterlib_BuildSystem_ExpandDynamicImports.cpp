@@ -359,6 +359,7 @@ namespace NMib::NBuildSystem
 		bool bVerbose = f_EvaluateEntityPropertyBool(_Entity, gc_ConstKey_Import_CMake_Verbose, false);
 		bool bVerboseHash = f_EvaluateEntityPropertyBool(_Entity, gc_ConstKey_Import_CMake_VerboseHash, false);
 		bool bDiffHash = f_EvaluateEntityPropertyBool(_Entity, gc_ConstKey_Import_CMake_DiffHash, false);
+		bool bForceCrossCompile = f_EvaluateEntityPropertyBool(_Entity, gc_ConstKey_Import_CMake_ForceCrossCompile, false);
 
 #ifdef DPlatformFamily_Windows
 		auto fStartsWith = [&](auto &&_String, auto &&_Find)
@@ -733,7 +734,7 @@ namespace NMib::NBuildSystem
 
 			Params.f_Insert("-DCMAKE_TOOLCHAIN_NO_PREFIX=1");
 
-			if (Platform != DMibStringize(DPlatform))
+			if (Platform != DMibStringize(DPlatform) || bForceCrossCompile)
 			{
 				CStr SysRoot = f_EvaluateEntityPropertyString(_Entity, gc_ConstKey_Import_CMake_SysRoot, CStr());
 				if (!SysRoot.f_IsEmpty())
