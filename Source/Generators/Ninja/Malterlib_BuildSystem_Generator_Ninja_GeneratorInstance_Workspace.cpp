@@ -118,7 +118,7 @@ namespace NMib::NBuildSystem::NNinja
 			{
 				auto Char = *pParse;
 				if (Char == '\n')
-					_Appender += "$n\n";
+					_Appender += "$^$\n";
 				else if ((Char == ' ' && _bEscapeSpace) || Char == ':' || Char == '$')
 				{
 					_Appender += '$';
