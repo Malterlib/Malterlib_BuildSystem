@@ -233,7 +233,13 @@ namespace NMib::NBuildSystem
 								if (JoinString.f_GetLen() != 1)
 									fs_ThrowError(_Context, "Joining escaped the join by string needs to be exactly 1 character");
 
-								return CStr::fs_JoinEscaped(_Params[0].f_StringArray(), JoinString[0]);
+								auto JoinChar = JoinString[0];
+
+								CStr Return;
+								for (auto &String : _Params[0].f_StringArray())
+									fg_AddStrSepEscaped(Return, String, JoinChar);
+
+								return Return;
 							}
 							, DMibBuildSystemFilePosition
 						}
