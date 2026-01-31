@@ -605,7 +605,7 @@ namespace NMib::NBuildSystem::NNinja
 
 										Appender += Entry.f_Key();
 										Appender += '=';
-										Appender += Entry.f_Value();
+										fg_EscapeEnvironmentValue(Appender, Entry.f_Value());
 									}
 								}
 								Appender += "  environment = ";
