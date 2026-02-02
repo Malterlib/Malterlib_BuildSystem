@@ -725,7 +725,7 @@ namespace NMib::NBuildSystem::NNinja
 						g_Dispatch(BlockingActorCheckout) / [this, NinjaFile, NinjaFileConents = fg_Move(NinjaFileConents), WorkspaceName = _Workspace.f_GetName()]
 							{
 								bool bWasCreated;
-								if (!m_BuildSystem.f_AddGeneratedFile(NinjaFile, NinjaFileConents, WorkspaceName, bWasCreated))
+								if (!m_BuildSystem.f_AddGeneratedFile(NinjaFile, NinjaFileConents, WorkspaceName, bWasCreated, EGeneratedFileFlag_NoDateCheck))
 									DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << NinjaFile));
 
 								if (bWasCreated)
