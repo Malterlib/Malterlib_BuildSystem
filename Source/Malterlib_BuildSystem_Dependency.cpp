@@ -67,39 +67,146 @@ namespace NMib::NBuildSystem
 		Find.m_bFollowLinks = _bFollowLinks;
 	}
 
-	void CMalterlibDependencyTracker::f_WriteDependencyFile(CStr const &_File)
+	namespace
 	{
-		CStr Contents;
-		for (auto &Output : mp_Outputs)
-			Contents += CStr::CFormat("Output {}\n") << Output;
-
-		for (auto &File : mp_Inputs)
+		void fg_EscapeGccDepPath(CStr::CAppender &_Appender, CStr const &_String)
 		{
-			if (mp_bUseHash)
-				Contents += CStr::CFormat("FileDigest {nfh,sj16,sf0} {nfh,sj16,sf0} {}") << File.m_Time.f_GetSeconds() << File.m_Time.f_GetFractionInt() << File.m_Digest.f_GetString();
-			else
-				Contents += CStr::CFormat("File {nfh,sj16,sf0} {nfh,sj16,sf0}") << File.m_Time.f_GetSeconds() << File.m_Time.f_GetFractionInt();
-			fg_AddStrSepEscaped(Contents, File.m_Path, ' ', " \"\\");
-			Contents+= "\n";
-		}
-
-		for (auto &Find : mp_Finds)
-		{
-			Contents += CStr::CFormat("Directory {} {nfh,sj8,sf0} {} {nfh,sj16,sf0} {nfh,sj16,sf0}") << Find.m_bRecurse << Find.m_Attributes << Find.m_bFollowLinks << Find.m_Time.f_GetSeconds() << Find.m_Time.f_GetFractionInt();
-			fg_AddStrSepEscaped(Contents, Find.m_Path, ' ', " \"\\");
-			fg_AddStrSepEscaped(Contents, CFile::fs_GetFile(Find.m_Pattern), ' ', " \"\\");
-			Contents += "\n";
-
-			for (CStr const& File : Find.m_Excluded)
+			auto *pParse = _String.f_GetStr();
+			while (*pParse)
 			{
-				fg_AddStrSepEscaped(Contents, File, '-', " \"\\");
-				Contents += "\n";
+				auto Char = *pParse;
+				if (Char == ' ' || Char == '\t' || Char == '#' || Char == '\\')
+				{
+					_Appender += '\\';
+					_Appender += Char;
+				}
+				else if (Char == '$')
+				{
+					_Appender += "$$";
+				}
+				else
+				{
+					_Appender += Char;
+				}
+				++pParse;
+			}
+		}
+	}
+
+	void CMalterlibDependencyTracker::f_WriteDependencyFile(CStr const &_File, CStr const &_DepFile)
+	{
+		bool bDepfileMode = !_DepFile.f_IsEmpty();
+
+		// Write depfile if requested (GCC format: output: input1 input2 ...)
+		if (bDepfileMode)
+		{
+			CStr DepContents;
+			{
+				CStr::CAppender Appender(DepContents);
+
+				// When using hash mode, skip depfile (MalterlibDependency handles it)
+				if (!mp_bUseHash)
+				{
+					if (mp_Outputs.f_IsEmpty())
+						DError("Cannot write depfile: no outputs specified");
+
+					// All outputs as targets: output1 output2: input1 input2
+					for (aint i = 0; i < mp_Outputs.f_GetLen(); ++i)
+					{
+						if (i > 0)
+							Appender += ' ';
+						fg_EscapeGccDepPath(Appender, mp_Outputs[i]);
+					}
+					Appender += ':';
+
+					for (auto &Input : mp_Inputs)
+					{
+						Appender += ' ';
+						fg_EscapeGccDepPath(Appender, Input.m_Path);
+					}
+					Appender += '\n';
+				}
 			}
 
-			for (CStr const& File : Find.m_Results)
+			NFile::CFile::fs_CreateDirectory(CFile::fs_GetPath(_DepFile));
+			NFile::CFile::fs_WriteStringToFile(CStr(_DepFile), DepContents, true);
+		}
+
+		// Write MalterlibDependency file
+		// Always write to avoid stale data from previous runs
+		CStr Contents;
+		{
+			CStr::CAppender Appender(Contents);
+
+			// In depfile mode without hash: only write Outputs + Finds (ninja handles inputs via depfile)
+			// In depfile mode with hash: write Outputs + inputs with hashes + Finds
+			// In legacy mode: write everything
+			bool bHasFinds = !mp_Finds.f_IsEmpty();
+			bool bWriteInputs = !bDepfileMode || mp_bUseHash;
+			bool bWriteOutputs = bWriteInputs || bHasFinds;
+
+			if (bWriteOutputs)
 			{
-				fg_AddStrSepEscaped(Contents, File, '\t', " \"\\");
-				Contents += "\n";
+				for (auto &Output : mp_Outputs)
+				{
+					Appender += "Output ";
+					Appender += Output;
+					Appender += '\n';
+				}
+			}
+
+			if (bWriteInputs)
+			{
+				for (auto &File : mp_Inputs)
+				{
+					if (mp_bUseHash)
+					{
+						Appender.f_Commit().m_String += "FileDigest {nfh,sj16,sf0} {nfh,sj16,sf0} {}"_f
+							<< File.m_Time.f_GetSeconds()
+							<< File.m_Time.f_GetFractionInt()
+							<< File.m_Digest.f_GetString()
+						;
+					}
+					else
+					{
+						Appender.f_Commit().m_String += "File {nfh,sj16,sf0} {nfh,sj16,sf0}"_f
+							<< File.m_Time.f_GetSeconds()
+							<< File.m_Time.f_GetFractionInt()
+						;
+					}
+
+					fg_AddStrSepEscaped(Appender, File.m_Path, ' ', " \"\\");
+					Appender += '\n';
+				}
+			}
+
+			// Write Finds for directory monitoring
+			for (auto &Find : mp_Finds)
+			{
+				Appender.f_Commit().m_String += "Directory {} {nfh,sj8,sf0} {} {nfh,sj16,sf0} {nfh,sj16,sf0}"_f
+					<< Find.m_bRecurse
+					<< Find.m_Attributes
+					<< Find.m_bFollowLinks
+					<< Find.m_Time.f_GetSeconds()
+					<< Find.m_Time.f_GetFractionInt()
+				;
+
+				fg_AddStrSepEscaped(Appender, Find.m_Path, ' ', " \"\\");
+				fg_AddStrSepEscaped(Appender, CFile::fs_GetFile(Find.m_Pattern), ' ', " \"\\");
+
+				Appender += '\n';
+
+				for (CStr const &File : Find.m_Excluded)
+				{
+					fg_AddStrSepEscaped(Appender, File, '-', " \"\\");
+					Appender += '\n';
+				}
+
+				for (CStr const &File : Find.m_Results)
+				{
+					fg_AddStrSepEscaped(Appender, File, '\t', " \"\\");
+					Appender += '\n';
+				}	
 			}
 		}
 

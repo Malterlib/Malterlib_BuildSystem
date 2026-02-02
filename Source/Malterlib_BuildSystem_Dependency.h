@@ -25,7 +25,18 @@ namespace NMib::NBuildSystem
 			)
 		;
 
-		void f_WriteDependencyFile(CStr const &_File);
+		// Write dependency files
+		// _File: Path for MalterlibDependency file
+		// _DepFile: Optional path for gcc-format dependency file
+		//
+		// If _DepFile is empty (legacy mode):
+		//   - Write everything to MalterlibDependency
+		//
+		// If _DepFile is provided:
+		//   - If using hash mode: skip depfile (MalterlibDependency handles it)
+		//   - If not using hash mode: write depfile with inputs,
+		//     write MalterlibDependency only if there are Finds
+		void f_WriteDependencyFile(CStr const &_File, CStr const &_DepFile);
 
 	private:
 		struct CDependencyFile
