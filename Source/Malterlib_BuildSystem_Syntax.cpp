@@ -12,27 +12,27 @@ namespace NMib::NBuildSystem
 	static_assert(sizeof(CJsonSorted) == sizeof(void *) * 2);
 #endif
 
-	void CBuildSystemSyntax::fs_FormatString(NStr::CStrAggregate &o_String, NStr::CStr const &_SourceString)
+	void CBuildSystemSyntax::fs_FormatString(NStr::CStr &o_String, NStr::CStr const &_SourceString)
 	{
-		NStr::CStrAggregate::CAppender Appender(o_String);
+		NStr::CStr::CAppender Appender(o_String);
 		CBuildSystemParseContext::fs_GenerateString<CBuildSystemParseContext>(Appender, _SourceString);
 	}
 
-	void CBuildSystemSyntax::fs_FormatString(NStr::CStrAggregateNonTracked &o_String, NStr::CStr const &_SourceString)
+	void CBuildSystemSyntax::fs_FormatString(NStr::CStrNonTracked &o_String, NStr::CStr const &_SourceString)
 	{
-		NStr::CStrAggregateNonTracked::CAppender Appender(o_String);
+		NStr::CStrNonTracked::CAppender Appender(o_String);
 		CBuildSystemParseContext::fs_GenerateString<CBuildSystemParseContext>(Appender, _SourceString);
 	}
 
-	void CBuildSystemSyntax::fs_FormatKeyString(NStr::CStrAggregate &o_String, NStr::CStr const &_SourceString)
+	void CBuildSystemSyntax::fs_FormatKeyString(NStr::CStr &o_String, NStr::CStr const &_SourceString)
 	{
-		NStr::CStrAggregate::CAppender Appender(o_String);
+		NStr::CStr::CAppender Appender(o_String);
 		CBuildSystemParseContext::fs_GenerateKeyString<CBuildSystemParseContext>(Appender, _SourceString);
 	}
 
-	void CBuildSystemSyntax::fs_FormatKeyString(NStr::CStrAggregateNonTracked &o_String, NStr::CStr const &_SourceString)
+	void CBuildSystemSyntax::fs_FormatKeyString(NStr::CStrNonTracked &o_String, NStr::CStr const &_SourceString)
 	{
-		NStr::CStrAggregateNonTracked::CAppender Appender(o_String);
+		NStr::CStrNonTracked::CAppender Appender(o_String);
 		CBuildSystemParseContext::fs_GenerateKeyString<CBuildSystemParseContext>(Appender, _SourceString);
 	}
 

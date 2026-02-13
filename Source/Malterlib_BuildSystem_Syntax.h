@@ -907,10 +907,10 @@ namespace NMib::NBuildSystem
 			CVariant m_Value;
 		};
 
-		static void fs_FormatString(NStr::CStrAggregate &o_String, NStr::CStr const &_SourceString);
-		static void fs_FormatString(NStr::CStrAggregateNonTracked &o_String, NStr::CStr const &_SourceString);
-		static void fs_FormatKeyString(NStr::CStrAggregate &o_String, NStr::CStr const &_SourceString);
-		static void fs_FormatKeyString(NStr::CStrAggregateNonTracked &o_String, NStr::CStr const &_SourceString);
+		static void fs_FormatString(NStr::CStr &o_String, NStr::CStr const &_SourceString);
+		static void fs_FormatString(NStr::CStrNonTracked &o_String, NStr::CStr const &_SourceString);
+		static void fs_FormatKeyString(NStr::CStr &o_String, NStr::CStr const &_SourceString);
+		static void fs_FormatKeyString(NStr::CStrNonTracked &o_String, NStr::CStr const &_SourceString);
 	};
 }
 
