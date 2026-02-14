@@ -1275,7 +1275,7 @@ namespace NMib::NBuildSystem
 					CBuildSystemRegistryParseContext Context(mp_StringCache);
 					Registry.f_ParseStrWithContext(Context, FileContents, PatchedFileName);
 #ifdef DPlatformFamily_Windows
-					TCMap<CStr, CBuildSystemSyntax::CValue, CCompare_TStrNoCase> RemappedOutputs;
+					TCMap<CStr, CBuildSystemSyntax::CValue, CCompareNoCase> RemappedOutputs;
 #else
 					TCMap<CStr, CBuildSystemSyntax::CValue> RemappedOutputs;
 #endif
@@ -1897,7 +1897,7 @@ namespace NMib::NBuildSystem
 							}
 						}
 
-						TCSet<CStr, CCompare_TStrNoCase> TargetsNoCase;
+						TCSet<CStr, CCompareNoCase> TargetsNoCase;
 
 						for (auto &Target : Targets)
 						{
