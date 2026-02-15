@@ -1918,7 +1918,7 @@ namespace NMib::NBuildSystem
 							if (Target.m_pBaseName)
 								Target.m_pBaseName->f_SetThisValue({{CStr("{}{}"_f << Target.m_pBaseName->f_GetThisValue().m_Value.f_ConstantString() << DisambiguateNumber)}});
 							else
-								DMibConOut2("Missing base name: {}\n", DisambiguatedName);
+								DMibConOut("Missing base name: {}\n", DisambiguatedName);
 
 							f_OutputConsole
 								(

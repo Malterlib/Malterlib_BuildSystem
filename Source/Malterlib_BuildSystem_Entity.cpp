@@ -80,7 +80,7 @@ namespace NMib::NBuildSystem
 			mint iCallstack = 0;
 			for (auto &Callstack : this->m_RefCount.m_Debug->m_Callstacks)
 			{
-				DMibTrace2("        Reference callstack {}\n", iCallstack);
+				DMibTrace("        Reference callstack {}\n", iCallstack);
 				Callstack.f_Trace(12);
 				++iCallstack;
 			}
@@ -92,7 +92,7 @@ namespace NMib::NBuildSystem
 			DLock(mp_DebugSetLock);
 			CStr ThisPath = f_GetPath();
 			[[maybe_unused]] auto pThis = mp_DebugSet.f_FindEqual(this);
-			DMibTrace2("{} {}\n\n", pThis, ThisPath);
+			DMibTrace("{} {}\n\n", pThis, ThisPath);
 			DMibPDebugBreak;
 		}
 		{

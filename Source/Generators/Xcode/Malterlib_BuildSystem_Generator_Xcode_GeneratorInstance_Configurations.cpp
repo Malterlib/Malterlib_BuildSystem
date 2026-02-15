@@ -692,7 +692,7 @@ namespace NMib::NBuildSystem
 								}
 								else
 								{
-									//DMibTrace("Excluded {} = {}\n", iFlag->f_GetProperty() << iFlag->m_Value);
+									//DMibTrace("Excluded {} = {}\n", iFlag->f_GetProperty(), iFlag->m_Value);
 								}
 							}
 						}

@@ -214,7 +214,7 @@ namespace NMib::NBuildSystem
 				{
 					if (mp_GenerateWorkspace)
 					{
-						DMibConErrOut2("Generating all workspaces: Empty generated files\n");
+						DMibConErrOut("Generating all workspaces: Empty generated files\n");
 						mp_GenerateWorkspace.f_Clear();
 					}
 				}
@@ -223,7 +223,7 @@ namespace NMib::NBuildSystem
 			{
 				if (mp_GenerateWorkspace)
 				{
-					DMibConErrOut2("Generating all workspaces: Exception reading state: {}\n", _Exception);
+					DMibConErrOut("Generating all workspaces: Exception reading state: {}\n", _Exception);
 					mp_GenerateWorkspace.f_Clear();
 				}
 				_GenerateState.m_GlobalState = CGeneratorArchiveState();
@@ -232,7 +232,7 @@ namespace NMib::NBuildSystem
 			{
 				if (mp_GenerateWorkspace)
 				{
-					DMibConErrOut2("Generating all workspaces: Generic exception reading state\n");
+					DMibConErrOut("Generating all workspaces: Generic exception reading state\n");
 					mp_GenerateWorkspace.f_Clear();
 				}
 				_GenerateState.m_GlobalState = CGeneratorArchiveState();
@@ -242,7 +242,7 @@ namespace NMib::NBuildSystem
 		{
 			if (mp_GenerateWorkspace)
 			{
-				DMibConErrOut2("Generating all workspaces: No global state found at '{}'\n", _GenerateState.m_GlobalGeneratorStateFileName);
+				DMibConErrOut("Generating all workspaces: No global state found at '{}'\n", _GenerateState.m_GlobalGeneratorStateFileName);
 				mp_GenerateWorkspace.f_Clear(); // If we don't have global state we need to create the whole thing to get the correct generated files
 			}
 		}

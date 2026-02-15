@@ -322,14 +322,14 @@ namespace NMib::NBuildSystem::NRepository
 						{
 							{
 								DMibLock(g_TimerDestructionTrackerLock);
-								DMibTrace2("    Destruction callstack\n");
+								DMibTrace("    Destruction callstack\n");
 								g_TimerDestructionTrackerCallstack.f_Trace(8);
 							}
 
 							mint iCallstack = 0;
 							for (auto &Callstack : This.m_pState->m_RefCount.m_Debug->m_Callstacks)
 							{
-								DMibTrace2("    Reference callstack {}\n", iCallstack);
+								DMibTrace("    Reference callstack {}\n", iCallstack);
 								Callstack.f_Trace(8);
 								++iCallstack;
 							}
