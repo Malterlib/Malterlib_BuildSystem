@@ -349,7 +349,7 @@ namespace NMib::NBuildSystem
 								CByteVector FileDataVector;
 								if (bUTF16)
 								{
-									NStr::CWStr UTF16 = fg_ForceStrUTF16(Contents);
+									NStr::CWStr UTF16 = Contents;
 									uint8 BOM[] = {0xFF, 0xFE};
 									if (bUnicodeBOM)
 										FileDataVector.f_Insert(BOM, sizeof(BOM));
