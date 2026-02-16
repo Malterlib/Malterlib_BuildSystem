@@ -242,6 +242,7 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_AsString = gc_Str<"AsString">;
 	constexpr CStringAndHash const gc_ConstString_CMakeIntermediateDirectory{gc_Str<"CMakeIntermediateDirectory">};
 	constexpr CStringAndHash const gc_ConstString_Concat = gc_Str<"Concat">;
+	constexpr CStringAndHash const gc_ConstString_Reverse = gc_Str<"Reverse">;
 	constexpr CStringAndHash const gc_ConstString_Condition = gc_Str<"Condition">;
 	constexpr CStringAndHash const gc_ConstString_Configurations = gc_Str<"Configurations">;
 	constexpr CStringAndHash const gc_ConstString_ContainsListElement = gc_Str<"ContainsListElement">;
@@ -771,6 +772,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_AsString);
 		o_StringCache.f_AddConstantString(gc_ConstString_CMakeIntermediateDirectory);
 		o_StringCache.f_AddConstantString(gc_ConstString_Concat);
+		o_StringCache.f_AddConstantString(gc_ConstString_Reverse);
 		o_StringCache.f_AddConstantString(gc_ConstString_Condition);
 		o_StringCache.f_AddConstantString(gc_ConstString_Configurations);
 		o_StringCache.f_AddConstantString(gc_ConstString_ContainsListElement);

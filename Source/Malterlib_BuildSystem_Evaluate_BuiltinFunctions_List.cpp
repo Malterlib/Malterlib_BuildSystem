@@ -420,6 +420,20 @@ namespace NMib::NBuildSystem
 							, DMibBuildSystemFilePosition
 						}
 					}
+					,
+					{
+						gc_ConstString_Reverse
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_AnyArray, fg_FunctionParam(g_AnyArray, gc_ConstString__Array))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
+							{
+								TCVector<CEJsonSorted> Return = fg_Move(_Params[0].f_Array());
+								return fg_Move(Return.f_Reverse());
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
 				}
 			)
 		;

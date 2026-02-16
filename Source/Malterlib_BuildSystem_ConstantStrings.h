@@ -242,6 +242,7 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_AsString;
 	extern CStringAndHash const gc_ConstString_CMakeIntermediateDirectory;
 	extern CStringAndHash const gc_ConstString_Concat;
+	extern CStringAndHash const gc_ConstString_Reverse;
 	extern CStringAndHash const gc_ConstString_Condition;
 	extern CStringAndHash const gc_ConstString_Configurations;
 	extern CStringAndHash const gc_ConstString_ContainsListElement;
