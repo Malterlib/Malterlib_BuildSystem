@@ -171,13 +171,13 @@ namespace NMib::NBuildSystem::NNinja
 
 					CGeneratorThreadLocalConfigScope ConfigScope(*ms_ThreadLocal, &TargetSettings);
 
-					NTime::CCyclesClock YieldClock(true);
+					NTime::CCyclesStopwatch YieldStopwatch(true);
 
 					auto OnResume = co_await fg_OnResume
 						(
 							[&]() -> CExceptionPointer
 							{
-								YieldClock.f_Start();
+								YieldStopwatch.f_Start();
 								return {};
 							}
 						)
@@ -205,7 +205,7 @@ namespace NMib::NBuildSystem::NNinja
 
 						pResult->f_FromGeneratorSetting(m_BuildSystem, fg_Move(Result));
 
-						if (YieldClock.f_GetCycles() > g_CooperativeTimeSliceCycles)
+						if (YieldStopwatch.f_GetCycles() > g_CooperativeTimeSliceCycles)
 							co_await g_Yield;
 					}
 

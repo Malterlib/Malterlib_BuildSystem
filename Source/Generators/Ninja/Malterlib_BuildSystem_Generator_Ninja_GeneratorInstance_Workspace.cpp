@@ -208,13 +208,13 @@ namespace NMib::NBuildSystem::NNinja
 					if (!pEntity)
 						co_return {};
 
-					NTime::CCyclesClock YieldClock(true);
+					NTime::CCyclesStopwatch YieldStopwatch(true);
 
 					auto OnResume = co_await fg_OnResume
 						(
 							[&]() -> CExceptionPointer
 							{
-								YieldClock.f_Start();
+								YieldStopwatch.f_Start();
 								return {};
 							}
 						)
@@ -407,7 +407,7 @@ namespace NMib::NBuildSystem::NNinja
 
 						for (auto &Project : _Workspace.m_Projects)
 						{
-							if (YieldClock.f_GetCycles() > g_CooperativeTimeSliceCycles)
+							if (YieldStopwatch.f_GetCycles() > g_CooperativeTimeSliceCycles)
 							{
 								co_await m_BuildSystem.f_CheckCancelled();
 								co_await g_Yield;
@@ -578,7 +578,7 @@ namespace NMib::NBuildSystem::NNinja
 							if (RuleInfo.m_bPhony || !Rule.m_Command)
 								continue;
 
-							if (YieldClock.f_GetCycles() > g_CooperativeTimeSliceCycles)
+							if (YieldStopwatch.f_GetCycles() > g_CooperativeTimeSliceCycles)
 							{
 								co_await m_BuildSystem.f_CheckCancelled();
 								co_await g_Yield;
@@ -637,7 +637,7 @@ namespace NMib::NBuildSystem::NNinja
 							auto &Build = BuildInfo.m_Build;
 							auto &Rule = *BuildInfo.m_pRule;
 
-							if (YieldClock.f_GetCycles() > g_CooperativeTimeSliceCycles)
+							if (YieldStopwatch.f_GetCycles() > g_CooperativeTimeSliceCycles)
 							{
 								co_await m_BuildSystem.f_CheckCancelled();
 								co_await g_Yield;
@@ -713,7 +713,7 @@ namespace NMib::NBuildSystem::NNinja
 
 					NinjaFileConents = NinjaFileConents.f_Replace(gc_Str<"{uvi9RKGP}">.m_Str, gc_Str<"$">.m_Str);
 
-					if (YieldClock.f_GetCycles() > g_CooperativeTimeSliceCycles)
+					if (YieldStopwatch.f_GetCycles() > g_CooperativeTimeSliceCycles)
 						co_await g_Yield;
 
 					TCFutureVector<void> FileWrites;
@@ -745,7 +745,7 @@ namespace NMib::NBuildSystem::NNinja
 						auto &CompileCommandsFilePath = CompileCommandsEntry.f_Key();
 						auto &CompileCommands = CompileCommandsEntry.f_Value();
 
-						if (YieldClock.f_GetCycles() > g_CooperativeTimeSliceCycles)
+						if (YieldStopwatch.f_GetCycles() > g_CooperativeTimeSliceCycles)
 						{
 							co_await m_BuildSystem.f_CheckCancelled();
 							co_await g_Yield;

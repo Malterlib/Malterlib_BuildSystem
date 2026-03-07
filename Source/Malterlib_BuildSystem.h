@@ -645,7 +645,7 @@ namespace NMib::NBuildSystem
 
 		struct CGenerateEphemeralState
 		{
-			NTime::CClock m_Clock{true};
+			NTime::CStopwatch m_Stopwatch{true};
 			NStorage::TCUniquePointer<CBuildSystemGenerator> m_pGenerator;
 			NStr::CStr m_FileLocation;
 			NStr::CStr m_OutputDir;

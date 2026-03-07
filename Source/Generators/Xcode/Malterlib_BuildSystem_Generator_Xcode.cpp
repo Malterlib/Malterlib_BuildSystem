@@ -35,8 +35,8 @@ namespace NMib::NBuildSystem
 		{
 			co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
-			CClock Clock;
-			Clock.f_Start();
+			CStopwatch Stopwatch;
+			Stopwatch.f_Start();
 
 			auto &BuildSystem = *_pBuildSystem;
 			auto &BuildSystemData = *_pBuildSystemData;
@@ -55,7 +55,7 @@ namespace NMib::NBuildSystem
 
 			TCVector<TCVector<CConfigurationTuple>> Tuples = BuildSystem.f_EvaluateConfigurationTuples(Values);
 
-			fp64 Time1 = Clock.f_GetTime();
+			fp64 Time1 = Stopwatch.f_GetTime();
 			BuildSystem.f_OutputConsole("Evaluated config tuples {fe2} s{\n}"_f << Time1);
 
 			for (auto iTuple = Tuples.f_GetIterator(); iTuple; ++iTuple)
@@ -127,7 +127,7 @@ namespace NMib::NBuildSystem
 				ConfigData.m_Workspaces.f_Clear();
 			}
 
-			fp64 Time2 = Clock.f_GetTime();
+			fp64 Time2 = Stopwatch.f_GetTime();
 			BuildSystem.f_OutputConsole("Extracted workspaces, projects and files for {} configurations {fe2} s{\n}"_f << nConfigs << (Time2 - Time1));
 
 			mint MaxWorkspaceNameLen = 0;
@@ -182,7 +182,7 @@ namespace NMib::NBuildSystem
 
 						CAnsiEncoding Encoding(BuildSystem.f_AnsiFlags());
 						{
-							CClock Timer{true};
+							CStopwatch Stopwatch{true};
 
 							auto pSolution = fg_Move(_pSolution);
 							auto &Workspace = *pSolution;
@@ -210,7 +210,7 @@ namespace NMib::NBuildSystem
 										co_await ECoroutineFlag_CaptureMalterlibExceptions;
 										co_await BuildSystem.f_CheckCancelled();
 
-										auto Start = Timer.f_GetTime();
+										auto Start = Stopwatch.f_GetTime();
 										auto *pConfigData = Configurations.f_FindEqual(_WorkspaceInfo.m_Config);
 										DMibCheck(pConfigData);
 
@@ -224,7 +224,7 @@ namespace NMib::NBuildSystem
 											)
 										;
 
-										_WorkspaceInfo.m_Time = Timer.f_GetTime() - Start;
+										_WorkspaceInfo.m_Time = Stopwatch.f_GetTime() - Start;
 
 										co_return {};
 									}
@@ -350,7 +350,7 @@ namespace NMib::NBuildSystem
 							co_await GeneratorInstance.f_GenerateWorkspaceFile(Workspace, SolutionDir);
 							co_await BuildSystem.f_CheckCancelled();
 
-							fp64 RealTime = Timer.f_GetTime();
+							fp64 RealTime = Stopwatch.f_GetTime();
 
 							BuildSystem.f_OutputConsole
 								(
@@ -370,7 +370,7 @@ namespace NMib::NBuildSystem
 				)
 			;
 
-			fp64 Time3 = Clock.f_GetTime();
+			fp64 Time3 = Stopwatch.f_GetTime();
 			BuildSystem.f_OutputConsole("Generated workspaces {fe2} s{\n}"_f << (Time3 - Time2));
 
 			co_return {};

@@ -774,7 +774,7 @@ namespace NMib::NBuildSystem
 
 		LaunchParams.m_bShowLaunched = false;
 
-		CClock Clock{true};
+		CStopwatch Stopwatch{true};
 		uint32 ExitCode = 0;
 
 		CStr Output;
@@ -821,13 +821,13 @@ namespace NMib::NBuildSystem
 				DMibError(fg_Format("cmake failed: {}", Output));
 		}
 
-		f_OutputConsole("{}: Running CMake took {fe1} s\n"_f << CmakeCacheDirectory << Clock.f_GetTime());
+		f_OutputConsole("{}: Running CMake took {fe1} s\n"_f << CmakeCacheDirectory << Stopwatch.f_GetTime());
 
 		if (!CmakeCacheDirectory.f_IsEmpty())
 		{
-			auto Cleanup = g_OnScopeExit / [&, StartTime = Clock.f_GetTime()]
+			auto Cleanup = g_OnScopeExit / [&, StartTime = Stopwatch.f_GetTime()]
 				{
-					f_OutputConsole("{}: Creating CMake cache took {fe1} s\n"_f << CmakeCacheDirectory << (Clock.f_GetTime() - StartTime));
+					f_OutputConsole("{}: Creating CMake cache took {fe1} s\n"_f << CmakeCacheDirectory << (Stopwatch.f_GetTime() - StartTime));
 				}
 			;
 

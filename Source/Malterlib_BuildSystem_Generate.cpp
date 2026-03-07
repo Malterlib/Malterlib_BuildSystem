@@ -487,7 +487,7 @@ namespace NMib::NBuildSystem
 
 						if (!State.m_SourceFiles.f_IsEmpty() && mp_GenerateOptions.m_Settings.m_Action == "Build")
 						{
-							// DMibScopeConOutTimer("Check source files");
+							// DMibScopeConOutTimeMeasure("Check source files");
 
 							auto OldExeFile = *State.m_ExeFile.f_FindSmallest();
 
@@ -647,7 +647,7 @@ namespace NMib::NBuildSystem
 
 							if (!GenerateState.m_bDependenciesChanged)
 							{
-								fp64 Time1 = GenerateState.m_Clock.f_GetTime();
+								fp64 Time1 = GenerateState.m_Stopwatch.f_GetTime();
 								f_OutputConsole("No changes found {fe2} s{\n}"_f << Time1);
 
 								co_return true;
@@ -659,7 +659,7 @@ namespace NMib::NBuildSystem
 					else
 						f_OutputConsole("Dependency check: Regenerating build system because there is no state file{\n}"_f);
 
-					fp64 Time1 = GenerateState.m_Clock.f_GetTime();
+					fp64 Time1 = GenerateState.m_Stopwatch.f_GetTime();
 
 					GenerateState.m_bDependenciesChanged = true;
 					f_OutputConsole("Checked for changes {fe2} s{\n}"_f << Time1);
@@ -683,17 +683,17 @@ namespace NMib::NBuildSystem
 
 		GenerateState.m_LocalGeneratorInterfaceCleanup.f_Clear();
 
-		fp64 Time1 = GenerateState.m_Clock.f_GetTime();
+		fp64 Time1 = GenerateState.m_Stopwatch.f_GetTime();
 
 		// Clear out evaluated properties from repositories
 		mp_Data.m_RootEntity.m_EvaluatedProperties.m_Properties.f_Clear();
 
-		fp64 Time2 = GenerateState.m_Clock.f_GetTime();
+		fp64 Time2 = GenerateState.m_Stopwatch.f_GetTime();
 		f_OutputConsole("Parsed data {fe2} s{\n}"_f << (Time2 - Time1));
 
 		co_await GenerateState.m_pGenerator->f_Generate(this, &mp_Data, GenerateState.m_OutputDir, NumWorkspaceTargets);
 
-		fp64 Time3 = GenerateState.m_Clock.f_GetTime();
+		fp64 Time3 = GenerateState.m_Stopwatch.f_GetTime();
 
 		if (!GenerateState.m_bDisableUserSettings)
 		{
@@ -935,7 +935,7 @@ namespace NMib::NBuildSystem
 		else
 			f_OutputConsole("Deleted {} unused files{\n}"_f << DeletedFiles.f_GetLen());
 
-		fp64 Time4 = GenerateState.m_Clock.f_GetTime();
+		fp64 Time4 = GenerateState.m_Stopwatch.f_GetTime();
 		f_OutputConsole("Saved state {fe2} s{\n}"_f << (Time4 - Time3));
 		f_OutputConsole("Total time {fe2} s{\n}"_f << Time4);
 
