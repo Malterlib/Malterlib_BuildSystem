@@ -7,9 +7,8 @@
 
 namespace NMib::NBuildSystem
 {
-	class CMalterlibDependencyTracker
+	struct CMalterlibDependencyTracker
 	{
-	public:
 		CMalterlibDependencyTracker(bool _bUseHash = false);
 
 		void f_AddInputFile(CStr const &_File);
@@ -45,6 +44,7 @@ namespace NMib::NBuildSystem
 			CTime m_Time;
 			CHashDigest_MD5 m_Digest;
 		};
+
 		struct CFind : public CDependencyFile
 		{
 			CStr m_Pattern;
@@ -54,7 +54,7 @@ namespace NMib::NBuildSystem
 			TCVector<CStr> m_Excluded;
 			TCVector<CStr> m_Results;
 		};
-	private:
+
 		TCVector<CStr> mp_Outputs;
 		TCVector<CDependencyFile> mp_Inputs;
 		TCVector<CFind> mp_Finds;

@@ -52,7 +52,7 @@ namespace NMib::NBuildSystem
 			NAtomic::TCAtomic<bool> m_bFinished;
 			NThread::CMutual m_Lock;
 		};
-	private:
+
 		mutable align_cacheline NThread::CMutual mp_Lock;
 		mutable NContainer::TCMap<CFindOptions, CEntry> mp_SourceSearches;
 		mutable align_cacheline NThread::CMutual mp_SourceFilesLock;

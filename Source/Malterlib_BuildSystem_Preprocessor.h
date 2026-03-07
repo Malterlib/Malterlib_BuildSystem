@@ -8,9 +8,8 @@
 
 namespace NMib::NBuildSystem
 {
-	class CBuildSystemPreprocessor
+	struct CBuildSystemPreprocessor
 	{
-	public:
 		CBuildSystemPreprocessor
 			(
 				CBuildSystemRegistry &_ResultRegistry

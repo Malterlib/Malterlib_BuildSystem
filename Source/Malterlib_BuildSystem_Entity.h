@@ -14,10 +14,7 @@ namespace NMib::NBuildSystem
 		inline_always auto operator <=> (CEntityKey const &_Right) const = default;
 
 		template <typename tf_CStr>
-		void f_Format(tf_CStr &o_Str) const
-		{
-			o_Str += typename tf_CStr::CFormat("{}:{}") << fg_EntityTypeToStr(m_Type) << m_Name;
-		}
+		void f_Format(tf_CStr &o_Str) const;
 
 		NStr::CStr const &f_GetName(CFilePosition const &_Position) const;
 
@@ -130,11 +127,6 @@ namespace NMib::NBuildSystem
 
 		CEntityKey const &f_GetKey() const;
 
-	private:
-		void fpr_GetPathKey(NContainer::TCVector<CEntityKey> &_Dest) const;
-		void fpr_CheckParents() const;
-
-	public:
 #ifdef DMibBuildSystem_DebugReferences
 		NStorage::CIntrusiveRefCount m_RefCount;
 #endif
@@ -151,6 +143,10 @@ namespace NMib::NBuildSystem
 #if defined(DMibBuildSystem_DebugReferences)
 		DIfRefCountDebugging(NStorage::CRefCountDebugReference m_DebugSelfRef);
 #endif
+
+	private:
+		void fpr_GetPathKey(NContainer::TCVector<CEntityKey> &_Dest) const;
+		void fpr_CheckParents() const;
 
 #if defined(DMibBuildSystem_DebugReferences) && defined(DMibBuildSystem_DebugReferencesAdvanced)
 		static NThread::CMutual mp_DebugSetLock;

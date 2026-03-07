@@ -22,6 +22,15 @@ namespace NMib::NBuildSystem
 {
 	struct CBuildSystemData
 	{
+		struct CImportData
+		{
+			CImportData();
+			CImportData(CImportData const &_Right);
+
+			CEntity m_RootEntity{nullptr};
+			CBuildSystemRegistry m_Registry;
+		};
+
 		CBuildSystemData();
 		~CBuildSystemData();
 
@@ -33,15 +42,6 @@ namespace NMib::NBuildSystem
 		CEntity m_RootEntity{nullptr};
 
 		NContainer::TCMap<NStr::CStr, NStorage::TCSharedPointer<NCryptography::CHashDigest_SHA256>> m_MutableSourceFiles;
-
-		struct CImportData
-		{
-			CImportData();
-			CImportData(CImportData const &_Right);
-
-			CEntity m_RootEntity{nullptr};
-			CBuildSystemRegistry m_Registry;
-		};
 	};
 
 	struct CDependenciesBackup
@@ -51,6 +51,7 @@ namespace NMib::NBuildSystem
 			CEntityKey m_Key;
 			CEntity m_Entity;
 		};
+
 		NContainer::TCMap<NContainer::TCVector<CEntityKey>, NContainer::TCLinkedList<CEntityBackup>> m_Backup;
 	};
 }

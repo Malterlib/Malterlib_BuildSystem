@@ -15,7 +15,7 @@
 
 namespace NMib::NBuildSystem
 {
-	class CBuildSystem;
+	struct CBuildSystem;
 	struct CWorkspaceInfo;
 	struct CTargetInfo;
 }
@@ -44,9 +44,8 @@ namespace NMib::NBuildSystem
 		CFilePosition const *m_pFallbackPosition = nullptr;
 	};
 
-	class CBuildSystem : public NConcurrency::CAllowUnsafeThis
+	struct CBuildSystem : public NConcurrency::CAllowUnsafeThis
 	{
-	public:
 		CBuildSystem
 			(
 				NCommandLine::EAnsiEncodingFlag _AnsiFlags
@@ -229,6 +228,13 @@ namespace NMib::NBuildSystem
 		{
 			NStr::CStr m_FullVersion;
 			NStr::CStr m_RootPath;
+		};
+
+		struct CForEachRepoDirOptions
+		{
+			NContainer::TCVector<NStr::CStr> m_Params;
+			NStr::CStr m_Application;
+			bool m_bParallel = true;
 		};
 
 		void f_SetGeneratorInterface(ICGeneratorInterface *_pInterface) const;
@@ -476,12 +482,6 @@ namespace NMib::NBuildSystem
 			)
 		;
 
-		struct CForEachRepoDirOptions
-		{
-			NContainer::TCVector<NStr::CStr> m_Params;
-			NStr::CStr m_Application;
-			bool m_bParallel = true;
-		};
 		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_ForEachRepoDir(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, CForEachRepoDirOptions const &_Options);
 
 		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_Branch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, NStr::CStr const &_Branch, ERepoBranchFlag _Flags);
@@ -685,6 +685,19 @@ namespace NMib::NBuildSystem
 			, EFindFilesFunctionType_RecursiveDirectory
 		};
 
+		enum EDoesValueConformToTypeFlag
+		{
+			EDoesValueConformToTypeFlag_None = 0
+			, EDoesValueConformToTypeFlag_CanApplyDefault = DMibBit(0)
+			, EDoesValueConformToTypeFlag_ConvertFromString = DMibBit(1)
+		};
+
+		enum EHandleKeyFlag
+		{
+			EHandleKeyFlag_None = 0
+			, EHandleKeyFlag_AllowPropertyType = DMibBit(0)
+		};
+
 		struct CTypeConformError
 		{
 			template <typename tf_CStr>
@@ -696,7 +709,39 @@ namespace NMib::NBuildSystem
 
 		struct CApplyAccessorsHelper;
 
-	private:
+		struct CWritePropertyContext
+		{
+			CPropertyKey const &m_Property;
+			bool &m_bTypeAlreadyChecked;
+			NEncoding::CEJsonSorted *m_pWriteDestination = nullptr;
+			NContainer::TCVector<CBuildSystemSyntax::CJsonAccessorEntry> const *m_pAccessors = nullptr;
+		};
+
+		struct CCachedFile
+		{
+			NThread::CLowLevelLock m_Lock;
+			NStr::CStr m_Contents;
+			NStorage::TCSharedPointer<NCryptography::CHashDigest_SHA256> m_pDigest;
+			bool m_bRead = false;
+		};
+
+		struct CExecuteCommand
+		{
+			NThread::CLowLevelLock m_Lock;
+			NStr::CStr m_Executable;
+			NContainer::TCVector<NStr::CStr> m_FunctionParams;
+			NContainer::TCVector<NStr::CStr> m_Inputs;
+			NStr::CStr m_Result;
+			NStr::CStr m_Error;
+			bool m_bInitialized = false;
+		};
+
+		struct CCMakeGenerateState
+		{
+			NThread::CMutual m_Lock;
+			bool m_bTried = false;
+		};
+
 		NConcurrency::TCUnsafeFuture<ERetry> fp_GeneratePrepare
 			(
 				CGenerateOptions const &_GenerateOptions
@@ -735,12 +780,6 @@ namespace NMib::NBuildSystem
 		CTypeWithPosition const *fp_GetTypeForProperty(CEvalPropertyValueContext &_Context, CPropertyKeyReference const &_VariableName) const;
 		CTypeWithPosition const *fp_GetUserTypeWithPositionForProperty(CEvalPropertyValueContext &_Context, NStr::CStr const &_UserType, NStr::CStr &o_Namespace) const;
 
-		enum EDoesValueConformToTypeFlag
-		{
-			EDoesValueConformToTypeFlag_None = 0
-			, EDoesValueConformToTypeFlag_CanApplyDefault = DMibBit(0)
-			, EDoesValueConformToTypeFlag_ConvertFromString = DMibBit(1)
-		};
 		bool fp_DoesValueConformToType
 			(
 				CEvalPropertyValueContext &_Context
@@ -814,12 +853,6 @@ namespace NMib::NBuildSystem
 
 		static EPropertyFlag fsp_ParseDebugFlags(CFilePosition const &_Position, NStr::CStr const &_String);
 
-		enum EHandleKeyFlag
-		{
-			EHandleKeyFlag_None = 0
-			, EHandleKeyFlag_AllowPropertyType = DMibBit(0)
-		};
-
 		void fp_HandleKey
 			(
 				CBuildSystemRegistry &_Registry
@@ -872,14 +905,6 @@ namespace NMib::NBuildSystem
 				, bool &o_bTypeAlreadyChecked
 			 ) const
 		;
-
-		struct CWritePropertyContext
-		{
-			CPropertyKey const &m_Property;
-			bool &m_bTypeAlreadyChecked;
-			NEncoding::CEJsonSorted *m_pWriteDestination = nullptr;
-			NContainer::TCVector<CBuildSystemSyntax::CJsonAccessorEntry> const *m_pAccessors = nullptr;
-		};
 
 		CValuePotentiallyByRef fp_EvaluatePropertyValue(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CValue const &_Value, CWritePropertyContext *_pWriteContext) const;
 		NEncoding::CEJsonSorted fp_EvaluatePropertyValueObject(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CObject const &_Value) const;
@@ -1044,27 +1069,8 @@ namespace NMib::NBuildSystem
 
 		NEncoding::CEJsonSorted fp_SwitchValuesLazy(ESwitchType _Type, CBuildSystem::CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CFunctionCall const &_FunctionCall) const;
 
-		struct CCachedFile
-		{
-			NThread::CLowLevelLock m_Lock;
-			NStr::CStr m_Contents;
-			NStorage::TCSharedPointer<NCryptography::CHashDigest_SHA256> m_pDigest;
-			bool m_bRead = false;
-		};
-
 		mutable NThread::CLowLevelLock mp_CachedFilesLock;
 		mutable NContainer::TCMap<NStr::CStr, CCachedFile> mp_CachedFiles;
-
-		struct CExecuteCommand
-		{
-			NThread::CLowLevelLock m_Lock;
-			NStr::CStr m_Executable;
-			NContainer::TCVector<NStr::CStr> m_FunctionParams;
-			NContainer::TCVector<NStr::CStr> m_Inputs;
-			NStr::CStr m_Result;
-			NStr::CStr m_Error;
-			bool m_bInitialized = false;
-		};
 
 		mutable NThread::CLowLevelLock mp_ExecuteCommandsLock;
 		mutable NContainer::TCMap<NStr::CStr, CExecuteCommand> mp_ExecuteCommands;
@@ -1128,11 +1134,7 @@ namespace NMib::NBuildSystem
 		mutable NContainer::TCMap<NStr::CStr, CGeneratedFile> mp_GeneratedFiles;
 
 		align_cacheline mutable NThread::CMutual mp_CMakeGenerateLock;
-		struct CCMakeGenerateState
-		{
-			NThread::CMutual m_Lock;
-			bool m_bTried = false;
-		};
+
 		mutable NContainer::TCMap<NStr::CStr, CCMakeGenerateState> mp_CMakeGenerateState;
 		mutable NContainer::TCMap<NStr::CStr, NStr::CStr> mp_CMakeGenerated;
 		mutable NContainer::TCMap<NStr::CStr, NStr::CStr> mp_CMakeGeneratedContents;

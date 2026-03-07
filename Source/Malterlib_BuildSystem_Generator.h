@@ -8,12 +8,11 @@
 
 namespace NMib::NBuildSystem
 {
-	class CBuildSystem;
+	struct CBuildSystem;
 	struct CBuildSystemData;
 
-	class CBuildSystemGenerator
+	struct CBuildSystemGenerator
 	{
-	public:
 		virtual ~CBuildSystemGenerator();
 		virtual NContainer::TCMap<CPropertyKey, NEncoding::CEJsonSorted> f_GetValues(CBuildSystem const &_BuildSystem, NStr::CStr const &_OutputDir) = 0;
 		virtual NConcurrency::TCUnsafeFuture<void> f_Generate

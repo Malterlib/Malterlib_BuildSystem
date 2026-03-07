@@ -6,9 +6,8 @@
 namespace NMib::NBuildSystem
 {
 	template <typename t_CSortKey>
-	class TCSortedPerform
+	struct TCSortedPerform
 	{
-	public:
 		template <typename tf_CFunctor, typename tf_CKey>
 		void f_Add(tf_CKey const &_Key, tf_CFunctor &&_Functor);
 		void f_Perform();
@@ -30,9 +29,8 @@ namespace NMib::NBuildSystem
 	};
 
 	template <typename t_CSortKey>
-	class TCSortedPerform<t_CSortKey &>
+	struct TCSortedPerform<t_CSortKey &>
 	{
-	public:
 		template <typename tf_CFunctor, typename tf_CKey>
 		void f_Add(tf_CKey &&_Key, tf_CFunctor &&_Functor);
 		void f_Perform();

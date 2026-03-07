@@ -41,9 +41,8 @@ namespace NMib::NBuildSystem
 
 		struct CPosition
 		{
-			class CCompare
+			struct CCompare
 			{
-			public:
 				inline_small CKey const &operator () (CPosition const &_Node) const
 				{
 					return _Node.m_Key;
@@ -93,12 +92,12 @@ namespace NMib::NBuildSystem
 	template <typename t_CType>
 	struct TCValueWithPositions
 	{
-		t_CType m_Value = {};
-		CBuildSystemUniquePositions m_Positions;
-
 		template <typename tf_CValue>
 		void f_SetFrom(tf_CValue &&_Value, NStr::CStr const &_Name, CBuildSystemPropertyInfo const &_PropertyInfo, t_CType &&_DefaultValue);
 		template <typename tf_CValue>
 		void f_SetFrom(tf_CValue &&_Value, NStr::CStr const &_Name, CBuildSystemPropertyInfo const &_PropertyInfo);
+
+		t_CType m_Value = {};
+		CBuildSystemUniquePositions m_Positions;
 	};
 }
