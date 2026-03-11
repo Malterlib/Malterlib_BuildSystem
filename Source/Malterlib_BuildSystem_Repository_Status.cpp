@@ -950,9 +950,6 @@ namespace NMib::NBuildSystem
 
 		co_await fg_Move(DestroyLaunchs);
 
-		if (bActionNeeded)
-			f_OutputConsole("\a", true);
-
 		co_return ERetry_None;
 	}
 }
