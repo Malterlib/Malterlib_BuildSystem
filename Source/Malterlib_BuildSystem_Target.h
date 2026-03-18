@@ -46,7 +46,7 @@ namespace NMib::NBuildSystem
 			o_Str += typename tf_CStr::CFormat("{} - {}") << m_GroupPath << m_FileName;
 		}
 
-		auto operator <=> (CFileKey const &_Other) const = default;
+		auto operator <=> (CFileKey const &_Other) const noexcept = default;
 	};
 
 	struct align_cacheline CTargetInfo : public CGroupMember

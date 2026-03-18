@@ -32,7 +32,7 @@ namespace NMib::NBuildSystem
 
 	struct align_cacheline CConfiguration
 	{
-		auto operator <=> (CConfiguration const &_Right) const = default;
+		auto operator <=> (CConfiguration const &_Right) const noexcept = default;
 
 		template <typename tf_CStr>
 		void f_Format(tf_CStr &o_Str) const;

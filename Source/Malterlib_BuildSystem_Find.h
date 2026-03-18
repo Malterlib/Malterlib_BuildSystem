@@ -11,7 +11,7 @@ namespace NMib::NBuildSystem
 	{
 		CFindOptions(NStr::CStr const &_Path, NFile::EFileAttrib _Attribs = (NFile::EFileAttrib_File | NFile::EFileAttrib_Directory), bool _bRecursive = false, bool _bFollowLinks = true);
 
-		auto operator <=> (CFindOptions const &_Right) const = default;
+		auto operator <=> (CFindOptions const &_Right) const noexcept = default;
 
 		template <typename tf_CStream>
 		void f_Feed(tf_CStream &_Stream) const;

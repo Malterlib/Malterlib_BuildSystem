@@ -34,7 +34,7 @@ namespace NMib::NBuildSystem
 		return FilePosition;
 	}
 
-	COrdering_Strong CFilePosition::operator <=> (CFilePosition const &_Other) const
+	COrdering_Strong CFilePosition::operator <=> (CFilePosition const &_Other) const noexcept
 	{
 		if (auto Result = m_FileHash <=> _Other.m_FileHash; Result != 0)
 			return Result;

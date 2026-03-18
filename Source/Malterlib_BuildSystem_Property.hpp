@@ -71,32 +71,32 @@ namespace NMib::NBuildSystem
 		return m_TypeAndHash.f_GetNameHash();
 	}
 
-	COrdering_Strong CPropertyKeyReference::operator <=> (CPropertyKey const &_Right) const
+	COrdering_Strong CPropertyKeyReference::operator <=> (CPropertyKey const &_Right) const noexcept
 	{
 		return m_TypeAndHash.m_Data <=> _Right.m_TypeAndHash.m_Data;
 	}
 
-	COrdering_Strong CPropertyKeyReference::operator <=> (CPropertyKeyReference const &_Right) const
+	COrdering_Strong CPropertyKeyReference::operator <=> (CPropertyKeyReference const &_Right) const noexcept
 	{
 		return m_TypeAndHash.m_Data <=> _Right.m_TypeAndHash.m_Data;
 	}
 
-	bool CPropertyKeyReference::operator == (CPropertyKey const &_Right) const
+	bool CPropertyKeyReference::operator == (CPropertyKey const &_Right) const noexcept
 	{
 		return m_TypeAndHash.m_Data == _Right.m_TypeAndHash.m_Data;
 	}
 
-	bool CPropertyKeyReference::operator == (CPropertyKeyReference const &_Right) const
+	bool CPropertyKeyReference::operator == (CPropertyKeyReference const &_Right) const noexcept
 	{
 		return m_TypeAndHash.m_Data == _Right.m_TypeAndHash.m_Data;
 	}
 
-	COrdering_Strong CPropertyKey::operator <=> (CPropertyKey const &_Right) const
+	COrdering_Strong CPropertyKey::operator <=> (CPropertyKey const &_Right) const noexcept
 	{
 		return m_TypeAndHash.m_Data <=> _Right.m_TypeAndHash.m_Data;
 	}
 
-	COrdering_Strong CPropertyKey::operator <=> (CPropertyKeyReference const &_Right) const
+	COrdering_Strong CPropertyKey::operator <=> (CPropertyKeyReference const &_Right) const noexcept
 	{
 		return m_TypeAndHash.m_Data <=> _Right.m_TypeAndHash.m_Data;
 	}
@@ -109,12 +109,12 @@ namespace NMib::NBuildSystem
 		return _Left.f_GetType() <=> _Right.f_GetType();
 	}
 
-	bool CPropertyKey::operator == (CPropertyKey const &_Right) const
+	bool CPropertyKey::operator == (CPropertyKey const &_Right) const noexcept
 	{
 		return m_TypeAndHash.m_Data == _Right.m_TypeAndHash.m_Data;
 	}
 
-	bool CPropertyKey::operator == (CPropertyKeyReference const &_Right) const
+	bool CPropertyKey::operator == (CPropertyKeyReference const &_Right) const noexcept
 	{
 		return m_TypeAndHash.m_Data == _Right.m_TypeAndHash.m_Data;
 	}

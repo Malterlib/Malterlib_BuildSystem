@@ -15,7 +15,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 	{
 	}
 
-	COrdering_Strong CGeneratorInstance::CConfigValue::operator <=> (CConfigValue const &_Right) const
+	COrdering_Strong CGeneratorInstance::CConfigValue::operator <=> (CConfigValue const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Parent, m_Entity, m_Property, m_Value) <=> fg_TupleReferences(_Right.m_Parent, _Right.m_Entity, _Right.m_Property, _Right.m_Value);
 	}

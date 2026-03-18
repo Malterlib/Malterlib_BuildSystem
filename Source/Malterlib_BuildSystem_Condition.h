@@ -42,8 +42,8 @@ namespace NMib::NBuildSystem
 		template <typename tf_CStr>
 		void f_Format(tf_CStr &o_Str) const;
 
-		COrdering_Partial operator <=> (CCondition const &_Right) const;
-		bool operator == (CCondition const &_Right) const = default;
+		COrdering_Partial operator <=> (CCondition const &_Right) const noexcept;
+		bool operator == (CCondition const &_Right) const noexcept = default;
 
 		NContainer::TCLinkedList<CCondition> m_Children;
 

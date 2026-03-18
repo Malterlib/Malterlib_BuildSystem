@@ -6,7 +6,7 @@
 
 namespace NMib::NBuildSystem
 {
-	bool CGenerateSettings::operator == (CGenerateSettings const &_Right) const
+	bool CGenerateSettings::operator == (CGenerateSettings const &_Right) const noexcept
 	{
 		if (m_SourceFile != _Right.m_SourceFile)
 			return false;

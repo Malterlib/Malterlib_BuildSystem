@@ -5,397 +5,397 @@
 
 namespace NMib::NBuildSystem
 {
-	COrdering_Partial CBuildSystemSyntax::CObject::CObjectValue::operator <=> (CObjectValue const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CObject::CObjectValue::operator <=> (CObjectValue const &_Right) const noexcept
 	{
 		return m_Value <=> _Right.m_Value;
 	}
 
-	bool CBuildSystemSyntax::CObject::CObjectValue::operator == (CObjectValue const &_Right) const
+	bool CBuildSystemSyntax::CObject::CObjectValue::operator == (CObjectValue const &_Right) const noexcept
 	{
 		return m_Value == _Right.m_Value;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CObject::operator <=> (CObject const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CObject::operator <=> (CObject const &_Right) const noexcept
 	{
 		return m_Object <=> _Right.m_Object;
 	}
 
-	bool CBuildSystemSyntax::CObject::operator == (CObject const &_Right) const
+	bool CBuildSystemSyntax::CObject::operator == (CObject const &_Right) const noexcept
 	{
 		return m_Object == _Right.m_Object;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CClassType::operator <=> (CClassType const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CClassType::operator <=> (CClassType const &_Right) const noexcept
 	{
 		return m_Members <=> _Right.m_Members;
 	}
 
-	bool CBuildSystemSyntax::CClassType::operator == (CClassType const &_Right) const
+	bool CBuildSystemSyntax::CClassType::operator == (CClassType const &_Right) const noexcept
 	{
 		return m_Members == _Right.m_Members;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CClassType::CMember::operator <=> (CMember const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CClassType::CMember::operator <=> (CMember const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Type, m_bOptional) <=> fg_TupleReferences(_Right.m_Type, _Right.m_bOptional);
 	}
 
-	bool CBuildSystemSyntax::CClassType::CMember::operator == (CMember const &_Right) const
+	bool CBuildSystemSyntax::CClassType::CMember::operator == (CMember const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Type, m_bOptional) == fg_TupleReferences(_Right.m_Type, _Right.m_bOptional);
 	}
 
 
-	COrdering_Partial CBuildSystemSyntax::CEvalStringToken::operator <=> (CEvalStringToken const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CEvalStringToken::operator <=> (CEvalStringToken const &_Right) const noexcept
 	{
 		return m_Token <=> _Right.m_Token;
 	}
 
-	bool CBuildSystemSyntax::CEvalStringToken::operator == (CEvalStringToken const &_Right) const
+	bool CBuildSystemSyntax::CEvalStringToken::operator == (CEvalStringToken const &_Right) const noexcept
 	{
 		return m_Token == _Right.m_Token;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CEvalString::operator <=> (CEvalString const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CEvalString::operator <=> (CEvalString const &_Right) const noexcept
 	{
 		return m_Tokens <=> _Right.m_Tokens;
 	}
 
-	bool CBuildSystemSyntax::CEvalString::operator == (CEvalString const &_Right) const
+	bool CBuildSystemSyntax::CEvalString::operator == (CEvalString const &_Right) const noexcept
 	{
 		return m_Tokens == _Right.m_Tokens;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CWildcardString::operator <=> (CWildcardString const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CWildcardString::operator <=> (CWildcardString const &_Right) const noexcept
 	{
 		return m_String <=> _Right.m_String;
 	}
 
-	bool CBuildSystemSyntax::CWildcardString::operator == (CWildcardString const &_Right) const
+	bool CBuildSystemSyntax::CWildcardString::operator == (CWildcardString const &_Right) const noexcept
 	{
 		return m_String == _Right.m_String;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CParam::operator <=> (CParam const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CParam::operator <=> (CParam const &_Right) const noexcept
 	{
 		return m_Param <=> _Right.m_Param;
 	}
 
-	bool CBuildSystemSyntax::CParam::operator == (CParam const &_Right) const
+	bool CBuildSystemSyntax::CParam::operator == (CParam const &_Right) const noexcept
 	{
 		return m_Param == _Right.m_Param;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CFunctionCall::operator <=> (CFunctionCall const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CFunctionCall::operator <=> (CFunctionCall const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_PropertyKey, m_bEmptyPropertyType, m_Params, m_bPostFunction)
 			<=> fg_TupleReferences(_Right.m_PropertyKey, _Right.m_bEmptyPropertyType, _Right.m_Params, _Right.m_bPostFunction)
 		;
 	}
 
-	bool CBuildSystemSyntax::CFunctionCall::operator == (CFunctionCall const &_Right) const
+	bool CBuildSystemSyntax::CFunctionCall::operator == (CFunctionCall const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_PropertyKey, m_bEmptyPropertyType, m_Params, m_bPostFunction)
 			== fg_TupleReferences(_Right.m_PropertyKey, _Right.m_bEmptyPropertyType, _Right.m_Params, _Right.m_bPostFunction)
 		;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CTernary::operator <=> (CTernary const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CTernary::operator <=> (CTernary const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Conditional, m_Left, m_Right) <=> fg_TupleReferences(_Right.m_Conditional, _Right.m_Left, _Right.m_Right);
 	}
 
-	bool CBuildSystemSyntax::CTernary::operator == (CTernary const &_Right) const
+	bool CBuildSystemSyntax::CTernary::operator == (CTernary const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Conditional, m_Left, m_Right) == fg_TupleReferences(_Right.m_Conditional, _Right.m_Left, _Right.m_Right);
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CBinaryOperator::operator <=> (CBinaryOperator const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CBinaryOperator::operator <=> (CBinaryOperator const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Operator, m_Left, m_Right) <=> fg_TupleReferences(_Right.m_Operator, _Right.m_Left, _Right.m_Right);
 	}
 
-	bool CBuildSystemSyntax::CBinaryOperator::operator == (CBinaryOperator const &_Right) const
+	bool CBuildSystemSyntax::CBinaryOperator::operator == (CBinaryOperator const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Operator, m_Left, m_Right) == fg_TupleReferences(_Right.m_Operator, _Right.m_Left, _Right.m_Right);
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CPrefixOperator::operator <=> (CPrefixOperator const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CPrefixOperator::operator <=> (CPrefixOperator const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Operator, m_Right) <=> fg_TupleReferences(_Right.m_Operator, _Right.m_Right);
 	}
 
-	bool CBuildSystemSyntax::CPrefixOperator::operator == (CPrefixOperator const &_Right) const
+	bool CBuildSystemSyntax::CPrefixOperator::operator == (CPrefixOperator const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Operator, m_Right) == fg_TupleReferences(_Right.m_Operator, _Right.m_Right);
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CExpression::operator <=> (CExpression const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CExpression::operator <=> (CExpression const &_Right) const noexcept
 	{
 		return m_Expression <=> _Right.m_Expression;
 	}
 
-	bool CBuildSystemSyntax::CExpression::operator == (CExpression const &_Right) const
+	bool CBuildSystemSyntax::CExpression::operator == (CExpression const &_Right) const noexcept
 	{
 		return m_Expression == _Right.m_Expression;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CExpressionAppend::operator <=> (CExpressionAppend const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CExpressionAppend::operator <=> (CExpressionAppend const &_Right) const noexcept
 	{
 		return COrdering_Partial::equivalent;
 	}
 
-	bool CBuildSystemSyntax::CExpressionAppend::operator == (CExpressionAppend const &_Right) const
+	bool CBuildSystemSyntax::CExpressionAppend::operator == (CExpressionAppend const &_Right) const noexcept
 	{
 		return true;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CJsonSubscript::operator <=> (CJsonSubscript const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CJsonSubscript::operator <=> (CJsonSubscript const &_Right) const noexcept
 	{
 		return m_Index <=> _Right.m_Index;
 	}
 
-	bool CBuildSystemSyntax::CJsonSubscript::operator == (CJsonSubscript const &_Right) const
+	bool CBuildSystemSyntax::CJsonSubscript::operator == (CJsonSubscript const &_Right) const noexcept
 	{
 		return m_Index == _Right.m_Index;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CJsonAccessorEntry::operator <=> (CJsonAccessorEntry const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CJsonAccessorEntry::operator <=> (CJsonAccessorEntry const &_Right) const noexcept
 	{
 		return m_Accessor <=> _Right.m_Accessor;
 	}
 
-	bool CBuildSystemSyntax::CJsonAccessorEntry::operator == (CJsonAccessorEntry const &_Right) const
+	bool CBuildSystemSyntax::CJsonAccessorEntry::operator == (CJsonAccessorEntry const &_Right) const noexcept
 	{
 		return m_Accessor == _Right.m_Accessor;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CJsonAccessor::operator <=> (CJsonAccessor const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CJsonAccessor::operator <=> (CJsonAccessor const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Param, m_Accessors) <=> fg_TupleReferences(_Right.m_Param, _Right.m_Accessors);
 	}
 
-	bool CBuildSystemSyntax::CJsonAccessor::operator == (CJsonAccessor const &_Right) const
+	bool CBuildSystemSyntax::CJsonAccessor::operator == (CJsonAccessor const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Param, m_Accessors) == fg_TupleReferences(_Right.m_Param, _Right.m_Accessors);
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CIdentifier::operator <=> (CIdentifier const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CIdentifier::operator <=> (CIdentifier const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Name, m_EntityType, m_PropertyType) <=> fg_TupleReferences(_Right.m_Name, _Right.m_EntityType, _Right.m_PropertyType);
 	}
 
-	bool CBuildSystemSyntax::CIdentifier::operator == (CIdentifier const &_Right) const
+	bool CBuildSystemSyntax::CIdentifier::operator == (CIdentifier const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Name, m_EntityType, m_PropertyType) == fg_TupleReferences(_Right.m_Name, _Right.m_EntityType, _Right.m_PropertyType);
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CIdentifierReference::operator <=> (CIdentifierReference const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CIdentifierReference::operator <=> (CIdentifierReference const &_Right) const noexcept
 	{
 		return m_Identifier <=> _Right.m_Identifier;
 	}
 
-	bool CBuildSystemSyntax::CIdentifierReference::operator == (CIdentifierReference const &_Right) const
+	bool CBuildSystemSyntax::CIdentifierReference::operator == (CIdentifierReference const &_Right) const noexcept
 	{
 		return m_Identifier == _Right.m_Identifier;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CDefaultType::operator <=> (CDefaultType const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CDefaultType::operator <=> (CDefaultType const &_Right) const noexcept
 	{
 		return m_Type <=> _Right.m_Type;
 	}
 
-	bool CBuildSystemSyntax::CDefaultType::operator == (CDefaultType const &_Right) const
+	bool CBuildSystemSyntax::CDefaultType::operator == (CDefaultType const &_Right) const noexcept
 	{
 		return m_Type == _Right.m_Type;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CTypeDefaulted::operator <=> (CTypeDefaulted const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CTypeDefaulted::operator <=> (CTypeDefaulted const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Type, m_DefaultValue) <=> fg_TupleReferences(_Right.m_Type, _Right.m_DefaultValue);
 	}
 
-	bool CBuildSystemSyntax::CTypeDefaulted::operator == (CTypeDefaulted const &_Right) const
+	bool CBuildSystemSyntax::CTypeDefaulted::operator == (CTypeDefaulted const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Type, m_DefaultValue) == fg_TupleReferences(_Right.m_Type, _Right.m_DefaultValue);
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CUserType::operator <=> (CUserType const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CUserType::operator <=> (CUserType const &_Right) const noexcept
 	{
 		return m_Name <=> _Right.m_Name;
 	}
 
-	bool CBuildSystemSyntax::CUserType::operator == (CUserType const &_Right) const
+	bool CBuildSystemSyntax::CUserType::operator == (CUserType const &_Right) const noexcept
 	{
 		return m_Name == _Right.m_Name;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CArrayType::operator <=> (CArrayType const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CArrayType::operator <=> (CArrayType const &_Right) const noexcept
 	{
 		return m_Type <=> _Right.m_Type;
 	}
 
-	bool CBuildSystemSyntax::CArrayType::operator == (CArrayType const &_Right) const
+	bool CBuildSystemSyntax::CArrayType::operator == (CArrayType const &_Right) const noexcept
 	{
 		return m_Type == _Right.m_Type;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CType::operator <=> (CType const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CType::operator <=> (CType const &_Right) const noexcept
 	{
 		return m_Type <=> _Right.m_Type;
 	}
 
-	bool CBuildSystemSyntax::CType::operator == (CType const &_Right) const
+	bool CBuildSystemSyntax::CType::operator == (CType const &_Right) const noexcept
 	{
 		return m_Type == _Right.m_Type;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::COneOf::operator <=> (COneOf const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::COneOf::operator <=> (COneOf const &_Right) const noexcept
 	{
 		return m_OneOf <=> _Right.m_OneOf;
 	}
 
-	bool CBuildSystemSyntax::COneOf::operator == (COneOf const &_Right) const
+	bool CBuildSystemSyntax::COneOf::operator == (COneOf const &_Right) const noexcept
 	{
 		return m_OneOf == _Right.m_OneOf;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CDefine::operator <=> (CDefine const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CDefine::operator <=> (CDefine const &_Right) const noexcept
 	{
 		return m_Type <=> _Right.m_Type;
 	}
 
-	bool CBuildSystemSyntax::CDefine::operator == (CDefine const &_Right) const
+	bool CBuildSystemSyntax::CDefine::operator == (CDefine const &_Right) const noexcept
 	{
 		return m_Type == _Right.m_Type;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CFunctionParameter::operator <=> (CFunctionParameter const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CFunctionParameter::operator <=> (CFunctionParameter const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Type, m_ParamType, m_Name) <=> fg_TupleReferences(_Right.m_Type, _Right.m_ParamType, _Right.m_Name);
 	}
 
-	bool CBuildSystemSyntax::CFunctionParameter::operator == (CFunctionParameter const &_Right) const
+	bool CBuildSystemSyntax::CFunctionParameter::operator == (CFunctionParameter const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Type, m_ParamType, m_Name) == fg_TupleReferences(_Right.m_Type, _Right.m_ParamType, _Right.m_Name);
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CFunctionType::operator <=> (CFunctionType const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CFunctionType::operator <=> (CFunctionType const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Return, m_Parameters) <=> fg_TupleReferences(_Right.m_Return, _Right.m_Parameters);
 	}
 
-	bool CBuildSystemSyntax::CFunctionType::operator == (CFunctionType const &_Right) const
+	bool CBuildSystemSyntax::CFunctionType::operator == (CFunctionType const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Return, m_Parameters) == fg_TupleReferences(_Right.m_Return, _Right.m_Parameters);
 	}
 
-	COrdering_Partial CBuildSystemSyntax::COperator::operator <=> (COperator const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::COperator::operator <=> (COperator const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Operator, m_Right) <=> fg_TupleReferences(_Right.m_Operator, _Right.m_Right);
 	}
 
-	bool CBuildSystemSyntax::COperator::operator == (COperator const &_Right) const
+	bool CBuildSystemSyntax::COperator::operator == (COperator const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Operator, m_Right) == fg_TupleReferences(_Right.m_Operator, _Right.m_Right);
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CArray::operator <=> (CArray const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CArray::operator <=> (CArray const &_Right) const noexcept
 	{
 		return m_Array <=> _Right.m_Array;
 	}
 
-	bool CBuildSystemSyntax::CArray::operator == (CArray const &_Right) const
+	bool CBuildSystemSyntax::CArray::operator == (CArray const &_Right) const noexcept
 	{
 		return m_Array == _Right.m_Array;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CAppendObject::operator <=> (CAppendObject const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CAppendObject::operator <=> (CAppendObject const &_Right) const noexcept
 	{
 		return COrdering_Partial::equivalent;
 	}
 
-	bool CBuildSystemSyntax::CAppendObject::operator == (CAppendObject const &_Right) const
+	bool CBuildSystemSyntax::CAppendObject::operator == (CAppendObject const &_Right) const noexcept
 	{
 		return true;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CAppendObjectWithoutUndefined::operator <=> (CAppendObjectWithoutUndefined const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CAppendObjectWithoutUndefined::operator <=> (CAppendObjectWithoutUndefined const &_Right) const noexcept
 	{
 		return COrdering_Partial::equivalent;
 	}
 
-	bool CBuildSystemSyntax::CAppendObjectWithoutUndefined::operator == (CAppendObjectWithoutUndefined const &_Right) const
+	bool CBuildSystemSyntax::CAppendObjectWithoutUndefined::operator == (CAppendObjectWithoutUndefined const &_Right) const noexcept
 	{
 		return true;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CObjectKey::operator <=> (CObjectKey const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CObjectKey::operator <=> (CObjectKey const &_Right) const noexcept
 	{
 		return m_Key <=> _Right.m_Key;
 	}
 
-	bool CBuildSystemSyntax::CObjectKey::operator == (CObjectKey const &_Right) const
+	bool CBuildSystemSyntax::CObjectKey::operator == (CObjectKey const &_Right) const noexcept
 	{
 		return m_Key == _Right.m_Key;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CValue::operator <=> (CValue const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CValue::operator <=> (CValue const &_Right) const noexcept
 	{
 		return m_Value <=> _Right.m_Value;
 	}
 
-	bool CBuildSystemSyntax::CValue::operator == (CValue const &_Right) const
+	bool CBuildSystemSyntax::CValue::operator == (CValue const &_Right) const noexcept
 	{
 		return m_Value == _Right.m_Value;
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CRootValue::operator <=> (CRootValue const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CRootValue::operator <=> (CRootValue const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Value, m_Accessors) <=> fg_TupleReferences(_Right.m_Value, _Right.m_Accessors);
 	}
 
-	bool CBuildSystemSyntax::CRootValue::operator == (CRootValue const &_Right) const
+	bool CBuildSystemSyntax::CRootValue::operator == (CRootValue const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Value, m_Accessors) == fg_TupleReferences(_Right.m_Value, _Right.m_Accessors);
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CRootKey::operator <=> (CRootKey const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CRootKey::operator <=> (CRootKey const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Value) <=> fg_TupleReferences(_Right.m_Value);
 	}
 
-	bool CBuildSystemSyntax::CRootKey::operator == (CRootKey const &_Right) const
+	bool CBuildSystemSyntax::CRootKey::operator == (CRootKey const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Value) == fg_TupleReferences(_Right.m_Value);
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CKeyPrefixOperator::operator <=> (CKeyPrefixOperator const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CKeyPrefixOperator::operator <=> (CKeyPrefixOperator const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Operator, m_Right) <=> fg_TupleReferences(_Right.m_Operator, _Right.m_Right);
 	}
 
-	bool CBuildSystemSyntax::CKeyPrefixOperator::operator == (CKeyPrefixOperator const &_Right) const
+	bool CBuildSystemSyntax::CKeyPrefixOperator::operator == (CKeyPrefixOperator const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Operator, m_Right) == fg_TupleReferences(_Right.m_Operator, _Right.m_Right);
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CKeyLogicalOperator::operator <=> (CKeyLogicalOperator const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CKeyLogicalOperator::operator <=> (CKeyLogicalOperator const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Operator) <=> fg_TupleReferences(_Right.m_Operator);
 	}
 
-	COrdering_Partial CBuildSystemSyntax::CNamespace::operator <=> (CNamespace const &_Right) const
+	COrdering_Partial CBuildSystemSyntax::CNamespace::operator <=> (CNamespace const &_Right) const noexcept
 	{
 		return COrdering_Partial::equivalent;
 	}
 
-	bool CBuildSystemSyntax::CNamespace::operator == (CNamespace const &_Right) const
+	bool CBuildSystemSyntax::CNamespace::operator == (CNamespace const &_Right) const noexcept
 	{
 		return true;
 	}
 
-	bool CBuildSystemSyntax::CKeyLogicalOperator::operator == (CKeyLogicalOperator const &_Right) const
+	bool CBuildSystemSyntax::CKeyLogicalOperator::operator == (CKeyLogicalOperator const &_Right) const noexcept
 	{
 		return fg_TupleReferences(m_Operator) == fg_TupleReferences(_Right.m_Operator);
 	}

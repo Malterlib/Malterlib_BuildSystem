@@ -40,7 +40,7 @@ namespace NMib::NBuildSystem
 
 	struct CGenerateSettings
 	{
-		bool operator == (CGenerateSettings const &_Right) const;
+		bool operator == (CGenerateSettings const &_Right) const noexcept;
 
 		NStr::CStr m_SourceFile;
 		NStr::CStr m_OutputDir;

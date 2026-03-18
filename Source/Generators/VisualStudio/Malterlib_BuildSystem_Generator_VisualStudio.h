@@ -55,7 +55,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 	{
 		struct CVS_SettingShared
 		{
-			auto operator <=> (CVS_SettingShared const &_Right) const = default;
+			auto operator <=> (CVS_SettingShared const &_Right) const noexcept = default;
 
 			template <typename tf_CStr>
 			void f_Format(tf_CStr &o_String) const;
@@ -67,7 +67,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 		struct CVS_Setting_PropertyGroup : public CVS_SettingShared
 		{
-			auto operator <=> (CVS_Setting_PropertyGroup const &_Right) const = default;
+			auto operator <=> (CVS_Setting_PropertyGroup const &_Right) const noexcept = default;
 
 			template <typename tf_CStr>
 			void f_Format(tf_CStr &o_String) const;
@@ -79,7 +79,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 		struct CVS_Setting_ItemDefinitionGroup : public CVS_SettingShared
 		{
-			auto operator <=> (CVS_Setting_ItemDefinitionGroup const &_Right) const = default;
+			auto operator <=> (CVS_Setting_ItemDefinitionGroup const &_Right) const noexcept = default;
 
 			template <typename tf_CStr>
 			void f_Format(tf_CStr &o_String) const;
@@ -91,7 +91,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 		struct CVS_Setting_Item : public CVS_SettingShared
 		{
-			auto operator <=> (CVS_Setting_Item const &_Right) const = default;
+			auto operator <=> (CVS_Setting_Item const &_Right) const noexcept = default;
 
 			template <typename tf_CStr>
 			void f_Format(tf_CStr &o_String) const;
@@ -405,7 +405,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 			bool m_bMainValue = false;
 
-			inline COrdering_Strong operator <=> (CConfigValue const &_Right) const;
+			inline COrdering_Strong operator <=> (CConfigValue const &_Right) const noexcept;
 		};
 
 		struct CConfigResult

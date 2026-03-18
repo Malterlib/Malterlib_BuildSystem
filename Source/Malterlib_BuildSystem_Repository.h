@@ -441,7 +441,7 @@ namespace NMib::NBuildSystem::NRepository
 
 	struct CGitVersion
 	{
-		auto operator <=> (CGitVersion const &_Right) const = default;
+		auto operator <=> (CGitVersion const &_Right) const noexcept = default;
 
 		uint32 m_Major = 0;
 		uint32 m_Minor = 0;

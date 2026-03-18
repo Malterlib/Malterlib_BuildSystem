@@ -32,7 +32,7 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	COrdering_Partial CCondition::operator <=> (CCondition const &_Right) const
+	COrdering_Partial CCondition::operator <=> (CCondition const &_Right) const noexcept
 	{
 		return fg_ConditionTuple(*this) <=> fg_ConditionTuple(_Right);
 	}

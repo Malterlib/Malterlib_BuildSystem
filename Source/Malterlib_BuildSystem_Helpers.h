@@ -18,7 +18,7 @@ namespace NMib::NBuildSystem
 			CToSortBy(t_CSortKey const &_SortKey);
 			CToSortBy() = default;
 
-			COrdering_Strong operator <=> (CToSortBy const &_Other) const;
+			COrdering_Strong operator <=> (CToSortBy const &_Other) const noexcept;
 
 			t_CSortKey m_SortBy;
 			TCFunction<void ()> *m_pFunctor;
@@ -40,7 +40,7 @@ namespace NMib::NBuildSystem
 		{
 			CToSortBy(t_CSortKey &_SortKey);
 			CToSortBy() = default;
-			COrdering_Strong operator <=> (CToSortBy const &_Other) const;
+			COrdering_Strong operator <=> (CToSortBy const &_Other) const noexcept;
 
 			t_CSortKey *m_pSortBy;
 			TCFunction<void ()> *m_pFunctor;

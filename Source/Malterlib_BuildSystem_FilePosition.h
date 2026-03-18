@@ -20,7 +20,7 @@ namespace NMib::NBuildSystem
 		static CFilePosition fs_FromJson(NEncoding::CEJsonSorted const &_Value);
 		static CFilePosition fs_FromJson(NEncoding::CEJsonSorted &&_Value);
 
-		COrdering_Strong operator <=> (CFilePosition const &_Other) const;
+		COrdering_Strong operator <=> (CFilePosition const &_Other) const noexcept;
 
 		static CFilePosition const &fs_Default();
 
@@ -33,7 +33,7 @@ namespace NMib::NBuildSystem
 	{
 		struct CKey
 		{
-			auto operator <=> (CKey const &) const = default;
+			auto operator <=> (CKey const &) const noexcept = default;
 
 			CFilePosition m_Position;
 			NStr::CStr m_Identifier;

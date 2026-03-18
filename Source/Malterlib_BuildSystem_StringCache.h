@@ -56,7 +56,7 @@ namespace NMib::NBuildSystem
 		CStringAndHash(CStringAndHash &&) = default;
 		CStringAndHash(CStringAndHash const &) = default;
 
-		auto operator <=> (CStringAndHash const &) const = default;
+		auto operator <=> (CStringAndHash const &) const noexcept = default;
 
 		template <typename tf_CStr>
 		void f_Format(tf_CStr &o_Str) const

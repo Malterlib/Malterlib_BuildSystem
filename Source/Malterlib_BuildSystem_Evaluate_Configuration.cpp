@@ -12,13 +12,13 @@ namespace NMib::NBuildSystem
 			CStr m_ConfigType;
 			CStr m_ConfigName;
 
-			auto operator <=> (CConfigKey const &_Right) const = default;
+			auto operator <=> (CConfigKey const &_Right) const noexcept = default;
 		};
 
 		struct CConfigTuple
 		{
 			TCMap<CConfigKey, CBuildSystemConfiguration const *> m_Keys;
-			auto operator <=> (CConfigTuple const &_Right) const = default;
+			auto operator <=> (CConfigTuple const &_Right) const noexcept = default;
 		};
 
 	}

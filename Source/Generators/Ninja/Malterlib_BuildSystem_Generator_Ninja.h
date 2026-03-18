@@ -14,7 +14,7 @@ namespace NMib::NBuildSystem::NNinja
 
 	struct CRule
 	{
-		auto operator <=> (CRule const &_Right) const = default;
+		auto operator <=> (CRule const &_Right) const noexcept = default;
 
 		static CRule fs_FromJson(CEJsonSorted &&_Json);
 
@@ -47,7 +47,7 @@ namespace NMib::NBuildSystem::NNinja
 
 	struct CBuild
 	{
-		auto operator <=> (CBuild const &_Right) const = default;
+		auto operator <=> (CBuild const &_Right) const noexcept = default;
 
 		static CBuild fs_FromJson(CEJsonSorted &&_Json);
 

@@ -24,7 +24,7 @@ namespace NMib::NBuildSystem
 	{
 		struct CReportedMessage
 		{
-			auto operator <=> (CReportedMessage const &) const = default;
+			auto operator <=> (CReportedMessage const &) const noexcept = default;
 
 			CFilePosition m_Position;
 			CStr m_Message;
