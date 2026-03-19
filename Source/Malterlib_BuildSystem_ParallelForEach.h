@@ -13,7 +13,7 @@ namespace NMib::NBuildSystem
 		if (_Container.f_IsEmpty())
 			co_return {};
 
-		mint nConcurrency = NConcurrency::fg_ConcurrencyManager().f_GetConcurrency();
+		umint nConcurrency = NConcurrency::fg_ConcurrencyManager().f_GetConcurrency();
 		if (nConcurrency <= 1 || _bSingleThreaded)
 		{
 			NConcurrency::TCFutureVector<void> Results;
@@ -27,7 +27,7 @@ namespace NMib::NBuildSystem
 			co_return {};
 		}
 
-		mint iValue = 0;
+		umint iValue = 0;
 
 		NConcurrency::TCFutureVector<void> Results;
 

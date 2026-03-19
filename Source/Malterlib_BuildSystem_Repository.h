@@ -221,7 +221,7 @@ namespace NMib::NBuildSystem::NRepository
 		TCUnsafeFuture<CAsyncDestroyAwaiter> f_Init();
 
 		void f_CheckInit() const;
-		void f_SetNumRepos(mint _nRepos, bool _bReport = true);
+		void f_SetNumRepos(umint _nRepos, bool _bReport = true);
 		void f_MeasureRepos(TCVector<TCVector<CRepository *>> const &_FilteredRepositories, bool _bReport = true);
 
 		TCUnsafeFuture<CProcessLaunchActor::CSimpleLaunchResult> f_Launch
@@ -286,10 +286,10 @@ namespace NMib::NBuildSystem::NRepository
 			CMutual m_Lock;
 			CStr m_BaseDir;
 			TCActor<> m_OutputActor{fg_Construct()};
-			TCMap<mint, TCActor<CProcessLaunchActor>> m_Launches;
-			TCMap<mint, zbool> m_LaunchesAborted;
+			TCMap<umint, TCActor<CProcessLaunchActor>> m_Launches;
+			TCMap<umint, zbool> m_LaunchesAborted;
 			TCMap<CStr, CStr> m_RepoNames;
-			TCAtomic<mint> m_nDoneRepos = 0;
+			TCAtomic<umint> m_nDoneRepos = 0;
 			CStr m_ProgressDescription;
 
 			CMutual m_DeferredOutputLock;
@@ -300,9 +300,9 @@ namespace NMib::NBuildSystem::NRepository
 
 			mutable CMutual m_ConsoleOutputLock;
 
-			mint m_LaunchID = 0;
-			mint m_LongestRepo = 0;
-			TCAtomic<mint> m_nRepos = 0;
+			umint m_LaunchID = 0;
+			umint m_LongestRepo = 0;
+			TCAtomic<umint> m_nRepos = 0;
 			EAnsiEncodingFlag m_AnsiFlags;
 			NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> m_fOutputConsole;
 
@@ -324,7 +324,7 @@ namespace NMib::NBuildSystem::NRepository
 		CStr f_GetRepoName(CRepository const &_Repo) const;
 		void f_Output(EOutputType _OutputType, CRepository const &_Repo, CStr const &_Output, CStr const &_Prefix = {}) const;
 		void f_Output(EOutputType _OutputType, CStr const &_Section, CStr const &_Output) const;
-		void f_RepoDone(mint _nDone = 1) const;
+		void f_RepoDone(umint _nDone = 1) const;
 		COnScopeExitShared f_RepoDoneScope() const;
 		void f_SetOutputOrder(TCVector<TCSet<CStr>> const &_OutputOrder) const;
 
@@ -337,7 +337,7 @@ namespace NMib::NBuildSystem::NRepository
 
 	struct CFilteredRepos
 	{
-		TCVector<TCTuple<CRepository, mint>> f_GetAllRepos() const;
+		TCVector<TCTuple<CRepository, umint>> f_GetAllRepos() const;
 
 		TCVector<TCMap<CStr, CReposLocation>> m_ReposOrdered;
 		TCVector<TCVector<CRepository *>> m_FilteredRepositories;

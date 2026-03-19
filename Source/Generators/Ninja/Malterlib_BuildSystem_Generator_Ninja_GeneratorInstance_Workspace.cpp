@@ -379,7 +379,7 @@ namespace NMib::NBuildSystem::NNinja
 
 										auto Digest = Stream.f_GetDigest();
 
-										mint nChars = 4;
+										umint nChars = 4;
 
 										auto Format = "Rule_{sj*}"_f;
 										Format << Digest << nChars;

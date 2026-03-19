@@ -466,7 +466,7 @@ namespace NMib::NBuildSystem
 														{
 															CEntityKey Key;
 															Key.m_Type = EEntityType_Group;
-															mint iDistinguish = 0;
+															umint iDistinguish = 0;
 															Key.m_Name.m_Value = fg_Format("Dependency Distinguisher {}", iDistinguish);
 															while (auto *pOldDistinguisher = pParent->m_ChildEntitiesMap.f_FindEqual(Key))
 															{

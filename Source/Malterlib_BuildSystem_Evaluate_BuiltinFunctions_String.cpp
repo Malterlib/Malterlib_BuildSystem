@@ -620,9 +620,9 @@ namespace NMib::NBuildSystem
 
 								CEJsonSorted Output = EJsonType_Array;
 								auto &TypeParams = _Params[2].f_Array();
-								mint nTypeParams = TypeParams.f_GetLen();
+								umint nTypeParams = TypeParams.f_GetLen();
 								Output.f_SetLen(nTypeParams);
-								mint iType = 0;
+								umint iType = 0;
 
 								for (auto &TypeParam : TypeParams)
 								{
@@ -1063,8 +1063,8 @@ namespace NMib::NBuildSystem
 							{
 								CUStr SourceString = _Params[0].f_String();
 
-								mint ChunkLength = _Params[1].f_Integer();
-								mint SourceLength = SourceString.f_GetLen();
+								umint ChunkLength = _Params[1].f_Integer();
+								umint SourceLength = SourceString.f_GetLen();
 
 								CEJsonSorted Output = EJsonType_Array;
 
@@ -1072,7 +1072,7 @@ namespace NMib::NBuildSystem
 									Output.f_Insert(CStr(SourceString));
 								else
 								{
-									for (mint i = 0; i < SourceLength; i += ChunkLength)
+									for (umint i = 0; i < SourceLength; i += ChunkLength)
 										Output.f_Insert(CStr(SourceString.f_Extract(i, ChunkLength)));
 								}
 

@@ -1414,7 +1414,7 @@ namespace NMib::NBuildSystem
 					if (o_pError)
 						o_pError->m_ErrorPath.f_Insert();
 
-					mint iElement = 0;
+					umint iElement = 0;
 					for (auto &ElementValue : o_Value.f_Array())
 					{
 						if (o_pError)
@@ -2274,7 +2274,7 @@ namespace NMib::NBuildSystem
 		{
 			auto iParamType = _FunctionType.m_Parameters.f_GetIterator();
 
-			mint iParam = 0;
+			umint iParam = 0;
 			for (auto &EvalParam : EvalParams)
 			{
 				if (!iParamType)

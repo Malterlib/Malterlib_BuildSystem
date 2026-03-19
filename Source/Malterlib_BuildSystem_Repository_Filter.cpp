@@ -23,14 +23,14 @@ namespace NMib::NBuildSystem::NRepository
 
 		CFilteredRepos FilteredRepos;
 		FilteredRepos.m_ReposOrdered = fg_GetRepos(_BuildSystem, _Data, _GetRepoFlags);
-		TCMap<mint, TCVector<CRepository *>> FilteredPerStage;
+		TCMap<umint, TCVector<CRepository *>> FilteredPerStage;
 
-		TCFutureMap<mint, TCMap<CRepository *, TCAsyncResult<bool>>> DeferredResultsOrdered;
+		TCFutureMap<umint, TCMap<CRepository *, TCAsyncResult<bool>>> DeferredResultsOrdered;
 
 		CStr BaseDir = _BuildSystem.f_GetBaseDir();
 
-		mint nLaunchRepos = 0;
-		mint iStage = 0;
+		umint nLaunchRepos = 0;
+		umint iStage = 0;
 		for (auto &Repos : FilteredRepos.m_ReposOrdered)
 		{
 			TCFutureMap<CRepository *, bool> DeferredResults;
@@ -91,7 +91,7 @@ namespace NMib::NBuildSystem::NRepository
 
 		for (auto &Repos : SyncedResults)
 		{
-			mint iStage = SyncedResults.fs_GetKey(Repos);
+			umint iStage = SyncedResults.fs_GetKey(Repos);
 
 			for (auto &IsChanged : Repos)
 			{

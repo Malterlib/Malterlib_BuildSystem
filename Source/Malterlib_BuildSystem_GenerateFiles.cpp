@@ -394,11 +394,11 @@ namespace NMib::NBuildSystem
 							pParentGroup = &*Child;
 						}
 
-						mint ExpandedOrGeneratedFromSource = _Entity.f_ExpandedOrGeneratedFromSource();
+						umint ExpandedOrGeneratedFromSource = _Entity.f_ExpandedOrGeneratedFromSource();
 
 						auto pOldEntity = pParentGroup->m_ChildEntitiesMap.f_FindEqual(NewKey);
 
-						TCSet<mint> OldExpandedOrGeneratedFromSet;
+						TCSet<umint> OldExpandedOrGeneratedFromSet;
 						if (pOldEntity)
 						{
 							auto &OldEntityData = pOldEntity->f_Data();

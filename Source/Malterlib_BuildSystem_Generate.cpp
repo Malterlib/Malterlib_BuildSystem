@@ -748,14 +748,14 @@ namespace NMib::NBuildSystem
 
 			fUpdateFileInfo(State.m_ExeFile, CFile::fs_GetProgramPath(), nullptr);
 
-			mint nSourceFiles = 0;
+			umint nSourceFiles = 0;
 			for (auto &File : mp_SourceFiles.f_Entries())
 			{
 				++nSourceFiles;
 				fUpdateFileInfo(State.m_SourceFiles, File.f_Key(), File.f_Value());
 			}
 
-			mint nReferencedFiles = 0;
+			umint nReferencedFiles = 0;
 			{
 				auto SourceFiles = mp_FindCache.f_GetSourceFiles();
 				for (auto &File : SourceFiles.f_Entries())
@@ -765,7 +765,7 @@ namespace NMib::NBuildSystem
 				}
 			}
 
-			mint nGeneratedFiles = 0;
+			umint nGeneratedFiles = 0;
 
 			TCMap<CStr, NTime::CTime> GeneratedWriteTimes;
 			{
@@ -834,7 +834,7 @@ namespace NMib::NBuildSystem
 
 			State.m_SourceSearches = mp_FindCache.f_GetAllTagged();
 
-			mint nFileSearches = 0;
+			umint nFileSearches = 0;
 			for (auto iSearch = State.m_SourceSearches.f_GetIterator(); iSearch; ++iSearch)
 			{
 				++nFileSearches;

@@ -53,7 +53,7 @@ namespace NMib::NBuildSystem
 			CStr m_RepoName;
 			CRepository m_Repo;
 			TCVector<CCompareMessage> m_CompareMessages;
-			mint m_iSequence = 0;
+			umint m_iSequence = 0;
 			bool m_bActionNeeded = false;
 			bool m_bOpenEditor = false;
 		};
@@ -118,9 +118,9 @@ namespace NMib::NBuildSystem
 				if (bHasSeveralRows)
 					TableRenderer.f_ForceRowSeparator();
 
-				mint MaxBranchNameLenLocal = 0;
-				mint MaxBranchNameLenOrigin = 0;
-				mint MaxBranchNameLenOther = 0;
+				umint MaxBranchNameLenLocal = 0;
+				umint MaxBranchNameLenOrigin = 0;
+				umint MaxBranchNameLenOther = 0;
 
 				for (auto &Message : Result.m_CompareMessages)
 				{
@@ -133,7 +133,7 @@ namespace NMib::NBuildSystem
 						OriginMessages.f_Clear();
 					}
 
-					auto fMeasureMessages = [&](TCVector<CMessage> const &_Messages, mint &o_MaxLen)
+					auto fMeasureMessages = [&](TCVector<CMessage> const &_Messages, umint &o_MaxLen)
 						{
 							for (auto &Message : _Messages)
 							{
@@ -178,7 +178,7 @@ namespace NMib::NBuildSystem
 					if (!Message.m_OtherMessages.f_IsEmpty())
 						bHasOtherMessages = true;
 
-					auto fFormatMessages = [&](TCVector<CMessage> const &_Messages, mint _MaxLen) -> CStr
+					auto fFormatMessages = [&](TCVector<CMessage> const &_Messages, umint _MaxLen) -> CStr
 						{
 							TCVector<CStr> Return;
 
@@ -442,7 +442,7 @@ namespace NMib::NBuildSystem
 										return "<{}>"_f << CStr::fs_Join(_Names, ", ");
 									}
 								;
-								auto fPriority = [](mint _Priority) -> CStr
+								auto fPriority = [](umint _Priority) -> CStr
 									{
 										return "{sj*}"_f << "" << _Priority;
 									}
@@ -891,7 +891,7 @@ namespace NMib::NBuildSystem
 
 		co_await fg_OutputStatusTable({.m_pCommandLine = _pCommandLine, .m_Results = Results, .m_bIsVerbose = bIsVerbose});
 
-		TCMap<mint, TCVector<CRepository>> EditorsToLaunch;
+		TCMap<umint, TCVector<CRepository>> EditorsToLaunch;
 		bool bActionNeeded = false;
 		for (auto &Result : Results)
 		{

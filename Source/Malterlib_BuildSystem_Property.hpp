@@ -7,7 +7,7 @@
 
 namespace NMib::NBuildSystem
 {
-	template <mint tf_nChars>
+	template <umint tf_nChars>
 	constexpr CPropertyKeyReference::CPropertyKeyReference(EPropertyType _Type, NStr::TCStrConstDataAndStr<tf_nChars, ch8> const &_Name)
 		: m_TypeAndHash(_Type, fg_StrHash(_Name.m_StrData.m_Data))
 		, m_Name(_Name)

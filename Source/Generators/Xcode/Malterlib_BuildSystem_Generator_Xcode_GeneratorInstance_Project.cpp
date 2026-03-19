@@ -532,7 +532,7 @@ fi
 					co_await m_BuildSystem.f_CheckCancelled();
 
 					auto &Config = _Project.m_EnabledProjectConfigs.fs_GetKey(_ProjectEntity);
-					mint nFiles = 0;
+					umint nFiles = 0;
 					for (auto &File : _Project.m_Files)
 					{
 						auto *pResult = File.m_CompileResults.f_FindEqual(Config);
@@ -553,7 +553,7 @@ fi
 		;
 		co_await m_BuildSystem.f_CheckCancelled();
 
-		mint nFiles = 0;
+		umint nFiles = 0;
 
 		for (auto &File : _Project.m_Files)
 		{

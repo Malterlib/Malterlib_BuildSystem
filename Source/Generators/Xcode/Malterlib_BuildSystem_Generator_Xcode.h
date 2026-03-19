@@ -366,7 +366,7 @@ namespace NMib::NBuildSystem::NXcode
 		CStr m_IntermediatePath;
 		CStr m_OutputPath;
 
-		mint m_nTotalTargets = 0;
+		umint m_nTotalTargets = 0;
 
 		CFilePosition m_Position;
 

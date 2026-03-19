@@ -41,7 +41,7 @@ namespace NMib::NBuildSystem
 		{
 		}
 
-		template <mint tf_nChars>
+		template <umint tf_nChars>
 		constexpr CStringAndHash(NStr::TCStrConstDataAndStr<tf_nChars, ch8> const &_String)
 			: m_Hash(fg_StrHash(_String.m_StrData.m_Data))
 			, m_String(_String)

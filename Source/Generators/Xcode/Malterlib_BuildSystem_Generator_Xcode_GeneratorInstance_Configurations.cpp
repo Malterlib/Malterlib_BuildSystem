@@ -268,7 +268,7 @@ namespace NMib::NBuildSystem
 
 		void CGeneratorInstance::fp_GenerateCompilerFlags(CProjectState &_ProjectState, CProject& _Project) const
 		{
-			auto fGetSharedFlags = [&] (CStr const &_Type, mint _SettingsNumber, bool _bKey) -> CStr
+			auto fGetSharedFlags = [&] (CStr const &_Type, umint _SettingsNumber, bool _bKey) -> CStr
 			{
 				if (!_bKey)
 				{
@@ -323,7 +323,7 @@ namespace NMib::NBuildSystem
 				auto &SettingsFromTypes = _ProjectState.m_XcodeSettingsFromTypes[Configuration];
 
 				TCMap<CStr, zmint> SettingsNumber;
-				TCMap<CStr, TCMap<CStr, mint>> GeneratedOverriddenFlags;
+				TCMap<CStr, TCMap<CStr, umint>> GeneratedOverriddenFlags;
 
 				TCMap<CStr, TCMap<CStr, CStr>> SharedFlags;
 				TCMap<CStr, TCMap<CStr, TCSet<TCVariant<CStr, TCVector<CStr>>>>> SharedFlagsSet;

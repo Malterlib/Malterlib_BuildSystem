@@ -359,7 +359,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 		TCMap<CConfiguration, CConfigDisplay> m_EnabledConfigs;
 
-		mint m_nTotalTargets = 0;
+		umint m_nTotalTargets = 0;
 	};
 
 	struct CGeneratorState

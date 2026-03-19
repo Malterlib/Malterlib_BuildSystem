@@ -324,8 +324,8 @@ namespace NMib::NBuildSystem
 
 								CEJsonSorted Return;
 								auto &ReturnArray = Return.f_Array();
-								mint iLastLocation = TCLimitsInt<mint>::mc_Max;
-								mint iLocation = 0;
+								umint iLastLocation = TCLimitsInt<umint>::mc_Max;
+								umint iLocation = 0;
 								for (auto &Value : _Params[0].f_Array())
 								{
 									if (Value == ToUniqueValue)
@@ -337,7 +337,7 @@ namespace NMib::NBuildSystem
 									}
 								}
 
-								if (iLastLocation != TCLimitsInt<mint>::mc_Max)
+								if (iLastLocation != TCLimitsInt<umint>::mc_Max)
 									ReturnArray.f_InsertAfter(iLastLocation, fg_Move(ToUniqueValue));
 
 								return Return;
@@ -375,16 +375,16 @@ namespace NMib::NBuildSystem
 							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								auto &SourceArray = _Params[0].f_Array();
-								mint nLen = SourceArray.f_GetLen();
+								umint nLen = SourceArray.f_GetLen();
 
-								mint iStart = _Params[1].f_Integer();
-								mint iEnd = _Params[2].f_IsValid() ? _Params[2].f_Integer() : nLen;
+								umint iStart = _Params[1].f_Integer();
+								umint iEnd = _Params[2].f_IsValid() ? _Params[2].f_Integer() : nLen;
 
 								// Handle negative indices (count from end)
 								if (iStart < 0)
-									iStart = fg_Max(nLen + iStart, (mint)0);
+									iStart = fg_Max(nLen + iStart, (umint)0);
 								if (iEnd < 0)
-									iEnd = fg_Max(nLen + iEnd, (mint)0);
+									iEnd = fg_Max(nLen + iEnd, (umint)0);
 
 								// Clamp to valid range
 								iStart = fg_Min(iStart, nLen);
@@ -393,7 +393,7 @@ namespace NMib::NBuildSystem
 								CEJsonSorted Return;
 								auto &ReturnArray = Return.f_Array();
 
-								for (mint i = iStart; i < iEnd; ++i)
+								for (umint i = iStart; i < iEnd; ++i)
 									ReturnArray.f_Insert(fg_Move(SourceArray[i]));
 
 								return Return;

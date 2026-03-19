@@ -38,7 +38,7 @@ namespace NMib::NBuildSystem
 		static NStr::CStr const &fs_ConditionTypeToStr(EConditionType _Type);
 
 		template <typename tf_CStr>
-		void f_FormatRecursive(tf_CStr &o_Str, mint _Depth) const;
+		void f_FormatRecursive(tf_CStr &o_Str, umint _Depth) const;
 		template <typename tf_CStr>
 		void f_Format(tf_CStr &o_Str) const;
 

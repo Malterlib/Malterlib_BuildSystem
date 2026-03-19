@@ -61,7 +61,7 @@ namespace NMib::NBuildSystem::NRepository
 			(
 				EOutputType _OutputType
 				, CStr const &_RepoName
-				, mint _LongestRepoName
+				, umint _LongestRepoName
 				, CStr const &_Line
 				, EAnsiEncodingFlag _AnsiFlags
 				, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
@@ -109,12 +109,12 @@ namespace NMib::NBuildSystem::NRepository
 
 	CGitLaunches::CState::~CState()
 	{
-		mint LongestRepo = 0;
+		umint LongestRepo = 0;
 
 		for (auto &RepoOutput : m_DeferredOutput)
 		{
 			auto &RepoName = m_DeferredOutput.fs_GetKey(RepoOutput);
-			LongestRepo = fg_Max(LongestRepo, mint(RepoName.f_GetLen()));
+			LongestRepo = fg_Max(LongestRepo, umint(RepoName.f_GetLen()));
 		}
 
 		bool bDidOutputSection = false;
@@ -125,7 +125,7 @@ namespace NMib::NBuildSystem::NRepository
 			{
 				if (!AlreadyOutput(_Name).f_WasCreated())
 					return;
-				mint nLines = 0;
+				umint nLines = 0;
 				bool bIsSection = false;
 				for (auto &Output : _Output)
 				{
@@ -206,7 +206,7 @@ namespace NMib::NBuildSystem::NRepository
 		;
 	}
 
-	void CGitLaunches::f_RepoDone(mint _nDone) const
+	void CGitLaunches::f_RepoDone(umint _nDone) const
 	{
 		auto &State = *m_pState;
 
@@ -214,7 +214,7 @@ namespace NMib::NBuildSystem::NRepository
 		State.f_OutputState();
 	}
 
-	void CGitLaunches::f_SetNumRepos(mint _nRepos, bool _bReport)
+	void CGitLaunches::f_SetNumRepos(umint _nRepos, bool _bReport)
 	{
 		auto &State = *m_pState;
 
@@ -326,7 +326,7 @@ namespace NMib::NBuildSystem::NRepository
 								g_TimerDestructionTrackerCallstack.f_Trace(8);
 							}
 
-							mint iCallstack = 0;
+							umint iCallstack = 0;
 							for (auto &Callstack : This.m_pState->m_RefCount.m_Debug->m_Callstacks)
 							{
 								DMibTrace("    Reference callstack {}\n", iCallstack);
@@ -365,7 +365,7 @@ namespace NMib::NBuildSystem::NRepository
 					Name = "{}"_f << CFile::fs_MakePathRelative(Repo.m_Location, State.m_BaseDir);
 				else
 					Name = ".";
-				State.m_LongestRepo = fg_Max(State.m_LongestRepo, mint(Name.f_GetLen()));
+				State.m_LongestRepo = fg_Max(State.m_LongestRepo, umint(Name.f_GetLen()));
 				++State.m_nRepos;
 			}
 		}
@@ -438,7 +438,7 @@ namespace NMib::NBuildSystem::NRepository
 			co_return DMibErrorInstance("Aborted");
 
 		TCActor<CProcessLaunchActor> LaunchActor = fg_Construct();
-		mint LaunchID;
+		umint LaunchID;
 		{
 			DLock(State.m_Lock);
 			LaunchID = State.m_LaunchID++;

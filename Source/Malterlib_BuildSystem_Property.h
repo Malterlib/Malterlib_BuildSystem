@@ -27,7 +27,7 @@ namespace NMib::NBuildSystem
 	{
 		CPropertyKeyReference(CAssertAddedToStringCache _Dummy, EPropertyType _Type, NStr::CStr const &_Name, uint32 _NameHash);
 
-		template <mint tf_nChars>
+		template <umint tf_nChars>
 		constexpr CPropertyKeyReference(EPropertyType _Type, NStr::TCStrConstDataAndStr<tf_nChars, ch8> const &_Name);
 		constexpr CPropertyKeyReference(EPropertyType _Type, CStringAndHash const &_Name);
 

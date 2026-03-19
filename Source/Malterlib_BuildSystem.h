@@ -869,7 +869,7 @@ namespace NMib::NBuildSystem
 				, CEntity &_OriginalContext
 				, CCondition const &_Condition
 				, CEvaluationContext &_EvalContext
-				, mint _TraceDepth
+				, umint _TraceDepth
 				, CEvalPropertyValueContext const *_pParentContext
 				, CBuildSystemUniquePositions *o_pPositions
 			) const;
@@ -879,7 +879,7 @@ namespace NMib::NBuildSystem
 				, CEntity &_OriginalContext
 				, CCondition const &_Condition
 				, CEvaluationContext &_EvalContext
-				, mint _TraceDepth
+				, umint _TraceDepth
 				, EConditionType _ConditionType
 				, CEvalPropertyValueContext const *_pParentContext
 				, CBuildSystemUniquePositions *o_pPositions
@@ -1138,7 +1138,7 @@ namespace NMib::NBuildSystem
 		mutable NContainer::TCMap<NStr::CStr, CCMakeGenerateState> mp_CMakeGenerateState;
 		mutable NContainer::TCMap<NStr::CStr, NStr::CStr> mp_CMakeGenerated;
 		mutable NContainer::TCMap<NStr::CStr, NStr::CStr> mp_CMakeGeneratedContents;
-		mutable NAtomic::TCAtomic<mint> mp_LogSequence;
+		mutable NAtomic::TCAtomic<umint> mp_LogSequence;
 
 		mutable NConcurrency::CSequencer mp_SetupGlobalMToolSequencer{"Setup global MTool"};
 
@@ -1151,7 +1151,7 @@ namespace NMib::NBuildSystem
 		mutable NAtomic::TCAtomic<bool> mp_bGlobalMToolAlreadySetup = false;
 		mutable NAtomic::TCAtomic<bool> mp_bBootstrapMToolAlreadySetup = false;
 
-		mutable NAtomic::TCAtomic<mint> mp_nExecuteLaunches;
+		mutable NAtomic::TCAtomic<umint> mp_nExecuteLaunches;
 
 		NStorage::TCSharedPointer<NAtomic::TCAtomic<bool>> mp_pCancelled;
 	};

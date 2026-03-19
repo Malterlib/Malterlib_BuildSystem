@@ -6,7 +6,7 @@
 namespace NMib::NBuildSystem
 {
 	template <typename tf_CStr>
-	void CCondition::f_FormatRecursive(tf_CStr &o_Str, mint _Depth) const
+	void CCondition::f_FormatRecursive(tf_CStr &o_Str, umint _Depth) const
 	{
 		switch (m_Type)
 		{

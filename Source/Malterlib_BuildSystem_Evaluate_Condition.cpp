@@ -261,7 +261,7 @@ namespace NMib::NBuildSystem
 			, CEntity &_OriginalContext
 			, CCondition const &_Condition
 			, CEvaluationContext &_EvalContext
-			, mint _TraceDepth
+			, umint _TraceDepth
 			, EConditionType _ConditionType
 			, CEvalPropertyValueContext const *_pParentContext
 			, CBuildSystemUniquePositions *o_pPositions
@@ -334,7 +334,7 @@ namespace NMib::NBuildSystem
 			, CEntity &_OriginalContext
 			, CCondition const &_Condition
 			, CEvaluationContext &_EvalContext
-			, mint _TraceDepth
+			, umint _TraceDepth
 			, CEvalPropertyValueContext const *_pParentContext
 			, CBuildSystemUniquePositions *o_pPositions
 		) const

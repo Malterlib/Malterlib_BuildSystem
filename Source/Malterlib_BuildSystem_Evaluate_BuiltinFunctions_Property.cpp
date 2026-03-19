@@ -43,7 +43,7 @@ namespace NMib::NBuildSystem
 	{
 		CTypeWithPosition const *pOverrideType = nullptr;
 
-		mint iParam = 0;
+		umint iParam = 0;
 
 		auto &IdentifierJson = _Params[iParam];
 		++iParam;
@@ -176,7 +176,7 @@ namespace NMib::NBuildSystem
 	{
 		CBuildSystemSyntax::CIdentifier Identifier;
 		CStr EntityName;
-		mint iParam = 0;
+		umint iParam = 0;
 
 		if (_Function == EBuiltinFunctionGetProperty_HasEntity)
 		{

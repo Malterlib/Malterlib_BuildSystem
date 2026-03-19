@@ -475,11 +475,11 @@ namespace NMib::NBuildSystem::NRepository
 		return Branch;
 	}
 
-	TCVector<TCTuple<CRepository, mint>> CFilteredRepos::f_GetAllRepos() const
+	TCVector<TCTuple<CRepository, umint>> CFilteredRepos::f_GetAllRepos() const
 	{
-		TCVector<TCTuple<CRepository, mint>> AllRepos;
+		TCVector<TCTuple<CRepository, umint>> AllRepos;
 
-		mint iSequence = 0;
+		umint iSequence = 0;
 		for (auto &Repos : m_FilteredRepositories)
 		{
 			for (auto *pRepo : Repos)

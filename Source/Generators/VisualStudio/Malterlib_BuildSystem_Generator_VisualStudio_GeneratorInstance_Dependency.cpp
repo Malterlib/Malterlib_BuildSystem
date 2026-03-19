@@ -30,7 +30,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 					co_await m_BuildSystem.f_CheckCancelled();
 
 					auto &Config = _Project.m_EnabledProjectConfigs.fs_GetKey(_ProjectEntity);
-					mint nDepenencies = 0;
+					umint nDepenencies = 0;
 					for (auto &Dependency : _Project.m_Dependencies)
 					{
 						if (Dependency.m_EnabledConfigs.f_IsEmpty())

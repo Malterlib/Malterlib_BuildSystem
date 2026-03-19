@@ -64,8 +64,8 @@ namespace NMib::NBuildSystem
 		NContainer::TCMap<NStr::CStr, NContainer::TCLinkedList<CTypeWithConditions>> m_UserTypes;
 		NContainer::TCMap<CPropertyKey, CPropertyContainer> m_Properties;
 
-		mint m_ExpandedOrGeneratedFrom = 0;
-		NContainer::TCSet<mint> m_ExpandedOrGeneratedFromSet;
+		umint m_ExpandedOrGeneratedFrom = 0;
+		NContainer::TCSet<umint> m_ExpandedOrGeneratedFromSet;
 
 		CFilePosition m_Position;
 		EPropertyFlag m_DebugFlags = EPropertyFlag_None;
@@ -93,7 +93,7 @@ namespace NMib::NBuildSystem
 		~CEntity();
 #endif
 
-		mint f_ExpandedOrGeneratedFromSource() const;
+		umint f_ExpandedOrGeneratedFromSource() const;
 		void f_Assign(CEntity const &_Other);
 		void f_CheckChildren() const;
 		NContainer::TCVector<CEntityKey> f_GetPathKey() const;

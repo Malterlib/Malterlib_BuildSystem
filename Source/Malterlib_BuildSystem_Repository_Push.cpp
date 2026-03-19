@@ -203,7 +203,7 @@ namespace NMib::NBuildSystem
 
 		TCVector<TCSet<CStr>> OutputOrder;
 
-		mint PushOrderGroup = 0;
+		umint PushOrderGroup = 0;
 		for (auto &Repos : FilteredRepositories.m_FilteredRepositories.f_Reverse())
 		{
 			TCFutureVector<bool> Results;

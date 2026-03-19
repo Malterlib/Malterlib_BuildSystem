@@ -113,7 +113,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 			TCMap<CConfiguration, TCMap<CStr, TCMap<TCReference<TCVector<CGeneratorSettings::CVS_Setting>>, zmint>>> AllProperties;
 
-			mint nSettings = SettingsVSType.m_SpecificSettings.f_GetLen();
+			umint nSettings = SettingsVSType.m_SpecificSettings.f_GetLen();
 
 			for (auto &Settings : SettingsVSType.m_SpecificSettings)
 			{

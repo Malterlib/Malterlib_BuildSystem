@@ -409,7 +409,7 @@ namespace NMib::NBuildSystem
 			return SeenRepositories;
 		}
 
-		void fg_OutputRepositoryInfo(EOutputType _OutputType, CStr const &_Info, CStateHandler &o_StateHandler, CStr const &_RepoName, mint _MaxRepoWidth)
+		void fg_OutputRepositoryInfo(EOutputType _OutputType, CStr const &_Info, CStateHandler &o_StateHandler, CStr const &_RepoName, umint _MaxRepoWidth)
 		{
 			CColors Colors(o_StateHandler.f_AnsiFlags());
 			CStr RepoColor = Colors.f_StatusNormal();
@@ -446,7 +446,7 @@ namespace NMib::NBuildSystem
 				, CBuildSystem const &_BuildSystem
 				, TCMap<CStr, CRepository const *> const &_AllRepositories
 				, EHandleRepositoryAction _ReconcileAction
-				, mint _MaxRepoWidth
+				, umint _MaxRepoWidth
 			)
 		{
 			co_await ECoroutineFlag_CaptureMalterlibExceptions;
@@ -1779,11 +1779,11 @@ namespace NMib::NBuildSystem
 			}
 		;
 
-		mint MaxRepoWidth = 0;
+		umint MaxRepoWidth = 0;
 
 		auto LastSeenRepositories = StateHandler.f_GetLastSeenRepositories();
 		for (auto &RepoName : LastSeenRepositories)
-			MaxRepoWidth = fg_Max(MaxRepoWidth, (mint)RepoName.f_GetLen());
+			MaxRepoWidth = fg_Max(MaxRepoWidth, (umint)RepoName.f_GetLen());
 
 		TCSet<CStr> SeenRepositories;
 		TCSet<CStr> ExcludeFromSeenRepositories;
@@ -1806,7 +1806,7 @@ namespace NMib::NBuildSystem
 					else
 						RepoName = Repo.m_Location;
 
-					MaxRepoWidth = fg_Max(MaxRepoWidth, (mint)RepoName.f_GetLen());
+					MaxRepoWidth = fg_Max(MaxRepoWidth, (umint)RepoName.f_GetLen());
 				}
 			}
 		}

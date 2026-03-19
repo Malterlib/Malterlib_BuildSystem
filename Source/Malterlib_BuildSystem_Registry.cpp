@@ -105,7 +105,7 @@ namespace NMib::NContainer
 
 		if (fg_Clamp(Month, 1u, 12u) != Month)
 			fReportError("Invalid month", pParseEnd);
-		if (fg_Clamp(Day, 1u, mint(NTime::CTimeConvert::fs_GetDaysInMonth(Year, Month - 1))) != Day)
+		if (fg_Clamp(Day, 1u, umint(NTime::CTimeConvert::fs_GetDaysInMonth(Year, Month - 1))) != Day)
 			fReportError("Invalid day", pParseEnd);
 		if (fg_Clamp(Hour, 0u, 23u) != Hour)
 			fReportError("Invalid hour", pParseEnd);

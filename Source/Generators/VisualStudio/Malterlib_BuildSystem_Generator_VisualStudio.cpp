@@ -144,7 +144,7 @@ namespace NMib::NBuildSystem
 			co_await BuildSystem.f_GenerateBuildSystem(&Configurations, &Values);
 			co_await BuildSystem.f_CheckCancelled();
 
-			mint nConfigs = 0;
+			umint nConfigs = 0;
 
 			for (auto iConfig = Configurations.f_GetIterator(); iConfig; ++iConfig)
 			{
@@ -165,9 +165,9 @@ namespace NMib::NBuildSystem
 			fp64 Time2 = Stopwatch.f_GetTime();
 			BuildSystem.f_OutputConsole("Extracted workspaces, projects and files for {} configurations {fe2} s{\n}"_f << nConfigs << (Time2 - Time1));
 
-			mint MaxSolutionNameLength = 0;
+			umint MaxSolutionNameLength = 0;
 			for (auto &pSolution : GeneratorState.m_Solutions)
-				MaxSolutionNameLength = fg_Max(MaxSolutionNameLength, mint(pSolution->f_GetName().f_GetLen()));
+				MaxSolutionNameLength = fg_Max(MaxSolutionNameLength, umint(pSolution->f_GetName().f_GetLen()));
 
 			auto OldNumWorkspaceTargets = o_NumWorkspaceTargets;
 
@@ -270,7 +270,7 @@ namespace NMib::NBuildSystem
 						;
 						co_await BuildSystem.f_CheckCancelled();
 
-						mint nTotalTargets = 0;
+						umint nTotalTargets = 0;
 
 						for (auto &pWorkspaceInfo : pSolution->m_WorkspaceInfos)
 							nTotalTargets += pWorkspaceInfo->m_Targets.f_GetLen();

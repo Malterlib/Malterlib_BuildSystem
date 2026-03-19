@@ -56,7 +56,7 @@ namespace NMib::NBuildSystem
 
 			CGitHostingProvider::CRelease Release;
 
-			for (mint iRetry = 0; ; ++iRetry)
+			for (umint iRetry = 0; ; ++iRetry)
 			{
 				if (auto ExistingRelease = co_await _Options.m_HostingProvider(&CGitHostingProvider::f_GetRelease, _Options.m_Repository, CreateRelease.m_TagName))
 				{
@@ -154,7 +154,7 @@ namespace NMib::NBuildSystem
 						, .m_AssetSize = AssetSize
 						, .m_fReadData = g_ActorFunctor
 						/ [pFileReadState]
-						(mint _nBytes) mutable -> TCFuture<CByteVector>
+						(umint _nBytes) mutable -> TCFuture<CByteVector>
 						{
 							CByteVector Result;
 							{
@@ -165,7 +165,7 @@ namespace NMib::NBuildSystem
 										{
 											auto BytesLeftInFile = pFileReadState->m_File.f_GetLength() - pFileReadState->m_File.f_GetPosition();
 
-											mint BytesToRead = fg_Min(mint(BytesLeftInFile), _nBytes);
+											umint BytesToRead = fg_Min(umint(BytesLeftInFile), _nBytes);
 
 											CByteVector Return;
 											Return.f_SetLen(BytesToRead);

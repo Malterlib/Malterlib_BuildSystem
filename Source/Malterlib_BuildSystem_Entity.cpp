@@ -72,12 +72,12 @@ namespace NMib::NBuildSystem
 			}
 		}
 		m_ChildEntitiesMap.f_Clear();
-		mint RefCount = this->m_RefCount.f_Decrease(DIfRefCountDebugging(m_DebugSelfRef));
+		umint RefCount = this->m_RefCount.f_Decrease(DIfRefCountDebugging(m_DebugSelfRef));
 #if DMibConfig_RefCountDebugging
 		if (RefCount != 1)
 		{
 			DMibLock(this->m_RefCount.m_Debug->m_Lock);
-			mint iCallstack = 0;
+			umint iCallstack = 0;
 			for (auto &Callstack : this->m_RefCount.m_Debug->m_Callstacks)
 			{
 				DMibTrace("        Reference callstack {}\n", iCallstack);
@@ -149,12 +149,12 @@ namespace NMib::NBuildSystem
 		return g_RootKey;
 	}
 
-	mint CEntity::f_ExpandedOrGeneratedFromSource() const
+	umint CEntity::f_ExpandedOrGeneratedFromSource() const
 	{
 		auto &Data = f_Data();
 		if (Data.m_ExpandedOrGeneratedFrom)
 			return Data.m_ExpandedOrGeneratedFrom;
-		return (mint)this;
+		return (umint)this;
 	}
 
 	void CEntity::f_CopyAll(CEntity const &_Other, bool _bCopyChildren)

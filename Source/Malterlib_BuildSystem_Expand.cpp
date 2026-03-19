@@ -713,7 +713,7 @@ namespace NMib::NBuildSystem
 
 		CEvaluatedProperties TempProperties;
 		TempProperties.m_pParentProperties = &_Entity.m_EvaluatedProperties;
-		mint ExpandedOrGeneratedFromSource = _Entity.f_ExpandedOrGeneratedFromSource();
+		umint ExpandedOrGeneratedFromSource = _Entity.f_ExpandedOrGeneratedFromSource();
 
 		if (Key.m_Name.f_IsConstantString())
 		{
@@ -891,7 +891,7 @@ namespace NMib::NBuildSystem
 
 					auto pOldEntity = pParent->m_ChildEntitiesMap.f_FindEqual(NewKey);
 
-					TCSet<mint> OldExpandedOrGeneratedFromSet;
+					TCSet<umint> OldExpandedOrGeneratedFromSet;
 					if (pOldEntity)
 					{
 						auto &OldEntityData = pOldEntity->f_Data();
@@ -947,7 +947,7 @@ namespace NMib::NBuildSystem
 				NewKey.m_Name.m_Value = EntityName;
 				auto pOldEntity = _ParentEntity.m_ChildEntitiesMap.f_FindEqual(NewKey);
 
-				TCSet<mint> OldExpandedOrGeneratedFromSet;
+				TCSet<umint> OldExpandedOrGeneratedFromSet;
 				if (pOldEntity)
 				{
 					auto &OldEntityData = pOldEntity->f_Data();

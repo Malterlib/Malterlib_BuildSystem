@@ -61,7 +61,7 @@ namespace NMib::NBuildSystem
 		;
 		auto fDepth = [&](CBuildSystemRegistry const &_Registry)
 			{
-				mint Depth = 0;
+				umint Depth = 0;
 				for (auto pReg = &_Registry; pReg; pReg = pReg->f_GetParent())
 					++Depth;
 

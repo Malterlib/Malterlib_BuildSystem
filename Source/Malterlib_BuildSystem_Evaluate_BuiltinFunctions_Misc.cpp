@@ -475,7 +475,7 @@ namespace NMib::NBuildSystem
 							)
 							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
-								mint HashLen = 64;
+								umint HashLen = 64;
 								if (_Params[1].f_IsValid())
 									HashLen = _Params[1].f_Integer();
 

@@ -347,12 +347,12 @@ namespace NMib::NBuildSystem
 
 		auto fGetLogEntries = [&](TCVector<CLogEntryFull> _Entries, TCVector<CLogEntryFull> _ReverseEntries, CStr const &_RelativePath) -> TCVector<CLogEntry>
 			{
-				auto fFilterEntries = [](TCVector<CLogEntryFull> &o_Entries, mint _MaxEntries, CStr const &_Message)
+				auto fFilterEntries = [](TCVector<CLogEntryFull> &o_Entries, umint _MaxEntries, CStr const &_Message)
 					{
 						if (o_Entries.f_GetLen() <= _MaxEntries)
 							return;
 
-						mint nDeleted = o_Entries.f_GetLen() - _MaxEntries;
+						umint nDeleted = o_Entries.f_GetLen() - _MaxEntries;
 						o_Entries.f_SetLen(_MaxEntries);
 						auto &DummyLogEntry = o_Entries.f_Insert();
 						DummyLogEntry.m_Commit = CStr::CFormat(_Message) << nDeleted << (nDeleted + _MaxEntries);
@@ -411,7 +411,7 @@ namespace NMib::NBuildSystem
 					if (*pParse == ']')
 					{
 						++pParse;
-						mint SectionLen = pParse - _String.f_GetStr();
+						umint SectionLen = pParse - _String.f_GetStr();
 						return str_utf32("{2}{}{3}{4}{}"_f)
 							<< _String.f_Left(SectionLen)
 							<< _String.f_Extract(SectionLen)
@@ -472,7 +472,7 @@ namespace NMib::NBuildSystem
 				TCVector<TCTuple<int32, uint32>> MaxColumnWidths;
 				for (auto &Column : Columns)
 				{
-					mint iColumn = Headings.f_GetLen();
+					umint iColumn = Headings.f_GetLen();
 					Headings.f_Insert(Column);
 					if (auto *pMaxWidth = MaxColumnWidth.f_FindEqual(Column))
 						MaxColumnWidths.f_Insert({iColumn, *pMaxWidth});
@@ -611,7 +611,7 @@ namespace NMib::NBuildSystem
 						ToHash = CStr::fs_Join(ToResult.f_GetErrorOut().f_Trim().f_SplitLine(), " ").f_Replace("\t", " ");
 				}
 
-				mint MaxLen = fg_Max(_From.f_GetLen(), _To.f_GetLen());
+				umint MaxLen = fg_Max(_From.f_GetLen(), _To.f_GetLen());
 
 				CStr Description;
 				Description += "{5}From {3}{a-,sj*,sf }  {4}{}\n"_f << _From << MaxLen << FromHash << Colors.f_ToPush() << Colors.f_Foreground256(246) << Colors.f_Default();
@@ -632,9 +632,9 @@ namespace NMib::NBuildSystem
 				auto &Date = ChangelogEntries.fs_GetKey(Entry);
 				auto Lines = Entry.f_SplitLine();
 				CStr DateStr = "{tc6}"_f << Date;
-				mint nLines = Lines.f_GetLen();
+				umint nLines = Lines.f_GetLen();
 				CStr ToOutput = "{} "_f << DateStr;
-				for (mint i = 0; i < nLines; ++i)
+				for (umint i = 0; i < nLines; ++i)
 				{
 					if (Lines[i] == "Copied from Perforce")
 						break;

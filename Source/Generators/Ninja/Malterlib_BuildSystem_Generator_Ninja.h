@@ -212,7 +212,7 @@ namespace NMib::NBuildSystem::NNinja
 		TCMap<CConfiguration, CEntityMutablePointer> m_EnabledConfigs;
 		TCMap<CStr, CProject> m_Projects;
 
-		mint m_nTotalTargets = 0;
+		umint m_nTotalTargets = 0;
 
 		CFilePosition m_Position;
 

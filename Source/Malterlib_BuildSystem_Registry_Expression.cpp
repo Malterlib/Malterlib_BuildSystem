@@ -13,10 +13,10 @@ namespace NMib::NContainer
 	using namespace NBuildSystem;
 	using namespace NStr;
 
-	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContextCatureStringMap::f_MapCharacter(mint _iDestination, mint _iSource, mint _nChars)
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContextCatureStringMap::f_MapCharacter(umint _iDestination, umint _iSource, umint _nChars)
 	{
 		m_StringMap.f_SetAtLeastLen(_iDestination + _nChars, 0);
-		for (mint i = 0; i < _nChars; ++i)
+		for (umint i = 0; i < _nChars; ++i)
 			m_StringMap[_iDestination + i] = _iSource + i;
 	}
 
@@ -32,7 +32,7 @@ namespace NMib::NContainer
 		Location.m_Character = pParseInOriginal - m_pOriginalStartParse;
 
 		auto *pParse = m_pOriginalStartParse;
-		mint Line = 1;
+		umint Line = 1;
 		auto *pLastLine = pParse;
 		while (*pParse)
 		{
@@ -673,7 +673,7 @@ namespace NMib::NContainer
 			}
 		;
 
-		mint nParsed = 0;
+		umint nParsed = 0;
 
 		while (*pParse && !fg_CharIsNewLine(*pParse))
 		{
@@ -1257,7 +1257,7 @@ namespace NMib::NContainer
 	namespace
 	{
 		template <typename tf_CStr>
-		void fg_GenerateAccessors(tf_CStr &o_String, TCVector<CJsonSorted> const &_Accessors, mint _Depth)
+		void fg_GenerateAccessors(tf_CStr &o_String, TCVector<CJsonSorted> const &_Accessors, umint _Depth)
 		{
 			bool bFirst = true;
 			for (auto &Accessor : _Accessors)
@@ -1330,7 +1330,7 @@ namespace NMib::NContainer
 		(
 			tf_CStr &o_String
 			, NEncoding::CJsonSorted const &_Token
-			, mint _Depth
+			, umint _Depth
 		)
 	{
 		o_String += "`";
@@ -1363,7 +1363,7 @@ namespace NMib::NContainer
 			tf_CStr &o_String
 			, CJsonSorted const &_Token
 			, bool _bQuoteStrings
-			, mint _Depth
+			, umint _Depth
 		)
 	{
 		if (!_Token.f_IsObject())
@@ -1854,7 +1854,7 @@ namespace NMib::NContainer
 			CStr::CAppender &o_String
 			, CJsonSorted const &_Token
 			, bool _bQuoteStrings
-			, mint _Depth
+			, umint _Depth
 		)
 	;
 
@@ -1863,7 +1863,7 @@ namespace NMib::NContainer
 			CStrNonTracked::CAppender &o_String
 			, CJsonSorted const &_Token
 			, bool _bQuoteStrings
-			, mint _Depth
+			, umint _Depth
 		)
 	;
 #endif

@@ -29,7 +29,7 @@ namespace NMib::NContainer
 			CEJsonParseContext();
 
 			template <typename tf_CParseContext, typename tf_CStr>
-			static bool fs_GenerateValue(tf_CStr &o_String, NEncoding::CJsonSorted const &_Value, mint _Depth, ch8 const *_pPrettySeparator, NEncoding::EJsonDialectFlag _Flags);
+			static bool fs_GenerateValue(tf_CStr &o_String, NEncoding::CJsonSorted const &_Value, umint _Depth, ch8 const *_pPrettySeparator, NEncoding::EJsonDialectFlag _Flags);
 
 			NContainer::CByteVector f_ParseBinary(uch8 const * &o_pParse, bool _bWithinParenthesis);
 			NTime::CTime f_ParseDate(uch8 const * &o_pParse, bool _bWithinParenthesis);
@@ -75,10 +75,10 @@ namespace NMib::NContainer
 			NStr::CStr f_ParseIdentifierLax(uch8 const *&o_pParse);
 
 			template <typename tf_CStr>
-			static void fs_GenerateExpression(tf_CStr &o_String, NEncoding::CJsonSorted const &_Token, bool _bQuoteStrings, mint _Depth);
+			static void fs_GenerateExpression(tf_CStr &o_String, NEncoding::CJsonSorted const &_Token, bool _bQuoteStrings, umint _Depth);
 
 			template <typename tf_CStr>
-			static void fs_GenerateEvalString(tf_CStr &o_String, NEncoding::CJsonSorted const &_Token, mint _Depth);
+			static void fs_GenerateEvalString(tf_CStr &o_String, NEncoding::CJsonSorted const &_Token, umint _Depth);
 
 			template <typename tf_CParseContext>
 			void f_ParseKey(NStr::CStr &o_Key, uch8 const *&o_pParse);
@@ -92,7 +92,7 @@ namespace NMib::NContainer
 			void f_PostParse(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse);
 
 			template <typename tf_CParseContext, typename tf_CStr>
-			static bool fs_GenerateValue(tf_CStr &o_String, NEncoding::CJsonSorted const &_Value, mint _Depth, ch8 const *_pPrettySeparator, NEncoding::EJsonDialectFlag _Flags);
+			static bool fs_GenerateValue(tf_CStr &o_String, NEncoding::CJsonSorted const &_Value, umint _Depth, ch8 const *_pPrettySeparator, NEncoding::EJsonDialectFlag _Flags);
 
 			template <typename tf_CParseContext, typename tf_CStr, typename tf_CSourceStr>
 			static void fs_GenerateKeyString(tf_CStr &o_String, tf_CSourceStr const &_Key);
@@ -131,8 +131,8 @@ namespace NMib::NContainer
 				;
 			}
 
-			mint m_ParseDepth = 0;
-			mint m_ParsingFunctionParamsDepth = 0;
+			umint m_ParseDepth = 0;
+			umint m_ParsingFunctionParamsDepth = 0;
 			bool m_bParsingDefine = false;
 			bool m_bSupportBinaryOperators = true;
 			bool m_bParseAfterValue = true;
@@ -143,11 +143,11 @@ namespace NMib::NContainer
 		{
 			static constexpr bool mc_bRecordStringMap = true;
 
-			void f_MapCharacter(mint _iDestination, mint _iSource, mint _nChars);
+			void f_MapCharacter(umint _iDestination, umint _iSource, umint _nChars);
 			NStr::CParseLocation f_GetLocation(uch8 const *_pParse) const override;
 
 			CJsonParseContext const *m_pOriginalParseContext;
-			TCVector<mint> m_StringMap;
+			TCVector<umint> m_StringMap;
 			uch8 const *m_pOriginalStartParse = nullptr;
 		};
 
@@ -177,12 +177,12 @@ namespace NMib::NContainer
 		;
 
 		template <typename tf_CKey, typename tf_CString>
-		static void fs_GenerateKey(tf_CString &o_Output, tf_CKey const &_Value, bool _bForceEscape, mint _Level, tf_CString const &_PreData);
+		static void fs_GenerateKey(tf_CString &o_Output, tf_CKey const &_Value, bool _bForceEscape, umint _Level, tf_CString const &_PreData);
 
 		static bool fs_ValueIsEmpty(NBuildSystem::CBuildSystemSyntax::CRootValue const &_Value, bool _bForceEscape);
 
 		template <typename tf_CString>
-		static void fs_Generate(tf_CString &o_Output, NBuildSystem::CBuildSystemSyntax::CRootValue const &_Value, bool _bForceEscape, mint _Level, tf_CString const &_PreData);
+		static void fs_Generate(tf_CString &o_Output, NBuildSystem::CBuildSystemSyntax::CRootValue const &_Value, bool _bForceEscape, umint _Level, tf_CString const &_PreData);
 	};
 }
 

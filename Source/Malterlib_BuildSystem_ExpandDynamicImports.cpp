@@ -894,7 +894,7 @@ namespace NMib::NBuildSystem
 			}
 
 			auto FoundFiles = CFile::fs_FindFiles(FindOptions);
-			mint PathPrefixLen = TempDirectory.f_GetLen() + 1;
+			umint PathPrefixLen = TempDirectory.f_GetLen() + 1;
 
 			CStr SourceBase = CFile::fs_GetPath(FileName);
 			CStr SourceBaseFind = SourceBase + "/";
@@ -1441,7 +1441,7 @@ namespace NMib::NBuildSystem
 									CStr StrippedParam = fGetStripped(ParamString);
 									CStr *pWorkingDirOutput = nullptr;
 									CStr *pStrippedOutput = nullptr;
-									mint iOutput = 0;
+									umint iOutput = 0;
 									for (auto &Output : Outputs)
 									{
 										if (StrippedParam == Output)
@@ -1907,7 +1907,7 @@ namespace NMib::NBuildSystem
 								continue;
 
 							CStr DisambiguatedName = TargetName;
-							mint DisambiguateNumber = 1;
+							umint DisambiguateNumber = 1;
 							while (TargetsNoCase.f_FindEqual(DisambiguatedName))
 								DisambiguatedName = "{}{}"_f << TargetName << DisambiguateNumber;
 
