@@ -10,6 +10,7 @@
 #include <Mib/Concurrency/ActorSequencerActor>
 #include <Mib/CommandLine/AnsiEncoding>
 #include <Mib/Concurrency/AsyncDestroy>
+#include <Mib/Time/Stopwatch>
 
 namespace NMib::NBuildSystem::NRepository
 {
@@ -134,6 +135,12 @@ namespace NMib::NBuildSystem::NRepository
 		EGitIgnoreType m_GitIgnoreType = EGitIgnoreType::mc_GitIgnore;
 	};
 
+	struct CRepositoryDynamicInfo
+	{
+		CStr m_DataDir;
+		CStr m_CommonDir;
+	};
+
 	struct CReposLocation
 	{
 		CStr const &f_GetPath() const
@@ -159,6 +166,23 @@ namespace NMib::NBuildSystem::NRepository
 		bool m_bIsStateFile = false;
 	};
 
+	struct CMainRepoInfo
+	{
+		CStr m_Location;
+		CStr m_DataDir;
+		CStr m_CommonDir;
+		CStr m_Branch;
+		CStr m_DefaultBranch;
+		bool m_bIsWorktree = false;
+		bool m_bIsValid = false;
+	};
+
+	struct CMainRepoBranchInfo
+	{
+		CStr m_Branch;
+		CStr m_DefaultBranch;
+	};
+
 	struct CStateHandler
 	{
 		CStateHandler
@@ -182,8 +206,20 @@ namespace NMib::NBuildSystem::NRepository
 		EAnsiEncodingFlag f_AnsiFlags() const;
 		TCFuture<CActorSubscription> f_SequenceConfigChanges(CStr const &_Path);
 		bool f_UpdateCoreExcludesFileLocation(CStr const &_Path);
+		void f_IncrementBranchCreated(CStr const &_FromBranch, CStr const &_ToBranch, CStr const &_Repository);
+		void f_IncrementBranchSwitched(CStr const &_FromBranch, CStr const &_ToBranch, CStr const &_Repository);
+		void f_OutputBranchSwitchSummary(umint _MaxRepoWidth);
 
 	private:
+		struct CBranchTransition
+		{
+			CStr m_FromBranch;
+			CStr m_ToBranch;
+			bool m_bCreated = false;
+
+			auto operator<=>(CBranchTransition const &_Other) const = default;
+		};
+
 		CConfigFile const &fp_GetConfigFile(CStr const &_FileName, bool _bIsStateFile);
 
 		CStr const mp_BasePath;
@@ -202,6 +238,9 @@ namespace NMib::NBuildSystem::NRepository
 
 		CLowLevelRecursiveLock mp_CoreExcludesFileLocationLock;
 		TCSet<CStr> mp_CoreExcludesFileLocationUpdated;
+
+		CLowLevelRecursiveLock mp_BranchTransitionsLock;
+		TCMap<CBranchTransition, TCVector<CStr>> mp_BranchTransitions;
 	};
 
 	struct CGitLaunches
@@ -214,7 +253,9 @@ namespace NMib::NBuildSystem::NRepository
 
 		void f_CheckInit() const;
 		void f_SetNumRepos(umint _nRepos, bool _bReport = true);
+		void f_SetProgressDelay(fp64 _Delay);
 		void f_MeasureRepos(TCVector<TCVector<CRepository *>> const &_FilteredRepositories, bool _bReport = true);
+		void f_MeasureRepos(TCVector<TCMap<CStr, CReposLocation>> const &_Repositories, bool _bReport = true);
 
 		TCUnsafeFuture<CProcessLaunchActor::CSimpleLaunchResult> f_Launch
 			(
@@ -277,6 +318,8 @@ namespace NMib::NBuildSystem::NRepository
 			TCMap<CStr, CStr> m_RepoNames;
 			TCAtomic<umint> m_nDoneRepos = 0;
 			CStr m_ProgressDescription;
+			CStopwatch m_Stopwatch{true};
+			fp64 m_ProgressDelay = 0.0;
 
 			CMutual m_DeferredOutputLock;
 			TCMap<CStr, TCVector<CDeferredOutput>> m_DeferredOutput;
@@ -418,13 +461,13 @@ namespace NMib::NBuildSystem::NRepository
 		TCMap<CStr, CStr> m_CustomLfsTransferAgents;
 		CStr m_UserName;
 		CStr m_UserEmail;
+		bool m_bWorktreeConfig = false;
 	};
 
 	enum EFilterRepoFlag
 	{
 		EFilterRepoFlag_None = 0
 		, EFilterRepoFlag_OnlyTracked = DBit(0)
-		, EFilterRepoFlag_IncludePull = DBit(1)
 	};
 
 	struct CGitVersion
@@ -453,15 +496,24 @@ namespace NMib::NBuildSystem::NRepository
 	TCUnsafeFuture<CGitVersion> fg_GetGitVersion(CGitLaunches &_Launches);
 	CStr fg_GetGitRoot(CStr const &_Directory);
 	CStr fg_GetGitDataDir(CStr const &_GitRoot, CFilePosition const &_Position);
-	CStr fg_GetGitHeadHash(CStr const &_GitRoot, CFilePosition const &_Position);
-	CGitConfig fg_GetGitConfig(CStr const &_GitRoot, CFilePosition const &_Position);
-	bool fg_IsSubmodule(CStr const &_GitRoot);
+	CStr fg_GetGitCommonDir(CStr const &_DataDir, CFilePosition const &_Position);
+	CStr fg_GetGitHeadHash(CRepository const &_Repo, CRepositoryDynamicInfo const &_DynamicInfo);
+	CRepositoryDynamicInfo fg_GetRepositoryDynamicInfo(CRepository const &_Repo);
+
+	CGitConfig fg_GetGitConfig(CRepository const &_Repo, CRepositoryDynamicInfo const &_DynamicInfo, bool _bIsWorktree);
+	bool fg_IsSubmodule(CStr const &_DataDir);
+	bool fg_IsWorktree(CStr const &_DataDir);
+	bool fg_AreGitPathsSame(CStr const &_PathA, CStr const &_PathB);
+	TCUnsafeFuture<TCVector<CStr>> fg_ListWorktreePaths(CGitLaunches &_Launches, CStr const &_RepoDir);
+	TCUnsafeFuture<CStr> fg_FindSubRepoInWorktrees(CGitLaunches &_Launches, CStr const &_BaseDir, CStr const &_RelativeRepoPath);
+	TCUnsafeFuture<void> fg_TransferGitDirMainToWorktree(CGitLaunches &_Launches, CStr const &_MainSubRepoDir, CStr const &_TargetWorktreeSubRepoDir);
+	TCUnsafeFuture<void> fg_TransferGitDirWorktreeToMain(CGitLaunches &_Launches, CStr const &_WorktreeSubRepoDir, CStr const &_MainSubRepoDir, CStr const &_WorktreeName);
 	TCVector<TCMap<CStr, CReposLocation>> fg_GetRepos(CBuildSystem &_BuildSystem, CBuildSystemData &_Data, EGetRepoFlag _Flags);
 	CRepoEditor fg_GetRepoEditor(CBuildSystem &_BuildSystem, CBuildSystemData &_Data);
 
 	TCFunctionMovable<CStr (CProcessLaunchActor::CSimpleLaunchResult const &_Result)> fg_LogAllFunctor();
 
-	TCFuture<bool> fg_RepoIsChanged(CGitLaunches _GitLaunches, CRepository _Repo, EFilterRepoFlag _Flags);
+	TCFuture<bool> fg_RepoIsChanged(CGitLaunches _GitLaunches, CRepository _Repo, CRepositoryDynamicInfo _DynamicInfo, EFilterRepoFlag _Flags, bool _bIncludePull, CStr _MainRepoBranch, CStr _MainRepoDefaultBranch);
 	TCFuture<TCVector<CLocalFileChange>> fg_GetLocalFileChanges(CGitLaunches _GitLaunches, CRepository _Repo, bool _bIncludeUntracked);
 	TCFuture<CGitBranches> fg_GetBranches(CGitLaunches _GitLaunches, CRepository _Repo, bool _bRemote);
 	TCFuture<TCVector<CStr>> fg_GetRemotes(CGitLaunches _GitLaunches, CRepository _Repo);
@@ -469,9 +521,16 @@ namespace NMib::NBuildSystem::NRepository
 	TCFuture<TCVector<CLogEntry>> fg_GetLogEntries(CGitLaunches _GitLaunches, CRepository _Repo, CStr _From, CStr _To, bool _bReportBadRevision = true);
 	TCFuture<TCVector<CLogEntryFull>> fg_GetLogEntriesFull(CGitLaunches _GitLaunches, CRepository _Repo, CStr _From, CStr _To);
 
-	bool fg_BranchExists(CRepository const &_Repo, CStr const &_Branch);
-	CStr fg_GetBranch(CRepository const &_Repo);
-	CStr fg_GetRemoteHead(CRepository const &_Repo, CStr const &_Remote);
+	bool fg_BranchExists(CRepository const &_Repo, CRepositoryDynamicInfo const &_DynamicInfo, CStr const &_Branch);
+	bool fg_RemoteBranchExists(CRepository const &_Repo, CRepositoryDynamicInfo const &_DynamicInfo, CStr const &_Branch);
+	CStr fg_GetBranchHash(CRepository const &_Repo, CRepositoryDynamicInfo const &_DynamicInfo, CStr const &_Branch);
+	CStr fg_GetRemoteBranchHash(CRepository const &_Repo, CRepositoryDynamicInfo const &_DynamicInfo, CStr const &_Remote, CStr const &_Branch);
+	CStr fg_GetBranch(CRepository const &_Repo, CRepositoryDynamicInfo const &_DynamicInfo);
+	void fg_DetectGitBranchInfo(CStr const &_DataDir, CStr const &_CommonDir, CStr &o_Branch, CStr &o_DefaultBranch);
+	CStr fg_GetExpectedBranch(CRepository const &_Repo, CStr const &_MainRepoBranch, CStr const &_MainRepoDefaultBranch);
+	CMainRepoBranchInfo fg_GetMainRepoBranchInfo(CStr const &_BaseDir, TCVector<TCMap<CStr, CReposLocation>> const &_ReposOrdered);
+	CStr fg_GetRemoteHead(CRepository const &_Repo, CRepositoryDynamicInfo const &_DynamicInfo, CStr const &_Remote);
+	CStr fg_HandleRepositoryActionToString(EHandleRepositoryAction _Action, EOutputType &o_OutputType);
 
 	TCUnsafeFuture<void> fg_UpdateRemotes(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage = {});
 	TCMap<CStr, CStr> fg_FetchEnvironment(CBuildSystem const &_BuildSystem);

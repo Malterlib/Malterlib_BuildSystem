@@ -62,6 +62,7 @@ namespace NMib::NBuildSystem
 		{
 			ERetry_None
 			, ERetry_Again
+			, ERetry_Again_ForceUpdate
 			, ERetry_Again_NoReconcileOptions
 			, ERetry_Again_EnablePositions
 			, ERetry_Relaunch
@@ -72,11 +73,14 @@ namespace NMib::NBuildSystem
 		{
 			static CRepoFilter fs_ParseParams(NEncoding::CEJsonSorted const &_Params);
 
+			bool f_IsEmpty() const;
+
 			NStr::CStr m_NameWildcard;
 			NStr::CStr m_Type;
 			NStr::CStr m_Branch;
 			NContainer::TCSet<NStr::CStr> m_Tags;
 			bool m_bOnlyChanged = false;
+			bool m_bIncludePull = false;
 		};
 
 		enum ERepoCleanupBranchesFlag
@@ -467,6 +471,7 @@ namespace NMib::NBuildSystem
 		NStr::CStr f_GetEnvironmentVariable(NStr::CStr const &_Name, NStr::CStr const &_Default = {}, bool *o_pExists = nullptr) const;
 
 		void f_NoReconcileOptions();
+		void f_ForceUpdate();
 
 		bool f_SingleThreaded() const;
 
@@ -1056,6 +1061,8 @@ namespace NMib::NBuildSystem
 		void fp_TracePropertyEval(bool _bSuccess, CEntity const &_Entity, CPropertyKey const &_PropertyKey, CProperty const &_Property, NEncoding::CEJsonSorted const &_Value) const;
 
 		NConcurrency::TCUnsafeFuture<ERetry> fp_HandleRepositories(NContainer::TCMap<CPropertyKey, NEncoding::CEJsonSorted> const &_Values);
+		NConcurrency::TCUnsafeFuture<ERetry> fp_BranchRootRepo(CGenerateEphemeralState &_GenerateState, NStorage::TCOptional<NStr::CStr> const &_Branch, ERepoBranchFlag _Flags);
+		NConcurrency::TCUnsafeFuture<ERetry> fp_ForceBranchRepos(CRepoFilter const &_Filter, NStorage::TCOptional<NStr::CStr> const &_Branch, ERepoBranchFlag _Flags);
 
 		void fp_SaveEnvironment();
 
@@ -1109,7 +1116,9 @@ namespace NMib::NBuildSystem
 		CTypeWithPosition mp_TypeForPropertyAny;
 
 		CGenerateOptions mp_GenerateOptions;
+		umint mp_MaxRepoWidth = 0;
 		bool mp_bNoReconcileOptions = false;
+		bool mp_bForceUpdate = false;
 		bool mp_bSingleThreaded = false;
 		bool mp_bApplyRepoPolicy = false;
 		bool mp_bApplyRepoPolicyPretend = true;

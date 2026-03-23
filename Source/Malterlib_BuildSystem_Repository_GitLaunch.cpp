@@ -151,6 +151,8 @@ namespace NMib::NBuildSystem::NRepository
 		CUStr ToOutput = CStr{"  {}: {}/{} repos done"_f << m_ProgressDescription << m_nDoneRepos.f_Load() << m_nRepos.f_Load()};
 		if (m_nDoneRepos == m_nRepos.f_Load())
 			ToOutput = CStr{"{sj*}"_f << "" << ToOutput.f_GetLen()}; // Clear previous output
+		else if (m_ProgressDelay > 0.0 && m_Stopwatch.f_GetTime() < m_ProgressDelay)
+			return;
 
 		f_ConsoleOutput("{}\x1B[{}D"_f << ToOutput << ToOutput.f_GetLen());
 	}
@@ -189,6 +191,11 @@ namespace NMib::NBuildSystem::NRepository
 
 		if (_bReport)
 			f_RepoDone(0);
+	}
+
+	void CGitLaunches::f_SetProgressDelay(fp64 _Delay)
+	{
+		m_pState->m_ProgressDelay = _Delay;
 	}
 
 	void CGitLaunches::f_CheckInit() const
@@ -312,6 +319,35 @@ namespace NMib::NBuildSystem::NRepository
 				}
 			)
 		;
+	}
+
+	void CGitLaunches::f_MeasureRepos(TCVector<TCMap<CStr, CReposLocation>> const &_Repositories, bool _bReport)
+	{
+		auto &State = *m_pState;
+
+		State.m_LongestRepo = 0;
+		State.m_nRepos = 0;
+
+		for (auto &Repos : _Repositories)
+		{
+			for (auto &ReposLocation : Repos)
+			{
+				for (auto &Repo : ReposLocation.m_Repositories)
+				{
+					auto &Name = State.m_RepoNames[Repo.m_Location];
+					auto RelativePath = CFile::fs_MakePathRelative(Repo.m_Location, State.m_BaseDir);
+					if (!RelativePath.f_IsEmpty())
+						Name = "{}"_f << CFile::fs_MakePathRelative(Repo.m_Location, State.m_BaseDir);
+					else
+						Name = ".";
+					State.m_LongestRepo = fg_Max(State.m_LongestRepo, umint(Name.f_GetLen()));
+					++State.m_nRepos;
+				}
+			}
+		}
+
+		if (_bReport)
+			f_RepoDone(0);
 	}
 
 	void CGitLaunches::f_MeasureRepos(TCVector<TCVector<CRepository *>> const &_FilteredRepositories, bool _bReport)

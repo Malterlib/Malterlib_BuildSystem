@@ -248,7 +248,13 @@ namespace NMib::NBuildSystem
 
 		CRepoFilter Filter = _Filter;
 
-		EFilterRepoFlag FilterFlags = EFilterRepoFlag_IncludePull;
+		// "Include pull" is intentionally driven by --repo-include-pull rather than being
+		// hardcoded on for status. The previous always-on behavior was incidental: the
+		// changed-only filter is rarely combined with status anyway, and forcing it on
+		// here would override the user's CLI choice.
+		// Pull-only repos are still surfaced when the user passes --repo-include-pull;
+		// see fg_RepoIsChanged which receives _Filter.m_bIncludePull via fg_GetFilteredRepos.
+		EFilterRepoFlag FilterFlags = EFilterRepoFlag_None;
 
 		if (_Flags & CBuildSystem::ERepoStatusFlag_OnlyTracked)
 			FilterFlags |= EFilterRepoFlag_OnlyTracked;
@@ -341,14 +347,37 @@ namespace NMib::NBuildSystem
 									if (Branch == Repo.m_OriginProperties.m_DefaultBranch && !DefaultUpstreamBranch.f_IsEmpty() && !State.f_HasRemoteBranch(RemoteBranch))
 										MissingRemoteBranch = "{}/{}"_f << Remote << DefaultUpstreamBranch;
 
+									CStr DefaultBranch = Repo.m_OriginProperties.m_DefaultBranch;
+									if (pRemote && pRemote->m_Properties.m_DefaultBranch)
+										DefaultBranch = pRemote->m_Properties.m_DefaultBranch;
+
 									if (!(_Flags & ERepoStatusFlag_NonDefaultToAll) && Remote != "origin" && Branch != Repo.m_OriginProperties.m_DefaultBranch)
 										;
 									else
 									{
 										if (State.f_HasRemoteBranch(RemoteBranch))
 											fg_GetLogEntries(Launches, Repo, RemoteBranch, Branch) > ToPush[Remote];
-										else if ((Remote == "origin" && Branch == Repo.m_OriginProperties.m_DefaultBranch) || !State.f_HasRemoteBranch(MissingRemoteBranch))
+										else if (Remote == "origin" && Branch == Repo.m_OriginProperties.m_DefaultBranch)
 											ToPushMissing[Remote];
+										else if (!State.f_HasRemoteBranch(MissingRemoteBranch))
+										{
+											// Only report as needing push if the branch has commits not
+											// reachable from the remote default branch. This aligns with
+											// mib push which uses the same check: since the main branch
+											// is always synced to all sub-repositories, a branch whose
+											// tip is already in the default branch has no unique commits
+											// that would be needed for another pull to resolve hashes.
+											auto MergeBaseResult = co_await Launches.f_Launch
+												(
+													Repo
+													, {"merge-base", "--is-ancestor", Branch, "{}/{}"_f << Remote << DefaultBranch}
+													, {}
+													, CProcessLaunchActor::ESimpleLaunchFlag_None
+												)
+											;
+											if (MergeBaseResult.m_ExitCode != 0)
+												ToPushMissing[Remote];
+										}
 
 										if (State.f_HasRemoteBranch(PullRemoteBranch))
 										{
@@ -356,10 +385,6 @@ namespace NMib::NBuildSystem
 												fg_GetLogEntries(Launches, Repo, Branch, PullRemoteBranch) > ToPull[PullRemoteBranchName];
 										}
 									}
-
-									CStr DefaultBranch = Repo.m_OriginProperties.m_DefaultBranch;
-									if (pRemote && pRemote->m_Properties.m_DefaultBranch)
-										DefaultBranch = pRemote->m_Properties.m_DefaultBranch;
 
 									if (Branch != DefaultBranch && !DefaultBranch.f_IsEmpty())
 									{

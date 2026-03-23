@@ -72,5 +72,6 @@ namespace NMib::NBuildSystem
 		bool m_bUpdateLfsReleaseIndexesPretend = false;
 		bool m_bUpdateLfsReleaseIndexesPruneOrphanedAssets = false;
 		bool m_bShowProgress = true;
+		bool m_bStash = true; // Parsed from --stash in MTool (Malterlib_Tool_App_MTool_Malterlib.cpp), default true
 	};
 }

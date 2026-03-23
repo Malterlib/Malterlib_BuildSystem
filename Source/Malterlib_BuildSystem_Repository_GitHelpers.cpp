@@ -8,12 +8,38 @@
 
 namespace NMib::NBuildSystem::NRepository
 {
+	namespace
+	{
+		aint fg_FindGitPath(CStr const &_Path, ch8 const *_pSearch)
+		{
+#ifdef DPlatformFamily_Windows
+			return _Path.f_FindNoCase(_pSearch);
+#else
+			return _Path.f_Find(_pSearch);
+#endif
+		}
+
+		aint fg_FindGitPath(CStr const &_Path, aint _Start, ch8 const *_pSearch)
+		{
+#ifdef DPlatformFamily_Windows
+			return _Path.f_FindNoCase(_Start, _pSearch);
+#else
+			return _Path.f_Find(_Start, _pSearch);
+#endif
+		}
+
+		bool fg_GitPathContains(CStr const &_Path, ch8 const *_pSearch)
+		{
+			return fg_FindGitPath(_Path, _pSearch) >= 0;
+		}
+	}
+
 	CStr fg_GetGitRoot(CStr const &_Directory)
 	{
 		CStr CurrentDirectory = _Directory;
 		while (!CurrentDirectory.f_IsEmpty())
 		{
-			if (CFile::fs_FileExists(CurrentDirectory + "/.git", EFileAttrib_Directory))
+			if (CFile::fs_FileExists(CurrentDirectory + "/.git", EFileAttrib_Directory) || CFile::fs_FileExists(CurrentDirectory + "/.git", EFileAttrib_File))
 				return CurrentDirectory;
 			CurrentDirectory = CFile::fs_GetPath(CurrentDirectory);
 		}
@@ -28,35 +54,48 @@ namespace NMib::NBuildSystem::NRepository
 		{
 			CStr FileContents = CFile::fs_ReadStringFromFile(GitDirectory, true).f_TrimRight("\n");
 			if (!FileContents.f_StartsWith("gitdir: "))
-				CBuildSystem::fs_ThrowError(_Position, fg_Format("Unsupported git directory. Expected 'gitdir: ' in '{}'", GitDirectory));
+				CBuildSystem::fs_ThrowError(_Position, "Unsupported git directory. Expected 'gitdir: ' in '{}'"_f << GitDirectory);
 			GitDirectory = CFile::fs_GetExpandedPath(FileContents.f_Extract(8), _GitRoot);
 		}
 		if (!CFile::fs_FileExists(GitDirectory, EFileAttrib_Directory))
-			CBuildSystem::fs_ThrowError(_Position, fg_Format("Missing git directory: {}", GitDirectory));
+			CBuildSystem::fs_ThrowError(_Position, "Missing git directory for root '{}': {}"_f << _GitRoot << GitDirectory);
 		return GitDirectory;
 	}
 
-	CStr fg_GetGitHeadHash(CStr const &_GitRoot, CFilePosition const &_Position)
+	CStr fg_GetGitCommonDir(CStr const &_DataDir, CFilePosition const &_Position)
 	{
-		CStr GitDirectory = fg_GetGitDataDir(_GitRoot, _Position);
-
-		CStr HeadRef = CFile::fs_ReadStringFromFile(GitDirectory + "/HEAD", true).f_TrimRight("\n");
-		if (HeadRef.f_StartsWith("ref: "))
+		CStr CommonDirFile = _DataDir + "/commondir";
+		if (CFile::fs_FileExists(CommonDirFile))
 		{
-			HeadRef = HeadRef.f_Extract(5);
-			{
-				CStr RefFile = "{}/{}"_f << GitDirectory << + HeadRef;
-				if (CFile::fs_FileExists(RefFile))
-					return CFile::fs_ReadStringFromFile(RefFile, true).f_TrimRight("\n");
-			}
+			CStr CommonDirRelative = CFile::fs_ReadStringFromFile(CommonDirFile, true).f_TrimRight("\n");
+			return CFile::fs_GetExpandedPath(CommonDirRelative, _DataDir);
+		}
+		return _DataDir;
+	}
 
-			CStr PackedRefs;
+	CRepositoryDynamicInfo fg_GetRepositoryDynamicInfo(CRepository const &_Repo)
+	{
+		auto DataDir = fg_GetGitDataDir(_Repo.m_Location, _Repo.m_Position);
+		return
 			{
-				CStr PackedRefFile = "{}/packed-refs"_f << GitDirectory;
-				if (CFile::fs_FileExists(PackedRefFile))
-					PackedRefs = CFile::fs_ReadStringFromFile(PackedRefFile, true).f_TrimRight("\n");
+				.m_DataDir = DataDir
+				, .m_CommonDir = fg_GetGitCommonDir(DataDir, _Repo.m_Position)
 			}
+		;
+	}
 
+	CStr fsg_ResolveRefHash(CStr const &_CommonDir, CStr const &_Ref)
+	{
+		{
+			CStr RefFile = "{}/{}"_f << _CommonDir << _Ref;
+			if (CFile::fs_FileExists(RefFile))
+				return CFile::fs_ReadStringFromFile(RefFile, true).f_TrimRight("\n");
+		}
+
+		CStr PackedRefFile = "{}/packed-refs"_f << _CommonDir;
+		if (CFile::fs_FileExists(PackedRefFile))
+		{
+			CStr PackedRefs = CFile::fs_ReadStringFromFile(PackedRefFile, true).f_TrimRight("\n");
 			for (auto &Line : PackedRefs.f_SplitLine<true>())
 			{
 				if (Line.f_StartsWith("#"))
@@ -67,94 +106,346 @@ namespace NMib::NBuildSystem::NRepository
 				(CStr::CParse("{} {}") >> CommitHash >> Ref).f_Parse(Line, nParsed);
 				if (nParsed != 2)
 					continue;
-				if (Ref == HeadRef)
+				if (Ref == _Ref)
 					return CommitHash;
 			}
+		}
 
-			DMibError("Hash for {} was not found in {}"_f << HeadRef << GitDirectory);
+		return {};
+	}
+
+	CStr fg_GetGitHeadHash(CRepository const &_Repo, CRepositoryDynamicInfo const &_DynamicInfo)
+	{
+		CStr HeadRef = CFile::fs_ReadStringFromFile(_DynamicInfo.m_DataDir + "/HEAD", true).f_TrimRight("\n");
+		if (HeadRef.f_StartsWith("ref: "))
+		{
+			HeadRef = HeadRef.f_Extract(5);
+			CStr Hash = fsg_ResolveRefHash(_DynamicInfo.m_CommonDir, HeadRef);
+			if (Hash)
+				return Hash;
+			CBuildSystem::fs_ThrowError(_Repo.m_Position, "Hash for {} was not found in {}"_f << HeadRef << _DynamicInfo.m_CommonDir);
 		}
 		else
 			return HeadRef;
 	}
 
-	CGitConfig fg_GetGitConfig(CStr const &_GitRoot, CFilePosition const &_Position)
+	CGitConfig fg_GetGitConfig(CRepository const &_Repo, CRepositoryDynamicInfo const &_DynamicInfo, bool _bIsWorktree)
 	{
-		CStr GitDirectory = fg_GetGitDataDir(_GitRoot, _Position);
-
-		CStr Config = CFile::fs_ReadStringFromFile(GitDirectory + "/config", true);
-
-		auto ConfigContents = CGitConfigParser::fs_Parse(Config);
-
 		CGitConfig GitConfig;
 
-		if (auto *pValue = ConfigContents.f_GetValue("user", "name"))
-			GitConfig.m_UserName = *pValue;
-
-		if (auto *pValue = ConfigContents.f_GetValue("user", "email"))
-			GitConfig.m_UserEmail = *pValue;
-
-		if (auto *pRemotes = ConfigContents.m_Sections.f_FindEqual("remote"))
+		// Read shared config for remotes/LFS (these are shared between worktrees)
 		{
-			for (auto &SubSection : pRemotes->m_SubSections.f_Entries())
+			CStr SharedConfigFile = _DynamicInfo.m_CommonDir + "/config";
+			if (CFile::fs_FileExists(SharedConfigFile))
 			{
-				auto &Value = SubSection.f_Value();
+				CStr Config = CFile::fs_ReadStringFromFile(SharedConfigFile, true);
+				auto ConfigContents = CGitConfigParser::fs_Parse(Config);
 
-				if (auto *pValue = Value.m_Values.f_FindEqual("url"))
-					GitConfig.m_Remotes[SubSection.f_Key()].m_Url = pValue->f_GetLast();
+				if (auto *pValue = ConfigContents.f_GetValue("extensions", "worktreeconfig"))
+					GitConfig.m_bWorktreeConfig = CGitConfigParser::fs_ToBoolean(*pValue);
 
-				if (auto *pValue = Value.m_Values.f_FindEqual("fetch"))
-					GitConfig.m_Remotes[SubSection.f_Key()].m_Fetch = *pValue;
+				// For non-worktrees, also read user settings from shared config
+				if (!_bIsWorktree)
+				{
+					if (auto *pValue = ConfigContents.f_GetValue("user", "name"))
+						GitConfig.m_UserName = *pValue;
 
-				if (auto *pValue = Value.m_Values.f_FindEqual("tagopt"))
-					GitConfig.m_Remotes[SubSection.f_Key()].m_TagOptions = pValue->f_GetLast();
+					if (auto *pValue = ConfigContents.f_GetValue("user", "email"))
+						GitConfig.m_UserEmail = *pValue;
+				}
 
-				if (auto *pValue = Value.m_Values.f_FindEqual("malterlib-lfs-setup"))
-					GitConfig.m_Remotes[SubSection.f_Key()].m_bMalterlibLfsSetup = CGitConfigParser::fs_ToBoolean(pValue->f_GetLast());
+				if (auto *pRemotes = ConfigContents.m_Sections.f_FindEqual("remote"))
+				{
+					for (auto &SubSection : pRemotes->m_SubSections.f_Entries())
+					{
+						auto &Value = SubSection.f_Value();
+
+						if (auto *pValue = Value.m_Values.f_FindEqual("url"))
+							GitConfig.m_Remotes[SubSection.f_Key()].m_Url = pValue->f_GetLast();
+
+						if (auto *pValue = Value.m_Values.f_FindEqual("fetch"))
+							GitConfig.m_Remotes[SubSection.f_Key()].m_Fetch = *pValue;
+
+						if (auto *pValue = Value.m_Values.f_FindEqual("tagopt"))
+							GitConfig.m_Remotes[SubSection.f_Key()].m_TagOptions = pValue->f_GetLast();
+
+						if (auto *pValue = Value.m_Values.f_FindEqual("malterlib-lfs-setup"))
+							GitConfig.m_Remotes[SubSection.f_Key()].m_bMalterlibLfsSetup = CGitConfigParser::fs_ToBoolean(pValue->f_GetLast());
+					}
+				}
+
+				if (auto *pLfs = ConfigContents.m_Sections.f_FindEqual("lfs"))
+				{
+					if (auto *pCustomTransfer = pLfs->m_SubSections.f_FindEqual("customtransfer.malterlib-release"))
+					{
+						auto &CustomTransfer = GitConfig.m_MalterlibCustomTransfer;
+
+						if (auto *pValue = pCustomTransfer->m_Values.f_FindEqual("args"))
+							CustomTransfer.m_Arguments = pValue->f_GetLast();
+
+						if (auto *pValue = pCustomTransfer->m_Values.f_FindEqual("path"))
+							CustomTransfer.m_Path = pValue->f_GetLast();
+
+						if (auto *pValue = pCustomTransfer->m_Values.f_FindEqual("concurrent"))
+							CustomTransfer.m_bConcurrent = CGitConfigParser::fs_ToBoolean(pValue->f_GetLast());
+					}
+
+					for (auto &SubSection : pLfs->m_SubSections.f_Entries())
+					{
+						auto &Value = SubSection.f_Value();
+
+						if (auto *pValue = Value.m_Values.f_FindEqual("standalonetransferagent"))
+							GitConfig.m_CustomLfsTransferAgents[SubSection.f_Key()] = pValue->f_GetLast();
+					}
+				}
 			}
 		}
 
-		if (auto *pLfs = ConfigContents.m_Sections.f_FindEqual("lfs"))
+		// For worktrees, read per-worktree config for user settings
+		if (_bIsWorktree)
 		{
-			if (auto *pCustomTransfer = pLfs->m_SubSections.f_FindEqual("customtransfer.malterlib-release"))
+			CStr WorktreeConfigFile = _DynamicInfo.m_DataDir + "/config.worktree";
+			if (CFile::fs_FileExists(WorktreeConfigFile))
 			{
-				auto &CustomTransfer = GitConfig.m_MalterlibCustomTransfer;
+				CStr Config = CFile::fs_ReadStringFromFile(WorktreeConfigFile, true);
+				auto ConfigContents = CGitConfigParser::fs_Parse(Config);
 
-				if (auto *pValue = pCustomTransfer->m_Values.f_FindEqual("args"))
-					CustomTransfer.m_Arguments = pValue->f_GetLast();
+				if (auto *pValue = ConfigContents.f_GetValue("user", "name"))
+					GitConfig.m_UserName = *pValue;
 
-				if (auto *pValue = pCustomTransfer->m_Values.f_FindEqual("path"))
-					CustomTransfer.m_Path = pValue->f_GetLast();
-
-				if (auto *pValue = pCustomTransfer->m_Values.f_FindEqual("concurrent"))
-					CustomTransfer.m_bConcurrent = CGitConfigParser::fs_ToBoolean(pValue->f_GetLast());
-			}
-
-			for (auto &SubSection : pLfs->m_SubSections.f_Entries())
-			{
-				auto &Value = SubSection.f_Value();
-
-				if (auto *pValue = Value.m_Values.f_FindEqual("standalonetransferagent"))
-					GitConfig.m_CustomLfsTransferAgents[SubSection.f_Key()] = pValue->f_GetLast();
+				if (auto *pValue = ConfigContents.f_GetValue("user", "email"))
+					GitConfig.m_UserEmail = *pValue;
 			}
 		}
 
 		return GitConfig;
 	}
 
-	bool fg_IsSubmodule(CStr const &_GitRoot)
+	bool fg_IsSubmodule(CStr const &_DataDir)
 	{
-		CStr GitDirectory = _GitRoot + "/.git";
-		return CFile::fs_FileExists(GitDirectory, EFileAttrib_File);
+		CStr DataDir = CFile::fs_GetExpandedPath(_DataDir, false);
+
+		// Main checkout: submodule data dir is <main>/.git/modules/<name>
+		if (fg_GitPathContains(DataDir, "/.git/modules/"))
+			return true;
+
+		// Linked worktree: submodule data dir is <main>/.git/worktrees/<wt>/modules/<name>
+		auto iWorktreePos = fg_FindGitPath(DataDir, "/.git/worktrees/");
+		if (iWorktreePos >= 0)
+			return fg_FindGitPath(DataDir, iWorktreePos, "/modules/") >= 0;
+
+		return false;
 	}
 
-	TCFuture<bool> fg_RepoIsChanged(CGitLaunches _GitLaunches, CRepository _Repo, EFilterRepoFlag _Flags)
+	bool fg_IsWorktree(CStr const &_DataDir)
 	{
-		CStr GitDirectory = fg_GetGitDataDir(_Repo.m_Location, _Repo.m_Position);
+		CStr DataDir = CFile::fs_GetExpandedPath(_DataDir, false);
+
+		// Worktrees have data dir pointing to <main>/.git/worktrees/<name>
+		// Submodules have data dir pointing to <main>/.git/modules/<name>
+		// Submodules inside a linked worktree have data dir
+		// <main>/.git/worktrees/<wt>/modules/<name> — exclude those.
+		auto iWorktreePos = fg_FindGitPath(DataDir, "/.git/worktrees/");
+		if (iWorktreePos < 0)
+			return false;
+		return fg_FindGitPath(DataDir, iWorktreePos, "/modules/") < 0;
+	}
+
+	bool fg_AreGitPathsSame(CStr const &_PathA, CStr const &_PathB)
+	{
+		if (_PathA.f_IsEmpty() || _PathB.f_IsEmpty())
+			return _PathA.f_IsEmpty() && _PathB.f_IsEmpty();
+
+		CStr PathA = CFile::fs_GetExpandedPath(_PathA, false);
+		CStr PathB = CFile::fs_GetExpandedPath(_PathB, false);
+		return CFile::fs_MakePathRelative(PathA, PathB).f_IsEmpty();
+	}
+
+	TCUnsafeFuture<TCVector<CStr>> fg_ListWorktreePaths(CGitLaunches &_Launches, CStr const &_RepoDir)
+	{
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+		auto Result = co_await _Launches.f_Launch(_RepoDir, {"worktree", "list", "--porcelain"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
+
+		TCVector<CStr> Paths;
+		if (Result.m_ExitCode != 0)
+			co_return fg_Move(Paths);
+
+		for (auto &Line : Result.f_GetStdOut().f_SplitLine<true>())
+		{
+			if (Line.f_StartsWith("worktree "))
+				Paths.f_Insert(CFile::fs_GetExpandedPath(Line.f_Extract(9), false));
+		}
+
+		co_return fg_Move(Paths);
+	}
+
+	TCUnsafeFuture<CStr> fg_FindSubRepoInWorktrees(CGitLaunches &_Launches, CStr const &_BaseDir, CStr const &_RelativeRepoPath)
+	{
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+		auto WorktreePaths = co_await fg_ListWorktreePaths(_Launches, _BaseDir);
+
+		for (auto &WtRoot : WorktreePaths)
+		{
+			// Skip the main working tree itself
+			if (fg_AreGitPathsSame(WtRoot, _BaseDir))
+				continue;
+
+			CStr SubRepoPath = WtRoot / _RelativeRepoPath;
+			// This helper is only for finding a sibling standalone repository that can be
+			// transferred back into the main working tree by moving its real .git directory.
+			// Do not treat a .git file as a match here: that shape is already a git worktree,
+			// and the transfer path below expects SubRepoPath/.git to be an actual directory.
+			if (CFile::fs_FileExists(SubRepoPath + "/.git", EFileAttrib_Directory))
+				co_return SubRepoPath;
+		}
+
+		co_return CStr{};
+	}
+
+	TCUnsafeFuture<void> fg_TransferGitDirMainToWorktree(CGitLaunches &_Launches, CStr const &_MainSubRepoDir, CStr const &_TargetWorktreeSubRepoDir)
+	{
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+		CStr MainGitDir = _MainSubRepoDir + "/.git";
+		CStr TargetGitFile = _TargetWorktreeSubRepoDir + "/.git";
+
+		CStr TargetGitFileContents = CFile::fs_ReadStringFromFile(TargetGitFile, true).f_TrimRight("\n");
+		if (!TargetGitFileContents.f_StartsWith("gitdir: "))
+			DMibError("Expected worktree .git file at: {}"_f << TargetGitFile);
+
+		CStr TargetGitDataDir = CFile::fs_GetExpandedPath(TargetGitFileContents.f_Extract(8), _TargetWorktreeSubRepoDir);
+		CStr WorktreeName = CFile::fs_GetFile(TargetGitDataDir);
+
+		CStr WorktreeEntryDir = MainGitDir + "/worktrees/" + WorktreeName;
+
+		CStr WorktreeHead = CFile::fs_ReadStringFromFile(WorktreeEntryDir + "/HEAD", true);
+		CFile::fs_WriteStringToFile(MainGitDir + "/HEAD", WorktreeHead, false);
+
+		CStr WorktreeIndexFile = WorktreeEntryDir + "/index";
+		CStr MainIndexFile = MainGitDir + "/index";
+		if (CFile::fs_FileExists(WorktreeIndexFile))
+		{
+			if (CFile::fs_FileExists(MainIndexFile))
+				CFile::fs_DeleteFile(MainIndexFile);
+			CFile::fs_RenameFile(WorktreeIndexFile, MainIndexFile);
+		}
+		else if (CFile::fs_FileExists(MainIndexFile))
+			CFile::fs_DeleteFile(MainIndexFile);
+
+		CStr WorktreeConfigFile = WorktreeEntryDir + "/config.worktree";
+		if (CFile::fs_FileExists(WorktreeConfigFile))
+		{
+			CStr MainConfigFile = MainGitDir + "/config";
+			CStr MainConfigContents;
+			if (CFile::fs_FileExists(MainConfigFile))
+				MainConfigContents = CFile::fs_ReadStringFromFile(MainConfigFile, true);
+
+			CStr WorktreeConfigContents = CFile::fs_ReadStringFromFile(WorktreeConfigFile, true);
+			if (!MainConfigContents.f_IsEmpty() && !MainConfigContents.f_EndsWith("\n"))
+				MainConfigContents += "\n";
+			if (!MainConfigContents.f_IsEmpty() && !WorktreeConfigContents.f_IsEmpty() && !WorktreeConfigContents.f_StartsWith("\n"))
+				MainConfigContents += "\n";
+			MainConfigContents += WorktreeConfigContents;
+
+			CFile::fs_WriteStringToFile(MainConfigFile, MainConfigContents, false);
+		}
+
+		CFile::fs_DeleteDirectoryRecursive(WorktreeEntryDir, true);
+		CFile::fs_DeleteFile(TargetGitFile);
+		CFile::fs_RenameFile(MainGitDir, _TargetWorktreeSubRepoDir + "/.git");
+
+		co_await _Launches.f_Launch
+			(
+				_TargetWorktreeSubRepoDir
+				, {"worktree", "repair"}
+				, {}
+				, CProcessLaunchActor::ESimpleLaunchFlag_GenerateExceptionOnNonZeroExitCode
+			)
+		;
+
+		CFile::fs_DeleteDirectoryRecursive(_MainSubRepoDir, true);
+
+		co_return {};
+	}
+
+	TCUnsafeFuture<void> fg_TransferGitDirWorktreeToMain(CGitLaunches &_Launches, CStr const &_WorktreeSubRepoDir, CStr const &_MainSubRepoDir, CStr const &_WorktreeName)
+	{
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+		CStr WorktreeGitDir = _WorktreeSubRepoDir + "/.git";
+
+		CStr CurrentHead = CFile::fs_ReadStringFromFile(WorktreeGitDir + "/HEAD", true);
+
+		CFile::fs_CreateDirectory(_MainSubRepoDir);
+
+		CStr MainGitDir = _MainSubRepoDir + "/.git";
+		CFile::fs_RenameFile(WorktreeGitDir, MainGitDir);
+
+		// Detach the main HEAD so the branch is free for the worktree entry
+		auto RevParseResult = co_await _Launches.f_Launch(_MainSubRepoDir, {"rev-parse", "HEAD"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
+		if (RevParseResult.m_ExitCode == 0)
+			CFile::fs_WriteStringToFile(MainGitDir + "/HEAD", RevParseResult.f_GetStdOut().f_TrimRight("\n") + "\n", false);
+
+		CStr WorktreesDir = MainGitDir + "/worktrees";
+		if (!CFile::fs_FileExists(WorktreesDir, EFileAttrib_Directory))
+			CFile::fs_CreateDirectory(WorktreesDir);
+
+		CStr WorktreeEntryDir = "{}/{}"_f << WorktreesDir << _WorktreeName;
+		if (CFile::fs_FileExists(WorktreeEntryDir, EFileAttrib_Directory))
+		{
+			// Find a unique name if the entry already exists
+			for (umint i = 1; ; ++i)
+			{
+				WorktreeEntryDir = "{}/{}{}"_f << WorktreesDir << _WorktreeName << i;
+				if (!CFile::fs_FileExists(WorktreeEntryDir, EFileAttrib_Directory))
+					break;
+			}
+		}
+
+		CFile::fs_CreateDirectory(WorktreeEntryDir);
+		CFile::fs_WriteStringToFile(WorktreeEntryDir + "/gitdir", _WorktreeSubRepoDir + "/.git\n", false);
+		CFile::fs_WriteStringToFile(WorktreeEntryDir + "/commondir", "../..\n", false);
+		CFile::fs_WriteStringToFile(WorktreeEntryDir + "/HEAD", CurrentHead, false);
+
+		CStr MainIndexFile = MainGitDir + "/index";
+		if (CFile::fs_FileExists(MainIndexFile))
+			CFile::fs_RenameFile(MainIndexFile, WorktreeEntryDir + "/index");
+
+		CFile::fs_WriteStringToFile(_WorktreeSubRepoDir + "/.git", "gitdir: {}\n"_f << WorktreeEntryDir, false);
+
+		co_await _Launches.f_Launch
+			(
+				_MainSubRepoDir
+				, {"worktree", "repair"}
+				, {}
+				, CProcessLaunchActor::ESimpleLaunchFlag_GenerateExceptionOnNonZeroExitCode
+			)
+		;
+
+		co_return {};
+	}
+
+	TCFuture<bool> fg_RepoIsChanged
+		(
+			CGitLaunches _GitLaunches
+			, CRepository _Repo
+			, CRepositoryDynamicInfo _DynamicInfo
+			, EFilterRepoFlag _Flags
+			, bool _bIncludePull
+			, CStr _MainRepoBranch
+			, CStr _MainRepoDefaultBranch
+		)
+	{
+		CStr GitDirectory = _DynamicInfo.m_DataDir;
 
 		CStr HeadRef = CFile::fs_ReadStringFromFile(GitDirectory + "/HEAD", true).f_TrimRight("\n");
+		CStr ExpectedBranch;
 		if (HeadRef.f_StartsWith("ref: "))
 		{
-			if (HeadRef != ("ref: refs/heads/{}"_f << _Repo.m_OriginProperties.m_DefaultBranch).f_GetStr())
+			ExpectedBranch = fg_GetExpectedBranch(_Repo, _MainRepoBranch, _MainRepoDefaultBranch);
+			if (HeadRef != ("ref: refs/heads/{}"_f << ExpectedBranch).f_GetStr())
 				co_return true;
 		}
 		else
@@ -177,20 +468,57 @@ namespace NMib::NBuildSystem::NRepository
 		else if (BranchLine.f_StartsWith("## "))
 		{
 			if (BranchLine.f_Find(gc_ConstString_Symbol_Ellipsis.m_String) < 0)
+			{
+				// Branch has no upstream tracking - if on a non-default expected branch,
+				// check if HEAD is in the history of origin/{default_branch}
+				if (ExpectedBranch != _Repo.m_OriginProperties.m_DefaultBranch && StdOut.f_IsEmpty())
+				{
+					auto MergeBaseResult = co_await _GitLaunches.f_Launch
+						(
+							_Repo
+							, {"merge-base", "--is-ancestor", ExpectedBranch, "origin/{}"_f << _Repo.m_OriginProperties.m_DefaultBranch}
+							, {}
+							, CProcessLaunchActor::ESimpleLaunchFlag_None
+						)
+					;
+					if (MergeBaseResult.m_ExitCode == 0)
+						co_return false; // HEAD is in history of default branch on remote, only check for local changes
+				}
 				co_return true; // Non-pushed branch
+			}
 
 			CStr LocalRef;
 			CStr RemoteRef;
 			CStr Changes;
 			(CStr::CParse("## {}...{} [{}]") >> LocalRef >> RemoteRef >> Changes).f_Parse(BranchLine);
 
-			if ((_Flags & EFilterRepoFlag_IncludePull) && !Changes.f_IsEmpty())
+			if (_bIncludePull && !Changes.f_IsEmpty())
 				co_return true; // Non-pushed or pulled changes
 			else if (Changes.f_Find("ahead") >= 0)
 				co_return true; // Non-pushed changes
 		}
 
-		co_return !StdOut.f_IsEmpty(); // Local changes
+		if (!StdOut.f_IsEmpty()) // Local changes
+			co_return true;
+
+		// Check if HEAD is in the history of origin/{default_branch}.
+		// Note: origin is always required and enforced by the repo config system, so if
+		// origin/<default> is missing the repo is in an unexpected state and reporting it
+		// as changed is the correct behavior — the user needs to take action.
+		{
+			auto MergeBaseResult = co_await _GitLaunches.f_Launch
+				(
+					_Repo
+					, {"merge-base", "--is-ancestor", ExpectedBranch, "origin/{}"_f << _Repo.m_OriginProperties.m_DefaultBranch}
+					, {}
+					, CProcessLaunchActor::ESimpleLaunchFlag_None
+				)
+			;
+			if (MergeBaseResult.m_ExitCode != 0)
+				co_return true;
+		}
+
+		co_return false;
 	}
 
 	TCFuture<TCVector<CLocalFileChange>> fg_GetLocalFileChanges(CGitLaunches _GitLaunches, CRepository _Repo, bool _bIncludeUntracked)
@@ -410,16 +738,14 @@ namespace NMib::NBuildSystem::NRepository
 		co_return fg_Move(LogEntries);
 	}
 
-	bool fg_BranchExists(CRepository const &_Repo, CStr const &_Branch)
+	bool fg_BranchExists(CRepository const &_Repo, CRepositoryDynamicInfo const &_DynamicInfo, CStr const &_Branch)
 	{
-		CStr GitDirectory = fg_GetGitDataDir(_Repo.m_Location, _Repo.m_Position);
-
-		if (CFile::fs_FileExists("{}/refs/heads/{}"_f << GitDirectory << _Branch))
+		if (CFile::fs_FileExists("{}/refs/heads/{}"_f << _DynamicInfo.m_CommonDir << _Branch))
 			return true;
 
 		CStr PackedRefs;
 		{
-			CStr PackedRefFile = "{}/packed-refs"_f << GitDirectory;
+			CStr PackedRefFile = "{}/packed-refs"_f << _DynamicInfo.m_CommonDir;
 			if (!CFile::fs_FileExists(PackedRefFile))
 				return false;
 			PackedRefs = CFile::fs_ReadStringFromFile(PackedRefFile, true).f_TrimRight("\n");
@@ -444,11 +770,24 @@ namespace NMib::NBuildSystem::NRepository
 		return false;
 	}
 
-	CStr fg_GetBranch(CRepository const &_Repo)
+	bool fg_RemoteBranchExists(CRepository const &_Repo, CRepositoryDynamicInfo const &_DynamicInfo, CStr const &_Branch)
 	{
-		CStr GitDirectory = fg_GetGitDataDir(_Repo.m_Location, _Repo.m_Position);
+		return !fsg_ResolveRefHash(_DynamicInfo.m_CommonDir, "refs/remotes/origin/{}"_f << _Branch).f_IsEmpty();
+	}
 
-		CStr HeadRef = CFile::fs_ReadStringFromFile(GitDirectory + "/HEAD", true).f_TrimRight("\n");
+	CStr fg_GetBranchHash(CRepository const &_Repo, CRepositoryDynamicInfo const &_DynamicInfo, CStr const &_Branch)
+	{
+		return fsg_ResolveRefHash(_DynamicInfo.m_CommonDir, "refs/heads/{}"_f << _Branch);
+	}
+
+	CStr fg_GetRemoteBranchHash(CRepository const &_Repo, CRepositoryDynamicInfo const &_DynamicInfo, CStr const &_Remote, CStr const &_Branch)
+	{
+		return fsg_ResolveRefHash(_DynamicInfo.m_CommonDir, "refs/remotes/{}/{}"_f << _Remote << _Branch);
+	}
+
+	CStr fg_GetBranch(CRepository const &_Repo, CRepositoryDynamicInfo const &_DynamicInfo)
+	{
+		CStr HeadRef = CFile::fs_ReadStringFromFile(_DynamicInfo.m_DataDir + "/HEAD", true).f_TrimRight("\n");
 		if (!HeadRef.f_StartsWith("ref: "))
 			return {};
 
@@ -457,11 +796,118 @@ namespace NMib::NBuildSystem::NRepository
 		return Branch;
 	}
 
-	CStr fg_GetRemoteHead(CRepository const &_Repo, CStr const &_Remote)
+	void fg_DetectGitBranchInfo(CStr const &_DataDir, CStr const &_CommonDir, CStr &o_Branch, CStr &o_DefaultBranch)
 	{
-		CStr GitDirectory = fg_GetGitDataDir(_Repo.m_Location, _Repo.m_Position);
+		CStr HeadRef = CFile::fs_ReadStringFromFile(_DataDir + "/HEAD", true).f_TrimRight("\n");
+		if (HeadRef.f_StartsWith("ref: "))
+			(CStr::CParse("ref: refs/heads/{}") >> o_Branch).f_Parse(HeadRef);
 
-		CStr File = "{}/refs/remotes/{}/HEAD"_f << GitDirectory << _Remote;
+		// Determine default branch from origin/HEAD
+		CStr OriginHeadFile = _CommonDir + "/refs/remotes/origin/HEAD";
+		if (CFile::fs_FileExists(OriginHeadFile))
+		{
+			CStr OriginHeadRef = CFile::fs_ReadStringFromFile(OriginHeadFile, true).f_TrimRight("\n");
+			if (OriginHeadRef.f_StartsWith("ref: "))
+				(CStr::CParse("ref: refs/remotes/origin/{}") >> o_DefaultBranch).f_Parse(OriginHeadRef);
+		}
+
+		// Best-effort local fallback when origin/HEAD is unavailable. Git does not
+		// store the authoritative default branch locally in the general case, so we
+		// only recognize the common main/master layouts here and otherwise fall back
+		// to the current branch as default branch.
+		//
+		// This fallback makes the current branch indistinguishable from the default
+		// branch, which means fg_GetExpectedBranch() will not propagate it as a
+		// feature branch and mib unbranch becomes a no-op. This is expected to only
+		// happen during bootstrap of a new project that does not yet have an
+		// upstream, and is intentionally left unresolved: once the remote exists
+		// and origin/HEAD is populated the heuristic is no longer needed.
+		if (o_DefaultBranch.f_IsEmpty())
+		{
+			bool bHasMain = !fsg_ResolveRefHash(_CommonDir, "refs/heads/main").f_IsEmpty();
+			bool bHasMaster = !fsg_ResolveRefHash(_CommonDir, "refs/heads/master").f_IsEmpty();
+
+			if (o_Branch == "main" && bHasMain)
+				o_DefaultBranch = "main";
+			else if (o_Branch == "master" && bHasMaster)
+				o_DefaultBranch = "master";
+			else if (bHasMain && !bHasMaster)
+				o_DefaultBranch = "main";
+			else if (bHasMaster && !bHasMain)
+				o_DefaultBranch = "master";
+			else
+				o_DefaultBranch = o_Branch;
+		}
+	}
+
+	CStr fg_GetExpectedBranch(CRepository const &_Repo, CStr const &_MainRepoBranch, CStr const &_MainRepoDefaultBranch)
+	{
+		if (_MainRepoBranch.f_IsEmpty())
+			return _Repo.m_OriginProperties.m_DefaultBranch;
+
+		if (_MainRepoBranch == _MainRepoDefaultBranch)
+			return _Repo.m_OriginProperties.m_DefaultBranch;
+
+		// If we can't determine the default branch, assume we're on a feature branch
+		return _MainRepoBranch;
+	}
+
+	CStr fg_HandleRepositoryActionToString(EHandleRepositoryAction _Action, EOutputType &o_OutputType)
+	{
+		o_OutputType = EOutputType_Warning;
+		switch (_Action)
+		{
+		case EHandleRepositoryAction_None:
+			return "(No recommendation)";
+		case EHandleRepositoryAction_Leave:
+			return "(Leave as is)";
+		case EHandleRepositoryAction_ManualResolve:
+			o_OutputType = EOutputType_Error;
+			return "(Resolve manually)";
+		case EHandleRepositoryAction_Reset:
+			return "reset";
+		case EHandleRepositoryAction_Rebase:
+			return "rebase";
+		case EHandleRepositoryAction_Auto:
+		default:
+			return "internal error";
+		}
+	}
+
+	CMainRepoBranchInfo fg_GetMainRepoBranchInfo(CStr const &_BaseDir, TCVector<TCMap<CStr, CReposLocation>> const &_ReposOrdered)
+	{
+		CMainRepoBranchInfo Info;
+
+		for (auto &Repos : _ReposOrdered)
+		{
+			for (auto &RepoLocation : Repos)
+			{
+				for (auto &Repo : RepoLocation.m_Repositories)
+				{
+					if (fg_AreGitPathsSame(Repo.m_Location, _BaseDir))
+					{
+						auto DynamicInfo = fg_GetRepositoryDynamicInfo(Repo);
+						Info.m_Branch = fg_GetBranch(Repo, DynamicInfo);
+						Info.m_DefaultBranch = Repo.m_OriginProperties.m_DefaultBranch;
+						return Info;
+					}
+				}
+			}
+		}
+
+		if (CFile::fs_FileExists(_BaseDir + "/.git", EFileAttrib_Directory | EFileAttrib_File))
+		{
+			auto DataDir = fg_GetGitDataDir(_BaseDir, CFilePosition{});
+			CStr CommonDir = fg_GetGitCommonDir(DataDir, CFilePosition{});
+			fg_DetectGitBranchInfo(DataDir, CommonDir, Info.m_Branch, Info.m_DefaultBranch);
+		}
+
+		return Info;
+	}
+
+	CStr fg_GetRemoteHead(CRepository const &_Repo, CRepositoryDynamicInfo const &_DynamicInfo, CStr const &_Remote)
+	{
+		CStr File = "{}/refs/remotes/{}/HEAD"_f << _DynamicInfo.m_CommonDir << _Remote;
 
 		if (!CFile::fs_FileExists(File))
 			return {};
@@ -539,10 +985,12 @@ namespace NMib::NBuildSystem::NRepository
 					auto Remotes = Repo.m_Remotes;
 					Remotes["origin"].m_Properties.m_URL = Repo.m_OriginProperties.m_URL;
 
+					auto DynamicInfo = fg_GetRepositoryDynamicInfo(Repo);
+
 					for (auto &Remote : Remotes)
 					{
 						auto &RemoteName = Remote.f_Name();
-						(*pRemoteHeadBranches)[RemoteName].m_LocalBranch = fg_GetRemoteHead(Repo, RemoteName);
+						(*pRemoteHeadBranches)[RemoteName].m_LocalBranch = fg_GetRemoteHead(Repo, DynamicInfo, RemoteName);
 
 						Launches.f_Launch
 							(

@@ -11,17 +11,227 @@ namespace NMib::NBuildSystem
 {
 	using namespace NRepository;
 
-	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Branch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, CStr const &_Branch, ERepoBranchFlag _Flags)
+	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::fp_BranchRootRepo(CGenerateEphemeralState &_GenerateState, TCOptional<CStr> const &_Branch, ERepoBranchFlag _Flags)
 	{
-		co_await ECoroutineFlag_CaptureMalterlibExceptions;
+		if (!CFile::fs_FileExists(f_GetBaseDir() + "/.git", EFileAttrib_Directory | EFileAttrib_File))
+			co_return ERetry_None;
 
-		CGenerateEphemeralState GenerateState;
-		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
-			co_return Retry;
+		auto ReposOrdered = fg_GetRepos(*this, mp_Data, EGetRepoFlag::mc_None);
+		auto MainBranchInfo = fg_GetMainRepoBranchInfo(f_GetBaseDir(), ReposOrdered);
 
+		CStr Branch = _Branch ? *_Branch : MainBranchInfo.m_DefaultBranch;
+		if (Branch.f_IsEmpty() || MainBranchInfo.m_Branch == Branch)
+			co_return ERetry_None;
+
+		CGitLaunches Launches{f_GetGitLaunchOptions("branch-root"), "Switching root repo branch"};
+		auto DestroyLaunchs = co_await co_await Launches.f_Init();
+
+		auto BranchExistsResult = co_await Launches.f_Launch(f_GetBaseDir(), {"rev-parse", "--verify", "refs/heads/{}"_f << Branch}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
+		auto RemoteBranchExistsResult = co_await Launches.f_Launch
+			(
+				f_GetBaseDir()
+				, {"rev-parse", "--verify", "refs/remotes/origin/{}"_f << Branch}
+				, {}
+				, CProcessLaunchActor::ESimpleLaunchFlag_None
+			)
+		;
+
+		TCVector<CStr> ParamsCheckout;
+		// Intentionally use plain checkout for an existing branch. If the root repo itself is a
+		// secondary worktree and the target branch is already checked out in another worktree,
+		// Git must reject the operation. That is the correct behavior because mib should not
+		// silently detach HEAD or create a duplicate branch state just to bypass Git's worktree rules.
+		if (BranchExistsResult.m_ExitCode == 0)
+			ParamsCheckout = {"checkout", Branch};
+		else if (RemoteBranchExistsResult.m_ExitCode == 0)
+		{
+			// In the git-only fallback we may only have a cached local origin/<branch>. Use it as
+			// the most specific branch source available and keep origin/<branch> as upstream for
+			// normal git push / pull ergonomics, even though the cached ref may be stale.
+			ParamsCheckout = {"checkout", "--track", "-b", Branch, "origin/{}"_f << Branch};
+		}
+		else
+			ParamsCheckout = {"checkout", "-b", Branch};
+
+		// The stash name embeds a per-invocation random suffix so the failure-recovery
+		// cleanup can pop *exactly* the stash this invocation created and never touch
+		// an older stash with the same branch name. The cross-invocation pop logic
+		// further down matches on the branch portion only and accepts either the old
+		// (no suffix) or new (with suffix) format.
+		auto fGetStashNameForBranch = [](CStr const &_BranchName) -> CStr
+			{
+				return "mib-branch-switch:.:{}"_f << _BranchName;
+			}
+		;
+
+		CStr UniqueStashName = "{}:{}"_f << fGetStashNameForBranch(MainBranchInfo.m_Branch) << fg_FastRandomID();
+
+		auto fOutputRepoInfo = [&](CStr const &_Info)
+			{
+				fg_OutputRepositoryInfo
+					(
+						EOutputType_Normal
+						, _Info
+						, mp_AnsiFlags
+						, gc_Str<".">.m_Str
+						, mp_MaxRepoWidth
+						, [&](CStr const &_Line) { f_OutputConsole(_Line); }
+					)
+				;
+			}
+		;
+
+		bool bStashedLocalChanges = false;
+
+		// If checkout never succeeds (e.g. Git refuses because the target branch is checked
+		// out in another worktree), restore the just-created stash so the user's local
+		// changes are not silently orphaned in the stash list.
+		auto RestoreStashOnFailure = co_await fg_AsyncDestroy
+			(
+				[&]() -> TCFuture<void>
+				{
+					if (!bStashedLocalChanges)
+						co_return {};
+
+					// Snapshot everything into the coroutine frame before the first co_await.
+					// After the first suspension, all captured references are unsafe.
+					CGitLaunches LocalLaunches       = Launches;
+					CStr LocalBaseDir                = f_GetBaseDir();
+					CStr LocalUniqueStashName        = UniqueStashName;
+					EAnsiEncodingFlag LocalAnsiFlags = mp_AnsiFlags;
+					umint LocalMaxRepoWidth          = mp_MaxRepoWidth;
+					auto LocalOutputConsole          = mp_fOutputConsole;
+
+					auto fLocalOutputInfo = [&](EOutputType _OutputType, CStr const &_Info)
+						{
+							fg_OutputRepositoryInfo
+								(
+									_OutputType
+									, _Info
+									, LocalAnsiFlags
+									, gc_Str<".">.m_Str
+									, LocalMaxRepoWidth
+									, [&](CStr const &_Line) { LocalOutputConsole(_Line, false); }
+								)
+							;
+						}
+					;
+
+					co_await ECoroutineFlag_CaptureExceptions;
+
+					auto StashListResult = co_await LocalLaunches.f_Launch(LocalBaseDir, {"stash", "list"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
+					if (StashListResult.m_ExitCode != 0)
+					{
+						fLocalOutputInfo(EOutputType_Warning, "Failed to list stashes while restoring: {}"_f << StashListResult.f_GetCombinedOut());
+						co_return {};
+					}
+
+					for (auto &Line : StashListResult.f_GetStdOut().f_SplitLine<true>())
+					{
+						if (!Line.f_EndsWith(LocalUniqueStashName))
+							continue;
+
+						CStr StashRef;
+						(CStr::CParse("{}:") >> StashRef).f_Parse(Line);
+						if (StashRef.f_IsEmpty())
+							break;
+
+						fLocalOutputInfo(EOutputType_Normal, "Checkout failed; restoring stashed changes");
+
+						auto PopResult = co_await LocalLaunches.f_Launch(LocalBaseDir, {"stash", "pop", StashRef}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
+						if (PopResult.m_ExitCode != 0)
+							fLocalOutputInfo(EOutputType_Warning, "Stash pop conflict while restoring: {}"_f << PopResult.f_GetCombinedOut());
+						break;
+					}
+					co_return {};
+				}
+			)
+		;
+
+		if (mp_GenerateOptions.m_bStash)
+		{
+			auto StatusResult = co_await Launches.f_Launch(f_GetBaseDir(), {"status", "--porcelain"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_GenerateExceptionOnNonZeroExitCode);
+			if (!StatusResult.f_GetStdOut().f_Trim().f_IsEmpty())
+			{
+				if (_Flags & ERepoBranchFlag_Pretend)
+					Launches.f_Output(EOutputType_Normal, f_GetBaseDir(), "git stash push --include-untracked -m {}"_f << UniqueStashName);
+				else
+				{
+					fOutputRepoInfo("Stashing local changes on branch '{}'"_f << MainBranchInfo.m_Branch);
+					co_await Launches.f_Launch
+						(
+							f_GetBaseDir()
+							, {"stash", "push", "--include-untracked", "-m", UniqueStashName}
+							, {}
+							, CProcessLaunchActor::ESimpleLaunchFlag_GenerateExceptionOnNonZeroExitCode
+						)
+					;
+					bStashedLocalChanges = true;
+				}
+			}
+		}
+
+		if (_Flags & ERepoBranchFlag_Pretend)
+			Launches.f_Output(EOutputType_Normal, f_GetBaseDir(), "git {}"_f << CProcessLaunchParams::fs_GetParams(ParamsCheckout));
+		else
+			co_await Launches.f_Launch(f_GetBaseDir(), ParamsCheckout, {}, CProcessLaunchActor::ESimpleLaunchFlag_GenerateExceptionOnNonZeroExitCode);
+
+		RestoreStashOnFailure.f_Clear();
+
+		{
+			auto StashListResult = co_await Launches.f_Launch(f_GetBaseDir(), {"stash", "list"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_GenerateExceptionOnNonZeroExitCode);
+			CStr StashBranchPrefix = fGetStashNameForBranch(Branch);
+			for (auto &Line : StashListResult.f_GetStdOut().f_SplitLine<true>())
+			{
+				// Match either the legacy format (line ends with the prefix) or the
+				// new format (prefix followed by ":<random>"). The trailing colon
+				// avoids matching `:foobar` when looking for `:foo`.
+				auto PrefixPos = Line.f_Find(StashBranchPrefix);
+				if (PrefixPos < 0)
+					continue;
+				auto AfterPrefix = PrefixPos + StashBranchPrefix.f_GetLen();
+				if (AfterPrefix != Line.f_GetLen() && Line[AfterPrefix] != ':')
+					continue;
+
+				CStr StashRef;
+				(CStr::CParse("{}:") >> StashRef).f_Parse(Line);
+				if (!StashRef.f_IsEmpty())
+				{
+					if (_Flags & ERepoBranchFlag_Pretend)
+						Launches.f_Output(EOutputType_Normal, f_GetBaseDir(), "git stash pop {}"_f << StashRef);
+					else
+					{
+						fOutputRepoInfo("Restoring stashed changes for branch '{}'"_f << Branch);
+						auto PopResult = co_await Launches.f_Launch(f_GetBaseDir(), {"stash", "pop", StashRef}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
+						if (PopResult.m_ExitCode != 0)
+							fOutputRepoInfo("Stash pop conflict: {}"_f << PopResult.f_GetCombinedOut());
+					}
+				}
+				break;
+			}
+		}
+
+		if (_Flags & ERepoBranchFlag_Pretend)
+			fOutputRepoInfo("Pretend mode: nested repository operations are not previewed");
+		else
+		{
+			// The root repo now points at the new branch, so the build system data
+			// (mp_Data) parsed during fp_GeneratePrepare is stale. Retry so the outer
+			// loop creates a fresh CBuildSystem that re-parses from the new branch's
+			// configuration files before updating nested repositories.
+			// Use ForceUpdate so fp_HandleRepositories runs even with --skip-update,
+			// otherwise nested repos would not be reconciled to the new branch.
+			co_return ERetry_Again_ForceUpdate;
+		}
+
+		co_return ERetry_None;
+	}
+
+	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::fp_ForceBranchRepos(CRepoFilter const &_Filter, TCOptional<CStr> const &_Branch, ERepoBranchFlag _Flags)
+	{
 		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(_Filter, *this, mp_Data, EGetRepoFlag::mc_None);
 
-		CGitLaunches Launches{f_GetBaseDir(), "Branching repos", mp_AnsiFlags, mp_TerminalWidth, mp_fOutputConsole, f_GetCancelledPointer()};
+		CGitLaunches Launches{f_GetGitLaunchOptions("force-branch"), "Switching repo branches"};
 		auto DestroyLaunchs = co_await co_await Launches.f_Init();
 
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
@@ -35,17 +245,13 @@ namespace NMib::NBuildSystem
 			{
 				auto &Repo = *pRepo;
 
-				if (fg_GetBranch(Repo) == _Branch)
+				auto DynamicInfo = fg_GetRepositoryDynamicInfo(Repo);
+
+				CStr TargetBranch = _Branch ? *_Branch : Repo.m_OriginProperties.m_DefaultBranch;
+				if (fg_GetBranch(Repo, DynamicInfo) == TargetBranch)
 					continue;
 
-				TCVector<CStr> ParamsCheckout;
-
-				if (_Flags & ERepoBranchFlag_Force)
-					ParamsCheckout = {"checkout", "-B", _Branch};
-				else if (!fg_BranchExists(Repo, _Branch))
-					ParamsCheckout = {"checkout", "-b", _Branch};
-				else
-					ParamsCheckout = {"checkout", _Branch};
+				TCVector<CStr> ParamsCheckout = {"checkout", "-B", TargetBranch};
 
 				if (_Flags & ERepoBranchFlag_Pretend)
 					Launches.f_Output(EOutputType_Normal, Repo, "git {}"_f << CProcessLaunchParams::fs_GetParams(ParamsCheckout));
@@ -78,6 +284,35 @@ namespace NMib::NBuildSystem
 		co_return ERetry_None;
 	}
 
+	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Branch
+		(
+			CGenerateOptions const &_GenerateOptions
+			, CRepoFilter const &_Filter
+			, CStr const &_Branch
+			, ERepoBranchFlag _Flags
+		)
+	{
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+		CGenerateEphemeralState GenerateState;
+		// fp_GeneratePrepare parses the build system data and reconciles nested repos
+		// against the current branch. This is intentional: the user should see whether
+		// the workspace is clean before switching to another branch. If reconciliation
+		// is not desired the user can pass --skip-update to bypass it.
+		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
+			co_return Retry;
+
+		if (!(_Flags & ERepoBranchFlag_Force))
+		{
+			if (!_Filter.f_IsEmpty())
+				co_return DMibErrorInstance("Cannot use repository filters with non-forced branch. Use --force to branch individual repositories.");
+
+			co_return co_await fp_BranchRootRepo(GenerateState, _Branch, _Flags);
+		}
+
+		co_return co_await fp_ForceBranchRepos(_Filter, _Branch, _Flags);
+	}
+
 	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Unbranch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoBranchFlag _Flags)
 	{
 		co_await ECoroutineFlag_CaptureMalterlibExceptions;
@@ -86,64 +321,15 @@ namespace NMib::NBuildSystem
 		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
 			co_return Retry;
 
-		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(_Filter, *this, mp_Data, EGetRepoFlag::mc_None);
-
-		CGitLaunches Launches{f_GetBaseDir(), "Unbranching repos", mp_AnsiFlags, mp_fOutputConsole, f_GetCancelledPointer()};
-		auto DestroyLaunchs = co_await co_await Launches.f_Init();
-
-		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
-
-		TCVector<TCAsyncResult<void>> LaunchResults;
-
-		for (auto &Repos : FilteredRepositories.m_FilteredRepositories)
+		if (!(_Flags & ERepoBranchFlag_Force))
 		{
-			TCFutureVector<void> Results;
-			for (auto *pRepo : Repos)
-			{
-				auto &Repo = *pRepo;
+			if (!_Filter.f_IsEmpty())
+				co_return DMibErrorInstance("Cannot use repository filters with non-forced unbranch. Use --force to unbranch individual repositories.");
 
-				CStr CurrentBranch = fg_GetBranch(Repo);
-				if (CurrentBranch == Repo.m_OriginProperties.m_DefaultBranch)
-					continue;
-
-				TCVector<CStr> ParamsCheckout;
-
-				if (_Flags & ERepoBranchFlag_Force)
-					ParamsCheckout = {"checkout", "-B", Repo.m_OriginProperties.m_DefaultBranch};
-				else if (!fg_BranchExists(Repo, Repo.m_OriginProperties.m_DefaultBranch))
-					ParamsCheckout = {"checkout", "-b", Repo.m_OriginProperties.m_DefaultBranch};
-				else
-					ParamsCheckout = {"checkout", Repo.m_OriginProperties.m_DefaultBranch};
-
-				if (_Flags & ERepoBranchFlag_Pretend)
-					Launches.f_Output(EOutputType_Normal, Repo, "git {}"_f << CProcessLaunchParams::fs_GetParams(ParamsCheckout));
-				else
-				{
-					fg_DirectDispatch
-						(
-							[=]() -> TCFuture<void>
-							{
-								auto Result = co_await Launches.f_Launch(Repo, ParamsCheckout, fg_LogAllFunctor()).f_Wrap();
-								Launches.f_RepoDone();
-
-								co_return fg_Move(Result);
-							}
-						)
-						> Results
-					;
-				}
-
-			}
-
-			LaunchResults.f_Insert(co_await fg_AllDoneWrapped(Results));
-			if (*mp_pCancelled)
-				break;
+			co_return co_await fp_BranchRootRepo(GenerateState, {}, _Flags);
 		}
 
-		co_await (fg_Move(LaunchResults) | g_Unwrap);
-		co_await f_CheckCancelled();
-
-		co_return ERetry_None;
+		co_return co_await fp_ForceBranchRepos(_Filter, {}, _Flags);
 	}
 
 	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_CleanupBranches
@@ -199,7 +385,9 @@ namespace NMib::NBuildSystem
 			auto &Repo = RepoBound;
 			auto *pRepo = &Repo;
 
-			auto CurrentBranch = fg_GetBranch(Repo);
+			auto DynamicInfo = fg_GetRepositoryDynamicInfo(Repo);
+
+			auto CurrentBranch = fg_GetBranch(Repo, DynamicInfo);
 			auto &DeleteLaunchSequencer = *DeleteLaunchSequencers(pRepo, "BuildSystem Action Repository CleanupBranches DeleteLaunchSequencer {}"_f << Repo.f_GetName());
 			auto RepoDoneScope = Launches.f_RepoDoneScope();
 
@@ -305,7 +493,7 @@ namespace NMib::NBuildSystem
 								}
 							}
 
-							if (Remote && Branch == fg_GetRemoteHead(Repo, Remote))
+							if (Remote && Branch == fg_GetRemoteHead(Repo, DynamicInfo, Remote))
 							{
 								if (_Flags & ERepoCleanupBranchesFlag_Verbose)
 									Launches.f_Output(EOutputType_Normal, Repo, "{} - default remote branch protected"_f << FullBranch);

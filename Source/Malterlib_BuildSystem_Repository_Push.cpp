@@ -172,8 +172,29 @@ namespace NMib::NBuildSystem
 			TCSet<CStr> NeedPush;
 			for (auto &Commits : ResultsUnwrapped)
 			{
+				auto &Remote = ResultsUnwrapped.fs_GetKey(Commits);
 				if (!Commits.f_IsEmpty())
-					NeedPush[ResultsUnwrapped.fs_GetKey(Commits)];
+				{
+					// Skip branches whose tip is already reachable from the remote default branch.
+					// This intentionally excludes freshly created branches that haven't diverged yet:
+					// the main branch is always synced to all sub-repositories, so only branches with
+					// commits not yet visible via the default branch need to be pushed (i.e. commits
+					// that another pull would need to resolve).
+					CStr DefaultBranch = _Repo.m_OriginProperties.m_DefaultBranch;
+					if (auto pRemote = _Repo.m_Remotes.f_FindEqual(Remote); pRemote && pRemote->m_Properties.m_DefaultBranch)
+						DefaultBranch = pRemote->m_Properties.m_DefaultBranch;
+
+					auto MergeBaseResult = co_await _Launches.f_Launch
+						(
+							_Repo
+							, {"merge-base", "--is-ancestor", _Branches.m_Current, "{}/{}"_f << Remote << DefaultBranch}
+							, {}
+							, CProcessLaunchActor::ESimpleLaunchFlag_None
+						)
+					;
+					if (MergeBaseResult.m_ExitCode != 0)
+						NeedPush[Remote];
+				}
 			}
 
 			co_return fg_Move(NeedPush);

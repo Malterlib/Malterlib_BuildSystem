@@ -58,6 +58,8 @@ namespace NMib::NBuildSystem
 
 			if (Retry == CBuildSystem::ERetry_Again_NoReconcileOptions)
 				BuildSystem.f_NoReconcileOptions();
+			else if (Retry == CBuildSystem::ERetry_Again_ForceUpdate)
+				BuildSystem.f_ForceUpdate();
 			else if (Retry == CBuildSystem::ERetry_Again_EnablePositions)
 				BuildSystem.f_SetEnablePositions();
 
@@ -111,6 +113,11 @@ namespace NMib::NBuildSystem
 		co_return CBuildSystem::ERetry_None;
 	}
 
+	bool CBuildSystem::CRepoFilter::f_IsEmpty() const
+	{
+		return (m_NameWildcard.f_IsEmpty() || m_NameWildcard == "*") && m_Type.f_IsEmpty() && m_Branch.f_IsEmpty() && m_Tags.f_IsEmpty() && !m_bOnlyChanged;
+	}
+
 	CBuildSystem::CRepoFilter CBuildSystem::CRepoFilter::fs_ParseParams(NEncoding::CEJsonSorted const &_Params)
 	{
 		CBuildSystem::CRepoFilter Filter;
@@ -125,6 +132,8 @@ namespace NMib::NBuildSystem
 			Filter.m_Tags.f_AddContainer(pValue->f_String().f_Split<true>(";"));
 		if (auto pValue = _Params.f_GetMember(gc_ConstString_RepoOnlyChanged))
 			Filter.m_bOnlyChanged = pValue->f_Boolean();
+		if (auto pValue = _Params.f_GetMember(gc_ConstString_RepoIncludePull))
+			Filter.m_bIncludePull = pValue->f_Boolean();
 
 		return Filter;
 	}

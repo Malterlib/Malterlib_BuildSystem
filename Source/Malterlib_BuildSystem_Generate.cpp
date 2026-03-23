@@ -77,6 +77,11 @@ namespace NMib::NBuildSystem
 		mp_bNoReconcileOptions = true;
 	}
 
+	void CBuildSystem::f_ForceUpdate()
+	{
+		mp_bForceUpdate = true;
+	}
+
 
 	bool CBuildSystem::f_SingleThreaded() const
 	{

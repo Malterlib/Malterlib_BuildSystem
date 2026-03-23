@@ -87,8 +87,6 @@ namespace NMib::NBuildSystem
 		CGitLaunches Launches{f_GetGitLaunchOptions("list-commits"), "Listing Commits"};
 		auto DestroyLaunchs = co_await co_await Launches.f_Init();
 
-		CStateHandler StateHandler{f_GetBaseDir(), mp_OutputDir, mp_AnsiFlags, mp_fOutputConsole};
-
 		CColors Colors(mp_AnsiFlags);
 
 		TCVector<TCAsyncResult<void>> LaunchResults;
