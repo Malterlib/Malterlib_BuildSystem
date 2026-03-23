@@ -449,6 +449,7 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_ReconcileNoOptions;
 	extern CStringAndHash const gc_ConstString_ReconcileRemoved;
 	extern CStringAndHash const gc_ConstString_RepoBranch;
+	extern CStringAndHash const gc_ConstString_RepoIncludePull;
 	extern CStringAndHash const gc_ConstString_RepoName;
 	extern CStringAndHash const gc_ConstString_RepoOnlyChanged;
 	extern CStringAndHash const gc_ConstString_RepoTags;

@@ -35,14 +35,16 @@ namespace NMib::NBuildSystem
 			{
 				auto &Repo = *pRepo;
 
-				if (fg_GetBranch(Repo) == _Branch)
+				auto DynamicInfo = fg_GetRepositoryDynamicInfo(Repo);
+
+				if (fg_GetBranch(Repo, DynamicInfo) == _Branch)
 					continue;
 
 				TCVector<CStr> ParamsCheckout;
 
 				if (_Flags & ERepoBranchFlag_Force)
 					ParamsCheckout = {"checkout", "-B", _Branch};
-				else if (!fg_BranchExists(Repo, _Branch))
+				else if (!fg_BranchExists(Repo, DynamicInfo, _Branch))
 					ParamsCheckout = {"checkout", "-b", _Branch};
 				else
 					ParamsCheckout = {"checkout", _Branch};
@@ -88,6 +90,8 @@ namespace NMib::NBuildSystem
 
 		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(_Filter, *this, mp_Data, EGetRepoFlag::mc_None);
 
+		auto MainBranchInfo = fg_GetMainRepoBranchInfo(f_GetBaseDir(), FilteredRepositories.m_ReposOrdered);
+
 		CGitLaunches Launches{f_GetBaseDir(), "Unbranching repos", mp_AnsiFlags, mp_fOutputConsole, f_GetCancelledPointer()};
 		auto DestroyLaunchs = co_await co_await Launches.f_Init();
 
@@ -102,18 +106,24 @@ namespace NMib::NBuildSystem
 			{
 				auto &Repo = *pRepo;
 
-				CStr CurrentBranch = fg_GetBranch(Repo);
-				if (CurrentBranch == Repo.m_OriginProperties.m_DefaultBranch)
+				auto DynamicInfo = fg_GetRepositoryDynamicInfo(Repo);
+
+				CStr CurrentBranch = fg_GetBranch(Repo, DynamicInfo);
+				CStr ExpectedBranch = fg_GetExpectedBranch(Repo, MainBranchInfo.m_Branch, MainBranchInfo.m_DefaultBranch);
+				if (CurrentBranch == ExpectedBranch)
 					continue;
 
 				TCVector<CStr> ParamsCheckout;
 
 				if (_Flags & ERepoBranchFlag_Force)
-					ParamsCheckout = {"checkout", "-B", Repo.m_OriginProperties.m_DefaultBranch};
-				else if (!fg_BranchExists(Repo, Repo.m_OriginProperties.m_DefaultBranch))
-					ParamsCheckout = {"checkout", "-b", Repo.m_OriginProperties.m_DefaultBranch};
+					ParamsCheckout = {"checkout", "-B", ExpectedBranch};
+				else if (!fg_BranchExists(Repo, DynamicInfo, ExpectedBranch))
+					ParamsCheckout = {"checkout", "-b", ExpectedBranch};
 				else
-					ParamsCheckout = {"checkout", Repo.m_OriginProperties.m_DefaultBranch};
+					ParamsCheckout = {"checkout", ExpectedBranch};
+
+				bool bStash = _GenerateOptions.m_bStash;
+				CStr RepositoryIdentifier = Repo.f_GetIdentifierName(f_GetBaseDir(), f_GetBaseDir());
 
 				if (_Flags & ERepoBranchFlag_Pretend)
 					Launches.f_Output(EOutputType_Normal, Repo, "git {}"_f << CProcessLaunchParams::fs_GetParams(ParamsCheckout));
@@ -123,7 +133,43 @@ namespace NMib::NBuildSystem
 						(
 							[=]() -> TCFuture<void>
 							{
+								if (bStash)
+								{
+									auto StatusResult = co_await Launches.f_Launch(Repo, {"status", "--porcelain"}).f_Wrap();
+									if (StatusResult && !(*StatusResult).f_GetStdOut().f_Trim().f_IsEmpty())
+									{
+										CStr StashName = "mib-branch-switch:{}:{}"_f << RepositoryIdentifier << CurrentBranch;
+										Launches.f_Output(EOutputType_Normal, Repo, "Stashing local changes on branch '{}'"_f << CurrentBranch);
+										co_await Launches.f_Launch(Repo, {"stash", "push", "-m", StashName}, fg_LogAllFunctor());
+									}
+								}
+
 								auto Result = co_await Launches.f_Launch(Repo, ParamsCheckout, fg_LogAllFunctor()).f_Wrap();
+
+								if (bStash && Result)
+								{
+									CStr StashName = "mib-branch-switch:{}:{}"_f << RepositoryIdentifier << ExpectedBranch;
+									auto StashListResult = co_await Launches.f_Launch(Repo, {"stash", "list"}).f_Wrap();
+									if (StashListResult)
+									{
+										for (auto &Line : (*StashListResult).f_GetStdOut().f_SplitLine<true>())
+										{
+											if (Line.f_Find(StashName) >= 0)
+											{
+												CStr StashRef;
+												(CStr::CParse("{}:") >> StashRef).f_Parse(Line);
+												if (!StashRef.f_IsEmpty())
+												{
+													Launches.f_Output(EOutputType_Normal, Repo, "Restoring stashed changes for branch '{}'"_f << ExpectedBranch);
+													if (auto PopResult = co_await Launches.f_Launch(Repo, {"stash", "pop", StashRef}, fg_LogAllFunctor()).f_Wrap(); !PopResult)
+														Launches.f_Output(EOutputType_Warning, Repo, "Stash pop conflict: {}"_f << PopResult.f_GetExceptionStr());
+												}
+												break;
+											}
+										}
+									}
+								}
+
 								Launches.f_RepoDone();
 
 								co_return fg_Move(Result);
@@ -199,7 +245,9 @@ namespace NMib::NBuildSystem
 			auto &Repo = RepoBound;
 			auto *pRepo = &Repo;
 
-			auto CurrentBranch = fg_GetBranch(Repo);
+			auto DynamicInfo = fg_GetRepositoryDynamicInfo(Repo);
+
+			auto CurrentBranch = fg_GetBranch(Repo, DynamicInfo);
 			auto &DeleteLaunchSequencer = *DeleteLaunchSequencers(pRepo, "BuildSystem Action Repository CleanupBranches DeleteLaunchSequencer {}"_f << Repo.f_GetName());
 			auto RepoDoneScope = Launches.f_RepoDoneScope();
 
@@ -294,7 +342,7 @@ namespace NMib::NBuildSystem
 								}
 							}
 
-							if (Remote && Branch == fg_GetRemoteHead(Repo, Remote))
+							if (Remote && Branch == fg_GetRemoteHead(Repo, DynamicInfo, Remote))
 							{
 								if (_Flags & ERepoCleanupBranchesFlag_Verbose)
 									Launches.f_Output(EOutputType_Normal, Repo, "{} - default remote branch protected"_f << FullBranch);

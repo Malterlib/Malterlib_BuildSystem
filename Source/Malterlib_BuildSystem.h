@@ -75,6 +75,7 @@ namespace NMib::NBuildSystem
 			NStr::CStr m_Branch;
 			NContainer::TCSet<NStr::CStr> m_Tags;
 			bool m_bOnlyChanged = false;
+			bool m_bIncludePull = false;
 		};
 
 		enum ERepoCleanupBranchesFlag

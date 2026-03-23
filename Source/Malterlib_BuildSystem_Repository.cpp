@@ -20,16 +20,19 @@ Changes in sub-repositories needs to be reconciled.
 
 Choose how you want to reconcile changes:
 
-Accept recommended actions   : {0}./mib update_repos '--reconcile=*:auto'{1}
-Rebase all                   : {0}./mib update_repos '--reconcile=*:rebase'{1}
-Reset all                    : {0}./mib update_repos '--reconcile=*:reset'{1}
-No action, leave as is       : {0}./mib update_repos '--reconcile=*:leave'{1}
+Accept recommended actions   : {0}./mib update-repos '--reconcile=*:auto'{1}
+Rebase all                   : {0}./mib update-repos '--reconcile=*:rebase'{1}
+Reset all                    : {0}./mib update-repos '--reconcile=*:reset'{1}
+No action, leave as is       : {0}./mib update-repos '--reconcile=*:leave'{1}
 
 To choose separate action for different repositories you can specify wildcards. The last matching wildcard wins:
-{0}./mib update_repos '--reconcile=*:auto,External/*:reset'{1}
+{0}./mib update-repos '--reconcile=*:auto,External/*:reset'{1}
 
 To force the action even for repositories that you have not yet seen
-{0}./mib update_repos '--reconcile=*:auto --reconcile-force'{1}
+{0}./mib update-repos '--reconcile=*:auto --reconcile-force'{1}
+
+To disable stash local changes when switching branches:
+{0}./mib update-repos '--reconcile=*:auto --no-stash'{1}
 
 To show current status without reconciling use:
 {0}./mib status --skip-update{1}
@@ -49,16 +52,16 @@ Removed sub-repositories needs to be reconciled.
 
 Choose how you want to reconcile changes:
 
-Leave removed repositories on disk    : {0}./mib update_repos '--reconcile-removed=*:leave'{1}
-Delete removed repositories from disk : {0}./mib update_repos '--reconcile-removed=*:delete'{1}
+Leave removed repositories on disk    : {0}./mib update-repos '--reconcile-removed=*:leave'{1}
+Delete removed repositories from disk : {0}./mib update-repos '--reconcile-removed=*:delete'{1}
 
 {2}Warning:{1} Specifying {0}delete{1} for reconcile removed will delete the repository and any unpushed work permanently.
 
 To choose separate action for different repositories you can specify wildcards. The last matching wildcard wins:
-{0}./mib update_repos '--reconcile-removed=*:leave,External/*:delete'{1}
+{0}./mib update-repos '--reconcile-removed=*:leave,External/*:delete'{1}
 
 To force the action even for repositories that you have not yet seen the recommended action for
-{0}./mib update_repos '--reconcile-remove=*:delete' --reconcile-force{1}
+{0}./mib update-repos '--reconcile-remove=*:delete' --reconcile-force{1}
 
 To show current status without reconciling use:
 {0}./mib status --skip-update{1}
@@ -252,12 +255,13 @@ namespace NMib::NBuildSystem
 				while (!CurrentPath.f_IsEmpty())
 				{
 					CStr GitDir = CurrentPath / ".git";
-					if (CFile::fs_FileExists(GitDir, EFileAttrib_Directory))
+					if (CFile::fs_FileExists(GitDir, EFileAttrib_Directory | EFileAttrib_File))
 					{
 						GitRoot = CurrentPath;
 						if (_GitIgnoreType == EGitIgnoreType::mc_GitInfoExclude)
 						{
-							CStr InfoDir = GitDir / "info";
+							CStr GitCommonDir = fg_GetGitCommonDir(fg_GetGitDataDir(CurrentPath, CFilePosition{}), CFilePosition{});
+							CStr InfoDir = GitCommonDir / "info";
 							if (!CFile::fs_FileExists(InfoDir, EFileAttrib_Directory))
 								CFile::fs_CreateDirectory(InfoDir);
 							IgnoreFile = InfoDir / "exclude";
@@ -447,13 +451,16 @@ namespace NMib::NBuildSystem
 				, TCMap<CStr, CRepository const *> const &_AllRepositories
 				, EHandleRepositoryAction _ReconcileAction
 				, umint _MaxRepoWidth
+				, CMainRepoInfo const &_MainRepoInfo
+				, bool _bStash
 			)
 		{
 			co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 			CColors Colors(o_StateHandler.f_AnsiFlags());
 
-			CStr Location = _ReposDirectory + "/" + _Repo.f_GetName();
+			CStr Location = _Repo.m_Location;
+			DMibCheck(_Repo.m_Location == _ReposDirectory + "/" + _Repo.f_GetName());
 			CStr BaseDir = _BuildSystem.f_GetBaseDir();
 			CStr RepositoryIdentifier = _Repo.f_GetIdentifierName(BaseDir, BaseDir);
 
@@ -533,6 +540,59 @@ namespace NMib::NBuildSystem
 				}
 			;
 
+			auto fGetStashName = [&](CStr const &_Branch) -> CStr
+				{
+					return "mib-branch-switch:{}:{}"_f << RepositoryIdentifier << _Branch;
+				}
+			;
+
+			auto fStashIfNeeded = [&](CStr const &_Location, CStr const &_CurrentBranch) -> TCUnsafeFuture<void>
+				{
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
+					if ((co_await fLaunchGit({"status", "--porcelain"}, _Location)).f_Trim().f_IsEmpty())
+						co_return {};
+					fOutputInfo(EOutputType_Normal, "Stashing local changes on branch '{}'"_f << _CurrentBranch);
+					co_await fLaunchGit({"stash", "push", "--include-untracked", "-m", fGetStashName(_CurrentBranch)}, _Location);
+					co_return {};
+				}
+			;
+
+			auto fUnstashIfExists = [&](CStr const &_Location, CStr const &_Branch) -> TCUnsafeFuture<void>
+				{
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
+					CStr StashList = co_await fLaunchGit({"stash", "list"}, _Location);
+					CStr StashName = fGetStashName(_Branch);
+					for (auto &Line : StashList.f_SplitLine<true>())
+					{
+						if (Line.f_Find(StashName) >= 0)
+						{
+							CStr StashRef;
+							(CStr::CParse("{}:") >> StashRef).f_Parse(Line);
+							if (!StashRef.f_IsEmpty())
+							{
+								fOutputInfo(EOutputType_Normal, "Restoring stashed changes for branch '{}'"_f << _Branch);
+								if (auto Error = co_await fTryLaunchGit({"stash", "pop", StashRef}, _Location))
+									fOutputInfo(EOutputType_Warning, "Stash pop conflict: {}"_f << Error);
+							}
+							break;
+						}
+					}
+					co_return {};
+				}
+			;
+
+			auto fSetUpstreamTracking = [&](CStr const &_Branch, CStr const &_Location) -> TCUnsafeFuture<void>
+				{
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
+					if (auto Error = co_await fTryLaunchGit({"branch", "-u", "origin/{}"_f << _Branch}, _Location))
+					{
+						if (_Branch != _Repo.m_OriginProperties.m_DefaultBranch)
+							co_await fLaunchGit({"branch", "-u", "origin/{}"_f << _Repo.m_OriginProperties.m_DefaultBranch}, _Location);
+					}
+					co_return {};
+				}
+			;
+
 			bool bCloneNew = false;
 			if (CFile::fs_FileExists(Location))
 			{
@@ -591,63 +651,200 @@ namespace NMib::NBuildSystem
 
 			if (bCloneNew)
 			{
-				if (ConfigHash.f_IsEmpty())
-					fOutputInfo(EOutputType_Normal, "Adding external repository");
-				else
-					fOutputInfo(EOutputType_Normal, "Adding external repository at commit {}"_f << ConfigHash);
-
 				CStr GitRoot = fg_GetGitRoot(Location);
 				if (GitRoot.f_IsEmpty() || !_Repo.m_bSubmodule)
 				{
-					auto Result = co_await fg_CallSafe
-						(
-							[&]() -> TCUnsafeFuture<void>
+					bool bHandledByWorktree = false;
+					if (_MainRepoInfo.m_bIsWorktree)
+					{
+						// We're in a worktree - check if the sub-repo exists in any root worktree
+						CStr RelativePath = CFile::fs_MakePathRelative(Location, BaseDir);
+
+						CStr MainSubRepoPath;
+						{
+							auto RootWorktrees = co_await fg_ListWorktreePaths(_Launches, BaseDir);
+							for (auto &RootWorktree : RootWorktrees)
 							{
-								co_await ECoroutineFlag_CaptureMalterlibExceptions;
+								// Skip our own worktree
+								if (RootWorktree == BaseDir)
+									continue;
 
-								TCVector<CStr> CloneParams{"clone"};
-
-								CloneParams.f_Insert(fGetCloneConfigParams());
-								CloneParams.f_Insert({"-n", _Repo.m_OriginProperties.m_URL, Location});
-
-								co_await fLaunchGit(CloneParams, "");
-
-								if (_Repo.m_OriginProperties.m_bLfsReleaseStore)
+								CStr CandidatePath = RootWorktree / RelativePath;
+								if (CFile::fs_FileExists(CandidatePath + "/.git", EFileAttrib_Directory))
 								{
-									auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(Location);
-
-									co_await fLaunchGit({"update-ref", "-d", "refs/remotes/origin/lfs"}, Location);
-									co_await fLaunchGit({"config", "--local", "--unset", "remote.origin.tagOpt"}, Location);
-									co_await fLaunchGit({"fetch"}, Location);
+									MainSubRepoPath = CandidatePath;
+									break;
 								}
-
-								TCVector<CStr> Params = {"checkout", "-B", _Repo.m_OriginProperties.m_DefaultBranch};
-
-								if (!ConfigHash.f_IsEmpty())
-									Params.f_Insert(ConfigHash);
-
-								co_await fLaunchGit(Params, Location);
-
-								bChanged = true;
-
-								co_await fLaunchGit({"branch", "-u", "origin/{}"_f << _Repo.m_OriginProperties.m_DefaultBranch}, Location);
-
-								if (_Repo.m_bUpdateSubmodules)
-									co_await fLaunchGit({"submodule", "update", "--init"}, Location);
-
-								if (_Repo.m_bBootstrapSource)
-									co_await _BuildSystem.f_SetupBootstrapMTool();
-
-								co_return {};
 							}
-						)
-						.f_Wrap()
-					;
-					if (!Result)
-						CBuildSystem::fs_ThrowError(_Repo.m_Position, fg_Format("Failed to clone repository: {}", Result.f_GetExceptionStr()));
+						}
+
+						if (!MainSubRepoPath.f_IsEmpty())
+						{
+							if (ConfigHash.f_IsEmpty())
+								fOutputInfo(EOutputType_Normal, "Adding external repository (worktree)");
+							else
+								fOutputInfo(EOutputType_Normal, "Adding external repository (worktree) at commit {} {}"_f << ConfigHash << MainSubRepoPath);
+
+							auto Result = co_await fg_CallSafe
+								(
+									[&]() -> TCUnsafeFuture<void>
+									{
+										co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+										// Prune stale worktree entries before adding
+										co_await fLaunchGit({"worktree", "prune"}, MainSubRepoPath);
+
+										TCVector<CStr> WorktreeParams{"worktree", "add"};
+
+										if (!_MainRepoInfo.m_Branch.f_IsEmpty() && !ConfigHash.f_IsEmpty())
+											WorktreeParams.f_Insert({"-B", _MainRepoInfo.m_Branch, Location, ConfigHash});
+										else if (!ConfigHash.f_IsEmpty())
+											WorktreeParams.f_Insert({Location, ConfigHash});
+										else if (!_MainRepoInfo.m_Branch.f_IsEmpty())
+											WorktreeParams.f_Insert({"-B", _MainRepoInfo.m_Branch, Location});
+										else
+											WorktreeParams.f_Insert({Location});
+
+										co_await fLaunchGit(WorktreeParams, MainSubRepoPath);
+
+										bChanged = true;
+
+										if (_Repo.m_bUpdateSubmodules)
+											co_await fLaunchGit({"submodule", "update", "--init"}, Location);
+
+										if (_Repo.m_bBootstrapSource)
+											co_await _BuildSystem.f_SetupBootstrapMTool();
+
+										co_return {};
+									}
+								)
+								.f_Wrap()
+							;
+							if (!Result)
+								CBuildSystem::fs_ThrowError(_Repo.m_Position, fg_Format("Failed to add worktree for repository: {}", Result.f_GetExceptionStr()));
+
+							bHandledByWorktree = true;
+						}
+					}
+					else if (_MainRepoInfo.m_bIsValid)
+					{
+						// We're in the main working tree - check if the sub-repo exists in any worktree
+						CStr RelativePath = CFile::fs_MakePathRelative(Location, BaseDir);
+						CStr WorktreeSubRepoPath = co_await fg_FindSubRepoInWorktrees(_Launches, BaseDir, RelativePath);
+
+						if (!WorktreeSubRepoPath.f_IsEmpty())
+						{
+							// Sub-repo exists as standalone clone in a worktree - transfer .git/ here
+							if (ConfigHash.f_IsEmpty())
+								fOutputInfo(EOutputType_Normal, "Adding external repository (transfer from worktree)");
+							else
+								fOutputInfo(EOutputType_Normal, "Adding external repository (transfer from worktree) at commit {}"_f << ConfigHash);
+
+							CStr WorktreeName = CFile::fs_GetFile(WorktreeSubRepoPath);
+
+							auto Result = co_await fg_CallSafe
+								(
+									[&]() -> TCUnsafeFuture<void>
+									{
+										co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+										CFile::fs_CreateDirectory(Location);
+										co_await fg_TransferGitDirWorktreeToMain(_Launches, WorktreeSubRepoPath, Location, WorktreeName);
+
+										CStr TransferExpectedBranch = fg_GetExpectedBranch(_Repo, _MainRepoInfo.m_Branch, _MainRepoInfo.m_DefaultBranch);
+										TCVector<CStr> Params = {"checkout", "-B", TransferExpectedBranch};
+
+										if (!ConfigHash.f_IsEmpty())
+											Params.f_Insert(ConfigHash);
+
+										co_await fLaunchGit(Params, Location);
+
+										bChanged = true;
+
+										co_await fSetUpstreamTracking(TransferExpectedBranch, Location);
+
+										if (_Repo.m_bUpdateSubmodules)
+											co_await fLaunchGit({"submodule", "update", "--init"}, Location);
+
+										if (_Repo.m_bBootstrapSource)
+											co_await _BuildSystem.f_SetupBootstrapMTool();
+
+										co_return {};
+									}
+								)
+								.f_Wrap()
+							;
+							if (!Result)
+								CBuildSystem::fs_ThrowError(_Repo.m_Position, fg_Format("Failed to transfer repository from worktree: {}", Result.f_GetExceptionStr()));
+
+							bHandledByWorktree = true;
+						}
+					}
+
+					if (!bHandledByWorktree)
+					{
+						if (ConfigHash.f_IsEmpty())
+							fOutputInfo(EOutputType_Normal, "Adding external repository (clone)");
+						else
+							fOutputInfo(EOutputType_Normal, "Adding external repository (clone) at commit {}"_f << ConfigHash);
+
+						// Standard clone path
+						auto Result = co_await fg_CallSafe
+							(
+								[&]() -> TCUnsafeFuture<void>
+								{
+									co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+									TCVector<CStr> CloneParams{"clone"};
+
+									CloneParams.f_Insert(fGetCloneConfigParams());
+									CloneParams.f_Insert({"-n", _Repo.m_OriginProperties.m_URL, Location});
+
+									co_await fLaunchGit(CloneParams, "");
+
+									if (_Repo.m_OriginProperties.m_bLfsReleaseStore)
+									{
+										auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(Location);
+
+										co_await fLaunchGit({"update-ref", "-d", "refs/remotes/origin/lfs"}, Location);
+										co_await fLaunchGit({"config", "--local", "--unset", "remote.origin.tagOpt"}, Location);
+										co_await fLaunchGit({"fetch"}, Location);
+									}
+
+									CStr CloneExpectedBranch = fg_GetExpectedBranch(_Repo, _MainRepoInfo.m_Branch, _MainRepoInfo.m_DefaultBranch);
+									TCVector<CStr> Params = {"checkout", "-B", CloneExpectedBranch};
+
+									if (!ConfigHash.f_IsEmpty())
+										Params.f_Insert(ConfigHash);
+
+									co_await fLaunchGit(Params, Location);
+
+									bChanged = true;
+
+									co_await fSetUpstreamTracking(CloneExpectedBranch, Location);
+
+									if (_Repo.m_bUpdateSubmodules)
+										co_await fLaunchGit({"submodule", "update", "--init"}, Location);
+
+									if (_Repo.m_bBootstrapSource)
+										co_await _BuildSystem.f_SetupBootstrapMTool();
+
+									co_return {};
+								}
+							)
+							.f_Wrap()
+						;
+						if (!Result)
+							CBuildSystem::fs_ThrowError(_Repo.m_Position, fg_Format("Failed to clone repository: {}", Result.f_GetExceptionStr()));
+					}
 				}
 				else
 				{
+					if (ConfigHash.f_IsEmpty())
+						fOutputInfo(EOutputType_Normal, "Adding external repository (submodule)");
+					else
+						fOutputInfo(EOutputType_Normal, "Adding external repository (submodule) at commit {}"_f << ConfigHash);
+
 					CStr RelativeLocation = CFile::fs_MakePathRelative(Location, GitRoot);
 					auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(Location);
 					auto Result = co_await fg_CallSafe
@@ -696,7 +893,7 @@ namespace NMib::NBuildSystem
 						CStr CurrentPath = CFile::fs_GetPath(Location);
 						while (!CurrentPath.f_IsEmpty())
 						{
-							if (CFile::fs_FileExists(CurrentPath + "/.git", EFileAttrib_Directory))
+							if (CFile::fs_FileExists(CurrentPath + "/.git", EFileAttrib_Directory | EFileAttrib_File))
 							{
 								ConfigRepoRoot = CurrentPath;
 								break;
@@ -712,10 +909,22 @@ namespace NMib::NBuildSystem
 						if (!ConfigRepoRoot.f_IsEmpty() && o_StateHandler.f_UpdateCoreExcludesFileLocation(ConfigRepoRoot))
 						{
 							auto ExpectedExcludeFile = BaseDir / "BuildSystem/.localgitignore";
+							CStr GitDataDir = fg_GetGitDataDir(ConfigRepoRoot, _Repo.m_Position);
+							bool bConfigRepoIsWorktree = fg_IsWorktree(GitDataDir);
 
 							auto fNeedUpdate = [&]
 								{
-									CStr ConfigFile = ConfigRepoRoot / ".git/config";
+									CStr ConfigFile;
+									if (bConfigRepoIsWorktree)
+									{
+										// With worktreeConfig, excludesFile is per-worktree in config.worktree
+										ConfigFile = GitDataDir + "/config.worktree";
+									}
+									else
+									{
+										CStr GitCommonDir = fg_GetGitCommonDir(GitDataDir, _Repo.m_Position);
+										ConfigFile = GitCommonDir + "/config";
+									}
 									if (CFile::fs_FileExists(ConfigFile))
 									{
 										CStr ConfigContents = CFile::fs_ReadStringFromFile(ConfigFile, true);
@@ -734,7 +943,14 @@ namespace NMib::NBuildSystem
 							{
 								auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(ConfigRepoRoot);
 
-								co_await fLaunchGit({"config", "core.excludesFile", ExpectedExcludeFile}, ConfigRepoRoot);
+								if (bConfigRepoIsWorktree)
+								{
+									// Enable worktreeConfig extension and set excludesFile per-worktree
+									co_await fLaunchGit({"config", "--local", "extensions.worktreeConfig", "true"}, ConfigRepoRoot);
+									co_await fLaunchGit({"config", "--worktree", "core.excludesFile", ExpectedExcludeFile}, ConfigRepoRoot);
+								}
+								else
+									co_await fLaunchGit({"config", "--local", "core.excludesFile", ExpectedExcludeFile}, ConfigRepoRoot);
 							}
 						}
 					}
@@ -743,18 +959,30 @@ namespace NMib::NBuildSystem
 
 			bool bForceReset = fg_GetSys()->f_GetEnvironmentVariable("MalterlibRepositoryHardReset", "") == gc_ConstString_true.m_String;
 
-			auto GitConfig = fg_GetGitConfig(Location, _Repo.m_Position);
+			auto DynamicInfo = fg_GetRepositoryDynamicInfo(_Repo);
+
+			bool bLocationIsWorktree = fg_IsWorktree(DynamicInfo.m_DataDir);
+
+			auto GitConfig = fg_GetGitConfig(_Repo, DynamicInfo, bLocationIsWorktree);
 			auto &CurrentRemotes = GitConfig.m_Remotes;
 			auto WantedRemotes = _Repo.m_Remotes;
 			auto &OriginRemote = WantedRemotes["origin"];
 			OriginRemote.m_Properties = _Repo.m_OriginProperties;
+
+			CStr ConfigLocationParam = bLocationIsWorktree ? gc_Str<"--worktree">.m_Str : gc_Str<"--local">.m_Str;
+
+			if (bLocationIsWorktree && !GitConfig.m_bWorktreeConfig)
+			{
+				auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(Location);
+				co_await fLaunchGit({"config", "--local", "extensions.worktreeConfig", "true"}, Location);
+			}
 
 			if (_Repo.m_UserName && GitConfig.m_UserName != _Repo.m_UserName)
 			{
 				auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(Location);
 
 				fOutputInfo(EOutputType_Normal, "Changing user name '{}' -> '{}'"_f << GitConfig.m_UserName << _Repo.m_UserName);
-				co_await fLaunchGit({"config", "--local", "user.name", _Repo.m_UserName}, Location);
+				co_await fLaunchGit({"config", ConfigLocationParam, "user.name", _Repo.m_UserName}, Location);
 			}
 
 			if (_Repo.m_UserEmail && GitConfig.m_UserEmail != _Repo.m_UserEmail)
@@ -762,7 +990,7 @@ namespace NMib::NBuildSystem
 				auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(Location);
 
 				fOutputInfo(EOutputType_Normal, "Changing user email '{}' -> '{}'"_f << GitConfig.m_UserEmail << _Repo.m_UserEmail);
-				co_await fLaunchGit({"config", "--local", "user.email", _Repo.m_UserEmail}, Location);
+				co_await fLaunchGit({"config", ConfigLocationParam, "user.email", _Repo.m_UserEmail}, Location);
 			}
 
 			auto fSetupLfsReleaseStorage = [&, bDidSetup = false]() -> TCUnsafeFuture<void>
@@ -984,19 +1212,38 @@ namespace NMib::NBuildSystem
 				co_return false;
 
 			CStr CurrentHash = o_StateHandler.f_GetHash(_Repo.m_StateFile, Location, _Repo.m_Identity, true);
-			CStr HeadHash = fg_GetGitHeadHash(Location, _Repo.m_Position);
+			CStr HeadHash = fg_GetGitHeadHash(_Repo, DynamicInfo);
 
+			CStr ExpectedBranch = fg_GetExpectedBranch(_Repo, _MainRepoInfo.m_Branch, _MainRepoInfo.m_DefaultBranch);
+			CStr CurrentBranch = fg_GetBranch(_Repo, DynamicInfo);
+			bool bNeedBranchSwitch = !ExpectedBranch.f_IsEmpty() && CurrentBranch != ExpectedBranch;
+
+			CStr TargetHash;
+			bool bTargetBranchExists = false;
+			if (bNeedBranchSwitch)
+			{
+				bTargetBranchExists = fg_BranchExists(_Repo, DynamicInfo, ExpectedBranch);
+				if (bTargetBranchExists)
+					TargetHash = fg_GetBranchHash(_Repo, DynamicInfo, ExpectedBranch);
+				else
+					TargetHash = ConfigHash;
+			}
+			else
+				TargetHash = HeadHash;
+
+			bool bReconciliationHandled = false;
 			if
 				(
 					!ConfigHash.f_IsEmpty()
 					&&
 					(
-						(HeadHash != ConfigHash && CurrentHash != ConfigHash)
+						(TargetHash != ConfigHash && (CurrentHash != ConfigHash || bNeedBranchSwitch))
 						|| bForceReset
 					)
-					&& !fg_IsSubmodule(Location)
+					&& !fg_IsSubmodule(DynamicInfo.m_DataDir)
 				)
 			{
+				bReconciliationHandled = true;
 				bool bPassException = false;
 				auto Result = co_await fg_CallSafe
 					(
@@ -1031,15 +1278,21 @@ namespace NMib::NBuildSystem
 							{
 								if (HeadHash != ConfigHash || co_await fLaunchGitNonEmpty({"status", "--porcelain"}, Location))
 								{
+									if (bNeedBranchSwitch && _bStash)
+										co_await fStashIfNeeded(Location, CurrentBranch);
+
 									fOutputInfo(EOutputType_Warning, "Force Resetting to '{}'"_f << ConfigHash);
-									co_await fLaunchGit({"checkout", "-f", "-B", _Repo.m_OriginProperties.m_DefaultBranch, ConfigHash}, Location);
-									co_await fLaunchGit({"branch", "-u", "origin/{}"_f << _Repo.m_OriginProperties.m_DefaultBranch}, Location);
+									co_await fLaunchGit({"checkout", "-f", "-B", ExpectedBranch, ConfigHash}, Location);
+									co_await fSetUpstreamTracking(ExpectedBranch, Location);
 									co_await fLaunchGit({"clean", "-fd"}, Location);
 									if (_Repo.m_bUpdateSubmodules)
 										co_await fLaunchGit({"submodule", "update", "--init"}, Location);
 
 									if (_Repo.m_bBootstrapSource)
 										co_await _BuildSystem.f_SetupBootstrapMTool();
+
+									if (bNeedBranchSwitch)
+										co_await fUnstashIfExists(Location, ExpectedBranch);
 
 									// git remote set-head origin master
 									bChanged = true;
@@ -1051,22 +1304,22 @@ namespace NMib::NBuildSystem
 
 								do
 								{
-									if (co_await fLaunchGitQuestion({"merge-base", "--is-ancestor", HeadHash, ConfigHash}, Location, true))
+									if (co_await fLaunchGitQuestion({"merge-base", "--is-ancestor", TargetHash, ConfigHash}, Location, true))
 									{
-										if (!(co_await fLaunchGit({"status", "--porcelain"}, Location)).f_IsEmpty())
+										if (!bNeedBranchSwitch && !(co_await fLaunchGit({"status", "--porcelain"}, Location)).f_IsEmpty())
 											RecommendedAction = EHandleRepositoryAction_Rebase;
 										else
 											RecommendedAction = EHandleRepositoryAction_Reset;
 										break;
 									}
 
-									if (co_await fLaunchGitQuestion({"merge-base", "--is-ancestor", ConfigHash, HeadHash}, Location, true))
+									if (co_await fLaunchGitQuestion({"merge-base", "--is-ancestor", ConfigHash, TargetHash}, Location, true))
 									{
-										RecommendedAction = EHandleRepositoryAction_None;
+										RecommendedAction = EHandleRepositoryAction_Leave;
 										break;
 									}
 
-									if (!(co_await fLaunchGit({"status", "--porcelain"}, Location)).f_IsEmpty())
+									if (!bNeedBranchSwitch && !(co_await fLaunchGit({"status", "--porcelain"}, Location)).f_IsEmpty())
 									{
 										RecommendedAction = EHandleRepositoryAction_ManualResolve;
 										break;
@@ -1076,8 +1329,8 @@ namespace NMib::NBuildSystem
 
 									if
 										(
-											co_await fLaunchGitNonEmpty({"branch", "-r", "--contains", HeadHash}, Location)
-											|| co_await fLaunchGitNonEmpty({"tag", "--contains", HeadHash}, Location)
+											co_await fLaunchGitNonEmpty({"branch", "-r", "--contains", TargetHash}, Location)
+											|| co_await fLaunchGitNonEmpty({"tag", "--contains", TargetHash}, Location)
 										)
 									{
 										bIsOnRemote = true;
@@ -1117,12 +1370,12 @@ namespace NMib::NBuildSystem
 										{
 											if (bFoundCurrent)
 											{
-												RecommendedAction = EHandleRepositoryAction_None;
+												RecommendedAction = EHandleRepositoryAction_Leave;
 												break;
 											}
 											bFoundConfig = true;
 										}
-										if (Commit == HeadHash)
+										if (Commit == TargetHash)
 										{
 											if (bFoundConfig)
 											{
@@ -1145,10 +1398,21 @@ namespace NMib::NBuildSystem
 
 								if (Action == EHandleRepositoryAction_Reset)
 								{
-									if ((co_await fLaunchGit({"rev-parse", "--abbrev-ref", "HEAD"}, Location)).f_Trim() == "HEAD")
+									if (bNeedBranchSwitch)
+									{
+										if (_bStash)
+											co_await fStashIfNeeded(Location, CurrentBranch);
+
+										fOutputInfo(EOutputType_Warning, "Switching to branch '{}' and resetting to {}"_f << ExpectedBranch << ConfigHash);
+										co_await fLaunchGit({"checkout", "-B", ExpectedBranch, ConfigHash}, Location);
+										co_await fSetUpstreamTracking(ExpectedBranch, Location);
+										co_await fUnstashIfExists(Location, ExpectedBranch);
+									}
+									else if ((co_await fLaunchGit({"rev-parse", "--abbrev-ref", "HEAD"}, Location)).f_Trim() == "HEAD")
 									{
 										fOutputInfo(EOutputType_Warning, "Resetting to {} and recovering from detached head"_f << ConfigHash);
-										co_await fLaunchGit({"checkout", "-f", "-B", _Repo.m_OriginProperties.m_DefaultBranch, ConfigHash}, Location); // Recover from detached head
+										co_await fLaunchGit({"checkout", "-f", "-B", ExpectedBranch, ConfigHash}, Location);
+										co_await fSetUpstreamTracking(ExpectedBranch, Location);
 									}
 									else
 									{
@@ -1163,7 +1427,16 @@ namespace NMib::NBuildSystem
 								}
 								else if (Action == EHandleRepositoryAction_Rebase)
 								{
-									fOutputInfo(EOutputType_Normal, "Rebasing on top of {}"_f << ConfigHash);
+									if (bNeedBranchSwitch)
+									{
+										if (_bStash)
+											co_await fStashIfNeeded(Location, CurrentBranch);
+
+										fOutputInfo(EOutputType_Normal, "Switching to branch '{}' and rebasing on top of {}"_f << ExpectedBranch << ConfigHash);
+										co_await fLaunchGit({"checkout", ExpectedBranch}, Location);
+									}
+									else
+										fOutputInfo(EOutputType_Normal, "Rebasing on top of {}"_f << ConfigHash);
 
 									TCSet<CStr> AllConfigFiles;
 									for (auto &pRepository : _AllRepositories)
@@ -1240,6 +1513,9 @@ namespace NMib::NBuildSystem
 										if (_Repo.m_bBootstrapSource)
 											co_await _BuildSystem.f_SetupBootstrapMTool();
 									}
+
+									if (bNeedBranchSwitch)
+										co_await fUnstashIfExists(Location, ExpectedBranch);
 								}
 								else if (Action == EHandleRepositoryAction_ManualResolve)
 								{
@@ -1248,7 +1524,17 @@ namespace NMib::NBuildSystem
 									DMibError("Manual reconcile needed");
 								}
 								else if (Action == EHandleRepositoryAction_Leave)
-									;
+								{
+									if (bNeedBranchSwitch)
+									{
+										if (_bStash)
+											co_await fStashIfNeeded(Location, CurrentBranch);
+
+										fOutputInfo(EOutputType_Normal, "Switching to branch '{}'"_f << ExpectedBranch);
+										co_await fLaunchGit({"checkout", ExpectedBranch}, Location);
+										co_await fUnstashIfExists(Location, ExpectedBranch);
+									}
+								}
 								else if (_ReconcileAction != EHandleRepositoryAction_Auto)
 								{
 									CStr ActionStr;
@@ -1257,6 +1543,9 @@ namespace NMib::NBuildSystem
 									switch (RecommendedAction)
 									{
 									case EHandleRepositoryAction_None:
+										ActionStr = "(No recommendation)";
+										break;
+									case EHandleRepositoryAction_Leave:
 										ActionStr = "(Leave as is)";
 										break;
 									case EHandleRepositoryAction_ManualResolve:
@@ -1275,15 +1564,31 @@ namespace NMib::NBuildSystem
 										break;
 									}
 
-									fOutputInfo
-										(
-											OutputType
-											, "{}{}{} recommended for {}{}{} -> {}{}{}"_f
-											<< Colors.f_RepositoryName() << ActionStr << Colors.f_Default()
-											<< Colors.f_ToPush() << HeadHash << Colors.f_Default()
-											<< Colors.f_ToPush() << ConfigHash << Colors.f_Default()
-										)
-									;
+									if (bNeedBranchSwitch)
+									{
+										fOutputInfo
+											(
+												OutputType
+												, "Branch switch to '{}': {}{}{} recommended for {}{}{} -> {}{}{}"_f
+												<< ExpectedBranch
+												<< Colors.f_RepositoryName() << ActionStr << Colors.f_Default()
+												<< Colors.f_ToPush() << TargetHash << Colors.f_Default()
+												<< Colors.f_ToPush() << ConfigHash << Colors.f_Default()
+											)
+										;
+									}
+									else
+									{
+										fOutputInfo
+											(
+												OutputType
+												, "{}{}{} recommended for {}{}{} -> {}{}{}"_f
+												<< Colors.f_RepositoryName() << ActionStr << Colors.f_Default()
+												<< Colors.f_ToPush() << TargetHash << Colors.f_Default()
+												<< Colors.f_ToPush() << ConfigHash << Colors.f_Default()
+											)
+										;
+									}
 									bPassException = true;
 									DMibError(fg_ReconcileHelp(o_StateHandler.f_AnsiFlags()));
 								}
@@ -1308,7 +1613,36 @@ namespace NMib::NBuildSystem
 				}
 			}
 
-			CStr GitHeadHash = fg_GetGitHeadHash(Location, _Repo.m_Position);
+			if (!bCloneNew && !bIsRoot && bNeedBranchSwitch && !bReconciliationHandled && !fg_IsSubmodule(DynamicInfo.m_DataDir))
+			{
+				if (!bTargetBranchExists)
+				{
+					if (_bStash)
+						co_await fStashIfNeeded(Location, CurrentBranch);
+
+					fOutputInfo(EOutputType_Normal, "Creating and switching to branch '{}'"_f << ExpectedBranch);
+					if (!ConfigHash.f_IsEmpty())
+						co_await fLaunchGit({"checkout", "-b", ExpectedBranch, ConfigHash}, Location);
+					else
+						co_await fLaunchGit({"checkout", "-b", ExpectedBranch}, Location);
+
+					co_await fSetUpstreamTracking(ExpectedBranch, Location);
+					co_await fUnstashIfExists(Location, ExpectedBranch);
+					bChanged = true;
+				}
+				else if (TargetHash == ConfigHash || ConfigHash.f_IsEmpty())
+				{
+					if (_bStash)
+						co_await fStashIfNeeded(Location, CurrentBranch);
+
+					fOutputInfo(EOutputType_Normal, "Switching to branch '{}'"_f << ExpectedBranch);
+					co_await fLaunchGit({"checkout", ExpectedBranch}, Location);
+					co_await fUnstashIfExists(Location, ExpectedBranch);
+					bChanged = true;
+				}
+			}
+
+			CStr GitHeadHash = fg_GetGitHeadHash(_Repo, DynamicInfo);
 			o_StateHandler.f_SetHash(_Repo.m_StateFile, Location, GitHeadHash, _Repo.m_Identity, true);
 			o_StateHandler.f_SetHash(_Repo.m_ConfigFile, Location, GitHeadHash, _Repo.m_Identity, false);
 			o_StateHandler.f_AddGitIgnore(_Repo.m_StateFile, _BuildSystem, EGitIgnoreType::mc_GitIgnore);
@@ -1426,6 +1760,7 @@ namespace NMib::NBuildSystem
 
 					auto &Repo = *RepoMap;
 					Repo.m_Identity = ChildEntity.f_GetKeyName();
+					Repo.m_Position = ChildEntityData.m_Position;
 					Repo.m_Location = Location;
 					Repo.m_ConfigFile = ConfigFile;
 					Repo.m_StateFile = StateFile;
@@ -1554,7 +1889,6 @@ namespace NMib::NBuildSystem
 								OutRemote.m_Properties.m_ReleasePackage = fParseReleasePackage(ReleasePackageJson);
 						}
 					}
-					Repo.m_Position = ChildEntityData.m_Position;
 
 					if (Repo.m_OriginProperties.m_URL.f_IsEmpty())
 						_BuildSystem.fs_ThrowError(PropertyInfoURL, ChildEntityData.m_Position, "You have to specify Repository.URL");
@@ -1737,9 +2071,40 @@ namespace NMib::NBuildSystem
 		TCAtomic<bool> bChanged;
 		TCAtomic<bool> bBinariesChange;
 
-		CStateHandler StateHandler{f_GetBaseDir(), mp_OutputDir, mp_AnsiFlags, mp_fOutputConsole};
+		auto BaseDir = f_GetBaseDir();
+
+		CStateHandler StateHandler{BaseDir, mp_OutputDir, mp_AnsiFlags, mp_fOutputConsole};
 
 		CColors Colors(mp_AnsiFlags);
+
+		CMainRepoInfo MainRepoInfo;
+		auto pMainRepo = AllRepositories.f_FindEqual(BaseDir);
+		if (pMainRepo)
+		{
+			auto &MainRepo = **pMainRepo;
+			MainRepoInfo.m_bIsValid = true;
+
+			auto DynamicInfo = fg_GetRepositoryDynamicInfo(MainRepo);
+			MainRepoInfo.m_DataDir = DynamicInfo.m_DataDir;
+			MainRepoInfo.m_Location = MainRepo.m_Location;
+			MainRepoInfo.m_CommonDir = DynamicInfo.m_CommonDir;
+			MainRepoInfo.m_Branch = fg_GetBranch(MainRepo, DynamicInfo);
+			MainRepoInfo.m_DefaultBranch = MainRepo.m_OriginProperties.m_DefaultBranch;
+			MainRepoInfo.m_bIsWorktree = fg_IsWorktree(DynamicInfo.m_DataDir);
+		}
+		else if (CFile::fs_FileExists(BaseDir + "/.git", EFileAttrib_Directory | EFileAttrib_File))
+		{
+			// Base dir is a git directory but not part of the repositories
+			MainRepoInfo.m_bIsValid = true;
+			MainRepoInfo.m_Location = BaseDir;
+			MainRepoInfo.m_DataDir = fg_GetGitDataDir(BaseDir, CFilePosition{});
+			MainRepoInfo.m_CommonDir = fg_GetGitCommonDir(MainRepoInfo.m_DataDir, CFilePosition{});
+			MainRepoInfo.m_bIsWorktree = fg_IsWorktree(MainRepoInfo.m_DataDir);
+
+			CStr HeadRef = CFile::fs_ReadStringFromFile(MainRepoInfo.m_DataDir + "/HEAD", true).f_TrimRight("\n");
+			if (HeadRef.f_StartsWith("ref: "))
+				(CStr::CParse("ref: refs/heads/{}") >> MainRepoInfo.m_Branch).f_Parse(HeadRef);
+		}
 
 		auto fGetReconcileActionByName = [&](CStr const &_RepoName)
 			{
@@ -1775,7 +2140,7 @@ namespace NMib::NBuildSystem
 
 		auto fGetReconcileAction = [&](CRepository const &_Repo)
 			{
-				return fGetReconcileActionByName(_Repo.f_GetIdentifierName(f_GetBaseDir(), f_GetBaseDir()));
+				return fGetReconcileActionByName(_Repo.f_GetIdentifierName(BaseDir, BaseDir));
 			}
 		;
 
@@ -1795,9 +2160,9 @@ namespace NMib::NBuildSystem
 				for (auto &Repo : Repos.m_Repositories)
 				{
 					CStr RepoName;
-					if (Repo.m_Location.f_StartsWith(f_GetBaseDir()))
+					if (Repo.m_Location.f_StartsWith(BaseDir))
 					{
-						RepoName = CFile::fs_MakePathRelative(Repo.m_Location, f_GetBaseDir());
+						RepoName = CFile::fs_MakePathRelative(Repo.m_Location, BaseDir);
 						if (!Repo.m_bExcludeFromSeen)
 							SeenRepositories[RepoName];
 						else
@@ -1811,7 +2176,7 @@ namespace NMib::NBuildSystem
 			}
 		}
 
-		CGitLaunches Launches{f_GetBaseDir(), "Check repository status", mp_AnsiFlags, mp_fOutputConsole, f_GetCancelledPointer()};
+		CGitLaunches Launches{BaseDir, "Check repository status", mp_AnsiFlags, mp_fOutputConsole, f_GetCancelledPointer()};
 		auto DestroyLaunchs = co_await co_await Launches.f_Init();
 
 		for (auto &Repos : ReposOrdered)
@@ -1890,11 +2255,13 @@ namespace NMib::NBuildSystem
 												, AllRepositories
 												, fGetReconcileAction(_Repo)
 												, MaxRepoWidth
+												, MainRepoInfo
+												, mp_GenerateOptions.m_bStash
 											)
 										)
 									{
 										bChanged.f_Exchange(true);
-										CStr RelativePath = CFile::fs_MakePathRelative(_Repo.m_Location, f_GetBaseDir());
+										CStr RelativePath = CFile::fs_MakePathRelative(_Repo.m_Location, BaseDir);
 										if (RelativePath.f_StartsWith("Binaries/Malterlib/"))
 											bBinariesChange.f_Exchange(true);
 									}
@@ -1974,15 +2341,58 @@ namespace NMib::NBuildSystem
 
 			for (auto &LastSeen : LastSeenRepositories)
 			{
-				CStr FullRepoPath = f_GetBaseDir() / LastSeen;
+				CStr FullRepoPath = BaseDir / LastSeen;
 				if (!SeenRepositories.f_FindEqual(LastSeen) && !ExcludeFromSeenRepositories.f_FindEqual(LastSeen) && CFile::fs_FileExists(FullRepoPath, EFileAttrib_Directory))
 				{
 					EHandleRepositoryRemovedAction Action = fGetReconcileRemovedActionByName(LastSeen);
 
 					if (bForceReset || Action == EHandleRepositoryRemovedAction_Delete)
 					{
-						fg_OutputRepositoryInfo(EOutputType_Warning, "Deleting repository permanently from disk: {}"_f << FullRepoPath, StateHandler, LastSeen, MaxRepoWidth);
-						CFile::fs_DeleteDirectoryRecursive(FullRepoPath, true);
+						bool bHandled = false;
+
+						if (CFile::fs_FileExists(FullRepoPath + "/.git", EFileAttrib_File))
+						{
+							CStr SubRepoDataDir = fg_GetGitDataDir(FullRepoPath, CFilePosition{});
+							if (fg_IsWorktree(SubRepoDataDir))
+							{
+								// Sub-repo is a worktree - find its main repo and use git worktree remove
+								fg_OutputRepositoryInfo(EOutputType_Warning, "Removing worktree: {}"_f << FullRepoPath, StateHandler, LastSeen, MaxRepoWidth);
+
+								CStr SubRepoCommonDir = fg_GetGitCommonDir(SubRepoDataDir, CFilePosition{});
+								CStr MainSubRepoPath = CFile::fs_GetPath(SubRepoCommonDir);
+								co_await Launches.f_Launch(MainSubRepoPath, {"worktree", "remove", FullRepoPath, "--force"});
+								bHandled = true;
+							}
+						}
+						else if (CFile::fs_FileExists(FullRepoPath + "/.git", EFileAttrib_Directory))
+						{
+							// Sub-repo has a .git directory - check for worktrees to preserve
+							auto Worktrees = co_await fg_ListWorktreePaths(Launches, FullRepoPath);
+
+							// Sub-repo has worktrees - transfer .git/ to first other worktree before removal
+							CStr TargetWorktree;
+							for (auto &WorkTree : Worktrees)
+							{
+								if (WorkTree != FullRepoPath)
+								{
+									TargetWorktree = WorkTree;
+									break;
+								}
+							}
+
+							if (TargetWorktree)
+							{
+								fg_OutputRepositoryInfo(EOutputType_Warning, "Transferring repository to worktree before removal: {}"_f << TargetWorktree, StateHandler, LastSeen, MaxRepoWidth);
+								co_await fg_TransferGitDirMainToWorktree(Launches, FullRepoPath, TargetWorktree);
+								bHandled = true;
+							}
+						}
+
+						if (!bHandled)
+						{
+							fg_OutputRepositoryInfo(EOutputType_Warning, "Deleting repository permanently from disk: {}"_f << FullRepoPath, StateHandler, LastSeen, MaxRepoWidth);
+							CFile::fs_DeleteDirectoryRecursive(FullRepoPath, true);
+						}
 					}
 					else if (Action != EHandleRepositoryRemovedAction_Leave)
 					{

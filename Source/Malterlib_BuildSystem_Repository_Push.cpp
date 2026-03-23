@@ -169,8 +169,17 @@ namespace NMib::NBuildSystem
 			TCSet<CStr> NeedPush;
 			for (auto &Commits : ResultsUnwrapped)
 			{
+				auto &Remote = ResultsUnwrapped.fs_GetKey(Commits);
 				if (!Commits.f_IsEmpty())
-					NeedPush[ResultsUnwrapped.fs_GetKey(Commits)];
+				{
+					CStr DefaultBranch = _Repo.m_OriginProperties.m_DefaultBranch;
+					if (auto pRemote = _Repo.m_Remotes.f_FindEqual(Remote); pRemote && pRemote->m_Properties.m_DefaultBranch)
+						DefaultBranch = pRemote->m_Properties.m_DefaultBranch;
+
+					auto MergeBaseResult = co_await _Launches.f_Launch(_Repo, {"merge-base", "--is-ancestor", _Branches.m_Current, "{}/{}"_f << Remote << DefaultBranch});
+					if (MergeBaseResult.m_ExitCode != 0)
+						NeedPush[Remote];
+				}
 			}
 
 			co_return fg_Move(NeedPush);

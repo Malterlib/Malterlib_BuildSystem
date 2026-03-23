@@ -119,6 +119,8 @@ namespace NMib::NBuildSystem
 			Filter.m_Tags.f_AddContainer(pValue->f_String().f_Split<true>(";"));
 		if (auto pValue = _Params.f_GetMember(gc_ConstString_RepoOnlyChanged))
 			Filter.m_bOnlyChanged = pValue->f_Boolean();
+		if (auto pValue = _Params.f_GetMember(gc_ConstString_RepoIncludePull))
+			Filter.m_bIncludePull = pValue->f_Boolean();
 
 		return Filter;
 	}

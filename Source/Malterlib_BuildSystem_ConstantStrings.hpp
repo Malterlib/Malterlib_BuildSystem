@@ -449,6 +449,7 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_ReconcileNoOptions = gc_Str<"ReconcileNoOptions">;
 	constexpr CStringAndHash const gc_ConstString_ReconcileRemoved = gc_Str<"ReconcileRemoved">;
 	constexpr CStringAndHash const gc_ConstString_RepoBranch = gc_Str<"RepoBranch">;
+	constexpr CStringAndHash const gc_ConstString_RepoIncludePull = gc_Str<"RepoIncludePull">;
 	constexpr CStringAndHash const gc_ConstString_RepoName = gc_Str<"RepoName">;
 	constexpr CStringAndHash const gc_ConstString_RepoOnlyChanged = gc_Str<"RepoOnlyChanged">;
 	constexpr CStringAndHash const gc_ConstString_RepoTags = gc_Str<"RepoTags">;
@@ -986,6 +987,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_ReconcileNoOptions);
 		o_StringCache.f_AddConstantString(gc_ConstString_ReconcileRemoved);
 		o_StringCache.f_AddConstantString(gc_ConstString_RepoBranch);
+		o_StringCache.f_AddConstantString(gc_ConstString_RepoIncludePull);
 		o_StringCache.f_AddConstantString(gc_ConstString_RepoName);
 		o_StringCache.f_AddConstantString(gc_ConstString_RepoOnlyChanged);
 		o_StringCache.f_AddConstantString(gc_ConstString_RepoTags);

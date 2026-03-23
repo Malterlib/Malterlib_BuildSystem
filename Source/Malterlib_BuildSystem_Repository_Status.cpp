@@ -248,7 +248,7 @@ namespace NMib::NBuildSystem
 
 		CRepoFilter Filter = _Filter;
 
-		EFilterRepoFlag FilterFlags = EFilterRepoFlag_IncludePull;
+		EFilterRepoFlag FilterFlags = EFilterRepoFlag_None;
 
 		if (_Flags & CBuildSystem::ERepoStatusFlag_OnlyTracked)
 			FilterFlags |= EFilterRepoFlag_OnlyTracked;
@@ -341,14 +341,24 @@ namespace NMib::NBuildSystem
 									if (Branch == Repo.m_OriginProperties.m_DefaultBranch && !DefaultUpstreamBranch.f_IsEmpty() && !State.f_HasRemoteBranch(RemoteBranch))
 										MissingRemoteBranch = "{}/{}"_f << Remote << DefaultUpstreamBranch;
 
+									CStr DefaultBranch = Repo.m_OriginProperties.m_DefaultBranch;
+									if (pRemote && pRemote->m_Properties.m_DefaultBranch)
+										DefaultBranch = pRemote->m_Properties.m_DefaultBranch;
+
 									if (!(_Flags & ERepoStatusFlag_NonDefaultToAll) && Remote != "origin" && Branch != Repo.m_OriginProperties.m_DefaultBranch)
 										;
 									else
 									{
 										if (State.f_HasRemoteBranch(RemoteBranch))
 											fg_GetLogEntries(Launches, Repo, RemoteBranch, Branch) > ToPush[Remote];
-										else if ((Remote == "origin" && Branch == Repo.m_OriginProperties.m_DefaultBranch) || !State.f_HasRemoteBranch(MissingRemoteBranch))
+										else if (Remote == "origin" && Branch == Repo.m_OriginProperties.m_DefaultBranch)
 											ToPushMissing[Remote];
+										else if (!State.f_HasRemoteBranch(MissingRemoteBranch))
+										{
+											auto MergeBaseResult = co_await Launches.f_Launch(Repo, {"merge-base", "--is-ancestor", Branch, "{}/{}"_f << Remote << DefaultBranch});
+											if (MergeBaseResult.m_ExitCode != 0)
+												ToPushMissing[Remote];
+										}
 
 										if (State.f_HasRemoteBranch(PullRemoteBranch))
 										{
@@ -356,10 +366,6 @@ namespace NMib::NBuildSystem
 												fg_GetLogEntries(Launches, Repo, Branch, PullRemoteBranch) > ToPull[PullRemoteBranchName];
 										}
 									}
-
-									CStr DefaultBranch = Repo.m_OriginProperties.m_DefaultBranch;
-									if (pRemote && pRemote->m_Properties.m_DefaultBranch)
-										DefaultBranch = pRemote->m_Properties.m_DefaultBranch;
 
 									if (Branch != DefaultBranch && !DefaultBranch.f_IsEmpty())
 									{

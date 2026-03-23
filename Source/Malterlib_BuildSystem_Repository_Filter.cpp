@@ -28,6 +28,7 @@ namespace NMib::NBuildSystem::NRepository
 		TCFutureMap<umint, TCMap<CRepository *, TCAsyncResult<bool>>> DeferredResultsOrdered;
 
 		CStr BaseDir = _BuildSystem.f_GetBaseDir();
+		auto MainBranchInfo = fg_GetMainRepoBranchInfo(BaseDir, FilteredRepos.m_ReposOrdered);
 
 		umint nLaunchRepos = 0;
 		umint iStage = 0;
@@ -57,7 +58,9 @@ namespace NMib::NBuildSystem::NRepository
 					if (!_Filter.m_Tags.f_IsEmpty() && Repo.m_Tags.f_And(_Filter.m_Tags) != _Filter.m_Tags)
 						continue;
 
-					if (!_Filter.m_Branch.f_IsEmpty() && fg_GetBranch(Repo) != _Filter.m_Branch)
+					auto DynamicInfo = fg_GetRepositoryDynamicInfo(Repo);
+
+					if (!_Filter.m_Branch.f_IsEmpty() && fg_GetBranch(Repo, DynamicInfo) != _Filter.m_Branch)
 						continue;
 
 					if (_Filter.m_bOnlyChanged)
@@ -71,7 +74,8 @@ namespace NMib::NBuildSystem::NRepository
 						;
 						TCPromiseFuturePair<bool> ChangedDonePromise;
 						fg_Move(ChangedDonePromise.m_Future) > DeferredResults[&Repo];
-						fg_RepoIsChanged(Launches, Repo, _Flags) > [Launches, ChangedDonePromise = fg_Move(ChangedDonePromise.m_Promise)](TCAsyncResult<bool> &&_bChanged)
+						fg_RepoIsChanged(Launches, Repo, DynamicInfo, _Flags, _Filter.m_bIncludePull, MainBranchInfo.m_Branch, MainBranchInfo.m_DefaultBranch)
+							> [Launches, ChangedDonePromise = fg_Move(ChangedDonePromise.m_Promise)](TCAsyncResult<bool> &&_bChanged)
 							{
 								Launches.f_RepoDone();
 								ChangedDonePromise.f_SetResult(_bChanged);
@@ -107,6 +111,7 @@ namespace NMib::NBuildSystem::NRepository
 		{
 			if (Repos.f_IsEmpty())
 				continue;
+
 			FilteredRepos.m_FilteredRepositories.f_Insert(fg_Move(Repos));
 		}
 
