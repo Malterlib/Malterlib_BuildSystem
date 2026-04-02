@@ -337,6 +337,7 @@ namespace NMib::NBuildSystem::NRepository
 			CLaunchSequencer m_LaunchSequencer{"GitLaunches State LaunchSequencer", fg_Clamp(NSys::fg_Thread_GetVirtualCores()*2u, 32u, fs_MaxProcesses())};
 
 			mutable CMutual m_ConsoleOutputLock;
+			mutable fp64 m_LastProgressOutputTime = 0.0;
 
 			umint m_LaunchID = 0;
 			umint m_LongestRepo = 0;

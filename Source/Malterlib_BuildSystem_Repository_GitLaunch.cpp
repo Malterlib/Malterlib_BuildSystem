@@ -148,13 +148,26 @@ namespace NMib::NBuildSystem::NRepository
 
 		DMibLock(m_ConsoleOutputLock);
 
-		CUStr ToOutput = CStr{"  {}: {}/{} repos done"_f << m_ProgressDescription << m_nDoneRepos.f_Load() << m_nRepos.f_Load()};
-		if (m_nDoneRepos == m_nRepos.f_Load())
-			ToOutput = CStr{"{sj*}"_f << "" << ToOutput.f_GetLen()}; // Clear previous output
-		else if (m_ProgressDelay > 0.0 && m_Stopwatch.f_GetTime() < m_ProgressDelay)
-			return;
+		if (m_AnsiFlags & EAnsiEncodingFlag_Color)
+		{
+			CUStr ToOutput = CStr{"  {}: {}/{} repos done"_f << m_ProgressDescription << m_nDoneRepos.f_Load() << m_nRepos.f_Load()};
+			if (m_nDoneRepos == m_nRepos.f_Load())
+				ToOutput = CStr{"{sj*}"_f << "" << ToOutput.f_GetLen()}; // Clear previous output
+			else if (m_ProgressDelay > 0.0 && m_Stopwatch.f_GetTime() < m_ProgressDelay)
+				return;
 
-		f_ConsoleOutput("{}\x1B[{}D"_f << ToOutput << ToOutput.f_GetLen());
+			f_ConsoleOutput("{}\x1B[{}D"_f << ToOutput << ToOutput.f_GetLen());
+		}
+		else
+		{
+			bool bDone = m_nDoneRepos == m_nRepos.f_Load();
+			fp64 Now = m_Stopwatch.f_GetTime();
+			if (!bDone && (Now - m_LastProgressOutputTime) < fg_Max(m_ProgressDelay, 10.0))
+				return;
+			m_LastProgressOutputTime = Now;
+
+			f_ConsoleOutput("  {}: {}/{} repos done\n"_f << m_ProgressDescription << m_nDoneRepos.f_Load() << m_nRepos.f_Load());
+		}
 	}
 
 	void CGitLaunches::CState::f_ConsoleOutput(CStr const &_Output, bool _bError) const
