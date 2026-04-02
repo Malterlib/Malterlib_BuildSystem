@@ -538,5 +538,34 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString__Min;
 	extern CStringAndHash const gc_ConstString__Max;
 
+	extern CStringAndHash const gc_ConstString_Hook_applypatch_msg;
+	extern CStringAndHash const gc_ConstString_Hook_pre_applypatch;
+	extern CStringAndHash const gc_ConstString_Hook_post_applypatch;
+	extern CStringAndHash const gc_ConstString_Hook_pre_commit;
+	extern CStringAndHash const gc_ConstString_Hook_pre_merge_commit;
+	extern CStringAndHash const gc_ConstString_Hook_prepare_commit_msg;
+	extern CStringAndHash const gc_ConstString_Hook_commit_msg;
+	extern CStringAndHash const gc_ConstString_Hook_post_commit;
+	extern CStringAndHash const gc_ConstString_Hook_pre_rebase;
+	extern CStringAndHash const gc_ConstString_Hook_post_checkout;
+	extern CStringAndHash const gc_ConstString_Hook_post_merge;
+	extern CStringAndHash const gc_ConstString_Hook_pre_push;
+	extern CStringAndHash const gc_ConstString_Hook_pre_receive;
+	extern CStringAndHash const gc_ConstString_Hook_update;
+	extern CStringAndHash const gc_ConstString_Hook_post_receive;
+	extern CStringAndHash const gc_ConstString_Hook_post_update;
+	extern CStringAndHash const gc_ConstString_Hook_post_rewrite;
+	extern CStringAndHash const gc_ConstString_Hook_pre_auto_gc;
+	extern CStringAndHash const gc_ConstString_Hook_fsmonitor_watchman;
+	extern CStringAndHash const gc_ConstString_Hook_proc_receive;
+	extern CStringAndHash const gc_ConstString_Hook_reference_transaction;
+	extern CStringAndHash const gc_ConstString_Hook_push_to_checkout;
+	extern CStringAndHash const gc_ConstString_Hook_sendemail_validate;
+	extern CStringAndHash const gc_ConstString_Hook_post_index_change;
+	extern CStringAndHash const gc_ConstString_Hook_p4_changelist;
+	extern CStringAndHash const gc_ConstString_Hook_p4_prepare_changelist;
+	extern CStringAndHash const gc_ConstString_Hook_p4_post_changelist;
+	extern CStringAndHash const gc_ConstString_Hook_p4_pre_submit;
+
 	void fg_CacheConstantStrings(CStringCache &o_StringCache);
 }

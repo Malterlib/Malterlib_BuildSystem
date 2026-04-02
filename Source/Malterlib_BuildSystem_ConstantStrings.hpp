@@ -538,6 +538,35 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString__Min = gc_Str<"_Min">;
 	constexpr CStringAndHash const gc_ConstString__Max = gc_Str<"_Max">;
 
+	constexpr CStringAndHash const gc_ConstString_Hook_applypatch_msg = gc_Str<"applypatch-msg">;
+	constexpr CStringAndHash const gc_ConstString_Hook_pre_applypatch = gc_Str<"pre-applypatch">;
+	constexpr CStringAndHash const gc_ConstString_Hook_post_applypatch = gc_Str<"post-applypatch">;
+	constexpr CStringAndHash const gc_ConstString_Hook_pre_commit = gc_Str<"pre-commit">;
+	constexpr CStringAndHash const gc_ConstString_Hook_pre_merge_commit = gc_Str<"pre-merge-commit">;
+	constexpr CStringAndHash const gc_ConstString_Hook_prepare_commit_msg = gc_Str<"prepare-commit-msg">;
+	constexpr CStringAndHash const gc_ConstString_Hook_commit_msg = gc_Str<"commit-msg">;
+	constexpr CStringAndHash const gc_ConstString_Hook_post_commit = gc_Str<"post-commit">;
+	constexpr CStringAndHash const gc_ConstString_Hook_pre_rebase = gc_Str<"pre-rebase">;
+	constexpr CStringAndHash const gc_ConstString_Hook_post_checkout = gc_Str<"post-checkout">;
+	constexpr CStringAndHash const gc_ConstString_Hook_post_merge = gc_Str<"post-merge">;
+	constexpr CStringAndHash const gc_ConstString_Hook_pre_push = gc_Str<"pre-push">;
+	constexpr CStringAndHash const gc_ConstString_Hook_pre_receive = gc_Str<"pre-receive">;
+	constexpr CStringAndHash const gc_ConstString_Hook_update = gc_Str<"update">;
+	constexpr CStringAndHash const gc_ConstString_Hook_post_receive = gc_Str<"post-receive">;
+	constexpr CStringAndHash const gc_ConstString_Hook_post_update = gc_Str<"post-update">;
+	constexpr CStringAndHash const gc_ConstString_Hook_post_rewrite = gc_Str<"post-rewrite">;
+	constexpr CStringAndHash const gc_ConstString_Hook_pre_auto_gc = gc_Str<"pre-auto-gc">;
+	constexpr CStringAndHash const gc_ConstString_Hook_fsmonitor_watchman = gc_Str<"fsmonitor-watchman">;
+	constexpr CStringAndHash const gc_ConstString_Hook_proc_receive = gc_Str<"proc-receive">;
+	constexpr CStringAndHash const gc_ConstString_Hook_reference_transaction = gc_Str<"reference-transaction">;
+	constexpr CStringAndHash const gc_ConstString_Hook_push_to_checkout = gc_Str<"push-to-checkout">;
+	constexpr CStringAndHash const gc_ConstString_Hook_sendemail_validate = gc_Str<"sendemail-validate">;
+	constexpr CStringAndHash const gc_ConstString_Hook_post_index_change = gc_Str<"post-index-change">;
+	constexpr CStringAndHash const gc_ConstString_Hook_p4_changelist = gc_Str<"p4-changelist">;
+	constexpr CStringAndHash const gc_ConstString_Hook_p4_prepare_changelist = gc_Str<"p4-prepare-changelist">;
+	constexpr CStringAndHash const gc_ConstString_Hook_p4_post_changelist = gc_Str<"p4-post-changelist">;
+	constexpr CStringAndHash const gc_ConstString_Hook_p4_pre_submit = gc_Str<"p4-pre-submit">;
+
 	void fg_CacheConstantStrings(CStringCache &o_StringCache)
 	{
 		o_StringCache.f_AddString(gc_ConstString_Empty, gc_ConstString_Empty.f_Hash());
@@ -1075,5 +1104,34 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_Clamp);
 		o_StringCache.f_AddConstantString(gc_ConstString__Min);
 		o_StringCache.f_AddConstantString(gc_ConstString__Max);
+
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_applypatch_msg);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_pre_applypatch);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_post_applypatch);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_pre_commit);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_pre_merge_commit);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_prepare_commit_msg);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_commit_msg);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_post_commit);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_pre_rebase);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_post_checkout);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_post_merge);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_pre_push);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_pre_receive);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_update);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_post_receive);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_post_update);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_post_rewrite);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_pre_auto_gc);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_fsmonitor_watchman);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_proc_receive);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_reference_transaction);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_push_to_checkout);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_sendemail_validate);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_post_index_change);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_p4_changelist);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_p4_prepare_changelist);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_p4_post_changelist);
+		o_StringCache.f_AddConstantString(gc_ConstString_Hook_p4_pre_submit);
 	}
 }

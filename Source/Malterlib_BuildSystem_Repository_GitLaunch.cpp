@@ -491,6 +491,22 @@ namespace NMib::NBuildSystem::NRepository
 		CProcessLaunchActor::CSimpleLaunch LaunchParams{_Application, CommandLineParams, {}, _Flags};
 
 		LaunchParams.m_Params.m_Environment += _Environment;
+		// The invocation tag is attached to every child launched through
+		// CGitLaunches, regardless of _Application. Helper binaries routed
+		// through this path (notably the user-supplied commit-message transform
+		// script invoked via fg_RunTransformScript) are contract-bound to
+		// transform their inputs, not mutate git state. If such a helper
+		// violates that contract and shells out to git, inheriting the parent
+		// operation's tag is the desired outcome: mib must not silently
+		// reconcile on top of a misbehaving helper.
+		{
+			CStr ParentChain = fg_GetSys()->f_GetEnvironmentVariable(gc_Str<"MalterlibInvocationCommands">.m_Str);
+			LaunchParams.m_Params.m_Environment[gc_Str<"MalterlibInvocationCommands">.m_Str]
+				= ParentChain.f_IsEmpty()
+				? m_pState->m_InvocationCommand
+				: CStr("{} {}"_f << ParentChain << m_pState->m_InvocationCommand)
+			;
+		}
 		if (_Application != "git")
 			LaunchParams.m_Params.m_WorkingDirectory = _Directory;
 
@@ -561,6 +577,20 @@ namespace NMib::NBuildSystem::NRepository
 		CProcessLaunchActor::CSimpleLaunch LaunchParams{_Application, CommandLineParams, {}, CProcessLaunchActor::ESimpleLaunchFlag_None};
 
 		LaunchParams.m_Params.m_Environment += _Environment;
+		// See the matching comment in the _Directory overload above: the
+		// invocation tag is attached even for non-git applications so that a
+		// misbehaving helper (e.g. a commit-message transform script that
+		// shells out to git) cannot slip past the hook's mib-orchestration
+		// suppression. Un-tagging non-git launches would paper over contract
+		// violations in helpers with an automatic reconcile.
+		{
+			CStr ParentChain = fg_GetSys()->f_GetEnvironmentVariable(gc_Str<"MalterlibInvocationCommands">.m_Str);
+			LaunchParams.m_Params.m_Environment[gc_Str<"MalterlibInvocationCommands">.m_Str]
+				= ParentChain.f_IsEmpty()
+				? State.m_InvocationCommand
+				: CStr("{} {}"_f << ParentChain << State.m_InvocationCommand)
+			;
+		}
 		if (_Application != "git")
 			LaunchParams.m_Params.m_WorkingDirectory = _Repo.m_Location;
 

@@ -91,6 +91,12 @@ namespace NMib::NBuildSystem::NRepository
 		mc_CoreExcludesFile   // Use core.excludesFile (BuildSystem/.localgitignore)
 	};
 
+	struct CHooksConfig
+	{
+		TCMap<CStr, TCVector<CStr>> m_Hooks;
+		TCVector<CStr> m_HelperFiles;
+	};
+
 	struct CRepository
 	{
 		CRepository(CStr const &_Name)
@@ -135,6 +141,7 @@ namespace NMib::NBuildSystem::NRepository
 		EGitIgnoreType m_GitIgnoreType = EGitIgnoreType::mc_GitIgnore;
 		CEJsonSorted m_License;
 		bool m_bCheckLicense = false;
+		TCOptional<CHooksConfig> m_HookConfig;
 	};
 
 	struct CRepositoryDynamicInfo

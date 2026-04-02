@@ -384,6 +384,54 @@ namespace NMib::NBuildSystem
 					, {CPropertyKey(gc_ConstKey_Repository_ExtraFetchSpecs), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
 					,
 					{
+						CPropertyKey(gc_ConstKey_Repository_Hooks)
+						, DMibBuildSystemTypeWithPosition
+						(
+							fg_Optional
+							(
+								CBuildSystemSyntax::CType
+								{
+									CBuildSystemSyntax::CClassType
+									{
+										{
+											{gc_ConstString_Hook_applypatch_msg, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_pre_applypatch, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_post_applypatch, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_pre_commit, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_pre_merge_commit, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_prepare_commit_msg, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_commit_msg, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_post_commit, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_pre_rebase, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_post_checkout, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_post_merge, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_pre_push, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_pre_receive, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_update, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_post_receive, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_post_update, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_post_rewrite, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_pre_auto_gc, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_fsmonitor_watchman, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_proc_receive, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_reference_transaction, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_push_to_checkout, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_sendemail_validate, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_post_index_change, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_p4_changelist, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_p4_prepare_changelist, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_p4_post_changelist, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+											, {gc_ConstString_Hook_p4_pre_submit, CBuildSystemSyntax::CClassType::CMember{g_StringArray, true}}
+										}
+										, {}
+									}
+								}
+							)
+						)
+					}
+					, {CPropertyKey(gc_ConstKey_Repository_HookHelperFiles), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
+					,
+					{
 						CPropertyKey(gc_ConstKey_Repository_Remotes)
 						, DMibBuildSystemTypeWithPosition
 						(

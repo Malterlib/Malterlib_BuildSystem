@@ -199,6 +199,8 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_GitIgnoreType(EPropertyType_Repository, gc_Str<"GitIgnoreType">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_License(EPropertyType_Repository, gc_Str<"License">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_CheckLicense(EPropertyType_Repository, gc_Str<"CheckLicense">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Repository_HookHelperFiles(EPropertyType_Repository, gc_Str<"HookHelperFiles">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Repository_Hooks(EPropertyType_Repository, gc_Str<"Hooks">);
 
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_ClCompileSuffix(EPropertyType_Target, gc_Str<"ClCompileSuffix">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_DependencyFile(EPropertyType_Target, gc_Str<"DependencyFile">);

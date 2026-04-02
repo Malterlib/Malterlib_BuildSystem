@@ -8,8 +8,16 @@
 #include <Mib/Encoding/EJson>
 #include <Mib/Git/LfsReleaseStore>
 #include <Mib/Git/Helpers/ConfigParser>
+#include <Mib/Cryptography/Hashes/SHA>
 #include <Mib/Process/ProcessLaunch>
 #include <Mib/Process/ProcessLaunchActor>
+
+constexpr static ch8 const gc_pHookDispatcherScript[] =
+	{
+		#embed "Malterlib_BuildSystem_Repository_HookDispatcher.sh"
+		, '\0'
+	}
+;
 
 CStr fg_ReconcileHelp(EAnsiEncodingFlag _AnsiFlags)
 {
@@ -1337,6 +1345,364 @@ namespace NMib::NBuildSystem
 				co_await fLaunchGit({"config", ConfigLocationParam, "user.email", _Repo.m_UserEmail}, Location);
 			}
 
+			// Manage git hooks for this worktree.
+			// Hook scripts are stored per-worktree under malterlib/hooks/<type>/ (main)
+			// or malterlib/worktrees/<name>/<type>/ (linked), with a shared dispatcher
+			// script in hooks/<type> that routes to the correct worktree at runtime.
+			auto fManageHooks = [&]() -> TCUnsafeFuture<void>
+				{
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+					CStr WorktreeId;
+					if (bLocationIsWorktree)
+						WorktreeId = CFile::fs_GetFile(DynamicInfo.m_DataDir);
+
+					CStr HooksDir = DynamicInfo.m_CommonDir / "hooks";
+					CStr MalterlibDir = HooksDir / "malterlib";
+					CStr MalterlibMainHooksDir = MalterlibDir / "hooks";
+					CStr MalterlibWorktreesDir = MalterlibDir / "worktrees";
+					CStr WorktreeHooksDir = WorktreeId ? (MalterlibWorktreesDir / WorktreeId) : MalterlibMainHooksDir;
+					// The main worktree uses ".hooks-main-hash" rather than ".hooks-hash-main"
+					// so a linked worktree whose admin-dir basename is "main" cannot collide
+					// with it — linked worktree files follow the ".hooks-hash-<id>" pattern.
+					CStr HashFile = MalterlibDir / (WorktreeId ? (".hooks-hash-" + WorktreeId) : CStr(".hooks-main-hash"));
+
+					auto fWorktreeSuffix = [&]() -> CStr
+						{
+							return WorktreeId ? (" for worktree '"_f << WorktreeId << "'") : CStr();
+						}
+					;
+
+					// Helper: collect all hook types still present across main and all
+					// linked worktrees so we know which dispatcher scripts to keep.
+					auto fCollectAllHookTypes = [&]() -> TCSet<CStr>
+						{
+							TCSet<CStr> HookTypes;
+							if (CFile::fs_FileExists(MalterlibMainHooksDir, EFileAttrib_Directory))
+							{
+								for (auto &HookTypeDir : CFile::fs_FindFiles(MalterlibMainHooksDir / "*", EFileAttrib_Directory))
+									HookTypes.f_Insert(CFile::fs_GetFile(HookTypeDir));
+							}
+							if (CFile::fs_FileExists(MalterlibWorktreesDir, EFileAttrib_Directory))
+							{
+								for (auto &WorktreeDir : CFile::fs_FindFiles(MalterlibWorktreesDir / "*", EFileAttrib_Directory))
+								{
+									for (auto &HookTypeDir : CFile::fs_FindFiles(WorktreeDir / "*", EFileAttrib_Directory))
+										HookTypes.f_Insert(CFile::fs_GetFile(HookTypeDir));
+								}
+							}
+							return HookTypes;
+						}
+					;
+
+					// Helper: remove Malterlib-managed dispatcher scripts from hooks/
+					// for hook types that are no longer used by any worktree.
+					auto fCleanupDispatchers = [&](TCSet<CStr> const &_ActiveHookTypes)
+						{
+							for (auto &ExistingFile : CFile::fs_FindFiles(HooksDir / "*", EFileAttrib_File))
+							{
+								CStr FileName = CFile::fs_GetFile(ExistingFile);
+								if (FileName.f_StartsWith("."))
+									continue;
+								if (!_ActiveHookTypes.f_FindEqual(FileName))
+								{
+									CStr ExistingContent = CFile::fs_ReadStringFromFile(ExistingFile, true);
+									if (ExistingContent.f_Find("# Managed by Malterlib") >= 0)
+									{
+										CFile::fs_DeleteFile(ExistingFile);
+										fOutputInfo(EOutputType_Normal, "Removed dispatcher hook '{}'"_f << FileName);
+									}
+								}
+							}
+						}
+					;
+
+					if (!_Repo.m_HookConfig || _Repo.m_HookConfig->m_Hooks.f_IsEmpty())
+					{
+						// Clean up this worktree's hooks if the Hooks property was removed.
+						// Each worktree has its own directory so this is safe — it won't
+						// affect hooks installed for other worktrees.
+						if (CFile::fs_FileExists(WorktreeHooksDir, EFileAttrib_Directory))
+						{
+							// Sequence on HooksDir (shared across worktrees of the same repo)
+							// rather than Location, since fCleanupDispatchers mutates the shared
+							// hooks/<type> dispatcher files. A single build system run won't
+							// have two worktrees of the same repo, so this only serializes
+							// within-process work; cross-process races (two mib commands on
+							// the same repo at once) are unsupported.
+							auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(HooksDir);
+
+							CFile::fs_DeleteDirectoryRecursive(WorktreeHooksDir);
+							if (CFile::fs_FileExists(HashFile))
+								CFile::fs_DeleteFile(HashFile);
+							fOutputInfo(EOutputType_Normal, "Removed managed hooks{}"_f << fWorktreeSuffix());
+
+							fCleanupDispatchers(fCollectAllHookTypes());
+						}
+						co_return {};
+					}
+
+					auto &Hooks = _Repo.m_HookConfig->m_Hooks;
+
+					// Compute hash from all hook source files + hook type names + worktree id
+					// + embedded dispatcher script so dispatcher changes in a new mib build
+					// trigger reinstall without needing --force-update-hooks.
+					NCryptography::CHash_SHA256 HooksHash;
+					{
+						CStr HashDiscriminator = WorktreeId ? WorktreeId : CStr("@main");
+						HooksHash.f_AddData(HashDiscriminator.f_GetStr(), HashDiscriminator.f_GetLen());
+						HooksHash.f_AddData(gc_pHookDispatcherScript, sizeof(gc_pHookDispatcherScript) - 1);
+					}
+
+					for (auto iHook = Hooks.f_GetIterator(); iHook; ++iHook)
+					{
+						CStr const &HookType = TCMap<CStr, TCVector<CStr>>::fs_GetKey(*iHook);
+						HooksHash.f_AddData(HookType.f_GetStr(), HookType.f_GetLen());
+						for (auto &FilePath : *iHook)
+						{
+							if (!CFile::fs_FileExists(FilePath))
+							{
+								CStr Message = "Hook script '{}' configured for '{}' does not exist"_f << FilePath << HookType;
+								fOutputInfo(EOutputType_Error, Message);
+								co_return DMibErrorInstance(Message);
+							}
+							HooksHash.f_AddData(FilePath.f_GetStr(), FilePath.f_GetLen());
+							CStr FileContents = CFile::fs_ReadStringFromFile(FilePath, true);
+							HooksHash.f_AddData(FileContents.f_GetStr(), FileContents.f_GetLen());
+						}
+					}
+
+					TCSet<CStr> SeenHelperBaseNames;
+					for (auto &HelperPath : _Repo.m_HookConfig->m_HelperFiles)
+					{
+						if (!CFile::fs_FileExists(HelperPath))
+						{
+							CStr Message = "Hook helper file '{}' does not exist"_f << HelperPath;
+							fOutputInfo(EOutputType_Error, Message);
+							co_return DMibErrorInstance(Message);
+						}
+
+						CStr HelperBaseName = CFile::fs_GetFile(HelperPath);
+						if
+						(
+							HelperBaseName.f_GetLen() >= 4
+							&& HelperBaseName[3] == '_'
+							&& HelperBaseName[0] >= '0' && HelperBaseName[0] <= '9'
+							&& HelperBaseName[1] >= '0' && HelperBaseName[1] <= '9'
+							&& HelperBaseName[2] >= '0' && HelperBaseName[2] <= '9'
+						)
+						{
+							CStr Message = "Hook helper file '{}' uses reserved NNN_ prefix which would cause the dispatcher to execute it as a hook"_f << HelperPath;
+							fOutputInfo(EOutputType_Error, Message);
+							co_return DMibErrorInstance(Message);
+						}
+
+						if (SeenHelperBaseNames.f_FindEqual(HelperBaseName))
+						{
+							CStr Message = "Hook helper file '{}' collides with another helper sharing basename '{}'"_f << HelperPath << HelperBaseName;
+							fOutputInfo(EOutputType_Error, Message);
+							co_return DMibErrorInstance(Message);
+						}
+
+						SeenHelperBaseNames[HelperBaseName];
+						HooksHash.f_AddData(HelperPath.f_GetStr(), HelperPath.f_GetLen());
+						CStr FileContents = CFile::fs_ReadStringFromFile(HelperPath, true);
+						HooksHash.f_AddData(FileContents.f_GetStr(), FileContents.f_GetLen());
+						// Include the executable bit so `chmod +x helper.sh` (content
+						// unchanged) triggers a reinstall — otherwise fs_CopyFileDiff would
+						// see matching content and leave the destination's permissions stale.
+						uint8 HelperExecFlag = (CFile::fs_GetAttributes(HelperPath) & EFileAttrib_Executable) ? 1 : 0;
+						HooksHash.f_AddData(&HelperExecFlag, 1);
+					}
+
+					CStr NewHashString = HooksHash.f_GetDigest().f_GetString();
+
+					bool bNeedsUpdate = true;
+					if (!_BuildSystem.f_GetGenerateOptions().m_bForceUpdateHooks && CFile::fs_FileExists(HashFile))
+					{
+						CStr ExistingHash = CFile::fs_ReadStringFromFile(HashFile, true).f_Trim();
+						if (ExistingHash == NewHashString)
+						{
+							// Guard only against third-party tools overwriting the dispatcher
+							// at .git/hooks/<type> after we installed it (notably `git lfs
+							// install`, which rewrites pre-push/post-checkout/post-commit/
+							// post-merge). The source-only hash still matches in that case, so
+							// without this check the configured hooks would silently stop
+							// running until the user ran with --force-update-hooks.
+							//
+							// We deliberately do NOT enumerate the managed payload under
+							// .git/hooks/malterlib/... Users who hand-delete files inside that
+							// directory are expected to recover with --force-update-hooks;
+							// probing every script/helper on the hot path would cost far more
+							// than the rare recovery it would automate.
+							bNeedsUpdate = false;
+							for (auto iHook = Hooks.f_GetIterator(); iHook; ++iHook)
+							{
+								CStr const &HookType = TCMap<CStr, TCVector<CStr>>::fs_GetKey(*iHook);
+
+								if (!CFile::fs_FileExists(WorktreeHooksDir / HookType, EFileAttrib_Directory))
+								{
+									bNeedsUpdate = true;
+									break;
+								}
+
+								CStr WrapperPath = HooksDir / HookType;
+								if (!CFile::fs_FileExists(WrapperPath))
+								{
+									bNeedsUpdate = true;
+									break;
+								}
+
+								CStr WrapperContent = CFile::fs_ReadStringFromFile(WrapperPath, true);
+								if (WrapperContent.f_Find("# Managed by Malterlib") < 0)
+								{
+									bNeedsUpdate = true;
+									break;
+								}
+							}
+						}
+					}
+
+					if (!bNeedsUpdate)
+						co_return {};
+
+					// Sequence on HooksDir (shared across worktrees of the same repo)
+					// rather than Location, since the install path below mutates shared
+					// hooks/<type> dispatcher files. A single build system run won't have
+					// two worktrees of the same repo, so this only serializes within-process
+					// work; cross-process races (two mib commands on the same repo at once)
+					// are unsupported.
+					auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(HooksDir);
+
+					// Check if core.hooksPath is set (locally, globally, or system-wide),
+					// which would cause git to ignore the default .git/hooks directory.
+					// Note: this only runs when hooks need updating, not on every invocation,
+					// as a tradeoff to avoid a process launch on the hot path.
+					// Note: when the Repository.Hooks property is set, Malterlib takes full
+					// ownership of the listed hook types in .git/hooks — any existing hook
+					// scripts at those paths (including ones installed by third-party tools
+					// such as Git LFS) are replaced by the Malterlib dispatcher. Tools that
+					// rely on repo-local hooks must be installed globally instead — for LFS,
+					// run `git lfs install --skip-repo` so its hooks are registered via the
+					// global core.hooksPath-equivalent template/hooks mechanism rather than
+					// written into each repo's .git/hooks directory. core.hooksPath itself
+					// is also incompatible with LFS hooks for the same reason.
+					{
+						auto HooksPathResult = co_await _Launches.f_Launch(Location, {"config", "core.hooksPath"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
+						if (HooksPathResult.m_ExitCode == 0)
+						{
+							CStr HooksPath = HooksPathResult.f_GetStdOut().f_Trim();
+							if (HooksPath)
+								fOutputInfo(EOutputType_Warning, "core.hooksPath is set to '{}', managed hooks in .git/hooks will be ignored by git"_f << HooksPath);
+						}
+					}
+
+					CFile::fs_CreateDirectory(HooksDir);
+					CFile::fs_CreateDirectory(MalterlibDir);
+					if (WorktreeId)
+						CFile::fs_CreateDirectory(MalterlibWorktreesDir);
+					CFile::fs_CreateDirectory(WorktreeHooksDir);
+
+					// Remove hook types no longer specified for this worktree
+					if (CFile::fs_FileExists(WorktreeHooksDir, EFileAttrib_Directory))
+					{
+						for (auto &ExistingDir : CFile::fs_FindFiles(WorktreeHooksDir / "*", EFileAttrib_Directory))
+						{
+							CStr ExistingHookType = CFile::fs_GetFile(ExistingDir);
+							if (!Hooks.f_FindEqual(ExistingHookType))
+							{
+								CFile::fs_DeleteDirectoryRecursive(ExistingDir);
+								fOutputInfo(EOutputType_Normal, "Removed hook '{}'{}"_f << ExistingHookType << fWorktreeSuffix());
+							}
+						}
+					}
+
+					// Clean up dispatcher scripts for hook types no longer used
+					auto AllHookTypes = fCollectAllHookTypes();
+					for (auto iHook = Hooks.f_GetIterator(); iHook; ++iHook)
+						AllHookTypes.f_Insert(TCMap<CStr, TCVector<CStr>>::fs_GetKey(*iHook));
+					fCleanupDispatchers(AllHookTypes);
+
+					// Install/update configured hooks for this worktree
+					for (auto iHook = Hooks.f_GetIterator(); iHook; ++iHook)
+					{
+						CStr const &HookType = TCMap<CStr, TCVector<CStr>>::fs_GetKey(*iHook);
+						CStr HookTypeDir = WorktreeHooksDir / HookType;
+
+						// Remove stale files before repopulating so that renamed,
+						// removed, or reordered entries don't leave behind executables
+						// that the wildcard dispatcher would still invoke.
+						if (CFile::fs_FileExists(HookTypeDir, EFileAttrib_Directory))
+							CFile::fs_DeleteDirectoryRecursive(HookTypeDir);
+						CFile::fs_CreateDirectory(HookTypeDir);
+
+						bool bHookChanged = false;
+
+						// Zero-pad the index to 3 digits so that shell glob ordering
+						// (lexicographic) matches the configured order even beyond 9 entries.
+						// The dispatcher only invokes files matching this NNN_* prefix so
+						// helper files copied below (without the prefix) sit alongside the
+						// hook scripts — reachable via "$(dirname "$0")/<name>" — but are
+						// not themselves executed as hooks.
+						umint nIndex = 0;
+						for (auto &FilePath : *iHook)
+						{
+							CStr DestFile = HookTypeDir / fg_Format("{sj3,sf0}_{}", nIndex, CFile::fs_GetFile(FilePath));
+							if (CFile::fs_CopyFileDiff(FilePath, DestFile, true))
+								bHookChanged = true;
+							auto Attribs = CFile::fs_GetAttributes(DestFile);
+							if (!(Attribs & EFileAttrib_Executable))
+								CFile::fs_SetAttributes(DestFile, Attribs | EFileAttrib_Executable);
+							++nIndex;
+						}
+
+						// Copy helper files (shared scripts, fixtures, etc.) into the same
+						// directory so hook scripts can source or invoke them by relative
+						// path. They retain their original filenames, so the dispatcher's
+						// NNN_* glob excludes them from execution.
+						for (auto &HelperPath : _Repo.m_HookConfig->m_HelperFiles)
+						{
+							CStr DestFile = HookTypeDir / CFile::fs_GetFile(HelperPath);
+							if (CFile::fs_CopyFileDiff(HelperPath, DestFile, true))
+								bHookChanged = true;
+						}
+
+						// Generate the worktree-aware dispatcher script.
+						// Git always runs hooks from $GIT_COMMON_DIR/hooks (see path.c common_list),
+						// so the dispatcher detects the active worktree at runtime and dispatches
+						// to the correct per-worktree hook scripts:
+						//   Main worktree:   malterlib/hooks/<type>/
+						//   Linked worktree: malterlib/worktrees/<name>/<type>/
+						CStr WrapperPath = HooksDir / HookType;
+
+						// Warn when replacing a pre-existing non-Malterlib hook. Preserving
+						// the old hook is a non-goal: hook types listed under
+						// Repository.Hooks are fully owned by Malterlib. Third-party tools
+						// (e.g. Git LFS) that want to participate must register themselves
+						// globally rather than writing into this repo's .git/hooks.
+						if (CFile::fs_FileExists(WrapperPath))
+						{
+							CStr ExistingContent = CFile::fs_ReadStringFromFile(WrapperPath, true);
+							if (ExistingContent.f_Find("# Managed by Malterlib") < 0)
+								fOutputInfo(EOutputType_Warning, "Overwriting existing '{}' hook not managed by Malterlib"_f << HookType);
+						}
+
+						CStr Script = gc_pHookDispatcherScript;
+						NContainer::CByteVector ScriptData;
+						CFile::fs_WriteStringToVector(ScriptData, Script, false);
+						if (CFile::fs_CopyFileDiff(ScriptData, WrapperPath, NTime::CTime::fs_NowUTC(), EFileAttrib_Executable))
+							bHookChanged = true;
+
+						if (bHookChanged)
+							fOutputInfo(EOutputType_Normal, "Updated hook '{}'{}"_f << HookType << fWorktreeSuffix());
+					}
+
+					CFile::fs_WriteStringToFile(HashFile, NewHashString, false);
+					co_return {};
+				}
+			;
+			co_await fManageHooks();
+
 			auto fSetupLfsReleaseStorage = [&, bDidSetup = false]() -> TCUnsafeFuture<void>
 				{
 					co_await ECoroutineFlag_CaptureMalterlibExceptions;
@@ -2080,6 +2446,7 @@ namespace NMib::NBuildSystem
 					auto bBootstrapSource = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_BootstrapSource, false);
 					auto GitIgnoreTypeStr = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, gc_ConstKey_Repository_GitIgnoreType, CStr());
 					auto ExtraFetchSpecs = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, gc_ConstKey_Repository_ExtraFetchSpecs, TCVector<CStr>());
+					auto HooksJson = _BuildSystem.f_EvaluateEntityPropertyObject(ChildEntity, gc_ConstKey_Repository_Hooks, CEJsonSorted()).f_Move();
 
 					TCVector<CStr> NoPushRemotes = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, gc_ConstKey_Repository_NoPushRemotes, TCVector<CStr>());
 
@@ -2136,6 +2503,19 @@ namespace NMib::NBuildSystem
 						Repo.m_GitIgnoreType = EGitIgnoreType::mc_CoreExcludesFile;
 					else
 						Repo.m_GitIgnoreType = EGitIgnoreType::mc_GitIgnore; // Default
+
+					if (HooksJson.f_IsValid() && HooksJson.f_IsObject())
+					{
+						auto &Config = *(Repo.m_HookConfig = CHooksConfig());
+						for (auto &HookEntry : fg_Const(HooksJson).f_Object())
+						{
+							CStr HookType = HookEntry.f_Name();
+							TCVector<CStr> HookFiles = HookEntry.f_Value().f_StringArray();
+							if (!HookFiles.f_IsEmpty())
+								Config.m_Hooks[HookType] = fg_Move(HookFiles);
+						}
+						Config.m_HelperFiles = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, gc_ConstKey_Repository_HookHelperFiles, TCVector<CStr>());
+					}
 
 					Repo.m_OriginProperties.m_URL = URL;
 					Repo.m_OriginProperties.m_DefaultBranch = DefaultBranch;

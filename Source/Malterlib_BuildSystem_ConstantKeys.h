@@ -198,6 +198,8 @@ namespace NMib::NBuildSystem
 	extern CPropertyKeyReference const gc_ConstKey_Repository_GitIgnoreType;
 	extern CPropertyKeyReference const gc_ConstKey_Repository_License;
 	extern CPropertyKeyReference const gc_ConstKey_Repository_CheckLicense;
+	extern CPropertyKeyReference const gc_ConstKey_Repository_HookHelperFiles;
+	extern CPropertyKeyReference const gc_ConstKey_Repository_Hooks;
 
 	extern CPropertyKeyReference const gc_ConstKey_Target_ClCompileSuffix;
 	extern CPropertyKeyReference const gc_ConstKey_Target_DependencyFile;
