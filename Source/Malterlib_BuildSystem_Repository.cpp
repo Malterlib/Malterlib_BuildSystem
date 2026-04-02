@@ -1811,7 +1811,7 @@ namespace NMib::NBuildSystem
 			}
 		}
 
-		CGitLaunches Launches{f_GetBaseDir(), "Check repository status", mp_AnsiFlags, mp_fOutputConsole, f_GetCancelledPointer()};
+		CGitLaunches Launches{f_GetBaseDir(), "Check repository status", mp_AnsiFlags, mp_TerminalWidth, mp_fOutputConsole, f_GetCancelledPointer()};
 		auto DestroyLaunchs = co_await co_await Launches.f_Init();
 
 		for (auto &Repos : ReposOrdered)

@@ -49,6 +49,7 @@ namespace NMib::NBuildSystem
 		CBuildSystem
 			(
 				NCommandLine::EAnsiEncodingFlag _AnsiFlags
+				, uint32 _TerminalWidth
 				, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
 				, NStorage::TCSharedPointer<NAtomic::TCAtomic<bool>> const &_pCancelled
 			)
@@ -537,6 +538,7 @@ namespace NMib::NBuildSystem
 		;
 
 		NCommandLine::EAnsiEncodingFlag f_AnsiFlags() const;
+		uint32 f_TerminalWidth() const;
 
 		void f_RegisterFunctions(NContainer::TCMap<NStr::CStr, CBuiltinFunction> &&_Functions);
 		void f_RegisterBuiltinVariables(NContainer::TCMap<CPropertyKey, CTypeWithPosition> &&_Variables) const;
@@ -1146,6 +1148,7 @@ namespace NMib::NBuildSystem
 		NFile::EFileAttrib mp_ValidAttributes = NFile::CFile::fs_GetValidAttributes();
 		bool mp_bDebugFileLocks = fg_GetSys()->f_GetEnvironmentVariable("MalterlibBuildSystemDebugFileLocks", "false") == gc_ConstString_true.m_String;
 		NCommandLine::EAnsiEncodingFlag mp_AnsiFlags = NCommandLine::EAnsiEncodingFlag_None;
+		uint32 mp_TerminalWidth = 0;
 		bool mp_bEnablePositions = false;
 		bool mp_bEnableValues = false;
 		mutable NAtomic::TCAtomic<bool> mp_bGlobalMToolAlreadySetup = false;

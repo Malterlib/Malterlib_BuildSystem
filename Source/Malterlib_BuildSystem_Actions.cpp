@@ -48,7 +48,7 @@ namespace NMib::NBuildSystem
 		while (Retry != CBuildSystem::ERetry_None)
 		{
 			auto AnsiFlags = _pCommandLine->f_AnsiEncoding().f_Flags();
-			CBuildSystem BuildSystem(AnsiFlags, _fOutputConsole, pCancelled);
+			CBuildSystem BuildSystem(AnsiFlags, _pCommandLine->m_CommandLineWidth, _fOutputConsole, pCancelled);
 
 			if (_GenerateOptions.m_DetailedPositions == EDetailedPositions_Enable)
 				BuildSystem.f_SetEnablePositions();

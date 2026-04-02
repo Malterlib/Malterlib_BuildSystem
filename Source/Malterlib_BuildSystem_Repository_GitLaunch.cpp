@@ -3,6 +3,7 @@
 
 #include "Malterlib_BuildSystem_Repository.h"
 #include <Mib/Concurrency/Actor/Timer>
+#include <Mib/CommandLine/TableRenderer>
 #ifdef DPlatformFamily_Windows
 #include <Mib/Core/PlatformSpecific/WindowsFilePath>
 #endif
@@ -14,12 +15,14 @@ namespace NMib::NBuildSystem::NRepository
 			CStr const &_BaseDir
 			, CStr const &_ProgressDescription
 			, EAnsiEncodingFlag _AnsiFlags
+			, uint32 _TerminalWidth
 			, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
 			, NStorage::TCSharedPointer<TCAtomic<bool>> const &_pCancelled
 		)
 		: m_BaseDir(_BaseDir)
 		, m_ProgressDescription(_ProgressDescription)
 		, m_AnsiFlags(_AnsiFlags)
+		, m_TerminalWidth(_TerminalWidth)
 		, m_fOutputConsole(_fOutputConsole)
 		, m_pCancelled(_pCancelled)
 	{
@@ -30,10 +33,11 @@ namespace NMib::NBuildSystem::NRepository
 			CStr const &_BaseDir
 			, CStr const &_ProgressDescription
 			, EAnsiEncodingFlag _AnsiFlags
+			, uint32 _TerminalWidth
 			, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
 			, NStorage::TCSharedPointer<TCAtomic<bool>> const &_pCancelled
 		)
-		: m_pState(fg_Construct(_BaseDir, _ProgressDescription, _AnsiFlags, _fOutputConsole, _pCancelled))
+		: m_pState(fg_Construct(_BaseDir, _ProgressDescription, _AnsiFlags, _TerminalWidth, _fOutputConsole, _pCancelled))
 	{
 		m_pOwner = fg_Construct(m_pState);
 	}
@@ -55,124 +59,98 @@ namespace NMib::NBuildSystem::NRepository
 	{
 	}
 
-	namespace
-	{
-		void fg_OutputRepoLine
-			(
-				EOutputType _OutputType
-				, CStr const &_RepoName
-				, umint _LongestRepoName
-				, CStr const &_Line
-				, EAnsiEncodingFlag _AnsiFlags
-				, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
-			)
-		{
-			CStr RepoColor;
-
-			CColors Colors(_AnsiFlags);
-
-			switch (_OutputType)
-			{
-			case EOutputType_Normal: RepoColor = Colors.f_StatusNormal(); break;
-			case EOutputType_Warning: RepoColor = Colors.f_StatusWarning(); break;
-			case EOutputType_Error: RepoColor = Colors.f_StatusError(); break;
-			default: RepoColor = "ERROR"; break;
-			}
-
-			CStr ReplacedRepo = _RepoName.f_Replace("/", "{}{}/{}"_f << Colors.f_Default() << Colors.f_Foreground256(250) << RepoColor ^ 1);
-			if (_fOutputConsole)
-			{
-				_fOutputConsole
-					(
-						"{}{sl*,sf ,a-}{} {}|{}  {}\n"_f
-						<< RepoColor
-						<< ReplacedRepo
-						<< _LongestRepoName + ReplacedRepo.f_GetLen() - _RepoName.f_GetLen()
-						<< Colors.f_Default()
-						<< Colors.f_Foreground256(242)
-						<< Colors.f_Default()
-						<< _Line
-						, false
-					)
-				;
-			}
-		}
-
-		void fg_OutputSectionLine(EAnsiEncodingFlag _AnsiFlags, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole)
-		{
-			CColors Colors(_AnsiFlags);
-
-			if (_fOutputConsole)
-				_fOutputConsole("{}--------------------------------------------------------------------------------{}\n"_f << Colors.f_Foreground256(242) << Colors.f_Default(), false);
-		}
-	}
-
 	CGitLaunches::CState::~CState()
 	{
-		umint LongestRepo = 0;
-
-		for (auto &RepoOutput : m_DeferredOutput)
+		if (!m_DeferredOutput.f_IsEmpty() && m_fOutputConsole)
 		{
-			auto &RepoName = m_DeferredOutput.fs_GetKey(RepoOutput);
-			LongestRepo = fg_Max(LongestRepo, umint(RepoName.f_GetLen()));
-		}
+			CColors Colors(m_AnsiFlags);
 
-		bool bDidOutputSection = false;
-
-		TCSet<CStr> AlreadyOutput;
-
-		auto fOutputSection = [&](CStr const &_Name, TCVector<CDeferredOutput> const &_Output)
-			{
-				if (!AlreadyOutput(_Name).f_WasCreated())
-					return;
-				umint nLines = 0;
-				bool bIsSection = false;
-				for (auto &Output : _Output)
-				{
-					if (Output.m_Lines.f_GetLen() == 1 && Output.m_Lines[0] == "ForceSection")
-						bIsSection = true;
-					nLines += Output.m_Lines.f_GetLen();
-				}
-
-				if (nLines > 1 || bIsSection)
-				{
-					if (!bDidOutputSection)
+			NCommandLine::CTableRenderHelper TableRenderer
+				(
+					[this](NStr::CStr const &_Output)
 					{
-						fg_OutputSectionLine(m_AnsiFlags, m_fOutputConsole);
-						bDidOutputSection = true;
+						m_fOutputConsole(_Output, false);
 					}
-				}
-				else
-					bDidOutputSection = false;
+					, NCommandLine::CTableRenderHelper::EOption_NoHeadings
+					| NCommandLine::CTableRenderHelper::EOption_Rounded
+					| NCommandLine::CTableRenderHelper::EOption_AvoidRowSeparators
+					| NCommandLine::CTableRenderHelper::EOption_NoExtraLines
+					, m_AnsiFlags
+					, m_TerminalWidth
+				)
+			;
 
-				for (auto &Output : _Output)
+			TableRenderer.f_AddHeadings("Repo", "Output");
+
+			TCSet<CStr> AlreadyOutput;
+
+			auto fAddSection = [&](CStr const &_Name, TCVector<CDeferredOutput> const &_Output)
 				{
-					for (auto Line : Output.m_Lines)
+					if (!AlreadyOutput(_Name).f_WasCreated())
+						return;
+
+					EOutputType WorstType = EOutputType_Normal;
+					TCVector<CStr> AllLines;
+					bool bIsSection = false;
+
+					for (auto &Output : _Output)
 					{
-						if (Line == "ForceSection")
-							Line = "";
-						fg_OutputRepoLine(Output.m_OutputType, _Name, LongestRepo, Line, m_AnsiFlags, m_fOutputConsole);
+						if (Output.m_OutputType > WorstType)
+							WorstType = Output.m_OutputType;
+
+						for (auto Line : Output.m_Lines)
+						{
+							if (Line == "ForceSection")
+							{
+								bIsSection = true;
+								Line = "";
+							}
+							AllLines.f_Insert(fg_Move(Line));
+						}
 					}
+
+					CStr RepoColor;
+					switch (WorstType)
+					{
+					case EOutputType_Normal: RepoColor = Colors.f_StatusNormal(); break;
+					case EOutputType_Warning: RepoColor = Colors.f_StatusWarning(); break;
+					case EOutputType_Error: RepoColor = Colors.f_StatusError(); break;
+					default: RepoColor = "ERROR"; break;
+					}
+
+					if (bIsSection)
+						TableRenderer.f_ForceRowSeparator();
+
+					CStr ReplacedRepo = _Name.f_Replace("/", CStr("{}{}/{}"_f << Colors.f_Default() << Colors.f_Foreground256(250) << RepoColor));
+
+					TableRenderer.f_AddRow
+						(
+							"{}{}{}"_f << RepoColor << ReplacedRepo << Colors.f_Default()
+							, CStr::fs_Join(AllLines, "\n")
+						)
+					;
+
+					if (bIsSection)
+						TableRenderer.f_ForceRowSeparator();
 				}
+			;
 
-				if (bDidOutputSection)
-					fg_OutputSectionLine(m_AnsiFlags, m_fOutputConsole);
-			}
-		;
-
-		for (auto &Sections : m_OutputOrder)
-		{
-			for (auto &Section : Sections)
+			for (auto &Sections : m_OutputOrder)
 			{
-				auto *pOutput = m_DeferredOutput.f_FindEqual(Section);
-				if (!pOutput)
-					continue;
-				fOutputSection(Section, *pOutput);
+				for (auto &Section : Sections)
+				{
+					auto *pOutput = m_DeferredOutput.f_FindEqual(Section);
+					if (!pOutput)
+						continue;
+					fAddSection(Section, *pOutput);
+				}
 			}
-		}
 
-		for (auto &RepoOutput : m_DeferredOutput)
-			fOutputSection(m_DeferredOutput.fs_GetKey(RepoOutput), RepoOutput);
+			for (auto &RepoOutput : m_DeferredOutput)
+				fAddSection(m_DeferredOutput.fs_GetKey(RepoOutput), RepoOutput);
+
+			TableRenderer.f_Output(NCommandLine::CTableRenderHelper::EOutputType_HumanReadable);
+		}
 
 		fg_Move(m_LaunchSequencer).f_Destroy().f_DiscardResult();
 	}

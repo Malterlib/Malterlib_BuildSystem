@@ -17,11 +17,13 @@ namespace NMib::NBuildSystem
 	CBuildSystem::CBuildSystem
 		(
 			NCommandLine::EAnsiEncodingFlag _AnsiFlags
+			, uint32 _TerminalWidth
 			, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
 			, NStorage::TCSharedPointer<TCAtomic<bool>> const &_pCancelled
 		)
 		: mp_NowUTC(NTime::CTime::fs_NowUTC())
 		, mp_AnsiFlags(_AnsiFlags)
+		, mp_TerminalWidth(_TerminalWidth)
 		, mp_pCancelled(_pCancelled)
 		, mp_fOutputConsole(_fOutputConsole)
 	{
@@ -78,6 +80,11 @@ namespace NMib::NBuildSystem
 	EAnsiEncodingFlag CBuildSystem::f_AnsiFlags() const
 	{
 		return mp_AnsiFlags;
+	}
+
+	uint32 CBuildSystem::f_TerminalWidth() const
+	{
+		return mp_TerminalWidth;
 	}
 
 	TCMap<CStr, TCSharedPointer<CHashDigest_SHA256>> CBuildSystem::f_GetSourceFiles() const

@@ -258,7 +258,7 @@ namespace NMib::NBuildSystem
 		if (_Flags & ERepoStatusFlag_UpdateRemotes)
 			co_await fg_UpdateRemotes(*this, FilteredRepositories);
 
-		CGitLaunches Launches{f_GetBaseDir(), "Getting repo status", mp_AnsiFlags, mp_fOutputConsole, f_GetCancelledPointer()};
+		CGitLaunches Launches{f_GetBaseDir(), "Getting repo status", mp_AnsiFlags, mp_TerminalWidth, mp_fOutputConsole, f_GetCancelledPointer()};
 		auto DestroyLaunchs = co_await co_await Launches.f_Init();
 
 		CColors Colors(mp_AnsiFlags);

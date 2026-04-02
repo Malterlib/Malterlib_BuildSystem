@@ -211,6 +211,7 @@ namespace NMib::NBuildSystem::NRepository
 				CStr const &_BaseDir
 				, CStr const &_ProgressDescription
 				, EAnsiEncodingFlag _AnsiFlags
+				, uint32 _TerminalWidth
 				, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
 				, NStorage::TCSharedPointer<TCAtomic<bool>> const &_pCancelled
 			)
@@ -271,6 +272,7 @@ namespace NMib::NBuildSystem::NRepository
 					CStr const &_BaseDir
 					, CStr const &_ProgressDescription
 					, EAnsiEncodingFlag _AnsiFlags
+					, uint32 _TerminalWidth
 					, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
 					, NStorage::TCSharedPointer<TCAtomic<bool>> const &_pCancelled
 				)
@@ -304,6 +306,7 @@ namespace NMib::NBuildSystem::NRepository
 			umint m_LongestRepo = 0;
 			TCAtomic<umint> m_nRepos = 0;
 			EAnsiEncodingFlag m_AnsiFlags;
+			uint32 m_TerminalWidth = 0;
 			NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> m_fOutputConsole;
 
 			NStorage::TCSharedPointer<TCAtomic<bool>> m_pCancelled;

@@ -505,6 +505,7 @@ namespace NMib::NBuildSystem::NRepository
 				_BuildSystem.f_GetBaseDir()
 				, "Fetching remotes" + _ExtraMessage
 				, _BuildSystem.f_AnsiFlags()
+				, _BuildSystem.f_TerminalWidth()
 				, _BuildSystem.f_OutputConsoleFunctor()
 				, _BuildSystem.f_GetCancelledPointer()
 			}

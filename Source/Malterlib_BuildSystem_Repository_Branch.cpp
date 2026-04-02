@@ -21,7 +21,7 @@ namespace NMib::NBuildSystem
 
 		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(_Filter, *this, mp_Data, EGetRepoFlag::mc_None);
 
-		CGitLaunches Launches{f_GetBaseDir(), "Branching repos", mp_AnsiFlags, mp_fOutputConsole, f_GetCancelledPointer()};
+		CGitLaunches Launches{f_GetBaseDir(), "Branching repos", mp_AnsiFlags, mp_TerminalWidth, mp_fOutputConsole, f_GetCancelledPointer()};
 		auto DestroyLaunchs = co_await co_await Launches.f_Init();
 
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
@@ -165,7 +165,7 @@ namespace NMib::NBuildSystem
 		if (_Flags & ERepoCleanupBranchesFlag_UpdateRemotes)
 			co_await fg_UpdateRemotes(*this, FilteredRepositories);
 
-		CGitLaunches Launches{f_GetBaseDir(), "Cleaning up branches", mp_AnsiFlags, mp_fOutputConsole, f_GetCancelledPointer()};
+		CGitLaunches Launches{f_GetBaseDir(), "Cleaning up branches", mp_AnsiFlags, mp_TerminalWidth, mp_fOutputConsole, f_GetCancelledPointer()};
 		auto DestroyLaunchs = co_await co_await Launches.f_Init();
 
 		CColors Colors(mp_AnsiFlags);
@@ -430,7 +430,7 @@ namespace NMib::NBuildSystem
 		if (_Flags & ERepoCleanupTagsFlag_UpdateRemotes)
 			co_await fg_UpdateRemotes(*this, FilteredRepositories);
 
-		CGitLaunches Launches{f_GetBaseDir(), "Cleaning up tags", mp_AnsiFlags, mp_fOutputConsole, f_GetCancelledPointer()};
+		CGitLaunches Launches{f_GetBaseDir(), "Cleaning up tags", mp_AnsiFlags, mp_TerminalWidth, mp_fOutputConsole, f_GetCancelledPointer()};
 		auto DestroyLaunchs = co_await co_await Launches.f_Init();
 
 		CColors Colors(mp_AnsiFlags);
