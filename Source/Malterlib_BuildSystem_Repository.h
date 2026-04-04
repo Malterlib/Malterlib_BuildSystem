@@ -237,6 +237,7 @@ namespace NMib::NBuildSystem::NRepository
 		};
 
 		CConfigFile const &fp_GetConfigFile(CStr const &_FileName, bool _bIsStateFile);
+		bool fp_IsPerforceRoot();
 
 		CStr const mp_BasePath;
 		CStr const mp_OutputDir;
@@ -254,6 +255,9 @@ namespace NMib::NBuildSystem::NRepository
 
 		CLowLevelRecursiveLock mp_CoreExcludesFileLocationLock;
 		TCSet<CStr> mp_CoreExcludesFileLocationUpdated;
+
+		CLowLevelLock mp_IsPerforceRootLock;
+		TCOptional<bool> mp_bIsPerforceRoot;
 
 		CLowLevelRecursiveLock mp_BranchTransitionsLock;
 		TCMap<CBranchTransition, TCVector<CStr>> mp_BranchTransitions;

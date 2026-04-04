@@ -4,6 +4,7 @@
 #include "Malterlib_BuildSystem.h"
 #include "Malterlib_BuildSystem_Repository.h"
 
+#include <Mib/Perforce/Wrapper>
 #include <Mib/Concurrency/AsyncDestroy>
 #include <Mib/Encoding/EJson>
 #include <Mib/Git/LfsReleaseStore>
@@ -159,6 +160,14 @@ namespace NMib::NBuildSystem
 		{
 		}
 
+		bool CStateHandler::fp_IsPerforceRoot()
+		{
+			DLock(mp_IsPerforceRootLock);
+			if (!mp_bIsPerforceRoot)
+				mp_bIsPerforceRoot = CPerforceClient::fs_HasP4Config(mp_BasePath);
+			return *mp_bIsPerforceRoot;
+		}
+
 		EAnsiEncodingFlag CStateHandler::f_AnsiFlags() const
 		{
 			return mp_AnsiFlags;
@@ -291,15 +300,37 @@ namespace NMib::NBuildSystem
 					CurrentPath = ParentPath;
 				}
 
-				// Fall back to .gitignore if no .git directory found
+				// Fall back to .gitignore/.p4ignore if no .git directory found
 				if (IgnoreFile.f_IsEmpty())
 				{
-					IgnoreFile = CFile::fs_GetPath(_FileName) / ".gitignore";
+					IgnoreFile = CFile::fs_GetPath(_FileName) / (fp_IsPerforceRoot() ? ".p4ignore" : ".gitignore");
 					GitRoot.f_Clear();
 				}
 			}
 			else
-				IgnoreFile = CFile::fs_GetPath(_FileName) / ".gitignore";
+			{
+				bool bUseP4Ignore = fp_IsPerforceRoot();
+				if (bUseP4Ignore)
+				{
+					// Check if the file is inside a child git repository
+					CStr CurrentPath = CFile::fs_GetPath(_FileName);
+					while (!CurrentPath.f_IsEmpty())
+					{
+						if (CFile::fs_FileExists(CurrentPath / ".git", EFileAttrib_Directory | EFileAttrib_File))
+						{
+							bUseP4Ignore = false;
+							break;
+						}
+
+						CStr ParentPath = CFile::fs_GetPath(CurrentPath);
+						if (ParentPath == CurrentPath)
+							break;
+
+						CurrentPath = ParentPath;
+					}
+				}
+				IgnoreFile = CFile::fs_GetPath(_FileName) / (bUseP4Ignore ? ".p4ignore" : ".gitignore");
+			}
 
 			CStr IgnoreContents;
 			if (CFile::fs_FileExists(IgnoreFile))
