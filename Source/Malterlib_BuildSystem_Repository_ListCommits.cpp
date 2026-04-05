@@ -2,6 +2,7 @@
 // Distributed under the MIT license, see license text in LICENSE.Malterlib
 
 #include "Malterlib_BuildSystem_Repository.h"
+#include "Malterlib_BuildSystem_Repository_PerforceHelpers.h"
 
 #include <Mib/CommandLine/AnsiEncodingParse>
 #include <Mib/CommandLine/TableRenderer>
@@ -33,6 +34,294 @@ namespace NMib::NBuildSystem
 
 			return Lines;
 		}
+
+		// Auto-detect from/to changelists when both are default.
+		// Returns {from, to} where to="" means workspace.
+		// Checks if workspace files differ from the latest submitted version:
+		//   - If changes: from=latest CL, to="" (workspace)
+		//   - If no changes: from=second-latest CL, to=latest CL
+		TCFuture<TCTuple<CStr, CStr>> fg_PerforceAutoDetectChangelists(TCVector<CStr> _ConfigFilePaths, CStr _BaseDir)
+		{
+			auto BlockingActorCheckout = fg_BlockingActor();
+			co_return co_await
+				(
+					g_Dispatch(BlockingActorCheckout) / [_ConfigFilePaths, _BaseDir]() -> TCTuple<CStr, CStr>
+					{
+						CPerforceClientThrow Client;
+						auto DepotPaths = fg_PerforceConnectAndResolveDepotPaths(_ConfigFilePaths, _BaseDir, Client);
+
+						// DepotPaths is aligned 1:1 with _ConfigFilePaths and may contain
+						// empty entries for brand-new files; filter them out before asking
+						// Perforce for revisions.
+						TCVector<CStr> TrackedDepotPaths;
+						for (auto &DepotPath : DepotPaths)
+						{
+							if (!DepotPath.f_IsEmpty())
+								TrackedDepotPaths.f_Insert(DepotPath);
+						}
+
+						uint32 HighestCL = 0;
+						uint32 SecondHighestCL = 0;
+						if (!TrackedDepotPaths.f_IsEmpty())
+						{
+							auto Revisions = Client.f_GetFileRevisions(TrackedDepotPaths);
+							for (auto &File : Revisions.m_Files)
+							{
+								for (auto &Rev : File.m_Revisions)
+								{
+									if (Rev.m_ChangeList > 0)
+									{
+										uint32 CL = (uint32)Rev.m_ChangeList;
+										if (CL > HighestCL)
+										{
+											SecondHighestCL = HighestCL;
+											HighestCL = CL;
+										}
+										else if (CL > SecondHighestCL && CL != HighestCL)
+											SecondHighestCL = CL;
+									}
+								}
+							}
+						}
+
+						// Check if any workspace file differs from the latest submitted
+						// version. New files (empty depot path) always count as a change.
+						bool bWorkspaceHasChanges = false;
+						for (umint i = 0; i < _ConfigFilePaths.f_GetLen(); ++i)
+						{
+							if (DepotPaths[i].f_IsEmpty())
+							{
+								if (CFile::fs_FileExists(_ConfigFilePaths[i]))
+								{
+									bWorkspaceHasChanges = true;
+									break;
+								}
+								continue;
+							}
+
+							CStr SubmittedContent;
+							if (!Client.f_NoThrow().f_GetTextFileContents("{}@{}"_f << DepotPaths[i] << HighestCL, SubmittedContent))
+								continue;
+
+							CStr WorkspaceContent = CFile::fs_ReadStringFromFile(_ConfigFilePaths[i]);
+							if (WorkspaceContent != SubmittedContent)
+							{
+								bWorkspaceHasChanges = true;
+								break;
+							}
+						}
+
+						if (bWorkspaceHasChanges)
+							return {CStr::fs_ToStr(HighestCL), CStr()};
+						else if (SecondHighestCL > 0)
+							return {CStr::fs_ToStr(SecondHighestCL), CStr::fs_ToStr(HighestCL)};
+						else
+							return {CStr::fs_ToStr(HighestCL), CStr()};
+					}
+				)
+			;
+		}
+
+
+		// Collect Perforce changelists into AllChangelists, deduplicating by CL ID.
+		// Check for workspace files that differ from head but aren't opened in any changelist.
+		bool fg_PerforceHasUnreconciledChanges(CPerforceClientThrow &_Client, TCVector<CStr> const &_ConfigFilePaths)
+		{
+			for (auto &ConfigFile : _ConfigFilePaths)
+			{
+				CStr DepotPath;
+				bool bHasMapping = _Client.f_NoThrow().f_GetDepotPath(ConfigFile, DepotPath);
+
+				// Files already opened in any pending CL surface through the
+				// CL-based log collection above, so they're not "unreconciled".
+				if (bHasMapping)
+				{
+					TCVector<CStr> Opened;
+					_Client.f_NoThrow().f_GetOpened(DepotPath, CStr(), Opened);
+					if (!Opened.f_IsEmpty())
+						continue;
+				}
+
+				CStr HeadContent;
+				bool bHasHeadRevision = bHasMapping && _Client.f_NoThrow().f_GetTextFileContents(DepotPath, HeadContent);
+
+				if (!bHasHeadRevision)
+				{
+					// No submitted revision (and not currently opened): a
+					// brand-new config file that exists locally is an
+					// unreconciled workspace addition.
+					if (CFile::fs_FileExists(ConfigFile))
+						return true;
+					continue;
+				}
+
+				CStr WorkspaceContent = CFile::fs_ReadStringFromFile(ConfigFile);
+				if (WorkspaceContent != HeadContent)
+					return true;
+			}
+			return false;
+		}
+
+		// Convert Perforce changelists to CLogEntryFull entries.
+		// Get changelists between from and to. Empty _ToCL means up to #head + pending + unreconciled.
+		TCFuture<TCVector<CLogEntryFull>> fg_PerforceGetLogEntries(TCVector<CStr> _ConfigFilePaths, CStr _FromCL, CStr _ToCL, CStr _BaseDir)
+		{
+			auto BlockingActorCheckout = fg_BlockingActor();
+			co_return co_await
+				(
+					g_Dispatch(BlockingActorCheckout) / [_ConfigFilePaths, _FromCL, _ToCL, _BaseDir]() -> TCVector<CLogEntryFull>
+					{
+						CPerforceClientThrow Client;
+						fg_PerforceConnectAndResolveDepotPaths(_ConfigFilePaths, _BaseDir, Client);
+
+						uint32 FromChangelist = _FromCL.f_ToInt(uint32(0));
+						bool bToIsWorkspace = _ToCL.f_IsEmpty();
+						CStr ToSpec = bToIsWorkspace ? CStr("#head") : ("@" + _ToCL);
+
+						TCSet<uint32> SeenCLs;
+						TCVector<CPerforceClient::CChangeList> AllChangelists;
+						for (auto &ConfigFile : _ConfigFilePaths)
+						{
+							CStr DepotPath;
+							if (!Client.f_NoThrow().f_GetDepotPath(ConfigFile, DepotPath))
+								continue;
+
+							// Submitted changelists in range
+							TCVector<CPerforceClient::CChangeList> CLs;
+							Client.f_NoThrow().f_GetChangelists("{}@{},{}"_f << DepotPath << (FromChangelist + 1) << ToSpec, CLs, false);
+
+							for (auto &CL : CLs)
+							{
+								if (SeenCLs(CL.m_ChangeID).f_WasCreated())
+									AllChangelists.f_Insert(CL);
+							}
+
+							if (!bToIsWorkspace)
+								continue;
+
+							// Pending changelists with this file open in this workspace
+							TCVector<CPerforceClient::CChangeList> PendingCLs;
+							Client.f_NoThrow().f_GetChangelists(ConfigFile, PendingCLs, false, CStr(), "pending");
+
+							for (auto &CL : PendingCLs)
+							{
+								if (SeenCLs(CL.m_ChangeID).f_WasCreated())
+									AllChangelists.f_Insert(CL);
+							}
+
+							// Default changelist (CL 0) is not returned by p4 changes
+							TCVector<CStr> Opened;
+							if (Client.f_NoThrow().f_GetOpened(ConfigFile, CStr(), Opened) && !Opened.f_IsEmpty())
+							{
+								if (SeenCLs(0u).f_WasCreated())
+								{
+									CPerforceClient::CChangeList DefaultCL;
+									DefaultCL.m_ChangeID = 0;
+									DefaultCL.m_Status = "pending";
+									DefaultCL.m_Description = "Default changelist";
+									Client.f_NoThrow().f_GetUserName(DefaultCL.m_User);
+									AllChangelists.f_Insert(DefaultCL);
+								}
+							}
+						}
+
+						TCVector<CLogEntryFull> Entries;
+						for (auto &CL : AllChangelists)
+						{
+							CLogEntryFull Entry;
+							Entry.m_Commit = CL.m_Status == "pending" ? ("pending:" + CStr::fs_ToStr(CL.m_ChangeID)) : CStr::fs_ToStr(CL.m_ChangeID);
+							Entry.m_Author = CL.m_User;
+							// CL.m_Date is 0 for synthesized entries (e.g. the
+							// default changelist) that have no real timestamp;
+							// leave the dates as the default invalid CTime in
+							// that case so the renderer doesn't show 1970.
+							if (CL.m_Date != 0)
+							{
+								Entry.m_AuthorDate = CTimeConvert::fs_FromUnixSeconds(CL.m_Date);
+								Entry.m_CommitterDate = Entry.m_AuthorDate;
+							}
+							Entry.m_Committer = CL.m_User;
+							Entry.m_Message = CL.m_Description.f_Trim();
+							if (!Entry.m_Message.f_IsEmpty())
+								Entry.m_FirstLine = Entry.m_Message.f_SplitLine().f_GetFirst();
+							Entries.f_Insert(fg_Move(Entry));
+						}
+
+						if (bToIsWorkspace && fg_PerforceHasUnreconciledChanges(Client, _ConfigFilePaths))
+						{
+							CLogEntryFull Entry;
+							Entry.m_Commit = "unreconciled";
+							Entry.m_Author = Client.f_GetUser();
+							Entry.m_Message = "Unreconciled workspace changes";
+							Entry.m_FirstLine = Entry.m_Message;
+							Entries.f_InsertFirst(fg_Move(Entry));
+						}
+
+						return Entries;
+					}
+				)
+			;
+		}
+
+		struct CPerforceResolvedRefs
+		{
+			CStr m_From;
+			CStr m_To;
+			CStr m_FromDisplay;
+			CStr m_ToDisplay;
+		};
+
+		// Resolve Perforce from/to references, replacing git defaults and auto-detecting changelists.
+		TCFuture<CPerforceResolvedRefs> fg_PerforceResolveRefs
+			(
+				CStr _From
+				, CStr _To
+				, TCSet<CStr> _PerforceRootConfigFiles
+				, CStr _BaseDir
+			)
+		{
+			CStr PerforceFrom = _From;
+			CStr PerforceTo = _To;
+
+			// Replace git defaults with empty (auto-detect) for Perforce
+			if (PerforceFrom == "origin/master")
+				PerforceFrom = "";
+			if (PerforceTo == "HEAD")
+				PerforceTo = "";
+
+			// Strip leading @ from explicit changelist references
+			if (PerforceFrom.f_StartsWith("@"))
+				PerforceFrom = PerforceFrom.f_Extract(1);
+			if (PerforceTo.f_StartsWith("@"))
+				PerforceTo = PerforceTo.f_Extract(1);
+
+			// Auto-detect default from/to changelists
+			bool bFromDefault = PerforceFrom.f_IsEmpty();
+			bool bToDefault = PerforceTo.f_IsEmpty();
+			if (bFromDefault)
+			{
+				TCVector<CStr> ConfigFilePaths;
+				for (auto &ConfigFile : _PerforceRootConfigFiles)
+					ConfigFilePaths.f_Insert(ConfigFile);
+
+				if (bToDefault)
+				{
+					auto [AutoFrom, AutoTo] = co_await fg_PerforceAutoDetectChangelists(ConfigFilePaths, _BaseDir);
+					PerforceFrom = AutoFrom;
+					PerforceTo = AutoTo;
+				}
+				else
+					PerforceFrom = co_await fg_PerforceGetLatestChangelist(ConfigFilePaths, _BaseDir);
+			}
+
+			CPerforceResolvedRefs Result;
+			Result.m_From = PerforceFrom;
+			Result.m_To = PerforceTo;
+			Result.m_FromDisplay = "@" + PerforceFrom;
+			Result.m_ToDisplay = PerforceTo.f_IsEmpty() ? CStr("workspace") : ("@" + PerforceTo);
+			co_return Result;
+		}
+
 	}
 
 	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_ListCommits
@@ -62,6 +351,12 @@ namespace NMib::NBuildSystem
 			for (auto Repo : Repos)
 				ShowRepos[fg_Get<0>(Repo).m_Location];
 		}
+
+		bool bIsPerforceRoot = !CFile::fs_FileExists(f_GetBaseDir() + "/.git", EFileAttrib_Directory | EFileAttrib_File) && CPerforceClient::fs_HasP4Config(f_GetBaseDir());
+
+		// Perforce root should always appear in the output
+		if (bIsPerforceRoot)
+			ShowRepos[f_GetBaseDir()];
 
 		TCSharedPointer<CFilteredRepos> pFilteredRepositories = fg_Construct(co_await fg_GetFilteredRepos(CRepoFilter(), *this, mp_Data, EGetRepoFlag::mc_None));
 		auto &FilteredRepositories = *pFilteredRepositories;
@@ -100,6 +395,19 @@ namespace NMib::NBuildSystem
 				RepositoryByLocation[pRepo->m_Location] = pRepo;
 		}
 
+		TCSet<CStr> PerforceRootConfigFiles;
+		if (bIsPerforceRoot)
+			PerforceRootConfigFiles = fg_CollectPerforceRootConfigFiles(RepositoryByLocation, f_GetBaseDir());
+
+		// Insert a sentinel for the base dir so config file ownership resolution
+		// can find it as the owner of Perforce-tracked config files
+		if (bIsPerforceRoot && !RepositoryByLocation.f_FindEqual(f_GetBaseDir()))
+			RepositoryByLocation[f_GetBaseDir()] = nullptr;
+
+		CPerforceResolvedRefs PerforceRefs;
+		if (bIsPerforceRoot)
+			PerforceRefs = co_await fg_PerforceResolveRefs(_From, _To, PerforceRootConfigFiles, f_GetBaseDir());
+
 		struct CState
 		{
 			TCMap<CStr, CStr> m_StartCommits;
@@ -113,8 +421,16 @@ namespace NMib::NBuildSystem
 
 		TCSharedPointer<CState> pState = fg_Construct();
 
-		pState->m_StartCommits[f_GetBaseDir()] = _From;
-		pState->m_EndCommits[f_GetBaseDir()] = _To;
+		if (bIsPerforceRoot)
+		{
+			pState->m_StartCommits[f_GetBaseDir()] = PerforceRefs.m_From;
+			pState->m_EndCommits[f_GetBaseDir()] = PerforceRefs.m_To;
+		}
+		else
+		{
+			pState->m_StartCommits[f_GetBaseDir()] = _From;
+			pState->m_EndCommits[f_GetBaseDir()] = _To;
+		}
 
 		while (true)
 		{
@@ -128,6 +444,9 @@ namespace NMib::NBuildSystem
 				bAllFinished = true;
 				for (auto &pRepository : RepositoryByLocation)
 				{
+					if (!pRepository)
+						continue;
+
 					auto &Repo = *pRepository;
 
 					if (State.m_StartCommits.f_FindEqual(Repo.m_Location))
@@ -139,28 +458,16 @@ namespace NMib::NBuildSystem
 						bAllFinished = false;
 
 					CStr ConfigDirectory = CFile::fs_GetPath(Repo.m_ConfigFile);
-					auto *pOwner = RepositoryByLocation.f_FindLargestLessThanEqual(ConfigDirectory);
+					CStr OwnerLocation;
+					auto *pOwner = CBuildSystem::fs_FindContainingPath(RepositoryByLocation, ConfigDirectory, OwnerLocation);
 					if (!pOwner)
 						continue;
 
-					auto &RepositoryPath = RepositoryByLocation.fs_GetKey(pOwner);
-
-					if (!ConfigDirectory.f_StartsWith(RepositoryPath))
-					{
-						State.m_EndCommits[Repo.m_Location];
-						State.m_StartCommits[Repo.m_Location];
-						bResolved = true;
-						bDoneSomething = true;
-						continue;
-					}
-
-					auto &Owner = **pOwner;
-
-					auto *pStartCommit = State.m_StartCommits.f_FindEqual(Owner.m_Location);
+					auto *pStartCommit = State.m_StartCommits.f_FindEqual(OwnerLocation);
 					if (!pStartCommit)
 						continue;
 
-					auto *pEndCommit = State.m_EndCommits.f_FindEqual(Owner.m_Location);
+					auto *pEndCommit = State.m_EndCommits.f_FindEqual(OwnerLocation);
 					if (!pEndCommit)
 						continue;
 
@@ -173,7 +480,7 @@ namespace NMib::NBuildSystem
 
 						auto pStartConfigFile = State.m_StartConfigFiles.f_FindEqual(ConfigFile);
 
-						CStr RelativePath = CFile::fs_MakePathRelative(ConfigFile, Owner.m_Location);
+						CStr RelativePath = CFile::fs_MakePathRelative(ConfigFile, OwnerLocation);
 
 						if (pStartConfigFile)
 						{
@@ -203,29 +510,48 @@ namespace NMib::NBuildSystem
 						continue;
 					}
 
-					CStr RelativePath = CFile::fs_MakePathRelative(ConfigFile, Owner.m_Location);
+					CStr RelativePath = CFile::fs_MakePathRelative(ConfigFile, OwnerLocation);
 
 					bDoneSomething = true;
 
-					State.m_PendingGitShow[ConfigFile];
-
-					auto [StartResult, EndResult] = co_await
-						(
-							Launches.f_Launch(Owner, {"show", "{}:{}"_f << *pStartCommit << RelativePath})
-							+ Launches.f_Launch(Owner, {"show", "{}:{}"_f << *pEndCommit << RelativePath})
-						)
-					;
-					auto &State = *pState;
-
-					State.m_PendingGitShow.f_Remove(ConfigFile);
-
+					if (bIsPerforceRoot && PerforceRootConfigFiles.f_FindEqual(ConfigFile))
 					{
-						auto CaptureScope = co_await (g_CaptureExceptions % "Exception parsing config files");
+						auto [StartContent, EndContent] = co_await fg_PerforceGetConfigFileContents(ConfigFile, *pStartCommit, *pEndCommit);
+						auto &State = *pState;
 
-						if (StartResult.m_ExitCode == 0)
-							State.m_StartConfigFiles[ConfigFile] = CStateHandler::fs_ParseConfigFile(StartResult.f_GetStdOut(), ConfigFile);
-						if (EndResult.m_ExitCode == 0)
-							State.m_EndConfigFiles[ConfigFile] = CStateHandler::fs_ParseConfigFile(EndResult.f_GetStdOut(), ConfigFile);
+						{
+							auto CaptureScope = co_await (g_CaptureExceptions % "Exception parsing config files");
+
+							if (!StartContent.f_IsEmpty())
+								State.m_StartConfigFiles[ConfigFile] = CStateHandler::fs_ParseConfigFile(StartContent, ConfigFile);
+							if (!EndContent.f_IsEmpty())
+								State.m_EndConfigFiles[ConfigFile] = CStateHandler::fs_ParseConfigFile(EndContent, ConfigFile);
+						}
+					}
+					else
+					{
+						DCheck(*pOwner);
+						auto &Owner = **pOwner;
+						State.m_PendingGitShow[ConfigFile];
+
+						auto [StartResult, EndResult] = co_await
+							(
+								Launches.f_Launch(Owner, {"show", "{}:{}"_f << *pStartCommit << RelativePath}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None)
+								+ Launches.f_Launch(Owner, {"show", "{}:{}"_f << *pEndCommit << RelativePath}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None)
+							)
+						;
+						auto &State = *pState;
+
+						State.m_PendingGitShow.f_Remove(ConfigFile);
+
+						{
+							auto CaptureScope = co_await (g_CaptureExceptions % "Exception parsing config files");
+
+							if (StartResult.m_ExitCode == 0)
+								State.m_StartConfigFiles[ConfigFile] = CStateHandler::fs_ParseConfigFile(StartResult.f_GetStdOut(), ConfigFile);
+							if (EndResult.m_ExitCode == 0)
+								State.m_EndConfigFiles[ConfigFile] = CStateHandler::fs_ParseConfigFile(EndResult.f_GetStdOut(), ConfigFile);
+						}
 					}
 				}
 			}
@@ -247,8 +573,36 @@ namespace NMib::NBuildSystem
 		TCSet<CStr> NoStartCommits;
 		TCSet<CStr> NoEndCommits;
 
+		// Handle Perforce root log entries separately (base dir has no CRepository object)
+		if (bIsPerforceRoot)
+		{
+			auto *pStartCommit = State.m_StartCommits.f_FindEqual(f_GetBaseDir());
+			auto *pEndCommit = State.m_EndCommits.f_FindEqual(f_GetBaseDir());
+
+			if (pStartCommit && !pStartCommit->f_IsEmpty())
+			{
+				TCVector<CStr> ConfigFilePaths;
+				for (auto &ConfigFile : PerforceRootConfigFiles)
+					ConfigFilePaths.f_Insert(ConfigFile);
+
+				CStr ToCL = pEndCommit ? *pEndCommit : CStr();
+
+				fg_PerforceGetLogEntries(ConfigFilePaths, *pStartCommit, ToCL, f_GetBaseDir()) > CommitsResults[f_GetBaseDir()];
+			}
+			else
+			{
+				NoStartCommits[f_GetBaseDir()];
+				TCFuture(TCVector<CLogEntryFull>()) > CommitsResults[f_GetBaseDir()];
+			}
+
+			TCFuture(TCVector<CLogEntryFull>()) > ReverseCommitsResults[f_GetBaseDir()];
+		}
+
 		for (auto &pRepository : RepositoryByLocation)
 		{
+			if (!pRepository)
+				continue;
+
 			auto &Location = pRepository->m_Location;
 			auto *pStartCommit = State.m_StartCommits.f_FindEqual(Location);
 			auto *pEndCommit = State.m_EndCommits.f_FindEqual(Location);
@@ -264,17 +618,8 @@ namespace NMib::NBuildSystem
 				else
 					NoEndCommits[Location];
 
-				{
-					TCPromiseFuturePair<TCVector<CLogEntryFull>> Result;
-					Result.m_Promise.f_SetResult(TCVector<CLogEntryFull>());
-					fg_Move(Result.m_Future) > CommitsResults[Location];
-				}
-
-				{
-					TCPromiseFuturePair<TCVector<CLogEntryFull>> Result;
-					Result.m_Promise.f_SetResult(TCVector<CLogEntryFull>());
-					fg_Move(Result.m_Future) > ReverseCommitsResults[Location];
-				}
+				TCFuture(TCVector<CLogEntryFull>()) > CommitsResults[Location];
+				TCFuture(TCVector<CLogEntryFull>()) > ReverseCommitsResults[Location];
 				continue;
 			}
 
@@ -459,7 +804,7 @@ namespace NMib::NBuildSystem
 			else if (!Repo.f_StartsWith(f_GetBaseDir()))
 			{
 				auto pRepository = RepositoryByLocation.f_FindEqual(Repo);
-				if (pRepository)
+				if (pRepository && *pRepository)
 					RelativePath = "~" + (*pRepository)->m_Identity;
 			}
 
@@ -585,37 +930,48 @@ namespace NMib::NBuildSystem
 
 			if (RelativePath == ".")
 			{
-				auto *pRepo = AllReposByRelativePath.f_FindEqual(RelativePath);
-				CStr FromHash = "Unknown";
-				CStr ToHash = "Unknown";
-
-				if (pRepo)
+				if (bIsPerforceRoot)
 				{
-					auto [FromResult, ToResult] = co_await
-						(
-							Launches.f_Launch(**pRepo, {"rev-parse", "{}^0"_f << _From})
-							+ Launches.f_Launch(**pRepo, {"rev-parse", "{}^0"_f << _To})
-						)
-					;
+					CStr Description;
+					Description += "{3}From {2}{}{1}\n"_f << PerforceRefs.m_FromDisplay << Colors.f_Default() << Colors.f_Foreground256(246) << Colors.f_Default();
+					Description += "{3}To   {2}{}{1}"_f << PerforceRefs.m_ToDisplay << Colors.f_Default() << Colors.f_Foreground256(246) << Colors.f_Default();
 
-					if (FromResult.m_ExitCode == 0)
-						FromHash = FromResult.f_GetStdOut().f_Trim();
-					else
-						FromHash = CStr::fs_Join(FromResult.f_GetErrorOut().f_Trim().f_SplitLine(), " ").f_Replace("\t", " ");
-
-					if (FromResult.m_ExitCode == 0)
-						ToHash = ToResult.f_GetStdOut().f_Trim();
-					else
-						ToHash = CStr::fs_Join(ToResult.f_GetErrorOut().f_Trim().f_SplitLine(), " ").f_Replace("\t", " ");
+					TableRenderer.f_AddDescription(Description);
 				}
+				else
+				{
+					auto *pRepo = AllReposByRelativePath.f_FindEqual(RelativePath);
+					CStr FromHash = "Unknown";
+					CStr ToHash = "Unknown";
 
-				umint MaxLen = fg_Max(_From.f_GetLen(), _To.f_GetLen());
+					if (pRepo)
+					{
+						auto [FromResult, ToResult] = co_await
+							(
+								Launches.f_Launch(**pRepo, {"rev-parse", "{}^0"_f << _From}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None)
+								+ Launches.f_Launch(**pRepo, {"rev-parse", "{}^0"_f << _To}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None)
+							)
+						;
 
-				CStr Description;
-				Description += "{5}From {3}{a-,sj*,sf }  {4}{}\n"_f << _From << MaxLen << FromHash << Colors.f_ToPush() << Colors.f_Foreground256(246) << Colors.f_Default();
-				Description += "{5}To   {3}{a-,sj*,sf }  {4}{}"_f << _To << MaxLen << ToHash << Colors.f_ToPush() << Colors.f_Foreground256(246) << Colors.f_Default();
+						if (FromResult.m_ExitCode == 0)
+							FromHash = FromResult.f_GetStdOut().f_Trim();
+						else
+							FromHash = CStr::fs_Join(FromResult.f_GetErrorOut().f_Trim().f_SplitLine(), " ").f_Replace("\t", " ");
 
-				TableRenderer.f_AddDescription(Description);
+						if (ToResult.m_ExitCode == 0)
+							ToHash = ToResult.f_GetStdOut().f_Trim();
+						else
+							ToHash = CStr::fs_Join(ToResult.f_GetErrorOut().f_Trim().f_SplitLine(), " ").f_Replace("\t", " ");
+					}
+
+					umint MaxLen = fg_Max(_From.f_GetLen(), _To.f_GetLen());
+
+					CStr Description;
+					Description += "{5}From {3}{a-,sj*,sf }  {4}{}\n"_f << _From << MaxLen << FromHash << Colors.f_ToPush() << Colors.f_Foreground256(246) << Colors.f_Default();
+					Description += "{5}To   {3}{a-,sj*,sf }  {4}{}"_f << _To << MaxLen << ToHash << Colors.f_ToPush() << Colors.f_Foreground256(246) << Colors.f_Default();
+
+					TableRenderer.f_AddDescription(Description);
+				}
 			}
 			else
 				TableRenderer.f_AddDescription("{1}{2}{}{1}"_f << RelativePath << Colors.f_Default() << Colors.f_Bold());
