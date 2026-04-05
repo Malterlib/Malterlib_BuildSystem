@@ -567,5 +567,8 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_Hook_p4_post_changelist;
 	extern CStringAndHash const gc_ConstString_Hook_p4_pre_submit;
 
+	extern CStringAndHash const gc_ConstString_MessageHeader;
+	extern CStringAndHash const gc_ConstString_TransformScript;
+
 	void fg_CacheConstantStrings(CStringCache &o_StringCache);
 }

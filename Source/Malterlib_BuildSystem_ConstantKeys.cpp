@@ -13,6 +13,7 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_MalterlibRepositoryEditorSequential(EPropertyType_Property, gc_Str<"MalterlibRepositoryEditorSequential">);
 	constexpr CPropertyKeyReference const gc_ConstKey_MalterlibRepositoryEditorSleep(EPropertyType_Property, gc_Str<"MalterlibRepositoryEditorSleep">);
 	constexpr CPropertyKeyReference const gc_ConstKey_MalterlibRepositoryEditorWorkingDir(EPropertyType_Property, gc_Str<"MalterlibRepositoryEditorWorkingDir">);
+	constexpr CPropertyKeyReference const gc_ConstKey_PerforceRoot(EPropertyType_Property, gc_Str<"PerforceRoot">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Platform(EPropertyType_Property, gc_Str<"Platform">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Disabled(EPropertyType_Property, gc_Str<"Disabled">);
 	constexpr CPropertyKeyReference const gc_ConstKey_HiddenGroup(EPropertyType_Property, gc_Str<"HiddenGroup">);
@@ -201,6 +202,7 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_CheckLicense(EPropertyType_Repository, gc_Str<"CheckLicense">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_HookHelperFiles(EPropertyType_Repository, gc_Str<"HookHelperFiles">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_Hooks(EPropertyType_Repository, gc_Str<"Hooks">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Repository_RepoCommit(EPropertyType_Repository, gc_Str<"RepoCommit">);
 
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_ClCompileSuffix(EPropertyType_Target, gc_Str<"ClCompileSuffix">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Target_DependencyFile(EPropertyType_Target, gc_Str<"DependencyFile">);
@@ -276,6 +278,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_MalterlibRepositoryEditorSequential);
 		o_StringCache.f_AddConstantString(gc_ConstKey_MalterlibRepositoryEditorSleep);
 		o_StringCache.f_AddConstantString(gc_ConstKey_MalterlibRepositoryEditorWorkingDir);
+		o_StringCache.f_AddConstantString(gc_ConstKey_PerforceRoot);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Platform);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Disabled);
 		o_StringCache.f_AddConstantString(gc_ConstKey_HiddenGroup);
@@ -460,6 +463,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_BootstrapSource);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_License);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_CheckLicense);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_RepoCommit);
 
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_ClCompileSuffix);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Target_DependencyFile);

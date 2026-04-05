@@ -12,6 +12,7 @@ namespace NMib::NBuildSystem
 	extern CPropertyKeyReference const gc_ConstKey_MalterlibRepositoryEditorSequential;
 	extern CPropertyKeyReference const gc_ConstKey_MalterlibRepositoryEditorSleep;
 	extern CPropertyKeyReference const gc_ConstKey_MalterlibRepositoryEditorWorkingDir;
+	extern CPropertyKeyReference const gc_ConstKey_PerforceRoot;
 	extern CPropertyKeyReference const gc_ConstKey_Platform;
 	extern CPropertyKeyReference const gc_ConstKey_Disabled;
 	extern CPropertyKeyReference const gc_ConstKey_HiddenGroup;
@@ -200,6 +201,7 @@ namespace NMib::NBuildSystem
 	extern CPropertyKeyReference const gc_ConstKey_Repository_CheckLicense;
 	extern CPropertyKeyReference const gc_ConstKey_Repository_HookHelperFiles;
 	extern CPropertyKeyReference const gc_ConstKey_Repository_Hooks;
+	extern CPropertyKeyReference const gc_ConstKey_Repository_RepoCommit;
 
 	extern CPropertyKeyReference const gc_ConstKey_Target_ClCompileSuffix;
 	extern CPropertyKeyReference const gc_ConstKey_Target_DependencyFile;

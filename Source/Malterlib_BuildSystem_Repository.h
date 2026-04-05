@@ -97,6 +97,12 @@ namespace NMib::NBuildSystem::NRepository
 		TCVector<CStr> m_HelperFiles;
 	};
 
+	struct CRepoCommitOptions
+	{
+		CStr m_MessageHeader;
+		CStr m_TransformScript;
+	};
+	
 	struct CRepository
 	{
 		CRepository(CStr const &_Name)
@@ -142,6 +148,7 @@ namespace NMib::NBuildSystem::NRepository
 		CEJsonSorted m_License;
 		bool m_bCheckLicense = false;
 		TCOptional<CHooksConfig> m_HookConfig;
+		TCOptional<CRepoCommitOptions> m_RepoCommitOptions;
 	};
 
 	struct CRepositoryDynamicInfo
@@ -427,6 +434,7 @@ namespace NMib::NBuildSystem::NRepository
 	{
 		CStr m_Hash;
 		CStr m_Description;
+		bool m_bUnresolved = false;
 	};
 
 	struct CLogEntryFull
@@ -502,6 +510,7 @@ namespace NMib::NBuildSystem::NRepository
 		, mc_IncludePolicy = DMibBit(0)
 		, mc_IncludeReleasePackage = DMibBit(1)
 		, mc_IncludeLicense = DMibBit(2)
+		, mc_IncludeRepoCommit = DMibBit(3)
 	};
 
 	TCUnsafeFuture<CGitVersion> fg_GetGitVersion(CGitLaunches &_Launches);
@@ -521,6 +530,7 @@ namespace NMib::NBuildSystem::NRepository
 	TCUnsafeFuture<void> fg_TransferGitDirWorktreeToMain(CGitLaunches &_Launches, CStr const &_WorktreeSubRepoDir, CStr const &_MainSubRepoDir, CStr const &_WorktreeName);
 	TCVector<TCMap<CStr, CReposLocation>> fg_GetRepos(CBuildSystem &_BuildSystem, CBuildSystemData &_Data, EGetRepoFlag _Flags);
 	CRepoEditor fg_GetRepoEditor(CBuildSystem &_BuildSystem, CBuildSystemData &_Data);
+	NStorage::TCOptional<CRepoCommitOptions> fg_GetPerforceRootRepoCommitOptions(CBuildSystem &_BuildSystem, CBuildSystemData &_Data);
 
 	TCFunctionMovable<CStr (CProcessLaunchActor::CSimpleLaunchResult const &_Result)> fg_LogAllFunctor();
 

@@ -102,6 +102,43 @@ namespace NMib::NBuildSystem
 					, {CPropertyKey(gc_ConstKey_MalterlibRepositoryEditorSequential),  DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					, {CPropertyKey(gc_ConstKey_MalterlibRepositoryEditorSleep), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_FloatingPoint, 0.0))}
 					, {CPropertyKey(gc_ConstKey_MalterlibRepositoryEditorWorkingDir), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
+					,
+					{
+						CPropertyKey(gc_ConstKey_PerforceRoot)
+						, DMibBuildSystemTypeWithPosition
+						(
+							fg_Optional
+							(
+								CBuildSystemSyntax::CType
+								{
+									CBuildSystemSyntax::CClassType
+									{
+										{
+											{
+												gc_ConstKey_Repository_RepoCommit.m_Name
+												, CBuildSystemSyntax::CClassType::CMember
+												{
+													CBuildSystemSyntax::CType
+													{
+														CBuildSystemSyntax::CClassType
+														{
+															{
+																{gc_ConstString_MessageHeader, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_String, ""), true}}
+																, {gc_ConstString_TransformScript, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_String, ""), true}}
+															}
+															, {}
+														}
+													}
+													, true
+												}
+											}
+										}
+										, {}
+									}
+								}
+							)
+						)
+					}
 
 					, {CPropertyKey(gc_ConstKey_Workspace_Name), DMibBuildSystemTypeWithPosition(g_String)}
 					, {CPropertyKey(gc_ConstKey_Workspace_AllTargets), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, EJsonType_Array))}
@@ -382,6 +419,35 @@ namespace NMib::NBuildSystem
 					, {CPropertyKey(gc_ConstKey_Repository_LfsReleaseStore), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					, {CPropertyKey(gc_ConstKey_Repository_TagPreviousOnForcePush), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, true))}
 					, {CPropertyKey(gc_ConstKey_Repository_ExtraFetchSpecs), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
+					,
+					{
+						CPropertyKey(gc_ConstKey_Repository_RepoCommit)
+						, DMibBuildSystemTypeWithPosition
+						(
+							fg_Optional
+							(
+								CBuildSystemSyntax::CType
+								{
+									CBuildSystemSyntax::CClassType
+									{
+										{
+											// MessageHeader is used as a subject-line prefix to identify
+											// auto-generated repo-commit entries across tooling
+											// (list-commits collapses them to the first line, Perforce
+											// pending-CL reuse matches on this prefix, transform scripts
+											// must preserve it). Choose a header specific enough that it
+											// will not collide with hand-written commits — any human
+											// commit whose subject starts with this string is treated as
+											// auto-generated. Defaults to "Update repositories" when unset.
+											{gc_ConstString_MessageHeader, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_String, ""), true}}
+											, {gc_ConstString_TransformScript, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_String, ""), true}}
+										}
+										, {}
+									}
+								}
+							)
+						)
+					}
 					,
 					{
 						CPropertyKey(gc_ConstKey_Repository_Hooks)

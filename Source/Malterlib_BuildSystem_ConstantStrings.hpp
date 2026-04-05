@@ -567,6 +567,9 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_Hook_p4_post_changelist = gc_Str<"p4-post-changelist">;
 	constexpr CStringAndHash const gc_ConstString_Hook_p4_pre_submit = gc_Str<"p4-pre-submit">;
 
+	constexpr CStringAndHash const gc_ConstString_MessageHeader = gc_Str<"MessageHeader">;
+	constexpr CStringAndHash const gc_ConstString_TransformScript = gc_Str<"TransformScript">;
+
 	void fg_CacheConstantStrings(CStringCache &o_StringCache)
 	{
 		o_StringCache.f_AddString(gc_ConstString_Empty, gc_ConstString_Empty.f_Hash());
@@ -1133,5 +1136,8 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_Hook_p4_prepare_changelist);
 		o_StringCache.f_AddConstantString(gc_ConstString_Hook_p4_post_changelist);
 		o_StringCache.f_AddConstantString(gc_ConstString_Hook_p4_pre_submit);
+
+		o_StringCache.f_AddConstantString(gc_ConstString_MessageHeader);
+		o_StringCache.f_AddConstantString(gc_ConstString_TransformScript);
 	}
 }

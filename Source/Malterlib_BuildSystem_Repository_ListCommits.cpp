@@ -358,7 +358,7 @@ namespace NMib::NBuildSystem
 		if (bIsPerforceRoot)
 			ShowRepos[f_GetBaseDir()];
 
-		TCSharedPointer<CFilteredRepos> pFilteredRepositories = fg_Construct(co_await fg_GetFilteredRepos(CRepoFilter(), *this, mp_Data, EGetRepoFlag::mc_None));
+		TCSharedPointer<CFilteredRepos> pFilteredRepositories = fg_Construct(co_await fg_GetFilteredRepos(CRepoFilter(), *this, mp_Data, EGetRepoFlag::mc_IncludeRepoCommit));
 		auto &FilteredRepositories = *pFilteredRepositories;
 
 		TCLinkedList<CRepository> AllRepos;
@@ -840,6 +840,23 @@ namespace NMib::NBuildSystem
 				}
 			;
 
+			// The Perforce root uses the global PerforceRoot.RepoCommit config
+			// (it has no %Repository and its RepositoryByLocation slot is a
+			// nullptr sentinel), so route it through the same helper that
+			// repo-commit uses when writing the outermost changelist. Every
+			// other repo keeps its per-%Repository m_RepoCommitOptions.
+			CStr CommitMessageHeader;
+			if (bIsPerforceRoot && Repo == f_GetBaseDir())
+			{
+				if (auto RootOptions = fg_GetPerforceRootRepoCommitOptions(*this, mp_Data))
+					CommitMessageHeader = RootOptions->m_MessageHeader;
+			}
+			else if (auto *pRepo = RepositoryByLocation.f_FindEqual(Repo); pRepo && *pRepo)
+			{
+				if ((*pRepo)->m_RepoCommitOptions)
+					CommitMessageHeader = (*pRepo)->m_RepoCommitOptions->m_MessageHeader;
+			}
+
 			for (auto &LogEntry : LogEntries)
 			{
 				CStr CommitColor = Colors.f_Foreground256(11);
@@ -895,7 +912,6 @@ namespace NMib::NBuildSystem
 				;
 
 				CStr Message = LogEntry.m_Message;
-
 				for (auto &Wildcard : WildcardColumns)
 				{
 					CStr NewMessage;
@@ -918,6 +934,11 @@ namespace NMib::NBuildSystem
 
 					RowValues.f_Insert(fColorSection(CStr::fs_Join(ColumnValue, "\n")));
 				}
+
+				// Limit repo-commit messages to first line since the per-repo
+				// breakdown is already shown separately and the extra lines are redundant
+				if (Message.f_StartsWith(CommitMessageHeader ? CommitMessageHeader : gc_Str<"Update repositories">.m_Str))
+					Message = LogEntry.m_FirstLine;
 
 				Message = CStr::fs_Join(fCleanupLines(Message), "\n");
 

@@ -631,7 +631,8 @@ namespace NMib::NBuildSystem::NRepository
 			{
 				TCVector<CLogEntry> LogEntries;
 				auto &DummyEntry = LogEntries.f_Insert();
-				DummyEntry.m_Description = Output;
+				DummyEntry.m_Description = "Unable to resolve commit range {}..{} (referenced commit not available locally)"_f << _From << _To;
+				DummyEntry.m_bUnresolved = true;
 				co_return fg_Move(LogEntries);
 			}
 			if (Output.f_IsEmpty())

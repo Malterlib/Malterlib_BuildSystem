@@ -136,6 +136,12 @@ namespace NMib::NBuildSystem
 			, ERepoPushFlag_Force = DMibBit(3)
 		};
 
+		enum ERepoCommitFlag
+		{
+			ERepoCommitFlag_None = 0
+			, ERepoCommitFlag_SkipCi = DMibBit(0)
+		};
+
 		enum ERepoBranchFlag
 		{
 			ERepoBranchFlag_None = 0
@@ -540,6 +546,14 @@ namespace NMib::NBuildSystem
 				, CRepoFilter const &_Filter
 				, NContainer::TCVector<NStr::CStr> const &_Remotes
 				, ERepoPushFlag _PushFlags
+			)
+		;
+
+		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_CommitRepos
+			(
+				CGenerateOptions const &_GenerateOptions
+				, ERepoCommitFlag _Flags
+				, uint32 _MaxCommitsPerSection
 			)
 		;
 

@@ -2368,6 +2368,44 @@ namespace NMib::NBuildSystem
 			co_return bChanged;
 		}
 
+		// Reads the global PerforceRoot.RepoCommit DSL object off the root
+		// entity. The Perforce root is not a %Repository, so both repo-commit
+		// (when generating the outermost changelist) and list-commits (when
+		// deciding whether to collapse a log entry to its first line) route
+		// through this helper to stay aligned on the configured MessageHeader
+		// and TransformScript. Returns an empty optional when the property is
+		// unset so callers can distinguish "no user override" from "override
+		// with empty fields".
+		NStorage::TCOptional<CRepoCommitOptions> fg_GetPerforceRootRepoCommitOptions(CBuildSystem &_BuildSystem, CBuildSystemData &_Data)
+		{
+			auto const PerforceRootJson = _BuildSystem.f_EvaluateEntityPropertyObject(_Data.m_RootEntity, gc_ConstKey_PerforceRoot, CEJsonSorted()).f_Move();
+			if (!PerforceRootJson.f_IsValid() || !PerforceRootJson.f_IsObject())
+				return {};
+
+			// `PerforceRoot` is an optional DSL object that contains an
+			// optional `RepoCommit` sub-object. When the user writes
+			// `PerforceRoot {}` (or no RepoCommit inside it) the nested member
+			// is absent, and the const `operator[]` on TCJsonValue throws
+			// `DMibError` for a missing member. Use `f_GetMember` so the
+			// helper returns an empty optional in that case instead of aborting
+			// repo-commit / list-commits with a hard error.
+			auto *pRepoCommitJson = PerforceRootJson.f_GetMember(gc_ConstKey_Repository_RepoCommit.m_Name);
+			if (!pRepoCommitJson || !pRepoCommitJson->f_IsObject())
+				return {};
+
+			// Both members are declared as `fg_Defaulted(g_String, "")` with
+			// `, true` (optional) in fp_RegisterBuiltinVariables. The evaluator
+			// always runs with EDoesValueConformToTypeFlag_CanApplyDefault, so
+			// whenever the enclosing RepoCommit object is present any missing
+			// sibling is materialized as the empty-string default before we
+			// read it — the typed f_String() accessors are safe even for
+			// one-field user configs.
+			CRepoCommitOptions Options;
+			Options.m_MessageHeader = (*pRepoCommitJson)[gc_ConstString_MessageHeader].f_String();
+			Options.m_TransformScript = (*pRepoCommitJson)[gc_ConstString_TransformScript].f_String();
+			return Options;
+		}
+
 		CRepoEditor fg_GetRepoEditor(CBuildSystem &_BuildSystem, CBuildSystemData &_Data)
 		{
 			CStr EditorString = _BuildSystem.f_EvaluateEntityPropertyString(_Data.m_RootEntity, gc_ConstKey_MalterlibRepositoryEditor);
@@ -2391,6 +2429,7 @@ namespace NMib::NBuildSystem
 			bool bIncludePolicy = fg_IsSet(_Flags, EGetRepoFlag::mc_IncludePolicy);
 			bool bIncludeReleasePackage = fg_IsSet(_Flags, EGetRepoFlag::mc_IncludeReleasePackage);
 			bool bIncludeLicense = fg_IsSet(_Flags, EGetRepoFlag::mc_IncludeLicense);
+			bool bIncludeRepoCommit = fg_IsSet(_Flags, EGetRepoFlag::mc_IncludeRepoCommit);
 
 			TCMap<CStr, CReposLocation> Repos;
 
@@ -2515,6 +2554,18 @@ namespace NMib::NBuildSystem
 								Config.m_Hooks[HookType] = fg_Move(HookFiles);
 						}
 						Config.m_HelperFiles = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, gc_ConstKey_Repository_HookHelperFiles, TCVector<CStr>());
+					}
+
+					if (bIncludeRepoCommit)
+					{
+						auto RepoCommitJson = _BuildSystem.f_EvaluateEntityPropertyObject(ChildEntity, gc_ConstKey_Repository_RepoCommit, CEJsonSorted()).f_Move();
+						if (RepoCommitJson.f_IsValid() && RepoCommitJson.f_IsObject())
+						{
+							CRepoCommitOptions Options;
+							Options.m_MessageHeader = RepoCommitJson[gc_ConstString_MessageHeader].f_AsString();
+							Options.m_TransformScript = RepoCommitJson[gc_ConstString_TransformScript].f_AsString();
+							Repo.m_RepoCommitOptions = fg_Move(Options);
+						}
 					}
 
 					Repo.m_OriginProperties.m_URL = URL;
