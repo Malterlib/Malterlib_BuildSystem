@@ -229,7 +229,8 @@ namespace NMib::NBuildSystem::NRepository
 			(
 				CRepository const &_Repo
 				, TCVector<CStr> const &_Params
-				, TCMap<CStr, CStr> const &_Environment = {}
+				, TCMap<CStr, CStr> const &_Environment
+				, CProcessLaunchActor::ESimpleLaunchFlag _Flags
 				, CStr const &_Application = "git"
 			) const
 		;
@@ -237,8 +238,8 @@ namespace NMib::NBuildSystem::NRepository
 			(
 				CStr const &_Directory
 				, TCVector<CStr> const &_Params
-				, TCMap<CStr, CStr> const &_Environment = {}
-				, CProcessLaunchActor::ESimpleLaunchFlag _Flags = CProcessLaunchActor::ESimpleLaunchFlag_None
+				, TCMap<CStr, CStr> const &_Environment
+				, CProcessLaunchActor::ESimpleLaunchFlag _Flags
 				, CStr const &_Application = "git"
 			) const
 		;

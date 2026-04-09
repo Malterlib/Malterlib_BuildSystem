@@ -167,7 +167,7 @@ namespace NMib::NBuildSystem::NRepository
 		if (_Flags & EFilterRepoFlag_OnlyTracked)
 			Params.f_Insert("-uno");
 
-		auto StdOut = (co_await _GitLaunches.f_Launch(_Repo, Params)).f_GetStdOut().f_Trim();
+		auto StdOut = (co_await _GitLaunches.f_Launch(_Repo, Params, {}, CProcessLaunchActor::ESimpleLaunchFlag_GenerateExceptionOnNonZeroExitCode)).f_GetStdOut().f_Trim();
 
 		CStr OriginalStdOut = StdOut;
 		CStr BranchLine = fg_GetStrLineSep(StdOut);
@@ -200,7 +200,7 @@ namespace NMib::NBuildSystem::NRepository
 		if (!_bIncludeUntracked)
 			Params.f_Insert("-uno");
 
-		auto Result = co_await _GitLaunches.f_Launch(_Repo, Params);
+		auto Result = co_await _GitLaunches.f_Launch(_Repo, Params, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 
 		if (Result.m_ExitCode)
 			co_return DMibErrorInstance(Result.f_GetErrorOut().f_Trim());
@@ -225,7 +225,7 @@ namespace NMib::NBuildSystem::NRepository
 		if (_bRemote)
 			Params.f_Insert("-r");
 
-		auto Result = co_await _GitLaunches.f_Launch(_Repo, Params);
+		auto Result = co_await _GitLaunches.f_Launch(_Repo, Params, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 
 		if (Result.m_ExitCode)
 			co_return DMibErrorInstance(Result.f_GetErrorOut().f_Trim());
@@ -252,7 +252,7 @@ namespace NMib::NBuildSystem::NRepository
 
 	TCFuture<TCVector<CStr>> fg_GetRemotes(CGitLaunches _GitLaunches, CRepository _Repo)
 	{
-		auto Result = co_await _GitLaunches.f_Launch(_Repo, {"remote"});
+		auto Result = co_await _GitLaunches.f_Launch(_Repo, {"remote"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 
 		if (Result.m_ExitCode)
 			co_return DMibErrorInstance(Result.f_GetErrorOut().f_Trim());
@@ -267,7 +267,7 @@ namespace NMib::NBuildSystem::NRepository
 
 	TCFuture<TCMap<CStr, CRemote>> fg_GetPushRemotes(CGitLaunches _GitLaunches, CRepository _Repo, TCVector<CStr> _Remotes)
 	{
-		auto Result = co_await _GitLaunches.f_Launch(_Repo, {"remote"});
+		auto Result = co_await _GitLaunches.f_Launch(_Repo, {"remote"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 
 		if (Result.m_ExitCode)
 			co_return DMibErrorInstance(Result.f_GetErrorOut().f_Trim());
@@ -275,7 +275,7 @@ namespace NMib::NBuildSystem::NRepository
 		TCFutureMap<CStr, CProcessLaunchActor::CSimpleLaunchResult> UrlResults;
 
 		for (auto &Remote : Result.f_GetStdOut().f_SplitLine<true>())
-			_GitLaunches.f_Launch(_Repo, {"remote", "get-url", Remote, "--push"}) > UrlResults[Remote];
+			_GitLaunches.f_Launch(_Repo, {"remote", "get-url", Remote, "--push"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None) > UrlResults[Remote];
 
 		auto LaunchResults = co_await fg_AllDone(UrlResults);
 
@@ -294,7 +294,7 @@ namespace NMib::NBuildSystem::NRepository
 
 	TCFuture<TCVector<CLogEntry>> fg_GetLogEntries(CGitLaunches _GitLaunches, CRepository _Repo, CStr _From, CStr _To, bool _bReportBadRevision)
 	{
-		auto LaunchResult = co_await _GitLaunches.f_Launch(_Repo, {"log", "{}..{}"_f << _From << _To, "--oneline", "--"});
+		auto LaunchResult = co_await _GitLaunches.f_Launch(_Repo, {"log", "{}..{}"_f << _From << _To, "--oneline", "--"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 
 		if (LaunchResult.m_ExitCode)
 		{
@@ -325,7 +325,7 @@ namespace NMib::NBuildSystem::NRepository
 
 	TCFuture<TCVector<CLogEntryFull>> fg_GetLogEntriesFull(CGitLaunches _GitLaunches, CRepository _Repo, CStr _From, CStr _To)
 	{
-		auto LogResult = co_await _GitLaunches.f_Launch(_Repo, {"log", "{}..{}"_f << _From << _To, "--pretty=raw", "--"});
+		auto LogResult = co_await _GitLaunches.f_Launch(_Repo, {"log", "{}..{}"_f << _From << _To, "--pretty=raw", "--"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 		if (LogResult.m_ExitCode)
 			co_return DMibErrorInstance(LogResult.f_GetErrorOut().f_Trim());
 
@@ -587,7 +587,13 @@ namespace NMib::NBuildSystem::NRepository
 						(
 							Launches.f_Launch(Repo, FetchParams, fg_LogAllFunctor(), {}, FetchEnvironment)
 							+ fg_AllDoneWrapped(RemoteQueryResults)
-							+ Launches.f_Launch(Repo, {"for-each-ref", "--format=%(upstream:short)", "refs/heads/{}"_f << Repo.m_OriginProperties.m_DefaultBranch})
+							+ Launches.f_Launch
+							(
+								Repo
+								, {"for-each-ref", "--format=%(upstream:short)", "refs/heads/{}"_f << Repo.m_OriginProperties.m_DefaultBranch}
+								, {}
+								, CProcessLaunchActor::ESimpleLaunchFlag_None
+							)
 						).f_Wrap()
 					;
 
@@ -599,7 +605,17 @@ namespace NMib::NBuildSystem::NRepository
 					TCFutureVector<void> SetHeadResults;
 
 					CStr ExpectedTracking = "origin/{}"_f << Repo.m_OriginProperties.m_DefaultBranch;
-					CStr CurrentTracking = TrackingResult ? TrackingResult->f_GetStdOut().f_Trim() : CStr();
+					CStr CurrentTracking;
+					if (TrackingResult)
+					{
+						if (TrackingResult->m_ExitCode != 0)
+							Launches.f_Output(EOutputType_Warning, Repo, "Failed to query default branch tracking branch: {}"_f << TrackingResult->f_GetCombinedOut().f_Trim());
+						else
+							CurrentTracking = TrackingResult->f_GetStdOut().f_Trim();
+					}
+					else
+						Launches.f_Output(EOutputType_Warning, Repo, "Failed to query default branch tracking branch: {}"_f << TrackingResult.f_GetExceptionStr());
+
 					if (CurrentTracking != ExpectedTracking)
 					{
 						Launches.f_Output(EOutputType_Normal, Repo, "Updating default branch remote tracking branch from {} to {}"_f << CurrentTracking << ExpectedTracking);
@@ -643,7 +659,7 @@ namespace NMib::NBuildSystem::NRepository
 				co_return GitVersion;
 		}
 
-		CStr VersionStr = (co_await _Launches.f_Launch(CStr(""), {"--version"})).f_GetStdOut().f_Trim();
+		CStr VersionStr = (co_await _Launches.f_Launch(CStr(""), {"--version"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_GenerateExceptionOnNonZeroExitCode)).f_GetStdOut().f_Trim();
 
 		CGitVersion Version;
 

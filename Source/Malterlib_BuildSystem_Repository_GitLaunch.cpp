@@ -463,8 +463,7 @@ namespace NMib::NBuildSystem::NRepository
 			CommandLineParams = {"-C", _Directory};
 		CommandLineParams.f_Insert(_Params);
 
-		CProcessLaunchActor::CSimpleLaunch LaunchParams{_Application, CommandLineParams};
-		LaunchParams.m_SimpleFlags = _Flags;
+		CProcessLaunchActor::CSimpleLaunch LaunchParams{_Application, CommandLineParams, {}, _Flags};
 
 		LaunchParams.m_Params.m_Environment += _Environment;
 		if (_Application != "git")
@@ -478,21 +477,11 @@ namespace NMib::NBuildSystem::NRepository
 			CRepository const &_Repo
 			, TCVector<CStr> const &_Params
 			, TCMap<CStr, CStr> const &_Environment
+			, CProcessLaunchActor::ESimpleLaunchFlag _Flags
 			, CStr const &_Application
 		) const
 	{
-		TCVector<CStr> CommandLineParams;
-		if (_Application == "git")
-			CommandLineParams = {"-C", _Repo.m_Location};
-		CommandLineParams.f_Insert(_Params);
-
-		CProcessLaunchActor::CSimpleLaunch LaunchParams{_Application, CommandLineParams};
-
-		LaunchParams.m_Params.m_Environment += _Environment;
-		if (_Application != "git")
-			LaunchParams.m_Params.m_WorkingDirectory = _Repo.m_Location;
-
-		return fp_Launch(fg_Move(LaunchParams));
+		return f_Launch(_Repo.m_Location, _Params, _Environment, _Flags, _Application);
 	}
 
 	TCUnsafeFuture<CProcessLaunchActor::CSimpleLaunchResult> CGitLaunches::f_OpenRepoEditor(CRepoEditor _Editor, CStr _Repo) const
@@ -506,7 +495,7 @@ namespace NMib::NBuildSystem::NRepository
 		for (auto &Param : Params)
 			Param = Param.f_Replace("{}", RepoNative);
 
-		CProcessLaunchActor::CSimpleLaunch LaunchParams{_Editor.m_Application, Params};
+		CProcessLaunchActor::CSimpleLaunch LaunchParams{_Editor.m_Application, Params, {}, CProcessLaunchActor::ESimpleLaunchFlag_None};
 		LaunchParams.m_Params.m_WorkingDirectory = _Editor.m_WorkingDir ? _Editor.m_WorkingDir : _Repo;
 
 		auto Result = co_await fp_Launch(fg_Move(LaunchParams)).f_Wrap();
@@ -544,7 +533,7 @@ namespace NMib::NBuildSystem::NRepository
 			CommandLineParams = {"-C", _Repo.m_Location};
 		CommandLineParams.f_Insert(_Params);
 
-		CProcessLaunchActor::CSimpleLaunch LaunchParams{_Application, CommandLineParams};
+		CProcessLaunchActor::CSimpleLaunch LaunchParams{_Application, CommandLineParams, {}, CProcessLaunchActor::ESimpleLaunchFlag_None};
 
 		LaunchParams.m_Params.m_Environment += _Environment;
 		if (_Application != "git")

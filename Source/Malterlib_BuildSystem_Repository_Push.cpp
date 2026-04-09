@@ -21,7 +21,7 @@ namespace NMib::NBuildSystem
 		{
 			using namespace NStr;
 
-			auto Result = co_await _Launches.f_Launch(_Repo, {"ls-remote", _Remote, "refs/heads/{}"_f << _Branch});
+			auto Result = co_await _Launches.f_Launch(_Repo, {"ls-remote", _Remote, "refs/heads/{}"_f << _Branch}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 			if (Result.m_ExitCode != 0)
 				co_return {};
 
@@ -41,7 +41,7 @@ namespace NMib::NBuildSystem
 
 		TCFuture<CStr> fg_GetShortHash(CGitLaunches _Launches, CRepository _Repo, CStr _FullHash)
 		{
-			auto Result = co_await _Launches.f_Launch(_Repo, {"rev-parse", "--short", _FullHash});
+			auto Result = co_await _Launches.f_Launch(_Repo, {"rev-parse", "--short", _FullHash}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 			if (Result.m_ExitCode != 0)
 				co_return _FullHash;
 
@@ -60,6 +60,7 @@ namespace NMib::NBuildSystem
 					_Repo
 					, FetchParams
 					, fg_FetchEnvironment(*_pBuildSystem)
+					, CProcessLaunchActor::ESimpleLaunchFlag_None
 				)
 			;
 
@@ -93,6 +94,8 @@ namespace NMib::NBuildSystem
 					(
 						_Repo
 						, {"merge-base", "--is-ancestor", "{}/{}"_f << Remote << _Branches.m_Current, _Branches.m_Current}
+						, {}
+						, CProcessLaunchActor::ESimpleLaunchFlag_None
 					)
 					> CanPushResultsMap[Remote]
 				;
@@ -394,7 +397,14 @@ namespace NMib::NBuildSystem
 								{
  									g_Dispatch / [Launches, Repo, TagInfo = *pTagInfo, Colors, Remote, CurrentBranch = Branches.m_Current, Params]() -> TCFuture<void>
 										{
-											auto TagResult = co_await Launches.f_Launch(Repo, {"tag", TagInfo.m_TagName, TagInfo.m_RemoteHash});
+											auto TagResult = co_await Launches.f_Launch
+												(
+													Repo
+													, {"tag", TagInfo.m_TagName, TagInfo.m_RemoteHash}
+													, {}
+													, CProcessLaunchActor::ESimpleLaunchFlag_None
+												)
+											;
 
 											if (TagResult.m_ExitCode == 0)
 											{
@@ -411,7 +421,14 @@ namespace NMib::NBuildSystem
 													)
 												;
 
-												auto TagPushResult = co_await Launches.f_Launch(Repo, {"push", Remote, "refs/tags/{}"_f << TagInfo.m_TagName});
+												auto TagPushResult = co_await Launches.f_Launch
+													(
+														Repo
+														, {"push", Remote, "refs/tags/{}"_f << TagInfo.m_TagName}
+														, {}
+														, CProcessLaunchActor::ESimpleLaunchFlag_None
+													)
+												;
 
 												if (TagPushResult.m_ExitCode == 0)
 												{

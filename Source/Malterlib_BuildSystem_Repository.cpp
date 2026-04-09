@@ -478,7 +478,7 @@ namespace NMib::NBuildSystem
 				{
 					co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
-					auto Return = co_await _Launches.f_Launch(_WorkingDir, _Params);
+					auto Return = co_await _Launches.f_Launch(_WorkingDir, _Params, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 
 					CStr StdErr = Return.f_GetErrorOut().f_Trim();
 					if (_bErrorOnStdErr && !StdErr.f_IsEmpty())
@@ -491,7 +491,7 @@ namespace NMib::NBuildSystem
 				{
 					co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
-					auto Return = co_await _Launches.f_Launch(_WorkingDir, _Params);
+					auto Return = co_await _Launches.f_Launch(_WorkingDir, _Params, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 
 					if (Return.m_ExitCode)
 						co_return false;
@@ -503,7 +503,7 @@ namespace NMib::NBuildSystem
 				{
 					co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
-					auto Return = co_await _Launches.f_Launch(_WorkingDir, _Params);
+					auto Return = co_await _Launches.f_Launch(_WorkingDir, _Params, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 
 
 					if (Return.m_ExitCode == 0)

@@ -219,7 +219,18 @@ namespace NMib::NBuildSystem
 						else
 							RemotesFuture = TCVector<CStr>();
 
-						auto [LaunchResult, RemotesVector] = co_await (Launches.f_Launch(Repo, Params) + fg_Move(RemotesFuture));
+						auto [LaunchResult, RemotesVector] = co_await
+							(
+								Launches.f_Launch(Repo, Params, {}, CProcessLaunchActor::ESimpleLaunchFlag_None)
+								+ fg_Move(RemotesFuture)
+							)
+						;
+
+						if (LaunchResult.m_ExitCode != 0)
+						{
+							Launches.f_Output(EOutputType_Error, Repo, "Failed to list branches: {}"_f << LaunchResult.f_GetCombinedOut().f_Trim());
+							co_return {};
+						}
 
 						auto Remotes = TCSet<CStr>::fs_FromContainer(fg_Move(RemotesVector));
 
@@ -338,11 +349,19 @@ namespace NMib::NBuildSystem
 									{
 										auto [MergeResult, RebaseResult] = co_await
 											(
-												Launches.f_Launch(Repo, {"merge-base", "--is-ancestor", FullBranch, "{}/{}"_f << CompareRemote << Repo.m_OriginProperties.m_DefaultBranch})
+												Launches.f_Launch
+												(
+													Repo
+													, {"merge-base", "--is-ancestor", FullBranch, "{}/{}"_f << CompareRemote << Repo.m_OriginProperties.m_DefaultBranch}
+													, {}
+													, CProcessLaunchActor::ESimpleLaunchFlag_None
+												)
 												+ Launches.f_Launch
 												(
 													Repo
 													, {"log", "--oneline", "--cherry", "{}/{}...{}"_f << CompareRemote << Repo.m_OriginProperties.m_DefaultBranch << FullBranch}
+													, {}
+													, CProcessLaunchActor::ESimpleLaunchFlag_None
 												)
 											)
 										;
@@ -479,7 +498,18 @@ namespace NMib::NBuildSystem
 						else
 							RemotesFuture = TCVector<CStr>();
 
-						auto [TagResult, RemotesVector] = co_await (Launches.f_Launch(Repo, {"tag"}) + fg_Move(RemotesFuture));
+						auto [TagResult, RemotesVector] = co_await
+							(
+								Launches.f_Launch(Repo, {"tag"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None)
+								+ fg_Move(RemotesFuture)
+							)
+						;
+
+						if (TagResult.m_ExitCode != 0)
+						{
+							Launches.f_Output(EOutputType_Error, Repo, "Failed to list tags: {}"_f << TagResult.f_GetCombinedOut().f_Trim());
+							co_return {};
+						}
 
 						auto Remotes = TCSet<CStr>::fs_FromContainer(fg_Move(RemotesVector));
 
@@ -487,7 +517,7 @@ namespace NMib::NBuildSystem
 
 						TCFutureMap<CStr, CProcessLaunchActor::CSimpleLaunchResult> RemoteTagsResults;
 						for (auto &Remote : Remotes)
-							Launches.f_Launch(Repo, {"ls-remote", "--tags", Remote}) > RemoteTagsResults[Remote];
+							Launches.f_Launch(Repo, {"ls-remote", "--tags", Remote}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None) > RemoteTagsResults[Remote];
 
 						auto RemoteTags = co_await fg_AllDoneWrapped(RemoteTagsResults);
 
@@ -529,6 +559,11 @@ namespace NMib::NBuildSystem
 							if (!LaunchResult)
 							{
 								Launches.f_Output(EOutputType_Error, Repo, "{} - Failed to query tags: {}"_f << Remote << LaunchResult.f_GetExceptionStr());
+								continue;
+							}
+							else if ((*LaunchResult).m_ExitCode != 0)
+							{
+								Launches.f_Output(EOutputType_Error, Repo, "{} - Failed to query tags: {}"_f << Remote << (*LaunchResult).f_GetCombinedOut().f_Trim());
 								continue;
 							}
 
@@ -625,8 +660,20 @@ namespace NMib::NBuildSystem
 									{
 										auto [MergeResult, RebaseResult] = co_await
 											(
-												Launches.f_Launch(Repo, {"merge-base", "--is-ancestor", Tag.f_GetRef(), "{}/{}"_f << CompareRemote << Repo.m_OriginProperties.m_DefaultBranch})
-												+ Launches.f_Launch(Repo, {"log", "--oneline", "--cherry", "{}/{}...{}"_f << CompareRemote << Repo.m_OriginProperties.m_DefaultBranch << Tag.f_GetRef()})
+												Launches.f_Launch
+												(
+													Repo
+													, {"merge-base", "--is-ancestor", Tag.f_GetRef(), "{}/{}"_f << CompareRemote << Repo.m_OriginProperties.m_DefaultBranch}
+													, {}
+													, CProcessLaunchActor::ESimpleLaunchFlag_None
+												)
+												+ Launches.f_Launch
+												(
+													Repo
+													, {"log", "--oneline", "--cherry", "{}/{}...{}"_f << CompareRemote << Repo.m_OriginProperties.m_DefaultBranch << Tag.f_GetRef()}
+													, {}
+													, CProcessLaunchActor::ESimpleLaunchFlag_None
+												)
 											)
 										;
 
