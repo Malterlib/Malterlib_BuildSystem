@@ -411,30 +411,20 @@ namespace NMib::NBuildSystem
 
 		void fg_OutputRepositoryInfo(EOutputType _OutputType, CStr const &_Info, CStateHandler &o_StateHandler, CStr const &_RepoName, umint _MaxRepoWidth)
 		{
-			CColors Colors(o_StateHandler.f_AnsiFlags());
-			CStr RepoColor = Colors.f_StatusNormal();
-			switch (_OutputType)
-			{
-			case EOutputType_Normal: RepoColor = Colors.f_StatusNormal(); break;
-			case EOutputType_Warning: RepoColor = Colors.f_StatusWarning(); break;
-			case EOutputType_Error: RepoColor = Colors.f_StatusError(); break;
-			}
-
-			CStr RepoName = "{sj*,a-}"_f << _RepoName << _MaxRepoWidth;
-
-			CStr ReplacedRepo = RepoName.f_Replace("/", "{}{}/{}"_f << Colors.f_Default() << Colors.f_Foreground256(250) << RepoColor ^ 1);
-			{
-				DMibLock(o_StateHandler.f_ConsoleOutputLock());
-				o_StateHandler.f_ConsoleOutput
-					(
-						"{}{}{}   {}\n"_f
-						<< RepoColor
-						<< ReplacedRepo
-						<< Colors.f_Default()
-						<< _Info
-					)
-				;
-			}
+			fg_OutputRepositoryInfo
+				(
+					_OutputType
+					, _Info
+					, o_StateHandler.f_AnsiFlags()
+					, _RepoName
+					, _MaxRepoWidth
+					, [&](CStr const &_Line)
+					{
+						DMibLock(o_StateHandler.f_ConsoleOutputLock());
+						o_StateHandler.f_ConsoleOutput(_Line);
+					}
+				)
+			;
 		}
 
 		TCUnsafeFuture<bool> DMibWorkaroundUBSanSectionErrors fg_HandleRepository

@@ -503,4 +503,18 @@ namespace NMib::NBuildSystem::NRepository
 	;
 
 	TCFuture<void> fg_ApplyPolicies(CStr _Url, CStr _RepoDir, CEJsonSorted _Policy, EApplyPolicyFlag _Flags, TCFunction<void (EOutputType _OutputType, CStr const &_String)> _fOutputInfo);
+
+	template <typename tf_FOutput>
+	void fg_OutputRepositoryInfo
+		(
+			EOutputType _OutputType
+			, CStr const &_Info
+			, EAnsiEncodingFlag _AnsiFlags
+			, CStr const &_RepoName
+			, umint _MaxRepoWidth
+			, tf_FOutput const &_fOutput
+		)
+	;
 }
+
+#include "Malterlib_BuildSystem_Repository.hpp"
