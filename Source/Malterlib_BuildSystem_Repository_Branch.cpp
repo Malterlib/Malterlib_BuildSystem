@@ -13,8 +13,7 @@ namespace NMib::NBuildSystem
 
 	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::fp_BranchRootRepo(CGenerateEphemeralState &_GenerateState, TCOptional<CStr> const &_Branch, ERepoBranchFlag _Flags)
 	{
-		if (!CFile::fs_FileExists(f_GetBaseDir() + "/.git", EFileAttrib_Directory | EFileAttrib_File))
-			co_return ERetry_None;
+		bool bIsGitRoot = CFile::fs_FileExists(f_GetBaseDir() + "/.git", EFileAttrib_Directory | EFileAttrib_File);
 
 		auto ReposOrdered = fg_GetRepos(*this, mp_Data, EGetRepoFlag::mc_None);
 		auto MainBranchInfo = fg_GetMainRepoBranchInfo(f_GetBaseDir(), ReposOrdered);
@@ -22,6 +21,49 @@ namespace NMib::NBuildSystem
 		CStr Branch = _Branch ? *_Branch : MainBranchInfo.m_DefaultBranch;
 		if (Branch.f_IsEmpty() || MainBranchInfo.m_Branch == Branch)
 			co_return ERetry_None;
+
+		if (!bIsGitRoot)
+		{
+			// Non-git root: update .malterlib-branch file
+			if (_Flags & ERepoBranchFlag_Pretend)
+				f_OutputConsole("Pretend mode: nested repository operations are not previewed\n"_f);
+			else
+			{
+				CStr BranchFile = f_GetBaseDir() + "/.malterlib-branch";
+				CStateHandler StateHandler{f_GetBaseDir(), mp_OutputDir, mp_AnsiFlags, mp_fOutputConsole};
+				StateHandler.f_AddGitIgnore(BranchFile, *this, EGitIgnoreType::mc_GitIgnore);
+				// "master" is the sentinel for the unbranched/default state in non-git
+				// roots (see fg_GetMainRepoBranchInfo, which hard-codes the main-repo
+				// default branch to "master" when there is no git metadata to consult).
+				// Deleting the file returns to that default state; individual repos map
+				// it to their own configured default branch via fg_GetExpectedBranch().
+				//
+				// This is deliberately the same behavior as a real git root whose default
+				// branch is "master": in that setup `mib branch master` also checks out the
+				// main repo's default branch and then fg_GetExpectedBranch() resolves each
+				// nested repo to its own Repository.DefaultBranch (which may be "main",
+				// "master", or anything else). Persisting the literal string "master" here
+				// instead would diverge from the git-root case and force every nested repo
+				// onto a literal "master" branch that may not even exist. The non-git root
+				// cannot distinguish "I want the workspace default" from "I want the literal
+				// branch named master" because it has no authoritative default-branch
+				// metadata — by convention the default is always the sentinel, matching the
+				// git-root-with-master-default behavior.
+				if (Branch == "master")
+					CFile::fs_DeleteFile(BranchFile);
+				else
+					CFile::fs_WriteStringToFile(BranchFile, Branch, false);
+
+				// The branch file changed, so the build system data (mp_Data) parsed during
+				// fp_GeneratePrepare is now stale. Retry so the outer loop creates a fresh
+				// CBuildSystem that re-parses from the new branch's configuration files.
+				// Use ForceUpdate so fp_HandleRepositories runs even with --skip-update,
+				// otherwise nested repos would not be reconciled to the new branch.
+				co_return ERetry_Again_ForceUpdate;
+			}
+
+			co_return ERetry_None;
+		}
 
 		CGitLaunches Launches{f_GetGitLaunchOptions("branch-root"), "Switching root repo branch"};
 		auto DestroyLaunchs = co_await co_await Launches.f_Init();

@@ -902,6 +902,26 @@ namespace NMib::NBuildSystem::NRepository
 			CStr CommonDir = fg_GetGitCommonDir(DataDir, CFilePosition{});
 			fg_DetectGitBranchInfo(DataDir, CommonDir, Info.m_Branch, Info.m_DefaultBranch);
 		}
+		else
+		{
+			// Non-git root: read .malterlib-branch file
+			// There is no git metadata here that tells us the workspace's real default branch.
+			// Use "master" as the sentinel for the unbranched/default state because mib branch
+			// and mib unbranch persist that state via .malterlib-branch using the same convention.
+			// This value is only the main-workspace sentinel: individual repositories still map
+			// that default state to their own Repository.DefaultBranch via fg_GetExpectedBranch().
+			CStr BranchFile = _BaseDir + "/.malterlib-branch";
+			if (CFile::fs_FileExists(BranchFile))
+			{
+				Info.m_Branch = CFile::fs_ReadStringFromFile(BranchFile, true).f_Trim();
+				if (Info.m_Branch.f_IsEmpty())
+					Info.m_Branch = "master";
+			}
+			else
+				Info.m_Branch = "master";
+
+			Info.m_DefaultBranch = "master";
+		}
 
 		return Info;
 	}
