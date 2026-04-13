@@ -2024,6 +2024,7 @@ namespace NMib::NBuildSystem
 		{
 			bool bIncludePolicy = fg_IsSet(_Flags, EGetRepoFlag::mc_IncludePolicy);
 			bool bIncludeReleasePackage = fg_IsSet(_Flags, EGetRepoFlag::mc_IncludeReleasePackage);
+			bool bIncludeLicense = fg_IsSet(_Flags, EGetRepoFlag::mc_IncludeLicense);
 
 			TCMap<CStr, CReposLocation> Repos;
 
@@ -2155,6 +2156,23 @@ namespace NMib::NBuildSystem
 								.f_Move()
 							;
 							Repo.m_OriginProperties.m_bApplyPolicyPretend = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_ApplyPolicyPretend, false);
+						}
+					}
+
+					if (bIncludeLicense)
+					{
+						// Types and defaults for CheckLicense/License are defined in Core/Build/Shared_RepositoryLicense.MSettings
+						Repo.m_bCheckLicense = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_CheckLicense, false);
+						if (Repo.m_bCheckLicense)
+						{
+							Repo.m_License = _BuildSystem.f_EvaluateEntityPropertyObject
+								(
+									ChildEntity
+									, gc_ConstKey_Repository_License
+									, CEJsonSorted(EJsonType_Object)
+								)
+								.f_Move()
+							;
 						}
 					}
 

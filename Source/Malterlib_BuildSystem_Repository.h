@@ -133,6 +133,8 @@ namespace NMib::NBuildSystem::NRepository
 		bool m_bBootstrapSource = false;
 		bool m_bUpdateSubmodules = false;
 		EGitIgnoreType m_GitIgnoreType = EGitIgnoreType::mc_GitIgnore;
+		CEJsonSorted m_License;
+		bool m_bCheckLicense = false;
 	};
 
 	struct CRepositoryDynamicInfo
@@ -490,7 +492,8 @@ namespace NMib::NBuildSystem::NRepository
 	{
 		mc_None = 0
 		, mc_IncludePolicy = DMibBit(0)
-		, mc_IncludeReleasePackage = DMibBit(0)
+		, mc_IncludeReleasePackage = DMibBit(1)
+		, mc_IncludeLicense = DMibBit(2)
 	};
 
 	TCUnsafeFuture<CGitVersion> fg_GetGitVersion(CGitLaunches &_Launches);

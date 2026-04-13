@@ -254,6 +254,13 @@ namespace NMib::NBuildSystem
 			bool m_bShowProgress = true;
 		};
 
+		enum class ECheckLicenseFlag
+		{
+			mc_None = 0
+			, mc_Fix = DMibBit(0)
+			, mc_ShowAll = DMibBit(1)
+		};
+
 		void f_SetGeneratorInterface(ICGeneratorInterface *_pInterface) const;
 		NConcurrency::TCFuture<void> f_GenerateBuildSystem
 			(
@@ -556,6 +563,15 @@ namespace NMib::NBuildSystem
 			(
 				CGenerateOptions const &_GenerateOptions
 				, CRepoFilter const &_Filter
+				, NStorage::TCSharedPointer<NConcurrency::CCommandLineControl> const &_pCommandLine
+			)
+		;
+
+		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_CheckLicense
+			(
+				CGenerateOptions const &_GenerateOptions
+				, CRepoFilter const &_Filter
+				, ECheckLicenseFlag _Flags
 				, NStorage::TCSharedPointer<NConcurrency::CCommandLineControl> const &_pCommandLine
 			)
 		;
