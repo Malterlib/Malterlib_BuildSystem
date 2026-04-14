@@ -71,5 +71,6 @@ namespace NMib::NBuildSystem
 		bool m_bUpdateLfsReleaseIndexes = false;
 		bool m_bUpdateLfsReleaseIndexesPretend = false;
 		bool m_bUpdateLfsReleaseIndexesPruneOrphanedAssets = false;
+		bool m_bShowProgress = true;
 	};
 }

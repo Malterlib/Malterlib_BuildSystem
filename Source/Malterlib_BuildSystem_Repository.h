@@ -206,16 +206,7 @@ namespace NMib::NBuildSystem::NRepository
 
 	struct CGitLaunches
 	{
-		CGitLaunches
-			(
-				CStr const &_BaseDir
-				, CStr const &_ProgressDescription
-				, EAnsiEncodingFlag _AnsiFlags
-				, uint32 _TerminalWidth
-				, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
-				, NStorage::TCSharedPointer<TCAtomic<bool>> const &_pCancelled
-			)
-		;
+		CGitLaunches(CBuildSystem::CGitLaunchOptions const &_Options, CStr const &_ProgressDescription);
 		CGitLaunches(CGitLaunches const &_Other);
 		CGitLaunches(CGitLaunches &&_Other) = default;
 
@@ -268,16 +259,7 @@ namespace NMib::NBuildSystem::NRepository
 		struct COwner;
 		struct CState
 		{
-			CState
-				(
-					CStr const &_BaseDir
-					, CStr const &_ProgressDescription
-					, EAnsiEncodingFlag _AnsiFlags
-					, uint32 _TerminalWidth
-					, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
-					, NStorage::TCSharedPointer<TCAtomic<bool>> const &_pCancelled
-				)
-			;
+			CState(CBuildSystem::CGitLaunchOptions const &_Options, CStr const &_ProgressDescription);
 			~CState();
 
 			void f_OutputState() const;
@@ -288,6 +270,7 @@ namespace NMib::NBuildSystem::NRepository
 
 			CMutual m_Lock;
 			CStr m_BaseDir;
+			CStr m_InvocationCommand;
 			TCActor<> m_OutputActor{fg_Construct()};
 			TCMap<umint, TCActor<CProcessLaunchActor>> m_Launches;
 			TCMap<umint, zbool> m_LaunchesAborted;
@@ -308,6 +291,7 @@ namespace NMib::NBuildSystem::NRepository
 			TCAtomic<umint> m_nRepos = 0;
 			EAnsiEncodingFlag m_AnsiFlags;
 			uint32 m_TerminalWidth = 0;
+			bool m_bShowProgress = true;
 			NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> m_fOutputConsole;
 
 			NStorage::TCSharedPointer<TCAtomic<bool>> m_pCancelled;

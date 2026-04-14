@@ -20,10 +20,12 @@ namespace NMib::NBuildSystem
 			, uint32 _TerminalWidth
 			, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
 			, NStorage::TCSharedPointer<TCAtomic<bool>> const &_pCancelled
+			, bool _bShowProgress
 		)
 		: mp_NowUTC(NTime::CTime::fs_NowUTC())
 		, mp_AnsiFlags(_AnsiFlags)
 		, mp_TerminalWidth(_TerminalWidth)
+		, mp_bShowProgress(_bShowProgress)
 		, mp_pCancelled(_pCancelled)
 		, mp_fOutputConsole(_fOutputConsole)
 	{
@@ -85,6 +87,26 @@ namespace NMib::NBuildSystem
 	uint32 CBuildSystem::f_TerminalWidth() const
 	{
 		return mp_TerminalWidth;
+	}
+
+	bool CBuildSystem::f_ShowProgress() const
+	{
+		return mp_bShowProgress;
+	}
+
+	CBuildSystem::CGitLaunchOptions CBuildSystem::f_GetGitLaunchOptions(NStr::CStr _Command) const
+	{
+		return
+			{
+				.m_BaseDir = f_GetBaseDir()
+				, .m_InvocationCommand = fg_Move(_Command)
+				, .m_AnsiFlags = mp_AnsiFlags
+				, .m_TerminalWidth = mp_TerminalWidth
+				, .m_fOutputConsole = mp_fOutputConsole
+				, .m_pCancelled = f_GetCancelledPointer()
+				, .m_bShowProgress = mp_bShowProgress
+			}
+		;
 	}
 
 	TCMap<CStr, TCSharedPointer<CHashDigest_SHA256>> CBuildSystem::f_GetSourceFiles() const

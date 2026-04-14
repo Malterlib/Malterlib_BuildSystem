@@ -10,34 +10,20 @@
 
 namespace NMib::NBuildSystem::NRepository
 {
-	CGitLaunches::CState::CState
-		(
-			CStr const &_BaseDir
-			, CStr const &_ProgressDescription
-			, EAnsiEncodingFlag _AnsiFlags
-			, uint32 _TerminalWidth
-			, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
-			, NStorage::TCSharedPointer<TCAtomic<bool>> const &_pCancelled
-		)
-		: m_BaseDir(_BaseDir)
+	CGitLaunches::CState::CState(CBuildSystem::CGitLaunchOptions const &_Options, CStr const &_ProgressDescription)
+		: m_BaseDir(_Options.m_BaseDir)
+		, m_InvocationCommand(_Options.m_InvocationCommand)
 		, m_ProgressDescription(_ProgressDescription)
-		, m_AnsiFlags(_AnsiFlags)
-		, m_TerminalWidth(_TerminalWidth)
-		, m_fOutputConsole(_fOutputConsole)
-		, m_pCancelled(_pCancelled)
+		, m_AnsiFlags(_Options.m_AnsiFlags)
+		, m_TerminalWidth(_Options.m_TerminalWidth)
+		, m_bShowProgress(_Options.m_bShowProgress)
+		, m_fOutputConsole(_Options.m_fOutputConsole)
+		, m_pCancelled(_Options.m_pCancelled)
 	{
 	}
 
-	CGitLaunches::CGitLaunches
-		(
-			CStr const &_BaseDir
-			, CStr const &_ProgressDescription
-			, EAnsiEncodingFlag _AnsiFlags
-			, uint32 _TerminalWidth
-			, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
-			, NStorage::TCSharedPointer<TCAtomic<bool>> const &_pCancelled
-		)
-		: m_pState(fg_Construct(_BaseDir, _ProgressDescription, _AnsiFlags, _TerminalWidth, _fOutputConsole, _pCancelled))
+	CGitLaunches::CGitLaunches(CBuildSystem::CGitLaunchOptions const &_Options, CStr const &_ProgressDescription)
+		: m_pState(fg_Construct(_Options, _ProgressDescription))
 	{
 		m_pOwner = fg_Construct(m_pState);
 	}
@@ -157,6 +143,9 @@ namespace NMib::NBuildSystem::NRepository
 
 	void CGitLaunches::CState::f_OutputState() const
 	{
+		if (!m_bShowProgress)
+			return;
+
 		DMibLock(m_ConsoleOutputLock);
 
 		CUStr ToOutput = CStr{"  {}: {}/{} repos done"_f << m_ProgressDescription << m_nDoneRepos.f_Load() << m_nRepos.f_Load()};

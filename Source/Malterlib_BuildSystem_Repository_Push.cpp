@@ -197,7 +197,7 @@ namespace NMib::NBuildSystem
 
 		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(_Filter, *this, mp_Data, EGetRepoFlag::mc_None);
 
-		CGitLaunches Launches{f_GetBaseDir(), (_PushFlags & ERepoPushFlag_Pretend) ? "Pretending to push repos" : "Pushing repos", mp_AnsiFlags, mp_TerminalWidth, mp_fOutputConsole, f_GetCancelledPointer()};
+		CGitLaunches Launches{f_GetGitLaunchOptions("push"), (_PushFlags & ERepoPushFlag_Pretend) ? "Pretending to push repos" : "Pushing repos"};
 		auto DestroyLaunchs = co_await co_await Launches.f_Init();
 
 		CColors Colors(mp_AnsiFlags);

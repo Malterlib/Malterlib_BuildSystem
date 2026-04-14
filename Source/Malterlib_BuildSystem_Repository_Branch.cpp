@@ -165,7 +165,7 @@ namespace NMib::NBuildSystem
 		if (_Flags & ERepoCleanupBranchesFlag_UpdateRemotes)
 			co_await fg_UpdateRemotes(*this, FilteredRepositories);
 
-		CGitLaunches Launches{f_GetBaseDir(), "Cleaning up branches", mp_AnsiFlags, mp_TerminalWidth, mp_fOutputConsole, f_GetCancelledPointer()};
+		CGitLaunches Launches{f_GetGitLaunchOptions("cleanup-branches"), "Cleaning up branches"};
 		auto DestroyLaunchs = co_await co_await Launches.f_Init();
 
 		CColors Colors(mp_AnsiFlags);
@@ -449,7 +449,7 @@ namespace NMib::NBuildSystem
 		if (_Flags & ERepoCleanupTagsFlag_UpdateRemotes)
 			co_await fg_UpdateRemotes(*this, FilteredRepositories);
 
-		CGitLaunches Launches{f_GetBaseDir(), "Cleaning up tags", mp_AnsiFlags, mp_TerminalWidth, mp_fOutputConsole, f_GetCancelledPointer()};
+		CGitLaunches Launches{f_GetGitLaunchOptions("cleanup-tags"), "Cleaning up tags"};
 		auto DestroyLaunchs = co_await co_await Launches.f_Init();
 
 		CColors Colors(mp_AnsiFlags);

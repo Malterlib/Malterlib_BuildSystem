@@ -84,7 +84,7 @@ namespace NMib::NBuildSystem
 		if (_Flags & ERepoListCommitsFlag_UpdateRemotes)
 			co_await fg_UpdateRemotes(*this, FilteredRepositories, " (Disable with --local) ");
 
-		CGitLaunches Launches{f_GetBaseDir(), "Listing Commits", mp_AnsiFlags, mp_TerminalWidth, mp_fOutputConsole, f_GetCancelledPointer()};
+		CGitLaunches Launches{f_GetGitLaunchOptions("list-commits"), "Listing Commits"};
 		auto DestroyLaunchs = co_await co_await Launches.f_Init();
 
 		CStateHandler StateHandler{f_GetBaseDir(), mp_OutputDir, mp_AnsiFlags, mp_fOutputConsole};

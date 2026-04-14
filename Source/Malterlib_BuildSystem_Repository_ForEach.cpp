@@ -25,7 +25,7 @@ namespace NMib::NBuildSystem
 
 		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(_Filter, *this, mp_Data, EGetRepoFlag::mc_None);
 
-		CGitLaunches Launches{f_GetBaseDir(), "Running for each repo", mp_AnsiFlags, mp_TerminalWidth, mp_fOutputConsole, f_GetCancelledPointer()};
+		CGitLaunches Launches{f_GetGitLaunchOptions("git"), "Running for each repo"};
 		auto DestroyLaunchs = co_await co_await Launches.f_Init();
 
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
@@ -76,7 +76,7 @@ namespace NMib::NBuildSystem
 
 		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(_Filter, *this, mp_Data, EGetRepoFlag::mc_None);
 
-		CGitLaunches Launches{f_GetBaseDir(), "Running for each repo", mp_AnsiFlags, mp_TerminalWidth, mp_fOutputConsole, f_GetCancelledPointer()};
+		CGitLaunches Launches{f_GetGitLaunchOptions("repo-run"), "Running for each repo"};
 		auto DestroyLaunchs = co_await co_await Launches.f_Init();
 
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);

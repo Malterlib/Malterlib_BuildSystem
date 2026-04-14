@@ -52,6 +52,7 @@ namespace NMib::NBuildSystem
 				, uint32 _TerminalWidth
 				, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
 				, NStorage::TCSharedPointer<NAtomic::TCAtomic<bool>> const &_pCancelled
+				, bool _bShowProgress = true
 			)
 		;
 		CBuildSystem(CBuildSystem const &) = delete;
@@ -236,6 +237,17 @@ namespace NMib::NBuildSystem
 			NContainer::TCVector<NStr::CStr> m_Params;
 			NStr::CStr m_Application;
 			bool m_bParallel = true;
+		};
+
+		struct CGitLaunchOptions
+		{
+			NStr::CStr m_BaseDir;
+			NStr::CStr m_InvocationCommand;
+			NCommandLine::EAnsiEncodingFlag m_AnsiFlags = NCommandLine::EAnsiEncodingFlag_None;
+			uint32 m_TerminalWidth = 0;
+			NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> m_fOutputConsole;
+			NStorage::TCSharedPointer<NAtomic::TCAtomic<bool>> m_pCancelled;
+			bool m_bShowProgress = true;
 		};
 
 		void f_SetGeneratorInterface(ICGeneratorInterface *_pInterface) const;
@@ -539,6 +551,9 @@ namespace NMib::NBuildSystem
 
 		NCommandLine::EAnsiEncodingFlag f_AnsiFlags() const;
 		uint32 f_TerminalWidth() const;
+		bool f_ShowProgress() const;
+
+		CGitLaunchOptions f_GetGitLaunchOptions(NStr::CStr _Command) const;
 
 		void f_RegisterFunctions(NContainer::TCMap<NStr::CStr, CBuiltinFunction> &&_Functions);
 		void f_RegisterBuiltinVariables(NContainer::TCMap<CPropertyKey, CTypeWithPosition> &&_Variables) const;
@@ -1152,6 +1167,7 @@ namespace NMib::NBuildSystem
 		bool mp_bDebugFileLocks = fg_GetSys()->f_GetEnvironmentVariable("MalterlibBuildSystemDebugFileLocks", "false") == gc_ConstString_true.m_String;
 		NCommandLine::EAnsiEncodingFlag mp_AnsiFlags = NCommandLine::EAnsiEncodingFlag_None;
 		uint32 mp_TerminalWidth = 0;
+		bool mp_bShowProgress = true;
 		bool mp_bEnablePositions = false;
 		bool mp_bEnableValues = false;
 		mutable NAtomic::TCAtomic<bool> mp_bGlobalMToolAlreadySetup = false;
