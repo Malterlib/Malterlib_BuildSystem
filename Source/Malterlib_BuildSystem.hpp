@@ -32,6 +32,36 @@ namespace NMib::NBuildSystem
 		m_Context.m_pEvaluatedProperties = m_pOldProperties;
 	}
 
+	template <typename t_CValue>
+	auto CBuildSystem::fs_FindContainingPath(NContainer::TCMap<NStr::CStr, t_CValue> const &_Paths, NStr::CStr const &_Path, NStr::CStr &o_OwnerPath)
+		-> decltype(_Paths.f_FindEqual(_Path))
+	{
+		o_OwnerPath.f_Clear();
+
+		if (auto *pExact = _Paths.f_FindEqual(_Path))
+		{
+			o_OwnerPath = _Path;
+			return pExact;
+		}
+
+		for (NStr::CStr SearchPath = _Path;;)
+		{
+			NStr::CStr ParentPath = NFile::CFile::fs_GetPath(SearchPath);
+			if (ParentPath == SearchPath || ParentPath.f_IsEmpty())
+				break;
+
+			SearchPath = fg_Move(ParentPath);
+
+			if (auto *pOwner = _Paths.f_FindEqual(SearchPath))
+			{
+				o_OwnerPath = SearchPath;
+				return pOwner;
+			}
+		}
+
+		return nullptr;
+	}
+
 	template <typename tf_CStr>
 	void CBuildSystem::CTypeConformError::f_Format(tf_CStr &o_Str) const
 	{

@@ -1078,8 +1078,9 @@ namespace NMib::NBuildSystem
 									else
 										RecommendedAction = EHandleRepositoryAction_ManualResolve;
 
-									auto *pRepo = _AllRepositories.f_FindLargestLessThanEqual(_Repo.m_ConfigFile);
-									if (!pRepo || !_Repo.m_ConfigFile.f_StartsWith((*pRepo)->m_Location))
+									CStr OwnerLocation;
+									auto *pRepo = CBuildSystem::fs_FindContainingPath(_AllRepositories, _Repo.m_ConfigFile, OwnerLocation);
+									if (!pRepo)
 									{
 										//fOutputInfo(EOutputType_Warning, "Could not find containing repo for config file '{}'"_f << _Repo.m_ConfigFile);
 										break;
@@ -1614,17 +1615,14 @@ namespace NMib::NBuildSystem
 
 						bAllAdded = false;
 
-						auto *pDependency = RepoRoots.f_FindLargestLessThanEqual(_Repo.m_ConfigFile);
+						CStr DependencyRoot;
+						auto *pDependency = CBuildSystem::fs_FindContainingPath(RepoRoots, _Repo.m_ConfigFile, DependencyRoot);
 						if (pDependency)
 						{
-							auto &DependencyRoot = RepoRoots.fs_GetKey(*pDependency);
-							if (_Repo.m_ConfigFile.f_StartsWith(DependencyRoot))
+							if (!AddedRepos.f_FindEqual(DependencyRoot))
 							{
-								if (!AddedRepos.f_FindEqual(DependencyRoot))
-								{
-									LeftFilePos = _Repo.m_Position;
-									return;
-								}
+								LeftFilePos = _Repo.m_Position;
+								return;
 							}
 						}
 

@@ -443,6 +443,12 @@ namespace NMib::NBuildSystem
 				, NContainer::TCVector<CBuildSystemError> const &_Errors = {}
 			)
 		;
+
+		template <typename t_CValue>
+		static auto fs_FindContainingPath(NContainer::TCMap<NStr::CStr, t_CValue> const &_Paths, NStr::CStr const &_Path, NStr::CStr &o_OwnerPath)
+			-> decltype(_Paths.f_FindEqual(_Path))
+		;
+
 		static NStr::CStr fs_GetNameIdentifierString(CBuildSystemRegistry const &_Registry);
 		void f_AddSourceFile(NStr::CStr const &_File, NStorage::TCSharedPointer<NCryptography::CHashDigest_SHA256> &&_pDigest) const;
 		NStr::CStr f_ReadFile(NStr::CStr const &_File) const;
