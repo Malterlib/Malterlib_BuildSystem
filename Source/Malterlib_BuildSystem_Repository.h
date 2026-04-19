@@ -102,7 +102,7 @@ namespace NMib::NBuildSystem::NRepository
 		CStr m_MessageHeader;
 		CStr m_TransformScript;
 	};
-	
+
 	struct CRepository
 	{
 		CRepository(CStr const &_Name)
@@ -345,6 +345,7 @@ namespace NMib::NBuildSystem::NRepository
 
 			mutable CMutual m_ConsoleOutputLock;
 			mutable fp64 m_LastProgressOutputTime = 0.0;
+			mutable bool m_bOutputStatusDone = false;
 
 			umint m_LaunchID = 0;
 			umint m_LongestRepo = 0;

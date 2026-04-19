@@ -10,13 +10,15 @@
 
 namespace NMib::NBuildSystem::NRepository
 {
+	constinit TCAtomic<umint> g_RecursiveGitLaunchesCounter{0};
+
 	CGitLaunches::CState::CState(CBuildSystem::CGitLaunchOptions const &_Options, CStr const &_ProgressDescription)
 		: m_BaseDir(_Options.m_BaseDir)
 		, m_InvocationCommand(_Options.m_InvocationCommand)
 		, m_ProgressDescription(_ProgressDescription)
 		, m_AnsiFlags(_Options.m_AnsiFlags)
 		, m_TerminalWidth(_Options.m_TerminalWidth)
-		, m_bShowProgress(_Options.m_bShowProgress)
+		, m_bShowProgress(g_RecursiveGitLaunchesCounter.f_FetchAdd(1) == 0 && _Options.m_bShowProgress)
 		, m_fOutputConsole(_Options.m_fOutputConsole)
 		, m_pCancelled(_Options.m_pCancelled)
 	{
@@ -47,6 +49,12 @@ namespace NMib::NBuildSystem::NRepository
 
 	CGitLaunches::CState::~CState()
 	{
+		auto Cleanup = g_OnScopeExit / [&]
+			{
+				g_RecursiveGitLaunchesCounter.f_FetchSub(1);
+			}
+		;
+
 		if (!m_DeferredOutput.f_IsEmpty() && m_fOutputConsole)
 		{
 			CColors Colors(m_AnsiFlags);
@@ -148,12 +156,19 @@ namespace NMib::NBuildSystem::NRepository
 
 		DMibLock(m_ConsoleOutputLock);
 
+		if (m_bOutputStatusDone)
+			return;
+
+		bool bDone = m_nDoneRepos >= m_nRepos.f_Load();
+
 		if (m_AnsiFlags & EAnsiEncodingFlag_Color)
 		{
 			CUStr ToOutput = CStr{"  {}: {}/{} repos done"_f << m_ProgressDescription << m_nDoneRepos.f_Load() << m_nRepos.f_Load()};
-			if (m_nDoneRepos == m_nRepos.f_Load())
+
+			if (bDone)
 				ToOutput = CStr{"{sj*}"_f << "" << ToOutput.f_GetLen()}; // Clear previous output
-			else if (m_ProgressDelay > 0.0 && m_Stopwatch.f_GetTime() < m_ProgressDelay)
+
+			if (!bDone && m_ProgressDelay > 0.0 && m_Stopwatch.f_GetTime() < m_ProgressDelay)
 				return;
 
 			f_ConsoleOutput("{}\x1B[{}D"_f << ToOutput << ToOutput.f_GetLen());
@@ -168,6 +183,9 @@ namespace NMib::NBuildSystem::NRepository
 
 			f_ConsoleOutput("  {}: {}/{} repos done\n"_f << m_ProgressDescription << m_nDoneRepos.f_Load() << m_nRepos.f_Load());
 		}
+
+		if (bDone)
+			m_bOutputStatusDone = true;
 	}
 
 	void CGitLaunches::CState::f_ConsoleOutput(CStr const &_Output, bool _bError) const
@@ -200,7 +218,14 @@ namespace NMib::NBuildSystem::NRepository
 	{
 		auto &State = *m_pState;
 
-		State.m_nRepos = _nRepos;
+		{
+			DMibLock(State.m_ConsoleOutputLock);
+			if (State.m_nRepos != _nRepos)
+			{
+				State.m_nRepos = _nRepos;
+				State.m_bOutputStatusDone = false;
+			}
+		}
 
 		if (_bReport)
 			f_RepoDone(0);
