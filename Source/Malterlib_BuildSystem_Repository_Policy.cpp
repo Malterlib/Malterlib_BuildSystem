@@ -287,6 +287,12 @@ namespace NMib::NBuildSystem::NRepository
 			}
 		;
 
+		auto fErrorContext = [&](CStr const &_Section) -> CStr
+			{
+				return "Error applying {} policy to '{}'"_f << _Section << _Url;
+			}
+		;
+
 		auto pRepositorySettings = _Policy.f_GetMember("RepositorySettings");
 		if (pRepositorySettings || fg_IsSet(_Flags, EApplyPolicyFlag::mc_CreateMissing))
 		{
@@ -299,22 +305,22 @@ namespace NMib::NBuildSystem::NRepository
 			// existing repositories.
 			CEJsonSorted const EmptySettings(EJsonType_Object);
 			auto const &Settings = pRepositorySettings ? *pRepositorySettings : EmptySettings;
-			bool bCreated = co_await fg_ApplyPolicies_RepositorySettings(Options, Settings);
+			bool bCreated = co_await (fg_ApplyPolicies_RepositorySettings(Options, Settings) % fErrorContext("RepositorySettings"));
 			if (bCreated && fg_IsSet(_Flags, EApplyPolicyFlag::mc_Pretend))
 				co_return {};
 		}
 
 		if (auto pPermissions = _Policy.f_GetMember("Permissions"))
-			co_await fg_ApplyPolicies_Permissions(Options, *pPermissions);
+			co_await (fg_ApplyPolicies_Permissions(Options, *pPermissions) % fErrorContext("Permissions"));
 
 		if (auto pBranchProtection = _Policy.f_GetMember("BranchProtection"))
-			co_await fg_ApplyPolicies_BranchProtection(Options, *pBranchProtection);
+			co_await (fg_ApplyPolicies_BranchProtection(Options, *pBranchProtection) % fErrorContext("BranchProtection"));
 
 		if (auto pGenericRules = _Policy.f_GetMember("GenericRules"))
-			co_await fg_ApplyPolicies_GenericRules(Options, *pGenericRules);
+			co_await (fg_ApplyPolicies_GenericRules(Options, *pGenericRules) % fErrorContext("GenericRules"));
 
 		if (auto pActions = _Policy.f_GetMember("ActionsSettings"))
-			co_await fg_ApplyPolicies_ActionsSettings(Options, *pActions);
+			co_await (fg_ApplyPolicies_ActionsSettings(Options, *pActions) % fErrorContext("ActionsSettings"));
 
 		co_return {};
 	}
