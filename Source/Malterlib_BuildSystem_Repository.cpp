@@ -90,6 +90,69 @@ namespace NMib::NBuildSystem
 
 	namespace NRepository
 	{
+		CRepository::CRepository(CStr const &_Name)
+			: m_Name(_Name)
+		{
+		}
+
+		CStr const &CRepository::f_GetName() const
+		{
+			return m_Name;
+		}
+
+		CStr const &CRemote::CCompare::operator () (CRemote const &_Node)
+		{
+			return _Node.m_Name;
+		}
+
+		CRemote::CRemote(CStr const &_Name)
+			: m_Name(_Name)
+		{
+		}
+
+		CRemote::CRemote(CRemote const &_Other)
+			: m_Name(_Other.m_Name)
+			, m_Properties(_Other.m_Properties)
+			, m_bCanPush(_Other.m_bCanPush)
+		{
+		}
+
+		CRemote::CRemote(CRemote &&_Other)
+			: m_Name(fg_Move(fg_RemoveQualifiers(_Other.m_Name)))
+			, m_Properties(fg_Move(_Other.m_Properties))
+			, m_bCanPush(_Other.m_bCanPush)
+		{
+		}
+
+		CRemotes &CRemotes::operator = (CRemotes const &_Other)
+		{
+			m_Remotes.f_Clear();
+			m_OrderedRemotes = _Other.m_OrderedRemotes;
+
+			for (auto &Remote : m_OrderedRemotes)
+				m_Remotes.f_Insert(Remote);
+
+			return *this;
+		}
+
+		CRemotes::CRemotes(CRemotes const &_Other)
+			: m_OrderedRemotes(_Other.m_OrderedRemotes)
+		{
+			for (auto &Remote : m_OrderedRemotes)
+				m_Remotes.f_Insert(Remote);
+		}
+
+		CRemote &CRemotes::operator [] (CStr const &_Name)
+		{
+			auto *pRemote = m_Remotes.f_FindEqual(_Name);
+			if (pRemote)
+				return *pRemote;
+
+			auto &Remote = m_OrderedRemotes.f_Insert(fg_Construct(_Name));
+			m_Remotes.f_Insert(Remote);
+			return Remote;
+		}
+
 		CColors::CColors(EAnsiEncodingFlag _AnsiFlags)
 			: CAnsiEncoding(_AnsiFlags)
 		{
@@ -1776,19 +1839,17 @@ namespace NMib::NBuildSystem
 				}
 			;
 
-			if (!WantedRemotes.f_IsEmpty())
+			if (!WantedRemotes.m_OrderedRemotes.f_IsEmpty())
 			{
-				for (auto iRemote = WantedRemotes.f_GetIterator(); iRemote; ++iRemote)
+				for (auto &Remote : WantedRemotes.m_OrderedRemotes)
 				{
-					auto &RemoteName = iRemote.f_GetKey();
-					auto &Remote = *iRemote;
-					auto pCurrentRemote = CurrentRemotes.f_FindEqual(RemoteName);
+					auto pCurrentRemote = CurrentRemotes.f_FindEqual(Remote.m_Name);
 					if (pCurrentRemote)
 					{
 						if (pCurrentRemote->m_Url != Remote.m_Properties.m_URL)
 						{
-							fOutputInfo(EOutputType_Normal, "Changing remote URL '{}={}'"_f << RemoteName << Remote.m_Properties.m_URL);
-							co_await fLaunchGit({"remote", "set-url", RemoteName, Remote.m_Properties.m_URL}, Location);
+							fOutputInfo(EOutputType_Normal, "Changing remote URL '{}={}'"_f << Remote.m_Name << Remote.m_Properties.m_URL);
+							co_await fLaunchGit({"remote", "set-url", Remote.m_Name, Remote.m_Properties.m_URL}, Location);
 						}
 
 						if (Remote.m_Properties.m_bLfsReleaseStore)
@@ -1809,9 +1870,9 @@ namespace NMib::NBuildSystem
 								fOutputInfo(EOutputType_Normal, "Setting up LFS fetch exclusions");
 
 								auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(Location);
-								co_await fLaunchGit({"config", "--local", "--add", "remote.{}.fetch"_f << RemoteName, "^refs/heads/lfs"}, Location);
-								co_await fLaunchGit({"config", "--local", "--add", "remote.{}.fetch"_f << RemoteName, "^refs/tags/lfs/*"}, Location);
-								co_await fLaunchGit({"config", "--local", "remote.{}.malterlib-lfs-setup"_f << RemoteName, "true"}, Location);
+								co_await fLaunchGit({"config", "--local", "--add", "remote.{}.fetch"_f << Remote.m_Name, "^refs/heads/lfs"}, Location);
+								co_await fLaunchGit({"config", "--local", "--add", "remote.{}.fetch"_f << Remote.m_Name, "^refs/tags/lfs/*"}, Location);
+								co_await fLaunchGit({"config", "--local", "remote.{}.malterlib-lfs-setup"_f << Remote.m_Name, "true"}, Location);
 							}
 						}
 						else
@@ -1828,7 +1889,7 @@ namespace NMib::NBuildSystem
 
 						TCVector<CStr> WantedFetchSpecs;
 
-						WantedFetchSpecs.f_Insert("+refs/heads/*:refs/remotes/{}/*"_f << RemoteName);
+						WantedFetchSpecs.f_Insert("+refs/heads/*:refs/remotes/{}/*"_f << Remote.m_Name);
 
 						if (Remote.m_Properties.m_bLfsReleaseStore)
 						{
@@ -1841,9 +1902,9 @@ namespace NMib::NBuildSystem
 
 						if (pCurrentRemote->m_Fetch != WantedFetchSpecs)
 						{
-							fOutputInfo(EOutputType_Normal, "Updating fetch specs for remote '{}'"_f << RemoteName);
+							fOutputInfo(EOutputType_Normal, "Updating fetch specs for remote '{}'"_f << Remote.m_Name);
 
-							CStr RemoteConfigName = "remote.{}.fetch"_f << RemoteName;
+							CStr RemoteConfigName = "remote.{}.fetch"_f << Remote.m_Name;
 
 							auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(Location);
 
@@ -1855,31 +1916,31 @@ namespace NMib::NBuildSystem
 
 						continue;
 					}
-					fOutputInfo(EOutputType_Normal, "Adding remote '{}={}'"_f << RemoteName << Remote.m_Properties.m_URL);
-					co_await fLaunchGit({"remote", "add", RemoteName, Remote.m_Properties.m_URL}, Location);
+					fOutputInfo(EOutputType_Normal, "Adding remote '{}={}'"_f << Remote.m_Name << Remote.m_Properties.m_URL);
+					co_await fLaunchGit({"remote", "add", Remote.m_Name, Remote.m_Properties.m_URL}, Location);
 
 					if (Remote.m_Properties.m_bLfsReleaseStore)
 					{
 						co_await fSetupLfsReleaseStorage();
 
 						co_await fLaunchGit({"config", "--local", "lfs.{}.standalonetransferagent"_f << Remote.m_Properties.m_URL, "malterlib-release"}, Location);
-						co_await fLaunchGit({"config", "--local", "--add", "remote.{}.fetch"_f << RemoteName, "^refs/heads/lfs"}, Location);
-						co_await fLaunchGit({"config", "--local", "--add", "remote.{}.fetch"_f << RemoteName, "^refs/tags/lfs/*"}, Location);
-						co_await fLaunchGit({"config", "--local", "remote.{}.malterlib-lfs-setup"_f << RemoteName, "true"}, Location);
+						co_await fLaunchGit({"config", "--local", "--add", "remote.{}.fetch"_f << Remote.m_Name, "^refs/heads/lfs"}, Location);
+						co_await fLaunchGit({"config", "--local", "--add", "remote.{}.fetch"_f << Remote.m_Name, "^refs/tags/lfs/*"}, Location);
+						co_await fLaunchGit({"config", "--local", "remote.{}.malterlib-lfs-setup"_f << Remote.m_Name, "true"}, Location);
 					}
 
 					for (auto &FetchSpec : Remote.m_Properties.m_ExtraFetchSpecs)
-						co_await fLaunchGit({"config", "--local", "--add", "remote.{}.fetch"_f << RemoteName, FetchSpec}, Location);
+						co_await fLaunchGit({"config", "--local", "--add", "remote.{}.fetch"_f << Remote.m_Name, FetchSpec}, Location);
 
 					if (_BuildSystem.f_GetGenerateOptions().m_bForceUpdateRemotes)
-						co_await fLaunchGit({"fetch", "--tags", "--force", RemoteName}, Location);
+						co_await fLaunchGit({"fetch", "--tags", "--force", Remote.m_Name}, Location);
 					else
-						co_await fLaunchGit({"fetch", "--tags", RemoteName}, Location);
+						co_await fLaunchGit({"fetch", "--tags", Remote.m_Name}, Location);
 				}
 
 				if (_BuildSystem.f_ApplyRepoPolicy())
 				{
-					for (auto &Remote : WantedRemotes)
+					for (auto &Remote : WantedRemotes.m_OrderedRemotes)
 					{
 						if (!Remote.m_Properties.m_bApplyPolicy)
 							continue;
@@ -1898,11 +1959,8 @@ namespace NMib::NBuildSystem
 
 				if (_BuildSystem.f_UpdateLfsReleaseIndexes())
 				{
-					for (auto iRemote = WantedRemotes.f_GetIterator(); iRemote; ++iRemote)
+					for (auto &Remote : WantedRemotes.m_OrderedRemotes)
 					{
-						auto &RemoteName = iRemote.f_GetKey();
-						auto &Remote = *iRemote;
-
 						if (!Remote.m_Properties.m_bLfsReleaseStore)
 							continue;
 
@@ -1922,7 +1980,7 @@ namespace NMib::NBuildSystem
 							co_await LfsService
 								(
 									&NGit::CLfsReleaseStoreService::f_UpdateReleaseIndex
-									, RemoteName
+									, Remote.m_Name
 									, Options
 									, [fOutputInfo](NStr::CStr const &_Output)
 									{
@@ -1938,10 +1996,10 @@ namespace NMib::NBuildSystem
 
 				if (bForceReset)
 				{
-					for (auto iRemote = CurrentRemotes.f_GetIterator(); iRemote; ++iRemote)
+					for (auto &Remote : CurrentRemotes.f_Entries())
 					{
-						auto &RemoteName = iRemote.f_GetKey();
-						if (WantedRemotes.f_FindEqual(RemoteName))
+						auto &RemoteName = Remote.f_Key();
+						if (WantedRemotes.m_Remotes.f_FindEqual(RemoteName))
 							continue;
 						fOutputInfo(EOutputType_Normal, "Removing remote '{}'"_f << RemoteName);
 						co_await fLaunchGit({"remote", "remove", RemoteName}, Location);
@@ -2669,7 +2727,7 @@ namespace NMib::NBuildSystem
 					for (auto &Remote : Remotes.f_Get().f_Array())
 					{
 						CStr Name = Remote[gc_ConstString_Name].f_String();
-						if (Repo.m_Remotes.f_FindEqual(Name))
+						if (Repo.m_Remotes.m_Remotes.f_FindEqual(Name))
 							_BuildSystem.fs_ThrowError(PropertyInfoRemotes, ChildEntityData.m_Position, fg_Format("Same remote '{}' specified multiple times", Name));
 
 						CStr URL = Remote[gc_ConstString_URL].f_String();

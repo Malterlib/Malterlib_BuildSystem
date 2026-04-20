@@ -75,13 +75,22 @@ namespace NMib::NBuildSystem::NRepository
 
 	struct CRemote
 	{
-		CStr const &f_Name() const
+		struct CCompare
 		{
-			return TCMap<CStr, CRemote>::fs_GetKey(*this);
-		}
+			CStr const &operator () (CRemote const &_Node);
+		};
 
+		CRemote(CStr const &_Name);
+
+		CStr const m_Name;
 		CRemoteProperties m_Properties;
 		bool m_bCanPush = true;
+		TCAVLLink<> m_Link;
+	private:
+		friend class TCLinkedListMember<CRemote>;
+
+		CRemote(CRemote const &_Other);
+		CRemote(CRemote &&_Other);
 	};
 
 	enum class EGitIgnoreType : uint32
@@ -103,22 +112,30 @@ namespace NMib::NBuildSystem::NRepository
 		CStr m_TransformScript;
 	};
 
+	struct CRemotes
+	{
+		CRemotes() = default;
+		CRemotes(CRemotes const &_Other);
+		CRemotes(CRemotes &&_Other) = default;
+		CRemotes &operator = (CRemotes const &_Other);
+		CRemotes &operator = (CRemotes &&_Other) = default;
+
+		CRemote &operator [] (CStr const &_Name);
+
+		TCLinkedList<CRemote> m_OrderedRemotes;
+		TCAVLTree<&CRemote::m_Link, CRemote::CCompare> m_Remotes;
+	};
+
 	struct CRepository
 	{
-		CRepository(CStr const &_Name)
-			: m_Name(_Name)
-		{
-		}
-
-		CRepository(CRepository const &) = default;
+		CRepository(CStr const &_Name);
+		CRepository(CRepository const &_Other) = default;
 		CRepository(CRepository &&) = default;
-		CRepository &operator = (CRepository const &) = default;
+
+		CRepository &operator = (CRepository const &_Other) = default;
 		CRepository &operator = (CRepository &&) = default;
 
-		CStr const &f_GetName() const
-		{
-			return m_Name;
-		}
+		CStr const &f_GetName() const;
 
 		CStr f_GetIdentifierName(CStr const &_BasePath, CStr const &_Root) const;
 
@@ -133,7 +150,7 @@ namespace NMib::NBuildSystem::NRepository
 		CStr m_UserName;
 		CStr m_UserEmail;
 		TCSet<CStr> m_Tags;
-		TCMap<CStr, CRemote> m_Remotes;
+		CRemotes m_Remotes;
 		TCSet<CStr> m_ProtectedBranches;
 		TCSet<CStr> m_ProtectedTags;
 		CFilePosition m_Position;
@@ -543,7 +560,7 @@ namespace NMib::NBuildSystem::NRepository
 	TCFuture<TCVector<CLocalFileChange>> fg_GetLocalFileChanges(CGitLaunches _GitLaunches, CRepository _Repo, bool _bIncludeUntracked);
 	TCFuture<CGitBranches> fg_GetBranches(CGitLaunches _GitLaunches, CRepository _Repo, bool _bRemote);
 	TCFuture<TCVector<CStr>> fg_GetRemotes(CGitLaunches _GitLaunches, CRepository _Repo);
-	TCFuture<TCMap<CStr, CRemote>> fg_GetPushRemotes(CGitLaunches _GitLaunches, CRepository _Repo, TCVector<CStr> _Remotes);
+	TCFuture<CRemotes> fg_GetPushRemotes(CGitLaunches _GitLaunches, CRepository _Repo, TCVector<CStr> _Remotes);
 	TCFuture<TCVector<CLogEntry>> fg_GetLogEntries(CGitLaunches _GitLaunches, CRepository _Repo, CStr _From, CStr _To, bool _bReportBadRevision = true);
 	TCFuture<TCVector<CLogEntryFull>> fg_GetLogEntriesFull(CGitLaunches _GitLaunches, CRepository _Repo, CStr _From, CStr _To);
 

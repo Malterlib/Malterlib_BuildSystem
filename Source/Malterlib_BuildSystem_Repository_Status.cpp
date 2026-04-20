@@ -328,7 +328,7 @@ namespace NMib::NBuildSystem
 
 									CStr DefaultUpstreamBranch = Repo.m_DefaultUpstreamBranch;
 
-									auto *pRemote = Repo.m_Remotes.f_FindEqual(Remote);
+									auto *pRemote = Repo.m_Remotes.m_Remotes.f_FindEqual(Remote);
 									if (pRemote && pRemote->m_Properties.m_DefaultBranch)
 										DefaultUpstreamBranch = pRemote->m_Properties.m_DefaultBranch;
 

@@ -513,7 +513,7 @@ namespace NMib::NBuildSystem
 							{
 								if (Remote != "origin")
 								{
-									auto pRemote = Repo.m_Remotes.f_FindEqual(Remote);
+									auto pRemote = Repo.m_Remotes.m_Remotes.f_FindEqual(Remote);
 									if (!pRemote)
 									{
 										if (_Flags & ERepoCleanupBranchesFlag_Verbose)
@@ -800,7 +800,7 @@ namespace NMib::NBuildSystem
 							bool bWritable = true;
 							if (Remote && Remote != "origin")
 							{
-								auto pRemote = Repo.m_Remotes.f_FindEqual(Remote);
+								auto pRemote = Repo.m_Remotes.m_Remotes.f_FindEqual(Remote);
 								if (!pRemote)
 								{
 									if (_Flags & ERepoCleanupTagsFlag_Verbose)

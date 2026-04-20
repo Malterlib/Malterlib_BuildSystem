@@ -316,7 +316,7 @@ namespace NMib::NBuildSystem
 				if (Repo.m_OriginProperties.m_ReleasePackage)
 					co_await fg_ReleasePackage(Repo.m_Location, Repo.m_OriginProperties, fOutput);
 
-				for (auto &Remote : Repo.m_Remotes)
+				for (auto &Remote : Repo.m_Remotes.m_OrderedRemotes)
 				{
 					if (Remote.m_Properties.m_ReleasePackage)
 						co_await fg_ReleasePackage(Repo.m_Location, Remote.m_Properties, fOutput);

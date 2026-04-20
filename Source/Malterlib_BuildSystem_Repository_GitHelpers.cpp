@@ -593,7 +593,7 @@ namespace NMib::NBuildSystem::NRepository
 		co_return fg_Move(Remotes);
 	}
 
-	TCFuture<TCMap<CStr, CRemote>> fg_GetPushRemotes(CGitLaunches _GitLaunches, CRepository _Repo, TCVector<CStr> _Remotes)
+	TCFuture<CRemotes> fg_GetPushRemotes(CGitLaunches _GitLaunches, CRepository _Repo, TCVector<CStr> _Remotes)
 	{
 		auto Result = co_await _GitLaunches.f_Launch(_Repo, {"remote"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 
@@ -607,14 +607,14 @@ namespace NMib::NBuildSystem::NRepository
 
 		auto LaunchResults = co_await fg_AllDone(UrlResults);
 
-		TCMap<CStr, CRemote> Remotes;
+		CRemotes Remotes;
 
 		for (auto &LaunchResult : LaunchResults.f_Entries())
 		{
 			if (LaunchResult.f_Value().m_ExitCode)
 				co_return DMibErrorInstance(LaunchResult.f_Value().f_GetErrorOut().f_Trim());
 
-			Remotes[LaunchResult.f_Key()] = CRemote{.m_Properties = CRemoteProperties{.m_URL = LaunchResult.f_Value().f_GetStdOut().f_Trim()}};
+			Remotes[LaunchResult.f_Key()].m_Properties = CRemoteProperties{.m_URL = LaunchResult.f_Value().f_GetStdOut().f_Trim()};
 		}
 
 		co_return fg_Move(Remotes);
@@ -1008,9 +1008,9 @@ namespace NMib::NBuildSystem::NRepository
 
 					auto DynamicInfo = fg_GetRepositoryDynamicInfo(Repo);
 
-					for (auto &Remote : Remotes)
+					for (auto &Remote : Remotes.m_OrderedRemotes)
 					{
-						auto &RemoteName = Remote.f_Name();
+						auto &RemoteName = Remote.m_Name;
 						(*pRemoteHeadBranches)[RemoteName].m_LocalBranch = fg_GetRemoteHead(Repo, DynamicInfo, RemoteName);
 
 						Launches.f_Launch
@@ -1035,7 +1035,7 @@ namespace NMib::NBuildSystem::NRepository
 								, {}
 								, FetchEnvironment
 							)
-							> RemoteQueryResults[Remote.f_Name()]
+							> RemoteQueryResults[Remote.m_Name]
 						;
 					}
 

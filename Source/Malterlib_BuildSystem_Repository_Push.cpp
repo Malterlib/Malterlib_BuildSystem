@@ -181,7 +181,7 @@ namespace NMib::NBuildSystem
 					// commits not yet visible via the default branch need to be pushed (i.e. commits
 					// that another pull would need to resolve).
 					CStr DefaultBranch = _Repo.m_OriginProperties.m_DefaultBranch;
-					if (auto pRemote = _Repo.m_Remotes.f_FindEqual(Remote); pRemote && pRemote->m_Properties.m_DefaultBranch)
+					if (auto pRemote = _Repo.m_Remotes.m_Remotes.f_FindEqual(Remote); pRemote && pRemote->m_Properties.m_DefaultBranch)
 						DefaultBranch = pRemote->m_Properties.m_DefaultBranch;
 
 					auto MergeBaseResult = co_await _Launches.f_Launch
@@ -250,18 +250,18 @@ namespace NMib::NBuildSystem
 						TCVector<CStr> Remotes;
 						{
 							TCSet<CStr> AddedUrls;
-							for (auto &Remote : PushRemotes)
+							for (auto &Remote : PushRemotes.m_OrderedRemotes)
 							{
-								if (auto pRemote = Repo.m_Remotes.f_FindEqual(Remote.f_Name()); pRemote && !pRemote->m_bCanPush)
+								if (auto pRemote = Repo.m_Remotes.m_Remotes.f_FindEqual(Remote.m_Name); pRemote && !pRemote->m_bCanPush)
 									continue;
 
-								if (!(_PushFlags & ERepoPushFlag_NonDefaultToAll) && Branches.m_Current != Repo.m_OriginProperties.m_DefaultBranch && Remote.f_Name() != "origin")
+								if (!(_PushFlags & ERepoPushFlag_NonDefaultToAll) && Branches.m_Current != Repo.m_OriginProperties.m_DefaultBranch && Remote.m_Name != "origin")
 									continue;
 
 								if (!AddedUrls(Remote.m_Properties.m_URL).f_WasCreated())
 									continue;
 
-								Remotes.f_Insert(Remote.f_Name());
+								Remotes.f_Insert(Remote.m_Name);
 							}
 						}
 
@@ -292,7 +292,7 @@ namespace NMib::NBuildSystem
 							for (auto &Remote : Remotes)
 							{
 								CRemoteProperties const *pRemoteProps = nullptr;
-								if (auto pRemote = PushRemotes.f_FindEqual(Remote))
+								if (auto pRemote = PushRemotes.m_Remotes.f_FindEqual(Remote))
 									pRemoteProps = &pRemote->m_Properties;
 								if (!pRemoteProps && Remote == "origin")
 									pRemoteProps = &Repo.m_OriginProperties;
