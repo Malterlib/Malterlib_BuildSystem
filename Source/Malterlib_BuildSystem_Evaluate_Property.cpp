@@ -10,6 +10,16 @@ namespace NMib::NBuildSystem
 		mp_bEnablePositions = true;
 	}
 
+	bool CBuildSystem::f_GetDisableOnDemandPositions() const
+	{
+		return mp_bDisableOnDemandPositions.f_Load();
+	}
+
+	void CBuildSystem::f_SetDisableOnDemandPositions() const
+	{
+		mp_bDisableOnDemandPositions.f_Exchange(true);
+	}
+
 	bool CBuildSystem::f_EnablePositions() const
 	{
 		return mp_bEnablePositions;

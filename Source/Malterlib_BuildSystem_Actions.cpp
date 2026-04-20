@@ -64,7 +64,13 @@ namespace NMib::NBuildSystem
 			auto RetryResult = co_await _fCommand(&BuildSystem).f_Wrap();
 			if (!RetryResult)
 			{
-				if (RetryResult.f_HasExceptionType<NStr::CExceptionParse>() && !BuildSystem.f_EnablePositions() && _GenerateOptions.m_DetailedPositions == EDetailedPositions_OnDemand)
+				if
+				(
+					!BuildSystem.f_GetDisableOnDemandPositions()
+					&& RetryResult.f_HasExceptionType<NStr::CExceptionParse>()
+					&& !BuildSystem.f_EnablePositions()
+					&& _GenerateOptions.m_DetailedPositions == EDetailedPositions_OnDemand
+				)
 				{
 					CAnsiEncoding AnsiEncoding(AnsiFlags);
 

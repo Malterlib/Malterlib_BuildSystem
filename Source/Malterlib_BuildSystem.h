@@ -588,6 +588,9 @@ namespace NMib::NBuildSystem
 		CBuildSystemUniquePositions *f_EnablePositions(CBuildSystemUniquePositions *_pPositions) const;
 		void f_SetEnablePositions();
 
+		bool f_GetDisableOnDemandPositions() const;
+		void f_SetDisableOnDemandPositions() const;
+
 		bool f_EnableValues() const;
 		void f_SetEnableValues();
 
@@ -1153,6 +1156,7 @@ namespace NMib::NBuildSystem
 		bool mp_bEnableValues = false;
 		mutable NAtomic::TCAtomic<bool> mp_bGlobalMToolAlreadySetup = false;
 		mutable NAtomic::TCAtomic<bool> mp_bBootstrapMToolAlreadySetup = false;
+		mutable NAtomic::TCAtomic<bool> mp_bDisableOnDemandPositions = false;
 
 		mutable NAtomic::TCAtomic<umint> mp_nExecuteLaunches;
 
