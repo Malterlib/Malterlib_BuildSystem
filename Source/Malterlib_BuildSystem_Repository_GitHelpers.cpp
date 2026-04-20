@@ -853,6 +853,45 @@ namespace NMib::NBuildSystem::NRepository
 		return _MainRepoBranch;
 	}
 
+	CStr fg_GetHostingProviderClassName(CStr const &_Url)
+	{
+		// Returns the CGitHostingProvider factory class name for the given URL, or empty if unsupported.
+		//
+		// URL-scheme scope: we classify any URL that NWeb::NHTTP::CURL can parse into a host,
+		// which intentionally includes BOTH https:// and ssh://git@host/path scheme-form URLs.
+		// This matches the long-standing behavior of fg_ApplyPolicies / --apply-policy — we
+		// classify on host, not scheme. The scp-short form "git@host:path" (no scheme) is the
+		// only common remote form that NWeb::NHTTP::CURL cannot parse; it yields an empty host
+		// and therefore returns unsupported here. Users who want provider-backed operations on
+		// an scp-short remote must rewrite the URL to ssh://host/path or https://host/path in
+		// the .MHeader.
+		//
+		// Known limitation for ssh:// URLs (intentional, not fixed here): hosting-provider
+		// operations (f_GetRepository, f_ForkRepository, f_CreateRepository, f_RenameBranch)
+		// authenticate via `git credential fill`, which on typical developer machines only
+		// returns tokens for https:// URLs — SSH transport is usually keyed off ~/.ssh keys, not
+		// the credential helper. So an ssh://github.com/... remote classifies as a supported
+		// provider here, clones fine over SSH, but its provider-backed REST calls may fail to
+		// authenticate. That failure surfaces as a real API error (401/403 or "not found") at
+		// the point of the operation, not silently; the user then either caches an HTTPS token
+		// for the host or switches the .MHeader URL to https://. This matches --apply-policy's
+		// pre-existing behavior and is not worth working around at classification time because
+		// narrowing the classifier would regress --apply-policy for SSH remotes that happen to
+		// have a usable HTTPS token cached. If this becomes a frequent support issue, the right
+		// fix is to canonicalize ssh://host/path → https://host/path before querying the
+		// credential helper (inside fg_GetGitCredentials), not here.
+		NWeb::NHTTP::CURL Url(_Url);
+		auto &HostName = Url.f_GetHost();
+		if (HostName == "github.com")
+			return "CGitHostingProviderFactory_CGitHostingProvider_GitHub";
+		return {};
+	}
+
+	bool fg_IsSupportedHostingProvider(CStr const &_Url)
+	{
+		return !fg_GetHostingProviderClassName(_Url).f_IsEmpty();
+	}
+
 	CStr fg_HandleRepositoryActionToString(EHandleRepositoryAction _Action, EOutputType &o_OutputType)
 	{
 		o_OutputType = EOutputType_Warning;

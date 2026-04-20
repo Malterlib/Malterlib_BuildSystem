@@ -265,12 +265,9 @@ namespace NMib::NBuildSystem::NRepository
 		co_await ECoroutineFlag_CaptureExceptions;
 
 		NWeb::NHTTP::CURL Url(_Url);
-		CStr Provider;
-		auto &HostName = Url.f_GetHost();
-		if (HostName == "github.com")
-			Provider = "CGitHostingProviderFactory_CGitHostingProvider_GitHub";
-		else
-			co_return DMibErrorInstance("Unsupported hosting provider for '{}'"_f << HostName);
+		CStr Provider = fg_GetHostingProviderClassName(_Url);
+		if (Provider.f_IsEmpty())
+			co_return DMibErrorInstance("Unsupported hosting provider for '{}'"_f << Url.f_GetHost());
 
 		CStr HostingProviderToken = co_await fg_GetGitCredentials(Url, _RepoDir);
 

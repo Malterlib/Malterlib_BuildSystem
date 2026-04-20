@@ -575,6 +575,9 @@ namespace NMib::NBuildSystem::NRepository
 	CStr fg_GetRemoteHead(CRepository const &_Repo, CRepositoryDynamicInfo const &_DynamicInfo, CStr const &_Remote);
 	CStr fg_HandleRepositoryActionToString(EHandleRepositoryAction _Action, EOutputType &o_OutputType);
 
+	CStr fg_GetHostingProviderClassName(CStr const &_Url);
+	bool fg_IsSupportedHostingProvider(CStr const &_Url);
+
 	TCUnsafeFuture<void> fg_UpdateRemotes(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage = {});
 	TCMap<CStr, CStr> fg_FetchEnvironment(CBuildSystem const &_BuildSystem);
 
