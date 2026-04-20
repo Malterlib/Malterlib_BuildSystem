@@ -287,9 +287,19 @@ namespace NMib::NBuildSystem::NRepository
 			}
 		;
 
-		if (auto pRepositorySettings = _Policy.f_GetMember("RepositorySettings"))
+		auto pRepositorySettings = _Policy.f_GetMember("RepositorySettings");
+		if (pRepositorySettings || fg_IsSet(_Flags, EApplyPolicyFlag::mc_CreateMissing))
 		{
-			bool bCreated = co_await fg_ApplyPolicies_RepositorySettings(Options, *pRepositorySettings);
+			// When --apply-policy-create-missing is set without a RepositorySettings block,
+			// pass empty settings so the create-on-404 path still fires. On the update path
+			// this becomes a no-op (nothing to diff). Safe defaults for visibility are
+			// applied inside each hosting-provider's f_CreateRepository (e.g. GitHub defaults
+			// to private on create when the caller didn't specify) so we don't need to
+			// synthesize them here, which would incorrectly be seen as a wanted update on
+			// existing repositories.
+			CEJsonSorted const EmptySettings(EJsonType_Object);
+			auto const &Settings = pRepositorySettings ? *pRepositorySettings : EmptySettings;
+			bool bCreated = co_await fg_ApplyPolicies_RepositorySettings(Options, Settings);
 			if (bCreated && fg_IsSet(_Flags, EApplyPolicyFlag::mc_Pretend))
 				co_return {};
 		}
