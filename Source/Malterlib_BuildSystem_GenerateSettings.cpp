@@ -63,8 +63,14 @@ namespace NMib::NBuildSystem
 				Action = EHandleRepositoryAction_Rebase;
 			else if (ActionStr == gc_ConstString_leave.m_String)
 				Action = EHandleRepositoryAction_Leave;
+			else if (ActionStr == gc_ConstString_init.m_String)
+				Action = EHandleRepositoryAction_Init;
+			else if (ActionStr == gc_ConstString_clone_remote.m_String)
+				Action = EHandleRepositoryAction_CloneRemote;
+			else if (ActionStr == gc_ConstString_fork_remote.m_String)
+				Action = EHandleRepositoryAction_ForkRemote;
 			else
-				DError("Invalid format for --reconcile. Expected action to be one of: [auto, reset, rebase, leave]");
+				DError("Invalid format for --reconcile. Expected action to be one of: [auto, reset, rebase, leave, init, clone-remote, fork-remote]");
 
 			m_ReconcileActions[WildCard] = Action;
 		}

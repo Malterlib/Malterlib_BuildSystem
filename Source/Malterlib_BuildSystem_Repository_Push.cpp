@@ -160,6 +160,42 @@ namespace NMib::NBuildSystem
 			co_return fg_Move(PushResult);
 		}
 
+		// Returns true if the remote has at least one branch. Checks local remote-tracking
+		// refs first (cheap, uses whatever was fetched) and falls back to ls-remote when
+		// nothing is fetched locally. Used to detect "remote is freshly created, no
+		// branches exist yet" so push can seed the configured default branch first.
+		//
+		// The local-first check is intentional — we don't want to pessimize the default
+		// push path with an extra network round-trip for every remote. If a user has
+		// externally deleted and recreated the remote, stale local refs could make this
+		// return a false positive. That scenario is rare; running `./mib update-repos -r`
+		// prunes stale refs and restores correct behavior.
+		TCFuture<bool> fg_HasRemoteBranches(CGitLaunches _Launches, CRepository _Repo, CStr _Remote)
+		{
+			{
+				auto Result = co_await _Launches.f_Launch
+					(
+						_Repo
+						, {"for-each-ref", "--count=1", "refs/remotes/{}/"_f << _Remote}
+						, {}
+						, CProcessLaunchActor::ESimpleLaunchFlag_None
+					)
+				;
+				if (Result.m_ExitCode == 0 && !Result.f_GetStdOut().f_Trim().f_IsEmpty())
+					co_return true;
+			}
+
+			auto Result = co_await _Launches.f_Launch
+				(
+					_Repo
+					, {"ls-remote", "--exit-code", "--heads", _Remote}
+					, {}
+					, CProcessLaunchActor::ESimpleLaunchFlag_None
+				)
+			;
+			co_return Result.m_ExitCode == 0;
+		}
+
 		TCFuture<TCSet<CStr>> DMibWorkaroundUBSanSectionErrors fg_NeedPush(CGitLaunches _Launches, CRepository _Repo, TCVector<CStr> _Remotes, CGitBranches _Branches)
 		{
 			TCFutureMap<CStr, TCVector<CLogEntry>> NeedPushResults;
@@ -329,11 +365,68 @@ namespace NMib::NBuildSystem
 							}
 						}
 
+						// For remotes that have no branches yet (freshly created origin from
+						// init/clone-remote/fork-remote recovery), seed the configured default
+						// branch from the current HEAD before pushing the current branch. Without
+						// this, pushing only the current branch makes the hosting provider adopt
+						// it as the default branch (e.g. when running ./mib push from a feature
+						// branch on a subrepo whose origin was just created).
+						//
+						// Seeding from HEAD (the current feature-branch tip) is intentional even
+						// when the user has already committed on top of the placeholder: HEAD is
+						// the best available starting point for a brand-new default branch. For
+						// init in particular the placeholder is meant to be amended/extended by
+						// the user, and for clone-remote the source's default-branch tip was
+						// already folded into the feature branch at recovery time, so using HEAD
+						// gives the remote's default branch the user's current working state.
+						TCMap<CStr, CStr> SeedDefaults;
+						{
+							auto fResolveRemoteProperties = [&](CStr const &_Remote) -> CRemoteProperties const *
+								{
+									if (_Remote == "origin")
+										return &Repo.m_OriginProperties;
+
+									if (auto pRemote = Repo.m_Remotes.m_Remotes.f_FindEqual(_Remote))
+										return &pRemote->m_Properties;
+
+									return nullptr;
+								}
+							;
+
+							auto fResolveDefaultBranch = [&](CStr const &_Remote) -> CStr
+								{
+									if (auto pRemoteProperties = fResolveRemoteProperties(_Remote); pRemoteProperties && !pRemoteProperties->m_DefaultBranch.f_IsEmpty())
+										return pRemoteProperties->m_DefaultBranch;
+
+									return Repo.m_OriginProperties.m_DefaultBranch;
+								}
+							;
+
+							TCFutureMap<CStr, bool> HasBranchesFutures;
+							for (auto &Remote : Remotes)
+							{
+								CStr DefaultBranch = fResolveDefaultBranch(Remote);
+								if (!DefaultBranch.f_IsEmpty() && Branches.m_Current != DefaultBranch)
+									fg_HasRemoteBranches(Launches, Repo, Remote) > HasBranchesFutures[Remote];
+							}
+
+							auto HasBranchesResults = co_await fg_AllDone(HasBranchesFutures);
+							for (auto &bHas : HasBranchesResults)
+							{
+								if (!bHas)
+								{
+									auto const &Remote = HasBranchesResults.fs_GetKey(bHas);
+									SeedDefaults[Remote] = fResolveDefaultBranch(Remote);
+								}
+							}
+						}
+
 						TCFutureVector<void> PushResults;
 
 						for (auto &Remote : Remotes)
 						{
 							CTagInfo const *pTagInfo = TagInfos.f_FindEqual(Remote);
+							CStr const *pSeedDefault = SeedDefaults.f_FindEqual(Remote);
 
 							TCVector<CStr> Params;
 
@@ -352,6 +445,22 @@ namespace NMib::NBuildSystem
 
 							if (_PushFlags & ERepoPushFlag_Pretend)
 							{
+								if (pSeedDefault)
+								{
+									Launches.f_Output
+										(
+											EOutputType_Normal
+											, Repo
+											, "Seed default branch {3}{}{4} on {3}{}{4}: git {}"_f
+											<< *pSeedDefault
+											<< Remote
+											<< CProcessLaunchParams::fs_GetParams({"push", Remote, "HEAD:refs/heads/{}"_f << *pSeedDefault})
+											<< Colors.f_RepositoryName()
+											<< Colors.f_Default()
+										)
+									;
+								}
+
 								if (pTagInfo)
 								{
 									Launches.f_Output
@@ -414,87 +523,140 @@ namespace NMib::NBuildSystem
 							}
 							else if (NeedRemotes.f_FindEqual(Remote))
 							{
-								if (pTagInfo)
+								if (pTagInfo || pSeedDefault)
 								{
- 									g_Dispatch / [Launches, Repo, TagInfo = *pTagInfo, Colors, Remote, CurrentBranch = Branches.m_Current, Params]() -> TCFuture<void>
+									g_Dispatch /
+										[
+											Launches, Repo, Colors, Remote
+											, CurrentBranch = Branches.m_Current
+											, Params
+											, bHasTagInfo = (pTagInfo != nullptr)
+											, TagInfo = pTagInfo ? *pTagInfo : CTagInfo{}
+											, bHasSeed = (pSeedDefault != nullptr)
+											, SeedDefault = pSeedDefault ? *pSeedDefault : CStr{}
+										]() -> TCFuture<void>
 										{
-											auto TagResult = co_await Launches.f_Launch
-												(
-													Repo
-													, {"tag", TagInfo.m_TagName, TagInfo.m_RemoteHash}
-													, {}
-													, CProcessLaunchActor::ESimpleLaunchFlag_None
-												)
-											;
-
-											if (TagResult.m_ExitCode == 0)
+											if (bHasSeed)
 											{
-												Launches.f_Output
-													(
-														EOutputType_Normal
-														, Repo
-														, "Created previous {3}{}{4} commit as tag {3}{}{4}:\n{}\n"_f
-														<< CurrentBranch
-														<< TagInfo.m_TagName
-														<< TagResult.f_GetCombinedOut().f_Trim()
-														<< Colors.f_RepositoryName()
-														<< Colors.f_Default()
-													)
-												;
-
-												auto TagPushResult = co_await Launches.f_Launch
+												auto SeedResult = co_await Launches.f_Launch
 													(
 														Repo
-														, {"push", Remote, "refs/tags/{}"_f << TagInfo.m_TagName}
+														, {"push", Remote, "HEAD:refs/heads/{}"_f << SeedDefault}
 														, {}
 														, CProcessLaunchActor::ESimpleLaunchFlag_None
 													)
 												;
 
-												if (TagPushResult.m_ExitCode == 0)
-												{
-													Launches.f_Output
-														(
-															EOutputType_Normal
-															, Repo
-															, "Pushed previous {4}{}{5} commit as {4}{}{5} on remote {4}{}{5}:\n{}\n"_f
-															<< CurrentBranch
-															<< TagInfo.m_TagName
-															<< Remote
-															<< TagPushResult.f_GetCombinedOut().f_Trim()
-															<< Colors.f_RepositoryName()
-															<< Colors.f_Default()
-														)
-													;
-												}
-												else
+												if (SeedResult.m_ExitCode != 0)
 												{
 													Launches.f_Output
 														(
 															EOutputType_Error
 															, Repo
-															, "Failed to push tag {}: {}"_f
-															<< TagInfo.m_TagName
-															<< TagPushResult.f_GetCombinedOut().f_Trim()
+															, "Failed to seed default branch {} on {}: {}"_f
+															<< SeedDefault
+															<< Remote
+															<< SeedResult.f_GetCombinedOut().f_Trim()
 														)
 													;
 
 													co_return DMibErrorInstance("Error status");
 												}
-											}
-											else if (TagResult.f_GetCombinedOut().f_Find("already exists") < 0)
-											{
+
 												Launches.f_Output
 													(
-														EOutputType_Error
+														EOutputType_Normal
 														, Repo
-														, "Failed to create tag {}: {}"_f
-														<< TagInfo.m_TagName
-														<< TagResult.f_GetCombinedOut().f_Trim()
+														, "Seeded default branch {3}{}{4} on {3}{}{4}:\n{}\n"_f
+														<< SeedDefault
+														<< Remote
+														<< SeedResult.f_GetCombinedOut().f_Trim()
+														<< Colors.f_RepositoryName()
+														<< Colors.f_Default()
+													)
+												;
+											}
+
+											if (bHasTagInfo)
+											{
+												auto TagResult = co_await Launches.f_Launch
+													(
+														Repo
+														, {"tag", TagInfo.m_TagName, TagInfo.m_RemoteHash}
+														, {}
+														, CProcessLaunchActor::ESimpleLaunchFlag_None
 													)
 												;
 
-												co_return DMibErrorInstance("Error status");
+												if (TagResult.m_ExitCode == 0)
+												{
+													Launches.f_Output
+														(
+															EOutputType_Normal
+															, Repo
+															, "Created previous {3}{}{4} commit as tag {3}{}{4}:\n{}\n"_f
+															<< CurrentBranch
+															<< TagInfo.m_TagName
+															<< TagResult.f_GetCombinedOut().f_Trim()
+															<< Colors.f_RepositoryName()
+															<< Colors.f_Default()
+														)
+													;
+
+													auto TagPushResult = co_await Launches.f_Launch
+														(
+															Repo
+															, {"push", Remote, "refs/tags/{}"_f << TagInfo.m_TagName}
+															, {}
+															, CProcessLaunchActor::ESimpleLaunchFlag_None
+														)
+													;
+
+													if (TagPushResult.m_ExitCode == 0)
+													{
+														Launches.f_Output
+															(
+																EOutputType_Normal
+																, Repo
+																, "Pushed previous {4}{}{5} commit as {4}{}{5} on remote {4}{}{5}:\n{}\n"_f
+																<< CurrentBranch
+																<< TagInfo.m_TagName
+																<< Remote
+																<< TagPushResult.f_GetCombinedOut().f_Trim()
+																<< Colors.f_RepositoryName()
+																<< Colors.f_Default()
+															)
+														;
+													}
+													else
+													{
+														Launches.f_Output
+															(
+																EOutputType_Error
+																, Repo
+																, "Failed to push tag {}: {}"_f
+																<< TagInfo.m_TagName
+																<< TagPushResult.f_GetCombinedOut().f_Trim()
+															)
+														;
+
+														co_return DMibErrorInstance("Error status");
+													}
+												}
+												else if (TagResult.f_GetCombinedOut().f_Find("already exists") < 0)
+												{
+													Launches.f_Output
+														(
+															EOutputType_Error
+															, Repo
+															, "Failed to create tag {}: {}"_f
+															<< TagInfo.m_TagName
+															<< TagResult.f_GetCombinedOut().f_Trim()
+														)
+													;
+
+													co_return DMibErrorInstance("Error status");
+												}
 											}
 
 											co_await Launches.f_Launch(Repo, Params, fg_LogAllFunctor());

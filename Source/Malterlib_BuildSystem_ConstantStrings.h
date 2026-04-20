@@ -505,7 +505,10 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString__bByDigest;
 	extern CStringAndHash const gc_ConstString_auto;
 	extern CStringAndHash const gc_ConstString_bash;
+	extern CStringAndHash const gc_ConstString_clone_remote;
 	extern CStringAndHash const gc_ConstString_delete;
+	extern CStringAndHash const gc_ConstString_fork_remote;
+	extern CStringAndHash const gc_ConstString_init;
 	extern CStringAndHash const gc_ConstString_leave;
 	extern CStringAndHash const gc_ConstString_p_ErrorValues;
 	extern CStringAndHash const gc_ConstString_p_LogValues;

@@ -505,7 +505,10 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString__bByDigest = gc_Str<"_bByDigest">;
 	constexpr CStringAndHash const gc_ConstString_auto = gc_Str<"auto">;
 	constexpr CStringAndHash const gc_ConstString_bash = gc_Str<"bash">;
+	constexpr CStringAndHash const gc_ConstString_clone_remote = gc_Str<"clone-remote">;
 	constexpr CStringAndHash const gc_ConstString_delete = gc_Str<"delete">;
+	constexpr CStringAndHash const gc_ConstString_fork_remote = gc_Str<"fork-remote">;
+	constexpr CStringAndHash const gc_ConstString_init = gc_Str<"init">;
 	constexpr CStringAndHash const gc_ConstString_leave = gc_Str<"leave">;
 	constexpr CStringAndHash const gc_ConstString_p_ErrorValues = gc_Str<"p_ErrorValues">;
 	constexpr CStringAndHash const gc_ConstString_p_LogValues = gc_Str<"p_LogValues">;
@@ -1075,7 +1078,10 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString__bByDigest);
 		o_StringCache.f_AddConstantString(gc_ConstString_auto);
 		o_StringCache.f_AddConstantString(gc_ConstString_bash);
+		o_StringCache.f_AddConstantString(gc_ConstString_clone_remote);
 		o_StringCache.f_AddConstantString(gc_ConstString_delete);
+		o_StringCache.f_AddConstantString(gc_ConstString_fork_remote);
+		o_StringCache.f_AddConstantString(gc_ConstString_init);
 		o_StringCache.f_AddConstantString(gc_ConstString_leave);
 		o_StringCache.f_AddConstantString(gc_ConstString_p_ErrorValues);
 		o_StringCache.f_AddConstantString(gc_ConstString_p_LogValues);

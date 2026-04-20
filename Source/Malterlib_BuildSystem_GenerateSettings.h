@@ -22,6 +22,9 @@ namespace NMib::NBuildSystem
 		, EHandleRepositoryAction_Reset
 		, EHandleRepositoryAction_Rebase
 		, EHandleRepositoryAction_Leave
+		, EHandleRepositoryAction_Init
+		, EHandleRepositoryAction_CloneRemote
+		, EHandleRepositoryAction_ForkRemote
 	};
 
 	enum EHandleRepositoryRemovedAction

@@ -5,6 +5,7 @@
 
 #include <Mib/Concurrency/AsyncDestroy>
 #include <Mib/Git/Helpers/ConfigParser>
+#include <Mib/Web/HTTP/URL>
 
 namespace NMib::NBuildSystem::NRepository
 {
@@ -908,6 +909,12 @@ namespace NMib::NBuildSystem::NRepository
 			return "reset";
 		case EHandleRepositoryAction_Rebase:
 			return "rebase";
+		case EHandleRepositoryAction_Init:
+			return "init";
+		case EHandleRepositoryAction_CloneRemote:
+			return "clone-remote";
+		case EHandleRepositoryAction_ForkRemote:
+			return "fork-remote";
 		case EHandleRepositoryAction_Auto:
 		default:
 			return "internal error";

@@ -7,11 +7,15 @@
 #include <Mib/Perforce/Wrapper>
 #include <Mib/Concurrency/AsyncDestroy>
 #include <Mib/Encoding/EJson>
+#include <Mib/Encoding/JsonShortcuts>
 #include <Mib/Git/LfsReleaseStore>
 #include <Mib/Git/Helpers/ConfigParser>
+#include <Mib/Git/Helpers/Credentials>
+#include <Mib/Git/HostingProvider>
 #include <Mib/Cryptography/Hashes/SHA>
 #include <Mib/Process/ProcessLaunch>
 #include <Mib/Process/ProcessLaunchActor>
+#include <Mib/Web/HTTP/URL>
 
 constexpr static ch8 const gc_pHookDispatcherScript[] =
 	{
@@ -45,7 +49,57 @@ To disable stashing of local changes when switching branches:
 
 To show current status without reconciling use:
 {0}./mib status --skip-update{1}
-)---"_f /**/
+)---"_f
+		<< Colors.f_RepositoryName()
+		<< Colors.f_Default()
+	;
+}
+
+
+// The follow-up commands here intentionally omit --no-apply-policy-pretend even
+// though --apply-policy defaults to pretend mode. The two-step UX is deliberate:
+// --apply-policy can rewrite permissions, branch protection, GenericRules and
+// ActionsSettings on every remote, and a copy-pasted command without a dry-run
+// could mass-rewrite production policy. The first invocation runs in pretend
+// mode and lists every change as "Would have: ...". The pretend-mode help line
+// emitted at the end of the apply-policy block then surfaces the actual-apply
+// flag in context, on the same screen as the proposed changes. The user opts
+// in by re-running with --no-apply-policy-pretend.
+CStr fg_ReconcileMissingHelp(EAnsiEncodingFlag _AnsiFlags)
+{
+	NMib::NBuildSystem::NRepository::CColors Colors(_AnsiFlags);
+
+	return R"---(
+Origin does not exist for one or more sub-repositories.
+
+Choose how you want to recover:
+
+Fork from a supported remote         : {0}./mib update-repos '--reconcile=*:fork-remote'{1}
+Clone from a non-origin remote       : {0}./mib update-repos '--reconcile=*:clone-remote'{1}
+Create missing repositories locally  : {0}./mib update-repos '--reconcile=*:init'{1}
+
+To choose separate action for different repositories you can specify wildcards. The last matching wildcard wins:
+{0}./mib update-repos '--reconcile=*:fork-remote,External/*:init'{1}
+
+{0}init{1} and recovering from an empty pre-existing origin both require a working git identity
+({0}user.name{1} and {0}user.email{1}). If your machine has no global or per-repo identity, run
+{0}git config --global user.name "..."{1} and {0}git config --global user.email "..."{1} first.
+
+Use {0}fork-remote{1} when a remote on a supported hosting provider (e.g. GitHub) has the
+repository — this creates origin as a fork in one step. Follow up with
+{0}./mib update-repos --apply-policy{1} if your repository has a policy configured (to apply
+permissions, branch protection, etc.); {0}./mib push{1} only if the main repo is on a feature
+branch.
+
+Use {0}clone-remote{1} when a remote on an unsupported provider has it — requires
+{0}./mib update-repos --apply-policy --apply-policy-create-missing{1} followed by {0}./mib push{1}
+afterwards to create origin and establish upstream tracking.
+
+Use {0}init{1} when no remote has it yet — this creates a repo with a placeholder initial
+commit so {0}./mib push{1} has something to push; follow up with
+{0}./mib update-repos --apply-policy --apply-policy-create-missing{1} then {0}./mib push{1}, and
+use {0}git commit --amend{1} later if you want to replace the placeholder with real content.
+)---"_f
 		<< Colors.f_RepositoryName()
 		<< Colors.f_Default()
 	;
@@ -74,7 +128,7 @@ To force the action even for repositories that you have not yet seen the recomme
 
 To show current status without reconciling use:
 {0}./mib status --skip-update{1}
-)---"_f /**/
+)---"_f
 		<< Colors.f_RepositoryName()
 		<< Colors.f_Default()
 		<< Colors.f_StatusError()
@@ -90,6 +144,8 @@ namespace NMib::NBuildSystem
 
 	namespace NRepository
 	{
+		DMibImpErrorClassImplement(CExceptionBuildSystemReconcileHelp);
+
 		CRepository::CRepository(CStr const &_Name)
 			: m_Name(_Name)
 		{
@@ -165,7 +221,7 @@ namespace NMib::NBuildSystem
 
 		NStr::CStr CColors::f_ChangedBranchName(CStr const &_Name) const
 		{
-			if (_Name == "origin" || _Name.f_StartsWith("origin/"))
+			if (_Name == gc_Str<"origin">.m_Str || _Name.f_StartsWith("origin/"))
 				return f_Default() + f_Foreground256(221);
 			else
 				return f_Default() + f_Foreground256(214);
@@ -249,6 +305,11 @@ namespace NMib::NBuildSystem
 		}
 
 		CLowLevelRecursiveLock &CStateHandler::f_ConsoleOutputLock()
+		{
+			return mp_ConsoleOutputLock;
+		}
+
+		CLowLevelRecursiveLock &CStateHandler::f_OutputConsoleLock()
 		{
 			return mp_ConsoleOutputLock;
 		}
@@ -527,6 +588,34 @@ namespace NMib::NBuildSystem
 			mp_BranchTransitions[CBranchTransition{_FromBranch, _ToBranch, false}].f_Insert(_Repository);
 		}
 
+		void CStateHandler::f_NotePretendPolicyOutput()
+		{
+			mp_bAnyPretendPolicyOutput.f_Store(true, NAtomic::gc_MemoryOrder_Relaxed);
+		}
+
+		void CStateHandler::f_OutputPretendPolicyReminder()
+		{
+			if (!mp_bAnyPretendPolicyOutput.f_Load(NAtomic::gc_MemoryOrder_Relaxed))
+				return;
+
+			CColors Colors(f_AnsiFlags());
+			// Matches EColor_Option (0xffd700) from the CommandLine help renderer so
+			// option names here look the same as in `--help` output.
+			CStr OptionColor = Colors.f_ForegroundRGB(0xffd700);
+
+			f_ConsoleOutput
+				(
+					"{}Pretend mode is on by default for {}--apply-policy{}.{} To actually apply the changes shown above, re-run with {}--no-apply-policy-pretend{}.\n"_f
+					<< Colors.f_StatusWarning()
+					<< OptionColor
+					<< Colors.f_StatusWarning()
+					<< Colors.f_Default()
+					<< OptionColor
+					<< Colors.f_Default()
+				)
+			;
+		}
+
 		void CStateHandler::f_OutputBranchSwitchSummary(umint _MaxRepoWidth)
 		{
 			CColors Colors(f_AnsiFlags());
@@ -698,8 +787,10 @@ namespace NMib::NBuildSystem
 			if (!bIsRoot)
 				ConfigHash = o_StateHandler.f_GetHash(_Repo.m_ConfigFile, Location, _Repo.m_Identity, false);
 
-			auto fOutputInfo = [&](EOutputType _OutputType, CStr const &_Info)
+			auto fOutputInfo = [&](EOutputType _OutputType, CStr const &_Info, bool _bEmptyRepo = false)
 				{
+					DMibLock(o_StateHandler.f_OutputConsoleLock());
+
 					CStr RepoName;
 					if (_Repo.m_Location.f_StartsWith(BaseDir))
 						RepoName = CFile::fs_MakePathRelative(_Repo.m_Location, BaseDir);
@@ -709,7 +800,7 @@ namespace NMib::NBuildSystem
 					if (RepoName.f_IsEmpty())
 						RepoName = gc_Str<".">.m_Str;
 
-					fg_OutputRepositoryInfo(_OutputType, _Info, o_StateHandler, RepoName, _MaxRepoWidth);
+					fg_OutputRepositoryInfo(_OutputType, _Info, o_StateHandler, _bEmptyRepo ? "" : RepoName, _MaxRepoWidth);
 					_Launches.f_RepoDone(0);
 				}
 			;
@@ -953,32 +1044,87 @@ namespace NMib::NBuildSystem
 				if (bIsRoot)
 				{
 					fOutputInfo(EOutputType_Error, "Root repository does not exist at: {}"_f << Location);
-					DMibError("Aborting, root repository needs to exists");
+					co_return DMibErrorInstance("Aborting, root repository needs to exists");
 				}
 				else
 					bCloneNew = true;
 			}
 
-			auto fGetCloneConfigParams = [&]() -> TCVector<CStr>
+			// The 3 (key, value) pairs for the LFS custom transfer agent configuration.
+			// Single source of truth — used by fGetCloneConfigParams (emitted as --config
+			// args during clone) and by fInitRecovery (applied as `git config --local`
+			// on a brand-new `git init`). fSetupLfsReleaseStorage keeps its own structured
+			// conditional logic because it compares against parsed GitConfig state.
+			auto fGetLfsCustomTransferConfigPairs = [&]() -> TCVector<TCTuple<CStr, CStr>>
+				{
+					auto GlobalMibExecutable = CFile::fs_GetUserHomeDirectory() / (".Malterlib/bin/mib" + CFile::mc_ExecutableExtension);
+					TCVector<TCTuple<CStr, CStr>> Pairs;
+					Pairs.f_Insert({gc_Str<"lfs.customtransfer.malterlib-release.path">.m_Str, GlobalMibExecutable});
+					Pairs.f_Insert({gc_Str<"lfs.customtransfer.malterlib-release.args">.m_Str, gc_Str<"lfs-release-store">.m_Str});
+					Pairs.f_Insert({gc_Str<"lfs.customtransfer.malterlib-release.concurrent">.m_Str, gc_Str<"true">.m_Str});
+					return Pairs;
+				}
+			;
+
+			// Per-remote fetch refspec exclusions that keep the LFS book-keeping refs
+			// out of the normal fetch. Single source of truth used by fGetCloneConfigParams
+			// (as --config args), fApplyRemoteLfsAndFetchSpecs (as git config --local --add),
+			// and the existing remote-sync loop's fetch-spec comparison.
+			auto fGetLfsFetchExclusions = [&]() -> TCVector<CStr>
+				{
+					TCVector<CStr> Specs;
+					Specs.f_Insert(gc_Str<"^refs/heads/lfs">.m_Str);
+					Specs.f_Insert(gc_Str<"^refs/tags/lfs/*">.m_Str);
+					return Specs;
+				}
+			;
+
+			// True iff any configured remote (origin or other) uses the LFS release store.
+			// The `lfs.customtransfer.malterlib-release.*` keys are global to the repo —
+			// they register the transfer agent — so we set them up when *any* remote might
+			// reference it, not just the remote being cloned.
+			auto fAnyRemoteHasLfsReleaseStore = [&]() -> bool
+				{
+					if (_Repo.m_OriginProperties.m_bLfsReleaseStore)
+						return true;
+					for (auto &Remote : _Repo.m_Remotes.m_OrderedRemotes)
+					{
+						if (Remote.m_Properties.m_bLfsReleaseStore)
+							return true;
+					}
+					return false;
+				}
+			;
+
+			// Per-remote clone config params. The caller uses `git clone -o <_RemoteName>`
+			// to name the remote directly — so we emit config keys under
+			// "remote.<_RemoteName>.*" rather than hardcoding "remote.origin.*".
+			auto fGetCloneConfigParams = [&](CRemoteProperties const &_Properties, CStr const &_RemoteName) -> TCVector<CStr>
 				{
 					TCVector<CStr> Params;
 
-					auto GlobalMibExecutable = CFile::fs_GetUserHomeDirectory() / (".Malterlib/bin/mib" + CFile::mc_ExecutableExtension);
-
-					if (_Repo.m_OriginProperties.m_bLfsReleaseStore)
+					// Global LFS custom-transfer-agent config: set if any configured remote
+					// uses the release store, even if the remote being cloned right now does
+					// not — otherwise the later remote-sync loop's fSetupLfsReleaseStorage
+					// would have to retroactively set these.
+					if (fAnyRemoteHasLfsReleaseStore())
 					{
-						Params.f_Insert({"--config", "lfs.customtransfer.malterlib-release.path={}"_f << GlobalMibExecutable});
-						Params.f_Insert({"--config", "lfs.customtransfer.malterlib-release.args=lfs-release-store"});
-						Params.f_Insert({"--config", "lfs.customtransfer.malterlib-release.concurrent=true"});
-						Params.f_Insert({"--config", "lfs.{}.standalonetransferagent=malterlib-release"_f << _Repo.m_OriginProperties.m_URL});
-						Params.f_Insert({"--config", "remote.origin.fetch=^refs/heads/lfs"});
-						Params.f_Insert({"--config", "remote.origin.fetch=^refs/tags/lfs/*"});
-						Params.f_Insert({"--no-tags"});
-						Params.f_Insert({"--config", "remote.origin.malterlib-lfs-setup=true"});
+						for (auto &Pair : fGetLfsCustomTransferConfigPairs())
+							Params.f_Insert({"--config", "{}={}"_f << fg_Get<0>(Pair) << fg_Get<1>(Pair)});
 					}
 
-					for (auto &FetchSpec : _Repo.m_OriginProperties.m_ExtraFetchSpecs)
-						Params.f_Insert({"--config", "remote.origin.fetch={}"_f << FetchSpec});
+					// Per-remote LFS keys — only for the remote being cloned.
+					if (_Properties.m_bLfsReleaseStore)
+					{
+						Params.f_Insert({"--config", "lfs.{}.standalonetransferagent=malterlib-release"_f << _Properties.m_URL});
+						for (auto &Spec : fGetLfsFetchExclusions())
+							Params.f_Insert({"--config", "remote.{}.fetch={}"_f << _RemoteName << Spec});
+						Params.f_Insert({"--no-tags"});
+						Params.f_Insert({"--config", "remote.{}.malterlib-lfs-setup=true"_f << _RemoteName});
+					}
+
+					for (auto &FetchSpec : _Properties.m_ExtraFetchSpecs)
+						Params.f_Insert({"--config", "remote.{}.fetch={}"_f << _RemoteName << FetchSpec});
 
 					if (_Repo.m_UserName)
 						Params.f_Insert({"--config", "user.name={}"_f << _Repo.m_UserName});
@@ -987,6 +1133,1195 @@ namespace NMib::NBuildSystem
 						Params.f_Insert({"--config", "user.email={}"_f << _Repo.m_UserEmail});
 
 					return Params;
+				}
+			;
+
+			// Force-English git output for stderr-stable probing. Merged into the launch
+			// environment for git subprocesses in the recovery code paths.
+			auto fEnglishGitEnvironment = [&]() -> TCMap<CStr, CStr>
+				{
+					auto Env = fg_FetchEnvironment(_BuildSystem);
+					Env["LC_ALL"] = "C";
+					Env["LANG"] = "C";
+					return Env;
+				}
+			;
+
+			// Delete `Location` only if local HEAD is unborn — i.e. clone/init/fixup ran far
+			// enough to create .git/ but HEAD never pointed at a real commit. Established
+			// repos (HEAD born) are left in place because deleting them would throw away
+			// potentially large amounts of fetched content for a failure the next
+			// `update-repos` run can usually continue from. Callers use this in
+			// cleanup-on-error paths where leaving a half-initialized Location behind would
+			// make the next run take the "repo already exists" branch and trip over the
+			// broken state.
+			auto fCleanupLocationIfHeadUnborn = [&]() -> TCUnsafeFuture<void>
+				{
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
+					if (!CFile::fs_FileExists(Location))
+						co_return {};
+					if (co_await fLaunchGitQuestion({"rev-parse", "--verify", "HEAD"}, Location, false))
+						co_return {};
+					CFile::fs_DeleteDirectoryRecursive(Location);
+					co_return {};
+				}
+			;
+
+			enum class EOriginProbeResult
+			{
+				mc_Missing
+				, mc_Exists
+				, mc_Unknown
+			};
+
+			// Classifies `git ls-remote` stderr as indicating a genuinely missing repo.
+			// LC_ALL=C / LANG=C force English output so these phrases are stable. Matches:
+			//   - "remote: Repository not found." (emitted by GitHub/GitLab/Bitbucket HTTPS)
+			//   - "fatal: repository 'URL' not found" (emitted by git itself for HTTP 404)
+			// Used as the authoritative signal for UNSUPPORTED hosting providers, where no API
+			// fallback is available to apply the authenticated-404 rule. For SUPPORTED providers
+			// we never rely on stderr matching — the same message is emitted by GitHub for
+			// private repos hidden from anonymous callers (auth masquerade), and the
+			// authenticated-404 API rule is the only safe disambiguation.
+			auto fLsRemoteStderrIndicatesMissing = [](CStr const &_StdErr) -> bool
+				{
+					return _StdErr.f_Find("Repository not found") >= 0
+						|| _StdErr.f_Find("not found") >= 0
+					;
+				}
+			;
+
+			// Probe whether origin exists. Returns Missing / Exists / Unknown.
+			//   1. `git ls-remote --exit-code <url>` with LC_ALL=C. Success + stdout → Exists.
+			//   2. If the URL is on a supported hosting provider, fall through to the API with
+			//      the authenticated-404 rule (only a 404 from a successfully-authenticated call
+			//      counts as Missing; unauthenticated 404s can be private repos hidden from
+			//      anonymous callers).
+			//   3. Otherwise — unsupported provider — use ls-remote stderr as the authoritative
+			//      signal. This is the whole reason we forced LC_ALL=C above. "Repository not
+			//      found" / "... not found" → Missing; any other failure → Unknown. Intentional:
+			//      self-hosted GitLab/Bitbucket-style servers that hide private repos behind a
+			//      "not found" error can be misclassified as Missing here, but `auto` only
+			//      *recommends* recovery — the user must explicitly pass --reconcile=*:init
+			//      /clone-remote/fork-remote for anything destructive, and the original clone
+			//      error is echoed via fOutputInfo so the auth cause is visible. Accepted in
+			//      exchange for having auto-detection work at all on unsupported providers.
+			//
+			// Any throw from the API-fallback path (credential helper failing, hosting provider
+			// crashing, DNS blowing up mid-probe) is absorbed and reported as Unknown, so one
+			// flaky remote never aborts the missing-origin recovery loop.
+			auto fProbeOriginExists = [&](CStr _OriginUrl) -> TCUnsafeFuture<EOriginProbeResult>
+				{
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+					// Step 1: ls-remote with forced English output. No --exit-code: we want
+					// exit 0 to mean "successful talk with the remote" regardless of ref
+					// count, so an empty-but-reachable repo classifies as Exists instead
+					// of falling through to the API/stderr fallback.
+					CStr LsStdErr;
+					{
+						auto Env = fEnglishGitEnvironment();
+						auto Return = co_await _Launches.f_Launch(BaseDir, {"ls-remote", _OriginUrl}, Env, CProcessLaunchActor::ESimpleLaunchFlag_None);
+						if (Return.m_ExitCode == 0)
+							co_return EOriginProbeResult::mc_Exists;
+						LsStdErr = Return.f_GetErrorOut();
+					}
+
+					CStr ProviderClass = fg_GetHostingProviderClassName(_OriginUrl);
+					if (ProviderClass.f_IsEmpty())
+					{
+						// Step 3: unsupported provider — stderr match is our only signal.
+						if (fLsRemoteStderrIndicatesMissing(LsStdErr))
+							co_return EOriginProbeResult::mc_Missing;
+						co_return EOriginProbeResult::mc_Unknown;
+					}
+
+					// Step 2: hosting provider API fallback (authenticated-404 only).
+					// Exceptions from the credential helper or provider propagate to the caller,
+					// which wraps via f_Wrap() and collects the exception into its error
+					// collector so the user sees why the probe couldn't classify origin.
+					NWeb::NHTTP::CURL ProbeUrl(_OriginUrl);
+					CStr Slug = CStr::fs_Join(ProbeUrl.f_GetPath(), "/").f_RemoveSuffix(".git");
+
+					auto HostingProvider = CGitHostingProvider::fs_CreateHostingProvider(ProviderClass);
+					auto DestroyHostingProvider = co_await fg_AsyncDestroy(HostingProvider);
+
+					CStr Token = co_await fg_GetGitCredentials(ProbeUrl, BaseDir);
+
+					bool bAuthenticated = false;
+					if (Token)
+					{
+						auto LoginResult = co_await HostingProvider(&CGitHostingProvider::f_Login, CEJsonSorted{"Token"_= Token}).f_Wrap();
+						bAuthenticated = !!LoginResult;
+					}
+
+					auto Probe = co_await HostingProvider(&CGitHostingProvider::f_GetRepository, Slug).f_Wrap();
+					if (Probe)
+						co_return EOriginProbeResult::mc_Exists;
+
+					// 404 from an authenticated probe means missing (we can see private repos).
+					// Anything else (401, network error, 5xx) is ambiguous — rethrow the
+					// provider exception so the caller's error collector can forward it.
+					bool bMissing = false;
+					NException::fg_VisitException<CGitHostingProviderException>
+						(
+							Probe.f_GetException()
+							, [&](CGitHostingProviderException const &_Exception)
+							{
+								if (_Exception.f_GetSpecific().m_StatusCode == 404 && bAuthenticated)
+									bMissing = true;
+							}
+						)
+					;
+
+					if (bMissing)
+						co_return EOriginProbeResult::mc_Missing;
+
+					co_return Probe.f_GetException();
+				}
+			;
+
+			// Probe whether a configured non-origin remote is reachable as a clone source.
+			// Returns true iff we're confident we can clone from the URL. Same structure as
+			// fProbeOriginExists — ls-remote first, then hosting-provider API fallback on
+			// supported providers. For unsupported providers, only a successful ls-remote
+			// counts as reachable; any failure (missing, auth, network) returns false. We
+			// don't need the stderr match here because both "definitely missing" and "maybe
+			// unreachable" collapse to the same outcome (not reachable) — the stderr
+			// classification would only matter if we exposed the reason, which we don't.
+			//
+			// Exceptions from the credential helper or provider propagate to the caller,
+			// which wraps via f_Wrap() and collects them into its error collector so the
+			// user can see why a remote was treated as unreachable.
+			//
+			// The API fallback intentionally accepts "repo exists per provider" as reachable
+			// even when ls-remote failed. That surfaces real git errors from the subsequent
+			// clone/fetch at the point of failure rather than pre-filtering remotes on a
+			// transport heuristic we can't make reliable.
+			//
+			// Empty source repos (exist per provider, no refs yet) are treated the same way:
+			// a user-error corner case that the explicit clone-remote/fork-remote recovery
+			// will surface with a clear default-branch-missing error at checkout. Demoting
+			// to init here would silently place a placeholder commit on origin, which is
+			// the wrong action when the user was expecting content from the source.
+			// Empty origin is a different scenario and is handled by
+			// fHandleEmptyOriginAfterClone — origin is authoritative for our content, so
+			// we create the first commit automatically there.
+			auto fProbeRemoteReachability = [&](CStr _Url) -> TCUnsafeFuture<bool>
+				{
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+					{
+						auto Env = fEnglishGitEnvironment();
+						auto Return = co_await _Launches.f_Launch(BaseDir, {"ls-remote", _Url}, Env, CProcessLaunchActor::ESimpleLaunchFlag_None);
+						if (Return.m_ExitCode == 0)
+							co_return true;
+					}
+
+					CStr ProviderClass = fg_GetHostingProviderClassName(_Url);
+					if (ProviderClass.f_IsEmpty())
+						co_return false;
+
+					NWeb::NHTTP::CURL ProbeUrl(_Url);
+					CStr Slug = CStr::fs_Join(ProbeUrl.f_GetPath(), "/").f_RemoveSuffix(".git");
+
+					auto HostingProvider = CGitHostingProvider::fs_CreateHostingProvider(ProviderClass);
+					auto DestroyHostingProvider = co_await fg_AsyncDestroy(HostingProvider);
+
+					CStr Token = co_await fg_GetGitCredentials(ProbeUrl, BaseDir);
+					if (Token)
+					{
+						auto LoginResult = co_await HostingProvider(&CGitHostingProvider::f_Login, CEJsonSorted{"Token"_= Token}).f_Wrap();
+						(void)LoginResult;
+					}
+
+					auto Probe = co_await HostingProvider(&CGitHostingProvider::f_GetRepository, Slug).f_Wrap();
+					if (Probe)
+						co_return true;
+
+					// API call failed — rethrow so the caller can collect the exception.
+					co_return Probe.f_GetException();
+				}
+			;
+
+			// Apply per-remote LFS config (standalonetransferagent + fetch exclusions +
+			// malterlib-lfs-setup marker) and any extra fetch specs. Caller owns the
+			// `git remote add` (or rename) and any sequencing scope it wants to wrap.
+			// Used by the recovery flows (init/clone-remote/fork-remote) and by the
+			// existing remote-sync loop's "add new remote" branch.
+			auto fApplyRemoteLfsAndFetchSpecs = [&](CStr _RemoteName, CRemoteProperties const &_Properties) -> TCUnsafeFuture<void>
+				{
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+					if (_Properties.m_bLfsReleaseStore)
+					{
+						// Ensure the global mib binary exists at the path we're about to
+						// reference via lfs.<URL>.standalonetransferagent. Idempotent —
+						// guarded by mp_bGlobalMToolAlreadySetup.
+						co_await _BuildSystem.f_SetupGlobalMTool();
+
+						co_await fLaunchGit({"config", "--local", "lfs.{}.standalonetransferagent"_f << _Properties.m_URL, "malterlib-release"}, Location);
+						for (auto &Spec : fGetLfsFetchExclusions())
+							co_await fLaunchGit({"config", "--local", "--add", "remote.{}.fetch"_f << _RemoteName, Spec}, Location);
+						co_await fLaunchGit({"config", "--local", "remote.{}.malterlib-lfs-setup"_f << _RemoteName, "true"}, Location);
+					}
+
+					for (auto &FetchSpec : _Properties.m_ExtraFetchSpecs)
+						co_await fLaunchGit({"config", "--local", "--add", "remote.{}.fetch"_f << _RemoteName, FetchSpec}, Location);
+
+					co_return {};
+				}
+			;
+
+			// Common helper: add a remote with full LFS/fetch-spec setup and fetch.
+			// Mirrors the per-remote block at the existing remote-sync loop, so that the later
+			// remote-sync sees the remote as already-configured and takes the no-fetch branch.
+			auto fAddRemoteAndFetch = [&](CStr _RemoteName, CRemoteProperties const &_Properties) -> TCUnsafeFuture<void>
+				{
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+					auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(Location);
+
+					co_await fLaunchGit({"remote", "add", _RemoteName, _Properties.m_URL}, Location);
+					co_await fApplyRemoteLfsAndFetchSpecs(_RemoteName, _Properties);
+
+					if (_BuildSystem.f_GetGenerateOptions().m_bForceUpdateRemotes)
+						co_await fLaunchGit({"fetch", "--tags", "--force", _RemoteName}, Location);
+					else
+						co_await fLaunchGit({"fetch", "--tags", _RemoteName}, Location);
+
+					co_return {};
+				}
+			;
+
+			// Variant that adds a remote without fetching (used by `init`, where no remote
+			// has content yet, and by `clone-remote` for the missing origin).
+			auto fAddRemoteNoFetch = [&](CStr _RemoteName, CRemoteProperties const &_Properties) -> TCUnsafeFuture<void>
+				{
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+					auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(Location);
+
+					co_await fLaunchGit({"remote", "add", _RemoteName, _Properties.m_URL}, Location);
+					co_await fApplyRemoteLfsAndFetchSpecs(_RemoteName, _Properties);
+
+					co_return {};
+				}
+			;
+
+			// `init` recovery: create empty local repo with remotes wired up + placeholder commit.
+			// Does NOT fetch any remote — only chosen when no remote has content yet.
+			auto fInitRecovery = [&](CStr _CloneExpectedBranch) -> TCUnsafeFuture<void>
+				{
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+					if (!ConfigHash.f_IsEmpty())
+					{
+						CStr Message =
+							"Cannot use 'init' reconcile action on repository '{}': a ConfigHash is pinned ({})\n"
+							"but no remote has this commit yet. Use 'clone-remote' or 'fork-remote' against a\n"
+							"reachable source remote, or remove the pinned hash from the config file."_f
+							<< _Repo.f_GetName()
+							<< ConfigHash
+						;
+						fOutputInfo(EOutputType_Error, Message);
+						co_return DMibErrorInstance(Message);
+					}
+
+					// Wrap all subsequent steps so we can clean up the partially-initialized
+					// directory if any step fails (otherwise next run sees a non-empty Location
+					// and skips the new-clone path entirely, leaving the user stuck).
+					auto InitResult = co_await fg_CallSafe
+						(
+							[&]() -> TCUnsafeFuture<void>
+							{
+								co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+								CFile::fs_CreateDirectory(Location);
+								co_await fLaunchGit({"init", Location}, "");
+
+								// Ensure the global mib binary exists before we write any config
+								// that references it (customtransfer.malterlib-release.path below
+								// and per-remote standalonetransferagent via fAddRemoteNoFetch).
+								if (fAnyRemoteHasLfsReleaseStore())
+									co_await _BuildSystem.f_SetupGlobalMTool();
+
+								// Apply the same global config keys that fGetCloneConfigParams
+								// would have set as --config args during a clone. Per-remote LFS
+								// keys (standalonetransferagent + fetch exclusions) are handled
+								// by fAddRemoteNoFetch via fApplyRemoteLfsAndFetchSpecs.
+								{
+									auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(Location);
+
+									if (fAnyRemoteHasLfsReleaseStore())
+									{
+										for (auto &Pair : fGetLfsCustomTransferConfigPairs())
+											co_await fLaunchGit({"config", "--local", fg_Get<0>(Pair), fg_Get<1>(Pair)}, Location);
+									}
+
+									if (_Repo.m_UserName)
+										co_await fLaunchGit({"config", "--local", "user.name", _Repo.m_UserName}, Location);
+
+									if (_Repo.m_UserEmail)
+										co_await fLaunchGit({"config", "--local", "user.email", _Repo.m_UserEmail}, Location);
+								}
+
+								co_await fAddRemoteNoFetch(gc_Str<"origin">.m_Str, _Repo.m_OriginProperties);
+
+								for (auto &Remote : _Repo.m_Remotes.m_OrderedRemotes)
+								{
+									if (Remote.m_Name == gc_Str<"origin">.m_Str)
+										continue;
+									co_await fAddRemoteNoFetch(Remote.m_Name, Remote.m_Properties);
+								}
+
+								// `-B` (capital) so the command is idempotent with init.defaultBranch.
+								co_await fLaunchGit({"checkout", "-B", _CloneExpectedBranch}, Location);
+
+								// Placeholder commit so HEAD is born — required for downstream
+								// HEAD-dependent code in fg_HandleRepository, and gives ./mib push
+								// something to push.
+								co_await fLaunchGit({"commit", "--allow-empty", "-m", "Initial commit"}, Location);
+
+								bChanged = true;
+
+								co_return {};
+							}
+						)
+						.f_Wrap()
+					;
+
+					if (!InitResult)
+					{
+						co_await fCleanupLocationIfHeadUnborn();
+						fOutputInfo(EOutputType_Error, "Failed to init repository: {}"_f << InitResult.f_GetExceptionStr());
+						co_return InitResult.f_GetException();
+					}
+
+					if (fg_IsSupportedHostingProvider(_Repo.m_OriginProperties.m_URL))
+					{
+						fOutputInfo
+							(
+								EOutputType_Warning
+								, "Initialized empty repository with a placeholder initial commit. Origin is missing.\n"
+								"To finish setup: (1) run './mib update-repos --apply-policy --apply-policy-create-missing'\n"
+								"to create origin, (2) run './mib push' to populate origin and establish upstream tracking.\n"
+								"To replace the placeholder commit with real content later, use 'git commit --amend'."
+							)
+						;
+					}
+					else
+					{
+						fOutputInfo
+							(
+								EOutputType_Warning
+								, "Initialized empty repository with a placeholder initial commit. Origin is missing.\n"
+								"To replace the placeholder commit with real content later, use 'git commit --amend'."
+							)
+						;
+					}
+
+					co_return {};
+				}
+			;
+
+			// `clone-remote` recovery: clone from a non-origin source, rename the auto-created
+			// origin to that source's configured name, then add the real origin (with no fetch
+			// since it doesn't exist yet) plus all other configured remotes (with fetch).
+			// The local branch ends with no upstream; user runs ./mib push to set it after
+			// --apply-policy-create-missing has created origin.
+			auto fCloneRemoteRecovery = [&](CStr _SourceName, CRemote const &_SourceRemote, CStr _CloneExpectedBranch) -> TCUnsafeFuture<void>
+				{
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+					// If any configured remote uses the LFS release store, ensure the mib
+					// binary exists before any operation that may invoke the transfer agent
+					// (the post-clone `git fetch` below; later fetches added via fAddRemote*).
+					if (fAnyRemoteHasLfsReleaseStore())
+						co_await _BuildSystem.f_SetupGlobalMTool();
+
+					// Wrap the clone-and-configure sequence so a failure can clean up a
+					// half-initialized Location (only when HEAD is unborn — established repos
+					// are preserved so the next `update-repos` can continue from partial state).
+					auto CloneResult = co_await fg_CallSafe
+						(
+							[&]() -> TCUnsafeFuture<void>
+							{
+								co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+								// Clone from source URL using source-specific config (LFS, fetch specs).
+								// `-o _SourceName` names the remote directly — avoids a post-clone
+								// `git remote rename` (and the "Not updating non-default fetch refspec"
+								// warning it emits for pure-negative refspecs like ^refs/heads/lfs).
+								{
+									TCVector<CStr> CloneParams{"clone"};
+									CloneParams.f_Insert(fGetCloneConfigParams(_SourceRemote.m_Properties, _SourceName));
+									CloneParams.f_Insert({"-o", _SourceName, "-n", _SourceRemote.m_Properties.m_URL, Location});
+									co_await fLaunchGit(CloneParams, "");
+
+									if (_SourceRemote.m_Properties.m_bLfsReleaseStore)
+									{
+										auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(Location);
+										co_await fLaunchGit({"update-ref", "-d", "refs/remotes/{}/lfs"_f << _SourceName}, Location);
+										co_await fLaunchGit({"config", "--local", "--unset", "remote.{}.tagOpt"_f << _SourceName}, Location);
+										co_await fLaunchGit({"fetch"}, Location);
+									}
+								}
+
+								// Add the real origin with no fetch (it doesn't exist yet). LFS keys
+								// and extra fetch specs are applied by fAddRemoteNoFetch.
+								co_await fAddRemoteNoFetch(gc_Str<"origin">.m_Str, _Repo.m_OriginProperties);
+
+								// Add and fetch every other configured remote (skipping origin and the
+								// renamed source).
+								for (auto &Remote : _Repo.m_Remotes.m_OrderedRemotes)
+								{
+									if (Remote.m_Name == gc_Str<"origin">.m_Str || Remote.m_Name == _SourceName)
+										continue;
+									co_await fAddRemoteAndFetch(Remote.m_Name, Remote.m_Properties);
+								}
+
+								// Resolve source's default branch first via fetched ref, then fall back to
+								// the configured value if the server didn't advertise HEAD.
+								auto DynamicInfo = fg_GetRepositoryDynamicInfo(_Repo);
+								CStr SourceDefaultBranch = fg_GetRemoteHead(_Repo, DynamicInfo, _SourceName);
+								if (SourceDefaultBranch.f_IsEmpty())
+									SourceDefaultBranch = _SourceRemote.m_Properties.m_DefaultBranch;
+
+								if (SourceDefaultBranch.f_IsEmpty())
+								{
+									CStr Message =
+										"Source remote '{}' at '{}' has refs but doesn't advertise a default branch (HEAD symref is unset).\n"
+										"Fix this on the source's hosting provider, or set the source remote's m_DefaultBranch in the .MHeader\n"
+										"to specify which branch to use."_f
+										<< _SourceName
+										<< _SourceRemote.m_Properties.m_URL
+									;
+									fOutputInfo(EOutputType_Error, Message);
+									co_return DMibErrorInstance(Message);
+								}
+
+								CStr CheckoutSHA;
+								if (!ConfigHash.f_IsEmpty())
+								{
+									// The config file pinned a specific commit; refuse to check
+									// out a different one. If this source doesn't have the commit,
+									// the user needs a different source (or to remove the pin).
+									if (!(co_await fLaunchGitQuestion({"cat-file", "-e", "{}^{{commit}"_f << ConfigHash}, Location, false)))
+									{
+										CStr Message =
+											"Source remote '{}' at '{}' does not contain the pinned ConfigHash {}.\n"
+											"Make a source remote containing this commit reachable, or remove the pinned hash from the config file."_f
+											<< _SourceName
+											<< _SourceRemote.m_Properties.m_URL
+											<< ConfigHash
+										;
+										fOutputInfo(EOutputType_Error, Message);
+										co_return DMibErrorInstance(Message);
+									}
+									CheckoutSHA = ConfigHash;
+								}
+								else
+								{
+									// Intentional: seed _CloneExpectedBranch from the source's default-branch
+									// tip, NOT from refs/remotes/<source>/<_CloneExpectedBranch> even if that
+									// ref happens to exist. The main-repo branch name has no required
+									// relationship to the source's branch namespace — a local `feature-x` may
+									// be about to receive entirely different content than an upstream
+									// `feature-x` that happens to share the name, and cross-matching would
+									// silently seed recovery from the wrong history. Users who need a specific
+									// source commit pin it via ConfigHash above.
+									CheckoutSHA = (co_await fLaunchGit({"rev-parse", "refs/remotes/{}/{}"_f << _SourceName << SourceDefaultBranch}, Location)).f_Trim();
+								}
+
+								co_await fLaunchGit({"checkout", "-B", _CloneExpectedBranch, CheckoutSHA}, Location);
+
+								// Explicitly clear upstream config (origin doesn't exist yet, source is the
+								// only remote that could be tracked but we don't want that). `git branch
+								// --unset-upstream` aborts non-zero when nothing is set, so unset the keys
+								// directly via fTryLaunchGit which ignores non-zero exits.
+								co_await fTryLaunchGit({"config", "--local", "--unset-all", "branch.{}.remote"_f << _CloneExpectedBranch}, Location);
+								co_await fTryLaunchGit({"config", "--local", "--unset-all", "branch.{}.merge"_f << _CloneExpectedBranch}, Location);
+
+								if (_Repo.m_bUpdateSubmodules)
+									co_await fLaunchGit({"submodule", "update", "--init"}, Location);
+
+								if (_Repo.m_bBootstrapSource)
+									co_await _BuildSystem.f_SetupBootstrapMTool();
+
+								bChanged = true;
+
+								co_return {};
+							}
+						)
+						.f_Wrap()
+					;
+
+					if (!CloneResult)
+					{
+						co_await fCleanupLocationIfHeadUnborn();
+						co_return CloneResult.f_GetException();
+					}
+
+					if (fg_IsSupportedHostingProvider(_Repo.m_OriginProperties.m_URL))
+					{
+						fOutputInfo
+							(
+								EOutputType_Warning
+								, "Cloned from '{}' — origin missing. Run './mib update-repos --apply-policy --apply-policy-create-missing'\n"
+								"to create origin, then './mib push' to populate it and set upstream tracking."_f
+								<< _SourceName
+							)
+						;
+					}
+					else
+					{
+						fOutputInfo(EOutputType_Warning, "Cloned from '{}' — origin missing."_f << _SourceName);
+					}
+
+					co_return {};
+				}
+			;
+
+			// `fork-remote` recovery: fork the source via hosting provider into origin's
+			// namespace, optionally rename the fork's default branch to match origin's, then
+			// clone origin and add the source remote locally so we can resolve pinned hashes.
+			auto fForkRemoteRecovery = [&](CStr _SourceName, CRemote const &_SourceRemote, CStr _CloneExpectedBranch) -> TCUnsafeFuture<void>
+				{
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+					// Captured so success messages below can reference them without re-parsing.
+					NWeb::NHTTP::CURL SourceUrlOuter(_SourceRemote.m_Properties.m_URL);
+					CStr SourceSlugOuter = CStr::fs_Join(SourceUrlOuter.f_GetPath(), "/").f_RemoveSuffix(".git");
+					CStr OriginDefaultOuter = _Repo.m_OriginProperties.m_DefaultBranch;
+
+					// Wrap the fork + clone + configure sequence so a failure can clean up a
+					// half-initialized Location (only when HEAD is unborn — established repos
+					// are preserved so the next `update-repos` can continue from partial state).
+					// The fork itself persists on the hosting provider across failures; on retry,
+					// origin now exists and the regular clone path takes over.
+					auto ForkResult = co_await fg_CallSafe
+						(
+							[&]() -> TCUnsafeFuture<void>
+							{
+								co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+								NWeb::NHTTP::CURL OriginUrl(_Repo.m_OriginProperties.m_URL);
+								CStr OriginSlug = CStr::fs_Join(OriginUrl.f_GetPath(), "/").f_RemoveSuffix(".git");
+								CStr TargetOrganization = CFile::fs_GetPath(OriginSlug);
+								CStr TargetName = CFile::fs_GetFile(OriginSlug);
+
+								NWeb::NHTTP::CURL SourceUrl(_SourceRemote.m_Properties.m_URL);
+								CStr SourceSlug = CStr::fs_Join(SourceUrl.f_GetPath(), "/").f_RemoveSuffix(".git");
+
+								CStr ProviderClass = fg_GetHostingProviderClassName(_Repo.m_OriginProperties.m_URL);
+								DMibCheck(!ProviderClass.f_IsEmpty()); // Caller (dispatcher) verifies this precondition.
+
+								auto HostingProvider = CGitHostingProvider::fs_CreateHostingProvider(ProviderClass);
+								auto DestroyHostingProvider = co_await fg_AsyncDestroy(HostingProvider);
+
+								// Use origin-URL credentials: the fork API writes into origin's namespace,
+								// so we need write permission for that scope. With per-org or
+								// credential.useHttpPath setups, source-scoped tokens may only be read-capable.
+								CStr Token = co_await fg_GetGitCredentials(OriginUrl, BaseDir);
+								if (Token)
+									co_await HostingProvider(&CGitHostingProvider::f_Login, CEJsonSorted{"Token"_= Token});
+
+								// Always default-branch-only — we configure source remote locally for any
+								// pinned ConfigHash that lives on a non-default branch.
+								//
+								// Decide whether to pass `m_Organization`:
+								//  - Target == authenticated user's login → omit (personal fork into self).
+								//  - Target is an organization → set m_Organization (org fork).
+								//  - Target is a different user → refuse; the provider can only fork
+								//    into the authenticated user's own namespace or an org they can write to.
+								CGitHostingProvider::CForkRepository ForkParams;
+								ForkParams.m_Name = TargetName;
+								ForkParams.m_bDefaultBranchOnly = true;
+								{
+									auto AuthUser = co_await HostingProvider(&CGitHostingProvider::f_GetAuthenticatedUser);
+									// GitHub owner names (users and orgs) are case-insensitive on the server
+									// but rendered in whatever casing the owner picked. A .MHeader URL of
+									// `github.com/MyUser/repo` with an authenticated login reported as
+									// `myuser` still identifies the same account, so compare case-insensitively
+									// to avoid rejecting valid personal forks over URL-casing mismatches.
+									if (AuthUser.m_Login.f_CmpNoCase(TargetOrganization) == 0)
+									{
+										// Personal fork into the authenticated user's own namespace.
+									}
+									else if (co_await HostingProvider(&CGitHostingProvider::f_IsOrganization, TargetOrganization))
+										ForkParams.m_Organization = TargetOrganization;
+									else
+									{
+										CStr Message =
+											"Cannot fork into '{}': the target is a user account that is not the authenticated user '{}'.\n"
+											"Forks can only be created in the authenticated user's own namespace or in an organization they can write to."_f
+											<< TargetOrganization
+											<< AuthUser.m_Login
+										;
+										fOutputInfo(EOutputType_Error, Message);
+										co_return DMibErrorInstance(Message);
+									}
+								}
+
+								auto Forked = co_await HostingProvider(&CGitHostingProvider::f_ForkRepository, SourceSlug, ForkParams);
+
+								// GitHub creates the fork asynchronously — poll f_GetRepository until 200.
+								{
+									constexpr uint32 c_MaxPolls = 30;
+									constexpr uint32 c_PollDelayMillis = 1000;
+									bool bReady = false;
+									for (uint32 iPoll = 0; iPoll < c_MaxPolls; ++iPoll)
+									{
+										auto Probe = co_await HostingProvider(&CGitHostingProvider::f_GetRepository, OriginSlug).f_Wrap();
+										if (Probe)
+										{
+											bReady = true;
+											Forked = *Probe;
+											break;
+										}
+										co_await fg_Timeout(fp64(c_PollDelayMillis) / 1000.0);
+									}
+
+									if (!bReady)
+									{
+										CStr Message = "Fork was created but did not become available within {} seconds;\n"
+											"re-run './mib update-repos' to continue."_f << c_MaxPolls
+										;
+										fOutputInfo(EOutputType_Error, Message);
+										co_return DMibErrorInstance(Message);
+									}
+								}
+
+								// Determine whether to rename the fork's default branch (use the discovered
+								// value from f_GetRepository, fall back to configured if empty).
+								CStr SourceDefault;
+								if (Forked.m_DefaultBranch && !Forked.m_DefaultBranch->f_IsEmpty())
+									SourceDefault = *Forked.m_DefaultBranch;
+								else
+									SourceDefault = _SourceRemote.m_Properties.m_DefaultBranch;
+
+								CStr OriginDefault = _Repo.m_OriginProperties.m_DefaultBranch;
+
+								if (!SourceDefault.f_IsEmpty() && !OriginDefault.f_IsEmpty() && SourceDefault != OriginDefault)
+								{
+									// GitHub's branch rename atomically renames the branch and updates the
+									// default-branch pointer. We fork with m_bDefaultBranchOnly = true so
+									// the fork starts with exactly one branch (the source's default), so
+									// the target name cannot pre-exist and the rename cannot collide. If
+									// the API ever returns an error here it's a real configuration
+									// problem (or a GitHub-side invariant violation) and we want the
+									// exception to surface; don't defensively swallow it.
+									co_await HostingProvider(&CGitHostingProvider::f_RenameBranch, OriginSlug, SourceDefault, OriginDefault);
+								}
+
+								// If any configured remote uses the LFS release store, ensure the mib
+								// binary exists before any operation that may invoke the transfer agent
+								// (the post-clone `git fetch` below, and the later fAddRemote* calls).
+								if (fAnyRemoteHasLfsReleaseStore())
+									co_await _BuildSystem.f_SetupGlobalMTool();
+
+								// Now clone origin (which exists). Use origin's own clone config.
+								{
+									TCVector<CStr> CloneParams{"clone"};
+									CloneParams.f_Insert(fGetCloneConfigParams(_Repo.m_OriginProperties, gc_Str<"origin">.m_Str));
+									CloneParams.f_Insert({"-n", _Repo.m_OriginProperties.m_URL, Location});
+									co_await fLaunchGit(CloneParams, "");
+
+									if (_Repo.m_OriginProperties.m_bLfsReleaseStore)
+									{
+										auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(Location);
+										co_await fLaunchGit({"update-ref", "-d", "refs/remotes/origin/lfs"}, Location);
+										co_await fLaunchGit({"config", "--local", "--unset", "remote.origin.tagOpt"}, Location);
+										co_await fLaunchGit({"fetch"}, Location);
+									}
+								}
+
+								// When a ConfigHash is pinned, fetch every configured non-origin remote
+								// so the subsequent checkout can resolve the commit — origin is a
+								// default-branch-only fork and may not contain the pin, and the hash
+								// might live on any mirror, not just the source we forked from.
+								// When no ConfigHash is pinned, skip the whole add-remote pass here
+								// and let the outer WantedRemotes loop in fg_HandleRepository handle
+								// it through the regular clone-path code. That preserves the "always
+								// fetch added remotes" invariant without turning a broken
+								// source/mirror transport into a fork-remote hard failure when the
+								// fetch isn't recovery-critical.
+								if (!ConfigHash.f_IsEmpty())
+								{
+									for (auto &Remote : _Repo.m_Remotes.m_OrderedRemotes)
+									{
+										if (Remote.m_Name == gc_Str<"origin">.m_Str)
+											continue;
+										co_await fAddRemoteAndFetch(Remote.m_Name, Remote.m_Properties);
+									}
+								}
+
+								// Run the standard outer wrap (checkout + upstream + submodules + bootstrap).
+								// Intentional: fPopulateConfigHashFromBranchIfExists looks only at local refs
+								// and origin/<_CloneExpectedBranch>. Right after a default-branch-only fork,
+								// origin has only the default branch, so when _CloneExpectedBranch names a
+								// feature branch the result is empty and the checkout below seeds the new
+								// local branch from origin's default-branch tip. We do NOT cross-match
+								// against refs/remotes/<source>/<_CloneExpectedBranch> even when that ref
+								// was fetched above: the main-repo branch name has no required relationship
+								// to the source's branch namespace (same rationale as the clone-remote
+								// checkout above). Users who need a specific source commit pin it via
+								// ConfigHash.
+								CStr CloneConfigHash = co_await fPopulateConfigHashFromBranchIfExists(ConfigHash, Location, _CloneExpectedBranch);
+
+								// fPopulateConfigHashFromBranchIfExists returns a pinned ConfigHash
+								// without verifying its presence. If the pin isn't in any of the
+								// fetched remotes, refuse to proceed — `git checkout -B <branch> <hash>`
+								// would error anyway, but the error is clearer here.
+								if (!ConfigHash.f_IsEmpty() && !(co_await fLaunchGitQuestion({"cat-file", "-e", "{}^{{commit}"_f << ConfigHash}, Location, false)))
+								{
+									CStr Message =
+										"Neither origin (forked from '{}') nor source remote '{}' contains the pinned ConfigHash {}.\n"
+										"Make a source remote containing this commit reachable, or remove the pinned hash from the config file."_f
+										<< SourceSlug
+										<< _SourceName
+										<< ConfigHash
+									;
+									fOutputInfo(EOutputType_Error, Message);
+									co_return DMibErrorInstance(Message);
+								}
+
+								TCVector<CStr> CheckoutParams = {"checkout", "-B", _CloneExpectedBranch};
+								if (!CloneConfigHash.f_IsEmpty())
+									CheckoutParams.f_Insert(CloneConfigHash);
+
+								co_await fLaunchGit(CheckoutParams, Location);
+
+								bChanged = true;
+
+								co_await fSetUpstreamTracking(_CloneExpectedBranch, Location);
+
+								if (_Repo.m_bUpdateSubmodules)
+									co_await fLaunchGit({"submodule", "update", "--init"}, Location);
+
+								if (_Repo.m_bBootstrapSource)
+									co_await _BuildSystem.f_SetupBootstrapMTool();
+
+								co_return {};
+							}
+						)
+						.f_Wrap()
+					;
+
+					if (!ForkResult)
+					{
+						co_await fCleanupLocationIfHeadUnborn();
+						co_return ForkResult.f_GetException();
+					}
+
+					if (_CloneExpectedBranch == OriginDefaultOuter)
+					{
+						fOutputInfo
+							(
+								EOutputType_Warning
+								, "Forked '{}' into origin via hosting provider. If this repository has a policy configured,\n"
+								"run './mib update-repos --apply-policy' to apply permissions and branch protection."_f
+								 << SourceSlugOuter
+							)
+						;
+					}
+					else
+					{
+						fOutputInfo
+							(
+								EOutputType_Warning
+								, "Forked '{}' into origin via hosting provider. Feature branch '{}' was created locally but has\n"
+								"no upstream — run './mib push' to establish tracking. If this repository has a policy\n"
+								"configured, also run './mib update-repos --apply-policy' to apply permissions and branch protection.\n"_f
+								<< SourceSlugOuter
+								<< _CloneExpectedBranch
+							)
+						;
+					}
+
+					co_return {};
+				}
+			;
+
+			// Handle the case where `git clone -n` succeeded but local HEAD is unborn.
+			// Distinguish empty-origin (recover with placeholder commit) from broken-HEAD
+			// origin (fail with actionable error).
+			auto fHandleEmptyOriginAfterClone = [&](CStr _CloneExpectedBranch) -> TCUnsafeFuture<void>
+				{
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+					// HEAD born → no work needed (most common case).
+					if (co_await fLaunchGitQuestion({"rev-parse", "--verify", "HEAD"}, Location, false))
+						co_return {};
+
+					// HEAD unborn. Distinguish empty origin vs. broken-HEAD origin.
+					bool bHasRemoteRefs = co_await fLaunchGitNonEmpty({"for-each-ref", "--count=1", "refs/remotes/origin/"}, Location);
+
+					if (bHasRemoteRefs)
+					{
+						// Broken-HEAD: origin has refs but doesn't advertise a default branch.
+						co_await fCleanupLocationIfHeadUnborn();
+						CStr Message =
+							"Origin '{}' has refs but doesn't advertise a default branch (HEAD symref is unset on the server).\n"
+							"Fix this on the hosting provider — for GitHub, change or set the default branch in repository\n"
+							"settings; for self-hosted git, run 'git symbolic-ref HEAD refs/heads/<branch>' on the bare\n"
+							"repository. Then re-run './mib update-repos'."_f
+							<< _Repo.m_OriginProperties.m_URL
+						;
+						fOutputInfo(EOutputType_Error, Message);
+						co_return DMibErrorInstance(Message);
+					}
+
+					// Genuinely empty origin. Reject pinned ConfigHash up front (we can't satisfy it).
+					if (!ConfigHash.f_IsEmpty())
+					{
+						co_await fCleanupLocationIfHeadUnborn();
+						CStr Message =
+							"Origin '{}' exists but is empty, and this repository pins ConfigHash {}. The pinned commit\n"
+							"doesn't exist on origin. Either populate origin via './mib push' from another working clone,\n"
+							"or remove the pinned hash from the config file."_f
+							<< _Repo.m_OriginProperties.m_URL
+							<< ConfigHash
+						;
+						fOutputInfo(EOutputType_Error, Message);
+						co_return DMibErrorInstance(Message);
+					}
+
+					// Switch HEAD to expected branch + create placeholder empty commit.
+					// Wrap with cleanup-on-failure: if commit fails (most commonly because
+					// user.name/user.email is unconfigured), the cloned .git/ would otherwise
+					// be left behind with an unborn HEAD. The next run sees a non-empty
+					// Location, sets bCloneNew = false, and trips on fg_GetGitHeadHash later.
+					// Removing Location restores bCloneNew = true so the user can re-run after
+					// fixing their identity.
+					//
+					// Per-repo git identity (_Repo.m_UserName / _Repo.m_UserEmail from the
+					// .MHeader) is already persisted in .git/config at this point: the clone
+					// above ran through fGetCloneConfigParams which emits `--config user.name=`
+					// and `--config user.email=` to `git clone`, so the commit below picks them
+					// up from .git/config exactly like any later commit in the repo would.
+					// The "please tell me who you are" failure mode only happens when the
+					// .MHeader has no identity configured AND the user has no global git
+					// identity either — same prerequisite as the init recovery path and
+					// documented in fg_ReconcileMissingHelp.
+					auto FixupResult = co_await fg_CallSafe
+						(
+							[&]() -> TCUnsafeFuture<void>
+							{
+								co_await ECoroutineFlag_CaptureMalterlibExceptions;
+								co_await fLaunchGit({"checkout", "-B", _CloneExpectedBranch}, Location);
+								co_await fLaunchGit({"commit", "--allow-empty", "-m", "Initial commit"}, Location);
+								co_return {};
+							}
+						)
+						.f_Wrap()
+					;
+
+					if (!FixupResult)
+					{
+						co_await fCleanupLocationIfHeadUnborn();
+						fOutputInfo(EOutputType_Error, "Failed to populate empty origin with a placeholder commit: {}"_f << FixupResult.f_GetExceptionStr());
+						co_return FixupResult.f_GetException();
+					}
+
+					fOutputInfo
+						(
+							EOutputType_Warning
+							, "Origin existed but was empty; populated with a placeholder initial commit. Run './mib push'\n"
+							  "to push it and establish upstream tracking. Use 'git commit --amend' later to replace the\n"
+							  "placeholder with real content."
+						)
+					;
+
+					co_return {};
+				}
+			;
+
+			// Main recovery dispatch when `git clone` of origin fails.
+			auto fHandleMissingOrigin = [&](CExceptionPointer _pOriginalCloneError, CStr _CloneExpectedBranch) -> TCUnsafeFuture<void>
+				{
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+					// MalterlibRepositoryHardReset preserves the pre-recovery "hard fail on
+					// any clone error" behavior. Used by CI builds that want clone failures
+					// to surface immediately rather than silently kicking off a recovery path.
+					if (bForceReset)
+						co_return _pOriginalCloneError;
+
+					EHandleRepositoryAction ResolvedAction = _ReconcileAction;
+					bool bExplicitRecovery =
+						_ReconcileAction == EHandleRepositoryAction_Init
+						|| _ReconcileAction == EHandleRepositoryAction_CloneRemote
+						|| _ReconcileAction == EHandleRepositoryAction_ForkRemote
+					;
+					bool bAutoAction =
+						_ReconcileAction == EHandleRepositoryAction_None
+						|| _ReconcileAction == EHandleRepositoryAction_Auto
+					;
+
+					// Reject reconcile actions that make no sense for a missing origin.
+					// `leave`/`reset`/`rebase`/manual-resolve assume a local repo exists and
+					// has something to reconcile with the remote; here there's no local repo
+					// yet and the remote is absent, so the action cannot apply. Mirrors the
+					// worktree-reconcile code's unsupported-action branch.
+					if (!bExplicitRecovery && !bAutoAction)
+					{
+						EOutputType ActionOutputType;
+						CStr ActionStr = fg_HandleRepositoryActionToString(_ReconcileAction, ActionOutputType);
+						fOutputInfo
+							(
+								EOutputType_Error
+								, "Unsupported reconcile action '{}' for missing origin recovery, only init, clone-remote, and fork-remote are supported"_f
+								<< ActionStr
+							)
+						;
+						co_return DMibErrorInstanceBuildSystemReconcileHelp(fg_ReconcileMissingHelp(o_StateHandler.f_AnsiFlags()));
+					}
+
+					// Intentional: explicit --reconcile=*:init|clone-remote|fork-remote
+					// bypasses fProbeOriginExists(). If the clone failed because origin exists
+					// but is unreachable (auth, network, 5xx), the probe itself is equally
+					// unreliable — the authenticated-404 rule can't distinguish "missing" from
+					// "private repo I can't see" for unauthenticated callers, so treating it
+					// as a block rather than a recommendation would incorrectly refuse legitimate
+					// recovery in common setups. The user who passed the flag has opted in; we
+					// still emit "Original clone error: ..." (via fOutputInfo below) so they
+					// see the underlying reason and can interrupt or undo if they made a mistake.
+					// Users who want unconditional hard failure on any clone error can set
+					// MalterlibRepositoryHardReset=true (common in CI).
+					//
+					// Codex reviews have flagged this in multiple rounds; the trade-off is
+					// deliberate — do not gate explicit recovery on the probe.
+					// Collect probe errors as we go so we can surface them on hard-failure
+					// paths. Probes throw on credential-helper / provider / network failures;
+					// we wrap via f_Wrap() here so a single flaky remote doesn't abort the
+					// loop, and collect the exception for later reporting.
+					NException::CExceptionExceptionVectorData::CErrorCollector ProbeErrors;
+
+					auto fEmitCollectedProbeErrors = [&](bool _bIndent)
+						{
+							if (!ProbeErrors.f_HasError())
+								return;
+							auto Bundled = fg_Move(ProbeErrors).f_GetException();
+
+							CStr Error = "Probe errors while evaluating remotes:\n{}"_f << NException::fg_ExceptionString(Bundled);
+							if (_bIndent)
+								Error = ("   " + Error).f_Indent("      ", false);
+							else
+								Error = Error.f_Indent("   ", false);
+
+							fOutputInfo(EOutputType_Error, Error, _bIndent);
+						}
+					;
+
+					if (!bExplicitRecovery)
+					{
+						// Auto / default — probe origin to decide whether recovery applies.
+						auto ProbeResult = co_await fProbeOriginExists(_Repo.m_OriginProperties.m_URL).f_Wrap();
+						EOriginProbeResult Probe = EOriginProbeResult::mc_Unknown;
+						if (ProbeResult)
+							Probe = *ProbeResult;
+						else
+							ProbeErrors.f_AddError(ProbeResult.f_GetException());
+
+						if (Probe != EOriginProbeResult::mc_Missing)
+						{
+							fEmitCollectedProbeErrors(false);
+							co_return _pOriginalCloneError;
+						}
+
+						// Will compute recommendation below.
+					}
+
+					auto fOutputOriginalCloneError = [&](bool _bIndent)
+						{
+							CStr Error = "Original clone error: {}"_f << NException::fg_ExceptionString(_pOriginalCloneError);
+							if (_bIndent)
+								Error = ("   " + Error).f_Indent("      ", false);
+							else
+								Error = Error.f_Indent("   ", false);
+							fOutputInfo(EOutputType_Warning, Error, _bIndent);
+						}
+					;
+
+					// Build reachable lists (skip for explicit Init — no source needed).
+					struct CSourceCandidate
+					{
+						CStr m_Name;
+						CRemote const *m_pRemote = nullptr;
+					};
+
+					TCVector<CSourceCandidate> ReachableRemotes;
+					TCVector<CSourceCandidate> ReachableForkableRemotes;
+
+					CStr OriginProviderClass = fg_GetHostingProviderClassName(_Repo.m_OriginProperties.m_URL);
+
+					if (ResolvedAction != EHandleRepositoryAction_Init)
+					{
+						for (auto &Remote : _Repo.m_Remotes.m_OrderedRemotes)
+						{
+							if (Remote.m_Name == gc_Str<"origin">.m_Str)
+								continue;
+
+							auto ReachResult = co_await fProbeRemoteReachability(Remote.m_Properties.m_URL).f_Wrap();
+							bool bReachable = false;
+							if (ReachResult)
+								bReachable = *ReachResult;
+							else
+								ProbeErrors.f_AddError(ReachResult.f_GetException());
+
+							if (!bReachable)
+								continue;
+
+							ReachableRemotes.f_Insert({Remote.m_Name, &Remote});
+
+							CStr SourceProviderClass = fg_GetHostingProviderClassName(Remote.m_Properties.m_URL);
+							if (!SourceProviderClass.f_IsEmpty() && SourceProviderClass == OriginProviderClass)
+								ReachableForkableRemotes.f_Insert({Remote.m_Name, &Remote});
+						}
+					}
+
+					// Compute Auto recommendation if needed. Intentional asymmetry with the
+					// rest of --reconcile=*:auto: we recommend but do NOT apply for missing
+					// origin. init / clone-remote / fork-remote are all destructive
+					// (placeholder commit, clone from arbitrary source, mutate hosting
+					// provider), so the user must explicitly opt into one. The recommendation
+					// plus reconcile help text tells them which to pick; they re-run with
+					// the explicit action.
+					if (!bExplicitRecovery)
+					{
+						EHandleRepositoryAction Recommended;
+						if (!ReachableForkableRemotes.f_IsEmpty())
+							Recommended = EHandleRepositoryAction_ForkRemote;
+						else if (!ReachableRemotes.f_IsEmpty())
+							Recommended = EHandleRepositoryAction_CloneRemote;
+						else if (ConfigHash.f_IsEmpty())
+							Recommended = EHandleRepositoryAction_Init;
+						else
+						{
+							// No reachable source + pinned ConfigHash: `init` can't satisfy
+							// the pinned commit (fInitRecovery rejects it up front), and
+							// there's no source to clone or fork from. Recommend
+							// ManualResolve the same way the commit reconcile code does
+							// when no automatic action applies.
+							Recommended = EHandleRepositoryAction_ManualResolve;
+						}
+
+						EOutputType RecommendedOutputType;
+						CStr RecommendedActionStr = "{}{}{}"_f << Colors.f_RepositoryName() << fg_HandleRepositoryActionToString(Recommended, RecommendedOutputType) << Colors.f_Default();
+
+						CStr Message;
+						if (Recommended == EHandleRepositoryAction_ManualResolve)
+						{
+							Message =
+								"Origin '{}' does not exist.\n"
+								"No reachable source remote has the pinned ConfigHash:\n"
+								"   {}\n"
+								"Resolve manually by performing one of:\n"
+								"   * Make a source remote containing the pinned commit reachable.\n"
+								"   * Remove the pinned hash from the config file."_f
+								<< _Repo.m_OriginProperties.m_URL
+								<< ConfigHash
+							;
+						}
+						else
+						{
+							Message = "Origin does not exist: {} recommended for {}"_f << RecommendedActionStr << _Repo.m_OriginProperties.m_URL;
+							if (Recommended == EHandleRepositoryAction_ForkRemote)
+								Message += "\n   (source remote: {} {})"_f << ReachableForkableRemotes[0].m_Name << ReachableForkableRemotes[0].m_pRemote->m_Properties.m_URL;
+							else if (Recommended == EHandleRepositoryAction_CloneRemote)
+								Message += "\n   (source remote: {} {})"_f << ReachableRemotes[0].m_Name << ReachableRemotes[0].m_pRemote->m_Properties.m_URL;
+						}
+
+						{
+							DMibLock(o_StateHandler.f_OutputConsoleLock());
+							fOutputInfo(RecommendedOutputType, Message);
+							fOutputOriginalCloneError(true);
+							fEmitCollectedProbeErrors(true);
+						}
+						co_return DMibErrorInstanceBuildSystemReconcileHelp(fg_ReconcileMissingHelp(o_StateHandler.f_AnsiFlags()));
+					}
+
+					// Explicit recovery actions:
+					if (ResolvedAction == EHandleRepositoryAction_Init)
+					{
+						fOutputOriginalCloneError(false);
+						co_await fInitRecovery(_CloneExpectedBranch);
+						co_return {};
+					}
+
+					if (ResolvedAction == EHandleRepositoryAction_CloneRemote)
+					{
+						if (ReachableRemotes.f_IsEmpty())
+						{
+							CStr Message = "Cannot use 'clone-remote' on '{}': no configured remote is reachable. Use 'init' instead."_f << _Repo.f_GetName();
+							{
+								DMibLock(o_StateHandler.f_OutputConsoleLock());
+								fOutputInfo(EOutputType_Error, Message);
+								fOutputOriginalCloneError(true);
+								fEmitCollectedProbeErrors(true);
+							}
+							co_return DMibErrorInstance(Message);
+						}
+
+						fOutputOriginalCloneError(false);
+
+						// Intentional: always pick the first reachable remote. If ConfigHash is pinned
+						// and this source doesn't contain that commit, the downstream recovery fails
+						// with a clear error rather than silently retrying later candidates. Retry-with-
+						// cleanup across multiple reachable sources would require unwinding a partially
+						// cloned .git/ and all configured remotes on each failed attempt, which is a
+						// lot of complexity for a narrow corner case. Users can reorder _Repo.m_Remotes
+						// in the .MHeader to put the authoritative source first, or drop the pin.
+						auto &Pick = ReachableRemotes[0];
+						co_await fCloneRemoteRecovery(Pick.m_Name, *Pick.m_pRemote, _CloneExpectedBranch);
+						co_return {};
+					}
+
+					if (ResolvedAction == EHandleRepositoryAction_ForkRemote)
+					{
+						if (OriginProviderClass.f_IsEmpty())
+						{
+							CStr Message = "Cannot use 'fork-remote' on '{}': origin '{}' is not on a supported hosting provider.\n"
+								"Use 'clone-remote' or 'init' instead."_f
+								<< _Repo.f_GetName()
+								<< _Repo.m_OriginProperties.m_URL
+							;
+							{
+								DMibLock(o_StateHandler.f_OutputConsoleLock());
+								fOutputInfo(EOutputType_Error, Message);
+								fOutputOriginalCloneError(true);
+								fEmitCollectedProbeErrors(true);
+							}
+							co_return DMibErrorInstance(Message);
+						}
+						if (ReachableForkableRemotes.f_IsEmpty())
+						{
+							CStr Message = "Cannot use 'fork-remote' on '{}': no configured remote is on the same supported hosting\n"
+								"provider as origin. Use 'clone-remote' or 'init' instead."_f
+								<< _Repo.f_GetName()
+							;
+							{
+								DMibLock(o_StateHandler.f_OutputConsoleLock());
+								fOutputInfo(EOutputType_Error, Message);
+								fOutputOriginalCloneError(true);
+								fEmitCollectedProbeErrors(true);
+							}
+							co_return DMibErrorInstance(Message);
+						}
+
+						fOutputOriginalCloneError(false);
+						// Same first-reachable selection as clone-remote above — retry across
+						// candidates when the first doesn't contain a pinned ConfigHash isn't
+						// worth the rollback complexity. Users can reorder _Repo.m_Remotes.
+						auto &Pick = ReachableForkableRemotes[0];
+						co_await fForkRemoteRecovery(Pick.m_Name, *Pick.m_pRemote, _CloneExpectedBranch);
+						co_return {};
+					}
+
+					// Should be unreachable.
+					co_return _pOriginalCloneError;
 				}
 			;
 
@@ -1094,7 +2429,7 @@ namespace NMib::NBuildSystem
 															<< Colors.f_ToPush() << ConfigHash << Colors.f_Default()
 														)
 													;
-													co_return DMibErrorInstance(fg_ReconcileHelp(o_StateHandler.f_AnsiFlags()));
+													co_return DMibErrorInstanceBuildSystemReconcileHelp(fg_ReconcileHelp(o_StateHandler.f_AnsiFlags()));
 												}
 												else
 												{
@@ -1107,7 +2442,7 @@ namespace NMib::NBuildSystem
 															<< ActionStr << WorktreeExpectedBranch
 														)
 													;
-													co_return DMibErrorInstance(fg_ReconcileHelp(o_StateHandler.f_AnsiFlags()));
+													co_return DMibErrorInstanceBuildSystemReconcileHelp(fg_ReconcileHelp(o_StateHandler.f_AnsiFlags()));
 												}
 											}
 										}
@@ -1157,7 +2492,11 @@ namespace NMib::NBuildSystem
 								.f_Wrap()
 							;
 							if (!Result)
+							{
+								// Any error in the repository management takes precedence, and we don't want double report of the same error when retrying
+								_BuildSystem.f_SetDisableOnDemandPositions();
 								CBuildSystem::fs_ThrowError(_Repo.m_Position, fg_Format("Failed to add worktree for repository: {}", Result.f_GetExceptionStr()));
+							}
 
 							bHandledByWorktree = true;
 						}
@@ -1215,7 +2554,11 @@ namespace NMib::NBuildSystem
 								.f_Wrap()
 							;
 							if (!Result)
+							{
+								// Any error in the repository management takes precedence, and we don't want double report of the same error when retrying
+								_BuildSystem.f_SetDisableOnDemandPositions();
 								CBuildSystem::fs_ThrowError(_Repo.m_Position, fg_Format("Failed to transfer repository from worktree: {}", Result.f_GetExceptionStr()));
+							}
 
 							bHandledByWorktree = true;
 						}
@@ -1228,8 +2571,38 @@ namespace NMib::NBuildSystem
 						else
 							fOutputInfo(EOutputType_Normal, "Adding external repository (clone) at commit {}"_f << ConfigHash);
 
-						// Standard clone path
-						auto Result = co_await fg_CallSafe
+						CStr CloneExpectedBranch = fg_GetExpectedBranch(_Repo, _MainRepoInfo.m_Branch, _MainRepoInfo.m_DefaultBranch);
+
+						auto fRunOuterClonePath = [&]() -> TCUnsafeFuture<void>
+							{
+								co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+								CStr CloneConfigHash = co_await fPopulateConfigHashFromBranchIfExists(ConfigHash, Location, CloneExpectedBranch);
+
+								TCVector<CStr> Params = {"checkout", "-B", CloneExpectedBranch};
+
+								if (!CloneConfigHash.f_IsEmpty())
+									Params.f_Insert(CloneConfigHash);
+
+								co_await fLaunchGit(Params, Location);
+
+								bChanged = true;
+
+								co_await fSetUpstreamTracking(CloneExpectedBranch, Location);
+
+								if (_Repo.m_bUpdateSubmodules)
+									co_await fLaunchGit({"submodule", "update", "--init"}, Location);
+
+								if (_Repo.m_bBootstrapSource)
+									co_await _BuildSystem.f_SetupBootstrapMTool();
+
+								co_return {};
+							}
+						;
+
+						// Inner wrap: just the clone + LFS-release-store config tweaks. If this
+						// fails, origin may be missing and we want to consider recovery actions.
+						auto InnerCloneResult = co_await fg_CallSafe
 							(
 								[&]() -> TCUnsafeFuture<void>
 								{
@@ -1237,7 +2610,7 @@ namespace NMib::NBuildSystem
 
 									TCVector<CStr> CloneParams{"clone"};
 
-									CloneParams.f_Insert(fGetCloneConfigParams());
+									CloneParams.f_Insert(fGetCloneConfigParams(_Repo.m_OriginProperties, gc_Str<"origin">.m_Str));
 									CloneParams.f_Insert({"-n", _Repo.m_OriginProperties.m_URL, Location});
 
 									co_await fLaunchGit(CloneParams, "");
@@ -1251,33 +2624,63 @@ namespace NMib::NBuildSystem
 										co_await fLaunchGit({"fetch"}, Location);
 									}
 
-									CStr CloneExpectedBranch = fg_GetExpectedBranch(_Repo, _MainRepoInfo.m_Branch, _MainRepoInfo.m_DefaultBranch);
-									CStr CloneConfigHash = co_await fPopulateConfigHashFromBranchIfExists(ConfigHash, Location, CloneExpectedBranch);
-
-									TCVector<CStr> Params = {"checkout", "-B", CloneExpectedBranch};
-
-									if (!CloneConfigHash.f_IsEmpty())
-										Params.f_Insert(CloneConfigHash);
-
-									co_await fLaunchGit(Params, Location);
-
-									bChanged = true;
-
-									co_await fSetUpstreamTracking(CloneExpectedBranch, Location);
-
-									if (_Repo.m_bUpdateSubmodules)
-										co_await fLaunchGit({"submodule", "update", "--init"}, Location);
-
-									if (_Repo.m_bBootstrapSource)
-										co_await _BuildSystem.f_SetupBootstrapMTool();
-
 									co_return {};
 								}
 							)
 							.f_Wrap()
 						;
-						if (!Result)
-							CBuildSystem::fs_ThrowError(_Repo.m_Position, fg_Format("Failed to clone repository: {}", Result.f_GetExceptionStr()));
+
+						bool bSkipOuterWrap = false;
+
+						if (!InnerCloneResult)
+						{
+							// Clone itself failed. Try recovery (init / clone-remote / fork-remote).
+							auto pOriginalCloneError = InnerCloneResult.f_GetException();
+
+							auto RecoveryResult = co_await fHandleMissingOrigin(pOriginalCloneError, CloneExpectedBranch).f_Wrap();
+
+							if (!RecoveryResult)
+							{
+								// Any error in the repository management takes precedence, and we don't want double report of the same error when retrying
+								_BuildSystem.f_SetDisableOnDemandPositions();
+								CBuildSystem::fs_ThrowError(_Repo.m_Position, fg_Format("Failed to clone repository: {}", RecoveryResult.f_GetExceptionStr()));
+							}
+
+							// Recovery handled the full setup (init/clone-remote skip outer
+							// wrap entirely; fork-remote sets up everything before invoking
+							// the outer wrap itself if needed).
+							bSkipOuterWrap = true;
+						}
+						else
+						{
+							// Clone succeeded. Check for unborn HEAD: empty origin (recover by
+							// creating a placeholder commit) vs broken-HEAD origin (fail with
+							// actionable error and clean up).
+							auto FixupResult = co_await fHandleEmptyOriginAfterClone(CloneExpectedBranch).f_Wrap();
+
+							if (!FixupResult)
+							{
+								// Any error in the repository management takes precedence, and we don't want double report of the same error when retrying
+								_BuildSystem.f_SetDisableOnDemandPositions();
+								CBuildSystem::fs_ThrowError(_Repo.m_Position, fg_Format("Failed to clone repository: {}", FixupResult.f_GetExceptionStr()));
+							}
+						}
+
+						if (!bSkipOuterWrap)
+						{
+							// Outer wrap: checkout + upstream + submodules + bootstrap.
+							// Failures propagate normally and do not trigger recovery — the
+							// clone succeeded, so recovery against an existing .git/ would be
+							// wrong and violate the bCloneNew-implies-empty invariant.
+							auto OuterResult = co_await fRunOuterClonePath().f_Wrap();
+
+							if (!OuterResult)
+							{
+								// Any error in the repository management takes precedence, and we don't want double report of the same error when retrying
+								_BuildSystem.f_SetDisableOnDemandPositions();
+								CBuildSystem::fs_ThrowError(_Repo.m_Position, fg_Format("Failed to clone repository: {}", OuterResult.f_GetExceptionStr()));
+							}
+						}
 					}
 				}
 				else
@@ -1319,7 +2722,11 @@ namespace NMib::NBuildSystem
 						.f_Wrap()
 					;
 					if (!Result)
+					{
+						// Any error in the repository management takes precedence, and we don't want double report of the same error when retrying
+						_BuildSystem.f_SetDisableOnDemandPositions();
 						CBuildSystem::fs_ThrowError(_Repo.m_Position, fg_Format("Failed to add submodule repository: {}", Result.f_GetExceptionStr()));
+					}
 				}
 			}
 			else if (!bIsRoot)
@@ -1412,7 +2819,7 @@ namespace NMib::NBuildSystem
 			auto GitConfig = fg_GetGitConfig(_Repo, DynamicInfo, bLocationIsWorktree);
 			auto &CurrentRemotes = GitConfig.m_Remotes;
 			auto WantedRemotes = _Repo.m_Remotes;
-			auto &OriginRemote = WantedRemotes["origin"];
+			auto &OriginRemote = WantedRemotes[gc_Str<"origin">.m_Str];
 			OriginRemote.m_Properties = _Repo.m_OriginProperties;
 
 			CStr ConfigLocationParam = bLocationIsWorktree ? gc_Str<"--worktree">.m_Str : gc_Str<"--local">.m_Str;
@@ -1870,8 +3277,8 @@ namespace NMib::NBuildSystem
 								fOutputInfo(EOutputType_Normal, "Setting up LFS fetch exclusions");
 
 								auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(Location);
-								co_await fLaunchGit({"config", "--local", "--add", "remote.{}.fetch"_f << Remote.m_Name, "^refs/heads/lfs"}, Location);
-								co_await fLaunchGit({"config", "--local", "--add", "remote.{}.fetch"_f << Remote.m_Name, "^refs/tags/lfs/*"}, Location);
+								for (auto &Spec : fGetLfsFetchExclusions())
+									co_await fLaunchGit({"config", "--local", "--add", "remote.{}.fetch"_f << Remote.m_Name, Spec}, Location);
 								co_await fLaunchGit({"config", "--local", "remote.{}.malterlib-lfs-setup"_f << Remote.m_Name, "true"}, Location);
 							}
 						}
@@ -1893,8 +3300,8 @@ namespace NMib::NBuildSystem
 
 						if (Remote.m_Properties.m_bLfsReleaseStore)
 						{
-							WantedFetchSpecs.f_Insert(gc_Str<"^refs/heads/lfs">);
-							WantedFetchSpecs.f_Insert(gc_Str<"^refs/tags/lfs/*">);
+							for (auto &Spec : fGetLfsFetchExclusions())
+								WantedFetchSpecs.f_Insert(Spec);
 						}
 
 						for (auto &FetchSpec : Remote.m_Properties.m_ExtraFetchSpecs)
@@ -1920,17 +3327,9 @@ namespace NMib::NBuildSystem
 					co_await fLaunchGit({"remote", "add", Remote.m_Name, Remote.m_Properties.m_URL}, Location);
 
 					if (Remote.m_Properties.m_bLfsReleaseStore)
-					{
 						co_await fSetupLfsReleaseStorage();
 
-						co_await fLaunchGit({"config", "--local", "lfs.{}.standalonetransferagent"_f << Remote.m_Properties.m_URL, "malterlib-release"}, Location);
-						co_await fLaunchGit({"config", "--local", "--add", "remote.{}.fetch"_f << Remote.m_Name, "^refs/heads/lfs"}, Location);
-						co_await fLaunchGit({"config", "--local", "--add", "remote.{}.fetch"_f << Remote.m_Name, "^refs/tags/lfs/*"}, Location);
-						co_await fLaunchGit({"config", "--local", "remote.{}.malterlib-lfs-setup"_f << Remote.m_Name, "true"}, Location);
-					}
-
-					for (auto &FetchSpec : Remote.m_Properties.m_ExtraFetchSpecs)
-						co_await fLaunchGit({"config", "--local", "--add", "remote.{}.fetch"_f << Remote.m_Name, FetchSpec}, Location);
+					co_await fApplyRemoteLfsAndFetchSpecs(Remote.m_Name, Remote.m_Properties);
 
 					if (_BuildSystem.f_GetGenerateOptions().m_bForceUpdateRemotes)
 						co_await fLaunchGit({"fetch", "--tags", "--force", Remote.m_Name}, Location);
@@ -1940,9 +3339,24 @@ namespace NMib::NBuildSystem
 
 				if (_BuildSystem.f_ApplyRepoPolicy())
 				{
+					auto fApplyPolicyOutputInfo = [&](EOutputType _OutputType, CStr const &_String)
+						{
+							if (_String.f_Find("Would have:") >= 0)
+								o_StateHandler.f_NotePretendPolicyOutput();
+							fOutputInfo(_OutputType, _String);
+						}
+					;
+
 					for (auto &Remote : WantedRemotes.m_OrderedRemotes)
 					{
-						if (!Remote.m_Properties.m_bApplyPolicy)
+						bool bWantApplyPolicy = Remote.m_Properties.m_bApplyPolicy;
+						// Origin-only bypass: --apply-policy-create-missing should still create
+						// origin even when the repo has no Policy configured. Restricting this
+						// to origin avoids speculatively creating non-origin mirrors and avoids
+						// "Unsupported hosting provider" errors on read-only mirrors.
+						bool bWantCreateMissing = _BuildSystem.f_ApplyRepoPolicyCreateMissing() && Remote.m_Name == gc_Str<"origin">.m_Str;
+
+						if (!bWantApplyPolicy && !bWantCreateMissing)
 							continue;
 
 						EApplyPolicyFlag Flags = EApplyPolicyFlag::mc_None;
@@ -1950,10 +3364,13 @@ namespace NMib::NBuildSystem
 						if (_BuildSystem.f_ApplyRepoPolicyPretend() || Remote.m_Properties.m_bApplyPolicyPretend)
 							Flags |= EApplyPolicyFlag::mc_Pretend;
 
-						if (_BuildSystem.f_ApplyRepoPolicyCreateMissing())
+						if (bWantCreateMissing)
 							Flags |= EApplyPolicyFlag::mc_CreateMissing;
 
-						co_await fg_ApplyPolicies(Remote.m_Properties.m_URL, Location, Remote.m_Properties.m_Policy, Flags, fOutputInfo);
+						CEJsonSorted const EmptyPolicy(EJsonType_Object);
+						auto const &Policy = bWantApplyPolicy ? Remote.m_Properties.m_Policy : EmptyPolicy;
+
+						co_await fg_ApplyPolicies(Remote.m_Properties.m_URL, Location, Policy, Flags, fApplyPolicyOutputInfo);
 					}
 				}
 
@@ -2331,7 +3748,7 @@ namespace NMib::NBuildSystem
 								{
 									fOutputInfo(EOutputType_Error, "Manual reconcile against {} needed"_f << ConfigHash);
 									bPassException = true;
-									DMibError("Manual reconcile needed");
+									co_return DMibErrorInstance("Manual reconcile needed");
 								}
 								else if (Action == EHandleRepositoryAction_Leave)
 								{
@@ -2382,7 +3799,7 @@ namespace NMib::NBuildSystem
 										;
 									}
 									bPassException = true;
-									DMibError(fg_ReconcileHelp(o_StateHandler.f_AnsiFlags()));
+									co_return DMibErrorInstanceBuildSystemReconcileHelp(fg_ReconcileHelp(o_StateHandler.f_AnsiFlags()));
 								}
 								bChanged = true;
 							}
@@ -2401,6 +3818,9 @@ namespace NMib::NBuildSystem
 					CStr ErrorString = Result.f_GetExceptionStr().f_Trim();
 
 					fOutputInfo(EOutputType_Error, "Reconcile error: {}"_f << ErrorString);
+					// Any error in the repository management takes precedence, and we don't want double report of the same error when retrying.
+					// Parse errors where we are interested in detailed positions would come from property evaluation, not git commands.
+					_BuildSystem.f_SetDisableOnDemandPositions();
 					CBuildSystem::fs_ThrowError(_Repo.m_Position, "Failed to reconcile hash '{}': {}"_f << ConfigHash << ErrorString);
 				}
 			}
@@ -3198,6 +4618,7 @@ namespace NMib::NBuildSystem
 		}
 
 		StateHandler.f_OutputBranchSwitchSummary(MaxRepoWidth);
+		StateHandler.f_OutputPretendPolicyReminder();
 
 		auto MergedFiles = StateHandler.f_GetMergedFiles();
 		for (auto &File : MergedFiles)
@@ -3335,7 +4756,7 @@ namespace NMib::NBuildSystem
 			if (bLastSeenActionNeeded)
 			{
 				if (!SeenRepositories.f_IsEmpty())
-					co_return DMibErrorInstance(fg_ReconcileRemovedHelp(mp_AnsiFlags));
+					co_return DMibErrorInstanceBuildSystemReconcileHelp(fg_ReconcileRemovedHelp(mp_AnsiFlags));
 			}
 			else
 			{

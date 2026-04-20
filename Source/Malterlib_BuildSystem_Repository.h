@@ -14,6 +14,11 @@
 
 namespace NMib::NBuildSystem::NRepository
 {
+	DMibImpErrorClassDefine(CExceptionBuildSystemReconcileHelp, NException::CException);
+
+#	define DMibErrorBuildSystemReconcileHelp(_Description) DMibImpError(NMib::NBuildSystem::NRepository::CExceptionBuildSystemReconcileHelp, _Description)
+#	define DMibErrorInstanceBuildSystemReconcileHelp(_Description) DMibImpErrorInstance(NMib::NBuildSystem::NRepository::CExceptionBuildSystemReconcileHelp, _Description)
+
 	struct CColors : public CAnsiEncoding
 	{
 		CColors(EAnsiEncodingFlag _AnsiFlags);
@@ -242,6 +247,9 @@ namespace NMib::NBuildSystem::NRepository
 		void f_IncrementBranchCreated(CStr const &_FromBranch, CStr const &_ToBranch, CStr const &_Repository);
 		void f_IncrementBranchSwitched(CStr const &_FromBranch, CStr const &_ToBranch, CStr const &_Repository);
 		void f_OutputBranchSwitchSummary(umint _MaxRepoWidth);
+		void f_NotePretendPolicyOutput();
+		void f_OutputPretendPolicyReminder();
+		CLowLevelRecursiveLock &f_OutputConsoleLock();
 
 	private:
 		struct CBranchTransition
@@ -278,6 +286,8 @@ namespace NMib::NBuildSystem::NRepository
 
 		CLowLevelRecursiveLock mp_BranchTransitionsLock;
 		TCMap<CBranchTransition, TCVector<CStr>> mp_BranchTransitions;
+
+		NAtomic::TCAtomic<bool> mp_bAnyPretendPolicyOutput;
 	};
 
 	struct CGitLaunches
