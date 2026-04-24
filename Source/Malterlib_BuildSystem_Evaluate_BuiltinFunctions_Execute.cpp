@@ -89,6 +89,13 @@ namespace NMib::NBuildSystem
 								if (GenerateStateFile.f_IsEmpty())
 									fs_ThrowError(_Context, "You need to specify states file");
 
+								// "Try" mode: when the state file extension contains "Try" (e.g. *.MTryState,
+								// *.TryMState, *.MTry), a failed command launch or non-zero exit yields an
+								// empty result instead of propagating the error. The empty result is still
+								// cached like a normal one, so callers can probe conditions such as "does
+								// HEAD resolve" without breaking the build when they don't.
+								bool bTryMode = CFile::fs_GetExtension(GenerateStateFile).f_Find("Try") >= 0;
+
 								auto const &Executable = _Params[2].f_String();
 
 								TCVector<CStr> FunctionParams = _Params[3].f_StringArray();
@@ -238,8 +245,13 @@ namespace NMib::NBuildSystem
 								}
 								catch (CException const &_Exception)
 								{
-									pExecuteCommand->m_Error = fg_Format("ExecuteCommand({vs,vb}) failed: {}", FunctionParams, _Exception);
-									fs_ThrowError(_Context, pExecuteCommand->m_Error);
+									if (bTryMode)
+										Ret = CStr();
+									else
+									{
+										pExecuteCommand->m_Error = fg_Format("ExecuteCommand({vs,vb}) failed: {}", FunctionParams, _Exception);
+										fs_ThrowError(_Context, pExecuteCommand->m_Error);
+									}
 								}
 
 								CExecuteCommandState State;
