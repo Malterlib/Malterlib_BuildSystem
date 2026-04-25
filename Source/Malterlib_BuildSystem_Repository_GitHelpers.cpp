@@ -1112,20 +1112,65 @@ namespace NMib::NBuildSystem::NRepository
 
 					CStr ExpectedTracking = "origin/{}"_f << Repo.m_OriginProperties.m_DefaultBranch;
 					CStr CurrentTracking;
+					bool bTrackingQuerySucceeded = false;
 					if (TrackingResult)
 					{
 						if (TrackingResult->m_ExitCode != 0)
 							Launches.f_Output(EOutputType_Warning, Repo, "Failed to query default branch tracking branch: {}"_f << TrackingResult->f_GetCombinedOut().f_Trim());
 						else
+						{
 							CurrentTracking = TrackingResult->f_GetStdOut().f_Trim();
+							bTrackingQuerySucceeded = true;
+						}
 					}
 					else
 						Launches.f_Output(EOutputType_Warning, Repo, "Failed to query default branch tracking branch: {}"_f << TrackingResult.f_GetExceptionStr());
 
-					if (CurrentTracking != ExpectedTracking)
+					if (bTrackingQuerySucceeded && CurrentTracking != ExpectedTracking)
 					{
-						Launches.f_Output(EOutputType_Normal, Repo, "Updating default branch remote tracking branch from {} to {}"_f << CurrentTracking << ExpectedTracking);
-						Launches.f_Launch(Repo, {"branch", "-u", ExpectedTracking, Repo.m_OriginProperties.m_DefaultBranch}, fg_LogAllFunctor()) > SetHeadResults;
+						auto BranchExistsResult = co_await Launches.f_Launch
+							(
+								Repo
+								, {"show-ref", "--verify", "--quiet", "refs/heads/{}"_f << Repo.m_OriginProperties.m_DefaultBranch}
+								, {}
+								, CProcessLaunchActor::ESimpleLaunchFlag_None
+							)
+						;
+
+						if (BranchExistsResult.m_ExitCode == 0)
+						{
+							Launches.f_Output(EOutputType_Normal, Repo, "Updating default branch remote tracking branch from {} to {}"_f << CurrentTracking << ExpectedTracking);
+							Launches.f_Launch(Repo, {"branch", "-u", ExpectedTracking, Repo.m_OriginProperties.m_DefaultBranch}, fg_LogAllFunctor()) > SetHeadResults;
+						}
+						else if (BranchExistsResult.m_ExitCode == 1)
+						{
+							auto RemoteBranchExistsResult = co_await Launches.f_Launch
+								(
+									Repo
+									, {"show-ref", "--verify", "--quiet", "refs/remotes/{}"_f << ExpectedTracking}
+									, {}
+									, CProcessLaunchActor::ESimpleLaunchFlag_None
+								)
+							;
+
+							if (RemoteBranchExistsResult.m_ExitCode == 0)
+							{
+								Launches.f_Output(EOutputType_Normal, Repo, "Creating default branch {} tracking {}"_f << Repo.m_OriginProperties.m_DefaultBranch << ExpectedTracking);
+								// update-remotes reconciles refs and upstream metadata only; it must not
+								// populate, reset, or switch the user's current worktree.
+								Launches.f_Launch(Repo, {"branch", "--track", Repo.m_OriginProperties.m_DefaultBranch, ExpectedTracking}, fg_LogAllFunctor()) > SetHeadResults;
+							}
+							else if (RemoteBranchExistsResult.m_ExitCode == 1)
+							{
+								CStr Message = "Missing remote default branch {}"_f << ExpectedTracking;
+								Launches.f_Output(EOutputType_Error, Repo, Message);
+								co_return DMibErrorInstance(Message);
+							}
+							else if (RemoteBranchExistsResult.m_ExitCode != 1)
+								Launches.f_Output(EOutputType_Warning, Repo, "Failed to query remote default branch: {}"_f << RemoteBranchExistsResult.f_GetCombinedOut().f_Trim());
+						}
+						else if (BranchExistsResult.m_ExitCode != 1)
+							Launches.f_Output(EOutputType_Warning, Repo, "Failed to query local default branch: {}"_f << BranchExistsResult.f_GetCombinedOut().f_Trim());
 					}
 
 					for (auto &Remote : *pRemoteHeadBranches)
