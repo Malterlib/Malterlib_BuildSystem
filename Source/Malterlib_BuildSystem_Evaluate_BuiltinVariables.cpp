@@ -395,6 +395,7 @@ namespace NMib::NBuildSystem
 
 					, {CPropertyKey(gc_ConstKey_Repository_Location), DMibBuildSystemTypeWithPosition(g_String)}
 					, {CPropertyKey(gc_ConstKey_Repository_ConfigFile), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
+					, {CPropertyKey(gc_ConstKey_Repository_AdditionalConfigFiles), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
 					, {CPropertyKey(gc_ConstKey_Repository_StateFile), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
 					, {CPropertyKey(gc_ConstKey_Repository_URL), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
 					, {CPropertyKey(gc_ConstKey_Repository_DefaultBranch), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}

@@ -170,6 +170,7 @@ namespace NMib::NBuildSystem
 	extern CPropertyKeyReference const gc_ConstKey_Import_SharedTempDirectory;
 	extern CPropertyKeyReference const gc_ConstKey_Import_TempDirectory;
 
+	extern CPropertyKeyReference const gc_ConstKey_Repository_AdditionalConfigFiles;
 	extern CPropertyKeyReference const gc_ConstKey_Repository_ConfigFile;
 	extern CPropertyKeyReference const gc_ConstKey_Repository_DefaultBranch;
 	extern CPropertyKeyReference const gc_ConstKey_Repository_DefaultUpstreamBranch;

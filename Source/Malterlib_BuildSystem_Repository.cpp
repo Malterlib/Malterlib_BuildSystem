@@ -3667,7 +3667,14 @@ namespace NMib::NBuildSystem
 
 									TCSet<CStr> AllConfigFiles;
 									for (auto &pRepository : _AllRepositories)
+									{
 										AllConfigFiles[pRepository->m_ConfigFile];
+										for (auto &AdditionalFile : pRepository->m_AdditionalConfigFiles)
+										{
+											if (!AdditionalFile.f_IsEmpty())
+												AllConfigFiles[AdditionalFile];
+										}
+									}
 
 									auto fResolveConflicts = [&](CStr const &_ConflictingFiles) -> TCUnsafeFuture<bool>
 										{
@@ -3971,6 +3978,7 @@ namespace NMib::NBuildSystem
 					CBuildSystemPropertyInfo PropertyInfoConfigFile;
 
 					auto ConfigFile = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, gc_ConstKey_Repository_ConfigFile, PropertyInfoConfigFile, CStr());
+					auto AdditionalConfigFiles = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, gc_ConstKey_Repository_AdditionalConfigFiles, TCVector<CStr>());
 					CBuildSystemPropertyInfo PropertyInfoStateFile;
 					auto StateFile = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, gc_ConstKey_Repository_StateFile, PropertyInfoStateFile, CStr());
 					CBuildSystemPropertyInfo PropertyInfoURL;
@@ -4031,6 +4039,7 @@ namespace NMib::NBuildSystem
 					Repo.m_Position = ChildEntityData.m_Position;
 					Repo.m_Location = Location;
 					Repo.m_ConfigFile = ConfigFile;
+					Repo.m_AdditionalConfigFiles = fg_Move(AdditionalConfigFiles);
 					Repo.m_StateFile = StateFile;
 					Repo.m_DefaultUpstreamBranch = DefaultUpstreamBranch;
 					Repo.m_Tags.f_AddContainer(Tags);
@@ -4621,32 +4630,63 @@ namespace NMib::NBuildSystem
 		StateHandler.f_OutputPretendPolicyReminder();
 
 		auto MergedFiles = StateHandler.f_GetMergedFiles();
-		for (auto &File : MergedFiles)
+
+		// Mirror subsets of each ConfigFile that should be kept in lockstep with
+		// selected repository entries. They never affect functionality (no ownership
+		// lookups, no parsing); they exist so external systems like the GitHub
+		// Actions cache can key off their content from a stable location.
+		//
+		// Indexed by the destination mirror path so multiple repositories that share
+		// a target mirror (e.g. several nested .MRepo files all keyed off one cache
+		// file at the workspace root) merge into a single output instead of racing
+		// to f_AddGeneratedFile with conflicting subsets.
+		TCMap<CStr, TCMap<CStr, TCSet<CStr>>> AdditionalConfigSourcesByMirror;
+		for (auto &Repos : ReposOrdered)
 		{
-			CStr FileName = MergedFiles.fs_GetKey(File);
-			CStr BasePath = CFile::fs_GetPath(FileName);
-
-			CStr FileContents;
-			if (File.m_bIsStateFile)
+			for (auto &Repos : Repos)
 			{
-				CRegistry Registry;
-
-				for (auto iConfig = File.m_Configs.f_GetIterator(); iConfig; ++iConfig)
+				for (auto &Repo : Repos.m_Repositories)
 				{
-					auto &Config = *iConfig;
-					if (Config.m_bExternalPath)
-						Registry.f_SetValueNoPath("~" + iConfig.f_GetKey(), Config.m_Hash);
-					else
-						Registry.f_SetValueNoPath(CFile::fs_MakePathRelative(iConfig.f_GetKey(), BasePath), Config.m_Hash);
+					if (Repo.m_ConfigFile.f_IsEmpty())
+						continue;
+
+					CStr ConfigIdentifier = Repo.m_Location;
+					if (!Repo.m_Location.f_StartsWith(BaseDir))
+						ConfigIdentifier = Repo.m_Identity;
+
+					for (auto &Additional : Repo.m_AdditionalConfigFiles)
+					{
+						if (Additional.f_IsEmpty())
+							continue;
+						AdditionalConfigSourcesByMirror[Additional][Repo.m_ConfigFile][ConfigIdentifier];
+					}
+				}
+			}
+		}
+
+		auto fBuildConfigFileContents = [](CConfigFile const &_File, CStr const &_FileName) -> CStr
+			{
+				CStr BasePath = CFile::fs_GetPath(_FileName);
+
+				if (_File.m_bIsStateFile)
+				{
+					CRegistry Registry;
+
+					for (auto iConfig = _File.m_Configs.f_GetIterator(); iConfig; ++iConfig)
+					{
+						auto &Config = *iConfig;
+						if (Config.m_bExternalPath)
+							Registry.f_SetValueNoPath("~" + iConfig.f_GetKey(), Config.m_Hash);
+						else
+							Registry.f_SetValueNoPath(CFile::fs_MakePathRelative(iConfig.f_GetKey(), BasePath), Config.m_Hash);
+					}
+
+					return Registry.f_GenerateStr().f_Replace(DMibNewLine, _File.m_LineEndings);
 				}
 
-				FileContents = Registry.f_GenerateStr().f_Replace(DMibNewLine, File.m_LineEndings);
-			}
-			else
-			{
-				CJsonSorted StateJson;
+				CJsonSorted StateJson = EJsonType_Object;
 
-				for (auto iConfig = File.m_Configs.f_GetIterator(); iConfig; ++iConfig)
+				for (auto iConfig = _File.m_Configs.f_GetIterator(); iConfig; ++iConfig)
 				{
 					auto &Config = *iConfig;
 					if (Config.m_bExternalPath)
@@ -4655,19 +4695,61 @@ namespace NMib::NBuildSystem
 						StateJson[CFile::fs_MakePathRelative(iConfig.f_GetKey(), BasePath)]["Hash"] = Config.m_Hash;
 				}
 
-				FileContents = StateJson.f_ToString().f_Replace("\n", File.m_LineEndings);
+				return StateJson.f_ToString().f_Replace("\n", _File.m_LineEndings);
 			}
+		;
 
-			bool bWasCreated = false;
-			if (!f_AddGeneratedFile(FileName, FileContents, "", bWasCreated))
-				fs_ThrowError(CFilePosition{}, CStr::CFormat("File '{}' already generated with other contents") << FileName);
-
-			if (bWasCreated)
+		auto fWriteConfigFile = [&](CStr const &_FileName, CConfigFile const &_File)
 			{
-				CByteVector FileData;
-				CFile::fs_WriteStringToVector(FileData, CStr(FileContents), false);
-				f_WriteFile(FileData, FileName);
+				CStr FileContents = fBuildConfigFileContents(_File, _FileName);
+
+				bool bWasCreated = false;
+				if (!f_AddGeneratedFile(_FileName, FileContents, "", bWasCreated))
+					fs_ThrowError(CFilePosition{}, CStr::CFormat("File '{}' already generated with other contents") << _FileName);
+
+				if (bWasCreated)
+				{
+					CByteVector FileData;
+					CFile::fs_WriteStringToVector(FileData, CStr(FileContents), false);
+					CFile::fs_CreateDirectory(CFile::fs_GetPath(_FileName));
+					f_WriteFile(FileData, _FileName);
+				}
 			}
+		;
+
+		for (auto &File : MergedFiles)
+			fWriteConfigFile(MergedFiles.fs_GetKey(File), File);
+
+		for (auto &SourceMap : AdditionalConfigSourcesByMirror)
+		{
+			CStr AdditionalFileName = AdditionalConfigSourcesByMirror.fs_GetKey(SourceMap);
+
+			CConfigFile MergedMirror;
+			bool bLineEndingsSet = false;
+
+			for (auto &IdentifierSet : SourceMap)
+			{
+				CStr SourceConfigFile = SourceMap.fs_GetKey(IdentifierSet);
+				auto *pSourceFile = MergedFiles.f_FindEqual(SourceConfigFile);
+				if (!pSourceFile || pSourceFile->m_bIsStateFile)
+					continue;
+
+				if (!bLineEndingsSet)
+				{
+					MergedMirror.m_LineEndings = pSourceFile->m_LineEndings;
+					bLineEndingsSet = true;
+				}
+
+				for (auto &Identifier : IdentifierSet)
+				{
+					auto *pConfig = pSourceFile->m_Configs.f_FindEqual(Identifier);
+					if (pConfig)
+						MergedMirror.m_Configs[Identifier] = *pConfig;
+				}
+			}
+
+			if (!MergedMirror.m_Configs.f_IsEmpty())
+				fWriteConfigFile(AdditionalFileName, MergedMirror);
 		}
 
 		{

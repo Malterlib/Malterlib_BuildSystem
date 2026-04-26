@@ -171,6 +171,7 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_Import_SharedTempDirectory(EPropertyType_Import, gc_Str<"SharedTempDirectory">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Import_TempDirectory(EPropertyType_Import, gc_Str<"TempDirectory">);
 
+	constexpr CPropertyKeyReference const gc_ConstKey_Repository_AdditionalConfigFiles(EPropertyType_Repository, gc_Str<"AdditionalConfigFiles">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_ConfigFile(EPropertyType_Repository, gc_Str<"ConfigFile">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_DefaultBranch(EPropertyType_Repository, gc_Str<"DefaultBranch">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_DefaultUpstreamBranch(EPropertyType_Repository, gc_Str<"DefaultUpstreamBranch">);
@@ -435,6 +436,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_Import_SharedTempDirectory);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Import_TempDirectory);
 
+		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_AdditionalConfigFiles);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_ConfigFile);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_DefaultBranch);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_DefaultUpstreamBranch);

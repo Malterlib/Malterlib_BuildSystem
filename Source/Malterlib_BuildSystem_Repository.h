@@ -148,6 +148,7 @@ namespace NMib::NBuildSystem::NRepository
 		CStr m_Identity;
 		CStr m_Location;
 		CStr m_ConfigFile;
+		TCVector<CStr> m_AdditionalConfigFiles;
 		CStr m_StateFile;
 		CStr m_DefaultUpstreamBranch;
 		CStr m_SubmoduleName;
