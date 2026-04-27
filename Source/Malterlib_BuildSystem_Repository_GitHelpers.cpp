@@ -628,11 +628,19 @@ namespace NMib::NBuildSystem::NRepository
 		if (LaunchResult.m_ExitCode)
 		{
 			CStr Output = LaunchResult.f_GetCombinedOut().f_Trim();
-			if (!_bReportBadRevision && Output.f_StartsWith("fatal: bad revision "))
+			if
+			(
+				!_bReportBadRevision
+				&&
+				(
+					Output.f_StartsWith("fatal: bad revision ")
+					|| Output.f_StartsWith("fatal: Invalid revision range ")
+				)
+			)
 			{
 				TCVector<CLogEntry> LogEntries;
 				auto &DummyEntry = LogEntries.f_Insert();
-				DummyEntry.m_Description = "Unable to resolve commit range {}..{} (referenced commit not available locally)"_f << _From << _To;
+				DummyEntry.m_Description = "Unable to resolve commit range {}..{} (referenced commit is unavailable)"_f << _From << _To;
 				DummyEntry.m_bUnresolved = true;
 				co_return fg_Move(LogEntries);
 			}
