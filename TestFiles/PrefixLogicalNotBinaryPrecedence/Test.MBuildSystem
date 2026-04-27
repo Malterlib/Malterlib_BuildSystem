@@ -1,0 +1,35 @@
+
+*Configuration
+{
+	Debug "Debug Config"
+	Release "Release Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
+
+%GenerateFile "TestFile"
+{
+	Property
+	{
+		BuildServerBuild: bool = false
+		RunningCI: bool = true
+		GenerateCompileCommands: bool = (!BuildServerBuild && !RunningCI)
+	}
+
+	GenerateFile
+	{
+		Name BuildSystemOutputDir / "TestGenerateFile.txt"
+		Contents `@(GenerateCompileCommands->EJsonToString(""))\n`
+		Executable false
+		UnixLineEnds true
+		UnicodeBOM false
+	}
+}

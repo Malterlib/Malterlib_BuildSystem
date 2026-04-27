@@ -639,6 +639,13 @@ namespace NMib::NContainer
 		)
 	{
 		auto *pParse = o_pParse;
+		++m_ExpressionDepth;
+		auto ExpressionDepthCleanup = g_OnScopeExit / [&]
+			{
+				--m_ExpressionDepth;
+			}
+		;
+
 		bool bUseParentheses = !(_Flags & EParseExpressionFlag_NoParentheses);
 		if (bUseParentheses)
 		{
@@ -702,6 +709,8 @@ namespace NMib::NContainer
 				if
 					(
 						(fg_CharIsWhiteSpace(*pParse) && m_ParseDepth == 1 && nParsed > 1 && m_ObjectArrayParseDepth == 0)
+						|| (m_ParsingPrefixOperandExpressionDepth == m_ExpressionDepth && m_ParsingPrefixOperandParseDepth == m_ParseDepth && (fs_IsBinaryOperator(pTestParse) || *pTestParse == '?'))
+						|| (m_ParsingBinaryOperandExpressionDepth == m_ExpressionDepth && m_ParsingBinaryOperandParseDepth == m_ParseDepth && *pTestParse == '?' && !fs_IsBinaryOperator(pTestParse + 1))
 						|| *pTestParse == '}'
 						|| *pTestParse == ']'
 						|| *pTestParse == ','
@@ -872,6 +881,7 @@ namespace NMib::NContainer
 
 				CJsonSorted Right;
 				auto Cleanup = f_DisableParseAfterValue();
+				auto PrefixOperand = f_ParsingPrefixOperand();
 				NJson::fg_ParseJsonValue(Right, pParse, *this);
 
 				CEJsonSorted Return;
@@ -931,6 +941,7 @@ namespace NMib::NContainer
 				fg_ParseWhiteSpace(pParse);
 
 				CJsonSorted Right;
+				auto BinaryOperand = f_ParsingBinaryOperand();
 				NJson::fg_ParseJsonValue(Right, pParse, *this);
 
 				CEJsonSorted Return;

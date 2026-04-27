@@ -498,6 +498,14 @@ namespace
 				DMibAssertTrue(EvalStringTokens[1].m_Token.f_IsOfType<NStr::CStr>());
 				DMibExpect(EvalStringTokens[1].m_Token.f_GetAsType<NStr::CStr>(), ==, "_Suffix");
 			}
+			{
+				DMibTestPath("PrefixLogicalNotBinaryPrecedence");
+				auto const &Value = fs_ParseString("(!MalterlibBuildServerBuild && !RunningCI)").m_Value.m_Value;
+				DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CExpression>());
+				CStr FormattedExpression;
+				Value.f_GetAsType<CBuildSystemSyntax::CExpression>().f_Format(FormattedExpression);
+				DMibExpect(FormattedExpression, ==, "((!MalterlibBuildServerBuild && !RunningCI))");
+			}
 		}
 
 		void f_TestExpressionFunction()

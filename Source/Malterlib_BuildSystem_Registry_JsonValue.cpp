@@ -236,11 +236,18 @@ namespace NMib::NContainer
 			if (fg_StrStartsWith(pParse, "//") || fg_StrStartsWith(pParse, "/*"))
 				return;
 
+			auto fIsParsingBinaryOperandTernary = [&]
+				{
+					return m_ParsingBinaryOperandParseDepth == m_ParseDepth && *pParse == '?' && !fs_IsBinaryOperator(pParse + 1);
+				}
+			;
+
 			while
 				(
 					fg_StrStartsWith(pParse, gc_ConstString_Symbol_AccessObject.m_String)
 					|| fg_StrStartsWith(pParse, gc_ConstString_Symbol_Ellipsis.m_String)
-					|| (m_bSupportBinaryOperators && fs_IsBinaryOperator(pParse)) || fg_StrStartsWith(pParse, gc_ConstString_Symbol_Optional.m_String)
+					|| (m_bSupportBinaryOperators && fs_IsBinaryOperator(pParse) && !fIsParsingBinaryOperandTernary())
+					|| (fg_StrStartsWith(pParse, gc_ConstString_Symbol_Optional.m_String) && !fIsParsingBinaryOperandTernary())
 					|| (*pParse == '<' && !fg_CharIsWhiteSpace(pParse[1]))
 				)
 			{

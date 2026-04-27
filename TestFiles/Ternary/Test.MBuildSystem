@@ -43,6 +43,15 @@
 		fg_TestTernary4 function(bool _bValue) string
 		fg_TestTernary4 (_bValue ? {Value: "Yes"} : {Value: "No"}) <Value>
 
+		TestTernaryCompound1: string = 1.0 + 2.0 > 2.0 ? "Yes" : "No"
+		TestTernaryCompound2: string = 1.0 > 2.0 || 3.0 < 4.0 ? "Yes" : "No"
+		TestTernaryCompound3: string = 1.0 < 2.0 && 3.0 > 4.0 ? "Yes" : "No"
+		TestTernaryRecursive1: string = (false ? false : true) ? "Yes" : "No"
+		TestTernaryRecursive2: string = true ? (false ? "No" : "Yes") : "No"
+		TestTernaryRecursive3: string = false ? "No" : (false ? "No" : "Yes")
+		TestTernaryRecursive4: string = false ? "No" : false ? "No" : "Yes"
+		TestTernaryNestedBinaryOperand: string = (true && {Value: false ? "No" : "Yes"})->EJsonToString("")
+
 		TestObject: type(CTest) = {Value: "Test"}
 		TestObject2: type(CTest) = {Value: "Test", OptionalValue: "Yep"}
 	}
@@ -58,7 +67,15 @@
 					`@(fg_TestTernary3(false)->ToString()->Trim())\n`\
 					`@(fg_TestTernary4(true))\n`\
 					`@(fg_TestTernary4(false))\n`\
-					`@(TestTernary1)\n`
+					`@(TestTernary1)\n`\
+					`@(TestTernaryCompound1)\n`\
+					`@(TestTernaryCompound2)\n`\
+					`@(TestTernaryCompound3)\n`\
+					`@(TestTernaryRecursive1)\n`\
+					`@(TestTernaryRecursive2)\n`\
+					`@(TestTernaryRecursive3)\n`\
+					`@(TestTernaryRecursive4)\n`\
+					`@(TestTernaryNestedBinaryOperand)\n`
 
 		Executable false
 		UnixLineEnds true

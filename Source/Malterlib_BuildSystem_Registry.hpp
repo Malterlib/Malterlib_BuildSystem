@@ -120,6 +120,32 @@ namespace NMib::NContainer
 					}
 				;
 			}
+			auto f_ParsingPrefixOperand()
+			{
+				auto OldParsingPrefixOperandExpressionDepth = m_ParsingPrefixOperandExpressionDepth;
+				auto OldParsingPrefixOperandParseDepth = m_ParsingPrefixOperandParseDepth;
+				m_ParsingPrefixOperandExpressionDepth = m_ExpressionDepth + 1;
+				m_ParsingPrefixOperandParseDepth = m_ParseDepth + 1;
+				return g_OnScopeExit / [this, OldParsingPrefixOperandExpressionDepth, OldParsingPrefixOperandParseDepth]
+					{
+						m_ParsingPrefixOperandExpressionDepth = OldParsingPrefixOperandExpressionDepth;
+						m_ParsingPrefixOperandParseDepth = OldParsingPrefixOperandParseDepth;
+					}
+				;
+			}
+			auto f_ParsingBinaryOperand()
+			{
+				auto OldParsingBinaryOperandExpressionDepth = m_ParsingBinaryOperandExpressionDepth;
+				auto OldParsingBinaryOperandParseDepth = m_ParsingBinaryOperandParseDepth;
+				m_ParsingBinaryOperandExpressionDepth = m_ExpressionDepth + 1;
+				m_ParsingBinaryOperandParseDepth = m_ParseDepth + 1;
+				return g_OnScopeExit / [this, OldParsingBinaryOperandExpressionDepth, OldParsingBinaryOperandParseDepth]
+					{
+						m_ParsingBinaryOperandExpressionDepth = OldParsingBinaryOperandExpressionDepth;
+						m_ParsingBinaryOperandParseDepth = OldParsingBinaryOperandParseDepth;
+					}
+				;
+			}
 			auto f_ParsingFunctionParams()
 			{
 				auto Old = m_ParsingFunctionParamsDepth;
@@ -132,7 +158,12 @@ namespace NMib::NContainer
 			}
 
 			umint m_ParseDepth = 0;
+			umint m_ExpressionDepth = 0;
 			umint m_ParsingFunctionParamsDepth = 0;
+			umint m_ParsingPrefixOperandExpressionDepth = 0;
+			umint m_ParsingPrefixOperandParseDepth = 0;
+			umint m_ParsingBinaryOperandExpressionDepth = 0;
+			umint m_ParsingBinaryOperandParseDepth = 0;
 			bool m_bParsingDefine = false;
 			bool m_bSupportBinaryOperators = true;
 			bool m_bParseAfterValue = true;
