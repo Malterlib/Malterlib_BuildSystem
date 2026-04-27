@@ -805,6 +805,72 @@ namespace NMib::NBuildSystem
 				}
 			;
 
+			auto fCloneFailureLooksTransient = [](CStr const &_Error) -> bool
+				{
+					return _Error.f_Find("RPC failed") >= 0
+						|| _Error.f_Find("Recv failure") >= 0
+						|| _Error.f_Find("Connection reset") >= 0
+						|| _Error.f_Find("Operation timed out") >= 0
+						|| _Error.f_Find("Failed to connect") >= 0
+						|| _Error.f_Find("Could not resolve host") >= 0
+						|| _Error.f_Find("transfer closed") >= 0
+						|| _Error.f_Find("unexpected disconnect") >= 0
+						|| _Error.f_Find("remote end hung up unexpectedly") >= 0
+						|| _Error.f_Find("early EOF") >= 0
+						|| _Error.f_Find("invalid index-pack output") >= 0
+						|| _Error.f_Find("SSL_ERROR_SYSCALL") >= 0
+						|| _Error.f_Find("HTTP/2 stream") >= 0
+						|| _Error.f_Find("Smudge error") >= 0
+						|| _Error.f_Find("Error downloading object") >= 0
+						|| _Error.f_Find("smudge filter lfs failed") >= 0
+						|| _Error.f_Find("external filter 'git-lfs filter-process' failed") >= 0
+						|| (_Error.f_Find("Error downloading") >= 0 && _Error.f_Find("EOF") >= 0)
+						|| _Error.f_Find("The requested URL returned error: 500") >= 0
+						|| _Error.f_Find("The requested URL returned error: 502") >= 0
+						|| _Error.f_Find("The requested URL returned error: 503") >= 0
+						|| _Error.f_Find("The requested URL returned error: 504") >= 0
+					;
+				}
+			;
+
+			auto fLaunchGitCloneWithRetry = [&](TCVector<CStr> const &_CloneParams) -> TCUnsafeFuture<void>
+				{
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+					constexpr uint32 c_MaxCloneAttempts = 6;
+					for (uint32 iAttempt = 0; iAttempt < c_MaxCloneAttempts; ++iAttempt)
+					{
+						auto CloneResult = co_await fLaunchGit(_CloneParams, "").f_Wrap();
+						if (CloneResult)
+							co_return {};
+
+						CStr Error = CloneResult.f_GetExceptionStr();
+						if (!fCloneFailureLooksTransient(Error))
+							co_return CloneResult.f_GetException();
+
+						if (CFile::fs_FileExists(Location, EFileAttrib_Directory))
+							CFile::fs_DeleteDirectoryRecursive(Location, true);
+
+						if (iAttempt + 1 == c_MaxCloneAttempts)
+							co_return CloneResult.f_GetException();
+
+						fOutputInfo
+							(
+								EOutputType_Warning
+								, "Git clone failed with a transient transport error; retrying attempt {}/{}\n{}"_f
+								<< (iAttempt + 2)
+								<< c_MaxCloneAttempts
+								<< Error
+							)
+						;
+
+						co_await fg_Timeout(fp64(1 << (iAttempt + 1)) * 2.0);
+					}
+
+					co_return {};
+				}
+			;
+
 			auto fFetchIfCommitMissing = [&](CStr const &_Hash, CStr const &_RepoDir, TCVector<CStr> _ExtraFetchParams = {}) -> TCUnsafeFuture<void>
 				{
 					co_await ECoroutineFlag_CaptureMalterlibExceptions;
@@ -1023,6 +1089,8 @@ namespace NMib::NBuildSystem
 				}
 			;
 
+			// CI/cache-warming mode: repository state is disposable and should be reset
+			// back to the configured hashes instead of preserving local work.
 			bool bForceReset = fg_GetSys()->f_GetEnvironmentVariable("MalterlibRepositoryHardReset", "") == gc_ConstString_true.m_String;
 
 			bool bCloneNew = false;
@@ -2579,7 +2647,8 @@ namespace NMib::NBuildSystem
 
 								CStr CloneConfigHash = co_await fPopulateConfigHashFromBranchIfExists(ConfigHash, Location, CloneExpectedBranch);
 
-								TCVector<CStr> Params = {"checkout", "-B", CloneExpectedBranch};
+								// Safe in the clone-new path, and lets retries overwrite files left by a failed LFS smudge checkout.
+								TCVector<CStr> Params = {"checkout", "-f", "-B", CloneExpectedBranch};
 
 								if (!CloneConfigHash.f_IsEmpty())
 									Params.f_Insert(CloneConfigHash);
@@ -2600,6 +2669,37 @@ namespace NMib::NBuildSystem
 							}
 						;
 
+						auto fRunOuterClonePathWithRetry = [&]() -> TCUnsafeFuture<void>
+							{
+								co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+								constexpr uint32 c_MaxCloneSetupAttempts = 6;
+								for (uint32 iAttempt = 0; iAttempt < c_MaxCloneSetupAttempts; ++iAttempt)
+								{
+									auto Result = co_await fRunOuterClonePath().f_Wrap();
+									if (Result)
+										co_return {};
+
+									CStr Error = Result.f_GetExceptionStr();
+									if (!fCloneFailureLooksTransient(Error) || iAttempt + 1 == c_MaxCloneSetupAttempts)
+										co_return Result.f_GetException();
+
+									fOutputInfo
+										(
+											EOutputType_Warning
+											, "Git checkout/LFS setup failed with a transient transport error; retrying attempt {}/{}\n{}"_f
+											<< (iAttempt + 2)
+											<< c_MaxCloneSetupAttempts
+											<< Error
+										)
+									;
+									co_await fg_Timeout(fp64(1 << (iAttempt + 1)) * 2.0);
+								}
+
+								co_return {};
+							}
+						;
+
 						// Inner wrap: just the clone + LFS-release-store config tweaks. If this
 						// fails, origin may be missing and we want to consider recovery actions.
 						auto InnerCloneResult = co_await fg_CallSafe
@@ -2613,7 +2713,7 @@ namespace NMib::NBuildSystem
 									CloneParams.f_Insert(fGetCloneConfigParams(_Repo.m_OriginProperties, gc_Str<"origin">.m_Str));
 									CloneParams.f_Insert({"-n", _Repo.m_OriginProperties.m_URL, Location});
 
-									co_await fLaunchGit(CloneParams, "");
+									co_await fLaunchGitCloneWithRetry(CloneParams);
 
 									if (_Repo.m_OriginProperties.m_bLfsReleaseStore)
 									{
@@ -2672,7 +2772,7 @@ namespace NMib::NBuildSystem
 							// Failures propagate normally and do not trigger recovery — the
 							// clone succeeded, so recovery against an existing .git/ would be
 							// wrong and violate the bCloneNew-implies-empty invariant.
-							auto OuterResult = co_await fRunOuterClonePath().f_Wrap();
+							auto OuterResult = co_await fRunOuterClonePathWithRetry().f_Wrap();
 
 							if (!OuterResult)
 							{
@@ -3484,16 +3584,10 @@ namespace NMib::NBuildSystem
 							{
 								if (HeadHash != ConfigHash || co_await fLaunchGitNonEmpty({"status", "--porcelain"}, Location))
 								{
-									CStr UniqueStashName = fMakeUniqueStashName(CurrentBranch);
-									bool bStashed = false;
-									auto RestoreOnFailure = co_await fg_AsyncDestroy(fMakeStashRestoreHook(Location, UniqueStashName, bStashed));
-
-									if (bNeedBranchSwitch && _bStash)
-										bStashed = co_await fStashIfNeeded(Location, CurrentBranch, UniqueStashName);
-
+									// bForceReset is the CI hard-reset path: do not stash or restore
+									// local changes, because the requested mode is to discard them.
 									fOutputInfo(EOutputType_Warning, "Force Resetting to '{}'"_f << ConfigHash);
 									co_await fLaunchGit({"checkout", "-f", "-B", ExpectedBranch, ConfigHash}, Location);
-									RestoreOnFailure.f_Clear();
 
 									co_await fSetUpstreamTracking(ExpectedBranch, Location);
 									co_await fLaunchGit({"clean", "-fd"}, Location);
@@ -3502,9 +3596,6 @@ namespace NMib::NBuildSystem
 
 									if (_Repo.m_bBootstrapSource)
 										co_await _BuildSystem.f_SetupBootstrapMTool();
-
-									if (bNeedBranchSwitch)
-										co_await fUnstashIfExists(Location, ExpectedBranch);
 
 									// git remote set-head origin master
 									bChanged = true;
