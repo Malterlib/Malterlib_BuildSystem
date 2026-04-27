@@ -2950,6 +2950,9 @@ namespace NMib::NBuildSystem
 			// Hook scripts are stored per-worktree under malterlib/hooks/<type>/ (main)
 			// or malterlib/worktrees/<name>/<type>/ (linked), with a shared dispatcher
 			// script in hooks/<type> that routes to the correct worktree at runtime.
+			// For linked worktrees, the worktree root directory is also an authoritative
+			// marker: if it is absent during `git worktree add`, the dispatcher falls
+			// back to the main worktree hook payload so the initial post-checkout runs.
 			auto fManageHooks = [&]() -> TCUnsafeFuture<void>
 				{
 					co_await ECoroutineFlag_CaptureMalterlibExceptions;
@@ -2970,7 +2973,7 @@ namespace NMib::NBuildSystem
 
 					auto fWorktreeSuffix = [&]() -> CStr
 						{
-							return WorktreeId ? (" for worktree '"_f << WorktreeId << "'") : CStr();
+							return WorktreeId ? CStr(" for linked worktree") : CStr();
 						}
 					;
 
@@ -3022,8 +3025,18 @@ namespace NMib::NBuildSystem
 					{
 						// Clean up this worktree's hooks if the Hooks property was removed.
 						// Each worktree has its own directory so this is safe — it won't
-						// affect hooks installed for other worktrees.
-						if (CFile::fs_FileExists(WorktreeHooksDir, EFileAttrib_Directory))
+						// affect hooks installed for other worktrees. For linked worktrees,
+						// keep an empty worktree root directory as an authoritative marker;
+						// otherwise the dispatcher would treat every future checkout as an
+						// uninitialized `git worktree add` and fall back to the main hooks.
+						bool bWorktreeHooksDirExists = CFile::fs_FileExists(WorktreeHooksDir, EFileAttrib_Directory);
+						bool bHasManagedHookDirs = false;
+						if (bWorktreeHooksDirExists)
+							bHasManagedHookDirs = !CFile::fs_FindFiles(WorktreeHooksDir / "*", EFileAttrib_Directory).f_IsEmpty();
+						bool bHashFileExists = CFile::fs_FileExists(HashFile);
+						bool bNeedsUpdate = bHasManagedHookDirs || bHashFileExists || (WorktreeId && !bWorktreeHooksDirExists) || (!WorktreeId && bWorktreeHooksDirExists);
+
+						if (bNeedsUpdate)
 						{
 							// Sequence on HooksDir (shared across worktrees of the same repo)
 							// rather than Location, since fCleanupDispatchers mutates the shared
@@ -3033,10 +3046,21 @@ namespace NMib::NBuildSystem
 							// the same repo at once) are unsupported.
 							auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(HooksDir);
 
-							CFile::fs_DeleteDirectoryRecursive(WorktreeHooksDir);
-							if (CFile::fs_FileExists(HashFile))
+							if (bWorktreeHooksDirExists)
+								CFile::fs_DeleteDirectoryRecursive(WorktreeHooksDir);
+							if (bHashFileExists)
 								CFile::fs_DeleteFile(HashFile);
-							fOutputInfo(EOutputType_Normal, "Removed managed hooks{}"_f << fWorktreeSuffix());
+
+							if (WorktreeId)
+							{
+								CFile::fs_CreateDirectory(HooksDir);
+								CFile::fs_CreateDirectory(MalterlibDir);
+								CFile::fs_CreateDirectory(MalterlibWorktreesDir);
+								CFile::fs_CreateDirectory(WorktreeHooksDir);
+							}
+
+							if (bHasManagedHookDirs || bHashFileExists || (!WorktreeId && bWorktreeHooksDirExists))
+								fOutputInfo(EOutputType_Normal, "Removed managed hooks{}"_f << fWorktreeSuffix());
 
 							fCleanupDispatchers(fCollectAllHookTypes());
 						}

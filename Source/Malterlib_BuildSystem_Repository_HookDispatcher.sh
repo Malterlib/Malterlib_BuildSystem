@@ -12,6 +12,14 @@ set -e
 #   Main worktree:   malterlib/hooks/<type>/
 #   Linked worktree: malterlib/worktrees/<name>/<type>/
 #
+# During `git worktree add`, Git runs post-checkout before mib has had a
+# chance to install the linked worktree's own hook payload. In that one case,
+# the linked worktree root under malterlib/worktrees/ is absent, so fall back
+# to the main worktree hook payload and tell the hook payload about that
+# fallback. Once mib has managed a linked worktree it creates that root
+# directory even if no hook payload exists, so a missing hook type below an
+# existing root is authoritative and must not fall back.
+#
 # We use "git rev-parse --git-dir" rather than $GIT_DIR because the
 # environment variable is not consistently exported to all hooks
 # across git versions (notably since Git 2.18).
@@ -28,12 +36,18 @@ HOOK_TYPE="$(basename "$0")"
 HOOKS_DIR="$(cd "$(dirname "$0")" && pwd)"
 GIT_COMMON="$(dirname "$HOOKS_DIR")"
 GIT_DIR_RESOLVED="$(cd "$(git rev-parse --git-dir)" && pwd)"
+MAIN_HOOK_DIR="$HOOKS_DIR/malterlib/hooks/$HOOK_TYPE"
 
 if [ "$GIT_DIR_RESOLVED" = "$GIT_COMMON" ]; then
-	WORKTREE_HOOK_DIR="$HOOKS_DIR/malterlib/hooks/$HOOK_TYPE"
+	WORKTREE_HOOK_DIR="$MAIN_HOOK_DIR"
 else
 	WORKTREE_ID="$(basename "$GIT_DIR_RESOLVED")"
-	WORKTREE_HOOK_DIR="$HOOKS_DIR/malterlib/worktrees/$WORKTREE_ID/$HOOK_TYPE"
+	WORKTREE_ROOT="$HOOKS_DIR/malterlib/worktrees/$WORKTREE_ID"
+	WORKTREE_HOOK_DIR="$WORKTREE_ROOT/$HOOK_TYPE"
+	if [ ! -d "$WORKTREE_ROOT" ]; then
+		WORKTREE_HOOK_DIR="$MAIN_HOOK_DIR"
+		export MalterlibHookMainWorktreeFallback=true
+	fi
 fi
 
 if [ -d "$WORKTREE_HOOK_DIR" ]; then
