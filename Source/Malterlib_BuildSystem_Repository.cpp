@@ -298,6 +298,11 @@ namespace NMib::NBuildSystem
 			return (*mp_GitConfigSequencers(_Path, CStr("Git Config for: "_f << _Path))).f_Sequence();
 		}
 
+		TCFuture<CActorSubscription> CStateHandler::f_SequenceLfsReleaseIndexUpdates()
+		{
+			return mp_LfsReleaseIndexUpdateSequencer.f_Sequence();
+		}
+
 		bool CStateHandler::f_UpdateCoreExcludesFileLocation(CStr const &_Path)
 		{
 			DLock(mp_CoreExcludesFileLocationLock);
@@ -3506,6 +3511,8 @@ namespace NMib::NBuildSystem
 							continue;
 
 						{
+							auto LfsReleaseIndexSequence = co_await o_StateHandler.f_SequenceLfsReleaseIndexUpdates();
+
 							TCActor<NGit::CLfsReleaseStoreService> LfsService = fg_Construct(nullptr, Location);
 
 							auto Destroy = co_await fg_AsyncDestroy(LfsService);

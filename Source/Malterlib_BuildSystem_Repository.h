@@ -244,6 +244,7 @@ namespace NMib::NBuildSystem::NRepository
 		TCSet<CStr> f_GetLastSeenRepositories();
 		EAnsiEncodingFlag f_AnsiFlags() const;
 		TCFuture<CActorSubscription> f_SequenceConfigChanges(CStr const &_Path);
+		TCFuture<CActorSubscription> f_SequenceLfsReleaseIndexUpdates();
 		bool f_UpdateCoreExcludesFileLocation(CStr const &_Path);
 		void f_IncrementBranchCreated(CStr const &_FromBranch, CStr const &_ToBranch, CStr const &_Repository);
 		void f_IncrementBranchSwitched(CStr const &_FromBranch, CStr const &_ToBranch, CStr const &_Repository);
@@ -278,6 +279,7 @@ namespace NMib::NBuildSystem::NRepository
 
 		CLowLevelRecursiveLock mp_GitConfigSequencersLock;
 		TCMap<CStr, CSequencer> mp_GitConfigSequencers;
+		CSequencer mp_LfsReleaseIndexUpdateSequencer{"LFS release index updates", 8};
 
 		CLowLevelRecursiveLock mp_CoreExcludesFileLocationLock;
 		TCSet<CStr> mp_CoreExcludesFileLocationUpdated;
