@@ -1230,20 +1230,21 @@ namespace NMib::NBuildSystem
 				// cross-platform (including Git Bash on Windows) without
 				// needing a script file or an executable bit. The non-zero
 				// exit aborts the rebase before any history is rewritten. The
-				// capture path is inserted via fg_StrEscapeBashSingleQuotes(),
-				// which returns a complete single-quoted shell literal, so
-				// spaces and embedded quotes in TempDir are handled correctly.
+				// capture path is single-quote escaped for the inner script,
+				// then the whole inner script is escaped for git's outer editor
+				// shell so spaces and quotes in TempDir survive both parses.
 				// Letting git generate the todo means merge commits come back
 				// as `merge -C <hash>` lines (with surrounding `label`/`reset`
 				// markers) and we can preserve them by passing those lines
 				// through unchanged when we rewrite the todo.
 				CStr CapturedTodoFile = TempDir / "captured-todo.txt";
+				CStr CaptureEditorScript = "cp \"$1\" {}; exit 1"_f << fg_StrEscapeBashSingleQuotes(CapturedTodoFile);
 
 				auto CaptureResult = co_await _Launches.f_Launch
 					(
 						_Repo
 						, {"rebase", "-i", "--rebase-merges", "--no-autosquash", "--autostash", "--empty=drop", _RepoMergeBase, "-X", "theirs"}
-						, {{"GIT_SEQUENCE_EDITOR", "sh -c 'cp \"$1\" '{}'; exit 1' _"_f << fg_StrEscapeBashSingleQuotes(CapturedTodoFile)}}
+						, {{"GIT_SEQUENCE_EDITOR", "sh -c {} _"_f << fg_StrEscapeBashSingleQuotes(CaptureEditorScript)}}
 						, CProcessLaunchActor::ESimpleLaunchFlag_None
 					)
 				;
