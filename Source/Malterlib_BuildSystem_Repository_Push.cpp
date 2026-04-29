@@ -196,30 +196,50 @@ namespace NMib::NBuildSystem
 			co_return Result.m_ExitCode == 0;
 		}
 
-		TCFuture<TCSet<CStr>> DMibWorkaroundUBSanSectionErrors fg_NeedPush(CGitLaunches _Launches, CRepository _Repo, TCVector<CStr> _Remotes, CGitBranches _Branches)
+		TCFuture<TCSet<CStr>> DMibWorkaroundUBSanSectionErrors fg_NeedPush(CGitLaunches _Launches, CRepository _Repo, TCVector<CStr> _Remotes, CGitBranches _Branches, bool _bPushPulls)
 		{
 			TCFutureMap<CStr, TCVector<CLogEntry>> NeedPushResults;
+			TCFutureMap<CStr, TCVector<CLogEntry>> NeedPushPullResults;
 
 			for (auto &Remote : _Remotes)
+			{
 				fg_GetLogEntries(_Launches, _Repo, "{}/{}"_f << Remote << _Branches.m_Current, _Branches.m_Current, false) > NeedPushResults[Remote];
+				if (_bPushPulls)
+					fg_GetLogEntries(_Launches, _Repo, _Branches.m_Current, "{}/{}"_f << Remote << _Branches.m_Current, false) > NeedPushPullResults[Remote];
+			}
 
-			auto ResultsUnwrapped = co_await fg_AllDone(NeedPushResults);
+			auto [ResultsUnwrapped, PullResultsUnwrapped] = co_await (fg_AllDone(NeedPushResults) + fg_AllDone(NeedPushPullResults));
+
+			auto fHasResolvedCommits = [](TCVector<CLogEntry> const &_Commits)
+				{
+					for (auto &Commit : _Commits)
+					{
+						if (!Commit.m_bUnresolved)
+							return true;
+					}
+
+					return false;
+				}
+			;
 
 			TCSet<CStr> NeedPush;
 			for (auto &Commits : ResultsUnwrapped)
 			{
 				auto &Remote = ResultsUnwrapped.fs_GetKey(Commits);
-				if (!Commits.f_IsEmpty())
+				auto pPullCommits = PullResultsUnwrapped.f_FindEqual(Remote);
+				bool bHasPull = _bPushPulls && pPullCommits && fHasResolvedCommits(*pPullCommits);
+
+				if (!Commits.f_IsEmpty() || bHasPull)
 				{
+					CStr DefaultBranch = _Repo.m_OriginProperties.m_DefaultBranch;
+					if (auto pRemote = _Repo.m_Remotes.m_Remotes.f_FindEqual(Remote); pRemote && pRemote->m_Properties.m_DefaultBranch)
+						DefaultBranch = pRemote->m_Properties.m_DefaultBranch;
+
 					// Skip branches whose tip is already reachable from the remote default branch.
 					// This intentionally excludes freshly created branches that haven't diverged yet:
 					// the main branch is always synced to all sub-repositories, so only branches with
 					// commits not yet visible via the default branch need to be pushed (i.e. commits
 					// that another pull would need to resolve).
-					CStr DefaultBranch = _Repo.m_OriginProperties.m_DefaultBranch;
-					if (auto pRemote = _Repo.m_Remotes.m_Remotes.f_FindEqual(Remote); pRemote && pRemote->m_Properties.m_DefaultBranch)
-						DefaultBranch = pRemote->m_Properties.m_DefaultBranch;
-
 					auto MergeBaseResult = co_await _Launches.f_Launch
 						(
 							_Repo
@@ -229,6 +249,11 @@ namespace NMib::NBuildSystem
 						)
 					;
 					if (MergeBaseResult.m_ExitCode != 0)
+					{
+						if (!Commits.f_IsEmpty())
+							NeedPush[Remote];
+					}
+					else if (bHasPull)
 						NeedPush[Remote];
 				}
 			}
@@ -304,7 +329,7 @@ namespace NMib::NBuildSystem
 						if (Branches.m_Current.f_IsEmpty())
 							co_return false;
 
-						TCSet<CStr> NeedRemotes = co_await fg_NeedPush(Launches, Repo, Remotes, Branches);
+						TCSet<CStr> NeedRemotes = co_await fg_NeedPush(Launches, Repo, Remotes, Branches, _PushFlags & ERepoPushFlag_PushPulls);
 
 						if (NeedRemotes.f_IsEmpty())
 							co_return false;

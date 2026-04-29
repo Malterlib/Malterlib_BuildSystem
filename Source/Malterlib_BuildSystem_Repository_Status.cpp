@@ -318,6 +318,7 @@ namespace NMib::NBuildSystem
 								TCFutureMap<CStr, TCVector<CLogEntry>> ToPull;
 								TCSet<CStr> ToPushMissing;
 								TCSet<CStr> ToPullAdded;
+								TCMap<CStr, CStr> DefaultBranchByRemote;
 
 								for (auto &Remote : State.m_Remotes)
 								{
@@ -392,6 +393,7 @@ namespace NMib::NBuildSystem
 										CStr ExtraRemoteBranch = "{}/{}"_f << Remote << DefaultBranch;
 										if (State.f_HasRemoteBranch(ExtraRemoteBranch))
 										{
+											DefaultBranchByRemote[Remote] = DefaultBranch;
 											fg_GetLogEntries(Launches, Repo, ExtraRemoteBranch, Branch) > ToPush[AgainstDefaultName];
 											if (ToPullAdded(AgainstDefaultName).f_WasCreated())
 												fg_GetLogEntries(Launches, Repo, Branch, ExtraRemoteBranch) > ToPull[AgainstDefaultName];
@@ -472,6 +474,34 @@ namespace NMib::NBuildSystem
 										return "{sj*}"_f << "" << _Priority;
 									}
 								;
+								auto fFindLogEntries = [](auto const &_SourceEntries, CStr const &_RemoteName) -> TCVector<CLogEntry> const *
+									{
+										for (auto &[Remotes, LogEntries] : _SourceEntries)
+										{
+											for (auto &Remote : Remotes)
+											{
+												if (Remote == _RemoteName)
+													return &LogEntries;
+											}
+										}
+
+										return nullptr;
+									}
+								;
+
+								TCSet<CStr> SameAsDefaultRemotes;
+								for (auto &DefaultBranch : DefaultBranchByRemote)
+								{
+									auto &Remote = DefaultBranchByRemote.fs_GetKey(DefaultBranch);
+									CStr DefaultRemoteBranch = "{}/{}"_f << Remote << DefaultBranch;
+									auto pDefaultToPush = fFindLogEntries(ToRemotePushByHashes, DefaultRemoteBranch);
+									auto pDefaultToPull = fFindLogEntries(ToLocalPullByHashes, DefaultRemoteBranch);
+
+									if (pDefaultToPush && pDefaultToPush->f_IsEmpty() && pDefaultToPull && pDefaultToPull->f_IsEmpty())
+										SameAsDefaultRemotes[Remote];
+								}
+
+								TCSet<CStr> SameAsDefaultRemoteNames;
 
 								auto fHandleRemotes = [&](auto &o_Entries, auto &_SourceEntries, bool _bOtherBranches)
 									{
@@ -498,6 +528,16 @@ namespace NMib::NBuildSystem
 											if (Branches.f_IsEmpty() && RemotesForName.f_IsEmpty())
 												continue;
 
+											bool bSameAsDefault = !_bOtherBranches && !RemotesForName.f_IsEmpty();
+											for (auto &Remote : RemotesForName)
+											{
+												if (!SameAsDefaultRemotes.f_FindEqual(Remote))
+												{
+													bSameAsDefault = false;
+													break;
+												}
+											}
+
 											CStr RemoteName = fJoinNames(RemotesForName);
 
 											if (!Branches.f_IsEmpty())
@@ -510,6 +550,9 @@ namespace NMib::NBuildSystem
 												RemoteName = fPriority(12) + RemoteName;
 											else
 												RemoteName = fPriority(2) + RemoteName;
+
+											if (bSameAsDefault)
+												SameAsDefaultRemoteNames[RemoteName];
 
 											o_Entries[RemoteName] = LogEntries;
 										}
@@ -603,15 +646,21 @@ namespace NMib::NBuildSystem
 
 								for (auto &ToPush : ToRemotePush)
 								{
+									auto &RemoteName = ToRemotePush.fs_GetKey(ToPush);
+									bool bSameAsDefault = SameAsDefaultRemoteNames.f_FindEqual(RemoteName);
+
 									if (!ToPush.f_IsEmpty())
 									{
-										bIsChanged = true;
-										if (_Flags & ERepoStatusFlag_NeedActionOnPush)
-											BranchResult.m_bActionNeeded = true;
-										RemotesWithAction[ToRemotePush.fs_GetKey(ToPush)];
+										if (!bSameAsDefault)
+										{
+											bIsChanged = true;
+											if (_Flags & ERepoStatusFlag_NeedActionOnPush)
+												BranchResult.m_bActionNeeded = true;
+										}
+										RemotesWithAction[RemoteName];
 									}
 									else
-										NoPush[ToRemotePush.fs_GetKey(ToPush)];
+										NoPush[RemoteName];
 								}
 
 								for (auto &ToPull : ToLocalPull)

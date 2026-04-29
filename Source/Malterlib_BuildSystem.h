@@ -134,6 +134,7 @@ namespace NMib::NBuildSystem
 			, ERepoPushFlag_FollowTags = DMibBit(1)
 			, ERepoPushFlag_NonDefaultToAll = DMibBit(2)
 			, ERepoPushFlag_Force = DMibBit(3)
+			, ERepoPushFlag_PushPulls = DMibBit(4)
 		};
 
 		enum ERepoCommitFlag
