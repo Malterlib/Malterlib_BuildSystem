@@ -13,12 +13,14 @@ set -e
 #   Linked worktree: malterlib/worktrees/<name>/<type>/
 #
 # During `git worktree add`, Git runs post-checkout before mib has had a
-# chance to install the linked worktree's own hook payload. In that one case,
-# the linked worktree root under malterlib/worktrees/ is absent, so fall back
-# to the main worktree hook payload and tell the hook payload about that
-# fallback. Once mib has managed a linked worktree it creates that root
-# directory even if no hook payload exists, so a missing hook type below an
-# existing root is authoritative and must not fall back.
+# chance to install the linked worktree's own hook payload. The destination
+# worktree id can also collide with a previous, removed worktree and leave
+# stale payload under malterlib/worktrees/<id>/. For that initial checkout,
+# ignore the destination payload and fall back to the source/parent worktree
+# payload, then the main worktree payload. Once mib has managed a linked
+# worktree it creates that root directory even if no hook payload exists, so
+# outside the initial checkout a missing hook type below an existing root is
+# authoritative and must not fall back.
 #
 # We use "git rev-parse --git-dir" rather than $GIT_DIR because the
 # environment variable is not consistently exported to all hooks
@@ -37,6 +39,124 @@ HOOKS_DIR="$(cd "$(dirname "$0")" && pwd)"
 GIT_COMMON="$(dirname "$HOOKS_DIR")"
 GIT_DIR_RESOLVED="$(cd "$(git rev-parse --git-dir)" && pwd)"
 MAIN_HOOK_DIR="$HOOKS_DIR/malterlib/hooks/$HOOK_TYPE"
+ZERO_REF="0000000000000000000000000000000000000000"
+NEW_WORKTREE_CHECKOUT=false
+
+if [ "$HOOK_TYPE" = "post-checkout" ] && [ "${1:-}" = "$ZERO_REF" ] && [ "${3:-}" = "1" ]; then
+	NEW_WORKTREE_CHECKOUT=true
+fi
+
+GetProcessParentPid()
+{
+	local Pid="$1"
+
+	ps -o ppid= -p "$Pid" 2>/dev/null | tr -d '[:space:]'
+}
+
+GetProcessCwd()
+{
+	local Pid="$1"
+	local Line
+
+	if [ -L "/proc/$Pid/cwd" ]; then
+		readlink "/proc/$Pid/cwd" 2>/dev/null && return 0
+	fi
+
+	while IFS= read -r Line; do
+		case "$Line" in
+			n*)
+				echo "${Line#n}"
+				return 0
+				;;
+		esac
+	done < <(lsof -a -p "$Pid" -d cwd -Fn 2>/dev/null)
+}
+
+GetGitPath()
+{
+	local Worktree="$1"
+	local Command="$2"
+	local GitPath
+
+	GitPath="$(
+		(
+			unset GIT_DIR GIT_WORK_TREE GIT_PREFIX GIT_COMMON_DIR GIT_INDEX_FILE
+			git -C "$Worktree" rev-parse "$Command" 2>/dev/null
+		) || true
+	)"
+	[ -n "$GitPath" ] || return 0
+
+	case "$GitPath" in
+		/*)
+			;;
+		*)
+			GitPath="$Worktree/$GitPath"
+			;;
+	esac
+
+	(cd "$GitPath" 2>/dev/null && pwd) || true
+}
+
+GetWorktreeRootForPath()
+{
+	local Path="$1"
+
+	(unset GIT_DIR GIT_WORK_TREE GIT_PREFIX GIT_COMMON_DIR GIT_INDEX_FILE; git -C "$Path" rev-parse --show-toplevel 2>/dev/null) || true
+}
+
+GetHookDirForWorktree()
+{
+	local Worktree="$1"
+	local WorktreeCommon
+	local WorktreeGitDir
+	local WorktreeId
+
+	[ -n "$Worktree" ] || return 0
+
+	WorktreeCommon="$(GetGitPath "$Worktree" --git-common-dir)"
+	[ "$WorktreeCommon" = "$GIT_COMMON" ] || return 0
+
+	WorktreeGitDir="$(GetGitPath "$Worktree" --git-dir)"
+	[ -n "$WorktreeGitDir" ] || return 0
+
+	if [ "$WorktreeGitDir" = "$GIT_COMMON" ]; then
+		echo "$MAIN_HOOK_DIR"
+	else
+		WorktreeId="$(basename "$WorktreeGitDir")"
+		echo "$HOOKS_DIR/malterlib/worktrees/$WorktreeId/$HOOK_TYPE"
+	fi
+}
+
+FindParentHookDir()
+{
+	local DestinationWorktree="$1"
+	local Pid="$PPID"
+	local ParentPid
+	local Cwd
+	local Worktree
+	local HookDir
+
+	while [ -n "$Pid" ] && [ "$Pid" != "0" ] && [ "$Pid" != "1" ]; do
+		Cwd="$(GetProcessCwd "$Pid" || true)"
+		if [ -n "$Cwd" ]; then
+			Worktree="$(GetWorktreeRootForPath "$Cwd" || true)"
+			if [ -n "$Worktree" ] && [ "$Worktree" != "$DestinationWorktree" ]; then
+				HookDir="$(GetHookDirForWorktree "$Worktree" || true)"
+				if [ -n "$HookDir" ]; then
+					echo "$HookDir"
+					return 0
+				fi
+			fi
+		fi
+
+		ParentPid="$(GetProcessParentPid "$Pid" || true)"
+		if [ -z "$ParentPid" ] || [ "$ParentPid" = "$Pid" ]; then
+			break
+		fi
+
+		Pid="$ParentPid"
+	done
+}
 
 if [ "$GIT_DIR_RESOLVED" = "$GIT_COMMON" ]; then
 	WORKTREE_HOOK_DIR="$MAIN_HOOK_DIR"
@@ -44,7 +164,21 @@ else
 	WORKTREE_ID="$(basename "$GIT_DIR_RESOLVED")"
 	WORKTREE_ROOT="$HOOKS_DIR/malterlib/worktrees/$WORKTREE_ID"
 	WORKTREE_HOOK_DIR="$WORKTREE_ROOT/$HOOK_TYPE"
-	if [ ! -d "$WORKTREE_ROOT" ]; then
+	if [ "$NEW_WORKTREE_CHECKOUT" = true ]; then
+		DESTINATION_WORKTREE="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+		PARENT_HOOK_DIR="$(FindParentHookDir "$DESTINATION_WORKTREE" || true)"
+		if [ -n "$PARENT_HOOK_DIR" ] && [ -d "$PARENT_HOOK_DIR" ]; then
+			WORKTREE_HOOK_DIR="$PARENT_HOOK_DIR"
+			if [ "$WORKTREE_HOOK_DIR" = "$MAIN_HOOK_DIR" ]; then
+				export MalterlibHookMainWorktreeFallback=true
+			else
+				export MalterlibHookParentWorktreeFallback=true
+			fi
+		else
+			WORKTREE_HOOK_DIR="$MAIN_HOOK_DIR"
+			export MalterlibHookMainWorktreeFallback=true
+		fi
+	elif [ ! -d "$WORKTREE_ROOT" ]; then
 		WORKTREE_HOOK_DIR="$MAIN_HOOK_DIR"
 		export MalterlibHookMainWorktreeFallback=true
 	fi

@@ -2956,8 +2956,10 @@ namespace NMib::NBuildSystem
 			// or malterlib/worktrees/<name>/<type>/ (linked), with a shared dispatcher
 			// script in hooks/<type> that routes to the correct worktree at runtime.
 			// For linked worktrees, the worktree root directory is also an authoritative
-			// marker: if it is absent during `git worktree add`, the dispatcher falls
-			// back to the main worktree hook payload so the initial post-checkout runs.
+			// marker after the initial `git worktree add` post-checkout. During that
+			// initial hook, the dispatcher ignores the destination payload (which may be
+			// stale from a removed worktree with the same id) and falls back to the
+			// parent worktree hook payload, then the main worktree payload.
 			auto fManageHooks = [&]() -> TCUnsafeFuture<void>
 				{
 					co_await ECoroutineFlag_CaptureMalterlibExceptions;
@@ -3032,8 +3034,7 @@ namespace NMib::NBuildSystem
 						// Each worktree has its own directory so this is safe — it won't
 						// affect hooks installed for other worktrees. For linked worktrees,
 						// keep an empty worktree root directory as an authoritative marker;
-						// otherwise the dispatcher would treat every future checkout as an
-						// uninitialized `git worktree add` and fall back to the main hooks.
+						// otherwise future non-initial hooks would fall back to the main hooks.
 						bool bWorktreeHooksDirExists = CFile::fs_FileExists(WorktreeHooksDir, EFileAttrib_Directory);
 						bool bHasManagedHookDirs = false;
 						if (bWorktreeHooksDirExists)
