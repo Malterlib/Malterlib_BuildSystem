@@ -13,48 +13,25 @@ namespace NMib::NContainer
 	using namespace NBuildSystem;
 	using namespace NStr;
 
-	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContextCatureStringMap::f_MapCharacter(umint _iDestination, umint _iSource, umint _nChars)
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContextCatureStringMap::f_MapCharacter
+		(
+			umint _iDestination
+			, umint _iSource
+			, umint _nChars
+		)
 	{
 		m_StringMap.f_SetAtLeastLen(_iDestination + _nChars, 0);
 		for (umint i = 0; i < _nChars; ++i)
 			m_StringMap[_iDestination + i] = _iSource + i;
 	}
 
-	CParseLocation TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContextCatureStringMap::f_GetLocation(uch8 const *_pParse) const
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContextCatureStringMap::f_ThrowError
+		(
+			NStr::CStr const &_Error
+			, uch8 const *_pLocation
+		) const
 	{
-		if (!m_pOriginalStartParse)
-			return m_pOriginalParseContext->f_GetLocation(_pParse);
-
-		auto pParseInOriginal = m_pOriginalStartParse + m_StringMap[_pParse - m_pStartParse];
-		using namespace NStr;
-		CParseLocation Location;
-		Location.m_File = m_FileName;
-		Location.m_Character = pParseInOriginal - m_pOriginalStartParse;
-
-		auto *pParse = m_pOriginalStartParse;
-		umint Line = 1;
-		auto *pLastLine = pParse;
-		while (*pParse)
-		{
-			fg_ParseToEndOfLine(pParse);
-
-			if (pParse >= pParseInOriginal)
-				break;
-
-			if (fg_ParseEndOfLine(pParse))
-			{
-				++Line;
-				pLastLine = pParse;
-			}
-		}
-
-		Location.m_Line = Line;
-		if (pParseInOriginal >= pLastLine)
-			Location.m_Column = (pParseInOriginal - pLastLine) + 1;
-		else
-			Location.m_Column = 1;
-
-		return Location;
+		NEncoding::NJson::fg_ThrowJsonParseError<CJsonParseContextCatureStringMap>(*this, _Error, _pLocation);
 	}
 
 	CJsonSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseEvalStringToken(uch8 const *&o_pParse)

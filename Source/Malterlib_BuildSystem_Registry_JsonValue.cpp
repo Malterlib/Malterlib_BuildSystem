@@ -163,6 +163,11 @@ namespace NMib::NContainer
 	{
 	}
 
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::f_ThrowError(NStr::CStr const &_Error, uch8 const *_pLocation) const
+	{
+		NEncoding::NJson::fg_ThrowJsonParseError<CEJsonParseContext>(*this, _Error, _pLocation);
+	}
+
 	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::f_ParseValue(CJsonSorted &o_Value, uch8 const *&o_pParse)
 	{
 		auto pParse = o_pParse;
@@ -219,6 +224,11 @@ namespace NMib::NContainer
 	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_PostParse(CJsonSorted &o_Value, uch8 const *&o_pParse)
 	{
 		--m_ParseDepth;
+	}
+
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ThrowError(NStr::CStr const &_Error, uch8 const *_pLocation) const
+	{
+		NEncoding::NJson::fg_ThrowJsonParseError<CJsonParseContext>(*this, _Error, _pLocation);
 	}
 
 	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseAfterValue(CJsonSorted &o_Value, uch8 const *&o_pParse)

@@ -12,13 +12,11 @@ namespace NMib::NContainer
 
 	TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::CEJsonParseContext()
 	{
-		m_bConvertNullToSpace = false;
 		m_Flags = gc_BuildSystemJsonParseFlags;
 	}
 
 	TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::CJsonParseContext()
 	{
-		m_bConvertNullToSpace = false;
 		m_Flags = gc_BuildSystemJsonParseFlags;
 	}
 

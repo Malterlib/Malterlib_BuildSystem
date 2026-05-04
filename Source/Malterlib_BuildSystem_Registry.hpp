@@ -28,9 +28,6 @@ namespace NMib::NContainer
 
 			CEJsonParseContext();
 
-			template <typename tf_CParseContext, typename tf_CStr>
-			static bool fs_GenerateValue(tf_CStr &o_String, NEncoding::CJsonSorted const &_Value, umint _Depth, ch8 const *_pPrettySeparator, NEncoding::EJsonDialectFlag _Flags);
-
 			NContainer::CByteVector f_ParseBinary(uch8 const * &o_pParse, bool _bWithinParenthesis);
 			NTime::CTime f_ParseDate(uch8 const * &o_pParse, bool _bWithinParenthesis);
 
@@ -39,6 +36,35 @@ namespace NMib::NContainer
 
 			void f_PreParse(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse);
 			void f_PostParse(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse);
+
+			void f_ThrowError(NStr::CStr const &_Error, uch8 const *_pLocation) const;
+
+			template <typename tf_CParseContext>
+			bool f_ParseValue(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse)
+			{
+				return f_ParseValue(o_Value, o_pParse);
+			}
+
+			template <typename tf_CParseContext>
+			void f_ParseAfterValue(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse)
+			{
+				f_ParseAfterValue(o_Value, o_pParse);
+			}
+
+			template <typename tf_CParseContext>
+			void f_PreParse(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse)
+			{
+				f_PreParse(o_Value, o_pParse);
+			}
+
+			template <typename tf_CParseContext>
+			void f_PostParse(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse)
+			{
+				f_PostParse(o_Value, o_pParse);
+			}
+
+			template <typename tf_CParseContext, typename tf_CStr>
+			static bool fs_GenerateValue(tf_CStr &o_String, NEncoding::CJsonSorted const &_Value, umint _Depth, ch8 const *_pPrettySeparator, NEncoding::EJsonDialectFlag _Flags);
 
 			static bool fs_IsBinaryOperator(uch8 const *_pParse);
 			static bool fs_IsPrefixOperator(uch8 const *_pParse);
@@ -90,6 +116,32 @@ namespace NMib::NContainer
 
 			void f_PreParse(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse);
 			void f_PostParse(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse);
+
+			void f_ThrowError(NStr::CStr const &_Error, uch8 const *_pLocation) const;
+
+			template <typename tf_CParseContext>
+			bool f_ParseValue(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse)
+			{
+				return f_ParseValue(o_Value, o_pParse);
+			}
+
+			template <typename tf_CParseContext>
+			void f_ParseAfterValue(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse)
+			{
+				f_ParseAfterValue(o_Value, o_pParse);
+			}
+
+			template <typename tf_CParseContext>
+			void f_PreParse(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse)
+			{
+				f_PreParse(o_Value, o_pParse);
+			}
+
+			template <typename tf_CParseContext>
+			void f_PostParse(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse)
+			{
+				f_PostParse(o_Value, o_pParse);
+			}
 
 			template <typename tf_CParseContext, typename tf_CStr>
 			static bool fs_GenerateValue(tf_CStr &o_String, NEncoding::CJsonSorted const &_Value, umint _Depth, ch8 const *_pPrettySeparator, NEncoding::EJsonDialectFlag _Flags);
@@ -175,7 +227,17 @@ namespace NMib::NContainer
 			static constexpr bool mc_bRecordStringMap = true;
 
 			void f_MapCharacter(umint _iDestination, umint _iSource, umint _nChars);
-			NStr::CParseLocation f_GetLocation(uch8 const *_pParse) const override;
+			void f_ThrowError(NStr::CStr const &_Error, uch8 const *_pLocation) const;
+
+			template <typename tf_CParseContext>
+			NStr::CParseLocation f_GetLocation(uch8 const *_pParse) const
+			{
+				if (!m_pOriginalStartParse)
+					return m_pOriginalParseContext->template f_GetLocation<tf_CParseContext>(_pParse);
+
+				auto pParseInOriginal = m_pOriginalStartParse + m_StringMap[_pParse - m_pStartParse];
+				return NEncoding::NJson::CParseContext::fs_GetLocation<tf_CParseContext>(m_FileName, 0, 0, 0, m_pOriginalStartParse, pParseInOriginal);
+			}
 
 			CJsonParseContext const *m_pOriginalParseContext;
 			TCVector<umint> m_StringMap;
