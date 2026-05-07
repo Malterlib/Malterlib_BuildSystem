@@ -321,6 +321,8 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_Or;
 	extern CStringAndHash const gc_ConstString_OverridingType;
 	extern CStringAndHash const gc_ConstString_Parse;
+	extern CStringAndHash const gc_ConstString_ParseCommandLineWindows;
+	extern CStringAndHash const gc_ConstString_ParseCommandLineWindowsArgs;
 	extern CStringAndHash const gc_ConstString_ParseEJson;
 	extern CStringAndHash const gc_ConstString_ParseEJSON;
 	extern CStringAndHash const gc_ConstString_ParseFormatString;

@@ -321,6 +321,8 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_Or = gc_Str<"Or">;
 	constexpr CStringAndHash const gc_ConstString_OverridingType = gc_Str<"OverridingType">;
 	constexpr CStringAndHash const gc_ConstString_Parse = gc_Str<"Parse">;
+	constexpr CStringAndHash const gc_ConstString_ParseCommandLineWindows = gc_Str<"ParseCommandLineWindows">;
+	constexpr CStringAndHash const gc_ConstString_ParseCommandLineWindowsArgs = gc_Str<"ParseCommandLineWindowsArgs">;
 	constexpr CStringAndHash const gc_ConstString_ParseEJson = gc_Str<"ParseEJson">;
 	constexpr CStringAndHash const gc_ConstString_ParseEJSON = gc_Str<"ParseEJSON">;
 	constexpr CStringAndHash const gc_ConstString_ParseFormatString = gc_Str<"ParseFormatString">;
@@ -887,6 +889,8 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_Or);
 		o_StringCache.f_AddConstantString(gc_ConstString_OverridingType);
 		o_StringCache.f_AddConstantString(gc_ConstString_Parse);
+		o_StringCache.f_AddConstantString(gc_ConstString_ParseCommandLineWindows);
+		o_StringCache.f_AddConstantString(gc_ConstString_ParseCommandLineWindowsArgs);
 		o_StringCache.f_AddConstantString(gc_ConstString_ParseEJson);
 		o_StringCache.f_AddConstantString(gc_ConstString_ParseEJSON);
 		o_StringCache.f_AddConstantString(gc_ConstString_ParseFormatString);

@@ -289,6 +289,55 @@ namespace NMib::NBuildSystem
 					}
 					,
 					{
+						gc_ConstString_ParseCommandLineWindows
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_StringArray, fg_FunctionParam(g_String, gc_ConstString__Source))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
+							{
+								// Parse a Windows-style command line into argv tokens
+								// (the executable token plus arguments). The executable
+								// is parsed with the simpler CreateProcess rules; the
+								// remaining args follow CommandLineToArgvW rules. This
+								// is the inverse of EscapeWindows.
+								NStr::CStr Executable;
+								auto Args = NProcess::CProcessLaunchParams::fs_ParseCommandLineWindows(_Params[0].f_String(), Executable);
+								NContainer::TCVector<NStr::CStr> Tokens;
+								Tokens.f_Insert(fg_Move(Executable));
+								for (auto &Arg : Args)
+									Tokens.f_Insert(fg_Move(Arg));
+								return fg_Move(Tokens);
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
+						gc_ConstString_ParseCommandLineWindowsArgs
+						, CBuiltinFunction
+						{
+							fg_FunctionType(g_StringArray, fg_FunctionParam(g_String, gc_ConstString__Source))
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
+							{
+								// Parse only the args portion of a Windows command
+								// line (no executable token). Prepends a dummy
+								// executable internally so every token follows the
+								// regular CommandLineToArgvW rules, then drops the
+								// dummy from the result.
+								NStr::CStr CommandLine = "dummy.exe ";
+								CommandLine += _Params[0].f_String();
+								NStr::CStr Executable;
+								auto Args = NProcess::CProcessLaunchParams::fs_ParseCommandLineWindows(CommandLine, Executable);
+								NContainer::TCVector<NStr::CStr> Tokens;
+								for (auto &Arg : Args)
+									Tokens.f_Insert(fg_Move(Arg));
+								return fg_Move(Tokens);
+							}
+							, DMibBuildSystemFilePosition
+						}
+					}
+					,
+					{
 						gc_ConstString_EscapeMSBuild
 						, CBuiltinFunction
 						{
