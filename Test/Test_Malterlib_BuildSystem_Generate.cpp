@@ -39,6 +39,8 @@ namespace
 		TCFuture<void> f_Clipboard_SetText(NStr::CStrIO _Text) override;
 		TCFuture<NStr::CStrIO> f_Clipboard_GetText() override;
 
+		TCFuture<NEncoding::CEJsonSorted> f_RunClientAction(NStr::CStr _Action, NEncoding::CEJsonSorted _Params) override;
+
 	private:
 		TCFuture<void> fp_Destroy() override;
 	};
@@ -126,6 +128,11 @@ namespace
 	TCFuture<NStr::CStrIO> CCommandLineControlActorTest::f_Clipboard_GetText()
 	{
 		DMibNeverGetHere;
+		co_return {};
+	}
+
+	TCFuture<NEncoding::CEJsonSorted> CCommandLineControlActorTest::f_RunClientAction(NStr::CStr _Action, NEncoding::CEJsonSorted _Params)
+	{
 		co_return {};
 	}
 
