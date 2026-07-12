@@ -39,6 +39,8 @@ namespace
 		TCFuture<void> f_Clipboard_SetText(NStr::CStrIO _Text) override;
 		TCFuture<NStr::CStrIO> f_Clipboard_GetText() override;
 
+		TCFuture<NEncoding::CEJsonSorted> f_Request(NEncoding::CEJsonSorted _Request) override;
+
 	private:
 		TCFuture<void> fp_Destroy() override;
 	};
@@ -127,6 +129,11 @@ namespace
 	{
 		DMibNeverGetHere;
 		co_return {};
+	}
+
+	TCFuture<NEncoding::CEJsonSorted> CCommandLineControlActorTest::f_Request(NEncoding::CEJsonSorted _Request)
+	{
+		co_return DMibErrorInstance("The test command line does not handle requests");
 	}
 
 	TCFuture<void> CCommandLineControlActorTest::fp_Destroy()
