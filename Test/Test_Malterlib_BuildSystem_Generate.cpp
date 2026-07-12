@@ -90,6 +90,11 @@ namespace
 			co_return {};
 		}
 
+		TCFuture<NEncoding::CEJsonSorted> f_RunClientAction(NStr::CStr _Action, NEncoding::CEJsonSorted _Params) override
+		{
+			co_return {};
+		}
+
 	private:
 		TCFuture<void> fp_Destroy() override
 		{
