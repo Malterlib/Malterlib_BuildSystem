@@ -173,6 +173,16 @@ namespace NMib::NBuildSystem::NNinja
 		}
 	}
 
+	CBlockingActorCheckout &CGeneratorInstance::f_GetFileWriteActor() const
+	{
+		DMibLock(m_FileWriteActorsLock);
+
+		// The checkouts live in the pool's reserved vector, so the reference stays valid
+		// after the lock is released; dispatching to the same blocking actor from several
+		// threads is safe, only the round-robin pick needs the lock
+		return *m_FileWriteActors;
+	}
+
 	TCUnsafeFuture<void> CGeneratorInstance::f_GenerateWorkspaceFile(CWorkspace &_Workspace, CStr const &_OutputDir) const
 	{
 		co_await ECoroutineFlag_CaptureExceptions;
@@ -717,10 +727,9 @@ namespace NMib::NBuildSystem::NNinja
 						co_await g_Yield;
 
 					TCFutureVector<void> FileWrites;
-					TCLinkedList<CBlockingActorCheckout> Checkouts;
 
 					{
-						auto &BlockingActorCheckout = Checkouts.f_Insert(fg_BlockingActor());
+						auto &BlockingActorCheckout = f_GetFileWriteActor();
 
 						g_Dispatch(BlockingActorCheckout) / [this, NinjaFile, NinjaFileConents = fg_Move(NinjaFileConents), WorkspaceName = _Workspace.f_GetName()]
 							{
@@ -763,7 +772,7 @@ namespace NMib::NBuildSystem::NNinja
 
 						CStr JsonContent = CompileCommandsJson.f_ToString(nullptr);
 
-						auto &BlockingActorCheckout = Checkouts.f_Insert(fg_BlockingActor());
+						auto &BlockingActorCheckout = f_GetFileWriteActor();
 
 						g_Dispatch(BlockingActorCheckout) / [this, CompileCommandsFilePath, JsonContent = fg_Move(JsonContent), WorkspaceName = _Workspace.f_GetName()]
 							{

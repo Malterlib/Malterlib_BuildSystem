@@ -260,10 +260,17 @@ namespace NMib::NBuildSystem::NNinja
 
 		TCUnsafeFuture<void> f_GenerateProjectFile(CProject &_Project) const;
 		TCUnsafeFuture<void> f_GenerateWorkspaceFile(CWorkspace &_Workspace, CStr const &_OutputDir) const;
+		NConcurrency::CBlockingActorCheckout &f_GetFileWriteActor() const;
 
 		// Members
 		CBuildSystem const &m_BuildSystem;
 		CBuildSystemData const &m_BuildSystemData;
+
+		// Bounded pool for generated-file writes; the workspace and configuration fan-out
+		// would otherwise check out one blocking actor per written file, spinning up hundreds
+		// of blocking threads at the end of a full-matrix generate
+		mutable NThread::CLowLevelLock m_FileWriteActorsLock;
+		mutable NConcurrency::CRoundRobinBlockingActors m_FileWriteActors{16};
 
 		CGeneratorState m_State;
 		CEJsonSorted m_OutputDir;
