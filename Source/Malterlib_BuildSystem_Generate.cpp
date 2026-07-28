@@ -47,6 +47,44 @@ namespace NMib::NBuildSystem
 
 			CStr m_OutputDir;
 		};
+
+		// The OS reports the program path with every symbolic link resolved, so a workspace reached through
+		// a symlink would refer to its own tools by the link target and generated command lines would mix
+		// both spellings of the same directory. Re-express the program directory under the base directory
+		// when it lives inside the workspace. Directories are matched on identity rather than by string, so
+		// this holds however the two paths are spelled, and a program outside the workspace is left alone.
+		auto fg_RebaseProgramDirectory(CStr const &_ProgramDirectory, CStr const &_BaseDir) -> CStr
+		{
+			if (!CFile::fs_FileExists(_BaseDir, EFileAttrib_Directory))
+				return _ProgramDirectory;
+
+			auto BaseIdentifier = CFile::fs_GetUniqueIdentifier(_BaseDir);
+
+			CStr Suffix;
+			CStr Directory = _ProgramDirectory;
+
+			while (Directory)
+			{
+				if
+				(
+					CFile::fs_FileExists(Directory, EFileAttrib_Directory)
+					&& CFile::fs_GetUniqueIdentifier(Directory) == BaseIdentifier
+				)
+				{
+					return Suffix ? (_BaseDir / Suffix) : _BaseDir;
+				}
+
+				CStr Parent = CFile::fs_GetPath(Directory);
+				if (!Parent || Parent == Directory)
+					break;
+
+				CStr Name = CFile::fs_GetFile(Directory);
+				Suffix = Suffix ? (Name / Suffix) : Name;
+				Directory = Parent;
+			}
+
+			return _ProgramDirectory;
+		}
 	}
 
 	void CBuildSystem::fp_SaveEnvironment()
@@ -280,8 +318,11 @@ namespace NMib::NBuildSystem
 		mp_FileLocation = CFile::fs_GetExpandedPath(GenerateSettings.m_SourceFile);
 		mp_BaseDir = CFile::fs_GetPath(mp_FileLocation.f_String());
 		mp_FileLocationFile = CFile::fs_GetFile(mp_FileLocation.f_String());
+
+		CStr ProgramDirectory = fg_RebaseProgramDirectory(CFile::fs_GetProgramDirectory(), mp_BaseDir.f_String());
+
 		{
-			CStr Ret = CFile::fs_GetProgramDirectory() / "MTool";
+			CStr Ret = ProgramDirectory / "MTool";
 			#ifdef DPlatformFamily_Windows
 				Ret += ".exe";
 			#endif
@@ -304,7 +345,7 @@ namespace NMib::NBuildSystem
 			mp_CMakeRoot = CmakeRoot;
 		}
 		{
-			CStr Ret = CFile::fs_GetProgramDirectory() / "mib";
+			CStr Ret = ProgramDirectory / "mib";
 			#ifdef DPlatformFamily_Windows
 				Ret += ".exe";
 			#endif
