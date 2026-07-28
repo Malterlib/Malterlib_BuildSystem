@@ -704,9 +704,22 @@ namespace NMib::NBuildSystem
 				;
 			}
 
+			// The results are collected wrapped so that a failing repository does not
+			// abort before the group heading and the output order have been recorded.
+			TCVector<TCAsyncResult<bool>> ResultsWrapped = co_await fg_AllDoneWrapped(Results);
+
 			bool bDidPush = false;
-			for (auto ResultsUnwrapped = co_await fg_AllDone(Results); auto &bResult : ResultsUnwrapped)
-				bDidPush = bDidPush || bResult;
+			bool bFailed = false;
+
+			for (auto &Result : ResultsWrapped)
+			{
+				// A failing repository has already emitted deferred output, so its group
+				// needs a heading just like a successful push does.
+				if (!Result)
+					bFailed = true;
+
+				bDidPush = bDidPush || !Result || *Result;
+			}
 
 			if (bDidPush)
 			{
@@ -716,6 +729,17 @@ namespace NMib::NBuildSystem
 
 				OutputOrder.f_Insert(OutputOrderSet);
 				++PushOrderGroup;
+			}
+
+			// The deferred output is rendered when the launch state is destroyed, so the
+			// order has to be applied before the failure propagates out of this coroutine.
+			// Without this every repository ends up rendered in name order, followed by
+			// the empty group headings.
+			if (bFailed)
+			{
+				Launches.f_SetOutputOrder(OutputOrder);
+
+				co_await (fg_Move(ResultsWrapped) | g_Unwrap);
 			}
 		}
 
