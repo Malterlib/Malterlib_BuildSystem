@@ -3075,6 +3075,14 @@ namespace NMib::NBuildSystem
 
 					auto &Hooks = _Repo.m_HookConfig->m_Hooks;
 
+					// Recorded in the dispatcher so hook scripts can re-enter mib with the root the
+					// workspace was generated with. Deriving it in the hook with `git rev-parse
+					// --show-toplevel` instead would always yield the fully resolved path, which
+					// disagrees with an interactive run whenever the checkout is reached through a
+					// symlink - and every root-derived path would then alternate between the two.
+					CStr HookWorkspaceRoot = fg_StrEscapeBashSingleQuotes(_BuildSystem.f_GetBaseDir());
+					CStr HookRepository = fg_StrEscapeBashSingleQuotes(Location);
+
 					// Compute hash from all hook source files + hook type names + worktree id
 					// + embedded dispatcher script so dispatcher changes in a new mib build
 					// trigger reinstall without needing --force-update-hooks.
@@ -3083,6 +3091,10 @@ namespace NMib::NBuildSystem
 						CStr HashDiscriminator = WorktreeId ? WorktreeId : CStr("@main");
 						HooksHash.f_AddData(HashDiscriminator.f_GetStr(), HashDiscriminator.f_GetLen());
 						HooksHash.f_AddData(gc_pHookDispatcherScript, sizeof(gc_pHookDispatcherScript) - 1);
+						// The injected values are not part of the embedded script, so hash them
+						// separately or a relocated workspace would keep a stale dispatcher.
+						HooksHash.f_AddData(HookWorkspaceRoot.f_GetStr(), HookWorkspaceRoot.f_GetLen());
+						HooksHash.f_AddData(HookRepository.f_GetStr(), HookRepository.f_GetLen());
 					}
 
 					for (auto iHook = Hooks.f_GetIterator(); iHook; ++iHook)
@@ -3318,7 +3330,11 @@ namespace NMib::NBuildSystem
 								fOutputInfo(EOutputType_Warning, "Overwriting existing '{}' hook not managed by Malterlib"_f << HookType);
 						}
 
-						CStr Script = gc_pHookDispatcherScript;
+						CStr Script = CStr(gc_pHookDispatcherScript)
+							.f_Replace("@MalterlibHookWorkspaceRoot@", HookWorkspaceRoot)
+							.f_Replace("@MalterlibHookRepository@", HookRepository)
+						;
+
 						NContainer::CByteVector ScriptData;
 						CFile::fs_WriteStringToVector(ScriptData, Script, false);
 						if (CFile::fs_CopyFileDiff(ScriptData, WrapperPath, NTime::CTime::fs_NowUTC(), EFileAttrib_Executable))

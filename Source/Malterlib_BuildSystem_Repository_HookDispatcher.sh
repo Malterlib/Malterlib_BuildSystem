@@ -5,6 +5,19 @@
 # Managed by Malterlib - do not edit
 set -e
 
+# Recorded by mib when these hooks were installed. MalterlibHookWorkspaceRoot is
+# the root the workspace was generated with, MalterlibHookRepository is the
+# repository this dispatcher belongs to.
+#
+# Hook scripts must use these instead of deriving paths with `git rev-parse`,
+# which always reports the fully resolved path. Reaching a checkout through a
+# symlink would otherwise hand mib a different root than an interactive run
+# uses, and everything derived from the root - generated files, the compiled
+# files directory, the managed hook hash - would alternate between the two.
+MalterlibHookWorkspaceRoot=@MalterlibHookWorkspaceRoot@
+MalterlibHookRepository=@MalterlibHookRepository@
+export MalterlibHookWorkspaceRoot MalterlibHookRepository
+
 # Determine the worktree identity.
 # Git runs hooks from $GIT_COMMON_DIR/hooks which is shared across
 # worktrees. We resolve the actual git dir to figure out which
