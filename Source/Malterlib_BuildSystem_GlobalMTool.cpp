@@ -64,6 +64,7 @@ namespace NMib::NBuildSystem
 #endif
 			fTryCopy("mib" + CFile::mc_ExecutableExtension);
 			fTryCopy("bsdtar" + CFile::mc_ExecutableExtension);
+			fTryCopy("zstd" + CFile::mc_ExecutableExtension);
 			fTryCopy("Bootstrap.version");
 		}
 	}
