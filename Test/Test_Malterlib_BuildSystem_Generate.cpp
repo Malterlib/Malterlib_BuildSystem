@@ -90,6 +90,18 @@ namespace
 			co_return {};
 		}
 
+		TCFuture<void> f_Clipboard_SetText(NStr::CStrIO _Text) override
+		{
+			DMibNeverGetHere;
+			co_return {};
+		}
+
+		TCFuture<NStr::CStrIO> f_Clipboard_GetText() override
+		{
+			DMibNeverGetHere;
+			co_return {};
+		}
+
 	private:
 		TCFuture<void> fp_Destroy() override
 		{
