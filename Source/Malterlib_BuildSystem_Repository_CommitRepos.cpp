@@ -2194,7 +2194,7 @@ namespace NMib::NBuildSystem
 				bool bIsRootRepo = Repo.m_Location == f_GetBaseDir();
 				TCSharedPointer<TCMap<CStr, CStr> const> pRepoStartCommits;
 				if (bIsRootRepo)
-					pRepoStartCommits = pStartCommits;
+					pRepoStartCommits = pStartCommits.f_ShareAsConst();
 				else
 				{
 					CStr MergeBase = co_await fg_ResolveMergeBaseWithBootstrapFallback(Launches, Repo, Repo, DefaultBranch);
@@ -2228,7 +2228,16 @@ namespace NMib::NBuildSystem
 				// stays canonical-only (mirrors duplicate hash entries).
 				auto [RepoCommits, Preflight] = co_await
 					(
-						fg_CollectChildCommits(Launches, SubtreeConfigFiles, f_GetBaseDir(), pRepoStartCommits, pRepositoryByLocation, pRepositoryByIdentity, TCSet<CStr>())
+						fg_CollectChildCommits
+						(
+							Launches
+							, SubtreeConfigFiles
+							, f_GetBaseDir()
+							, pRepoStartCommits
+							, pRepositoryByLocation.f_ShareAsConst()
+							, pRepositoryByIdentity.f_ShareAsConst()
+							, TCSet<CStr>()
+						)
 						+ fg_RepoPreFlight(Launches, Repo, StageFiles, AllConfigRelPaths, DefaultBranch)
 					)
 				;
@@ -2323,9 +2332,9 @@ namespace NMib::NBuildSystem
 					Launches
 					, PerforceSubtreeConfigFiles
 					, f_GetBaseDir()
-					, pStartCommits
-					, pRepositoryByLocation
-					, pRepositoryByIdentity
+					, pStartCommits.f_ShareAsConst()
+					, pRepositoryByLocation.f_ShareAsConst()
+					, pRepositoryByIdentity.f_ShareAsConst()
 					, PerforceRootConfigFilesAtStart
 				)
 			;
