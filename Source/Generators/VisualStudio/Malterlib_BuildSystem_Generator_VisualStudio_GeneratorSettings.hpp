@@ -11,8 +11,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 		using CType = t_CType;
 	};
 
-	template <typename t_CType>
-	struct TCRemoveOptional<TCOptional<t_CType>>
+	template <typename t_CType, NStorage::EOptionalMoveSemantics t_MoveSemantics>
+	struct TCRemoveOptional<TCOptional<t_CType, t_MoveSemantics>>
 	{
 		using CType = t_CType;
 	};
