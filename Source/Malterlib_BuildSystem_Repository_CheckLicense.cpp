@@ -13,6 +13,11 @@ namespace NMib::NBuildSystem
 
 	namespace
 	{
+		CStr fg_NormalizeLicenseLineEndings(CStr const &_Content)
+		{
+			return _Content.f_Replace("\r\n", "\n").f_Replace("\r", "\n");
+		}
+
 		struct CCommentStyleConfig
 		{
 			CStr m_LinePrefix;
@@ -896,14 +901,15 @@ namespace NMib::NBuildSystem
 										(
 											g_Dispatch(BlockingActorCheckout) / [SourcePath]() -> CStr
 											{
-												return CFile::fs_ReadStringFromFile(SourcePath, true);
+												return fg_NormalizeLicenseLineEndings(CFile::fs_ReadStringFromFile(SourcePath, true));
 											}
 										)
 									;
 								}
 								else if (Value.f_IsArray())
 								{
-									// Amalgamation: concatenate sources with optional Name headers
+									// Normalize each source before concatenation so a trailing CR
+									// cannot combine with an inserted LF separator.
 									for (auto &Entry : Value.f_Array())
 									{
 										CStr SourcePath = Entry["Source"].f_String();
@@ -936,7 +942,7 @@ namespace NMib::NBuildSystem
 											(
 												g_Dispatch(BlockingActorCheckout) / [SourcePath]() -> CStr
 												{
-													return CFile::fs_ReadStringFromFile(SourcePath, true);
+													return fg_NormalizeLicenseLineEndings(CFile::fs_ReadStringFromFile(SourcePath, true));
 												}
 											)
 										;
@@ -958,7 +964,8 @@ namespace NMib::NBuildSystem
 								if (bHasError)
 									continue;
 
-								// Compare with existing
+								// Use LF for generated output and ignore checkout line-ending differences when comparing.
+								ExpectedContent = fg_NormalizeLicenseLineEndings(ExpectedContent);
 								auto BlockingActorCheckout = fg_BlockingActor();
 								bool bMatch = co_await
 									(
@@ -967,7 +974,7 @@ namespace NMib::NBuildSystem
 											if (!CFile::fs_FileExists(DestPath))
 												return false;
 											CStr DestContent = CFile::fs_ReadStringFromFile(DestPath, true);
-											return DestContent == ExpectedContent;
+											return fg_NormalizeLicenseLineEndings(DestContent) == ExpectedContent;
 										}
 									)
 								;
@@ -1015,7 +1022,7 @@ namespace NMib::NBuildSystem
 										if (!CFile::fs_FileExists(ReuseTomlPath))
 											return false;
 										CStr Existing = CFile::fs_ReadStringFromFile(ReuseTomlPath, true);
-										return Existing == ExpectedReuseToml;
+										return fg_NormalizeLicenseLineEndings(Existing) == ExpectedReuseToml;
 									}
 								)
 							;
