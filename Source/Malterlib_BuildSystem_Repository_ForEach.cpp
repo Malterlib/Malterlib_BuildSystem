@@ -81,6 +81,34 @@ namespace NMib::NBuildSystem
 
 		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
 
+		// Use the same tool binaries as this mib invocation, including its safe snapshot.
+		CStr ToolDirectory = CFile::fs_GetProgramDirectory();
+		CStr Path = ToolDirectory;
+		CStr InheritedPath = fg_GetSys()->f_GetEnvironmentVariable("PATH");
+		if (InheritedPath)
+		{
+#ifdef DPlatformFamily_Windows
+			Path += ";";
+#else
+			Path += ":";
+#endif
+			Path += InheritedPath;
+		}
+
+		TCMap<CStr, CStr> Environment = {{"PATH", Path}};
+
+		// Direct executable lookup happens before the child environment is applied.
+		CStr Application = _Options.m_Application;
+		if (Application.f_FindChars("/\\") < 0)
+		{
+			CStr LocalApplication = ToolDirectory / Application;
+			if (!CFile::fs_FileExists(LocalApplication, EFileAttrib_File))
+				LocalApplication += CFile::mc_ExecutableExtension;
+
+			if (CFile::fs_FileExists(LocalApplication, EFileAttrib_File))
+				Application = fg_Move(LocalApplication);
+		}
+
 		TCVector<TCAsyncResult<void>> LaunchResults;
 
 		for (auto &Repos : FilteredRepositories.m_FilteredRepositories)
@@ -91,7 +119,8 @@ namespace NMib::NBuildSystem
 				auto &Repo = *pRepo;
 
 				TCPromiseFuturePair<void> Result;
-				Launches.f_Launch(Repo, _Options.m_Params, fg_LogAllFunctor(), {}, {}, _Options.m_Application) > [=, ResultPromise = fg_Move(Result.m_Promise)](TCAsyncResult<void> &&_Result)
+				Launches.f_Launch(Repo, _Options.m_Params, fg_LogAllFunctor(), {}, Environment, Application)
+					> [=, ResultPromise = fg_Move(Result.m_Promise)](TCAsyncResult<void> &&_Result)
 					{
 						ResultPromise.f_SetResult(fg_Move(_Result));
 						Launches.f_RepoDone();
