@@ -3,6 +3,8 @@
 
 #include <Mib/Core/Core>
 #include <Mib/BuildSystem/BuildSystem>
+#include <Mib/Process/ProcessLaunch>
+#include "../Source/Malterlib_BuildSystem_RepositoryEditor.h"
 
 namespace
 {
@@ -16,6 +18,35 @@ namespace
 	public:
 		void f_DoTests()
 		{
+			DMibTestSuite("RepositoryEditorCommandLine")
+			{
+#ifdef DPlatformFamily_Windows
+				CStr Application = R"(C:\Program Files/Sublime Merge/smerge.exe)";
+				CStr Repository = R"(C:\Source\repo with spaces\)";
+#else
+				CStr Application = "/opt/Repo Editor/bin/editor";
+				CStr Repository = "/opt/Source/repo with spaces/";
+#endif
+				TCVector<CStr> Tokens{Application, "{}", Repository, ""};
+				NRepository::CRepoEditor Editor;
+				Editor.f_SetCommandLine(NProcess::CProcessLaunchParams::fs_GetParams(Tokens));
+
+				DMibExpect(Editor.m_Application, ==, Application);
+				DMibAssert(Editor.m_Params.f_GetLen(), ==, 3u);
+				DMibExpect(Editor.m_Params[0], ==, "{}");
+				DMibExpect(Editor.m_Params[1], ==, Repository);
+				DMibExpect(Editor.m_Params[2], ==, "");
+
+				{
+					DMibTestPath("ReplaceCommand");
+					Editor.f_SetCommandLine("editor {}");
+
+					DMibExpect(Editor.m_Application, ==, "editor");
+					DMibAssert(Editor.m_Params.f_GetLen(), ==, 1u);
+					DMibExpect(Editor.m_Params[0], ==, "{}");
+				}
+			};
+
 			DMibTestSuite("FindContainingPath_FindsOwner")
 			{
 				TCMap<CStr, int32> Paths;

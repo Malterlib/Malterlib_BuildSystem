@@ -4,6 +4,7 @@
 #pragma once
 
 #include "Malterlib_BuildSystem.h"
+#include "Malterlib_BuildSystem_RepositoryEditor.h"
 #include <Mib/Process/ProcessLaunch>
 #include <Mib/Process/ProcessLaunchActor>
 #include <Mib/Encoding/EJson>
@@ -37,15 +38,6 @@ namespace NMib::NBuildSystem::NRepository
 		EOutputType_Normal
 		, EOutputType_Warning
 		, EOutputType_Error
-	};
-
-	struct CRepoEditor
-	{
-		CStr m_Application;
-		CStr m_WorkingDir;
-		TCVector<CStr> m_Params;
-		fp32 m_Sleep = 0.0;
-		bool m_bOpenSequential = false;
 	};
 
 	struct CReleasePackage

@@ -4061,6 +4061,15 @@ namespace NMib::NBuildSystem
 			return Options;
 		}
 
+		void CRepoEditor::f_SetCommandLine(CStr const &_CommandLine)
+		{
+#ifdef DPlatformFamily_Windows
+			m_Params = CProcessLaunchParams::fs_ParseCommandLineWindows(_CommandLine, m_Application);
+#else
+			m_Params = CProcessLaunchParams::fs_ParseCommandLineUnix(_CommandLine, m_Application);
+#endif
+		}
+
 		CRepoEditor fg_GetRepoEditor(CBuildSystem &_BuildSystem, CBuildSystemData &_Data)
 		{
 			CStr EditorString = _BuildSystem.f_EvaluateEntityPropertyString(_Data.m_RootEntity, gc_ConstKey_MalterlibRepositoryEditor);
@@ -4071,10 +4080,7 @@ namespace NMib::NBuildSystem
 			Editor.m_Sleep = _BuildSystem.f_EvaluateEntityPropertyFloat(_Data.m_RootEntity, gc_ConstKey_MalterlibRepositoryEditorSleep, fp64(0.0));
 
 			Editor.m_WorkingDir = _BuildSystem.f_EvaluateEntityPropertyString(_Data.m_RootEntity, gc_ConstKey_MalterlibRepositoryEditorWorkingDir, CStr());
-			Editor.m_Application = fg_GetStrSepEscaped(EditorString, " ");
-
-			while (!EditorString.f_IsEmpty())
-				Editor.m_Params.f_Insert(fg_GetStrSepEscaped(EditorString, " "));
+			Editor.f_SetCommandLine(EditorString);
 
 			return Editor;
 		}
