@@ -140,4 +140,27 @@ namespace NMib::NBuildSystem
 
 		co_return ERetry_None;
 	}
+
+	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_GetLocations
+		(
+			CGenerateOptions const &_GenerateOptions
+			, CRepoFilter const &_Filter
+			, TCVector<CStr> &o_Locations
+		)
+	{
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+		CGenerateEphemeralState GenerateState;
+		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
+			co_return Retry;
+
+		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(_Filter, *this, mp_Data, EGetRepoFlag::mc_None);
+		for (auto &Repos : FilteredRepositories.m_FilteredRepositories)
+		{
+			for (auto *pRepo : Repos)
+				o_Locations.f_Insert(pRepo->m_Location);
+		}
+
+		co_return ERetry_None;
+	}
 }

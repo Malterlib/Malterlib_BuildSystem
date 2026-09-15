@@ -81,6 +81,7 @@ namespace NMib::NBuildSystem
 			NContainer::TCSet<NStr::CStr> m_Tags;
 			bool m_bOnlyChanged = false;
 			bool m_bIncludePull = false;
+			bool m_bFormat = false;						// Only repositories with Repository.Format.
 		};
 
 		enum ERepoCleanupBranchesFlag
@@ -250,6 +251,7 @@ namespace NMib::NBuildSystem
 			NStr::CStr m_Application;
 			bool m_bParallel = true;
 		};
+
 
 		struct CGitLaunchOptions
 		{
@@ -522,6 +524,14 @@ namespace NMib::NBuildSystem
 		;
 
 		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_ForEachRepoDir(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, CForEachRepoDirOptions const &_Options);
+		// The locations of the filtered repositories, in dependency order.
+		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_GetLocations
+			(
+				CGenerateOptions const &_GenerateOptions
+				, CRepoFilter const &_Filter
+				, NContainer::TCVector<NStr::CStr> &o_Locations
+			)
+		;
 
 		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_Branch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, NStr::CStr const &_Branch, ERepoBranchFlag _Flags);
 		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_Unbranch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoBranchFlag _Flags);
