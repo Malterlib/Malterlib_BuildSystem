@@ -115,7 +115,7 @@ namespace NMib::NBuildSystem
 
 	bool CBuildSystem::CRepoFilter::f_IsEmpty() const
 	{
-		return (m_NameWildcard.f_IsEmpty() || m_NameWildcard == "*") && m_Type.f_IsEmpty() && m_Branch.f_IsEmpty() && m_Tags.f_IsEmpty() && !m_bOnlyChanged;
+		return (m_NameWildcard.f_IsEmpty() || m_NameWildcard == "*") && m_Type.f_IsEmpty() && m_Branch.f_IsEmpty() && m_Tags.f_IsEmpty() && !m_bOnlyChanged && !m_bFormat;
 	}
 
 	CBuildSystem::CRepoFilter CBuildSystem::CRepoFilter::fs_ParseParams(NEncoding::CEJsonSorted const &_Params)

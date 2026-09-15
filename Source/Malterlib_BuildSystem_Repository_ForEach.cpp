@@ -140,4 +140,56 @@ namespace NMib::NBuildSystem
 
 		co_return ERetry_None;
 	}
+
+	// Repositories run one after the other: a run already spreads its own work over the
+	// cores, and the order keeps the report the same from one invocation to the next.
+	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_ForEachRepoInProcess
+		(
+			CGenerateOptions const &_GenerateOptions
+			, CRepoFilter const &_Filter
+			, CForEachRepoInProcessOptions &_Options
+		)
+	{
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+		CGenerateEphemeralState GenerateState;
+		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
+			co_return Retry;
+
+		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(_Filter, *this, mp_Data, EGetRepoFlag::mc_None);
+
+		CGitLaunches Launches{f_GetGitLaunchOptions(_Options.m_InvocationCommand), _Options.m_ProgressDescription};
+		auto DestroyLaunches = co_await co_await Launches.f_Init();
+
+		Launches.f_MeasureRepos(FilteredRepositories.m_FilteredRepositories);
+
+		umint nFailed = 0;
+		for (auto &Repos : FilteredRepositories.m_FilteredRepositories)
+		{
+			for (auto *pRepo : Repos)
+			{
+				auto Result = co_await _Options.m_fRun(pRepo->m_Location).f_Wrap();
+				if (!Result)
+				{
+					Launches.f_Output(EOutputType_Error, *pRepo, "Failed: {}\n"_f << Result.f_GetExceptionStr());
+					++nFailed;
+				}
+				else
+				{
+					if (Result->m_Output)
+						Launches.f_Output(Result->m_bFailed ? EOutputType_Error : EOutputType_Normal, *pRepo, Result->m_Output);
+
+					if (Result->m_bFailed)
+						++nFailed;
+				}
+
+				Launches.f_RepoDone();
+			}
+		}
+
+		if (nFailed)
+			co_return DMibErrorInstance("{} in {} {}"_f << _Options.m_FailureDescription << nFailed << (nFailed == 1 ? "repository" : "repositories"));
+
+		co_return ERetry_None;
+	}
 }
