@@ -252,21 +252,6 @@ namespace NMib::NBuildSystem
 			bool m_bParallel = true;
 		};
 
-		struct CRepoInProcessResult
-		{
-			NStr::CStr m_Output;
-			bool m_bFailed = false;
-		};
-
-		// A coroutine run in this process for each repository, given its location, whose
-		// output is reported the way the launched commands' is.
-		struct CForEachRepoInProcessOptions
-		{
-			NFunction::TCFunctionMovable<NConcurrency::TCFuture<CRepoInProcessResult> (NStr::CStr _Location)> m_fRun;
-			NStr::CStr m_InvocationCommand;
-			NStr::CStr m_ProgressDescription;
-			NStr::CStr m_FailureDescription;			// Reported with the count when repositories fail.
-		};
 
 		struct CGitLaunchOptions
 		{
@@ -539,11 +524,12 @@ namespace NMib::NBuildSystem
 		;
 
 		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_ForEachRepoDir(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, CForEachRepoDirOptions const &_Options);
-		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_ForEachRepoInProcess
+		// The locations of the filtered repositories, in dependency order.
+		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_GetLocations
 			(
 				CGenerateOptions const &_GenerateOptions
 				, CRepoFilter const &_Filter
-				, CForEachRepoInProcessOptions &_Options
+				, NContainer::TCVector<NStr::CStr> &o_Locations
 			)
 		;
 
