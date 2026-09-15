@@ -4142,6 +4142,7 @@ namespace NMib::NBuildSystem
 					auto ProtectedTags = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, gc_ConstKey_Repository_ProtectedTags, TCVector<CStr>());
 					auto bUpdateSubmodules = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_UpdateSubmodules, false);
 					auto bExcludeFromSeen = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_ExcludeFromSeen, false);
+					auto bFormat = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_Format, false);
 					auto bLfsReleaseStore = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_LfsReleaseStore, false);
 					auto bTagPreviousOnForcePush = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_TagPreviousOnForcePush, true);
 					auto bBootstrapSource = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_BootstrapSource, false);
@@ -4197,6 +4198,7 @@ namespace NMib::NBuildSystem
 					Repo.m_ProtectedTags.f_AddContainer(ProtectedTags);
 					Repo.m_bUpdateSubmodules = bUpdateSubmodules;
 					Repo.m_bExcludeFromSeen = bExcludeFromSeen;
+					Repo.m_bFormat = bFormat;
 					Repo.m_bBootstrapSource = bBootstrapSource;
 
 					if (GitIgnoreTypeStr == "GitInfoExclude")

@@ -176,6 +176,7 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_DefaultBranch(EPropertyType_Repository, gc_Str<"DefaultBranch">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_DefaultUpstreamBranch(EPropertyType_Repository, gc_Str<"DefaultUpstreamBranch">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_ExcludeFromSeen(EPropertyType_Repository, gc_Str<"ExcludeFromSeen">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Repository_Format(EPropertyType_Repository, gc_Str<"Format">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_Location(EPropertyType_Repository, gc_Str<"Location">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_NoPushRemotes(EPropertyType_Repository, gc_Str<"NoPushRemotes">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_ProtectedBranches(EPropertyType_Repository, gc_Str<"ProtectedBranches">);
@@ -441,6 +442,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_DefaultBranch);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_DefaultUpstreamBranch);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_ExcludeFromSeen);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_Format);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_Location);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_NoPushRemotes);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_ProtectedBranches);

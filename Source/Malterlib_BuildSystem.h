@@ -81,6 +81,7 @@ namespace NMib::NBuildSystem
 			NContainer::TCSet<NStr::CStr> m_Tags;
 			bool m_bOnlyChanged = false;
 			bool m_bIncludePull = false;
+			bool m_bFormat = false;						// Only repositories with Repository.Format.
 		};
 
 		enum ERepoCleanupBranchesFlag
@@ -249,6 +250,22 @@ namespace NMib::NBuildSystem
 			NContainer::TCVector<NStr::CStr> m_Params;
 			NStr::CStr m_Application;
 			bool m_bParallel = true;
+		};
+
+		struct CRepoInProcessResult
+		{
+			NStr::CStr m_Output;
+			bool m_bFailed = false;
+		};
+
+		// A coroutine run in this process for each repository, given its location, whose
+		// output is reported the way the launched commands' is.
+		struct CForEachRepoInProcessOptions
+		{
+			NFunction::TCFunctionMovable<NConcurrency::TCFuture<CRepoInProcessResult> (NStr::CStr _Location)> m_fRun;
+			NStr::CStr m_InvocationCommand;
+			NStr::CStr m_ProgressDescription;
+			NStr::CStr m_FailureDescription;			// Reported with the count when repositories fail.
 		};
 
 		struct CGitLaunchOptions
@@ -522,6 +539,13 @@ namespace NMib::NBuildSystem
 		;
 
 		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_ForEachRepoDir(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, CForEachRepoDirOptions const &_Options);
+		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_ForEachRepoInProcess
+			(
+				CGenerateOptions const &_GenerateOptions
+				, CRepoFilter const &_Filter
+				, CForEachRepoInProcessOptions &_Options
+			)
+		;
 
 		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_Branch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, NStr::CStr const &_Branch, ERepoBranchFlag _Flags);
 		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_Unbranch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoBranchFlag _Flags);

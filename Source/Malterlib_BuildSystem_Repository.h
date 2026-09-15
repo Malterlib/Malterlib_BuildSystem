@@ -157,6 +157,7 @@ namespace NMib::NBuildSystem::NRepository
 
 		bool m_bSubmodule = false;
 		bool m_bExcludeFromSeen = false;
+		bool m_bFormat = false;							// The repository's sources are formatted by 'mib format'.
 		bool m_bBootstrapSource = false;
 		bool m_bUpdateSubmodules = false;
 		EGitIgnoreType m_GitIgnoreType = EGitIgnoreType::mc_GitIgnore;

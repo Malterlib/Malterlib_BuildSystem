@@ -403,6 +403,7 @@ namespace NMib::NBuildSystem
 					, {CPropertyKey(gc_ConstKey_Repository_Tags), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
 					, {CPropertyKey(gc_ConstKey_Repository_Submodule), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					, {CPropertyKey(gc_ConstKey_Repository_ExcludeFromSeen), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(gc_ConstKey_Repository_Format), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					, {CPropertyKey(gc_ConstKey_Repository_SubmoduleName), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
 					, {CPropertyKey(gc_ConstKey_Repository_Type), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
 					, {CPropertyKey(gc_ConstKey_Repository_UserName), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
