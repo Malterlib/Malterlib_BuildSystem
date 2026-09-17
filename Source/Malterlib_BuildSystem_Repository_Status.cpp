@@ -654,7 +654,8 @@ namespace NMib::NBuildSystem
 										if (!bSameAsDefault)
 										{
 											bIsChanged = true;
-											if (_Flags & ERepoStatusFlag_NeedActionOnPush)
+											bool bAgainstDefaultBranch = RemoteName.f_FindChar('/') >= 0;
+											if (_Flags & (bAgainstDefaultBranch ? ERepoStatusFlag_NeedActionOnPushDefault : ERepoStatusFlag_NeedActionOnPush))
 												BranchResult.m_bActionNeeded = true;
 										}
 										RemotesWithAction[RemoteName];

@@ -117,6 +117,7 @@ namespace NMib::NBuildSystem
 			, ERepoStatusFlag_NeedActionOnPush = DMibBit(8)
 			, ERepoStatusFlag_NeedActionOnPull = DMibBit(9)
 			, ERepoStatusFlag_NeedActionOnLocalChanges = DMibBit(10)
+			, ERepoStatusFlag_NeedActionOnPushDefault = DMibBit(11)
 		};
 
 		enum ERepoListCommitsFlag
