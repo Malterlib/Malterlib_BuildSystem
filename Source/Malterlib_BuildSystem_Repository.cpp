@@ -3075,8 +3075,9 @@ namespace NMib::NBuildSystem
 
 					auto &Hooks = _Repo.m_HookConfig->m_Hooks;
 
-					// Recorded in the dispatcher so hook scripts can re-enter mib with the root the
-					// workspace was generated with. Deriving it in the hook with `git rev-parse
+					// Recorded in the worktree's .Environment so hook scripts can re-enter mib with the
+					// root the workspace was generated with. The dispatcher is shared by every
+					// worktree of the repository, each belonging to a workspace of its own. Deriving it in the hook with `git rev-parse
 					// --show-toplevel` instead would always yield the fully resolved path, which
 					// disagrees with an interactive run whenever the checkout is reached through a
 					// symlink - and every root-derived path would then alternate between the two.
@@ -3190,7 +3191,7 @@ namespace NMib::NBuildSystem
 								}
 
 								CStr WrapperPath = HooksDir / HookType;
-								if (!CFile::fs_FileExists(WrapperPath))
+								if (!CFile::fs_FileExists(WrapperPath) || !CFile::fs_FileExists(WorktreeHooksDir / ".Environment"))
 								{
 									bNeedsUpdate = true;
 									break;
@@ -3266,6 +3267,17 @@ namespace NMib::NBuildSystem
 						AllHookTypes.f_Insert(TCMap<CStr, TCVector<CStr>>::fs_GetKey(*iHook));
 					fCleanupDispatchers(AllHookTypes);
 
+					{
+						CStr Environment = "# Managed by Malterlib - do not edit\nMalterlibHookWorkspaceRoot={}\nMalterlibHookRepository={}\n"_f
+							<< HookWorkspaceRoot
+							<< HookRepository
+						;
+						NContainer::CByteVector EnvironmentData;
+						CFile::fs_WriteStringToVector(EnvironmentData, Environment, false);
+						if (CFile::fs_CopyFileDiff(EnvironmentData, WorktreeHooksDir / ".Environment", NTime::CTime::fs_NowUTC(), EFileAttrib_None))
+							fOutputInfo(EOutputType_Normal, "Updated hook environment{}"_f << fWorktreeSuffix());
+					}
+
 					// Install/update configured hooks for this worktree
 					for (auto iHook = Hooks.f_GetIterator(); iHook; ++iHook)
 					{
@@ -3330,10 +3342,7 @@ namespace NMib::NBuildSystem
 								fOutputInfo(EOutputType_Warning, "Overwriting existing '{}' hook not managed by Malterlib"_f << HookType);
 						}
 
-						CStr Script = CStr(gc_pHookDispatcherScript)
-							.f_Replace("@MalterlibHookWorkspaceRoot@", HookWorkspaceRoot)
-							.f_Replace("@MalterlibHookRepository@", HookRepository)
-						;
+						CStr Script = gc_pHookDispatcherScript;
 
 						NContainer::CByteVector ScriptData;
 						CFile::fs_WriteStringToVector(ScriptData, Script, false);
