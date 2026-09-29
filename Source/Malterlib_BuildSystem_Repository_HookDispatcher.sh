@@ -5,19 +5,6 @@
 # Managed by Malterlib - do not edit
 set -e
 
-# Recorded by mib when these hooks were installed. MalterlibHookWorkspaceRoot is
-# the root the workspace was generated with, MalterlibHookRepository is the
-# repository this dispatcher belongs to.
-#
-# Hook scripts must use these instead of deriving paths with `git rev-parse`,
-# which always reports the fully resolved path. Reaching a checkout through a
-# symlink would otherwise hand mib a different root than an interactive run
-# uses, and everything derived from the root - generated files, the compiled
-# files directory, the managed hook hash - would alternate between the two.
-MalterlibHookWorkspaceRoot=@MalterlibHookWorkspaceRoot@
-MalterlibHookRepository=@MalterlibHookRepository@
-export MalterlibHookWorkspaceRoot MalterlibHookRepository
-
 # Determine the worktree identity.
 # Git runs hooks from $GIT_COMMON_DIR/hooks which is shared across
 # worktrees. We resolve the actual git dir to figure out which
@@ -195,6 +182,41 @@ else
 		WORKTREE_HOOK_DIR="$MAIN_HOOK_DIR"
 		export MalterlibHookMainWorktreeFallback=true
 	fi
+fi
+
+# Recorded by mib per worktree when its hooks were installed, in .Environment beside
+# the worktree's hook type directories. MalterlibHookWorkspaceRoot is the root the
+# workspace was generated with, MalterlibHookRepository is the repository checkout.
+# This dispatcher is shared by every worktree of the repository, so it records
+# neither itself: each worktree belongs to its own workspace, with its own tools.
+#
+# Hook scripts must use these instead of deriving paths with `git rev-parse`,
+# which always reports the fully resolved path. Reaching a checkout through a
+# symlink would otherwise hand mib a different root than an interactive run
+# uses, and everything derived from the root - generated files, the compiled
+# files directory, the managed hook hash - would alternate between the two.
+#
+# A worktree whose hooks were installed before mib recorded .Environment has none
+# until mib next runs there. Its workspace is then the nearest directory above the
+# checkout holding mib and the MTool launcher, spelled the resolved way git gives it.
+ENVIRONMENT_FILE="$(dirname "$WORKTREE_HOOK_DIR")/.Environment"
+if [ -f "$ENVIRONMENT_FILE" ]; then
+	. "$ENVIRONMENT_FILE"
+	export MalterlibHookWorkspaceRoot MalterlibHookRepository
+else
+	CHECKOUT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+	WORKSPACE_SEARCH="$CHECKOUT_ROOT"
+	while [ -n "$WORKSPACE_SEARCH" ] && [ "$WORKSPACE_SEARCH" != "/" ]; do
+		if [ -f "$WORKSPACE_SEARCH/mib" ] && [ -f "$WORKSPACE_SEARCH/Malterlib/Core/Scripts/MTool.sh" ]; then
+			MalterlibHookWorkspaceRoot="$WORKSPACE_SEARCH"
+			MalterlibHookRepository="$CHECKOUT_ROOT"
+			export MalterlibHookWorkspaceRoot MalterlibHookRepository
+
+			break
+		fi
+
+		WORKSPACE_SEARCH="$(dirname "$WORKSPACE_SEARCH")"
+	done
 fi
 
 if [ -d "$WORKTREE_HOOK_DIR" ]; then
