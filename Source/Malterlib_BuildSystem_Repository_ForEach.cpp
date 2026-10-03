@@ -146,6 +146,8 @@ namespace NMib::NBuildSystem
 			CGenerateOptions const &_GenerateOptions
 			, CRepoFilter const &_Filter
 			, TCVector<CStr> &o_Locations
+			, TCVector<CStr> *o_pAllLocations
+			, TCMap<CStr, CRepoTidyFiles> *o_pTidyFiles
 		)
 	{
 		co_await ECoroutineFlag_CaptureMalterlibExceptions;
@@ -158,7 +160,23 @@ namespace NMib::NBuildSystem
 		for (auto &Repos : FilteredRepositories.m_FilteredRepositories)
 		{
 			for (auto *pRepo : Repos)
+			{
 				o_Locations.f_Insert(pRepo->m_Location);
+				if (o_pTidyFiles)
+					(*o_pTidyFiles)[pRepo->m_Location] = CRepoTidyFiles{pRepo->m_TidyIncludeFiles, pRepo->m_TidyExcludeFiles};
+			}
+		}
+
+		if (o_pAllLocations)
+		{
+			for (auto &Repos : FilteredRepositories.m_ReposOrdered)
+			{
+				for (auto &RepoLocation : Repos)
+				{
+					for (auto &Repo : RepoLocation.m_Repositories)
+						o_pAllLocations->f_Insert(Repo.m_Location);
+				}
+			}
 		}
 
 		co_return ERetry_None;

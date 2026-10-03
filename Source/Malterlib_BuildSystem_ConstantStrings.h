@@ -128,6 +128,9 @@ namespace NMib::NBuildSystem
 	extern CStringAndHash const gc_ConstString_void;
 	extern CStringAndHash const gc_ConstString_WildcardString;
 	extern CStringAndHash const gc_ConstString_Write;
+	extern CStringAndHash const gc_ConstString_Enabled;
+	extern CStringAndHash const gc_ConstString_IncludeFiles;
+	extern CStringAndHash const gc_ConstString_ExcludeFiles;
 	extern CStringAndHash const gc_ConstString_XInternalPrecompiledHeaderOutputFile;
 	extern CStringAndHash const gc_ConstString_Replace;
 	extern CStringAndHash const gc_ConstString_Find;

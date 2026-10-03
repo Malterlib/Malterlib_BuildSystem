@@ -82,6 +82,15 @@ namespace NMib::NBuildSystem
 			bool m_bOnlyChanged = false;
 			bool m_bIncludePull = false;
 			bool m_bFormat = false;						// Only repositories with Repository.Format.
+			bool m_bTidy = false;						// Only repositories with Repository.Tidy.Enabled.
+		};
+
+		// The files of a repository that 'mib tidy' and the checks plugin check: wildcards matched against the paths
+		// relative to the repository, from Repository.Tidy.
+		struct CRepoTidyFiles
+		{
+			NContainer::TCVector<NStr::CStr> m_IncludeFiles;	// The files checked, or all when empty.
+			NContainer::TCVector<NStr::CStr> m_ExcludeFiles;	// The files not checked.
 		};
 
 		enum ERepoCleanupBranchesFlag
@@ -524,12 +533,15 @@ namespace NMib::NBuildSystem
 		;
 
 		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_ForEachRepoDir(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, CForEachRepoDirOptions const &_Options);
-		// The locations of the filtered repositories, in dependency order.
+		// The locations of the filtered repositories, in dependency order, and with
+		// o_pAllLocations, the locations of every repository, which tells what nests in them.
 		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_GetLocations
 			(
 				CGenerateOptions const &_GenerateOptions
 				, CRepoFilter const &_Filter
 				, NContainer::TCVector<NStr::CStr> &o_Locations
+				, NContainer::TCVector<NStr::CStr> *o_pAllLocations = nullptr
+				, NContainer::TCMap<NStr::CStr, CRepoTidyFiles> *o_pTidyFiles = nullptr
 			)
 		;
 
