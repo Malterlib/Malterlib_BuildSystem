@@ -176,6 +176,7 @@ namespace NMib::NBuildSystem
 	extern CPropertyKeyReference const gc_ConstKey_Repository_DefaultUpstreamBranch;
 	extern CPropertyKeyReference const gc_ConstKey_Repository_ExcludeFromSeen;
 	extern CPropertyKeyReference const gc_ConstKey_Repository_Format;
+	extern CPropertyKeyReference const gc_ConstKey_Repository_Tidy;
 	extern CPropertyKeyReference const gc_ConstKey_Repository_Location;
 	extern CPropertyKeyReference const gc_ConstKey_Repository_NoPushRemotes;
 	extern CPropertyKeyReference const gc_ConstKey_Repository_ProtectedBranches;

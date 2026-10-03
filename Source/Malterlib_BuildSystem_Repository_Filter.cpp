@@ -58,6 +58,9 @@ namespace NMib::NBuildSystem::NRepository
 					if (_Filter.m_bFormat && !Repo.m_bFormat)
 						continue;
 
+					if (_Filter.m_bTidy && !Repo.m_bTidy)
+						continue;
+
 					if (!_Filter.m_Tags.f_IsEmpty() && Repo.m_Tags.f_And(_Filter.m_Tags) != _Filter.m_Tags)
 						continue;
 

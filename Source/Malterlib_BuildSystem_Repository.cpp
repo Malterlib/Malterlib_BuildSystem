@@ -4152,6 +4152,7 @@ namespace NMib::NBuildSystem
 					auto bUpdateSubmodules = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_UpdateSubmodules, false);
 					auto bExcludeFromSeen = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_ExcludeFromSeen, false);
 					auto bFormat = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_Format, false);
+					auto TidyJson = _BuildSystem.f_EvaluateEntityPropertyObject(ChildEntity, gc_ConstKey_Repository_Tidy, CEJsonSorted()).f_Move();
 					auto bLfsReleaseStore = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_LfsReleaseStore, false);
 					auto bTagPreviousOnForcePush = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_TagPreviousOnForcePush, true);
 					auto bBootstrapSource = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_BootstrapSource, false);
@@ -4208,6 +4209,22 @@ namespace NMib::NBuildSystem
 					Repo.m_bUpdateSubmodules = bUpdateSubmodules;
 					Repo.m_bExcludeFromSeen = bExcludeFromSeen;
 					Repo.m_bFormat = bFormat;
+					if (TidyJson.f_IsObject())
+					{
+						if (auto pEnabled = TidyJson.f_GetMember(gc_ConstString_Enabled, EJsonType_Boolean))
+							Repo.m_bTidy = pEnabled->f_Boolean();
+						auto fGetFiles = [&](CStringAndHash const &_Member, TCVector<CStr> &o_Files)
+							{
+								if (auto pFiles = TidyJson.f_GetMember(_Member, EJsonType_Array))
+								{
+									for (auto &File : pFiles->f_Array())
+										o_Files.f_Insert(File.f_String());
+								}
+							}
+						;
+						fGetFiles(gc_ConstString_IncludeFiles, Repo.m_TidyIncludeFiles);
+						fGetFiles(gc_ConstString_ExcludeFiles, Repo.m_TidyExcludeFiles);
+					}
 					Repo.m_bBootstrapSource = bBootstrapSource;
 
 					if (GitIgnoreTypeStr == "GitInfoExclude")

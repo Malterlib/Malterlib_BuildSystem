@@ -129,6 +129,9 @@ namespace NMib::NBuildSystem
 	constexpr CStringAndHash const gc_ConstString_void = gc_Str<"void">;
 	constexpr CStringAndHash const gc_ConstString_WildcardString = gc_Str<"WildcardString">;
 	constexpr CStringAndHash const gc_ConstString_Write = gc_Str<"Write">;
+	constexpr CStringAndHash const gc_ConstString_Enabled = gc_Str<"Enabled">;
+	constexpr CStringAndHash const gc_ConstString_IncludeFiles = gc_Str<"IncludeFiles">;
+	constexpr CStringAndHash const gc_ConstString_ExcludeFiles = gc_Str<"ExcludeFiles">;
 	constexpr CStringAndHash const gc_ConstString_XInternalPrecompiledHeaderOutputFile = gc_Str<"XInternalPrecompiledHeaderOutputFile">;
 	constexpr CStringAndHash const gc_ConstString_Replace = gc_Str<"Replace">;
 	constexpr CStringAndHash const gc_ConstString_Find = gc_Str<"Find">;
@@ -697,6 +700,9 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstString_void);
 		o_StringCache.f_AddConstantString(gc_ConstString_WildcardString);
 		o_StringCache.f_AddConstantString(gc_ConstString_Write);
+		o_StringCache.f_AddConstantString(gc_ConstString_Enabled);
+		o_StringCache.f_AddConstantString(gc_ConstString_IncludeFiles);
+		o_StringCache.f_AddConstantString(gc_ConstString_ExcludeFiles);
 		o_StringCache.f_AddConstantString(gc_ConstString_XInternalPrecompiledHeaderOutputFile);
 		o_StringCache.f_AddConstantString(gc_ConstString_Replace);
 		o_StringCache.f_AddConstantString(gc_ConstString_Find);

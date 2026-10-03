@@ -158,6 +158,9 @@ namespace NMib::NBuildSystem::NRepository
 		bool m_bSubmodule = false;
 		bool m_bExcludeFromSeen = false;
 		bool m_bFormat = false;							// The repository's sources are formatted by 'mib format'.
+		bool m_bTidy = false;							// The repository's sources are checked by 'mib tidy' and the checks plugin.
+		TCVector<CStr> m_TidyIncludeFiles;				// Wildcards relative to the repository: the files checked, or all when empty.
+		TCVector<CStr> m_TidyExcludeFiles;				// Wildcards relative to the repository: the files not checked.
 		bool m_bBootstrapSource = false;
 		bool m_bUpdateSubmodules = false;
 		EGitIgnoreType m_GitIgnoreType = EGitIgnoreType::mc_GitIgnore;
