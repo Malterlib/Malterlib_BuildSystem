@@ -111,28 +111,32 @@ namespace
 
 	class CGenerate_Tests : public NMib::NTest::CTest
 	{
-		CEJsonSorted fp_Generate(CStr const &_TestName, TCOptional<TCMap<CStr, CStr>> const &_Environment)
+		// A non-fresh generate reuses the previous output and source files so dependency checks see only the changes made by the test
+		CEJsonSorted fp_Generate(CStr const &_TestName, TCOptional<TCMap<CStr, CStr>> const &_Environment, bool _bFresh = true, bool *o_pChanged = nullptr)
 		{
-			CExeFS SourceFS;
-			if (!fg_OpenExeFS(SourceFS))
-				DMibError("Could not open ExeFS");
-
-			CFileSystemInterface_VirtualFS SourceVirtualFS(SourceFS.m_FileSystem);
-			CFileSystemInterface_Disk DestinationFS;
-
 			CStr TempDirectory = CFile::fs_GetProgramDirectory() / "BuildSystemTests" / _TestName;
 			CStr OutputDirectory = CFile::fs_GetProgramDirectory() / "BuildSystemTestsOutput" / _TestName;
 
-			if (CFile::fs_FileExists(OutputDirectory))
-				CFile::fs_DeleteDirectoryRecursive(OutputDirectory);
+			if (_bFresh)
+			{
+				CExeFS SourceFS;
+				if (!fg_OpenExeFS(SourceFS))
+					DMibError("Could not open ExeFS");
 
-			CFile::fs_CreateDirectory(OutputDirectory);
+				CFileSystemInterface_VirtualFS SourceVirtualFS(SourceFS.m_FileSystem);
+				CFileSystemInterface_Disk DestinationFS;
 
-			CFile::fs_CreateDirectory(TempDirectory);
+				if (CFile::fs_FileExists(OutputDirectory))
+					CFile::fs_DeleteDirectoryRecursive(OutputDirectory);
 
-			[[maybe_unused]] auto Files = SourceVirtualFS.f_FindFiles("*", EFileAttrib_File | EFileAttrib_Directory, true);
+				CFile::fs_CreateDirectory(OutputDirectory);
 
-			SourceVirtualFS.f_CopyFiles(CStr("TestFiles") / _TestName / "*", DestinationFS, TempDirectory);
+				CFile::fs_CreateDirectory(TempDirectory);
+
+				[[maybe_unused]] auto Files = SourceVirtualFS.f_FindFiles("*", EFileAttrib_File | EFileAttrib_Directory, true);
+
+				SourceVirtualFS.f_CopyFiles(CStr("TestFiles") / _TestName / "*", DestinationFS, TempDirectory);
+			}
 
 			CGenerateOptions GenerateOptions;
 			auto &GenerateSettings = GenerateOptions.m_Settings;
@@ -188,6 +192,9 @@ namespace
 			}
 
 			DMibExpect(Retry, ==, CBuildSystem::ERetry_None)(ETestFlag_Aggregated);
+
+			if (o_pChanged)
+				*o_pChanged = bChanged;
 
 			auto GeneratorFile = OutputDirectory / "BuildSystemData.json";
 
@@ -508,6 +515,37 @@ namespace
 
 				DMibAssertTrue(CFile::fs_FileExists(TestGenerate.m_OutputDirectory / "TestGenerateFile.txt"));
 				DMibExpect(CFile::fs_ReadStringFromFile(TestGenerate.m_OutputDirectory / "TestGenerateFile.txt"), ==, TestGenerate.m_ExpectedContents);
+			};
+			DMibTestSuite("EnvironmentChanged")
+			{
+				CStr TestName = "EnvironmentChanged";
+				CStr OutputDirectory = CFile::fs_GetProgramDirectory() / "BuildSystemTestsOutput" / TestName;
+
+				fg_TestAddCleanupPath(CFile::fs_GetProgramDirectory() / "BuildSystemTests" / TestName);
+				fg_TestAddCleanupPath(OutputDirectory);
+
+				TCMap<CStr, CStr> ShelfEnvironment = {{"TestBaseChangeList", "168000"}, {"TestChangeList", "168630"}};
+				TCMap<CStr, CStr> OtherShelfEnvironment = {{"TestBaseChangeList", "168000"}, {"TestChangeList", "168700"}};
+
+				// Regeneration must be detected both when a variable becomes set and when a set variable changes or is removed
+				auto fCheckGenerate = [&](CStr const &_Case, TCMap<CStr, CStr> const &_Environment, bool _bFresh, bool _bExpectChanged, CStr const &_ExpectedContents)
+					{
+						DMibTestPath(_Case);
+
+						bool bChanged = false;
+						fp_Generate(TestName, _Environment, _bFresh, &bChanged);
+
+						DMibExpect(bChanged, ==, _bExpectChanged);
+						DMibExpect(CFile::fs_ReadStringFromFile(OutputDirectory / "TestGenerateFile.txt"), ==, _ExpectedContents);
+					}
+				;
+
+				fCheckGenerate("Unset", {}, true, true, "Value");
+				fCheckGenerate("UnsetUnchanged", {}, false, false, "Value");
+				fCheckGenerate("Set", ShelfEnvironment, false, true, "Value - 168630");
+				fCheckGenerate("SetUnchanged", ShelfEnvironment, false, false, "Value - 168630");
+				fCheckGenerate("SetChanged", OtherShelfEnvironment, false, true, "Value - 168700");
+				fCheckGenerate("Removed", {}, false, true, "Value");
 			};
 			DMibTestSuite("DynamicString")
 			{

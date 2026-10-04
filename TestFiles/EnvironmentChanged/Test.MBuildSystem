@@ -1,0 +1,44 @@
+
+*Configuration
+{
+	Debug "Debug Config"
+	Release "Release Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
+
+Property
+{
+	TestChangeList: string = ""
+	TestBaseChangeList: string = ""
+
+	TestSuffix: string = ""
+	TestSuffix ` - @(TestChangeList)`
+	{
+		&
+		{
+			!TestBaseChangeList ""
+			!TestBaseChangeList "0"
+		}
+	}
+}
+
+%GenerateFile "TestFile"
+{
+	GenerateFile
+	{
+		Name `@(BuildSystemOutputDir)/TestGenerateFile.txt`
+		Contents `Value@(TestSuffix)`
+		Executable false
+		UnixLineEnds true
+		UnicodeBOM false
+	}
+}

@@ -590,6 +590,9 @@ namespace NMib::NBuildSystem
 				auto *pValue = _Entity.m_EvaluatedProperties.m_Properties.f_FindEqual(_Key);
 				if (pValue && pValue->f_IsExternal())
 				{
+					if (_Key.f_GetType() == EPropertyType_Property)
+						fp_UsedExternal(_Key);
+
 					o_PropertyInfo.m_pProperty = pValue->m_pProperty;
 
 					pEvaluated = &_EvalContext.m_pEvaluatedProperties->m_Properties[_Key];
