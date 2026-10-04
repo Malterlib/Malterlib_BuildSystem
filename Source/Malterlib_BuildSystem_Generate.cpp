@@ -91,7 +91,7 @@ namespace NMib::NBuildSystem
 	{
 		try
 		{
-			CEJsonSorted Json;
+			CEJsonSorted Json(EEJsonType_Object);
 			for (auto &EnvVar : mp_SaveEnvironment)
 				Json[mp_SaveEnvironment.fs_GetKey(EnvVar)] = EnvVar;
 
