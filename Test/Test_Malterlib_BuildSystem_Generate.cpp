@@ -76,6 +76,11 @@ namespace
 			co_return {};
 		}
 
+		TCFuture<void> f_StdErrBinary(NContainer::CIOByteVector _Output) override
+		{
+			co_return {};
+		}
+
 		void f_Clear()
 		{
 		}
