@@ -17,9 +17,9 @@
 #include <Mib/Process/ProcessLaunchActor>
 #include <Mib/Web/HTTP/URL>
 
-constexpr static ch8 const gc_pHookDispatcherScript[] =
+static constexpr ch8 const gc_pHookDispatcherScript[] =
 	{
-		#embed "Malterlib_BuildSystem_Repository_HookDispatcher.sh"
+#embed "Malterlib_BuildSystem_Repository_HookDispatcher.sh"
 		, '\0'
 	}
 ;
@@ -54,7 +54,6 @@ To show current status without reconciling use:
 		<< Colors.f_Default()
 	;
 }
-
 
 // The follow-up commands here intentionally omit --no-apply-policy-pretend even
 // though --apply-policy defaults to pretend mode. The two-step UX is deliberate:
@@ -104,7 +103,6 @@ use {0}git commit --amend{1} later if you want to replace the placeholder with r
 		<< Colors.f_Default()
 	;
 }
-
 
 // _BuildSystemName is the build system that reports the repositories, which no other build system of the checkout sees.
 // The commands repeat --ignore-leave when the repositories are only removed with it.
@@ -676,16 +674,7 @@ namespace NMib::NBuildSystem
 						CStr Repository = _Repository;
 						auto Parts = Repository.f_Split("/");
 						if (umint nParts = Parts.f_GetLen(); nParts > 4)
-						{
-							Repository = "{}/{}/{}…{}/{}/{}"_f
-								<< Parts[0]
-								<< Parts[1]
-								<< Colors.f_Foreground256(250)
-								<< RepoColor
-								<< Parts[nParts - 2]
-								<< Parts[nParts - 1]
-							;
-						}
+							Repository = "{}/{}/{}…{}/{}/{}"_f << Parts[0] << Parts[1] << Colors.f_Foreground256(250) << RepoColor << Parts[nParts - 2] << Parts[nParts - 1];
 
 						return "{}{}{}"_f
 							<< RepoColor
@@ -736,13 +725,7 @@ namespace NMib::NBuildSystem
 		{
 			auto fReport = [&](CStr const &_Step, CProcessLaunchActor::CSimpleLaunchResult const &_Result)
 				{
-					_Launches.f_Output
-						(
-							EOutputType_Normal
-							, _Name
-							, "{} failed, so its LFS files keep their own copies: {}\n"_f << _Step << _Result.f_GetCombinedOut().f_Trim()
-						)
-					;
+					_Launches.f_Output(EOutputType_Normal, _Name, "{} failed, so its LFS files keep their own copies: {}\n"_f << _Step << _Result.f_GetCombinedOut().f_Trim());
 				}
 			;
 
@@ -825,14 +808,7 @@ namespace NMib::NBuildSystem
 						CommandLineParams.f_Insert({"-c", "submodule.recurse=false"});
 					CommandLineParams.f_Insert(_Params);
 
-					auto Return = co_await _Launches.f_Launch
-						(
-							_WorkingDir
-							, CommandLineParams
-							, _Environment
-							, CProcessLaunchActor::ESimpleLaunchFlag_GenerateExceptionOnNonZeroExitCode
-						)
-					;
+					auto Return = co_await _Launches.f_Launch(_WorkingDir, CommandLineParams, _Environment, CProcessLaunchActor::ESimpleLaunchFlag_GenerateExceptionOnNonZeroExitCode);
 					co_return Return.f_GetStdOut();
 				}
 			;
@@ -866,7 +842,6 @@ namespace NMib::NBuildSystem
 					co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 					auto Return = co_await _Launches.f_Launch(_WorkingDir, _Params, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
-
 
 					if (Return.m_ExitCode == 0)
 						co_return {};
@@ -951,15 +926,7 @@ namespace NMib::NBuildSystem
 						if (iAttempt + 1 == c_MaxCloneAttempts)
 							co_return CloneResult.f_GetException();
 
-						fOutputInfo
-							(
-								EOutputType_Warning
-								, "Git clone failed with a transient transport error; retrying attempt {}/{}\n{}"_f
-								<< (iAttempt + 2)
-								<< c_MaxCloneAttempts
-								<< Error
-							)
-						;
+						fOutputInfo(EOutputType_Warning, "Git clone failed with a transient transport error; retrying attempt {}/{}\n{}"_f << (iAttempt + 2) << c_MaxCloneAttempts << Error);
 
 						co_await fg_Timeout(fp64(1 << (iAttempt + 1)) * 2.0);
 					}
@@ -968,14 +935,7 @@ namespace NMib::NBuildSystem
 				}
 			;
 
-			auto fFetchIfCommitMissing = [&]
-				(
-					CStr const &_Hash
-					, CStr const &_RepoDir
-					, TCVector<CStr> _ExtraFetchParams = {}
-					, TCMap<CStr, CStr> _ExtraEnvironment = {}
-				)
-				-> TCUnsafeFuture<void>
+			auto fFetchIfCommitMissing = [&](CStr const &_Hash, CStr const &_RepoDir, TCVector<CStr> _ExtraFetchParams = {}, TCMap<CStr, CStr> _ExtraEnvironment = {}) -> TCUnsafeFuture<void>
 				{
 					co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
@@ -1064,14 +1024,7 @@ namespace NMib::NBuildSystem
 					// A pin such as a branch name resolves again when it is checked out, to what the hook may not have seen
 					// As long as the repository's object IDs: a name of the other length is a ref, which can move. Git before 2.29 doesn't
 					// know --show-object-format, and its repositories are SHA-1.
-					auto ObjectFormatResult = co_await _Launches.f_Launch
-						(
-							Location
-							, {"rev-parse", "--show-object-format"}
-							, {}
-							, CProcessLaunchActor::ESimpleLaunchFlag_None
-						)
-					;
+					auto ObjectFormatResult = co_await _Launches.f_Launch(Location, {"rev-parse", "--show-object-format"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 					umint ObjectIdLength = ObjectFormatResult.m_ExitCode == 0 && ObjectFormatResult.f_GetStdOut().f_Trim() == "sha256" ? 64 : 40;
 					if (!fg_IsFullCommitHash(_To) || _To.f_GetLen() != ObjectIdLength)
 					{
@@ -1116,14 +1069,7 @@ namespace NMib::NBuildSystem
 						co_return {};
 					}
 
-					auto BranchResult = co_await _Launches.f_Launch
-						(
-							Location
-							, {"symbolic-ref", "-q", "--short", "HEAD"}
-							, {}
-							, CProcessLaunchActor::ESimpleLaunchFlag_None
-						)
-					;
+					auto BranchResult = co_await _Launches.f_Launch(Location, {"symbolic-ref", "-q", "--short", "HEAD"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 					if (BranchResult.m_ExitCode == 0)
 						co_await fLaunchGit({"checkout", "-q", BranchResult.f_GetStdOut().f_Trim()}, Location);
 					else
@@ -1294,14 +1240,7 @@ namespace NMib::NBuildSystem
 						if (!(co_await fIsSubmoduleActive(Name, Path)))
 							continue;
 
-						auto UrlResult = co_await _Launches.f_Launch
-							(
-								_Location
-								, {"config", "--get", "submodule.{}.url"_f << Name}
-								, {}
-								, CProcessLaunchActor::ESimpleLaunchFlag_None
-							)
-						;
+						auto UrlResult = co_await _Launches.f_Launch(_Location, {"config", "--get", "submodule.{}.url"_f << Name}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 						if (UrlResult.m_ExitCode == 1)
 							continue;
 						if (UrlResult.m_ExitCode != 0)
@@ -1404,9 +1343,7 @@ namespace NMib::NBuildSystem
 							{
 								co_return DMibErrorInstance
 									(
-										"Would check out {} in submodule {} after the verify hook's submodule batch"_f
-										<< Checkout.m_Commit
-										<< fg_RelativeToBase(Checkout.m_Location, BaseDir)
+										"Would check out {} in submodule {} after the verify hook's submodule batch"_f << Checkout.m_Commit << fg_RelativeToBase(Checkout.m_Location, BaseDir)
 									)
 								;
 							}
@@ -1825,9 +1762,7 @@ namespace NMib::NBuildSystem
 			// authenticated-404 API rule is the only safe disambiguation.
 			auto fLsRemoteStderrIndicatesMissing = [](CStr const &_StdErr) -> bool
 				{
-					return _StdErr.f_Find("Repository not found") >= 0
-						|| _StdErr.f_Find("not found") >= 0
-					;
+					return _StdErr.f_Find("Repository not found") >= 0 || _StdErr.f_Find("not found") >= 0;
 				}
 			;
 
@@ -2315,9 +2250,7 @@ namespace NMib::NBuildSystem
 						;
 					}
 					else
-					{
 						fOutputInfo(EOutputType_Warning, "Cloned from '{}' — origin missing."_f << _SourceName);
-					}
 
 					co_return {};
 				}
@@ -2426,7 +2359,8 @@ namespace NMib::NBuildSystem
 									if (!bReady)
 									{
 										CStr Message = "Fork was created but did not become available within {} seconds;\n"
-											"re-run './mib update-repos' to continue."_f << c_MaxPolls
+											"re-run './mib update-repos' to continue."_f
+											<< c_MaxPolls
 										;
 										fOutputInfo(EOutputType_Error, Message);
 										co_return DMibErrorInstance(Message);
@@ -2563,7 +2497,7 @@ namespace NMib::NBuildSystem
 								EOutputType_Warning
 								, "Forked '{}' into origin via hosting provider. If this repository has a policy configured,\n"
 								"run './mib update-repos --apply-policy' to apply permissions and branch protection."_f
-								 << SourceSlugOuter
+								<< SourceSlugOuter
 							)
 						;
 					}
@@ -2670,8 +2604,8 @@ namespace NMib::NBuildSystem
 						(
 							EOutputType_Warning
 							, "Origin existed but was empty; populated with a placeholder initial commit. Run './mib push'\n"
-							  "to push it and establish upstream tracking. Use 'git commit --amend' later to replace the\n"
-							  "placeholder with real content."
+							"to push it and establish upstream tracking. Use 'git commit --amend' later to replace the\n"
+							"placeholder with real content."
 						)
 					;
 
@@ -2697,15 +2631,12 @@ namespace NMib::NBuildSystem
 					}
 
 					EHandleRepositoryAction ResolvedAction = _ReconcileAction;
-					bool bExplicitRecovery =
-						_ReconcileAction == EHandleRepositoryAction_Init
+					bool bExplicitRecovery
+						= _ReconcileAction == EHandleRepositoryAction_Init
 						|| _ReconcileAction == EHandleRepositoryAction_CloneRemote
 						|| _ReconcileAction == EHandleRepositoryAction_ForkRemote
 					;
-					bool bAutoAction =
-						_ReconcileAction == EHandleRepositoryAction_None
-						|| _ReconcileAction == EHandleRepositoryAction_Auto
-					;
+					bool bAutoAction = _ReconcileAction == EHandleRepositoryAction_None || _ReconcileAction == EHandleRepositoryAction_Auto;
 
 					// Reject reconcile actions that make no sense for a missing origin.
 					// `leave`/`reset`/`rebase`/manual-resolve assume a local repo exists and
@@ -2719,8 +2650,7 @@ namespace NMib::NBuildSystem
 						fOutputInfo
 							(
 								EOutputType_Error
-								, "Unsupported reconcile action '{}' for missing origin recovery, only init, clone-remote, and fork-remote are supported"_f
-								<< ActionStr
+								, "Unsupported reconcile action '{}' for missing origin recovery, only init, clone-remote, and fork-remote are supported"_f << ActionStr
 							)
 						;
 						co_return DMibErrorInstanceBuildSystemReconcileHelp(fg_ReconcileMissingHelp(o_StateHandler.f_AnsiFlags()));
@@ -3022,7 +2952,8 @@ namespace NMib::NBuildSystem
 										CStr WorktreeExpectedBranch = fg_GetExpectedBranch(_Repo, _MainRepoInfo.m_Branch, _MainRepoInfo.m_DefaultBranch);
 
 										// Check if the branch already exists in the main sub-repo
-										bool bBranchExists = !WorktreeExpectedBranch.f_IsEmpty()
+										bool bBranchExists
+											= !WorktreeExpectedBranch.f_IsEmpty()
 											&& co_await fLaunchGitQuestion({"rev-parse", "--verify", "refs/heads/{}"_f << WorktreeExpectedBranch}, MainSubRepoPath, false)
 										;
 										CStr WorktreeConfigHash = ConfigHash;
@@ -3071,9 +3002,15 @@ namespace NMib::NBuildSystem
 															RecommendedOutputType
 															, "Worktree branch '{}' already exists: {}{}{} recommended for {}{}{} -> {}{}{}"_f
 															<< WorktreeExpectedBranch
-															<< Colors.f_RepositoryName() << RecommendedActionStr << Colors.f_Default()
-															<< Colors.f_ToPush() << ExistingHash << Colors.f_Default()
-															<< Colors.f_ToPush() << ConfigHash << Colors.f_Default()
+															<< Colors.f_RepositoryName()
+															<< RecommendedActionStr
+															<< Colors.f_Default()
+															<< Colors.f_ToPush()
+															<< ExistingHash
+															<< Colors.f_Default()
+															<< Colors.f_ToPush()
+															<< ConfigHash
+															<< Colors.f_Default()
 														)
 													;
 													co_return DMibErrorInstanceBuildSystemReconcileHelp(fg_ReconcileHelp(o_StateHandler.f_AnsiFlags()));
@@ -3086,7 +3023,8 @@ namespace NMib::NBuildSystem
 														(
 															EOutputType_Error
 															, "Unsupported reconcile action '{}' for worktree creation of branch '{}', only reset and leave are supported"_f
-															<< ActionStr << WorktreeExpectedBranch
+															<< ActionStr
+															<< WorktreeExpectedBranch
 														)
 													;
 													co_return DMibErrorInstanceBuildSystemReconcileHelp(fg_ReconcileHelp(o_StateHandler.f_AnsiFlags()));
@@ -3706,9 +3644,12 @@ namespace NMib::NBuildSystem
 						(
 							HelperBaseName.f_GetLen() >= 4
 							&& HelperBaseName[3] == '_'
-							&& HelperBaseName[0] >= '0' && HelperBaseName[0] <= '9'
-							&& HelperBaseName[1] >= '0' && HelperBaseName[1] <= '9'
-							&& HelperBaseName[2] >= '0' && HelperBaseName[2] <= '9'
+							&& HelperBaseName[0] >= '0'
+							&& HelperBaseName[0] <= '9'
+							&& HelperBaseName[1] >= '0'
+							&& HelperBaseName[1] <= '9'
+							&& HelperBaseName[2] >= '0'
+							&& HelperBaseName[2] <= '9'
 						)
 						{
 							CStr Message = "Hook helper file '{}' uses reserved NNN_ prefix which would cause the dispatcher to execute it as a hook"_f << HelperPath;
@@ -3844,10 +3785,7 @@ namespace NMib::NBuildSystem
 					fCleanupDispatchers(AllHookTypes);
 
 					{
-						CStr Environment = "# Managed by Malterlib - do not edit\nMalterlibHookWorkspaceRoot={}\nMalterlibHookRepository={}\n"_f
-							<< HookWorkspaceRoot
-							<< HookRepository
-						;
+						CStr Environment = "# Managed by Malterlib - do not edit\nMalterlibHookWorkspaceRoot={}\nMalterlibHookRepository={}\n"_f << HookWorkspaceRoot << HookRepository;
 						NContainer::CByteVector EnvironmentData;
 						CFile::fs_WriteStringToVector(EnvironmentData, Environment, false);
 						if (CFile::fs_CopyFileDiff(EnvironmentData, WorktreeHooksDir / ".Environment", NTime::CTime::fs_NowUTC(), EFileAttrib_None))
@@ -4213,16 +4151,7 @@ namespace NMib::NBuildSystem
 			}
 
 			bool bReconciliationHandled = false;
-			if
-				(
-					!ConfigHash.f_IsEmpty()
-					&&
-					(
-						(TargetHash != ConfigHash && (CurrentHash != ConfigHash || bNeedBranchSwitch))
-						|| bForceReset
-					)
-					&& !fg_IsSubmodule(DynamicInfo.m_DataDir)
-				)
+			if (!ConfigHash.f_IsEmpty() && ((TargetHash != ConfigHash && (CurrentHash != ConfigHash || bNeedBranchSwitch)) || bForceReset) && !fg_IsSubmodule(DynamicInfo.m_DataDir))
 			{
 				bReconciliationHandled = true;
 				bool bPassException = false;
@@ -4294,10 +4223,10 @@ namespace NMib::NBuildSystem
 									bool bIsOnRemote = false;
 
 									if
-										(
-											co_await fLaunchGitNonEmpty({"branch", "-r", "--contains", TargetHash}, Location)
-											|| co_await fLaunchGitNonEmpty({"tag", "--contains", TargetHash}, Location)
-										)
+									(
+										co_await fLaunchGitNonEmpty({"branch", "-r", "--contains", TargetHash}, Location)
+										|| co_await fLaunchGitNonEmpty({"tag", "--contains", TargetHash}, Location)
+									)
 									{
 										bIsOnRemote = true;
 									}
@@ -4551,9 +4480,15 @@ namespace NMib::NBuildSystem
 												OutputType
 												, "Branch switch to '{}': {}{}{} recommended for {}{}{} -> {}{}{}"_f
 												<< ExpectedBranch
-												<< Colors.f_RepositoryName() << ActionStr << Colors.f_Default()
-												<< Colors.f_ToPush() << TargetHash << Colors.f_Default()
-												<< Colors.f_ToPush() << ConfigHash << Colors.f_Default()
+												<< Colors.f_RepositoryName()
+												<< ActionStr
+												<< Colors.f_Default()
+												<< Colors.f_ToPush()
+												<< TargetHash
+												<< Colors.f_Default()
+												<< Colors.f_ToPush()
+												<< ConfigHash
+												<< Colors.f_Default()
 											)
 										;
 									}
@@ -4563,9 +4498,15 @@ namespace NMib::NBuildSystem
 											(
 												OutputType
 												, "{}{}{} recommended for {}{}{} -> {}{}{}"_f
-												<< Colors.f_RepositoryName() << ActionStr << Colors.f_Default()
-												<< Colors.f_ToPush() << TargetHash << Colors.f_Default()
-												<< Colors.f_ToPush() << ConfigHash << Colors.f_Default()
+												<< Colors.f_RepositoryName()
+												<< ActionStr
+												<< Colors.f_Default()
+												<< Colors.f_ToPush()
+												<< TargetHash
+												<< Colors.f_Default()
+												<< Colors.f_ToPush()
+												<< ConfigHash
+												<< Colors.f_Default()
 											)
 										;
 									}
@@ -4646,13 +4587,13 @@ namespace NMib::NBuildSystem
 			// Deliberately only with the hook: without it, submodules are only updated with a change of their parent, as a pass that
 			// updated them every time would move submodules that someone checked out at other commits.
 			if
-				(
-					bVerifyHook
-					&& _Repo.m_bUpdateSubmodules
-					&& o_VerifyHook.m_iNextPhase <= CVerifyHookLevel::EPhase_Submodules
-					&& fIsCheckedOut(Location)
-					&& !fg_IsSubmodule(DynamicInfo.m_DataDir)
-				)
+			(
+				bVerifyHook
+				&& _Repo.m_bUpdateSubmodules
+				&& o_VerifyHook.m_iNextPhase <= CVerifyHookLevel::EPhase_Submodules
+				&& fIsCheckedOut(Location)
+				&& !fg_IsSubmodule(DynamicInfo.m_DataDir)
+			)
 			{
 				if (co_await fUpdateSubmodules(Location))
 					bChanged = true;
@@ -4912,12 +4853,7 @@ namespace NMib::NBuildSystem
 						Repo.m_OriginProperties.m_bApplyPolicy = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_ApplyPolicy, false);
 						if (Repo.m_OriginProperties.m_bApplyPolicy)
 						{
-							Repo.m_OriginProperties.m_Policy = _BuildSystem.f_EvaluateEntityPropertyObject
-								(
-									ChildEntity
-									, gc_ConstKey_Repository_Policy
-									, CEJsonSorted(EJsonType_Object)
-								)
+							Repo.m_OriginProperties.m_Policy = _BuildSystem.f_EvaluateEntityPropertyObject(ChildEntity, gc_ConstKey_Repository_Policy, CEJsonSorted(EJsonType_Object))
 								.f_Move()
 							;
 							Repo.m_OriginProperties.m_bApplyPolicyPretend = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_ApplyPolicyPretend, false);
@@ -4929,16 +4865,7 @@ namespace NMib::NBuildSystem
 						// Types and defaults for CheckLicense/License are defined in Core/Build/Shared_RepositoryLicense.MSettings
 						Repo.m_bCheckLicense = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_CheckLicense, false);
 						if (Repo.m_bCheckLicense)
-						{
-							Repo.m_License = _BuildSystem.f_EvaluateEntityPropertyObject
-								(
-									ChildEntity
-									, gc_ConstKey_Repository_License
-									, CEJsonSorted(EJsonType_Object)
-								)
-								.f_Move()
-							;
-						}
+							Repo.m_License = _BuildSystem.f_EvaluateEntityPropertyObject(ChildEntity, gc_ConstKey_Repository_License, CEJsonSorted(EJsonType_Object)).f_Move();
 					}
 
 					auto fParseReleasePackage = [](CEJsonSorted const &_Value) -> CReleasePackage
@@ -5151,7 +5078,6 @@ namespace NMib::NBuildSystem
 
 			return ReposOrdered;
 		}
-
 	}
 
 	using namespace NRepository;
@@ -5173,13 +5099,7 @@ namespace NMib::NBuildSystem
 			Repositories.f_Insert(ChildEntity.f_GetPathForGetProperty());
 		}
 
-		f_AddExternalProperty
-			(
-				fg_RemoveQualifiers(_BuildSystemData.m_RootEntity)
-				, gc_ConstKey_AllRepositories
-				, fg_Move(Repositories)
-			)
-		;
+		f_AddExternalProperty(fg_RemoveQualifiers(_BuildSystemData.m_RootEntity), gc_ConstKey_AllRepositories, fg_Move(Repositories));
 	}
 
 	bool CBuildSystem::fp_LfsDedupEnabled()
@@ -5421,7 +5341,7 @@ namespace NMib::NBuildSystem
 										if (mp_bDebugFileLocks)
 											f_OutputConsole("{} File lock: {}\n"_f << pLockFile.f_Get() << LockFileName, true);
 
-										pLockFile->f_LockWithException(5.0*60.0);
+										pLockFile->f_LockWithException(5.0 * 60.0);
 
 										return fg_Move(pLockFile);
 									}
@@ -5433,8 +5353,7 @@ namespace NMib::NBuildSystem
 							f_OutputConsole("{} File locked: {}\n"_f << pLockFile.f_Get() << LockFileName, true);
 
 						auto CleanupLock = g_BlockingActorSubscription
-							/ [LockFileName, bDebugFileLocks = mp_bDebugFileLocks, pLockFile = fg_Move(pLockFile), fOutputConsole = mp_fOutputConsole]
-							() mutable -> TCFuture<void>
+							/ [LockFileName, bDebugFileLocks = mp_bDebugFileLocks, pLockFile = fg_Move(pLockFile), fOutputConsole = mp_fOutputConsole]() mutable -> TCFuture<void>
 							{
 								try
 								{
@@ -5468,6 +5387,8 @@ namespace NMib::NBuildSystem
 									auto RepoDone = co_await fg_AsyncDestroy(Launches.f_RepoDoneSubscription());
 
 									if
+									(
+										co_await fg_HandleRepository
 										(
 											co_await fg_HandleRepository
 											(
@@ -5484,6 +5405,7 @@ namespace NMib::NBuildSystem
 												, VerifyHookRepository
 											)
 										)
+									)
 									{
 										bChanged.f_Exchange(true);
 										{
@@ -5666,11 +5588,11 @@ namespace NMib::NBuildSystem
 				{
 					CStr OutputDir = CBuildSystemsRegistry::fs_OutputDir(BaseDir, iBuildSystem.f_GetKey());
 					if
-						(
-							iBuildSystem.f_GetKey() != BuildSystemName
-							&& CFile::fs_FileExists(OutputDir, EFileAttrib_Directory)
-							&& CFile::fs_GetUniqueIdentifier(OutputDir) == OutputDirIdentifier
-						)
+					(
+						iBuildSystem.f_GetKey() != BuildSystemName
+						&& CFile::fs_FileExists(OutputDir, EFileAttrib_Directory)
+						&& CFile::fs_GetUniqueIdentifier(OutputDir) == OutputDirIdentifier
+					)
 					{
 						Aliases.f_Insert(iBuildSystem.f_GetKey());
 					}
@@ -5699,7 +5621,7 @@ namespace NMib::NBuildSystem
 			for (auto &Orphaned : BuildSystems.m_Orphaned.m_LeaveWhenRemoved)
 				CandidatesToLeave[Orphaned];
 
-			for (auto iBuildSystem = BuildSystems.m_BuildSystems.f_GetIterator(); iBuildSystem; )
+			for (auto iBuildSystem = BuildSystems.m_BuildSystems.f_GetIterator(); iBuildSystem;)
 			{
 				auto &Name = iBuildSystem.f_GetKey();
 				if (!CFile::fs_FileExists(CBuildSystemsRegistry::fs_OutputDir(BaseDir, Name) / "RepositoryState.json"))
@@ -5749,12 +5671,12 @@ namespace NMib::NBuildSystem
 			{
 				CStr FullRepoPath = BaseDir / LastSeen;
 				if
-					(
-						!SeenRepositories.f_FindEqual(LastSeen)
-						&& !ExcludeFromSeenRepositories.f_FindEqual(LastSeen)
-						&& !SeenByOthers.f_FindEqual(LastSeen)
-						&& CFile::fs_FileExists(FullRepoPath, EFileAttrib_Directory)
-					)
+				(
+					!SeenRepositories.f_FindEqual(LastSeen)
+					&& !ExcludeFromSeenRepositories.f_FindEqual(LastSeen)
+					&& !SeenByOthers.f_FindEqual(LastSeen)
+					&& CFile::fs_FileExists(FullRepoPath, EFileAttrib_Directory)
+				)
 				{
 					EHandleRepositoryRemovedAction Action = fGetReconcileRemovedActionByName(LastSeen);
 					if (Action == EHandleRepositoryRemovedAction_None && CandidatesToLeave.f_FindEqual(LastSeen))
@@ -5833,7 +5755,17 @@ namespace NMib::NBuildSystem
 					else if (Action != EHandleRepositoryRemovedAction_Leave)
 					{
 						if (!SeenRepositories.f_IsEmpty())
-							fg_OutputRepositoryInfo(EOutputType_Warning, "Repository has been {}removed{}"_f<< Colors.f_ToPush() << Colors.f_Default(), StateHandler, LastSeen, MaxRepoWidth);
+						{
+							fg_OutputRepositoryInfo
+								(
+									EOutputType_Warning
+									, "Repository has been {}removed{}"_f << Colors.f_ToPush() << Colors.f_Default()
+									, StateHandler
+									, LastSeen
+									, MaxRepoWidth
+								)
+							;
+						}
 						bLastSeenActionNeeded = true;
 					}
 				}
@@ -5882,7 +5814,7 @@ namespace NMib::NBuildSystem
 				BuildSystems.m_Orphaned = {};
 
 				// A kept repository that a build system uses again, or that is gone from disk, is no longer kept
-				for (auto iKept = KeptRepositories.f_GetIterator(); iKept; )
+				for (auto iKept = KeptRepositories.f_GetIterator(); iKept;)
 				{
 					bool bSeen = false;
 					for (auto &State : BuildSystems.m_BuildSystems)

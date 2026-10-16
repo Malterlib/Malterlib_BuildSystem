@@ -184,13 +184,8 @@ namespace NMib::NBuildSystem
 		return {EOperator_Entity, CBuildSystemSyntax::CValue::fs_Identifier(o_StringCache, _Name)};
 	}
 
-	CBuildSystemSyntax::CKeyPrefixOperator CBuildSystemSyntax::CKeyPrefixOperator::fs_FromJson
-		(
-			CStringCache &o_StringCache
-			, EOperator _Operator
-			, NEncoding::CEJsonSorted const &_Json
-			, CFilePosition const &_Position
-		)
+	auto CBuildSystemSyntax::CKeyPrefixOperator::fs_FromJson(CStringCache &o_StringCache, EOperator _Operator, NEncoding::CEJsonSorted const &_Json, CFilePosition const &_Position)
+		-> CBuildSystemSyntax::CKeyPrefixOperator
 	{
 		auto &UserType = _Json.f_UserType();
 		DMibRequire(UserType.m_Type == gc_ConstString_BuildSystemToken.m_String);
@@ -209,12 +204,8 @@ namespace NMib::NBuildSystem
 		return OutputOperator;
 	}
 
-	CBuildSystemSyntax::CKeyPrefixOperator CBuildSystemSyntax::CKeyPrefixOperator::fs_FromJson
-		(
-			CStringCache &o_StringCache
-			, NEncoding::CEJsonSorted const &_Json
-			, CFilePosition const &_Position
-		)
+	auto CBuildSystemSyntax::CKeyPrefixOperator::fs_FromJson(CStringCache &o_StringCache, NEncoding::CEJsonSorted const &_Json, CFilePosition const &_Position)
+		-> CBuildSystemSyntax::CKeyPrefixOperator
 	{
 		return fs_FromJson(o_StringCache, CKeyPrefixOperator::fs_TypeFromJson(_Json, _Position), _Json, _Position);
 	}
@@ -231,12 +222,7 @@ namespace NMib::NBuildSystem
 		return Return;
 	}
 
-	CBuildSystemSyntax::CNamespace CBuildSystemSyntax::CNamespace::fs_FromJson
-		(
-			CStringCache &o_StringCache
-			, NEncoding::CEJsonSorted const &_Json
-			, CFilePosition const &_Position
-		)
+	CBuildSystemSyntax::CNamespace CBuildSystemSyntax::CNamespace::fs_FromJson(CStringCache &o_StringCache, NEncoding::CEJsonSorted const &_Json, CFilePosition const &_Position)
 	{
 		auto &UserType = _Json.f_UserType();
 		DMibRequire(UserType.m_Type == gc_ConstString_BuildSystemToken.m_String);

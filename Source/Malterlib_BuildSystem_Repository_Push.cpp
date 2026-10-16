@@ -33,7 +33,7 @@ namespace NMib::NBuildSystem
 			CStr m_Branch;
 			CStr m_RemoteHead; // Empty when the branch doesn't exist on the remote
 			CStr m_Target;
-			CStr m_Lease; // The head the remote has to have for a forced push to go ahead; empty when the push isn't forced
+			CStr m_Lease;      // The head the remote has to have for a forced push to go ahead; empty when the push isn't forced
 			CStr m_LeaseSource;
 			TCVector<CBackupTag> m_BackupTags;
 			EPushKind m_Kind = EPushKind::mc_Update;
@@ -230,25 +230,11 @@ namespace NMib::NBuildSystem
 			if (_pBuildSystem->f_GetGenerateOptions().m_bForceUpdateRemotes)
 				FetchParams.f_Insert("--force");
 
-			auto Result = co_await _Launches.f_Launch
-				(
-					_Repo
-					, FetchParams
-					, fg_FetchEnvironment(*_pBuildSystem)
-					, CProcessLaunchActor::ESimpleLaunchFlag_None
-				)
-			;
+			auto Result = co_await _Launches.f_Launch(_Repo, FetchParams, fg_FetchEnvironment(*_pBuildSystem), CProcessLaunchActor::ESimpleLaunchFlag_None);
 
 			if (Result.m_ExitCode)
 			{
-				_Launches.f_Output
-					(
-						EOutputType_Error
-						, _Repo
-						, "Error fetching remotes: {}\n"_f
-						<< Result.f_GetCombinedOut().f_Trim()
-					)
-				;
+				_Launches.f_Output(EOutputType_Error, _Repo, "Error fetching remotes: {}\n"_f << Result.f_GetCombinedOut().f_Trim());
 				co_return DMibErrorInstance("Could not fetch remote");
 			}
 
@@ -268,26 +254,12 @@ namespace NMib::NBuildSystem
 		TCFuture<bool> fg_HasRemoteBranches(CGitLaunches _Launches, CRepository _Repo, CStr _Remote)
 		{
 			{
-				auto Result = co_await _Launches.f_Launch
-					(
-						_Repo
-						, {"for-each-ref", "--count=1", "refs/remotes/{}/"_f << _Remote}
-						, {}
-						, CProcessLaunchActor::ESimpleLaunchFlag_None
-					)
-				;
+				auto Result = co_await _Launches.f_Launch(_Repo, {"for-each-ref", "--count=1", "refs/remotes/{}/"_f << _Remote}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 				if (Result.m_ExitCode == 0 && !Result.f_GetStdOut().f_Trim().f_IsEmpty())
 					co_return true;
 			}
 
-			auto Result = co_await _Launches.f_Launch
-				(
-					_Repo
-					, {"ls-remote", "--exit-code", "--heads", _Remote}
-					, {}
-					, CProcessLaunchActor::ESimpleLaunchFlag_None
-				)
-			;
+			auto Result = co_await _Launches.f_Launch(_Repo, {"ls-remote", "--exit-code", "--heads", _Remote}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 			co_return Result.m_ExitCode == 0;
 		}
 
@@ -450,15 +422,8 @@ namespace NMib::NBuildSystem
 					if (auto pRemote = _Repo.m_Remotes.m_Remotes.f_FindEqual(Remote.m_Name); pRemote && !pRemote->m_bCanPush)
 						continue;
 
-					if
-						(
-							!(_PushFlags & CBuildSystem::ERepoPushFlag_NonDefaultToAll)
-							&& Branches.m_Current != _Repo.m_OriginProperties.m_DefaultBranch
-							&& Remote.m_Name != "origin"
-						)
-					{
+					if (!(_PushFlags & CBuildSystem::ERepoPushFlag_NonDefaultToAll) && Branches.m_Current != _Repo.m_OriginProperties.m_DefaultBranch && Remote.m_Name != "origin")
 						continue;
-					}
 
 					if (!AddedUrls(Remote.m_Properties.m_URL).f_WasCreated())
 						continue;
@@ -476,14 +441,7 @@ namespace NMib::NBuildSystem
 			for (auto &Remote : Remotes)
 			{
 				auto FetchUrlResult = co_await _Launches.f_Launch(_Repo, {"remote", "get-url", Remote}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
-				auto PushUrlsResult = co_await _Launches.f_Launch
-					(
-						_Repo
-						, {"remote", "get-url", "--push", "--all", Remote}
-						, {}
-						, CProcessLaunchActor::ESimpleLaunchFlag_None
-					)
-				;
+				auto PushUrlsResult = co_await _Launches.f_Launch(_Repo, {"remote", "get-url", "--push", "--all", Remote}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 
 				CStr FetchUrl = FetchUrlResult.f_GetStdOut().f_Trim();
 				bool bPushesWhereItFetches = FetchUrlResult.m_ExitCode == 0 && PushUrlsResult.m_ExitCode == 0;
@@ -546,20 +504,12 @@ namespace NMib::NBuildSystem
 				;
 
 				// git push <remote> goes to every push URL of the remote, with the same lease for all of them
-				auto PushUrlsResult = co_await _Launches.f_Launch
-					(
-						_Repo
-						, {"remote", "get-url", "--push", "--all", Remote}
-						, {}
-						, CProcessLaunchActor::ESimpleLaunchFlag_None
-					)
-				;
+				auto PushUrlsResult = co_await _Launches.f_Launch(_Repo, {"remote", "get-url", "--push", "--all", Remote}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 				if (PushUrlsResult.m_ExitCode != 0)
 				{
 					fError("Failed to read the push URLs of {}: {}"_f << Remote << PushUrlsResult.f_GetCombinedOut().f_Trim());
 					continue;
 				}
-
 
 				CStr PushUrl;
 				CStr RemoteHead;
@@ -620,25 +570,10 @@ namespace NMib::NBuildSystem
 					auto Destination = co_await fg_PushDestinationRemote(_Launches, _Repo, Remote, PushUrl);
 					TCVector<CStr> FetchParams = Destination.m_Params;
 					FetchParams.f_Insert({"fetch", "--no-tags", Destination.m_Name, RemoteHead});
-					auto FetchResult = co_await _Launches.f_Launch
-						(
-							_Repo
-							, FetchParams
-							, fg_FetchEnvironment(*_pBuildSystem)
-							, CProcessLaunchActor::ESimpleLaunchFlag_None
-						)
-					;
+					auto FetchResult = co_await _Launches.f_Launch(_Repo, FetchParams, fg_FetchEnvironment(*_pBuildSystem), CProcessLaunchActor::ESimpleLaunchFlag_None);
 					if (FetchResult.m_ExitCode != 0)
 					{
-						fError
-							(
-								"Failed to fetch {}, the head of {}/{}: {}"_f
-								<< RemoteHead
-								<< Remote
-								<< Branches.m_Current
-								<< FetchResult.f_GetCombinedOut().f_Trim()
-							)
-						;
+						fError("Failed to fetch {}, the head of {}/{}: {}"_f << RemoteHead << Remote << Branches.m_Current << FetchResult.f_GetCombinedOut().f_Trim());
 						continue;
 					}
 				}
@@ -750,14 +685,7 @@ namespace NMib::NBuildSystem
 							{
 								if (ExistingTag != RemoteHead)
 								{
-									fError
-										(
-											"Tag {} already exists at another commit than {}, the previous {} commit it has to keep"_f
-											<< Tag.m_Name
-											<< RemoteHead
-											<< Branches.m_Current
-										)
-									;
+									fError("Tag {} already exists at another commit than {}, the previous {} commit it has to keep"_f << Tag.m_Name << RemoteHead << Branches.m_Current);
 									continue;
 								}
 
@@ -823,14 +751,7 @@ namespace NMib::NBuildSystem
 							auto Destination = co_await fg_PushDestinationRemote(_Launches, _Repo, Remote, Url);
 							TCVector<CStr> HeadsParams = Destination.m_Params;
 							HeadsParams.f_Insert({"ls-remote", "--heads", Destination.m_Name});
-							auto HeadsResult = co_await _Launches.f_Launch
-								(
-									_Repo
-									, HeadsParams
-									, {}
-									, CProcessLaunchActor::ESimpleLaunchFlag_None
-								)
-							;
+							auto HeadsResult = co_await _Launches.f_Launch(_Repo, HeadsParams, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 							if (HeadsResult.m_ExitCode != 0)
 							{
 								fError("Failed to read the branches of {}: {}"_f << Url << HeadsResult.f_GetCombinedOut().f_Trim());
@@ -1009,23 +930,12 @@ namespace NMib::NBuildSystem
 						(
 							EOutputType_Normal
 							, _Repo
-							, "Previous {2}{}{3} commit already tagged as {2}{}{3}\n"_f
-							<< _Push.m_Branch
-							<< Tag.m_Name
-							<< _Colors.f_RepositoryName()
-							<< _Colors.f_Default()
+							, "Previous {2}{}{3} commit already tagged as {2}{}{3}\n"_f << _Push.m_Branch << Tag.m_Name << _Colors.f_RepositoryName() << _Colors.f_Default()
 						)
 					;
 				}
 
-				auto TagPushResult = co_await _Launches.f_Launch
-					(
-						_Repo
-						, {"push", _Push.m_Remote, "refs/tags/{}"_f << Tag.m_Name}
-						, {}
-						, CProcessLaunchActor::ESimpleLaunchFlag_None
-					)
-				;
+				auto TagPushResult = co_await _Launches.f_Launch(_Repo, {"push", _Push.m_Remote, "refs/tags/{}"_f << Tag.m_Name}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 
 				if (TagPushResult.m_ExitCode != 0)
 				{
@@ -1058,10 +968,7 @@ namespace NMib::NBuildSystem
 						(
 							EOutputType_Error
 							, _Repo
-							, "Failed to seed default branch {} on {}: {}"_f
-							<< _Push.m_Branch
-							<< _Push.m_Remote
-							<< SeedResult.f_GetCombinedOut().f_Trim()
+							, "Failed to seed default branch {} on {}: {}"_f << _Push.m_Branch << _Push.m_Remote << SeedResult.f_GetCombinedOut().f_Trim()
 						)
 					;
 

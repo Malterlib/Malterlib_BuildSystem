@@ -40,16 +40,14 @@ namespace NMib::NContainer
 			{
 				f_ThrowError
 					(
-						"Failed to parse \"{}\" as a date: {}. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]"_f
-						<< CStr(pParseStart, _pEnd - pParseStart)
-						<< _Error
+						"Failed to parse \"{}\" as a date: {}. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]"_f << CStr(pParseStart, _pEnd - pParseStart) << _Error
 						, pParseStart
 					)
 				;
 			}
 		;
 
-		auto fParseInt = [&](uch8 const *&_pParse, auto _Type, ch8 const *_pTerminators)
+		auto fParseInt = [&](uch8 const * &_pParse, auto _Type, ch8 const *_pTerminators)
 			{
 				auto pStart = _pParse;
 				bool bFailed = false;
@@ -121,7 +119,8 @@ namespace NMib::NContainer
 		return NTime::CTimeConvert::fs_CreateTime(Year, Month, Day, Hour, Minute, Second, Fraction);
 	}
 
-	NContainer::CByteVector TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::f_ParseBinary(uch8 const * &o_pParse, bool _bWithinParenthesis)
+	auto TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::f_ParseBinary(uch8 const * &o_pParse, bool _bWithinParenthesis)
+		-> NContainer::CByteVector
 	{
 		if (_bWithinParenthesis)
 			o_pParse += 7;
@@ -151,15 +150,15 @@ namespace NMib::NContainer
 		return Data;
 	}
 
-	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::f_ParseAfterValue(CJsonSorted &o_Value, uch8 const *&o_pParse)
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::f_ParseAfterValue(CJsonSorted &o_Value, uch8 const * &o_pParse)
 	{
 	}
 
-	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::f_PreParse(CJsonSorted &o_Value, uch8 const *&o_pParse)
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::f_PreParse(CJsonSorted &o_Value, uch8 const * &o_pParse)
 	{
 	}
 
-	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::f_PostParse(CJsonSorted &o_Value, uch8 const *&o_pParse)
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::f_PostParse(CJsonSorted &o_Value, uch8 const * &o_pParse)
 	{
 	}
 
@@ -168,7 +167,7 @@ namespace NMib::NContainer
 		NEncoding::NJson::fg_ThrowJsonParseError<CEJsonParseContext>(*this, _Error, _pLocation);
 	}
 
-	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::f_ParseValue(CJsonSorted &o_Value, uch8 const *&o_pParse)
+	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::f_ParseValue(CJsonSorted &o_Value, uch8 const * &o_pParse)
 	{
 		auto pParse = o_pParse;
 		if (NStr::fg_StrStartsWith(pParse, "date("))
@@ -216,12 +215,12 @@ namespace NMib::NContainer
 		return true;
 	}
 
-	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_PreParse(CJsonSorted &o_Value, uch8 const *&o_pParse)
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_PreParse(CJsonSorted &o_Value, uch8 const * &o_pParse)
 	{
 		++m_ParseDepth;
 	}
 
-	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_PostParse(CJsonSorted &o_Value, uch8 const *&o_pParse)
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_PostParse(CJsonSorted &o_Value, uch8 const * &o_pParse)
 	{
 		--m_ParseDepth;
 	}
@@ -231,7 +230,7 @@ namespace NMib::NContainer
 		NEncoding::NJson::fg_ThrowJsonParseError<CJsonParseContext>(*this, _Error, _pLocation);
 	}
 
-	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseAfterValue(CJsonSorted &o_Value, uch8 const *&o_pParse)
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseAfterValue(CJsonSorted &o_Value, uch8 const * &o_pParse)
 	{
 		if (!m_bParseAfterValue)
 			return;
@@ -240,7 +239,7 @@ namespace NMib::NContainer
 			f_ParsePostDefine(o_pParse, o_Value);
 		else
 		{
-			auto fParseWhiteSpace = [&](uch8 const *&o_pWhiteSpace)
+			auto fParseWhiteSpace = [&](uch8 const * &o_pWhiteSpace)
 				{
 					if (f_LineBreakIsWhiteSpace())
 						fg_ParseWhiteSpace(o_pWhiteSpace);
@@ -262,13 +261,13 @@ namespace NMib::NContainer
 			;
 
 			while
-				(
-					fg_StrStartsWith(pParse, gc_ConstString_Symbol_AccessObject.m_String)
-					|| fg_StrStartsWith(pParse, gc_ConstString_Symbol_Ellipsis.m_String)
-					|| (m_bSupportBinaryOperators && fs_IsBinaryOperator(pParse) && !fIsParsingBinaryOperandTernary())
-					|| (fg_StrStartsWith(pParse, gc_ConstString_Symbol_Optional.m_String) && !fIsParsingBinaryOperandTernary())
-					|| (*pParse == '<' && !fg_CharIsWhiteSpace(pParse[1]))
-				)
+			(
+				fg_StrStartsWith(pParse, gc_ConstString_Symbol_AccessObject.m_String)
+				|| fg_StrStartsWith(pParse, gc_ConstString_Symbol_Ellipsis.m_String)
+				|| (m_bSupportBinaryOperators && fs_IsBinaryOperator(pParse) && !fIsParsingBinaryOperandTernary())
+				|| (fg_StrStartsWith(pParse, gc_ConstString_Symbol_Optional.m_String) && !fIsParsingBinaryOperandTernary())
+				|| (*pParse == '<' && !fg_CharIsWhiteSpace(pParse[1]))
+			)
 			{
 				CJsonSorted FirstParam = fg_Move(o_Value);
 
@@ -283,7 +282,7 @@ namespace NMib::NContainer
 		}
 	}
 
-	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseValue(CJsonSorted &o_Value, uch8 const *&o_pParse)
+	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseValue(CJsonSorted &o_Value, uch8 const * &o_pParse)
 	{
 		if (CEJsonParseContext::f_ParseValue(o_Value, o_pParse))
 			return true;
@@ -298,16 +297,16 @@ namespace NMib::NContainer
 		auto fParseExpression = [&]
 			{
 				if
-					(
-						*pParse
-						&& !fg_CharIsWhiteSpace(*pParse)
-						&& *pParse != ','
-						&& *pParse != ')'
-						&& *pParse != ']'
-						&& *pParse != '}'
-						&& !fg_StrStartsWith(pParse, "//")
-						&& !fg_StrStartsWith(pParse, "/*")
-					)
+				(
+					*pParse
+					&& !fg_CharIsWhiteSpace(*pParse)
+					&& *pParse != ','
+					&& *pParse != ')'
+					&& *pParse != ']'
+					&& *pParse != '}'
+					&& !fg_StrStartsWith(pParse, "//")
+					&& !fg_StrStartsWith(pParse, "/*")
+				)
 				{
 					CJsonSorted *pFirstParam = nullptr;
 					CJsonSorted FirstParam;
@@ -435,16 +434,16 @@ namespace NMib::NContainer
 			++pParse;
 
 			if
-				(
-					Operator != gc_ConstString_Symbol_OperatorLessThan.m_String
-					&& Operator != gc_ConstString_Symbol_OperatorGreaterThan.m_String
-					&& Operator != gc_ConstString_Symbol_OperatorGreaterThanEqual.m_String
-					&& Operator != gc_ConstString_Symbol_OperatorLessThanEqual.m_String
-					&& Operator != gc_ConstString_Symbol_OperatorEqual.m_String
-					&& Operator != gc_ConstString_Symbol_OperatorNotEqual.m_String
-					&& Operator != gc_ConstString_Symbol_OperatorPrepend.m_String
-					&& Operator != gc_ConstString_Symbol_OperatorAppend.m_String
-				)
+			(
+				Operator != gc_ConstString_Symbol_OperatorLessThan.m_String
+				&& Operator != gc_ConstString_Symbol_OperatorGreaterThan.m_String
+				&& Operator != gc_ConstString_Symbol_OperatorGreaterThanEqual.m_String
+				&& Operator != gc_ConstString_Symbol_OperatorLessThanEqual.m_String
+				&& Operator != gc_ConstString_Symbol_OperatorEqual.m_String
+				&& Operator != gc_ConstString_Symbol_OperatorNotEqual.m_String
+				&& Operator != gc_ConstString_Symbol_OperatorPrepend.m_String
+				&& Operator != gc_ConstString_Symbol_OperatorAppend.m_String
+			)
 			{
 				f_ThrowError("Invalid operator: {}"_f << Operator, pParseStart);
 			}
@@ -547,17 +546,17 @@ namespace NMib::NContainer
 				o_pParse = pTestParse;
 			}
 			else if
-				(
-					Identifier == gc_ConstString_string.m_String
-					|| Identifier == gc_ConstString_identifier.m_String
-					|| Identifier == gc_ConstString_int.m_String
-					|| Identifier == gc_ConstString_float.m_String
-					|| Identifier == gc_ConstString_bool.m_String
-					|| Identifier == gc_ConstString_date.m_String
-					|| Identifier == gc_ConstString_binary.m_String
-					|| Identifier == gc_ConstString_any.m_String
-					|| Identifier == gc_ConstString_void.m_String
-				)
+			(
+				Identifier == gc_ConstString_string.m_String
+				|| Identifier == gc_ConstString_identifier.m_String
+				|| Identifier == gc_ConstString_int.m_String
+				|| Identifier == gc_ConstString_float.m_String
+				|| Identifier == gc_ConstString_bool.m_String
+				|| Identifier == gc_ConstString_date.m_String
+				|| Identifier == gc_ConstString_binary.m_String
+				|| Identifier == gc_ConstString_any.m_String
+				|| Identifier == gc_ConstString_void.m_String
+			)
 			{
 				if (!m_bParsingDefine)
 					f_ThrowError("Type '{}' can only be used inside define statements"_f << Identifier, pParse);
@@ -720,10 +719,10 @@ namespace NMib::NContainer
 				if (iMember)
 				{
 					if
-						(
-							(Name == CEJsonConstStrings::mc_Type && iMember->f_Name() == CEJsonConstStrings::mc_Value)
-							|| (Name == CEJsonConstStrings::mc_Value && iMember->f_Name() == CEJsonConstStrings::mc_Type)
-						)
+					(
+						(Name == CEJsonConstStrings::mc_Type && iMember->f_Name() == CEJsonConstStrings::mc_Value)
+						|| (Name == CEJsonConstStrings::mc_Value && iMember->f_Name() == CEJsonConstStrings::mc_Type)
+					)
 					{
 						++iMember;
 						if (!iMember)
@@ -749,11 +748,8 @@ namespace NMib::NContainer
 		return false;
 	}
 
-	template bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::fs_GenerateValue
-		<
-			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext
-			, NStr::CStr::CAppender
-		>
+	template bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext
+		::fs_GenerateValue<TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext, NStr::CStr::CAppender>
 		(
 			CStr::CAppender &o_String
 			, CJsonSorted const &_Value
@@ -762,11 +758,8 @@ namespace NMib::NContainer
 			, EJsonDialectFlag _Flags
 		)
 	;
-	template bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::fs_GenerateValue
-		<
-			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext
-			, NStr::CStrNonTracked::CAppender
-		>
+	template bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext
+		::fs_GenerateValue<TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext, NStr::CStrNonTracked::CAppender>
 		(
 			CStrNonTracked::CAppender &o_String
 			, CJsonSorted const &_Value
@@ -776,12 +769,8 @@ namespace NMib::NContainer
 		)
 	;
 
-	template bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::fs_GenerateValue
-		<
-			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey
-			, CBuildSystemSyntax::CRootValue>::CEJsonParseContext
-			, CStr::CAppender
-		>
+	template bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext
+		::fs_GenerateValue<TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext, CStr::CAppender>
 		(
 			CStr::CAppender &o_String
 			, CJsonSorted const &_Value
@@ -790,11 +779,8 @@ namespace NMib::NContainer
 			, EJsonDialectFlag _Flags
 		)
 	;
-	template bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::fs_GenerateValue
-		<
-			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext
-			, NStr::CStrNonTracked::CAppender
-		>
+	template bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext
+		::fs_GenerateValue<TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext, NStr::CStrNonTracked::CAppender>
 		(
 			CStrNonTracked::CAppender &o_String
 			, CJsonSorted const &_Value

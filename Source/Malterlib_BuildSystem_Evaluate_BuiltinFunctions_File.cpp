@@ -6,12 +6,8 @@
 
 namespace NMib::NBuildSystem
 {
-	NEncoding::CEJsonSorted CBuildSystem::fp_BuiltinFunction_FindFiles
-		(
-			CEvalPropertyValueContext &_Context
-			, NContainer::TCVector<NEncoding::CEJsonSorted> &&_Params
-			, EFindFilesFunctionType _Function
-		) const
+	auto CBuildSystem::fp_BuiltinFunction_FindFiles(CEvalPropertyValueContext &_Context, NContainer::TCVector<NEncoding::CEJsonSorted> &&_Params, EFindFilesFunctionType _Function) const
+		-> NEncoding::CEJsonSorted
 	{
 		CStr WholePath = mp_GeneratorInterface->f_GetExpandedPath(_Params[0].f_String(), CFile::fs_GetPath(_Context.m_Position.m_File));
 		WholePath = WholePath / _Params[1].f_String();
@@ -20,12 +16,8 @@ namespace NMib::NBuildSystem
 
 		switch (_Function)
 		{
-		case EFindFilesFunctionType_File:
-			FindOptions.m_Attribs = EFileAttrib_File;
-			break;
-		case EFindFilesFunctionType_Directory:
-			FindOptions.m_Attribs = EFileAttrib_Directory;
-			break;
+		case EFindFilesFunctionType_File: FindOptions.m_Attribs = EFileAttrib_File; break;
+		case EFindFilesFunctionType_Directory: FindOptions.m_Attribs = EFileAttrib_Directory; break;
 		case EFindFilesFunctionType_RecursiveFile:
 			FindOptions.m_Attribs = EFileAttrib_File;
 			FindOptions.m_bRecursive = true;
@@ -82,8 +74,14 @@ namespace NMib::NBuildSystem
 									{
 										if (iFile->m_bGeneral)
 										{
-											if (NStr::fg_StrMatchWildcard(iFile.f_GetKey().f_GetStr(), Wildcard.f_GetStr()) == NStr::EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
+											if
+											(
+												NStr::fg_StrMatchWildcard(iFile.f_GetKey().f_GetStr(), Wildcard.f_GetStr())
+												== NStr::EMatchWildcardResult_WholeStringMatchedAndPatternExhausted
+											)
+											{
 												Return.f_Insert(iFile.f_GetKey());
+											}
 										}
 									}
 								}

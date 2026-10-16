@@ -119,15 +119,7 @@ namespace
 				Paths["/opt/Source/Malterlib/External/mongo-c-driver"] = 4;
 				Paths["/opt/Source/Malterlib/External/mongo-cxx-driver"] = 5;
 
-				auto fCheckContainingPath =
-					[&]
-					(
-						CStr const &_TestPath
-						, CStr const &_Path
-						, CStr const &_ExpectedOwnerPath
-						, int32 _ExpectedOwnerValue
-					)
-					-> void
+				auto fCheckContainingPath = [&](CStr const &_TestPath, CStr const &_Path, CStr const &_ExpectedOwnerPath, int32 _ExpectedOwnerValue) -> void
 					{
 						DMibTestPath(_TestPath);
 
@@ -161,13 +153,7 @@ namespace
 				Paths["/opt/Source/Malterlib/External/mongo-c-driver"] = 4;
 				Paths["/opt/Source/Malterlib/External/mongo-cxx-driver"] = 5;
 
-				auto fCheckNoContainingPath =
-					[&]
-					(
-						CStr const &_TestPath
-						, CStr const &_Path
-					)
-					-> void
+				auto fCheckNoContainingPath = [&](CStr const &_TestPath, CStr const &_Path) -> void
 					{
 						DMibTestPath(_TestPath);
 
@@ -254,10 +240,7 @@ namespace
 					DMibExpectException
 						(
 							fRead(Stream.f_MoveVector())
-							, DMibErrorInstance
-							(
-								CStr::CFormat("Generator state of version 0x{nh} needs a reader of version 0x{nh} or later") << LaterVersion << LaterVersion
-							)
+							, DMibErrorInstance(CStr::CFormat("Generator state of version 0x{nh} needs a reader of version 0x{nh} or later") << LaterVersion << LaterVersion)
 						)
 					;
 				}

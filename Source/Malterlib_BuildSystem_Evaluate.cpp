@@ -28,30 +28,10 @@ namespace NMib::NBuildSystem
 			if (!_bSuccess)
 			{
 				if (_Property.m_Flags & EPropertyFlag_TraceEvalSuccess)
-				{
-					f_OutputConsole
-						(
-							"{} !!!!!! {} {} = {}{\n}"_f
-							<< _Property.m_Position.f_Location()
-							<< _Entity.f_GetPath()
-							<< _PropertyKey
-							<< _Property.m_Value
-						)
-					;
-				}
+					f_OutputConsole("{} !!!!!! {} {} = {}{\n}"_f << _Property.m_Position.f_Location() << _Entity.f_GetPath() << _PropertyKey << _Property.m_Value);
 			}
 			else
-			{
-				f_OutputConsole
-					(
-						"{}        {} {} = {}{\n}"_f
-						<< _Property.m_Position.f_Location()
-						<< _Entity.f_GetPath()
-						<< _PropertyKey
-						<< _Value
-					)
-				;
-			}
+				f_OutputConsole("{}        {} {} = {}{\n}"_f << _Property.m_Position.f_Location() << _Entity.f_GetPath() << _PropertyKey << _Value);
 		}
 	}
 }

@@ -5,41 +5,15 @@
 
 namespace NMib::NBuildSystem
 {
-	CEntity const *CBuildSystem::f_EvaluateData
-		(
-			CBuildSystemData &_Destination
-			, TCMap<CPropertyKey, CEJsonSorted> const &_InitialValues
-			, CEntity const *_pStartEntity
-			, bool _bCopyTree
-		) const
+	CEntity const *CBuildSystem::f_EvaluateData(CBuildSystemData &_Destination, TCMap<CPropertyKey, CEJsonSorted> const &_InitialValues, CEntity const *_pStartEntity, bool _bCopyTree) const
 	{
-		auto pRet = fp_EvaluateData
-			(
-				_Destination
-				, _InitialValues
-				, _pStartEntity
-				, _bCopyTree
-				, true
-			)
-		;
+		auto pRet = fp_EvaluateData(_Destination, _InitialValues, _pStartEntity, _bCopyTree, true);
 		return pRet;
 	}
 
-	CEntity const *CBuildSystem::f_EvaluateDataMain
-		(
-			CBuildSystemData &_Destination
-			, TCMap<CPropertyKey, CEJsonSorted> const &_InitialValues
-		) const
+	CEntity const *CBuildSystem::f_EvaluateDataMain(CBuildSystemData &_Destination, TCMap<CPropertyKey, CEJsonSorted> const &_InitialValues) const
 	{
-		auto pRet = fp_EvaluateData
-			(
-				_Destination
-				, _InitialValues
-				, nullptr
-				, true
-				, false
-			)
-		;
+		auto pRet = fp_EvaluateData(_Destination, _InitialValues, nullptr, true, false);
 
 		return pRet;
 	}
@@ -95,7 +69,8 @@ namespace NMib::NBuildSystem
 			, CEntity const *_pStartEntity
 			, bool _bCopyTree
 			, bool _bAllChildren
-		) const
+		)
+		const
 	{
 		CEntity const *pRet = nullptr;
 

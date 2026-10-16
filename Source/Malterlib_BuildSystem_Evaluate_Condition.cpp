@@ -38,7 +38,8 @@ namespace NMib::NBuildSystem
 			, CEJsonSorted const &_Right
 			, EConditionType _ConditionType
 			, NFunction::TCFunctionNoAlloc<void (NStr::CStr const &_Error)> const &_fOnError
-		) const
+		)
+		const
 	{
 		if (_Left.f_IsUserType())
 			_fOnError("Left hand side cannot contain user type ({})"_f << _Left.f_UserType().m_Type);
@@ -58,13 +59,7 @@ namespace NMib::NBuildSystem
 			if (!_Left.f_IsString())
 				_fOnError("Expected string for wilcard comparison, got: {}"_f << _Left);
 
-			bool bRet = NStr::fg_StrMatchWildcard
-				(
-					_Left.f_String().f_GetStr()
-					, UserType.m_Value.f_String().f_GetStr()
-				)
-				== NStr::EMatchWildcardResult_WholeStringMatchedAndPatternExhausted
-			;
+			bool bRet = NStr::fg_StrMatchWildcard(_Left.f_String().f_GetStr(), UserType.m_Value.f_String().f_GetStr()) == NStr::EMatchWildcardResult_WholeStringMatchedAndPatternExhausted;
 
 			if (_ConditionType == EConditionType_MatchEqual)
 				return bRet;
@@ -162,9 +157,7 @@ namespace NMib::NBuildSystem
 						return !bResult;
 					return bResult;
 				}
-			default:
-				DMibNeverGetHere;
-				break;
+			default: DMibNeverGetHere; break;
 			}
 		}
 		else if (_Left.f_IsArray())
@@ -229,9 +222,7 @@ namespace NMib::NBuildSystem
 						return !bResult;
 					return bResult;
 				}
-			default:
-				DMibNeverGetHere;
-				break;
+			default: DMibNeverGetHere; break;
 			}
 		}
 
@@ -247,9 +238,7 @@ namespace NMib::NBuildSystem
 		case EConditionType_CompareLessThanEqual: return _Left <= _Right;
 		case EConditionType_CompareGreaterThan: return _Left > _Right;
 		case EConditionType_CompareGreaterThanEqual: return _Left >= _Right;
-		default:
-			DMibNeverGetHere;
-			break;
+		default: DMibNeverGetHere; break;
 		}
 
 		return true;
@@ -265,7 +254,8 @@ namespace NMib::NBuildSystem
 			, EConditionType _ConditionType
 			, CEvalPropertyValueContext const *_pParentContext
 			, CBuildSystemUniquePositions *o_pPositions
-		) const
+		)
+		const
 	{
 		CEvalPropertyValueContext Context{_Context, _OriginalContext, _Condition.m_Position, _EvalContext, _pParentContext, o_pPositions};
 
@@ -337,7 +327,8 @@ namespace NMib::NBuildSystem
 			, umint _TraceDepth
 			, CEvalPropertyValueContext const *_pParentContext
 			, CBuildSystemUniquePositions *o_pPositions
-		) const
+		)
+		const
 	{
 		switch (_Condition.m_Type)
 		{
@@ -347,9 +338,9 @@ namespace NMib::NBuildSystem
 				if (_TraceDepth)
 				{
 					if (_Condition.m_Type == EConditionType_Root)
-						f_OutputConsole("{sj*}Root{\n}"_f << "" << _TraceDepth*3);
+						f_OutputConsole("{sj*}Root{\n}"_f << "" << _TraceDepth * 3);
 					else
-						f_OutputConsole("{sj*}Or{\n}"_f << "" << _TraceDepth*3);
+						f_OutputConsole("{sj*}Or{\n}"_f << "" << _TraceDepth * 3);
 				}
 				for (auto iCondition = _Condition.m_Children.f_GetIterator(); iCondition; ++iCondition)
 				{
@@ -427,7 +418,6 @@ namespace NMib::NBuildSystem
 							f_OutputConsole("{sj*}Failure{\n}"_f << "" << (_TraceDepth * 3));
 					}
 
-
 					return bRet;
 				}
 				DNeverGetHere;
@@ -449,12 +439,7 @@ namespace NMib::NBuildSystem
 					{
 						f_OutputConsole
 							(
-								"{sj*}Success: {} {} {}{\n}"_f
-								<< ""
-								<< (_TraceDepth * 3)
-								<< _Condition.m_Left
-								<< CCondition::fs_ConditionTypeToStr(_Condition.m_Type)
-								<< _Condition.m_Right
+								"{sj*}Success: {} {} {}{\n}"_f << "" << (_TraceDepth * 3) << _Condition.m_Left << CCondition::fs_ConditionTypeToStr(_Condition.m_Type) << _Condition.m_Right
 							)
 						;
 					}
@@ -462,12 +447,7 @@ namespace NMib::NBuildSystem
 					{
 						f_OutputConsole
 							(
-								"{sj*}Failure: {} {} {}{\n}"_f
-								<< ""
-								<< (_TraceDepth * 3)
-								<< _Condition.m_Left
-								<< CCondition::fs_ConditionTypeToStr(_Condition.m_Type)
-								<< _Condition.m_Right
+								"{sj*}Failure: {} {} {}{\n}"_f << "" << (_TraceDepth * 3) << _Condition.m_Left << CCondition::fs_ConditionTypeToStr(_Condition.m_Type) << _Condition.m_Right
 							)
 						;
 					}

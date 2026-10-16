@@ -98,12 +98,7 @@ namespace NMib::NBuildSystem
 						}
 					)
 				;
-				fp_AddBuiltin
-					(
-						{.m_LinePrefix = gc_Str<"# ">, .m_bDetectShebang = true, .m_bIsPython = true}
-						, {gc_Str<"py">}
-					)
-				;
+				fp_AddBuiltin({.m_LinePrefix = gc_Str<"# ">, .m_bDetectShebang = true, .m_bIsPython = true}, {gc_Str<"py">});
 				fp_AddBuiltin
 					(
 						{.m_LinePrefix = gc_Str<"# ">, .m_bDetectShebang = true}
@@ -124,86 +119,26 @@ namespace NMib::NBuildSystem
 						}
 					)
 				;
-				fp_AddBuiltin
-					(
-						{.m_LinePrefix = gc_Str<"; ">}
-						, {gc_Str<"ini">, gc_Str<"asm">, gc_Str<"nasm">}
-					)
-				;
+				fp_AddBuiltin({.m_LinePrefix = gc_Str<"; ">}, {gc_Str<"ini">, gc_Str<"asm">, gc_Str<"nasm">});
 				// Use @REM instead of REM so the license header stays silent even when
 				// inserted before @echo off (@ suppresses echo regardless of echo state).
-				fp_AddBuiltin
-					(
-						{.m_LinePrefix = gc_Str<"@REM ">}
-						, {gc_Str<"bat">, gc_Str<"cmd">}
-					)
-				;
-				fp_AddBuiltin
-					(
-						{.m_LinePrefix = gc_Str<"/* ">, .m_LineSuffix = gc_Str<" */">}
-						, {gc_Str<"css">, gc_Str<"scss">, gc_Str<"less">}
-					)
-				;
+				fp_AddBuiltin({.m_LinePrefix = gc_Str<"@REM ">}, {gc_Str<"bat">, gc_Str<"cmd">});
+				fp_AddBuiltin({.m_LinePrefix = gc_Str<"/* ">, .m_LineSuffix = gc_Str<" */">}, {gc_Str<"css">, gc_Str<"scss">, gc_Str<"less">});
 				fp_AddBuiltin
 					(
 						{.m_LinePrefix = gc_Str<"<!-- ">, .m_LineSuffix = gc_Str<" -->">, .m_bIsXml = true}
 						, {gc_Str<"xml">, gc_Str<"xsl">, gc_Str<"xslt">, gc_Str<"xsd">, gc_Str<"svg">, gc_Str<"xhtml">, gc_Str<"plist">, gc_Str<"html">, gc_Str<"htm">, gc_Str<"natvis">}
 					)
 				;
-				fp_AddBuiltinFileName
-					(
-						{.m_LinePrefix = gc_Str<"# ">}
-						, gc_Str<"CMakeLists.txt">
-					)
-				;
-				fp_AddBuiltinFileName
-					(
-						{.m_LinePrefix = gc_Str<"# ">}
-						, gc_Str<"Makefile">
-					)
-				;
-				fp_AddBuiltinFileName
-					(
-						{.m_LinePrefix = gc_Str<"# ">, .m_bDetectShebang = true}
-						, gc_Str<"Dockerfile">
-					)
-				;
-				fp_AddBuiltinFileName
-					(
-						{.m_LinePrefix = gc_Str<"# ">}
-						, gc_Str<".clangd">
-					)
-				;
-				fp_AddBuiltinFileName
-					(
-						{.m_LinePrefix = gc_Str<"# ">}
-						, gc_Str<".clang-format">
-					)
-				;
-				fp_AddBuiltinFileName
-					(
-						{.m_LinePrefix = gc_Str<"# ">}
-						, gc_Str<".clang-tidy">
-					)
-				;
-				fp_AddBuiltinFileName
-					(
-						{.m_LinePrefix = gc_Str<"# ">}
-						, gc_Str<".gitignore">
-					)
-				;
-				fp_AddBuiltinFileName
-					(
-						{.m_LinePrefix = gc_Str<"# ">}
-						, gc_Str<".lldbinit">
-					)
-				;
-				fp_AddBuiltinFileName
-					(
-						{.m_LinePrefix = gc_Str<"# ">}
-						, gc_Str<".gitattributes">
-					)
-				;
+				fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">}, gc_Str<"CMakeLists.txt">);
+				fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">}, gc_Str<"Makefile">);
+				fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">, .m_bDetectShebang = true}, gc_Str<"Dockerfile">);
+				fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">}, gc_Str<".clangd">);
+				fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">}, gc_Str<".clang-format">);
+				fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">}, gc_Str<".clang-tidy">);
+				fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">}, gc_Str<".gitignore">);
+				fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">}, gc_Str<".lldbinit">);
+				fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">}, gc_Str<".gitattributes">);
 
 				// Parse config-defined styles
 				auto const *pStyles = _License.f_GetMember("CommentStyles");
@@ -404,9 +339,7 @@ namespace NMib::NBuildSystem
 			// any line other than line 1 (index 0) is already ignored by the interpreter
 			// and does not need to be preserved.
 			else if (_StyleConfig.m_bIsPython && fg_IsPythonEncodingCookie(_Lines[0]))
-			{
 				iLine = 1;
-			}
 
 			// Skip XML declaration (<?xml ...?>)
 			if (_StyleConfig.m_bIsXml && _Lines[0].f_Trim().f_StartsWith("<?xml"))
@@ -446,9 +379,9 @@ namespace NMib::NBuildSystem
 
 		enum class EHeaderStatus
 		{
-			mc_Correct,
-			mc_Missing,
-			mc_Wrong
+			mc_Correct
+			, mc_Missing
+			, mc_Wrong
 		};
 
 		struct CHeaderCheckResult
@@ -458,13 +391,7 @@ namespace NMib::NBuildSystem
 			umint m_HeaderEndLine = 0; // exclusive
 		};
 
-		CHeaderCheckResult fg_CheckHeader
-			(
-				TCVector<CStr> const &_Lines
-				, TCVector<CStr> const &_HeaderLines
-				, CCommentStyleConfig const &_StyleConfig
-				, CStr const &_LineEnding
-			)
+		CHeaderCheckResult fg_CheckHeader(TCVector<CStr> const &_Lines, TCVector<CStr> const &_HeaderLines, CCommentStyleConfig const &_StyleConfig, CStr const &_LineEnding)
 		{
 			CHeaderCheckResult Result;
 			Result.m_HeaderStartLine = fg_FindHeaderInsertLine(_Lines, _StyleConfig);
@@ -550,11 +477,7 @@ namespace NMib::NBuildSystem
 			// header block (e.g. an empty comment line or additional text after the
 			// copyright/license lines). Without this, headers with trailing lines would
 			// always be classified as wrong and --fix would leave orphaned old lines.
-			while
-			(
-				Result.m_HeaderEndLine < _Lines.f_GetLen()
-				&& Result.m_HeaderEndLine < Result.m_HeaderStartLine + 10
-			)
+			while (Result.m_HeaderEndLine < _Lines.f_GetLen() && Result.m_HeaderEndLine < Result.m_HeaderStartLine + 10)
 			{
 				CStr Trimmed = _Lines[Result.m_HeaderEndLine].f_Trim();
 				if (Trimmed.f_IsEmpty() || !fg_IsCommentLine(_Lines[Result.m_HeaderEndLine], _StyleConfig))
@@ -1180,10 +1103,7 @@ namespace NMib::NBuildSystem
 							{
 								Result.m_Messages.f_Insert
 									(
-										"{}Warning:{} CheckLicense enabled but no Header configured: {}"_f
-										<< AnsiEncoding.f_StatusWarning()
-										<< AnsiEncoding.f_Default()
-										<< RelativePath
+										"{}Warning:{} CheckLicense enabled but no Header configured: {}"_f << AnsiEncoding.f_StatusWarning() << AnsiEncoding.f_Default() << RelativePath
 									)
 								;
 								++Result.m_Stats.m_nErrors;
@@ -1333,12 +1253,14 @@ namespace NMib::NBuildSystem
 				if (bFix)
 					TableRenderer.f_AddRow("License files updated", "{}"_f << Totals.m_nLicenseFilesIssues);
 				else
+				{
 					TableRenderer.f_AddRow
 						(
 							"{}License files needing update{}"_f << AnsiEncoding.f_StatusWarning() << AnsiEncoding.f_Default()
 							, "{}{}{}"_f << AnsiEncoding.f_StatusWarning() << Totals.m_nLicenseFilesIssues << AnsiEncoding.f_Default()
 						)
 					;
+				}
 			}
 
 			if (Totals.m_nReuseTomlIssues > 0)
@@ -1346,12 +1268,14 @@ namespace NMib::NBuildSystem
 				if (bFix)
 					TableRenderer.f_AddRow("REUSE.toml files updated", "{}"_f << Totals.m_nReuseTomlIssues);
 				else
+				{
 					TableRenderer.f_AddRow
 						(
 							"{}REUSE.toml files needing update{}"_f << AnsiEncoding.f_StatusWarning() << AnsiEncoding.f_Default()
 							, "{}{}{}"_f << AnsiEncoding.f_StatusWarning() << Totals.m_nReuseTomlIssues << AnsiEncoding.f_Default()
 						)
 					;
+				}
 			}
 
 			if (Totals.m_nDisallowedFiles > 0)
@@ -1359,12 +1283,14 @@ namespace NMib::NBuildSystem
 				if (bFix)
 					TableRenderer.f_AddRow("Disallowed files deleted", "{}"_f << Totals.m_nDisallowedFiles);
 				else
+				{
 					TableRenderer.f_AddRow
 						(
 							"{}Disallowed files{}"_f << AnsiEncoding.f_StatusWarning() << AnsiEncoding.f_Default()
 							, "{}{}{}"_f << AnsiEncoding.f_StatusWarning() << Totals.m_nDisallowedFiles << AnsiEncoding.f_Default()
 						)
 					;
+				}
 			}
 
 			if (Totals.m_nErrors > 0)

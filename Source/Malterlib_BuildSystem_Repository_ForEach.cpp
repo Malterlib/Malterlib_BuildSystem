@@ -9,13 +9,8 @@ namespace NMib::NBuildSystem
 {
 	using namespace NRepository;
 
-	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_ForEachRepo
-		(
-			CGenerateOptions const &_GenerateOptions
-			, CRepoFilter const &_Filter
-			, bool _bParallel
-			, TCVector<CStr> const &_Params
-		)
+	auto CBuildSystem::f_Action_Repository_ForEachRepo(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, bool _bParallel, TCVector<CStr> const &_Params)
+		-> TCUnsafeFuture<CBuildSystem::ERetry>
 	{
 		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
@@ -61,12 +56,8 @@ namespace NMib::NBuildSystem
 		co_return ERetry_None;
 	}
 
-	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_ForEachRepoDir
-		(
-			CGenerateOptions const &_GenerateOptions
-			, CRepoFilter const &_Filter
-			, CForEachRepoDirOptions const &_Options
-		)
+	auto CBuildSystem::f_Action_Repository_ForEachRepoDir(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, CForEachRepoDirOptions const &_Options)
+		-> TCUnsafeFuture<CBuildSystem::ERetry>
 	{
 		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
@@ -119,8 +110,7 @@ namespace NMib::NBuildSystem
 				auto &Repo = *pRepo;
 
 				TCPromiseFuturePair<void> Result;
-				Launches.f_Launch(Repo, _Options.m_Params, fg_LogAllFunctor(), {}, Environment, Application)
-					> [=, ResultPromise = fg_Move(Result.m_Promise)](TCAsyncResult<void> &&_Result)
+				Launches.f_Launch(Repo, _Options.m_Params, fg_LogAllFunctor(), {}, Environment, Application) > [=, ResultPromise = fg_Move(Result.m_Promise)](TCAsyncResult<void> &&_Result)
 					{
 						ResultPromise.f_SetResult(fg_Move(_Result));
 						Launches.f_RepoDone();

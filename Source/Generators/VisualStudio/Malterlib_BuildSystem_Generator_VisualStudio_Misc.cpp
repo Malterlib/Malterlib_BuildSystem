@@ -36,6 +36,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 	{
 		return TCMap<CStr, CProjectFile>::fs_GetKey(*this);
 	}
+
 	CStr CProjectFile::f_GetGroupPath() const
 	{
 		if (m_pGroup)
@@ -90,8 +91,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			return;
 
 		auto Mapped = _Stack(f_GetName());
-		auto Cleanup = g_OnScopeExit /
-			[&]
+		auto Cleanup = g_OnScopeExit / [&]
 			{
 				_Stack.f_Remove(f_GetName());
 			}
@@ -125,6 +125,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 	{
 		return TCMap<CStr, CSolutionFile>::fs_GetKey(*this);
 	}
+
 	CStr CSolutionFile::f_GetGroupPath() const
 	{
 		if (m_pGroup)

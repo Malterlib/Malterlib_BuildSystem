@@ -57,12 +57,13 @@ namespace NMib::NBuildSystem
 #endif
 				auto &&_fThis
 				, CEntity &_Entity
-			) -> void
+			)
+			-> void
 			{
 #ifdef DCompiler_Workaround_Apple_clang
-#define _fThis(...) _fThis(_fThis, __VA_ARGS__)
+#	define _fThis(...) _fThis(_fThis, __VA_ARGS__)
 #endif
-				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
+				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild;)
 				{
 					auto &Child = *iChild;
 					++iChild;
@@ -92,7 +93,7 @@ namespace NMib::NBuildSystem
 			}
 		;
 #ifdef DCompiler_Workaround_Apple_clang
-#define fExpandEntities(...) fExpandEntities(fExpandEntities, __VA_ARGS__)
+#	define fExpandEntities(...) fExpandEntities(fExpandEntities, __VA_ARGS__)
 #endif
 		fExpandEntities(_BuildSystemData.m_RootEntity);
 
@@ -103,9 +104,10 @@ namespace NMib::NBuildSystem
 #endif
 				auto &&_fThis
 				, CEntity &_Entity
-			) -> void
+			)
+			-> void
 			{
-				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
+				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild;)
 				{
 					auto &Child = *iChild;
 					++iChild;
@@ -125,7 +127,7 @@ namespace NMib::NBuildSystem
 		;
 
 #ifdef DCompiler_Workaround_Apple_clang
-#define fExpandImports(...) fExpandImports(fExpandImports, __VA_ARGS__)
+#	define fExpandImports(...) fExpandImports(fExpandImports, __VA_ARGS__)
 #endif
 		fExpandImports(_BuildSystemData.m_RootEntity);
 		{
@@ -134,12 +136,7 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	CBuildSystemData::CImportData CBuildSystem::fp_ExpandImportCMake_FromGeneratedDirectory
-		(
-			CEntity &_Entity
-			, CBuildSystemData &_BuildSystemData
-			, CStr const &_Directory
-		) const
+	CBuildSystemData::CImportData CBuildSystem::fp_ExpandImportCMake_FromGeneratedDirectory(CEntity &_Entity, CBuildSystemData &_BuildSystemData, CStr const &_Directory) const
 	{
 		TCVector<CStr> Projects = f_EvaluateEntityPropertyStringArray(_Entity, gc_ConstKey_Import_CMake_Projects, TCVector<CStr>());
 		if (Projects.f_IsEmpty())
@@ -193,9 +190,7 @@ namespace NMib::NBuildSystem
 		while (*pParse)
 		{
 			if (*pParse == '@' && pParse[1] != '(')
-			{
 				EscapedString.f_AddStr("@@");
-			}
 			else
 				EscapedString.f_AddChar(*pParse);
 			++pParse;
@@ -526,7 +521,7 @@ namespace NMib::NBuildSystem
 				if (pHash)
 					Hash = *pHash;
 			}
-			if(Hash)
+			if (Hash)
 			{
 				DUnlock(pCMakeGenerateState->m_Lock);
 				return fReturn(LockDirectory, Hash);
@@ -534,14 +529,7 @@ namespace NMib::NBuildSystem
 		}
 
 		if (pCMakeGenerateState->m_bTried)
-		{
-			fsp_ThrowError
-				(
-					EntityData.m_Position
-					, "CMake generation previously failed"
-				)
-			;
-		}
+			fsp_ThrowError(EntityData.m_Position, "CMake generation previously failed");
 
 		pCMakeGenerateState->m_bTried = true;
 
@@ -608,9 +596,7 @@ namespace NMib::NBuildSystem
 			if (bCacheUpToDate || !bUpdateCache)
 			{
 				if (!bCacheUpToDate)
-				{
 					f_OutputConsole("{}: WARNING: Import cache out of date (CMake), but updating has been disabled with Import.CMake_UpdateCache\n"_f << CmakeCacheDirectory);
-				}
 				{
 					DLock(mp_CMakeGenerateLock);
 					mp_CMakeGenerated[LockDirectory] = ConfigHashString;
@@ -688,14 +674,14 @@ namespace NMib::NBuildSystem
 		CStr CmakeExecutable;
 		TCVector<CStr> Params;
 
-#		ifdef DMalterlibBuildSystem_EmbedCMake
-			CmakeExecutable = CFile::fs_GetProgramDirectory() / "MToolCMake";
-#		else
-			CmakeExecutable = CFile::fs_GetProgramDirectory() + "/cmake";
-#		endif
-#		ifdef DPlatformFamily_Windows
-			CmakeExecutable += ".exe";
-#		endif
+#ifdef DMalterlibBuildSystem_EmbedCMake
+		CmakeExecutable = CFile::fs_GetProgramDirectory() / "MToolCMake";
+#else
+		CmakeExecutable = CFile::fs_GetProgramDirectory() + "/cmake";
+#endif
+#ifdef DPlatformFamily_Windows
+		CmakeExecutable += ".exe";
+#endif
 
 		Params.f_Insert
 			(
@@ -781,27 +767,27 @@ namespace NMib::NBuildSystem
 		//f_OutputConsole("Launching CMake: {}\n"_f << CProcessLaunchParams::fs_GetParams(Params), false);
 
 		if
+		(
+			!CProcessLaunch::fs_LaunchBlock
 			(
-				!CProcessLaunch::fs_LaunchBlock
-				(
-					CmakeExecutable
-					, Params
-					, [&](NStr::CStr const &_Output)
-					{
-						if (bVerbose)
-							f_OutputConsole(_Output, false);
-						Output += _Output;
-					}
-					, [&](NStr::CStr const &_Output)
-					{
-						if (bVerbose)
-							f_OutputConsole(_Output, true);
-						Output += _Output;
-					}
-					, ExitCode
-					, LaunchParams
-				)
+				CmakeExecutable
+				, Params
+				, [&](NStr::CStr const &_Output)
+				{
+					if (bVerbose)
+						f_OutputConsole(_Output, false);
+					Output += _Output;
+				}
+				, [&](NStr::CStr const &_Output)
+				{
+					if (bVerbose)
+						f_OutputConsole(_Output, true);
+					Output += _Output;
+				}
+				, ExitCode
+				, LaunchParams
 			)
+		)
 		{
 			CFile::fs_Touch(TempDirectory / "failed");
 
@@ -1183,7 +1169,7 @@ namespace NMib::NBuildSystem
 								if (!*pParseEnd || fg_StrFindChar(CmakeOutputFilesParseTerminators, *pParseEnd) >= 0)
 								{
 									auto RelativePath = CFile::fs_MakePathRelative(_ToFind, TempDirectory);
-									o_String += "{}(CMakeIntermediateDirectory)/{}/{}"_f << (bIsMHeader ? "@" : "#")<< IntermediateName << RelativePath;
+									o_String += "{}(CMakeIntermediateDirectory)/{}/{}"_f << (bIsMHeader ? "@" : "#") << IntermediateName << RelativePath;
 									if (*pParseEnd)
 									{
 										o_String.f_AddChar(*pParseEnd);
@@ -1666,14 +1652,8 @@ namespace NMib::NBuildSystem
 											if (Token0Param.f_IsIdentifier())
 											{
 												auto &Identifier = Token0Param.m_Param.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CIdentifier>>().f_Get();
-												if
-													(
-														Identifier.m_Name
-														!= gc_ConstString_CMakeIntermediateDirectory
-													)
-												{
+												if (Identifier.m_Name != gc_ConstString_CMakeIntermediateDirectory)
 													continue;
-												}
 
 												CStr FullPath;
 
@@ -1786,14 +1766,7 @@ namespace NMib::NBuildSystem
 
 										auto *pDependency = Targets.f_FindEqual(DependencyName);
 										if (!pDependency)
-										{
-											fsp_ThrowError
-												(
-													EntityData.m_Position
-													, "Colud not resolve dependency {} in target {}"_f << DependencyName << Targets.fs_GetKey(Target)
-												)
-											;
-										}
+											fsp_ThrowError(EntityData.m_Position, "Colud not resolve dependency {} in target {}"_f << DependencyName << Targets.fs_GetKey(Target));
 										// Only consider direct dependencies
 										//_fAddDependencies(*pDependency, _fAddDependencies);
 									}
@@ -1823,23 +1796,15 @@ namespace NMib::NBuildSystem
 										if (!pExistingDependency->m_bIsOrdered)
 										{
 											pExistingDependency->m_bIsOrdered = true;
-											if
-												(
-													pExistingDependency->m_pBuildSystemRegistry->f_GetChildNoPath
-													(
-														{CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_Indirect)}
-													)
-												)
+											if (pExistingDependency->m_pBuildSystemRegistry->f_GetChildNoPath({CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_Indirect)}))
 											{
-												pExistingDependency->m_pBuildSystemRegistry
-													->f_CreateChildNoPath
+												pExistingDependency->m_pBuildSystemRegistry->f_CreateChildNoPath
 													(
 														{CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_IndirectOrdered)}
 													)
 													->f_SetThisValue({{true}})
 												;
-												pExistingDependency->m_pBuildSystemRegistry
-													->f_CreateChildNoPath({CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_Link)})
+												pExistingDependency->m_pBuildSystemRegistry->f_CreateChildNoPath({CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_Link)})
 													->f_SetThisValue({{false}})
 												;
 											}
@@ -1869,18 +1834,8 @@ namespace NMib::NBuildSystem
 									pNewDependency->f_SetThisValue(CBuildSystemSyntax::CRootValue{{TargetName}});
 									if (TargetName.f_StartsWith("Lib_"))
 									{
-										pNewDependency->f_CreateChildNoPath
-											(
-												{CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_IndirectOrdered)}
-											)
-											->f_SetThisValue({{true}})
-										;
-										pNewDependency->f_CreateChildNoPath
-											(
-												{CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_Link)}
-											)
-											->f_SetThisValue({{false}})
-										;
+										pNewDependency->f_CreateChildNoPath({CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_IndirectOrdered)})->f_SetThisValue({{true}});
+										pNewDependency->f_CreateChildNoPath({CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_Link)})->f_SetThisValue({{false}});
 									}
 
 									break;
@@ -2023,7 +1978,7 @@ namespace NMib::NBuildSystem
 							CStr Error = _Error.f_GetErrorStr();
 							f_OutputConsole("Failed delete file in Perforce:{\n}{}{\n}"_f << Error, true);
 						}
-						CFile::fs_SetAttributes(File, (Attributes & ~EFileAttrib_ReadOnly)  | (SupportedAttributes & EFileAttrib_UserWrite) | ValidAttributes);
+						CFile::fs_SetAttributes(File, (Attributes & ~EFileAttrib_ReadOnly) | (SupportedAttributes & EFileAttrib_UserWrite) | ValidAttributes);
 					}
 					CFile::fs_DeleteFile(File);
 				}

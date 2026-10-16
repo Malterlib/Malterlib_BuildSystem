@@ -382,7 +382,6 @@ namespace NMib::NBuildSystem
 						}
 					}
 
-
 					,
 					{
 						gc_ConstString_EscapeBash
@@ -510,7 +509,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_Boolean, fg_FunctionParam(g_String, gc_ConstString__Source), fg_FunctionParam(g_String, gc_ConstString__StringToFind))
-							, [] (CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								if (_Params[0].f_String().f_FindNoCase(_Params[1].f_String()) >= 0)
 									return true;
@@ -585,24 +584,12 @@ namespace NMib::NBuildSystem
 								{
 									switch (Param.f_EType())
 									{
-									case EEJsonType_String:
-										Format << Param.f_String();
-										break;
-									case EEJsonType_Integer:
-										Format << Param.f_Integer();
-										break;
-									case EEJsonType_Float:
-										Format << Param.f_Float();
-										break;
-									case EEJsonType_Boolean:
-										Format << Param.f_Boolean();
-										break;
-									case EEJsonType_Date:
-										Format << Param.f_Date();
-										break;
-									case EEJsonType_Binary:
-										Format << fg_Base64Encode(Param.f_Binary());
-										break;
+									case EEJsonType_String: Format << Param.f_String(); break;
+									case EEJsonType_Integer: Format << Param.f_Integer(); break;
+									case EEJsonType_Float: Format << Param.f_Float(); break;
+									case EEJsonType_Boolean: Format << Param.f_Boolean(); break;
+									case EEJsonType_Date: Format << Param.f_Date(); break;
+									case EEJsonType_Binary: Format << fg_Base64Encode(Param.f_Binary()); break;
 									case EEJsonType_Invalid:
 									case EEJsonType_Null:
 									case EEJsonType_Object:
@@ -730,12 +717,12 @@ namespace NMib::NBuildSystem
 										CurChar = *pChar;
 
 										if
-											(
-												(CurChar >= 'a' && CurChar <= 'z')
-												|| (CurChar >= 'A' && CurChar <= 'Z')
-												|| (CurChar >= '0' && CurChar <= '9')
-												|| (CurChar == '.' || CurChar == '-')
-											)
+										(
+											(CurChar >= 'a' && CurChar <= 'z')
+											|| (CurChar >= 'A' && CurChar <= 'Z')
+											|| (CurChar >= '0' && CurChar <= '9')
+											|| (CurChar == '.' || CurChar == '-')
+										)
 										{
 										}
 										else
@@ -757,12 +744,7 @@ namespace NMib::NBuildSystem
 									{
 										CurChar = *pChar;
 
-										if
-											(
-												CurChar == ' '
-												|| CurChar == '"'
-												|| CurChar == '\''
-											)
+										if (CurChar == ' ' || CurChar == '"' || CurChar == '\'')
 										{
 											if (pStartRun < pChar)
 												Out.f_AddStr(pStartRun, pChar - pStartRun);
@@ -1095,7 +1077,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Source), fg_FunctionParam(g_String, gc_ConstString__String))
-							, [](CBuildSystem const& _This, CBuildSystem::CEvalPropertyValueContext& _Context, TCVector<CEJsonSorted>&& _Params) -> CEJsonSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								return _Params[0].f_String().f_Indent(_Params[1].f_String());
 							}
@@ -1108,7 +1090,7 @@ namespace NMib::NBuildSystem
 						, CBuiltinFunction
 						{
 							fg_FunctionType(g_StringArray, fg_FunctionParam(g_String, gc_ConstString__Source), fg_FunctionParam(g_Integer, gc_ConstString__Length))
-							, [](CBuildSystem const& _This, CBuildSystem::CEvalPropertyValueContext& _Context, TCVector<CEJsonSorted>&& _Params) -> CEJsonSorted
+							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								CUStr SourceString = _Params[0].f_String();
 

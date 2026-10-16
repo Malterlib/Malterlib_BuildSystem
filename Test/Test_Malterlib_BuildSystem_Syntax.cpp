@@ -8,17 +8,17 @@
 #include <Mib/Encoding/JsonShortcuts>
 
 #ifdef DPlatformFamily_Windows
-#define DPrefixLocation_1_7 "Test.MHeader(1,7):"
-#define DPrefixLocation_1_12 "Test.MHeader(1,12):"
-#define DPrefixLocation_1_14 "Test.MHeader(1,14):"
-#define DPrefixLocation_1_13 "Test.MHeader(1,13):"
-#define DPrefixLocation_2_1 "Test.MHeader(2,1):"
+#	define DPrefixLocation_1_7 "Test.MHeader(1,7):"
+#	define DPrefixLocation_1_12 "Test.MHeader(1,12):"
+#	define DPrefixLocation_1_14 "Test.MHeader(1,14):"
+#	define DPrefixLocation_1_13 "Test.MHeader(1,13):"
+#	define DPrefixLocation_2_1 "Test.MHeader(2,1):"
 #else
-#define DPrefixLocation_1_7 "Test.MHeader:1:7:"
-#define DPrefixLocation_1_12 "Test.MHeader:1:12:"
-#define DPrefixLocation_1_14 "Test.MHeader:1:14:"
-#define DPrefixLocation_1_13 "Test.MHeader:1:13:"
-#define DPrefixLocation_2_1 "Test.MHeader:2:1:"
+#	define DPrefixLocation_1_7 "Test.MHeader:1:7:"
+#	define DPrefixLocation_1_12 "Test.MHeader:1:12:"
+#	define DPrefixLocation_1_14 "Test.MHeader:1:14:"
+#	define DPrefixLocation_1_13 "Test.MHeader:1:13:"
+#	define DPrefixLocation_2_1 "Test.MHeader:2:1:"
 #endif
 
 namespace
@@ -224,7 +224,8 @@ namespace
 					fs_ParseString("date(2019-11-15 13:50:50.o56)")
 					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_12 " Failed to parse \"2019-11-15 13:50:50.\" as a date: Failed to parse \".\" as a float. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]"_f
+						DPrefixLocation_1_12 " Failed to parse \"2019-11-15 13:50:50.\" as a date: Failed to parse \".\" as a float. Date format is: Year-Month-Day "
+							"[Hour[:Minute[:Second[.Fraction]]]]"_f
 						, {}
 					)
 				)
@@ -234,7 +235,8 @@ namespace
 					fs_ParseString("date(2019-11-15 13:50:50.1.647)")
 					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_12 " Failed to parse \"2019-11-15 13:50:50.\" as a date: Failed to parse \".\" as a float. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]"_f
+						DPrefixLocation_1_12 " Failed to parse \"2019-11-15 13:50:50.\" as a date: Failed to parse \".\" as a float. Date format is: Year-Month-Day "
+							"[Hour[:Minute[:Second[.Fraction]]]]"_f
 						, {}
 					)
 				)
@@ -247,26 +249,12 @@ namespace
 			DMibAssertTrue(Value.f_IsOfType<CEJsonSorted>());
 			DMibAssertTrue(Value.f_GetAsType<CEJsonSorted>().f_IsBinary());
 			DMibExpect(Value.f_GetAsType<CEJsonSorted>().f_Binary(), ==, (CByteVector{'T', 'h', 'i', 's', ' ', 'i', 's', ' ', 'i', 't', '\n'}));
-			DMibExpectException
-				(
-					fs_ParseString("binary(156..6)")
-					, DMibExceptionInstanceParse
-					(
-						DPrefixLocation_1_14 " Unexpected character in Base64 string: ."_f
-						, {}
-					)
-				)
-			;
+			DMibExpectException(fs_ParseString("binary(156..6)"), DMibExceptionInstanceParse(DPrefixLocation_1_14 " Unexpected character in Base64 string: ."_f, {}));
 		}
 
 		void f_TestObjectDynamic()
 		{
-			auto const &Value = fs_ParseString
-				(
-					"{ \"doubleQuote\": 1, 'singleQuote': 2, noQuote: 3, `evalString`: 4, <<: [{'inner': 5}, Expression, ExpressionAppend...] }"
-				)
-				.m_Value.m_Value
-			;
+			auto const &Value = fs_ParseString("{ \"doubleQuote\": 1, 'singleQuote': 2, noQuote: 3, `evalString`: 4, <<: [{'inner': 5}, Expression, ExpressionAppend...] }").m_Value.m_Value;
 			DMibAssertTrue(Value.f_IsOfType<CBuildSystemSyntax::CObject>());
 
 			auto &Object = Value.f_GetAsType<CBuildSystemSyntax::CObject>();
@@ -298,7 +286,8 @@ namespace
 			DMibExpectException(fs_ParseString("{ <<: 5 }"), DMibExceptionInstanceParse(DPrefixLocation_1_7 " error: Append object only supports objects, arrays or expressions", {}));
 			DMibExpectException
 				(
-					fs_ParseString("{ <<: [5] }"), DMibExceptionInstanceParse(DPrefixLocation_1_7 " error: Append object array only supports objects expressions or append expressions", {})
+					fs_ParseString("{ <<: [5] }")
+					, DMibExceptionInstanceParse(DPrefixLocation_1_7 " error: Append object array only supports objects expressions or append expressions", {})
 				)
 			;
 		}
@@ -314,12 +303,7 @@ namespace
 
 		void f_TestObjectStatic()
 		{
-			auto const &Value = fs_ParseString
-				(
-					"{ \"doubleQuote\": 1, 'singleQuote': 2, noQuote: 3}"
-				)
-				.m_Value.m_Value
-			;
+			auto const &Value = fs_ParseString("{ \"doubleQuote\": 1, 'singleQuote': 2, noQuote: 3}").m_Value.m_Value;
 			DMibAssertTrue(Value.f_IsOfType<NEncoding::CEJsonSorted>());
 
 			auto &Object = Value.f_GetAsType<NEncoding::CEJsonSorted>();
@@ -351,7 +335,7 @@ namespace
 			DMibAssert(EvalString.m_Tokens.f_GetLen(), ==, 5);
 			auto &StringToken = EvalString.m_Tokens[0];
 			DMibAssertTrue(StringToken.m_Token.f_IsOfType<CStr>());
-			DMibExpect(StringToken.m_Token.f_GetAsType<CStr>(), ==,  "String ");
+			DMibExpect(StringToken.m_Token.f_GetAsType<CStr>(), ==, "String ");
 			DMibAssertTrue(EvalString.m_Tokens[1].m_Token.f_IsOfType<TCIndirection<CBuildSystemSyntax::CExpression>>());
 			DMibAssertTrue(EvalString.m_Tokens[2].m_Token.f_IsOfType<TCIndirection<CBuildSystemSyntax::CExpression>>());
 			DMibAssertTrue(EvalString.m_Tokens[3].m_Token.f_IsOfType<TCIndirection<CBuildSystemSyntax::CExpression>>());
@@ -366,7 +350,7 @@ namespace
 			DMibAssert(EvalString.m_Tokens.f_GetLen(), ==, 5);
 			auto &StringToken = EvalString.m_Tokens[0];
 			DMibAssertTrue(StringToken.m_Token.f_IsOfType<CStr>());
-			DMibExpect(StringToken.m_Token.f_GetAsType<CStr>(), ==,  "String ");
+			DMibExpect(StringToken.m_Token.f_GetAsType<CStr>(), ==, "String ");
 			DMibAssertTrue(EvalString.m_Tokens[1].m_Token.f_IsOfType<TCIndirection<CBuildSystemSyntax::CExpression>>());
 			DMibAssertTrue(EvalString.m_Tokens[2].m_Token.f_IsOfType<TCIndirection<CBuildSystemSyntax::CExpression>>());
 			DMibAssertTrue(EvalString.m_Tokens[3].m_Token.f_IsOfType<TCIndirection<CBuildSystemSyntax::CExpression>>());
@@ -726,7 +710,7 @@ namespace
 				DMibAssertTrue(JsonAccessor.m_Accessors[2].m_Accessor.f_IsOfType<CBuildSystemSyntax::CJsonSubscript>());
 				DMibAssertTrue(JsonAccessor.m_Accessors[2].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJsonSubscript>().m_Index.f_IsOfType<uint32>());
 				DMibExpect(JsonAccessor.m_Accessors[2].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJsonSubscript>().m_Index.f_GetAsType<uint32>(), ==, 2);
-				DMibExpectTrue(JsonAccessor.m_Accessors[3]. m_Accessor.f_IsOfType<CStr>());
+				DMibExpectTrue(JsonAccessor.m_Accessors[3].m_Accessor.f_IsOfType<CStr>());
 				DMibExpectTrue(JsonAccessor.m_Accessors[4].m_Accessor.f_IsOfType<CBuildSystemSyntax::CJsonSubscript>());
 				DMibAssertTrue(JsonAccessor.m_Accessors[4].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJsonSubscript>().m_Index.f_IsOfType<CBuildSystemSyntax::CExpression>());
 			}
@@ -761,7 +745,7 @@ namespace
 				DMibAssertTrue(JsonAccessor.m_Accessors[2].m_Accessor.f_IsOfType<CBuildSystemSyntax::CJsonSubscript>());
 				DMibAssertTrue(JsonAccessor.m_Accessors[2].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJsonSubscript>().m_Index.f_IsOfType<uint32>());
 				DMibExpect(JsonAccessor.m_Accessors[2].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJsonSubscript>().m_Index.f_GetAsType<uint32>(), ==, 2);
-				DMibExpectTrue(JsonAccessor.m_Accessors[3]. m_Accessor.f_IsOfType<CStr>());
+				DMibExpectTrue(JsonAccessor.m_Accessors[3].m_Accessor.f_IsOfType<CStr>());
 				DMibExpectTrue(JsonAccessor.m_Accessors[4].m_Accessor.f_IsOfType<CBuildSystemSyntax::CJsonSubscript>());
 				DMibAssertTrue(JsonAccessor.m_Accessors[4].m_Accessor.f_GetAsType<CBuildSystemSyntax::CJsonSubscript>().m_Index.f_IsOfType<CBuildSystemSyntax::CExpression>());
 			}
@@ -829,7 +813,7 @@ namespace
 				DMibAssert(EvalString.m_Tokens.f_GetLen(), ==, 1);
 				auto &StringToken = EvalString.m_Tokens[0];
 				DMibAssertTrue(StringToken.m_Token.f_IsOfType<CStr>());
-				DMibExpect(StringToken.m_Token.f_GetAsType<CStr>(), ==,  "Test");
+				DMibExpect(StringToken.m_Token.f_GetAsType<CStr>(), ==, "Test");
 			}
 			{
 				DMibTestPath("DynamicExpression");
@@ -1048,12 +1032,7 @@ namespace
 				auto &DefaultType = Define.f_GetAsType<CBuildSystemSyntax::CDefaultType>().m_Type;
 				DMibExpect(DefaultType, ==, CBuildSystemSyntax::CDefaultType::EType_Void);
 			}
-			DMibExpectException
-				(
-					fs_ParseString("any")
-					, DMibExceptionInstanceParse(DPrefixLocation_1_7 " Type 'any' can only be used inside define statements"_f, {})
-				)
-			;
+			DMibExpectException(fs_ParseString("any"), DMibExceptionInstanceParse(DPrefixLocation_1_7 " Type 'any' can only be used inside define statements"_f, {}));
 		}
 
 		void f_TestDefineDefaulted()
@@ -1429,18 +1408,8 @@ namespace
 		{
 			DMibExpectNoException(fs_ParseString("F(\"a\"\n, \"b\")"));
 
-			DMibExpectException
-				(
-					fs_ParseString("F(\"a\" \"b\")")
-					, DMibExceptionInstanceParse(DPrefixLocation_1_13 " Expected , between function parameters"_f, {})
-				)
-			;
-			DMibExpectException
-				(
-					fs_ParseString("F(\"a\"\n\"b\")")
-					, DMibExceptionInstanceParse(DPrefixLocation_2_1 " Expected , between function parameters"_f, {})
-				)
-			;
+			DMibExpectException(fs_ParseString("F(\"a\" \"b\")"), DMibExceptionInstanceParse(DPrefixLocation_1_13 " Expected , between function parameters"_f, {}));
+			DMibExpectException(fs_ParseString("F(\"a\"\n\"b\")"), DMibExceptionInstanceParse(DPrefixLocation_2_1 " Expected , between function parameters"_f, {}));
 		}
 
 		void f_TestFunction()
@@ -1455,76 +1424,16 @@ namespace
 
 		void f_TestFormat()
 		{
-			DMibExpect
-				(
-					("{}"_f << fs_ParseString("\"String\"")).f_GetStr()
-					, ==
-					, "\"String\""
-				)
-			;
-			DMibExpect
-				(
-					("{}"_f << fs_ParseString("'String'")).f_GetStr()
-					, ==
-					, "'String'"
-				)
-			;
-			DMibExpect
-				(
-					("{}"_f << fs_ParseString("'String\\n'\\\n'String'")).f_GetStr()
-					, ==
-					, "'String\\n'\\\n'String'"
-				)
-			;
-			DMibExpect
-				(
-					("{}"_f << fs_ParseString("55")).f_GetStr()
-					, ==
-					, "55"
-				)
-			;
-			DMibExpect
-				(
-					("{}"_f << fs_ParseString("55.5")).f_GetStr()
-					, ==
-					, "55.5"
-				)
-			;
-			DMibExpect
-				(
-					("{}"_f << fs_ParseString("true")).f_GetStr()
-					, ==
-					, "true"
-				)
-			;
-			DMibExpect
-				(
-					("{}"_f << fs_ParseString("null")).f_GetStr()
-					, ==
-					, "null"
-				)
-			;
-			DMibExpect
-				(
-					("{}"_f << fs_ParseString("undefined")).f_GetStr()
-					, ==
-					, "undefined"
-				)
-			;
-			DMibExpect
-				(
-					("{}"_f << fs_ParseString("date(2019-05-29 11:00:05.545)")).f_GetStr()
-					, ==
-					, "date(2019-05-29 11:00:05.545)"
-				)
-			;
-			DMibExpect
-				(
-					("{}"_f << fs_ParseString("binary(VGhpcyBpcyBpdAo=)")).f_GetStr()
-					, ==
-					, "binary(VGhpcyBpcyBpdAo=)"
-				)
-			;
+			DMibExpect(("{}"_f << fs_ParseString("\"String\"")).f_GetStr(), ==, "\"String\"");
+			DMibExpect(("{}"_f << fs_ParseString("'String'")).f_GetStr(), ==, "'String'");
+			DMibExpect(("{}"_f << fs_ParseString("'String\\n'\\\n'String'")).f_GetStr(), ==, "'String\\n'\\\n'String'");
+			DMibExpect(("{}"_f << fs_ParseString("55")).f_GetStr(), ==, "55");
+			DMibExpect(("{}"_f << fs_ParseString("55.5")).f_GetStr(), ==, "55.5");
+			DMibExpect(("{}"_f << fs_ParseString("true")).f_GetStr(), ==, "true");
+			DMibExpect(("{}"_f << fs_ParseString("null")).f_GetStr(), ==, "null");
+			DMibExpect(("{}"_f << fs_ParseString("undefined")).f_GetStr(), ==, "undefined");
+			DMibExpect(("{}"_f << fs_ParseString("date(2019-05-29 11:00:05.545)")).f_GetStr(), ==, "date(2019-05-29 11:00:05.545)");
+			DMibExpect(("{}"_f << fs_ParseString("binary(VGhpcyBpcyBpdAo=)")).f_GetStr(), ==, "binary(VGhpcyBpcyBpdAo=)");
 			DMibExpect
 				(
 					("{}"_f << fs_ParseString("[\"Test\", 5]")).f_GetStr()
@@ -1549,55 +1458,13 @@ namespace
 					, "{test: 5, 'test2': 5, \"test3\": 5, `test4 @(Test->Test(`Other @(Other)`))`: 5}"
 				)
 			;
-			DMibExpect
-				(
-					("{}"_f << fs_ParseString("~\"*Value*\"")).f_GetStr()
-					, ==
-					, "~\"*Value*\""
-				)
-			;
-			DMibExpect
-				(
-					("{}"_f << fs_ParseString("~'*Value*'")).f_GetStr()
-					, ==
-					, "~'*Value*'"
-				)
-			;
-			DMibExpect
-				(
-					("{}"_f << fs_ParseString("~`*Value*`")).f_GetStr()
-					, ==
-					, "~`*Value*`"
-				)
-			;
-			DMibExpect
-				(
-					("{}"_f << fs_ParseString("< Value<Property.ArrayProp[0].Prop2>")).f_GetStr()
-					, ==
-					, "< Value<Property.ArrayProp[0].Prop2>"
-				)
-			;
-			DMibExpect
-				(
-					("{}"_f << fs_ParseString("Value<@(DynamicProp).ArrayProp[IntProp].Prop2>")).f_GetStr()
-					, ==
-					, "Value<@(DynamicProp).ArrayProp[IntProp].Prop2>"
-				)
-			;
-			DMibExpect
-				(
-					("{}"_f << fs_ParseString("`String`")).f_GetStr()
-					, ==
-					, "`String`"
-				)
-			;
-			DMibExpect
-				(
-					("{}"_f << fs_ParseString("`Test @(Value<@(DynamicProp).ArrayProp[IntProp].Prop2>)`")).f_GetStr()
-					, ==
-					, "`Test @(Value<@(DynamicProp).ArrayProp[IntProp].Prop2>)`"
-				)
-			;
+			DMibExpect(("{}"_f << fs_ParseString("~\"*Value*\"")).f_GetStr(), ==, "~\"*Value*\"");
+			DMibExpect(("{}"_f << fs_ParseString("~'*Value*'")).f_GetStr(), ==, "~'*Value*'");
+			DMibExpect(("{}"_f << fs_ParseString("~`*Value*`")).f_GetStr(), ==, "~`*Value*`");
+			DMibExpect(("{}"_f << fs_ParseString("< Value<Property.ArrayProp[0].Prop2>")).f_GetStr(), ==, "< Value<Property.ArrayProp[0].Prop2>");
+			DMibExpect(("{}"_f << fs_ParseString("Value<@(DynamicProp).ArrayProp[IntProp].Prop2>")).f_GetStr(), ==, "Value<@(DynamicProp).ArrayProp[IntProp].Prop2>");
+			DMibExpect(("{}"_f << fs_ParseString("`String`")).f_GetStr(), ==, "`String`");
+			DMibExpect(("{}"_f << fs_ParseString("`Test @(Value<@(DynamicProp).ArrayProp[IntProp].Prop2>)`")).f_GetStr(), ==, "`Test @(Value<@(DynamicProp).ArrayProp[IntProp].Prop2>)`");
 			DMibExpect
 				(
 					("{}"_f << fs_ParseString(": {mem1: int, \"mem2\": float, 'mem3': any, mem4: [any], mem5: one_of(int, float), mem6: {...: any}, 'mem7?': any}")).f_GetStr()
@@ -1623,20 +1490,8 @@ namespace
 					, fs_ParseString(": {mem1: int, \"mem2\": float, 'mem3': any, mem4: [any], mem5: one_of(int, float), mem6: {...: any}, 'mem7?': any}")
 				)
 			;
-			DMibExpect
-				(
-					fs_ParseString("5")
-					, <
-					, fs_ParseString(": {mem1: int, \"mem2\": float, 'mem3': any, mem4: [any], mem5: one_of(int, float), mem6: {...: any}, 'mem7?': any}")
-				)
-			;
-			DMibExpect
-				(
-					fs_ParseString("5")
-					, <
-					, fs_ParseString("6")
-				)
-			;
+			DMibExpect(fs_ParseString("5"), <, fs_ParseString(": {mem1: int, \"mem2\": float, 'mem3': any, mem4: [any], mem5: one_of(int, float), mem6: {...: any}, 'mem7?': any}"));
+			DMibExpect(fs_ParseString("5"), <, fs_ParseString("6"));
 		}
 
 		void f_DoTests()

@@ -37,7 +37,8 @@ namespace NMib::NBuildSystem
 		(
 			EPropertyType _Type
 			, TCFunction<void (CPropertyKey const &_Key, CTypeWithPosition const &_Type)> const &_fOnDefinition
-		) const
+		)
+		const
 	{
 		for (auto &pType : mp_DefaultedBuiltinVariablesDefinitions[_Type])
 			_fOnDefinition(mp_BuiltinVariablesDefinitions.fs_GetKey(*pType), *pType);
@@ -99,7 +100,7 @@ namespace NMib::NBuildSystem
 					, {CPropertyKey(gc_ConstKey_AllRepositories), DMibBuildSystemTypeWithPosition(g_StringArray)}
 
 					, {CPropertyKey(gc_ConstKey_MalterlibRepositoryEditor), DMibBuildSystemTypeWithPosition(g_String)}
-					, {CPropertyKey(gc_ConstKey_MalterlibRepositoryEditorSequential),  DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(gc_ConstKey_MalterlibRepositoryEditorSequential), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					, {CPropertyKey(gc_ConstKey_MalterlibRepositoryEditorSleep), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_FloatingPoint, 0.0))}
 					, {CPropertyKey(gc_ConstKey_MalterlibRepositoryEditorWorkingDir), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
 					,
@@ -383,7 +384,7 @@ namespace NMib::NBuildSystem
 					, {CPropertyKey(gc_ConstKey_GenerateFile_Contents), DMibBuildSystemTypeWithPosition(g_String)}
 					, {CPropertyKey(gc_ConstKey_GenerateFile_UnicodeBOM), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, true))}
 					, {CPropertyKey(gc_ConstKey_GenerateFile_BeforeImports), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
-					, {CPropertyKey(gc_ConstKey_GenerateFile_UTF16),  DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
+					, {CPropertyKey(gc_ConstKey_GenerateFile_UTF16), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					, {CPropertyKey(gc_ConstKey_GenerateFile_Executable), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					, {CPropertyKey(gc_ConstKey_GenerateFile_UnixLineEnds), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					, {CPropertyKey(gc_ConstKey_GenerateFile_Symlink), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}

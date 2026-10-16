@@ -36,7 +36,6 @@ namespace NMib::NBuildSystem
 			o_Str += typename tf_CStr::CFormat("{}") << f_Get();
 		}
 
-
 	private:
 		NStorage::TCVariant<NEncoding::CEJsonSorted const *, NEncoding::CEJsonSorted *, NEncoding::CEJsonSorted> mp_ValueVariant;
 	};

@@ -254,6 +254,7 @@ namespace NMib::NBuildSystem::NNinja
 						NEncoding::CJsonSorted m_Arguments{NEncoding::EJsonType_Array};
 						CStr m_Output;
 					};
+
 					TCMap<CStr, TCVector<CCompileCommandEntry>> CompileCommandsByPath;
 					CStr CompileCommandsDirectory = m_BuildSystem.f_GetBaseDir();
 
@@ -411,7 +412,6 @@ namespace NMib::NBuildSystem::NNinja
 							}
 						;
 
-
 						for (auto &Rule : OtherWorkspaceRules)
 							fAddRuleEntry(Rule.f_GetMergedEntry(m_BuildSystem));
 
@@ -476,7 +476,14 @@ namespace NMib::NBuildSystem::NNinja
 								}
 
 								// Collect compile commands for C/C++/ObjC/ObjC++ files (only if enabled for this target)
-								if (pCompileCommandsPath && !pCompileCommandsPath->f_IsEmpty() && fg_IsCompileType(pBuild->m_Type) && !MergedEntry.m_Build.m_Inputs.f_IsEmpty() && !MergedEntry.m_Build.m_Outputs.f_IsEmpty())
+								if
+								(
+									pCompileCommandsPath
+									&& !pCompileCommandsPath->f_IsEmpty()
+									&& fg_IsCompileType(pBuild->m_Type)
+									&& !MergedEntry.m_Build.m_Inputs.f_IsEmpty()
+									&& !MergedEntry.m_Build.m_Outputs.f_IsEmpty()
+								)
 								{
 									auto &Entry = CompileCommandsByPath[*pCompileCommandsPath].f_Insert();
 									Entry.m_File = MergedEntry.m_Build.m_Inputs[0];

@@ -40,8 +40,8 @@ namespace NMib::NBuildSystem::NXcode
 		auto pWorkspace = XMLFile.f_CreateDefaultDocument(gc_ConstString_Workspace, "xml version=\"1.0\" encoding=\"UTF-8\"");
 		XMLFile.f_SetAttribute(pWorkspace, "version", "1.0");
 
-		TCMap<TCPointer<CGroup>, TCVector<CGroup*>> MapGroupToGroups;
-		TCMap<TCPointer<CGroup>, TCVector<CProject*>> MapProjectsToGroups;
+		TCMap<TCPointer<CGroup>, TCVector<CGroup *>> MapGroupToGroups;
+		TCMap<TCPointer<CGroup>, TCVector<CProject *>> MapProjectsToGroups;
 
 		for (auto iGroup = _Solution.m_Groups.f_GetIterator(); iGroup; ++iGroup)
 		{
@@ -55,41 +55,50 @@ namespace NMib::NBuildSystem::NXcode
 				MapProjectsToGroups[iProject->m_pGroup].f_Insert(iProject);
 		}
 
-		TCFunction<void (CXMLElement* _pParent, CGroup* pGroup)> fOutputGroup = [&] (CXMLElement* _pParent, CGroup* pGroup)
-		{
-			if (!pGroup->m_OutputToWorkspace)
+		TCFunction<void (CXMLElement *_pParent, CGroup *pGroup)> fOutputGroup = [&](CXMLElement *_pParent, CGroup *pGroup)
 			{
-				auto pGroupRef = XMLFile.f_CreateElement(_pParent, gc_ConstString_Group);
-				XMLFile.f_SetAttribute(pGroupRef, "location", "container:");
-				XMLFile.f_SetAttribute(pGroupRef, "name", pGroup->m_Name);
-				pGroup->m_OutputToWorkspace = true;
-
-				TCVector<CGroup*>& lChildGroups = MapGroupToGroups[pGroup];
-				for (auto iChildGroup = lChildGroups.f_GetIterator(); iChildGroup; ++iChildGroup)
+				if (!pGroup->m_OutputToWorkspace)
 				{
-					fOutputGroup(pGroupRef, *iChildGroup);
-				}
+					auto pGroupRef = XMLFile.f_CreateElement(_pParent, gc_ConstString_Group);
+					XMLFile.f_SetAttribute(pGroupRef, "location", "container:");
+					XMLFile.f_SetAttribute(pGroupRef, "name", pGroup->m_Name);
+					pGroup->m_OutputToWorkspace = true;
 
-				TCVector<CProject*>& lChildProjects = MapProjectsToGroups[pGroup];
-				for (auto iProject = lChildProjects.f_GetIterator(); iProject; ++iProject)
-				{
-					auto pFileRef = XMLFile.f_CreateElement(pGroupRef, "FileRef");
-					XMLFile.f_SetAttribute(pFileRef, "location", (CStr::CFormat("group:Files/{}/{}.xcodeproj") << CFile::fs_MakeNiceFilename(_Solution.f_GetName()) << (*iProject)->f_GetName()).f_GetStr());
+					TCVector<CGroup *> &lChildGroups = MapGroupToGroups[pGroup];
+					for (auto iChildGroup = lChildGroups.f_GetIterator(); iChildGroup; ++iChildGroup)
+						fOutputGroup(pGroupRef, *iChildGroup);
+
+					TCVector<CProject *> &lChildProjects = MapProjectsToGroups[pGroup];
+					for (auto iProject = lChildProjects.f_GetIterator(); iProject; ++iProject)
+					{
+						auto pFileRef = XMLFile.f_CreateElement(pGroupRef, "FileRef");
+						XMLFile.f_SetAttribute
+							(
+								pFileRef
+								, "location"
+								, (CStr::CFormat("group:Files/{}/{}.xcodeproj") << CFile::fs_MakeNiceFilename(_Solution.f_GetName()) << (*iProject)->f_GetName()).f_GetStr()
+							)
+						;
+					}
 				}
 			}
-		};
+		;
 
 		for (auto iGroup = _Solution.m_Groups.f_GetIterator(); iGroup; ++iGroup)
-		{
 			fOutputGroup(pWorkspace, &(*iGroup));
-		}
 
 		for (auto iProject = _Solution.m_Projects.f_GetIterator(); iProject; ++iProject)
 		{
 			if (!iProject->m_pGroup)
 			{
 				auto pFileRef = XMLFile.f_CreateElement(pWorkspace, "FileRef");
-				XMLFile.f_SetAttribute(pFileRef, "location", (CStr::CFormat("group:Files/{}/{}.xcodeproj") << CFile::fs_MakeNiceFilename(_Solution.f_GetName()) << (*iProject).f_GetName()).f_GetStr());
+				XMLFile.f_SetAttribute
+					(
+						pFileRef
+						, "location"
+						, (CStr::CFormat("group:Files/{}/{}.xcodeproj") << CFile::fs_MakeNiceFilename(_Solution.f_GetName()) << (*iProject).f_GetName()).f_GetStr()
+					)
+				;
 			}
 		}
 
@@ -108,7 +117,7 @@ namespace NMib::NBuildSystem::NXcode
 				m_BuildSystem.f_WriteFile(FileData, GeneratedFile);
 			}
 		}
-		CStr FileName = CFile::fs_AppendPath(OutputDir,  CStr("contents.xcworkspacedata"));
+		CStr FileName = CFile::fs_AppendPath(OutputDir, CStr("contents.xcworkspacedata"));
 		bool bSchemeChanged = fp_GenerateBuildAllSchemes(WorkspaceState, _Solution, OutputDir, SchemesWithRunnables, SchemesWithBuildables);
 		{
 			CStr XMLData = XMLFile.f_GetAsString(EXMLOutputDialect_Xcode);
@@ -143,7 +152,8 @@ namespace NMib::NBuildSystem::NXcode
 			, CStr const &_OutputDir
 			, TCMap<CConfiguration, TCSet<CStr>> &_Runnables
 			, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable
-		) const
+		)
+		const
 	{
 		bool bSchemesChanged = false;
 
@@ -264,7 +274,7 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 		{
 			CXMLDocument XMLFile(false);
 
-			CConfiguration const& Configuration = Iter.f_GetKey();
+			CConfiguration const &Configuration = Iter.f_GetKey();
 			CStr Name = (CStr::CFormat("{} {}") << Configuration.m_Platform << Configuration.m_Configuration).f_GetStr();
 
 			auto pScheme = XMLFile.f_CreateDefaultDocument("Scheme");
@@ -278,27 +288,34 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 				XMLFile.f_SetAttribute(pScheme, "LastUpgradeVersion", "0450");
 			XMLFile.f_SetAttribute(pScheme, "version", "1.3");
 
-			auto fGenerateBuildReference = [&] (CXMLElement* _pParent, CProject& _Project)
-			{
-				auto &NativeTarget = _Project.f_GetDefaultNativeTarget(Configuration);
-
-				auto pBuildReference = XMLFile.f_CreateElement(_pParent, "BuildableReference");
-				XMLFile.f_SetAttribute(pBuildReference, "BuildableIdentifier", "primary");
-				XMLFile.f_SetAttribute(pBuildReference, "BlueprintIdentifier", NativeTarget.f_GetGUID());
-
-				CStr BuildableName;
-				auto pBuildable = _Buildable.f_FindEqual(Configuration);
-				if (pBuildable)
+			auto fGenerateBuildReference = [&](CXMLElement *_pParent, CProject &_Project)
 				{
-					auto pName = pBuildable->f_FindEqual(_Project.f_GetGUID());
-					if (pName)
-						BuildableName = *pName;
-				}
+					auto &NativeTarget = _Project.f_GetDefaultNativeTarget(Configuration);
 
-				XMLFile.f_SetAttribute(pBuildReference, "BuildableName", BuildableName);
-				XMLFile.f_SetAttribute(pBuildReference, "BlueprintName", _Project.f_GetName());
-				XMLFile.f_SetAttribute(pBuildReference, "ReferencedContainer", (CStr::CFormat("container:Files/{}/{}.xcodeproj") << _Solution.f_GetName() << _Project.f_GetName()).f_GetStr());
-			};
+					auto pBuildReference = XMLFile.f_CreateElement(_pParent, "BuildableReference");
+					XMLFile.f_SetAttribute(pBuildReference, "BuildableIdentifier", "primary");
+					XMLFile.f_SetAttribute(pBuildReference, "BlueprintIdentifier", NativeTarget.f_GetGUID());
+
+					CStr BuildableName;
+					auto pBuildable = _Buildable.f_FindEqual(Configuration);
+					if (pBuildable)
+					{
+						auto pName = pBuildable->f_FindEqual(_Project.f_GetGUID());
+						if (pName)
+							BuildableName = *pName;
+					}
+
+					XMLFile.f_SetAttribute(pBuildReference, "BuildableName", BuildableName);
+					XMLFile.f_SetAttribute(pBuildReference, "BlueprintName", _Project.f_GetName());
+					XMLFile.f_SetAttribute
+						(
+							pBuildReference
+							, "ReferencedContainer"
+							, (CStr::CFormat("container:Files/{}/{}.xcodeproj") << _Solution.f_GetName() << _Project.f_GetName()).f_GetStr()
+						)
+					;
+				}
+			;
 
 			// BuildAction
 			{
@@ -393,7 +410,12 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 				XMLFile.f_SetAttribute(pArchiveAction, "revealArchiveInOrganizer", gc_ConstString_YES);
 			}
 
-			CStr FileName = CFile::fs_AppendPath(OutputDir,  (CStr::CFormat("{}.xcscheme") << CFile::fs_MakeNiceFilename((CStr::CFormat("{} {}") << CStr("Build All") << Name).f_GetStr())).f_GetStr());
+			CStr FileName = CFile::fs_AppendPath
+				(
+					OutputDir
+					, (CStr::CFormat("{}.xcscheme") << CFile::fs_MakeNiceFilename((CStr::CFormat("{} {}") << CStr("Build All") << Name).f_GetStr())).f_GetStr()
+				)
+			;
 
 			CStr RawXMLData = XMLFile.f_GetAsString(EXMLOutputDialect_Xcode);
 

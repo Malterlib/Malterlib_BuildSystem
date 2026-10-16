@@ -11,7 +11,7 @@ namespace NMib::NBuildSystem
 }
 
 #ifdef DMibBuildSystem_DebugReferences
-	DMibDefineSharedPointerType(NMib::NBuildSystem::CEntity, true, false);
+DMibDefineSharedPointerType(NMib::NBuildSystem::CEntity, true, false);
 #endif
 
 namespace NMib::NBuildSystem

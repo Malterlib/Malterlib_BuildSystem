@@ -21,7 +21,8 @@ namespace NMib::NBuildSystem
 				, CBuildSystemData const *_pBuildSystemData
 				, NStr::CStr _OutputDir
 				, NContainer::TCMap<NStr::CStr, uint32> &o_NumWorkspaceTargets
-			) = 0
+			)
+			= 0
 		;
 	};
 

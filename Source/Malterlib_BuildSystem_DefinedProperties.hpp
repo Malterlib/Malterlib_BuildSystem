@@ -54,15 +54,8 @@ namespace NMib::NBuildSystem
 			{
 				if (!bBelowFileLevel)
 				{
-					if
-						(
-							Key.m_Type != EEntityType_Group
-							&& Key.m_Type != EEntityType_GenerateFile
-							&& Key.m_Type != EEntityType_File
-						)
-					{
+					if (Key.m_Type != EEntityType_Group && Key.m_Type != EEntityType_GenerateFile && Key.m_Type != EEntityType_File)
 						bBelowFileLevel = true;
-					}
 				}
 			}
 

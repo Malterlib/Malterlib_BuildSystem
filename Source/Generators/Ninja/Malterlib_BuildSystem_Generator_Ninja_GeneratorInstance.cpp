@@ -59,11 +59,7 @@ namespace NMib::NBuildSystem::NNinja
 						gc_Str<"GetSharedFlags">.m_Str
 						, CBuildSystem::CBuiltinFunction
 						{
-							fg_FunctionType
-							(
-								g_StringArray
-								, fg_FunctionParam(g_String, gc_Str<"_Tool">.m_Str)
-							)
+							fg_FunctionType(g_StringArray, fg_FunctionParam(g_String, gc_Str<"_Tool">.m_Str))
 							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								auto &ThreadLocal = **ms_ThreadLocal;
@@ -172,8 +168,11 @@ namespace NMib::NBuildSystem::NNinja
 		{
 			if (_pStorePositions)
 			{
-				_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.VisualStudioRoot")
-					->f_AddValue(m_VisualStudioRootHelper.f_GetVisualStudioRoot(m_VisualStudioVersion), m_BuildSystem.f_EnableValues())
+				_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.VisualStudioRoot")->f_AddValue
+					(
+						m_VisualStudioRootHelper.f_GetVisualStudioRoot(m_VisualStudioVersion)
+						, m_BuildSystem.f_EnableValues()
+					)
 				;
 			}
 			o_bSuccess = true;

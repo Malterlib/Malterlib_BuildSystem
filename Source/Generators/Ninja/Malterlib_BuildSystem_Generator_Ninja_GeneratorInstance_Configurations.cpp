@@ -5,7 +5,7 @@
 
 namespace NMib::NBuildSystem::NNinja
 {
-	TCUnsafeFuture<void> CGeneratorInstance::fp_EvaluateTargetSettings(CProject& _Project) const
+	TCUnsafeFuture<void> CGeneratorInstance::fp_EvaluateTargetSettings(CProject &_Project) const
 	{
 		co_await ECoroutineFlag_CaptureExceptions;
 
@@ -29,15 +29,9 @@ namespace NMib::NBuildSystem::NNinja
 
 					fp_SetEvaluatedValuesTarget(Entity, o_Result, _Project.m_EntityName);
 
-					_Project.m_CompileCommandsFilePath[Config] = fp_GetConfigValue
-						(
-							_Project.m_EnabledProjectConfigs
-							, Config
-							, gc_ConstKey_Target_CompileCommandsFile
-							, EEJsonType_String
-							, false
-						)
-						.m_Value.f_MoveString()
+					_Project.m_CompileCommandsFilePath[Config] = fp_GetConfigValue(_Project.m_EnabledProjectConfigs, Config, gc_ConstKey_Target_CompileCommandsFile, EEJsonType_String, false)
+						.m_Value
+						.f_MoveString()
 					;
 
 					co_return {};

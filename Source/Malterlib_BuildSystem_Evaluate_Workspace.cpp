@@ -5,41 +5,17 @@
 
 namespace NMib::NBuildSystem
 {
-	void CBuildSystem::f_EvalGlobalWorkspaces
-		(
-			CBuildSystemData &_Destination
-			, TCMap<CStr, CEntityMutablePointer> &_Targets
-		) const
+	void CBuildSystem::f_EvalGlobalWorkspaces(CBuildSystemData &_Destination, TCMap<CStr, CEntityMutablePointer> &_Targets) const
 	{
-		fp_EvalGlobalWorkspaces
-			(
-				_Destination
-				, _Targets
-			)
-		;
+		fp_EvalGlobalWorkspaces(_Destination, _Targets);
 	}
 
-	TCMap<CEntity *, TCSet<CStr>> CBuildSystem::f_EvaluateTargetsInWorkspace
-		(
-			CBuildSystemData &_Destination
-			, TCMap<CStr, CEntityMutablePointer> const &_Targets
-			, CEntity &_Workspace
-		) const
+	TCMap<CEntity *, TCSet<CStr>> CBuildSystem::f_EvaluateTargetsInWorkspace(CBuildSystemData &_Destination, TCMap<CStr, CEntityMutablePointer> const &_Targets, CEntity &_Workspace) const
 	{
-		return fp_EvaluateTargetsInWorkspace
-			(
-				_Destination
-				, _Targets
-				, _Workspace
-			)
-		;
+		return fp_EvaluateTargetsInWorkspace(_Destination, _Targets, _Workspace);
 	}
 
-	void CBuildSystem::fp_EvaluateWorkspace
-		(
-			CBuildSystemData &_Destination
-			, CEntity &_Entity
-		) const
+	void CBuildSystem::fp_EvaluateWorkspace(CBuildSystemData &_Destination, CEntity &_Entity) const
 	{
 		bool bAdded = true;
 		TCSet<CStr> AlreadyAdded;
@@ -105,16 +81,11 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	void CBuildSystem::fp_EvalGlobalWorkspaces
-		(
-			CBuildSystemData &_Destination
-			, TCMap<CStr, CEntityMutablePointer> &_Targets
-		) const
+	void CBuildSystem::fp_EvalGlobalWorkspaces(CBuildSystemData &_Destination, TCMap<CStr, CEntityMutablePointer> &_Targets) const
 	{
 		{
 			TCFunction<void (CEntity &_Entity)> fFindTargetsRecursive;
-			auto fFindTargets
-				= [&fFindTargetsRecursive, &_Targets, this](CEntity &_Entity)
+			auto fFindTargets = [&fFindTargetsRecursive, &_Targets, this](CEntity &_Entity)
 				{
 					for (auto iEntity = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iEntity; ++iEntity)
 					{
@@ -141,8 +112,7 @@ namespace NMib::NBuildSystem
 								*Mapped = fg_Explicit(&ChildEntity);
 							}
 							break;
-						default:
-							break;
+						default: break;
 						}
 					}
 				}
@@ -199,20 +169,14 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	TCMap<CEntity *, TCSet<CStr>> CBuildSystem::fp_EvaluateTargetsInWorkspace
-		(
-			CBuildSystemData &_Destination
-			, TCMap<CStr, CEntityMutablePointer> const &_Targets
-			, CEntity &_Workspace
-		) const
+	TCMap<CEntity *, TCSet<CStr>> CBuildSystem::fp_EvaluateTargetsInWorkspace(CBuildSystemData &_Destination, TCMap<CStr, CEntityMutablePointer> const &_Targets, CEntity &_Workspace) const
 	{
 		TCLinkedList<CEntity *> ToEval;
 
 		TCMap<CEntity *, TCSet<CStr>> AlreadyCreatedGroups;
 
 		TCFunction<void (CEntity &_Entity)> fFindTargetsRecursive;
-		auto fFindTargets
-			= [&](CEntity &_Entity)
+		auto fFindTargets = [&](CEntity &_Entity)
 			{
 				for (auto iEntity = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iEntity;)
 				{
@@ -239,8 +203,7 @@ namespace NMib::NBuildSystem
 							fp_EvaluateTarget(_Destination, _Targets, ToEval, ChildEntity, AlreadyCreatedGroups[&ChildEntity]);
 						}
 						break;
-					default:
-						break;
+					default: break;
 					}
 				}
 			}
