@@ -56,7 +56,6 @@ namespace NMib::NBuildSystem::NVisualStudio
 							else
 								FilePos = _Project.m_Position;
 						}
-
 					}
 				}
 
@@ -99,16 +98,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 					CStr Platform = _Project.m_Platforms[iConfig.f_GetKey()];
 					auto pFileConfig = pEnabledConfigs->f_FindEqual(iConfig.f_GetKey());
 					if (!pFileConfig)
-					{
-						m_BuildSystem.fs_ThrowError
-							(
-								FilePos
-								, CStr::CFormat("Prefix header is not enabled for config '{} - {}'")
-								<< Platform
-								<< iConfig.f_GetKey().m_Configuration
-							)
-						;
-					}
+						m_BuildSystem.fs_ThrowError(FilePos, CStr::CFormat("Prefix header is not enabled for config '{} - {}'") << Platform << iConfig.f_GetKey().m_Configuration);
 					CEntity *pParent;
 					if ((*pFileConfig)->f_GetKey().m_Type == EEntityType_File)
 						pParent = (*pFileConfig)->m_pParent;

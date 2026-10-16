@@ -12,11 +12,9 @@ namespace NMib::NBuildSystem::NNinja
 
 namespace NMib::NBuildSystem
 {
-
 	class CBuildSystemGenerator_Ninja : public CBuildSystemGenerator, public CAllowUnsafeThis
 	{
 	public:
-
 		CBuildSystemGenerator_Ninja()
 		{
 			DMibLock(NNinja::g_CooperativeTimeSliceCyclesLock);
@@ -159,9 +157,7 @@ namespace NMib::NBuildSystem
 
 				auto *pTotalTargets = OldNumWorkspaceTargets.f_FindEqual(Workspace.f_GetName());
 				if (pTotalTargets)
-				{
 					Workspace.m_nTotalTargets = *pTotalTargets;
-				}
 				else
 				{
 					if (Workspace.f_GetName() == "Tests")
@@ -228,15 +224,7 @@ namespace NMib::NBuildSystem
 										auto *pConfigData = Configurations.f_FindEqual(_WorkspaceInfo.m_Config);
 										DMibCheck(pConfigData);
 
-										BuildSystem.f_GenerateBuildSystem_Workspace
-											(
-												_WorkspaceInfo.m_Config
-												, **pConfigData
-												, _WorkspaceInfo.m_pWorkspace
-												, ReservedGroups
-												, CStr()
-											)
-										;
+										BuildSystem.f_GenerateBuildSystem_Workspace(_WorkspaceInfo.m_Config, **pConfigData, _WorkspaceInfo.m_pWorkspace, ReservedGroups, CStr());
 
 										_WorkspaceInfo.m_Time = Stopwatch.f_GetTime() - Start;
 

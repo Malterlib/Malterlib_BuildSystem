@@ -7,8 +7,7 @@ namespace NMib::NBuildSystem
 {
 	void CBuildSystem::f_ExpandGlobalTargetsAndWorkspaces(CBuildSystemData &_BuildSystemData) const
 	{
-		TCFunction<void (CEntity &_Entity)> fExpandEntities
-			= [&](CEntity &_Entity)
+		TCFunction<void (CEntity &_Entity)> fExpandEntities = [&](CEntity &_Entity)
 			{
 				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild;)
 				{
@@ -49,10 +48,9 @@ namespace NMib::NBuildSystem
 
 	void CBuildSystem::f_ExpandRepositoryEntities(CBuildSystemData &_BuildSystemData) const
 	{
-		TCFunction<void (CEntity &_Entity)> fExpandEntities
-			= [&](CEntity &_Entity)
+		TCFunction<void (CEntity &_Entity)> fExpandEntities = [&](CEntity &_Entity)
 			{
-				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
+				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild;)
 				{
 					auto &Child = *iChild;
 					++iChild;
@@ -82,10 +80,9 @@ namespace NMib::NBuildSystem
 
 	void CBuildSystem::f_ExpandCreateTemplateEntities(CBuildSystemData &_BuildSystemData) const
 	{
-		TCFunction<void (CEntity &_Entity)> fExpandEntities
-			= [&](CEntity &_Entity)
+		TCFunction<void (CEntity &_Entity)> fExpandEntities = [&](CEntity &_Entity)
 			{
-				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
+				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild;)
 				{
 					auto &Child = *iChild;
 					++iChild;
@@ -113,10 +110,9 @@ namespace NMib::NBuildSystem
 
 	void CBuildSystem::f_ExpandGlobalEntities(CBuildSystemData &_BuildSystemData) const
 	{
-		TCFunction<void (CEntity &_Entity)> fExpandEntities
-			= [&](CEntity &_Entity)
+		TCFunction<void (CEntity &_Entity)> fExpandEntities = [&](CEntity &_Entity)
 			{
-				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
+				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild;)
 				{
 					auto &Child = *iChild;
 					++iChild;
@@ -124,13 +120,7 @@ namespace NMib::NBuildSystem
 					if (Key.m_Type == EEntityType_Target)
 						continue;
 
-					if
-						(
-							Key.m_Type == EEntityType_Workspace
-							|| Key.m_Type == EEntityType_Group
-							|| Key.m_Type == EEntityType_Root
-							|| Key.m_Type == EEntityType_Import
-						)
+					if (Key.m_Type == EEntityType_Workspace || Key.m_Type == EEntityType_Group || Key.m_Type == EEntityType_Root || Key.m_Type == EEntityType_Import)
 					{
 						if ((Key.m_Type == EEntityType_Group || Key.m_Type == EEntityType_Import) && Child.m_pParent == &_BuildSystemData.m_RootEntity)
 						{
@@ -185,22 +175,18 @@ namespace NMib::NBuildSystem
 #endif
 				auto &&_fThis
 				, CEntity &_Entity
-			) -> void
+			)
+			-> void
 			{
 #ifdef DCompiler_Workaround_Apple_clang
-#define _fThis(...) _fThis(_fThis, __VA_ARGS__)
+#	define _fThis(...) _fThis(_fThis, __VA_ARGS__)
 #endif
-				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
+				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild;)
 				{
 					auto &Child = *iChild;
 					++iChild;
 					auto &Key = Child.f_GetKey();
-					if
-						(
-							Key.m_Type == EEntityType_Target
-							|| Key.m_Type == EEntityType_Group
-							|| Key.m_Type == EEntityType_Import
-						)
+					if (Key.m_Type == EEntityType_Target || Key.m_Type == EEntityType_Group || Key.m_Type == EEntityType_Import)
 					{
 						if (!Child.f_GetKey().m_Name.f_IsConstantString())
 							continue;
@@ -221,7 +207,7 @@ namespace NMib::NBuildSystem
 		;
 
 #ifdef DCompiler_Workaround_Apple_clang
-#define fStoreBackup(...) fStoreBackup(fStoreBackup, __VA_ARGS__)
+#	define fStoreBackup(...) fStoreBackup(fStoreBackup, __VA_ARGS__)
 #endif
 		fStoreBackup(fg_RemoveQualifiers(_Target));
 	}
@@ -242,19 +228,15 @@ namespace NMib::NBuildSystem
 #endif
 						auto &&_fThis
 						, CEntity &_Entity
-					) -> void
+					)
+					-> void
 					{
-						for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
+						for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild;)
 						{
 							auto &Child = *iChild;
 							++iChild;
 							auto &Key = Child.f_GetKey();
-							if
-								(
-									Key.m_Type == EEntityType_Target
-									|| Key.m_Type == EEntityType_Group
-									|| Key.m_Type == EEntityType_Import
-								)
+							if (Key.m_Type == EEntityType_Target || Key.m_Type == EEntityType_Group || Key.m_Type == EEntityType_Import)
 							{
 								if (!Child.f_GetKey().m_Name.f_IsConstantString())
 									continue;
@@ -272,7 +254,7 @@ namespace NMib::NBuildSystem
 				;
 
 #ifdef DCompiler_Workaround_Apple_clang
-#define fRemoveOld(...) fRemoveOld(fRemoveOld, __VA_ARGS__)
+#	define fRemoveOld(...) fRemoveOld(fRemoveOld, __VA_ARGS__)
 #endif
 				fRemoveOld(fg_RemoveQualifiers(_Target));
 			}
@@ -297,15 +279,7 @@ namespace NMib::NBuildSystem
 					for (auto &BackedUpDependency : BackedUpDependencies)
 					{
 						DCheck(BackedUpDependency.m_Entity.m_ChildEntitiesMap.f_IsEmpty());
-						auto &NewEntity = pParent->m_ChildEntitiesMap
-							(
-								BackedUpDependency.m_Key
-								, BackedUpDependency.m_Entity
-								, pParent
-								, EEntityCopyFlag_CopyChildren
-							)
-							.f_GetResult()
-						;
+						auto &NewEntity = pParent->m_ChildEntitiesMap(BackedUpDependency.m_Key, BackedUpDependency.m_Entity, pParent, EEntityCopyFlag_CopyChildren).f_GetResult();
 						NewEntity.f_CopyExternal(BackedUpDependency.m_Entity);
 					}
 				}
@@ -317,24 +291,20 @@ namespace NMib::NBuildSystem
 			auto fExpandDependency = [&]
 				(
 #ifndef DCompiler_Workaround_Apple_clang
-				 this
+					this
 #endif
 					auto &&_fThis
 					, CEntity &_Entity
 					, bool _bUnexpandedGroup
-				) -> void
+				)
+				-> void
 				{
-					for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
+					for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild;)
 					{
 						auto &Child = *iChild;
 						++iChild;
 						auto &Key = Child.f_GetKey();
-						if
-							(
-								Key.m_Type == EEntityType_Target
-								|| Key.m_Type == EEntityType_Group
-								|| Key.m_Type == EEntityType_Import
-							)
+						if (Key.m_Type == EEntityType_Target || Key.m_Type == EEntityType_Group || Key.m_Type == EEntityType_Import)
 						{
 							_fThis(Child, _bUnexpandedGroup || !Child.f_GetKey().m_Name.f_IsConstantString());
 							continue;
@@ -366,7 +336,7 @@ namespace NMib::NBuildSystem
 				}
 			;
 #ifdef DCompiler_Workaround_Apple_clang
-#define fExpandDependency(...) fExpandDependency(fExpandDependency, __VA_ARGS__)
+#	define fExpandDependency(...) fExpandDependency(fExpandDependency, __VA_ARGS__)
 #endif
 			fExpandDependency(fg_RemoveQualifiers(_Target), false);
 		}
@@ -402,7 +372,8 @@ namespace NMib::NBuildSystem
 #endif
 				auto &&_fThis
 				, CEntity &_Entity
-			) -> void
+			)
+			-> void
 			{
 				for (auto iEntity = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iEntity; ++iEntity)
 				{
@@ -417,7 +388,7 @@ namespace NMib::NBuildSystem
 							if (!ChildEntity.f_GetKey().m_Name.f_IsConstantString() || _ExpandState.m_OldEntitiesToRemove.f_FindEqual(&ChildEntity))
 								continue;
 
-							_fThis( ChildEntity);
+							_fThis(ChildEntity);
 						}
 						break;
 					case EEntityType_File:
@@ -432,14 +403,13 @@ namespace NMib::NBuildSystem
 							AllFilesCombined.f_Insert(fg_Move(FilePath));
 						}
 						break;
-					default:
-						break;
+					default: break;
 					}
 				}
 			}
 		;
 #ifdef DCompiler_Workaround_Apple_clang
-#define fFindFiles(...) fFindFiles(fFindFiles, __VA_ARGS__)
+#	define fFindFiles(...) fFindFiles(fFindFiles, __VA_ARGS__)
 #endif
 		fFindFiles(o_Target);
 
@@ -478,9 +448,10 @@ namespace NMib::NBuildSystem
 #endif
 				auto &&_fThis
 				, CEntity &_Entity
-			) -> void
+			)
+			-> void
 			{
-				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
+				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild;)
 				{
 					auto &Child = *iChild;
 					++iChild;
@@ -501,12 +472,7 @@ namespace NMib::NBuildSystem
 						}
 					}
 
-					if
-						(
-							Key.m_Type == EEntityType_Target
-							|| Key.m_Type == EEntityType_Group
-							|| Key.m_Type == EEntityType_Import
-						)
+					if (Key.m_Type == EEntityType_Target || Key.m_Type == EEntityType_Group || Key.m_Type == EEntityType_Import)
 					{
 						if (!Child.f_GetKey().m_Name.f_IsConstantString())
 							continue;
@@ -517,7 +483,7 @@ namespace NMib::NBuildSystem
 		;
 
 #ifdef DCompiler_Workaround_Apple_clang
-#define fExpandGroup(...) fExpandGroup(fExpandGroup, __VA_ARGS__)
+#	define fExpandGroup(...) fExpandGroup(fExpandGroup, __VA_ARGS__)
 #endif
 		fExpandGroup(fg_RemoveQualifiers(_Target));
 
@@ -528,20 +494,14 @@ namespace NMib::NBuildSystem
 	{
 		DRequire(_Target.f_GetKey().m_Type == EEntityType_Target);
 		bool bChanged = false;
-		TCFunction<void (CEntity &_Entity)> fExpandFile
-			= [&](CEntity &_Entity)
+		TCFunction<void (CEntity &_Entity)> fExpandFile = [&](CEntity &_Entity)
 			{
-				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
+				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild;)
 				{
 					auto &Child = *iChild;
 					++iChild;
 					auto &Key = Child.f_GetKey();
-					if
-						(
-							Key.m_Type == EEntityType_Target
-							|| Key.m_Type == EEntityType_Group
-							|| Key.m_Type == EEntityType_Import
-						)
+					if (Key.m_Type == EEntityType_Target || Key.m_Type == EEntityType_Group || Key.m_Type == EEntityType_Import)
 					{
 						if (!Child.f_GetKey().m_Name.f_IsConstantString())
 							continue;
@@ -576,19 +536,14 @@ namespace NMib::NBuildSystem
 	void CBuildSystem::f_ExpandWorkspaceEntities(CBuildSystemData &_BuildSystemData, CEntity const &_Target) const
 	{
 		DRequire(_Target.f_GetKey().m_Type == EEntityType_Workspace);
-		TCFunction<void (CEntity &_Entity)> fExpandEntities
-			= [&](CEntity &_Entity)
+		TCFunction<void (CEntity &_Entity)> fExpandEntities = [&](CEntity &_Entity)
 			{
-				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
+				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild;)
 				{
 					auto &Child = *iChild;
 					++iChild;
 					auto &Key = Child.f_GetKey();
-					if
-						(
-							Key.m_Type == EEntityType_Group
-							|| Key.m_Type == EEntityType_Import
-						)
+					if (Key.m_Type == EEntityType_Group || Key.m_Type == EEntityType_Import)
 					{
 						if (!Child.f_GetKey().m_Name.f_IsConstantString())
 						{
@@ -627,19 +582,14 @@ namespace NMib::NBuildSystem
 	void CBuildSystem::f_ExpandWorkspaceTargets(CBuildSystemData &_BuildSystemData, CEntity const &_Target) const
 	{
 		DRequire(_Target.f_GetKey().m_Type == EEntityType_Workspace);
-		TCFunction<void (CEntity &_Entity)> fExpandEntities
-			= [&](CEntity &_Entity)
+		TCFunction<void (CEntity &_Entity)> fExpandEntities = [&](CEntity &_Entity)
 			{
-				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; )
+				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild;)
 				{
 					auto &Child = *iChild;
 					++iChild;
 					auto &Key = Child.f_GetKey();
-					if
-						(
-							Key.m_Type == EEntityType_Group
-							|| Key.m_Type == EEntityType_Import
-						)
+					if (Key.m_Type == EEntityType_Group || Key.m_Type == EEntityType_Import)
 					{
 						if (!Child.f_GetKey().m_Name.f_IsConstantString())
 						{
@@ -682,7 +632,8 @@ namespace NMib::NBuildSystem
 			, CEntityKey const &_NewKey
 			, CEntity *_pInsertAfter
 			, TCMap<CPropertyKey, CEvaluatedProperty> const *_pExtraProperties
-		) const
+		)
+		const
 	{
 		auto &NewEntity = _ParentEntity.m_ChildEntitiesMap(_NewKey, _Entity, &_ParentEntity, EEntityCopyFlag_CopyChildren).f_GetResult();
 
@@ -897,10 +848,10 @@ namespace NMib::NBuildSystem
 						auto &OldEntityData = pOldEntity->f_Data();
 
 						if
-							(
-								(OldEntityData.m_ExpandedOrGeneratedFrom && OldEntityData.m_ExpandedOrGeneratedFrom == ExpandedOrGeneratedFromSource)
-								|| OldEntityData.m_ExpandedOrGeneratedFromSet.f_FindEqual(ExpandedOrGeneratedFromSource)
-							)
+						(
+							(OldEntityData.m_ExpandedOrGeneratedFrom && OldEntityData.m_ExpandedOrGeneratedFrom == ExpandedOrGeneratedFromSource)
+							|| OldEntityData.m_ExpandedOrGeneratedFromSet.f_FindEqual(ExpandedOrGeneratedFromSource)
+						)
 						{
 							if (o_pCreated)
 								o_pCreated->f_Insert(pOldEntity);
@@ -953,10 +904,10 @@ namespace NMib::NBuildSystem
 					auto &OldEntityData = pOldEntity->f_Data();
 
 					if
-						(
-							(OldEntityData.m_ExpandedOrGeneratedFrom && OldEntityData.m_ExpandedOrGeneratedFrom == ExpandedOrGeneratedFromSource)
-							|| OldEntityData.m_ExpandedOrGeneratedFromSet.f_FindEqual(ExpandedOrGeneratedFromSource)
-						)
+					(
+						(OldEntityData.m_ExpandedOrGeneratedFrom && OldEntityData.m_ExpandedOrGeneratedFrom == ExpandedOrGeneratedFromSource)
+						|| OldEntityData.m_ExpandedOrGeneratedFromSet.f_FindEqual(ExpandedOrGeneratedFromSource)
+					)
 					{
 						if (o_pCreated)
 							o_pCreated->f_Insert(pOldEntity);

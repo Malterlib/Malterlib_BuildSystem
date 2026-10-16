@@ -122,7 +122,6 @@ namespace NMib::NBuildSystem
 			;
 		}
 
-
 		// Collect Perforce changelists into AllChangelists, deduplicating by CL ID.
 		// Check for workspace files that differ from head but aren't opened in any changelist.
 		bool fg_PerforceHasUnreconciledChanges(CPerforceClientThrow &_Client, TCVector<CStr> const &_ConfigFilePaths)
@@ -272,13 +271,7 @@ namespace NMib::NBuildSystem
 		};
 
 		// Resolve Perforce from/to references, replacing git defaults and auto-detecting changelists.
-		TCFuture<CPerforceResolvedRefs> fg_PerforceResolveRefs
-			(
-				CStr _From
-				, CStr _To
-				, TCSet<CStr> _PerforceRootConfigFiles
-				, CStr _BaseDir
-			)
+		TCFuture<CPerforceResolvedRefs> fg_PerforceResolveRefs(CStr _From, CStr _To, TCSet<CStr> _PerforceRootConfigFiles, CStr _BaseDir)
 		{
 			CStr PerforceFrom = _From;
 			CStr PerforceTo = _To;
@@ -321,7 +314,6 @@ namespace NMib::NBuildSystem
 			Result.m_ToDisplay = PerforceTo.f_IsEmpty() ? CStr("workspace") : ("@" + PerforceTo);
 			co_return Result;
 		}
-
 	}
 
 	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_ListCommits
@@ -559,9 +551,7 @@ namespace NMib::NBuildSystem
 			if (bAllFinished)
 				break;
 			else if (!bDoneSomething && State.m_PendingGitShow.f_IsEmpty())
-			{
 				co_return DMibErrorInstance("Failed to resolve dependency graph");
-			}
 		}
 
 		auto &State = *pState;
@@ -713,7 +703,6 @@ namespace NMib::NBuildSystem
 					fFilterEntries(_ReverseEntries, _MaxCommits, "{} reverse log entries were not shown. Specify --max-commits={} to see all.");
 				}
 
-
 				TCVector<CLogEntry> Entries;
 				for (auto &Entry : _Entries)
 					Entries.f_Insert({Entry, false});
@@ -755,13 +744,7 @@ namespace NMib::NBuildSystem
 					{
 						++pParse;
 						umint SectionLen = pParse - _String.f_GetStr();
-						return str_utf32("{2}{}{3}{4}{}"_f)
-							<< _String.f_Left(SectionLen)
-							<< _String.f_Extract(SectionLen)
-							<< Colors.f_Foreground256(39)
-							<< Colors.f_Default()
-							<< _pColor
-						;
+						return str_utf32("{2}{}{3}{4}{}"_f) << _String.f_Left(SectionLen) << _String.f_Extract(SectionLen) << Colors.f_Foreground256(39) << Colors.f_Default() << _pColor;
 					}
 				}
 				return _String;
@@ -770,7 +753,7 @@ namespace NMib::NBuildSystem
 
 		TCVector<CTableRenderHelper> TableRenderers;
 
-		for (auto & [Repo, LogEntriesSource] : LogEntriesPerRepoSorted)
+		for (auto &[Repo, LogEntriesSource] : LogEntriesPerRepoSorted)
 		{
 			auto LogEntries = LogEntriesSource;
 
@@ -886,24 +869,8 @@ namespace NMib::NBuildSystem
 						RowValues.f_Insert("{1}{}{2}"_f << LogEntry.m_Commit << CommitColorWarning << Colors.f_Default());
 				}
 
-				RowValues.f_Insert
-					(
-						"{}\n{2}{}{3}"_f
-						<< fStripEmail(LogEntry.m_Author)
-						<< fStripEmail(LogEntry.m_Committer)
-						<< CommitterColor
-						<< Colors.f_Default()
-					)
-				;
-				RowValues.f_Insert
-					(
-						"{tc6}\n{2}{tc6}{3}"_f
-						<< LogEntry.m_AuthorDate
-						<< LogEntry.m_CommitterDate
-						<< CommitterColor
-						<< Colors.f_Default()
-					)
-				;
+				RowValues.f_Insert("{}\n{2}{}{3}"_f << fStripEmail(LogEntry.m_Author) << fStripEmail(LogEntry.m_Committer) << CommitterColor << Colors.f_Default());
+				RowValues.f_Insert("{tc6}\n{2}{tc6}{3}"_f << LogEntry.m_AuthorDate << LogEntry.m_CommitterDate << CommitterColor << Colors.f_Default());
 
 				auto fCleanupLines = [](CStr const &_Value)
 					{

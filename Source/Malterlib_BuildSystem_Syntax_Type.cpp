@@ -237,12 +237,10 @@ namespace NMib::NBuildSystem
 					}
 				}
 				break;
-			case EJsonStringType_Custom:
-				CBuildSystem::fs_ThrowError(_Position, "Eval string as key not supported in types");
-				break;
+			case EJsonStringType_Custom: CBuildSystem::fs_ThrowError(_Position, "Eval string as key not supported in types"); break;
 			case EJsonStringType_DoubleQuote:
 			case EJsonStringType_SingleQuote:
-					break;
+				break;
 			}
 
 			bool bOptional = Name.f_EndsWith(gc_ConstString_Symbol_Optional.m_String);

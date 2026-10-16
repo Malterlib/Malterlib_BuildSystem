@@ -63,14 +63,8 @@ namespace NMib::NBuildSystem::NRepository
 			// A stray `p4 add` on such files during a rerun is a silent
 			// no-op (Perforce refuses to re-add an already-opened file).
 			CStr DepotPath;
-			if
-				(
-					o_Client.f_NoThrow().f_GetDepotPath(_ConfigFilePaths[i], DepotPath)
-					&& o_Client.f_NoThrow().f_FileExistsInDepot(_ConfigFilePaths[i])
-				)
-			{
+			if (o_Client.f_NoThrow().f_GetDepotPath(_ConfigFilePaths[i], DepotPath) && o_Client.f_NoThrow().f_FileExistsInDepot(_ConfigFilePaths[i]))
 				DepotPaths[i] = fg_Move(DepotPath);
-			}
 		}
 
 		return DepotPaths;

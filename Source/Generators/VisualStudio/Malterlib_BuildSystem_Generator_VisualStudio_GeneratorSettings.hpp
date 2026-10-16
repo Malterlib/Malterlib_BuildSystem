@@ -26,7 +26,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 				"            -----------------------------------------------------\n"
 				"{}\n"
 				"            -----------------------------------------------------\n"
-			) << m_Key << m_Value.f_Indent("            | ")
+			)
+			<< m_Key
+			<< m_Value.f_Indent("            | ")
 		;
 	}
 
@@ -474,9 +476,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 									}
 								}
 								else
-								{
 									static_assert(cIsSame<CType, void>, "Implement this");
-								}
 							}
 						)
 					;

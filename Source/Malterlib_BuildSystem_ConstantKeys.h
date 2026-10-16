@@ -130,7 +130,7 @@ namespace NMib::NBuildSystem
 	extern CPropertyKeyReference const gc_ConstKey_GeneratorSetting_IsFile;
 	extern CPropertyKeyReference const gc_ConstKey_GeneratorSetting_Xcode_TargetType;
 
-	extern CPropertyKeyReference const gc_ConstKey_Group_HideTargets;;
+	extern CPropertyKeyReference const gc_ConstKey_Group_HideTargets;
 
 	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_AlwaysFullRebuild;
 	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_CacheDirectory;

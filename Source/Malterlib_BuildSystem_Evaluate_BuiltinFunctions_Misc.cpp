@@ -84,9 +84,7 @@ namespace NMib::NBuildSystem
 					pExpandedArrayEnd = nullptr;
 				}
 				else
-				{
 					CBuildSystem::fs_ThrowError(_Context, "Append expressions expects an array to expand. {} resulted in : {}"_f << Expression << ToAppendRef);
-				}
 				return true;
 			}
 		;
@@ -379,7 +377,7 @@ namespace NMib::NBuildSystem
 								Format = Format.f_Replace("{F}", "{6}");
 								Format = Format.f_Replace("{WD}", "{7}");
 
-								static constexpr const ch8 *c_WeekDays[] =
+								static constexpr ch8 const *c_WeekDays[] =
 									{
 										""
 										, "Monday"
@@ -401,7 +399,8 @@ namespace NMib::NBuildSystem
 								NTime::CTimeConvert::CDateTime DateTime;
 								NTime::CTimeConvert(Time).f_ExtractDateTime(DateTime);
 
-								CStr Ret = CStr::CFormat(Format)
+								CStr Ret
+									= CStr::CFormat(Format)
 									<< DateTime.m_Year
 									<< DateTime.m_Month
 									<< DateTime.m_DayOfMonth
@@ -450,12 +449,7 @@ namespace NMib::NBuildSystem
 										DMibNeverGetHere;
 								}
 
-								return CUniversallyUniqueIdentifier
-									(
-										EUniversallyUniqueIdentifierGenerate_StringHash
-										, g_GeneratorFunctionUUIDHashUUIDNamespace
-										, _Params[0].f_String()
-									)
+								return CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorFunctionUUIDHashUUIDNamespace, _Params[0].f_String())
 									.f_GetAsString(UUIDFormat)
 								;
 							}
@@ -467,12 +461,7 @@ namespace NMib::NBuildSystem
 						gc_ConstString_HashSHA256
 						, CBuiltinFunction
 						{
-							fg_FunctionType
-							(
-								g_String
-								, fg_FunctionParam(g_String, gc_ConstString__StringToHash)
-								, fg_FunctionParam(fg_Optional(g_Integer), gc_ConstString__Length, g_Optional)
-							)
+							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__StringToHash), fg_FunctionParam(fg_Optional(g_Integer), gc_ConstString__Length, g_Optional))
 							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								umint HashLen = 64;
@@ -495,11 +484,7 @@ namespace NMib::NBuildSystem
 						gc_ConstString_IsDefined
 						, CBuiltinFunction
 						{
-							fg_FunctionType
-							(
-								g_Boolean
-								, fg_FunctionParam(g_String, gc_ConstString__Property)
-							)
+							fg_FunctionType(g_Boolean, fg_FunctionParam(g_String, gc_ConstString__Property))
 							, [this](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								CPropertyKey PropertyKey = CPropertyKey::fs_FromString(mp_StringCache, _Params[0].f_String(), _Context);
@@ -515,15 +500,17 @@ namespace NMib::NBuildSystem
 						gc_ConstString_Switch
 						, CBuiltinFunction
 						{
-							fg_FunctionType
-							(
-								g_Any
-								, fg_FunctionParam(g_Any, gc_ConstString__Value)
-								, fg_FunctionParam(g_Any, gc_ConstString_p_SwitchValues, g_Ellipsis)
-							)
+							fg_FunctionType(g_Any, fg_FunctionParam(g_Any, gc_ConstString__Value), fg_FunctionParam(g_Any, gc_ConstString_p_SwitchValues, g_Ellipsis))
 							, FEvalPropertyFunctionLazy
 							(
-								[](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CFunctionCall const &_FunctionCall, CBuildSystem::CBuiltinFunction const &_Function) -> CEJsonSorted
+								[]
+								(
+									CBuildSystem const &_This
+									, CBuildSystem::CEvalPropertyValueContext &_Context
+									, CBuildSystemSyntax::CFunctionCall const &_FunctionCall
+									, CBuildSystem::CBuiltinFunction const &_Function
+								)
+								-> CEJsonSorted
 								{
 									return _This.fp_SwitchValuesLazy(ESwitchType_Bare, _Context, _FunctionCall);
 								}
@@ -545,7 +532,14 @@ namespace NMib::NBuildSystem
 							)
 							, FEvalPropertyFunctionLazy
 							(
-								[](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CFunctionCall const &_FunctionCall, CBuildSystem::CBuiltinFunction const &_Function) -> CEJsonSorted
+								[]
+								(
+									CBuildSystem const &_This
+									, CBuildSystem::CEvalPropertyValueContext &_Context
+									, CBuildSystemSyntax::CFunctionCall const &_FunctionCall
+									, CBuildSystem::CBuiltinFunction const &_Function
+								)
+								-> CEJsonSorted
 								{
 									return _This.fp_SwitchValuesLazy(ESwitchType_Error, _Context, _FunctionCall);
 								}
@@ -567,7 +561,14 @@ namespace NMib::NBuildSystem
 							)
 							, FEvalPropertyFunctionLazy
 							(
-								[](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CFunctionCall const &_FunctionCall, CBuildSystem::CBuiltinFunction const &_Function) -> CEJsonSorted
+								[]
+								(
+									CBuildSystem const &_This
+									, CBuildSystem::CEvalPropertyValueContext &_Context
+									, CBuildSystemSyntax::CFunctionCall const &_FunctionCall
+									, CBuildSystem::CBuiltinFunction const &_Function
+								)
+								-> CEJsonSorted
 								{
 									return _This.fp_SwitchValuesLazy(ESwitchType_Default, _Context, _FunctionCall);
 								}

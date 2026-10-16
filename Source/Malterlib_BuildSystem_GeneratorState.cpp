@@ -50,10 +50,7 @@ namespace NMib::NBuildSystem
 						{
 							_BuildSystem.f_OutputConsole
 								(
-									"Dependency check: Regenerating build system because file digest changed ({} != {}): {}{\n}"_f
-									<< *pDigest
-									<< *m_pDigest
-									<< FileName
+									"Dependency check: Regenerating build system because file digest changed ({} != {}): {}{\n}"_f << *pDigest << *m_pDigest << FileName
 								)
 							;
 						}

@@ -11,39 +11,39 @@ namespace NMib::NContainer
 	using namespace NBuildSystem;
 	using namespace NStr;
 
-	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseEvalStringString(NStr::CStr &o_Key, uch8 const *&o_pParse)
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseEvalStringString(NStr::CStr &o_Key, uch8 const * &o_pParse)
 	{
 		auto pParse = o_pParse;
 		auto pParseStart = pParse;
 		CStr TempKey;
 		if
+		(
+			!fg_ParseJsonString<'`', NEncoding::NJson::EParseJsonStringFlag_AllowMultiLine>
 			(
-				!fg_ParseJsonString<'`', NEncoding::NJson::EParseJsonStringFlag_AllowMultiLine>
-				(
-					TempKey
-					, pParse
-					, *this
-					, [&](uch8 const *&o_pParse) -> bool
+				TempKey
+				, pParse
+				, *this
+				, [&](uch8 const * &o_pParse) -> bool
+				{
+					auto *pParse = o_pParse;
+					if (*pParse != '@')
+						return false;
+
+					++pParse;
+					if (*pParse == '@')
 					{
-						auto *pParse = o_pParse;
-						if (*pParse != '@')
-							return false;
-
-						++pParse;
-						if (*pParse == '@')
-						{
-							o_pParse = pParse;
-							return false;
-						}
-
-						fg_ParseWhiteSpace(pParse);
-						f_ParseExpression(pParse, EParseExpressionFlag_None);
-
 						o_pParse = pParse;
-						return true;
+						return false;
 					}
-				)
+
+					fg_ParseWhiteSpace(pParse);
+					f_ParseExpression(pParse, EParseExpressionFlag_None);
+
+					o_pParse = pParse;
+					return true;
+				}
 			)
+		)
 		{
 			f_ThrowError("End of eval string character ` not found for string", pParseStart);
 		}
@@ -54,15 +54,8 @@ namespace NMib::NContainer
 	}
 
 	template <>
-	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseKey
-		<
-			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey
-			, CBuildSystemSyntax::CRootValue>::CJsonParseContext
-		>
-		(
-			CStr &o_Key
-			, uch8 const *&o_pParse
-		)
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>
+		::CJsonParseContext::f_ParseKey<TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext>(CStr &o_Key, uch8 const * &o_pParse)
 	{
 		auto pParse = o_pParse;
 		if (*pParse == '`')
@@ -141,38 +134,34 @@ namespace NMib::NContainer
 		CParseContext::fs_GenerateString<CJsonParseContext>(o_String, _Value);
 	}
 
-	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::fs_GenerateKeyString
-		<
-			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext
-			, CStr::CAppender
-			, CStr
-		>
-		(CStr::CAppender &o_String, CStr const &_Key)
+	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext
+		::fs_GenerateKeyString<TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext, CStr::CAppender, CStr>
+		(
+			CStr::CAppender &o_String
+			, CStr const &_Key
+		)
 	;
-	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::fs_GenerateKeyString
-		<
-			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext
-			, CStrNonTracked::CAppender
-			, CStr
-		>
-		(CStrNonTracked::CAppender &o_String, CStr const &_Key)
+	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext
+		::fs_GenerateKeyString<TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext, CStrNonTracked::CAppender, CStr>
+		(
+			CStrNonTracked::CAppender &o_String
+			, CStr const &_Key
+		)
 	;
 
-	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::fs_GenerateString
-		<
-			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext
-			, CStrNonTracked::CAppender
-			, CStr
-		>
-		(CStrNonTracked::CAppender &o_String, CStr const &_Value)
+	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext
+		::fs_GenerateString<TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext, CStrNonTracked::CAppender, CStr>
+		(
+			CStrNonTracked::CAppender &o_String
+			, CStr const &_Value
+		)
 	;
-	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::fs_GenerateString
-		<
-			TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext
-			, CStr::CAppender
-			, CStr
-		>
-		(CStr::CAppender &o_String, CStr const &_Value)
+	template void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext
+		::fs_GenerateString<TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext, CStr::CAppender, CStr>
+		(
+			CStr::CAppender &o_String
+			, CStr const &_Value
+		)
 	;
 #endif
 }

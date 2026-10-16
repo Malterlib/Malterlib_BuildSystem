@@ -55,25 +55,11 @@ namespace NMib::NBuildSystem
 			if (_pBuildSystem->f_GetGenerateOptions().m_bForceUpdateRemotes)
 				FetchParams.f_Insert("--force");
 
-			auto Result = co_await _Launches.f_Launch
-				(
-					_Repo
-					, FetchParams
-					, fg_FetchEnvironment(*_pBuildSystem)
-					, CProcessLaunchActor::ESimpleLaunchFlag_None
-				)
-			;
+			auto Result = co_await _Launches.f_Launch(_Repo, FetchParams, fg_FetchEnvironment(*_pBuildSystem), CProcessLaunchActor::ESimpleLaunchFlag_None);
 
 			if (Result.m_ExitCode)
 			{
-				_Launches.f_Output
-					(
-						EOutputType_Error
-						, _Repo
-						, "Error fetching remotes: {}\n"_f
-						<< Result.f_GetCombinedOut().f_Trim()
-					)
-				;
+				_Launches.f_Output(EOutputType_Error, _Repo, "Error fetching remotes: {}\n"_f << Result.f_GetCombinedOut().f_Trim());
 				co_return DMibErrorInstance("Could not fetch remote");
 			}
 
@@ -90,13 +76,7 @@ namespace NMib::NBuildSystem
 
 			for (auto &Remote : _Remotes)
 			{
-				_Launches.f_Launch
-					(
-						_Repo
-						, {"merge-base", "--is-ancestor", "{}/{}"_f << Remote << _Branches.m_Current, _Branches.m_Current}
-						, {}
-						, CProcessLaunchActor::ESimpleLaunchFlag_None
-					)
+				_Launches.f_Launch(_Repo, {"merge-base", "--is-ancestor", "{}/{}"_f << Remote << _Branches.m_Current, _Branches.m_Current}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None)
 					> CanPushResultsMap[Remote]
 				;
 			}
@@ -117,11 +97,7 @@ namespace NMib::NBuildSystem
 							(
 								EOutputType_Error
 								, _Repo
-								, "Cannot fast forward to {2}{}/{}{3}\n"_f
-								<< Remote
-								<< _Branches.m_Current
-								<< Colors.f_RepositoryName()
-								<< Colors.f_Default()
+								, "Cannot fast forward to {2}{}/{}{3}\n"_f << Remote << _Branches.m_Current << Colors.f_RepositoryName() << Colors.f_Default()
 							)
 						;
 						bAllFastForward = false;
@@ -140,12 +116,7 @@ namespace NMib::NBuildSystem
 								(
 									EOutputType_Error
 									, _Repo
-									, "Error determining fast forward to {3}{}/{}{4}: {}\n"_f
-									<< Remote
-									<< _Branches.m_Current
-									<< Output
-									<< Colors.f_RepositoryName()
-									<< Colors.f_Default()
+									, "Error determining fast forward to {3}{}/{}{4}: {}\n"_f << Remote << _Branches.m_Current << Output << Colors.f_RepositoryName() << Colors.f_Default()
 								)
 							;
 							bAllFastForward = false;
@@ -173,26 +144,12 @@ namespace NMib::NBuildSystem
 		TCFuture<bool> fg_HasRemoteBranches(CGitLaunches _Launches, CRepository _Repo, CStr _Remote)
 		{
 			{
-				auto Result = co_await _Launches.f_Launch
-					(
-						_Repo
-						, {"for-each-ref", "--count=1", "refs/remotes/{}/"_f << _Remote}
-						, {}
-						, CProcessLaunchActor::ESimpleLaunchFlag_None
-					)
-				;
+				auto Result = co_await _Launches.f_Launch(_Repo, {"for-each-ref", "--count=1", "refs/remotes/{}/"_f << _Remote}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 				if (Result.m_ExitCode == 0 && !Result.f_GetStdOut().f_Trim().f_IsEmpty())
 					co_return true;
 			}
 
-			auto Result = co_await _Launches.f_Launch
-				(
-					_Repo
-					, {"ls-remote", "--exit-code", "--heads", _Remote}
-					, {}
-					, CProcessLaunchActor::ESimpleLaunchFlag_None
-				)
-			;
+			auto Result = co_await _Launches.f_Launch(_Repo, {"ls-remote", "--exit-code", "--heads", _Remote}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 			co_return Result.m_ExitCode == 0;
 		}
 
@@ -552,14 +509,18 @@ namespace NMib::NBuildSystem
 								{
 									g_Dispatch /
 										[
-											Launches, Repo, Colors, Remote
+											Launches
+											, Repo
+											, Colors
+											, Remote
 											, CurrentBranch = Branches.m_Current
 											, Params
 											, bHasTagInfo = (pTagInfo != nullptr)
 											, TagInfo = pTagInfo ? *pTagInfo : CTagInfo{}
 											, bHasSeed = (pSeedDefault != nullptr)
 											, SeedDefault = pSeedDefault ? *pSeedDefault : CStr{}
-										]() -> TCFuture<void>
+										]
+										() -> TCFuture<void>
 										{
 											if (bHasSeed)
 											{
@@ -578,10 +539,7 @@ namespace NMib::NBuildSystem
 														(
 															EOutputType_Error
 															, Repo
-															, "Failed to seed default branch {} on {}: {}"_f
-															<< SeedDefault
-															<< Remote
-															<< SeedResult.f_GetCombinedOut().f_Trim()
+															, "Failed to seed default branch {} on {}: {}"_f << SeedDefault << Remote << SeedResult.f_GetCombinedOut().f_Trim()
 														)
 													;
 
@@ -659,9 +617,7 @@ namespace NMib::NBuildSystem
 															(
 																EOutputType_Error
 																, Repo
-																, "Failed to push tag {}: {}"_f
-																<< TagInfo.m_TagName
-																<< TagPushResult.f_GetCombinedOut().f_Trim()
+																, "Failed to push tag {}: {}"_f << TagInfo.m_TagName << TagPushResult.f_GetCombinedOut().f_Trim()
 															)
 														;
 
@@ -670,15 +626,7 @@ namespace NMib::NBuildSystem
 												}
 												else if (TagResult.f_GetCombinedOut().f_Find("already exists") < 0)
 												{
-													Launches.f_Output
-														(
-															EOutputType_Error
-															, Repo
-															, "Failed to create tag {}: {}"_f
-															<< TagInfo.m_TagName
-															<< TagResult.f_GetCombinedOut().f_Trim()
-														)
-													;
+													Launches.f_Output(EOutputType_Error, Repo, "Failed to create tag {}: {}"_f << TagInfo.m_TagName << TagResult.f_GetCombinedOut().f_Trim());
 
 													co_return DMibErrorInstance("Error status");
 												}

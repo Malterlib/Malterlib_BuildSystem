@@ -19,7 +19,7 @@ namespace NMib::NBuildSystem
 
 	void CGroupInfo::fr_PruneEmpty()
 	{
-		for (auto iChild = m_Children.f_GetIterator(); iChild; )
+		for (auto iChild = m_Children.f_GetIterator(); iChild;)
 		{
 			auto *pChild = iChild.f_GetCurrent();
 			++iChild;

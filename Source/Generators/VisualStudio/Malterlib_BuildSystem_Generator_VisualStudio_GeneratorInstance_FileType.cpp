@@ -8,12 +8,8 @@
 
 namespace NMib::NBuildSystem::NVisualStudio
 {
-	TCUnsafeFuture<TCMap<CStr, CGeneratorSettingsVSType>> CGeneratorInstance::f_GenerateProjectFile_FileTypes
-		(
-			CProject &_Project
-			, CProjectState &_ProjectState
-			, TCMap<CStr, CCompileType> const &_CompileTypes
-		) const
+	auto CGeneratorInstance::f_GenerateProjectFile_FileTypes(CProject &_Project, CProjectState &_ProjectState, TCMap<CStr, CCompileType> const &_CompileTypes) const
+		-> TCUnsafeFuture<TCMap<CStr, CGeneratorSettingsVSType>>
 	{
 		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
@@ -161,7 +157,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 			, CProjectState &_ProjectState
 			, CProjectXMLState &_XMLState
 			, TCMap<CStr, CGeneratorSettingsVSType> &&_Compile
-		) const
+		)
+		const
 	{
 		for (auto &SettingsVSType : _Compile)
 			CGeneratorSettings::fs_AddToXMLFiles<true, false>(_XMLState, _Project, fg_Move(SettingsVSType.m_SharedSettings), nullptr);

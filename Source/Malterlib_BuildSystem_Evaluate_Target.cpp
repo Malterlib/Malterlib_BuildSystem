@@ -5,13 +5,7 @@
 
 namespace NMib::NBuildSystem
 {
-	void CBuildSystem::f_EvaluateTarget
-		(
-			CBuildSystemData &_Destination
-			, TCMap<CStr, CEntityMutablePointer> const &_Targets
-			, CEntity &_Entity
-			, TCSet<CStr> &_AlreadyAddedGroups
-		) const
+	void CBuildSystem::f_EvaluateTarget(CBuildSystemData &_Destination, TCMap<CStr, CEntityMutablePointer> const &_Targets, CEntity &_Entity, TCSet<CStr> &_AlreadyAddedGroups) const
 	{
 		TCLinkedList<CEntity *> ToEval;
 		fp_EvaluateTarget(_Destination, _Targets, ToEval, _Entity, _AlreadyAddedGroups);
@@ -45,8 +39,7 @@ namespace NMib::NBuildSystem
 						return &ChildEntity;
 				}
 				break;
-			default:
-				break;
+			default: break;
 			}
 		}
 		return nullptr;
@@ -56,8 +49,7 @@ namespace NMib::NBuildSystem
 	{
 		TCVector<CStr> Dependencies;
 
-		TCFunction<void (CEntity &_Entity)> fFindDependencies
-			= [&](CEntity &_Entity)
+		TCFunction<void (CEntity &_Entity)> fFindDependencies = [&](CEntity &_Entity)
 			{
 				for (auto iEntity = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iEntity; ++iEntity)
 				{
@@ -79,8 +71,7 @@ namespace NMib::NBuildSystem
 								Dependencies.f_Insert(Key.m_Name.f_ConstantString());
 						}
 						break;
-					default:
-						break;
+					default: break;
 					}
 				}
 			}
@@ -94,13 +85,7 @@ namespace NMib::NBuildSystem
 		for (auto &Dependency : Dependencies)
 			DependenciesJson.f_Insert(Dependency);
 
-		f_AddExternalProperty
-			(
-				*_pTargetOuterEntity
-				, gc_ConstKey_Target_DependenciesNames
-				, fg_Move(DependenciesJson)
-			)
-		;
+		f_AddExternalProperty(*_pTargetOuterEntity, gc_ConstKey_Target_DependenciesNames, fg_Move(DependenciesJson));
 	}
 
 	void CBuildSystem::fp_EvaluateTarget
@@ -110,7 +95,8 @@ namespace NMib::NBuildSystem
 			, TCLinkedList<CEntity *> &_ToEval
 			, CEntity &_Entity
 			, TCSet<CStr> &_AlreadyAddedGroups
-		) const
+		)
+		const
 	{
 		auto const &Name = _Entity.f_GetKeyName();
 		auto &EntityData = _Entity.f_Data();
@@ -153,7 +139,6 @@ namespace NMib::NBuildSystem
 
 				pParent = pNewEntity;
 			}
-
 
 			CEntity const *pSource;
 			pSource = &Target;

@@ -7,12 +7,7 @@
 
 namespace NMib::NBuildSystem::NXcode
 {
-	void CGeneratorInstance::fp_SetEvaluatedValuesCompile
-		(
-			CEntityMutablePointer const &_Config
-			, bool _bFile
-			, CConfigResultCompile &o_Result
-		) const
+	void CGeneratorInstance::fp_SetEvaluatedValuesCompile(CEntityMutablePointer const &_Config, bool _bFile, CConfigResultCompile &o_Result) const
 	{
 		auto pTopConfig = _Config.f_Get();
 
@@ -136,12 +131,7 @@ namespace NMib::NBuildSystem::NXcode
 		}
 	}
 
-	void CGeneratorInstance::fp_SetEvaluatedValuesTarget
-		(
-			CEntityMutablePointer const &_Entity
-			, CGeneratorInstance::CConfigResultTarget &o_Result
-			, CStr const &_Name
-		) const
+	void CGeneratorInstance::fp_SetEvaluatedValuesTarget(CEntityMutablePointer const &_Entity, CGeneratorInstance::CConfigResultTarget &o_Result, CStr const &_Name) const
 	{
 		auto *pConfig = _Entity.f_Get();
 		auto pTopConfig = pConfig;
@@ -158,13 +148,7 @@ namespace NMib::NBuildSystem::NXcode
 			}
 
 			CBuildSystemPropertyInfo PropertyInfo;
-			auto Value = m_BuildSystem.f_EvaluateEntityProperty
-				(
-					*pTopConfig
-					, gc_ConstKey_GeneratorSetting_Target
-					, PropertyInfo
-				)
-			;
+			auto Value = m_BuildSystem.f_EvaluateEntityProperty(*pTopConfig, gc_ConstKey_GeneratorSetting_Target, PropertyInfo);
 			auto ValueMove = Value.f_Move();
 
 			auto Cleanup = g_OnScopeExit / [&]
@@ -258,7 +242,8 @@ namespace NMib::NBuildSystem::NXcode
 			, CPropertyKeyReference const &_PropertyKey
 			, EEJsonType _ExpectedType
 			, bool _bOptional
-		) const
+		)
+		const
 		-> TCMap<CConfiguration, CSingleValue>
 	{
 		TCMap<CConfiguration, CSingleValue> RetValues;
@@ -291,7 +276,8 @@ namespace NMib::NBuildSystem::NXcode
 			, CPropertyKeyReference const &_PropertyKey
 			, EEJsonType _ExpectedType
 			, bool _bOptional
-		) const
+		)
+		const
 		-> CSingleValue
 	{
 		auto pEntity = _Configs.f_FindEqual(_Configuration);
@@ -301,12 +287,7 @@ namespace NMib::NBuildSystem::NXcode
 			if (!_Configs.f_IsEmpty())
 				Position = _Configs.f_FindSmallest()->f_Get()->f_Data().m_Position;
 
-			m_BuildSystem.fs_ThrowError
-				(
-					Position
-					, "When getting {}.{} Could not find config '{}' in enabled configs: {vs}"_f << _PropertyKey << _Configuration << _Configs.f_KeySet()
-				)
-			;
+			m_BuildSystem.fs_ThrowError(Position, "When getting {}.{} Could not find config '{}' in enabled configs: {vs}"_f << _PropertyKey << _Configuration << _Configs.f_KeySet());
 		}
 
 		CBuildSystemPropertyInfo PropertyInfo;
@@ -330,7 +311,8 @@ namespace NMib::NBuildSystem::NXcode
 			, CPropertyKeyReference const &_PropertyKey
 			, EEJsonType _ExpectedType
 			, bool _bOptional
-		) const
+		)
+		const
 	{
 		bool bFirst = true;
 

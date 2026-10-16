@@ -30,18 +30,106 @@ namespace NMib::NBuildSystem
 				}
 			;
 
-			fAddFunction(gc_Str<"ColorDefault">, [](auto &&_Enc){return _Enc.f_Default();});
-			fAddFunction(gc_Str<"ColorStatusNormal">, [](auto &&_Enc){return _Enc.f_StatusNormal();});
-			fAddFunction(gc_Str<"ColorStatusWarning">, [](auto &&_Enc){return _Enc.f_StatusWarning();});
-			fAddFunction(gc_Str<"ColorStatusError">, [](auto &&_Enc){return _Enc.f_StatusError();});
-			fAddFunction(gc_Str<"ColorBold">, [](auto &&_Enc){return _Enc.f_Bold();});
-			fAddFunction(gc_Str<"ColorNotBold">, [](auto &&_Enc){return _Enc.f_NotBold();});
-			fAddFunction(gc_Str<"ColorItalic">, [](auto &&_Enc){return _Enc.f_Italic();});
-			fAddFunction(gc_Str<"ColorNotItalic">, [](auto &&_Enc){return _Enc.f_NotItalic();});
+			fAddFunction
+				(
+					gc_Str<"ColorDefault">
+					, [](auto &&_Enc)
+					{
+						return _Enc.f_Default();
+					}
+				)
+			;
+			fAddFunction
+				(
+					gc_Str<"ColorStatusNormal">
+					, [](auto &&_Enc)
+					{
+						return _Enc.f_StatusNormal();
+					}
+				)
+			;
+			fAddFunction
+				(
+					gc_Str<"ColorStatusWarning">
+					, [](auto &&_Enc)
+					{
+						return _Enc.f_StatusWarning();
+					}
+				)
+			;
+			fAddFunction
+				(
+					gc_Str<"ColorStatusError">
+					, [](auto &&_Enc)
+					{
+						return _Enc.f_StatusError();
+					}
+				)
+			;
+			fAddFunction
+				(
+					gc_Str<"ColorBold">
+					, [](auto &&_Enc)
+					{
+						return _Enc.f_Bold();
+					}
+				)
+			;
+			fAddFunction
+				(
+					gc_Str<"ColorNotBold">
+					, [](auto &&_Enc)
+					{
+						return _Enc.f_NotBold();
+					}
+				)
+			;
+			fAddFunction
+				(
+					gc_Str<"ColorItalic">
+					, [](auto &&_Enc)
+					{
+						return _Enc.f_Italic();
+					}
+				)
+			;
+			fAddFunction
+				(
+					gc_Str<"ColorNotItalic">
+					, [](auto &&_Enc)
+					{
+						return _Enc.f_NotItalic();
+					}
+				)
+			;
 
-			fAddFunction(gc_Str<"ColorSyntaxNumber">, [](auto &&_Enc){return _Enc.f_SyntaxColor(NCommandLine::CAnsiEncoding::ESyntaxColor_Number);});
-			fAddFunction(gc_Str<"ColorSyntaxString">, [](auto &&_Enc){return _Enc.f_SyntaxColor(NCommandLine::CAnsiEncoding::ESyntaxColor_String);});
-			fAddFunction(gc_Str<"ColorSyntaxConstant">, [](auto &&_Enc){return _Enc.f_SyntaxColor(NCommandLine::CAnsiEncoding::ESyntaxColor_Constant);});
+			fAddFunction
+				(
+					gc_Str<"ColorSyntaxNumber">
+					, [](auto &&_Enc)
+					{
+						return _Enc.f_SyntaxColor(NCommandLine::CAnsiEncoding::ESyntaxColor_Number);
+					}
+				)
+			;
+			fAddFunction
+				(
+					gc_Str<"ColorSyntaxString">
+					, [](auto &&_Enc)
+					{
+						return _Enc.f_SyntaxColor(NCommandLine::CAnsiEncoding::ESyntaxColor_String);
+					}
+				)
+			;
+			fAddFunction
+				(
+					gc_Str<"ColorSyntaxConstant">
+					, [](auto &&_Enc)
+					{
+						return _Enc.f_SyntaxColor(NCommandLine::CAnsiEncoding::ESyntaxColor_Constant);
+					}
+				)
+			;
 		}
 
 		f_RegisterFunctions(fg_Move(Functions));
@@ -159,11 +247,7 @@ namespace NMib::NBuildSystem
 						gc_Str<"ColorStrip">
 						, CBuiltinFunction
 						{
-							fg_FunctionType
-							(
-								g_String
-								, fg_FunctionParam(g_String, gc_Str<"_String">)
-							)
+							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_Str<"_String">))
 							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								return CAnsiEncodingParse::fs_StripEncoding(_Params[0].f_String());
@@ -174,6 +258,5 @@ namespace NMib::NBuildSystem
 				}
 			)
 		;
-
 	}
 }

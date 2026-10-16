@@ -24,12 +24,12 @@ namespace NMib::NBuildSystem
 		, m_EvaluatedProperties(fg_Move(_Other.m_EvaluatedProperties))
 	{
 #ifdef DMibBuildSystem_DebugReferences
-#ifdef DMibBuildSystem_DebugReferencesAdvanced
+#	ifdef DMibBuildSystem_DebugReferencesAdvanced
 		{
 			DLock(mp_DebugSetLock);
 			mp_DebugSet[this];
 		}
-#endif
+#	endif
 		this->m_RefCount.f_Increase(DIfRefCountDebugging(m_DebugSelfRef));
 #endif
 	}
@@ -43,12 +43,12 @@ namespace NMib::NBuildSystem
 			_pParent->m_ChildEntitiesOrdered.f_Insert(*this);
 
 #ifdef DMibBuildSystem_DebugReferences
-#ifdef DMibBuildSystem_DebugReferencesAdvanced
+#	ifdef DMibBuildSystem_DebugReferencesAdvanced
 		{
 			DLock(mp_DebugSetLock);
 			mp_DebugSet[this];
 		}
-#endif
+#	endif
 		this->m_RefCount.f_Increase(DIfRefCountDebugging(m_DebugSelfRef));
 #endif
 	}
@@ -73,7 +73,7 @@ namespace NMib::NBuildSystem
 		}
 		m_ChildEntitiesMap.f_Clear();
 		umint RefCount = this->m_RefCount.f_Decrease(DIfRefCountDebugging(m_DebugSelfRef));
-#if DMibConfig_RefCountDebugging
+#	if DMibConfig_RefCountDebugging
 		if (RefCount != 1)
 		{
 			DMibLock(this->m_RefCount.m_Debug->m_Lock);
@@ -85,8 +85,8 @@ namespace NMib::NBuildSystem
 				++iCallstack;
 			}
 		}
-#endif
-#ifdef DMibBuildSystem_DebugReferencesAdvanced
+#	endif
+#	ifdef DMibBuildSystem_DebugReferencesAdvanced
 		if (RefCount > 1)
 		{
 			DLock(mp_DebugSetLock);
@@ -99,7 +99,7 @@ namespace NMib::NBuildSystem
 			DLock(mp_DebugSetLock);
 			mp_DebugSet.f_Remove(this);
 		}
-#endif
+#	endif
 		DCheck(RefCount == 1)(RefCount)(f_GetPath());
 		if (RefCount != 1)
 			DMibPDebugBreak;
@@ -117,12 +117,12 @@ namespace NMib::NBuildSystem
 			_pParent->m_ChildEntitiesOrdered.f_Insert(*this);
 
 #ifdef DMibBuildSystem_DebugReferences
-#ifdef DMibBuildSystem_DebugReferencesAdvanced
+#	ifdef DMibBuildSystem_DebugReferencesAdvanced
 		{
 			DLock(mp_DebugSetLock);
 			mp_DebugSet[this];
 		}
-#endif
+#	endif
 		this->m_RefCount.f_Increase(DIfRefCountDebugging(m_DebugSelfRef));
 #endif
 
@@ -192,14 +192,7 @@ namespace NMib::NBuildSystem
 			(
 				[&](TCMap<CEntityKey, CEntity>::CConditionalMapper &_Mapper) -> bool
 				{
-					auto Mapped = _Mapper
-						(
-							iChild->f_GetKey()
-							, *iChild
-							, this
-							, _Flags | EEntityCopyFlag_CopyChildren
-						)
-					;
+					auto Mapped = _Mapper(iChild->f_GetKey(), *iChild, this, _Flags | EEntityCopyFlag_CopyChildren);
 					if ((_Flags & EEntityCopyFlag_MergeEntities) && !Mapped.f_WasCreated())
 					{
 						auto &NewChild = *Mapped;
@@ -238,10 +231,10 @@ namespace NMib::NBuildSystem
 					}
 
 					if
-						(
-							auto *pDefinition = pParent->f_ChildDependentData().m_ChildrenVariableDefinitions.f_FindEqual(Key);
-							pDefinition && pDefinition->f_FindEqual(Definition.m_Type.m_Position)
-						)
+					(
+						auto *pDefinition = pParent->f_ChildDependentData().m_ChildrenVariableDefinitions.f_FindEqual(Key)
+						; pDefinition && pDefinition->f_FindEqual(Definition.m_Type.m_Position)
+					)
 					{
 						continue;
 					}
@@ -585,10 +578,10 @@ namespace NMib::NBuildSystem
 	}
 
 #ifdef DMibBuildSystem_DebugReferences
-#ifdef DMibBuildSystem_DebugReferencesAdvanced
+#	ifdef DMibBuildSystem_DebugReferencesAdvanced
 	CMutual CEntity::mp_DebugSetLock;
 	TCSet<CEntity const *> CEntity::mp_DebugSet;
-#endif
+#	endif
 #endif
 
 	void CEntity::f_CheckChildren() const
@@ -701,18 +694,30 @@ namespace NMib::NBuildSystem
 
 	EEntityType fg_EntityTypeFromStr(CStr const &_String)
 	{
-		if (_String == gc_ConstString_Root.m_String) return EEntityType_Root;
-		else if (_String == gc_ConstString_Target.m_String) return EEntityType_Target;
-		else if (_String == gc_ConstString_Group.m_String) return EEntityType_Group;
-		else if (_String == gc_ConstString_Workspace.m_String) return EEntityType_Workspace;
-		else if (_String == gc_ConstString_File.m_String) return EEntityType_File;
-		else if (_String == gc_ConstString_Dependency.m_String) return EEntityType_Dependency;
-		else if (_String == gc_ConstString_GeneratorSetting.m_String) return EEntityType_GeneratorSetting;
-		else if (_String == gc_ConstString_GenerateFile.m_String) return EEntityType_GenerateFile;
-		else if (_String == gc_ConstString_Import.m_String) return EEntityType_Import;
-		else if (_String == gc_ConstString_Repository.m_String) return EEntityType_Repository;
-		else if (_String == gc_ConstString_CreateTemplate.m_String) return EEntityType_CreateTemplate;
-		else return EEntityType_Invalid;
+		if (_String == gc_ConstString_Root.m_String)
+			return EEntityType_Root;
+		else if (_String == gc_ConstString_Target.m_String)
+			return EEntityType_Target;
+		else if (_String == gc_ConstString_Group.m_String)
+			return EEntityType_Group;
+		else if (_String == gc_ConstString_Workspace.m_String)
+			return EEntityType_Workspace;
+		else if (_String == gc_ConstString_File.m_String)
+			return EEntityType_File;
+		else if (_String == gc_ConstString_Dependency.m_String)
+			return EEntityType_Dependency;
+		else if (_String == gc_ConstString_GeneratorSetting.m_String)
+			return EEntityType_GeneratorSetting;
+		else if (_String == gc_ConstString_GenerateFile.m_String)
+			return EEntityType_GenerateFile;
+		else if (_String == gc_ConstString_Import.m_String)
+			return EEntityType_Import;
+		else if (_String == gc_ConstString_Repository.m_String)
+			return EEntityType_Repository;
+		else if (_String == gc_ConstString_CreateTemplate.m_String)
+			return EEntityType_CreateTemplate;
+		else
+			return EEntityType_Invalid;
 	}
 
 	CStr const &fg_EntityTypeToStr(EEntityType _Type)
@@ -730,7 +735,9 @@ namespace NMib::NBuildSystem
 		case EEntityType_Import: return gc_ConstString_Import;
 		case EEntityType_Repository: return gc_ConstString_Repository;
 		case EEntityType_CreateTemplate: return gc_ConstString_CreateTemplate;
-		default: DMibNeverGetHere; return gc_ConstString_Empty;
+		default:
+			DMibNeverGetHere;
+			return gc_ConstString_Empty;
 		}
 	}
 }

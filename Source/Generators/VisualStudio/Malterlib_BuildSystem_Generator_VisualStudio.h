@@ -233,7 +233,6 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 	private:
 		CStr mp_GUID;
-
 	};
 
 	struct CPrefixHeader
@@ -334,7 +333,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		class CCompare
 		{
 		public:
-			inline_small CStr const &operator() (CSolution const &_Node) const;
+			inline_small CStr const &operator () (CSolution const &_Node) const;
 		};
 
 		CStr const &f_GetName() const;
@@ -439,14 +438,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 			TCSet<CConfiguration> m_EnabledConfigs;
 		};
 
-		CGeneratorInstance
-			(
-				CBuildSystem const &_BuildSystem
-				, CBuildSystemData const &_BuildSystemData
-				, TCMap<CPropertyKey, CEJsonSorted> const &_InitialValues
-				, CStr const &_OutputDir
-			)
-		;
+		CGeneratorInstance(CBuildSystem const &_BuildSystem, CBuildSystemData const &_BuildSystemData, TCMap<CPropertyKey, CEJsonSorted> const &_InitialValues, CStr const &_OutputDir);
 		~CGeneratorInstance();
 
 		virtual CValuePotentiallyByRef f_GetBuiltin(CBuildSystemUniquePositions *_pStorePositions, CStr const &_Value, bool &o_bSuccess) const override;
@@ -462,12 +454,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 		TCUnsafeFuture<TCMap<CStr, CCompileType>> f_GenerateProjectFile_File(CProject &_Project, CProjectState &_ProjectState) const;
 		void f_GenerateProjectFile_AddPrefixHeaders(CProject &_Project, CProjectState &_ProjectState) const;
 		TCUnsafeFuture<void> f_GenerateProjectFile_Dependency(CProject &_Project, CProjectState &_ProjectState) const;
-		TCUnsafeFuture<TCMap<CStr, CGeneratorSettingsVSType>> f_GenerateProjectFile_FileTypes
-			(
-				CProject &_Project
-				, CProjectState &_ProjectState
-				, TCMap<CStr, CCompileType> const &_CompileTypes
-			) const
+		auto f_GenerateProjectFile_FileTypes(CProject &_Project, CProjectState &_ProjectState, TCMap<CStr, CCompileType> const &_CompileTypes) const
+			-> TCUnsafeFuture<TCMap<CStr, CGeneratorSettingsVSType>>
 		;
 		void f_GenerateProjectFile_AddToXML_FileTypes(CProject &_Project, CProjectState &_ProjectState, CProjectXMLState &_XMLState, TCMap<CStr, CGeneratorSettingsVSType> &&_Compile) const;
 		void f_GenerateProjectFile_AddToXML_File(CProject &_Project, CProjectState &_ProjectState, CProjectXMLState &_XMLState, TCMap<CStr, CGeneratorSettingsVSType> &_Compile) const;

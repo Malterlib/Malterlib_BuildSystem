@@ -31,13 +31,7 @@ namespace NMib::NBuildSystem::NNinja
 		else
 			ErrorMessage += "\nOld value:\n{}"_f << CStr::fs_ToStr(_OldValue).f_Indent("    ");
 
-		CBuildSystem::fs_ThrowError
-			(
-				_Entry.m_Positions
-				, ErrorMessage
-				, OtherErrors
-			)
-		;
+		CBuildSystem::fs_ThrowError(_Entry.m_Positions, ErrorMessage, OtherErrors);
 	}
 
 	void CRule::f_MergeFrom(CBuildAndRuleEntry const &_Entry, CBuildAndRuleEntry &o_Entry)
@@ -133,7 +127,8 @@ namespace NMib::NBuildSystem::NNinja
 			, CBuildSystem const &_BuildSystem
 			, CRuleAndBuild const &_Other
 			, TCMap<int64, TCVector<TCVariant<CStr, TCVector<CStr>>>> &o_PrioritizedFlags
-		) const
+		)
+		const
 	{
 		for (auto &Entry : _Other.m_Entries)
 		{
@@ -195,13 +190,7 @@ namespace NMib::NBuildSystem::NNinja
 						CGeneratorSettings::fs_PopulateSetting(gc_ConstKey_GeneratorSetting_Compile, EPropertyType_Compile, m_BuildSystem, Entity, Result);
 
 						CBuildSystemPropertyInfo PropertyInfoValidateSettings;
-						m_BuildSystem.f_EvaluateEntityProperty
-							(
-								Entity
-								, gc_ConstKey_GeneratorSetting_CompileValidateSettings
-								, PropertyInfoValidateSettings
-							)
-						;
+						m_BuildSystem.f_EvaluateEntityProperty(Entity, gc_ConstKey_GeneratorSetting_CompileValidateSettings, PropertyInfoValidateSettings);
 
 						pResult->f_FromGeneratorSetting(m_BuildSystem, fg_Move(Result));
 
@@ -233,5 +222,4 @@ namespace NMib::NBuildSystem::NNinja
 		co_return fg_Move(CompileTypes);
 	}
 }
-
 

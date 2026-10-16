@@ -29,12 +29,13 @@ namespace NMib::NContainer
 		(
 			NStr::CStr const &_Error
 			, uch8 const *_pLocation
-		) const
+		)
+		const
 	{
 		NEncoding::NJson::fg_ThrowJsonParseError<CJsonParseContextCatureStringMap>(*this, _Error, _pLocation);
 	}
 
-	CJsonSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseEvalStringToken(uch8 const *&o_pParse)
+	CJsonSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseEvalStringToken(uch8 const * &o_pParse)
 	{
 		auto *pParse = o_pParse;
 		CStr ParsedString;
@@ -59,7 +60,7 @@ namespace NMib::NContainer
 			}
 		;
 
-		auto fParseExpression = [&](uch8 const *&o_pParse) -> bool
+		auto fParseExpression = [&](uch8 const * &o_pParse) -> bool
 			{
 				auto *pParse = o_pParse;
 				if (*pParse != '@')
@@ -83,32 +84,21 @@ namespace NMib::NContainer
 
 		if (*pParse == '`')
 		{
-			if
-				(
-					!fg_ParseJsonString<'`', NEncoding::NJson::EParseJsonStringFlag_AllowMultiLine>
-					(
-						ParsedString
-						, pParse
-						, ParseContext
-						, fParseExpression
-					)
-				)
-			{
+			if (!fg_ParseJsonString<'`', NEncoding::NJson::EParseJsonStringFlag_AllowMultiLine>(ParsedString, pParse, ParseContext, fParseExpression))
 				f_ThrowError("End of eval string character ` not found for string", pParseStart);
-			}
 		}
 		else
 		{
 			if
+			(
+				!fg_ParseJsonString<'`', NEncoding::NJson::EParseJsonStringFlag_AllowMultiLine | NEncoding::NJson::EParseJsonStringFlag_NoQuotes>
 				(
-					!fg_ParseJsonString<'`', NEncoding::NJson::EParseJsonStringFlag_AllowMultiLine | NEncoding::NJson::EParseJsonStringFlag_NoQuotes>
-					(
-						ParsedString
-						, pParse
-						, ParseContext
-						, fParseExpression
-					)
+					ParsedString
+					, pParse
+					, ParseContext
+					, fParseExpression
 				)
+			)
 			{
 				f_ThrowError("End of eval string character ` not found for string", pParseStart);
 			}
@@ -125,7 +115,7 @@ namespace NMib::NContainer
 		return Return;
 	}
 
-	CJsonSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseWildcardStringToken(uch8 const *&o_pParse)
+	CJsonSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseWildcardStringToken(uch8 const * &o_pParse)
 	{
 		auto *pParse = o_pParse;
 		auto pParseStart = pParse;
@@ -242,7 +232,7 @@ namespace NMib::NContainer
 		return fs_CharIsIdentifier(_Char) || _Char == '@';
 	}
 
-	CStr TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseIdentifierLax(uch8 const *&o_pParse)
+	CStr TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseIdentifierLax(uch8 const * &o_pParse)
 	{
 		auto *pParse = o_pParse;
 
@@ -303,7 +293,7 @@ namespace NMib::NContainer
 		return Return;
 	}
 
-	NStr::CStr TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseIdentifierWithNamespace(uch8 const *&o_pParse)
+	NStr::CStr TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseIdentifierWithNamespace(uch8 const * &o_pParse)
 	{
 		auto *pParse = o_pParse;
 
@@ -326,7 +316,11 @@ namespace NMib::NContainer
 		return CStr::fs_Join(Identifiers, "::");
 	}
 
-	CJsonSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseJsonAccessor(uch8 const *&o_pParse, NEncoding::CJsonSorted &&_Param)
+	CJsonSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseJsonAccessor
+		(
+			uch8 const * &o_pParse
+			, NEncoding::CJsonSorted &&_Param
+		)
 	{
 		auto pParse = o_pParse;
 		DMibRequire(*pParse == '<');
@@ -412,11 +406,11 @@ namespace NMib::NContainer
 				if (Param.f_IsInteger())
 					bIsValid = true;
 				else if
-					(
-						Param.f_IsObject()
-						&& Param.f_GetMember(CEJsonConstStrings::mc_Type, EJsonType_String)
-						&& Param.f_GetMember(CEJsonConstStrings::mc_Type)->f_String() == gc_ConstString_BuildSystemToken.m_String
-					)
+				(
+					Param.f_IsObject()
+					&& Param.f_GetMember(CEJsonConstStrings::mc_Type, EJsonType_String)
+					&& Param.f_GetMember(CEJsonConstStrings::mc_Type)->f_String() == gc_ConstString_BuildSystemToken.m_String
+				)
 				{
 					if (auto pValue = Param.f_GetMember(CEJsonConstStrings::mc_Value, EJsonType_Object))
 					{
@@ -456,7 +450,7 @@ namespace NMib::NContainer
 		return fg_Move(Return).f_ToJson();
 	}
 
-	CEJsonSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseIdentifierTokenEJson(uch8 const *&o_pParse)
+	CEJsonSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseIdentifierTokenEJson(uch8 const * &o_pParse)
 	{
 		auto *pParse = o_pParse;
 
@@ -541,7 +535,7 @@ namespace NMib::NContainer
 
 	CJsonSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseFunctionToken
 		(
-			uch8 const *&o_pParse
+			uch8 const * &o_pParse
 			, CJsonSorted *_pFirstParam
 			, CStr const &_FunctionName
 			, CStr const &_PropertyType
@@ -610,7 +604,7 @@ namespace NMib::NContainer
 
 	CJsonSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseExpression
 		(
-			uch8 const *&o_pParse
+			uch8 const * &o_pParse
 			, EParseExpressionFlag _Flags
 			, CJsonSorted *_pFirstParam
 		)
@@ -684,17 +678,28 @@ namespace NMib::NContainer
 				fg_ParseWhiteSpaceNoLines(pTestParse);
 
 				if
+				(
+					(fg_CharIsWhiteSpace(*pParse) && m_ParseDepth == 1 && nParsed > 1 && m_ObjectArrayParseDepth == 0)
+					||
 					(
-						(fg_CharIsWhiteSpace(*pParse) && m_ParseDepth == 1 && nParsed > 1 && m_ObjectArrayParseDepth == 0)
-						|| (m_ParsingPrefixOperandExpressionDepth == m_ExpressionDepth && m_ParsingPrefixOperandParseDepth == m_ParseDepth && (fs_IsBinaryOperator(pTestParse) || *pTestParse == '?'))
-						|| (m_ParsingBinaryOperandExpressionDepth == m_ExpressionDepth && m_ParsingBinaryOperandParseDepth == m_ParseDepth && *pTestParse == '?' && !fs_IsBinaryOperator(pTestParse + 1))
-						|| *pTestParse == '}'
-						|| *pTestParse == ']'
-						|| *pTestParse == ','
-						|| *pTestParse == ':'
-						|| fg_StrStartsWith(pTestParse, gc_ConstString_Symbol_Ellipsis.m_String)
-						|| fg_StrStartsWith(pTestParse, "//")
+						m_ParsingPrefixOperandExpressionDepth == m_ExpressionDepth
+						&& m_ParsingPrefixOperandParseDepth == m_ParseDepth
+						&& (fs_IsBinaryOperator(pTestParse) || *pTestParse == '?')
 					)
+					||
+					(
+						m_ParsingBinaryOperandExpressionDepth == m_ExpressionDepth
+						&& m_ParsingBinaryOperandParseDepth == m_ParseDepth
+						&& *pTestParse == '?'
+						&& !fs_IsBinaryOperator(pTestParse + 1)
+					)
+					|| *pTestParse == '}'
+					|| *pTestParse == ']'
+					|| *pTestParse == ','
+					|| *pTestParse == ':'
+					|| fg_StrStartsWith(pTestParse, gc_ConstString_Symbol_Ellipsis.m_String)
+					|| fg_StrStartsWith(pTestParse, "//")
+				)
 				{
 					break;
 				}
@@ -802,7 +807,7 @@ namespace NMib::NContainer
 				auto FirstParam = fg_Move(*Param);
 				Param = f_ParseFunctionToken(pParse, &FirstParam, FunctionName, PropertyType);
 			}
-			else if (!m_bParsingDefine && *pParse == '?' && !fs_IsBinaryOperator(pParse+1))
+			else if (!m_bParsingDefine && *pParse == '?' && !fs_IsBinaryOperator(pParse + 1))
 			{
 				if (!Param)
 					f_ThrowError("Ternary operator needs a target", pParse);
@@ -842,12 +847,12 @@ namespace NMib::NContainer
 				CStr Operator(pParse, 1);
 
 				if
-					(
-						Operator != gc_ConstString_Symbol_OperatorAdd.m_String
-						&& Operator != gc_ConstString_Symbol_OperatorSubtract.m_String
-						&& Operator != gc_ConstString_Symbol_BitwiseNot.m_String
-						&& Operator != gc_ConstString_Symbol_LogicalNot.m_String
-					)
+				(
+					Operator != gc_ConstString_Symbol_OperatorAdd.m_String
+					&& Operator != gc_ConstString_Symbol_OperatorSubtract.m_String
+					&& Operator != gc_ConstString_Symbol_BitwiseNot.m_String
+					&& Operator != gc_ConstString_Symbol_LogicalNot.m_String
+				)
 				{
 					f_ThrowError("Invalid prefix operator: {}"_f << Operator, pParse);
 				}
@@ -887,29 +892,29 @@ namespace NMib::NContainer
 					f_ThrowError("Operator needs to be followed by whitespace", pParse);
 
 				if
-					(
-						Operator != gc_ConstString_Symbol_OperatorLessThan.m_String
-						&& Operator != gc_ConstString_Symbol_OperatorGreaterThan.m_String
-						&& Operator != gc_ConstString_Symbol_OperatorGreaterThanEqual.m_String
-						&& Operator != gc_ConstString_Symbol_OperatorLessThanEqual.m_String
-						&& Operator != gc_ConstString_Symbol_OperatorEqual.m_String
-						&& Operator != gc_ConstString_Symbol_OperatorNotEqual.m_String
-						&& Operator != gc_ConstString_Symbol_OperatorAdd.m_String
-						&& Operator != gc_ConstString_Symbol_OperatorSubtract.m_String
-						&& Operator != gc_ConstString_Symbol_OperatorDivide.m_String
-						&& Operator != gc_ConstString_Symbol_OperatorMultiply.m_String
-						&& Operator != gc_ConstString_Symbol_OperatorModulus.m_String
-						&& Operator != gc_ConstString_Symbol_OperatorBitwiseLeftShift.m_String
-						&& Operator != gc_ConstString_Symbol_OperatorBitwiseRightShift.m_String
-						&& Operator != gc_ConstString_Symbol_OperatorBitwiseAnd.m_String
-						&& Operator != gc_ConstString_Symbol_OperatorBitwiseOr.m_String
-						&& Operator != gc_ConstString_Symbol_OperatorBitwiseXor.m_String
-						&& Operator != gc_ConstString_Symbol_OperatorAnd.m_String
-						&& Operator != gc_ConstString_Symbol_OperatorOr.m_String
-						&& Operator != gc_ConstString_Symbol_OperatorNullishCoalescing.m_String
-						&& Operator != gc_ConstString_Symbol_OperatorMatchEqual.m_String
-						&& Operator != gc_ConstString_Symbol_OperatorMatchNotEqual.m_String
-					)
+				(
+					Operator != gc_ConstString_Symbol_OperatorLessThan.m_String
+					&& Operator != gc_ConstString_Symbol_OperatorGreaterThan.m_String
+					&& Operator != gc_ConstString_Symbol_OperatorGreaterThanEqual.m_String
+					&& Operator != gc_ConstString_Symbol_OperatorLessThanEqual.m_String
+					&& Operator != gc_ConstString_Symbol_OperatorEqual.m_String
+					&& Operator != gc_ConstString_Symbol_OperatorNotEqual.m_String
+					&& Operator != gc_ConstString_Symbol_OperatorAdd.m_String
+					&& Operator != gc_ConstString_Symbol_OperatorSubtract.m_String
+					&& Operator != gc_ConstString_Symbol_OperatorDivide.m_String
+					&& Operator != gc_ConstString_Symbol_OperatorMultiply.m_String
+					&& Operator != gc_ConstString_Symbol_OperatorModulus.m_String
+					&& Operator != gc_ConstString_Symbol_OperatorBitwiseLeftShift.m_String
+					&& Operator != gc_ConstString_Symbol_OperatorBitwiseRightShift.m_String
+					&& Operator != gc_ConstString_Symbol_OperatorBitwiseAnd.m_String
+					&& Operator != gc_ConstString_Symbol_OperatorBitwiseOr.m_String
+					&& Operator != gc_ConstString_Symbol_OperatorBitwiseXor.m_String
+					&& Operator != gc_ConstString_Symbol_OperatorAnd.m_String
+					&& Operator != gc_ConstString_Symbol_OperatorOr.m_String
+					&& Operator != gc_ConstString_Symbol_OperatorNullishCoalescing.m_String
+					&& Operator != gc_ConstString_Symbol_OperatorMatchEqual.m_String
+					&& Operator != gc_ConstString_Symbol_OperatorMatchNotEqual.m_String
+				)
 				{
 					f_ThrowError("Invalid binary operator: {}"_f << Operator, pParseStart);
 				}
@@ -960,7 +965,7 @@ namespace NMib::NContainer
 		return Return;
 	}
 
-	CJsonSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseDefine(uch8 const *&o_pParse, bool _bLegacy)
+	CJsonSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseDefine(uch8 const * &o_pParse, bool _bLegacy)
 	{
 		auto pParse = o_pParse;
 
@@ -989,7 +994,7 @@ namespace NMib::NContainer
 		return Return;
 	}
 
-	CJsonSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseFunctionType(uch8 const *&o_pParse)
+	CJsonSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseFunctionType(uch8 const * &o_pParse)
 	{
 		auto pParse = o_pParse;
 
@@ -1094,7 +1099,7 @@ namespace NMib::NContainer
 		return Return;
 	}
 
-	CJsonSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseType(uch8 const *&o_pParse)
+	CJsonSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseType(uch8 const * &o_pParse)
 	{
 		auto pParse = o_pParse;
 
@@ -1119,7 +1124,11 @@ namespace NMib::NContainer
 		return Return;
 	}
 
-	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParsePostDefine(uch8 const *&o_pParse, NEncoding::CJsonSorted &o_Value)
+	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParsePostDefine
+		(
+			uch8 const * &o_pParse
+			, NEncoding::CJsonSorted &o_Value
+		)
 	{
 		auto pParse = o_pParse;
 		fg_ParseWhiteSpaceNoLines(pParse);
@@ -1157,7 +1166,8 @@ namespace NMib::NContainer
 		}
 	}
 
-	NEncoding::CJsonSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseDefaulted(uch8 const *&o_pParse, NEncoding::CJsonSorted &&_Type)
+	auto TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseDefaulted(uch8 const * &o_pParse, NEncoding::CJsonSorted &&_Type)
+		-> NEncoding::CJsonSorted
 	{
 		auto pParse = o_pParse;
 
@@ -1186,7 +1196,7 @@ namespace NMib::NContainer
 		return Return;
 	}
 
-	CJsonSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseOneOf(uch8 const *&o_pParse)
+	CJsonSorted TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContext::f_ParseOneOf(uch8 const * &o_pParse)
 	{
 		auto pParse = o_pParse;
 
@@ -1427,7 +1437,7 @@ namespace NMib::NContainer
 			fg_GenerateAccessors(o_String, pAccessors->f_Array(), _Depth);
 			o_String += "> ";
 
-			 NJson::fg_GenerateJsonValue<CBuildSystemParseContext, tf_CStr>(o_String, *pRight, _Depth, "\t", gc_BuildSystemJsonParseFlags);
+			NJson::fg_GenerateJsonValue<CBuildSystemParseContext, tf_CStr>(o_String, *pRight, _Depth, "\t", gc_BuildSystemJsonParseFlags);
 		}
 		else if (TokenType == gc_ConstString_Define.m_String)
 		{
@@ -1693,7 +1703,6 @@ namespace NMib::NContainer
 			}
 			else
 				DMibError("Identifier token does not have valid Name member");
-
 		}
 		else if (TokenType == gc_ConstString_JsonAccessor.m_String)
 		{

@@ -60,12 +60,8 @@ namespace NMib::NBuildSystem
 		return {.m_Accessor = fs_AccessorFromJson(o_StringCache, *pAccessor, _Position), .m_bOptional = pOptionalChain->f_Boolean()};
 	}
 
-	auto CBuildSystemSyntax::CJsonAccessorEntry::fs_AccessorFromJson
-		(
-			CStringCache &o_StringCache
-			, NEncoding::CEJsonSorted const &_Json
-			, CFilePosition const &_Position
-		) -> NStorage::TCVariant<NStr::CStr, CExpression, CJsonSubscript>
+	auto CBuildSystemSyntax::CJsonAccessorEntry::fs_AccessorFromJson(CStringCache &o_StringCache, NEncoding::CEJsonSorted const &_Json, CFilePosition const &_Position)
+		-> NStorage::TCVariant<NStr::CStr, CExpression, CJsonSubscript>
 	{
 		if (_Json.f_IsString())
 			return {_Json.f_String()};

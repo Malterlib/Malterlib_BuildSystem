@@ -17,8 +17,8 @@ namespace NMib::NBuildSystem::NRepository
 {
 	DMibImpErrorClassDefine(CExceptionBuildSystemReconcileHelp, NException::CException);
 
-#	define DMibErrorBuildSystemReconcileHelp(_Description) DMibImpError(NMib::NBuildSystem::NRepository::CExceptionBuildSystemReconcileHelp, _Description)
-#	define DMibErrorInstanceBuildSystemReconcileHelp(_Description) DMibImpErrorInstance(NMib::NBuildSystem::NRepository::CExceptionBuildSystemReconcileHelp, _Description)
+#define DMibErrorBuildSystemReconcileHelp(_Description) DMibImpError(NMib::NBuildSystem::NRepository::CExceptionBuildSystemReconcileHelp, _Description)
+#define DMibErrorInstanceBuildSystemReconcileHelp(_Description) DMibImpErrorInstance(NMib::NBuildSystem::NRepository::CExceptionBuildSystemReconcileHelp, _Description)
 
 	struct CColors : public CAnsiEncoding
 	{
@@ -83,6 +83,7 @@ namespace NMib::NBuildSystem::NRepository
 		CRemoteProperties m_Properties;
 		bool m_bCanPush = true;
 		TCAVLLink<> m_Link;
+
 	private:
 		friend class TCLinkedListMember<CRemote>;
 
@@ -92,9 +93,9 @@ namespace NMib::NBuildSystem::NRepository
 
 	enum class EGitIgnoreType : uint32
 	{
-		mc_GitIgnore,         // Use .gitignore in parent directory
-		mc_GitInfoExclude,    // Use .git/info/exclude
-		mc_CoreExcludesFile   // Use core.excludesFile (BuildSystem/.localgitignore)
+		mc_GitIgnore          // Use .gitignore in parent directory
+		, mc_GitInfoExclude   // Use .git/info/exclude
+		, mc_CoreExcludesFile // Use core.excludesFile (BuildSystem/.localgitignore)
 	};
 
 	struct CHooksConfig
@@ -252,7 +253,7 @@ namespace NMib::NBuildSystem::NRepository
 			CStr m_ToBranch;
 			bool m_bCreated = false;
 
-			auto operator<=>(CBranchTransition const &_Other) const = default;
+			auto operator <=> (CBranchTransition const &_Other) const = default;
 		};
 
 		CConfigFile const &fp_GetConfigFile(CStr const &_FileName, bool _bIsStateFile);
@@ -306,7 +307,8 @@ namespace NMib::NBuildSystem::NRepository
 				, TCMap<CStr, CStr> const &_Environment
 				, CProcessLaunchActor::ESimpleLaunchFlag _Flags
 				, CStr const &_Application = "git"
-			) const
+			)
+			const
 		;
 		TCUnsafeFuture<CProcessLaunchActor::CSimpleLaunchResult> f_Launch
 			(
@@ -315,7 +317,8 @@ namespace NMib::NBuildSystem::NRepository
 				, TCMap<CStr, CStr> const &_Environment
 				, CProcessLaunchActor::ESimpleLaunchFlag _Flags
 				, CStr const &_Application = "git"
-			) const
+			)
+			const
 		;
 		TCUnsafeFuture<void> f_Launch
 			(
@@ -325,7 +328,8 @@ namespace NMib::NBuildSystem::NRepository
 				, CStr _Prefix = {}
 				, TCMap<CStr, CStr> _Environment = {}
 				, CStr _Application = "git"
-			) const
+			)
+			const
 		;
 		TCUnsafeFuture<CProcessLaunchActor::CSimpleLaunchResult> f_OpenRepoEditor(CRepoEditor _Editor, CStr _Repo) const;
 
@@ -348,7 +352,6 @@ namespace NMib::NBuildSystem::NRepository
 			void f_OutputState() const;
 			void f_ConsoleOutput(CStr const &_Output, bool _bError = false) const;
 
-
 			CIntrusiveRefCount m_RefCount;
 
 			CMutual m_Lock;
@@ -367,7 +370,7 @@ namespace NMib::NBuildSystem::NRepository
 			TCMap<CStr, TCVector<CDeferredOutput>> m_DeferredOutput;
 			TCVector<TCSet<CStr>> m_OutputOrder;
 
-			CLaunchSequencer m_LaunchSequencer{"GitLaunches State LaunchSequencer", fg_Clamp(NSys::fg_Thread_GetVirtualCores()*2u, 32u, fs_MaxProcesses())};
+			CLaunchSequencer m_LaunchSequencer{"GitLaunches State LaunchSequencer", fg_Clamp(NSys::fg_Thread_GetVirtualCores() * 2u, 32u, fs_MaxProcesses())};
 
 			mutable CMutual m_ConsoleOutputLock;
 			mutable fp64 m_LastProgressOutputTime = 0.0;
@@ -390,7 +393,7 @@ namespace NMib::NBuildSystem::NRepository
 
 		struct COwner
 		{
-			COwner(TCSharedPointer<CState> const&_pState);
+			COwner(TCSharedPointer<CState> const &_pState);
 			~COwner();
 
 			TCSharedPointer<CState> m_pState;
@@ -511,7 +514,7 @@ namespace NMib::NBuildSystem::NRepository
 
 	enum EFilterRepoFlag
 	{
-		EFilterRepoFlag_None = 0
+		EFilterRepoFlag_None          = 0
 		, EFilterRepoFlag_OnlyTracked = DBit(0)
 	};
 
@@ -526,18 +529,18 @@ namespace NMib::NBuildSystem::NRepository
 
 	enum class EApplyPolicyFlag
 	{
-		mc_None = 0
-		, mc_Pretend = DMibBit(0)
+		mc_None            = 0
+		, mc_Pretend       = DMibBit(0)
 		, mc_CreateMissing = DMibBit(1)
 	};
 
 	enum class EGetRepoFlag
 	{
-		mc_None = 0
-		, mc_IncludePolicy = DMibBit(0)
+		mc_None                    = 0
+		, mc_IncludePolicy         = DMibBit(0)
 		, mc_IncludeReleasePackage = DMibBit(1)
-		, mc_IncludeLicense = DMibBit(2)
-		, mc_IncludeRepoCommit = DMibBit(3)
+		, mc_IncludeLicense        = DMibBit(2)
+		, mc_IncludeRepoCommit     = DMibBit(3)
 	};
 
 	TCUnsafeFuture<CGitVersion> fg_GetGitVersion(CGitLaunches &_Launches);
@@ -561,7 +564,17 @@ namespace NMib::NBuildSystem::NRepository
 
 	TCFunctionMovable<CStr (CProcessLaunchActor::CSimpleLaunchResult const &_Result)> fg_LogAllFunctor();
 
-	TCFuture<bool> fg_RepoIsChanged(CGitLaunches _GitLaunches, CRepository _Repo, CRepositoryDynamicInfo _DynamicInfo, EFilterRepoFlag _Flags, bool _bIncludePull, CStr _MainRepoBranch, CStr _MainRepoDefaultBranch);
+	TCFuture<bool> fg_RepoIsChanged
+		(
+			CGitLaunches _GitLaunches
+			, CRepository _Repo
+			, CRepositoryDynamicInfo _DynamicInfo
+			, EFilterRepoFlag _Flags
+			, bool _bIncludePull
+			, CStr _MainRepoBranch
+			, CStr _MainRepoDefaultBranch
+		)
+	;
 	TCFuture<TCVector<CLocalFileChange>> fg_GetLocalFileChanges(CGitLaunches _GitLaunches, CRepository _Repo, bool _bIncludeUntracked);
 	TCFuture<CGitBranches> fg_GetBranches(CGitLaunches _GitLaunches, CRepository _Repo, bool _bRemote);
 	TCFuture<TCVector<CStr>> fg_GetRemotes(CGitLaunches _GitLaunches, CRepository _Repo);
@@ -599,16 +612,7 @@ namespace NMib::NBuildSystem::NRepository
 	TCFuture<void> fg_ApplyPolicies(CStr _Url, CStr _RepoDir, CEJsonSorted _Policy, EApplyPolicyFlag _Flags, TCFunction<void (EOutputType _OutputType, CStr const &_String)> _fOutputInfo);
 
 	template <typename tf_FOutput>
-	void fg_OutputRepositoryInfo
-		(
-			EOutputType _OutputType
-			, CStr const &_Info
-			, EAnsiEncodingFlag _AnsiFlags
-			, CStr const &_RepoName
-			, umint _MaxRepoWidth
-			, tf_FOutput const &_fOutput
-		)
-	;
+	void fg_OutputRepositoryInfo(EOutputType _OutputType, CStr const &_Info, EAnsiEncodingFlag _AnsiFlags, CStr const &_RepoName, umint _MaxRepoWidth, tf_FOutput const &_fOutput);
 }
 
 #include "Malterlib_BuildSystem_Repository.hpp"

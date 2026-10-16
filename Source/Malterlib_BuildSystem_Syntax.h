@@ -105,7 +105,7 @@ namespace NMib::NBuildSystem
 
 		struct CCompareByString
 		{
-			inline_always COrdering_Strong operator() (CPropertyKey const &_Left, CPropertyKey const &_Right) const;
+			inline_always COrdering_Strong operator () (CPropertyKey const &_Left, CPropertyKey const &_Right) const;
 		};
 
 		template <typename tf_CContext>
@@ -336,7 +336,8 @@ namespace NMib::NBuildSystem
 					, NStorage::TCIndirection<CTernary>
 					, NStorage::TCIndirection<CBinaryOperator>
 					, NStorage::TCIndirection<CPrefixOperator>
-				> m_Param
+				>
+				m_Param
 			;
 		};
 
@@ -482,12 +483,8 @@ namespace NMib::NBuildSystem
 			template <typename tf_CStr>
 			void f_Format(tf_CStr &o_Str) const;
 			static CJsonAccessorEntry fs_FromJson(CStringCache &o_StringCache, NEncoding::CEJsonSorted const &_Json, CFilePosition const &_Position);
-			static NStorage::TCVariant<NStr::CStr, CExpression, CJsonSubscript> fs_AccessorFromJson
-				(
-					CStringCache &o_StringCache
-					, NEncoding::CEJsonSorted const &_Json
-					, CFilePosition const &_Position
-				)
+			static auto fs_AccessorFromJson(CStringCache &o_StringCache, NEncoding::CEJsonSorted const &_Json, CFilePosition const &_Position)
+				-> NStorage::TCVariant<NStr::CStr, CExpression, CJsonSubscript>
 			;
 			NEncoding::CEJsonSorted f_AccessorToJson() const;
 			NEncoding::CEJsonSorted f_ToJson() const;

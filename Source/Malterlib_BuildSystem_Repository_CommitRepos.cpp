@@ -52,37 +52,24 @@ namespace NMib::NBuildSystem
 
 		TCFuture<bool> fg_PathExistsAtCommit(CGitLaunches _Launches, CRepository _Repo, CStr _CommitHash, CStr _Path)
 		{
-			auto PathResult = co_await _Launches.f_Launch
-				(
-					_Repo
-					, {"cat-file", "-e", "{}:{}"_f << _CommitHash << _Path}
-					, {}
-					, CProcessLaunchActor::ESimpleLaunchFlag_None
-				)
-			;
+			auto PathResult = co_await _Launches.f_Launch(_Repo, {"cat-file", "-e", "{}:{}"_f << _CommitHash << _Path}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 			co_return PathResult.m_ExitCode == 0;
 		}
 
 		bool fg_HasActiveGitOperation(CStr const &_GitDataDir)
 		{
-			return
-				CFile::fs_FileExists(_GitDataDir + "/rebase-merge", EFileAttrib_Directory)   // rebase
+			return CFile::fs_FileExists(_GitDataDir + "/rebase-merge", EFileAttrib_Directory) // rebase
 				|| CFile::fs_FileExists(_GitDataDir + "/rebase-apply", EFileAttrib_Directory) // rebase or git am
-				|| CFile::fs_FileExists(_GitDataDir + "/MERGE_HEAD", EFileAttrib_File)       // merge
+				|| CFile::fs_FileExists(_GitDataDir + "/MERGE_HEAD", EFileAttrib_File) // merge
 				|| CFile::fs_FileExists(_GitDataDir + "/CHERRY_PICK_HEAD", EFileAttrib_File) // single cherry-pick stop
-				|| CFile::fs_FileExists(_GitDataDir + "/REVERT_HEAD", EFileAttrib_File)      // single revert stop
-				|| CFile::fs_FileExists(_GitDataDir + "/sequencer", EFileAttrib_Directory)   // multi-step cherry-pick/revert
-				|| CFile::fs_FileExists(_GitDataDir + "/BISECT_LOG", EFileAttrib_File)       // bisect
-				|| CFile::fs_FileExists(_GitDataDir + "/BISECT_START", EFileAttrib_File)     // bisect
+				|| CFile::fs_FileExists(_GitDataDir + "/REVERT_HEAD", EFileAttrib_File) // single revert stop
+				|| CFile::fs_FileExists(_GitDataDir + "/sequencer", EFileAttrib_Directory) // multi-step cherry-pick/revert
+				|| CFile::fs_FileExists(_GitDataDir + "/BISECT_LOG", EFileAttrib_File) // bisect
+				|| CFile::fs_FileExists(_GitDataDir + "/BISECT_START", EFileAttrib_File) // bisect
 			;
 		}
 
-		TCFuture<void> fg_RestoreDesiredConfigContents
-			(
-				CRepository _Repo
-				, TCSet<CStr> _AllConfigRelPaths
-				, TCMap<CStr, CStr> _DesiredConfigContents
-			)
+		TCFuture<void> fg_RestoreDesiredConfigContents(CRepository _Repo, TCSet<CStr> _AllConfigRelPaths, TCMap<CStr, CStr> _DesiredConfigContents)
 		{
 			auto BlockingActorCheckout = fg_BlockingActor();
 			co_await
@@ -132,13 +119,7 @@ namespace NMib::NBuildSystem
 			co_return {};
 		}
 
-		TCFuture<CIndexBackup> fg_BackupRepositoryIndex
-			(
-				CGitLaunches _Launches
-				, CRepository _Repo
-				, CStr _OutputDir
-				, TCVector<CStr> _UntrackedConfigFiles
-			)
+		TCFuture<CIndexBackup> fg_BackupRepositoryIndex(CGitLaunches _Launches, CRepository _Repo, CStr _OutputDir, TCVector<CStr> _UntrackedConfigFiles)
 		{
 			auto BlockingActorCheckout = fg_BlockingActor();
 			CIndexBackup IndexBackup = co_await
@@ -219,14 +200,7 @@ namespace NMib::NBuildSystem
 					co_return DMibErrorInstance("Failed to stage untracked config files for backup: {}"_f << AddResult.f_GetCombinedOut().f_Trim());
 			}
 
-			auto StashCreateResult = co_await _Launches.f_Launch
-				(
-					_Repo
-					, {"stash", "create", "mib-repo-commit backup"}
-					, {}
-					, CProcessLaunchActor::ESimpleLaunchFlag_None
-				)
-			;
+			auto StashCreateResult = co_await _Launches.f_Launch(_Repo, {"stash", "create", "mib-repo-commit backup"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 			if (StashCreateResult.m_ExitCode != 0)
 				co_return DMibErrorInstance("Failed to create repository state backup: {}"_f << StashCreateResult.f_GetCombinedOut().f_Trim());
 			IndexBackup.m_StashHash = StashCreateResult.f_GetStdOut().f_Trim();
@@ -328,7 +302,7 @@ namespace NMib::NBuildSystem
 					return m_Name <=> _Other.m_Name;
 				}
 
-				bool operator==(CSectionOrder const &_Other) const = default;
+				bool operator == (CSectionOrder const &_Other) const = default;
 
 				umint m_Stage = 0;
 				CStr m_Name;
@@ -381,14 +355,7 @@ namespace NMib::NBuildSystem
 			return Message;
 		}
 
-		TCFuture<CStr> fg_RunTransformScript
-			(
-				CGitLaunches _Launches
-				, CStr _WorkingDirectory
-				, CStr _TransformScript
-				, CStr _TempDir
-				, CStr _Message
-			)
+		TCFuture<CStr> fg_RunTransformScript(CGitLaunches _Launches, CStr _WorkingDirectory, CStr _TransformScript, CStr _TempDir, CStr _Message)
 		{
 			CStr TempFile = _TempDir / "commit-message.tmp";
 			NFile::CFile::fs_WriteStringToFile(TempFile, _Message, false);
@@ -411,16 +378,8 @@ namespace NMib::NBuildSystem
 		// reuse, any prefix-based filter), so a script that rewrites the
 		// subject would silently create duplicates on the next run. Fail
 		// loudly here rather than surprising the user later.
-		TCFuture<CStr> fg_RunAndVerifyTransformScript
-			(
-				CGitLaunches _Launches
-				, CStr _OutputScope
-				, CStr _WorkingDirectory
-				, CStr _TransformScript
-				, CStr _MessageHeader
-				, CStr _TempDir
-				, CStr _Message
-			)
+		auto fg_RunAndVerifyTransformScript(CGitLaunches _Launches, CStr _OutputScope, CStr _WorkingDirectory, CStr _TransformScript, CStr _MessageHeader, CStr _TempDir, CStr _Message)
+			-> TCFuture<CStr>
 		{
 			CStr Transformed = co_await fg_RunTransformScript(_Launches, _WorkingDirectory, _TransformScript, _TempDir, _Message);
 
@@ -613,13 +572,7 @@ namespace NMib::NBuildSystem
 		}
 
 		// Analyze existing commits on the branch to determine which touch config files
-		TCFuture<TCVector<CCommitAnalysis>> fg_AnalyzeCommits
-			(
-				CGitLaunches _Launches
-				, CRepository _Repo
-				, TCVector<CStr> _CommitHashes
-				, TCSet<CStr> _AllConfigRelPaths
-			)
+		TCFuture<TCVector<CCommitAnalysis>> fg_AnalyzeCommits(CGitLaunches _Launches, CRepository _Repo, TCVector<CStr> _CommitHashes, TCSet<CStr> _AllConfigRelPaths)
 		{
 			// Launch subject and diff-tree queries for all commits in parallel
 			TCFutureMap<CStr, CProcessLaunchActor::CSimpleLaunchResult> SubjectResults;
@@ -687,22 +640,9 @@ namespace NMib::NBuildSystem
 		// the sub-repo site (CRepository for both), since `f_Launch` and
 		// `f_Output` each have overloads for the two shapes.
 		template <typename t_CLaunchTarget, typename t_COutputScope>
-		TCFuture<CStr> fg_ResolveMergeBaseWithBootstrapFallback
-			(
-				CGitLaunches _Launches
-				, t_CLaunchTarget _LaunchTarget
-				, t_COutputScope _OutputScope
-				, CStr _DefaultBranch
-			)
+		TCFuture<CStr> fg_ResolveMergeBaseWithBootstrapFallback(CGitLaunches _Launches, t_CLaunchTarget _LaunchTarget, t_COutputScope _OutputScope, CStr _DefaultBranch)
 		{
-			auto Result = co_await _Launches.f_Launch
-				(
-					_LaunchTarget
-					, {"merge-base", "origin/{}"_f << _DefaultBranch, "HEAD"}
-					, {}
-					, CProcessLaunchActor::ESimpleLaunchFlag_None
-				)
-			;
+			auto Result = co_await _Launches.f_Launch(_LaunchTarget, {"merge-base", "origin/{}"_f << _DefaultBranch, "HEAD"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 
 			CStr MergeBase;
 			if (Result.m_ExitCode != 0)
@@ -713,7 +653,9 @@ namespace NMib::NBuildSystem
 						, _OutputScope
 						, "git merge-base origin/{} HEAD failed (exit code {}): {}. Falling back to commit-at-HEAD without rebase;\n"
 						"any prior auto-generated commits on this branch will not be squashed."_f
-						<< _DefaultBranch << Result.m_ExitCode << Result.f_GetCombinedOut().f_Trim()
+						<< _DefaultBranch
+						<< Result.m_ExitCode
+						<< Result.f_GetCombinedOut().f_Trim()
 					)
 				;
 			}
@@ -745,14 +687,7 @@ namespace NMib::NBuildSystem
 			TCVector<CStr> m_CommitHashes;
 		};
 
-		TCFuture<CRepoPreflightResult> fg_RepoPreFlight
-			(
-				CGitLaunches _Launches
-				, CRepository _Repo
-				, TCSet<CStr> _ConfigFiles
-				, TCSet<CStr> _AllConfigRelPaths
-				, CStr _DefaultBranch
-			)
+		TCFuture<CRepoPreflightResult> fg_RepoPreFlight(CGitLaunches _Launches, CRepository _Repo, TCSet<CStr> _ConfigFiles, TCSet<CStr> _AllConfigRelPaths, CStr _DefaultBranch)
 		{
 			CRepoPreflightResult Result;
 
@@ -798,14 +733,7 @@ namespace NMib::NBuildSystem
 			// branches entirely.
 			if (!Result.m_MergeBase.f_IsEmpty())
 			{
-				auto RevListResult = co_await _Launches.f_Launch
-					(
-						_Repo
-						, {"rev-list", "--reverse", "{}..HEAD"_f << Result.m_MergeBase}
-						, {}
-						, CProcessLaunchActor::ESimpleLaunchFlag_None
-					)
-				;
+				auto RevListResult = co_await _Launches.f_Launch(_Repo, {"rev-list", "--reverse", "{}..HEAD"_f << Result.m_MergeBase}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 				if (RevListResult.m_ExitCode != 0)
 					co_return DMibErrorInstance("Failed to list commits since {}: {}"_f << Result.m_MergeBase << RevListResult.f_GetCombinedOut().f_Trim());
 
@@ -1060,15 +988,7 @@ namespace NMib::NBuildSystem
 								;
 							}
 							else
-							{
-								LocalLaunches.f_Output
-									(
-										EOutputType_Error
-										, LocalRepo
-										, "Failed to restore the original repository state{}"_f << StashSuffix
-									)
-								;
-							}
+								LocalLaunches.f_Output(EOutputType_Error, LocalRepo, "Failed to restore the original repository state{}"_f << StashSuffix);
 						}
 						co_return {};
 					}
@@ -1474,14 +1394,7 @@ namespace NMib::NBuildSystem
 
 		// Create or update a Perforce changelist with the given description for config files.
 		// Does NOT submit the changelist. Moves files from other pending changelists if needed.
-		TCFuture<void> fg_PerforceUpdateChangelist
-			(
-				CGitLaunches _Launches
-				, TCVector<CStr> _ConfigFilePaths
-				, CStr _BaseDir
-				, CStr _CommitMessage
-				, CStr _MessageHeader
-			)
+		TCFuture<void> fg_PerforceUpdateChangelist(CGitLaunches _Launches, TCVector<CStr> _ConfigFilePaths, CStr _BaseDir, CStr _CommitMessage, CStr _MessageHeader)
 		{
 			auto BlockingActorCheckout = fg_BlockingActor();
 			co_await
@@ -1845,12 +1758,7 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_CommitRepos
-		(
-			CGenerateOptions const &_GenerateOptions
-			, ERepoCommitFlag _Flags
-			, uint32 _MaxCommitsPerSection
-		)
+	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_CommitRepos(CGenerateOptions const &_GenerateOptions, ERepoCommitFlag _Flags, uint32 _MaxCommitsPerSection)
 	{
 		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
@@ -2018,7 +1926,11 @@ namespace NMib::NBuildSystem
 					FilesList += ", ";
 				FilesList += File;
 			}
-			CStr Message = "repo-commit cannot find an owning %Repository for these config files: {}. Declare a parent %Repository that contains them (e.g. %Repository \".\" at the workspace base directory '{}')."_f << FilesList << f_GetBaseDir();
+			CStr Message = "repo-commit cannot find an owning %Repository for these config files: {}. Declare a parent %Repository that contains them (e.g. %Repository \".\" at the "
+				"workspace base directory '{}')."_f
+				<< FilesList
+				<< f_GetBaseDir()
+			;
 			Launches.f_Output(EOutputType_Error, ".", Message);
 			co_return DMibErrorInstance(Message);
 		}
@@ -2053,8 +1965,7 @@ namespace NMib::NBuildSystem
 
 			auto [LatestCL, SubmittedConfigFiles] = co_await
 				(
-					fg_PerforceGetLatestChangelist(ConfigFilePaths, f_GetBaseDir())
-					+ fg_PerforceGetSubmittedConfigFiles(ConfigFilePaths, f_GetBaseDir())
+					fg_PerforceGetLatestChangelist(ConfigFilePaths, f_GetBaseDir()) + fg_PerforceGetSubmittedConfigFiles(ConfigFilePaths, f_GetBaseDir())
 				)
 			;
 
@@ -2101,14 +2012,7 @@ namespace NMib::NBuildSystem
 			// Git root: seed from merge-base with origin/defaultBranch when
 			// available. An empty result is tolerated (bootstrap mode); the
 			// helper emits warnings explaining the fallback.
-			CStr MergeBase = co_await fg_ResolveMergeBaseWithBootstrapFallback
-				(
-					Launches
-					, f_GetBaseDir()
-					, CStr(".")
-					, MainBranchInfo.m_DefaultBranch
-				)
-			;
+			CStr MergeBase = co_await fg_ResolveMergeBaseWithBootstrapFallback(Launches, f_GetBaseDir(), CStr("."), MainBranchInfo.m_DefaultBranch);
 
 			if (!MergeBase.f_IsEmpty())
 				RootSeed[f_GetBaseDir()] = MergeBase;
@@ -2296,7 +2200,7 @@ namespace NMib::NBuildSystem
 			// parent config files with the new HEAD hashes from just-committed repos
 			{
 				DMibLock(mp_GeneratedFilesLock);
-				for (auto iFile = mp_GeneratedFiles.f_GetIterator(); iFile; )
+				for (auto iFile = mp_GeneratedFiles.f_GetIterator(); iFile;)
 				{
 					iFile->m_Workspaces.f_Remove(CStr());
 					if (iFile->m_Workspaces.f_IsEmpty())
@@ -2356,19 +2260,7 @@ namespace NMib::NBuildSystem
 			CStr CommitMessage = fg_GenerateCommitMessage(PerforceRootCommits, DisplayNameStages, _Flags & ERepoCommitFlag_SkipCi, _MaxCommitsPerSection, RootMessageHeader);
 
 			if (!RootTransformScript.f_IsEmpty())
-			{
-				CommitMessage = co_await fg_RunAndVerifyTransformScript
-					(
-						Launches
-						, "."
-						, f_GetBaseDir()
-						, RootTransformScript
-						, RootMessageHeader
-						, fGetTransformTempDir()
-						, CommitMessage
-					)
-				;
-			}
+				CommitMessage = co_await fg_RunAndVerifyTransformScript(Launches, ".", f_GetBaseDir(), RootTransformScript, RootMessageHeader, fGetTransformTempDir(), CommitMessage);
 
 			TCVector<CStr> ConfigFilePaths;
 			for (auto &ConfigFile : PerforceRootConfigFiles)

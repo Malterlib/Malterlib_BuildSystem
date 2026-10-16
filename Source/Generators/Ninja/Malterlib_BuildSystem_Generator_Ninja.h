@@ -67,7 +67,8 @@ namespace NMib::NBuildSystem::NNinja
 		template <typename tf_CStr>
 		void f_Format(tf_CStr &o_Str) const
 		{
-			o_Str += typename tf_CStr::CFormat("Description: {} Inputs: {} Outputs: {} ImplicitDependencies: {} OrderDependencies: {} Validations: {} Variables: {vs}\n")
+			o_Str
+				+= typename tf_CStr::CFormat("Description: {} Inputs: {} Outputs: {} ImplicitDependencies: {} OrderDependencies: {} Validations: {} Variables: {vs}\n")
 				<< m_Description
 				<< m_Inputs
 				<< m_Outputs
@@ -120,7 +121,8 @@ namespace NMib::NBuildSystem::NNinja
 				, CBuildSystem const &_BuildSystem
 				, CRuleAndBuild const &_Other
 				, TCMap<int64, TCVector<TCVariant<CStr, TCVector<CStr>>>> &o_PrioritizedFlags
-			) const
+			)
+			const
 		;
 
 		template <typename tf_CStr>
@@ -244,14 +246,7 @@ namespace NMib::NBuildSystem::NNinja
 
 	struct CGeneratorInstance : public ICGeneratorInterface
 	{
-		CGeneratorInstance
-			(
-				CBuildSystem const &_BuildSystem
-				, CBuildSystemData const &_BuildSystemData
-				, TCMap<CPropertyKey, CEJsonSorted> const &_InitialValues
-				, CStr const &_OutputDir
-			)
-		;
+		CGeneratorInstance(CBuildSystem const &_BuildSystem, CBuildSystemData const &_BuildSystemData, TCMap<CPropertyKey, CEJsonSorted> const &_InitialValues, CStr const &_OutputDir);
 		~CGeneratorInstance();
 
 		CValuePotentiallyByRef f_GetBuiltin(CBuildSystemUniquePositions *_pStorePositions, CStr const &_Value, bool &o_bSuccess) const override;
@@ -320,22 +315,11 @@ namespace NMib::NBuildSystem::NNinja
 		};
 
 		TCUnsafeFuture<TCMap<CStr, CCompileType>> fp_GenerateProjectFile_File(CProject &_Project) const;
-		TCUnsafeFuture<void> fp_GenerateProjectFile_FileTypes
-			(
-				CProject &_Project
-				, TCMap<CStr, CCompileType> const &_CompileTypes
-			) const
-		;
+		TCUnsafeFuture<void> fp_GenerateProjectFile_FileTypes(CProject &_Project, TCMap<CStr, CCompileType> const &_CompileTypes) const;
 
 		TCUnsafeFuture<void> fp_EvaluateTargetSettings(CProject &_Project) const;
 
-		void fp_SetEvaluatedValuesTarget
-			(
-				CEntityMutablePointer const &_Entity
-				, CConfigResultTarget &o_Result
-				, CStr const &_Name
-			) const
-		;
+		void fp_SetEvaluatedValuesTarget(CEntityMutablePointer const &_Entity, CConfigResultTarget &o_Result, CStr const &_Name) const;
 
 		CSingleValue fp_GetConfigValue
 			(
@@ -344,7 +328,8 @@ namespace NMib::NBuildSystem::NNinja
 				, CPropertyKeyReference const &_PropertyKey
 				, EEJsonType _ExpectedType
 				, bool _bOptional
-			) const
+			)
+			const
 		;
 	};
 }

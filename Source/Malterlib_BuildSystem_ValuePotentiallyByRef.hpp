@@ -98,8 +98,7 @@ namespace NMib::NBuildSystem
 				return fg_Move(mp_ValueVariant.f_Get<1>()->f_String());
 			}
 			break;
-		case 2:
-			break;
+		case 2: break;
 		}
 		return fg_Move(mp_ValueVariant.f_Get<2>().f_String());
 	}

@@ -20,7 +20,6 @@ namespace NMib::NBuildSystem
 			TCMap<CConfigKey, CBuildSystemConfiguration const *> m_Keys;
 			auto operator <=> (CConfigTuple const &_Right) const noexcept = default;
 		};
-
 	}
 
 	CBuildSystemRegistry *CBuildSystem::CUserSettingsState::f_GetSection(CPropertyKey const &_Section)
@@ -346,8 +345,11 @@ namespace NMib::NBuildSystem
 
 				CStr Description = pParse;
 
-				UserVariablesBySection[CPropertyKey{mp_StringCache, VariableKey.f_GetType(), Section}][VariableKey]
-					= {.m_Description = fg_Move(Description), .m_DefaultValue = fg_Move(DefaultValue)}
+				UserVariablesBySection[CPropertyKey{mp_StringCache, VariableKey.f_GetType(), Section}][VariableKey] =
+					{
+						.m_Description = fg_Move(Description)
+						, .m_DefaultValue = fg_Move(DefaultValue)
+					}
 				;
 			}
 		}
@@ -378,7 +380,8 @@ namespace NMib::NBuildSystem
 					CBuildSystemRegistryParseContext Context(StringCache);
 					TempRegistry.f_ParseStrWithContext(Context, "{} false"_f << _VariableKey.m_Name);
 
-					CStr ToAdd = "{\n}\t//{} {} // {}{\n}"_f
+					CStr ToAdd
+						= "{\n}\t//{} {} // {}{\n}"_f
 						<< TempRegistry.f_GenerateStr().f_Trim().f_RemoveSuffix(" false")
 						<< (_DefaultValue.f_IsEmpty() ? CStr("\"\"") : _DefaultValue)
 						<< _Description
@@ -390,7 +393,6 @@ namespace NMib::NBuildSystem
 				}
 			}
 		;
-
 
 		for (auto &UserVariables : UserVariablesBySection)
 		{
