@@ -10,11 +10,11 @@ namespace NMib::NBuildSystem
 {
 	enum EGeneratedFileFlag
 	{
-		EGeneratedFileFlag_None = 0
-		, EGeneratedFileFlag_NoDateCheck = DMibBit(1)
+		EGeneratedFileFlag_None                = 0
+		, EGeneratedFileFlag_NoDateCheck       = DMibBit(1)
 		, EGeneratedFileFlag_KeepGeneratedFile = DMibBit(2)
-		, EGeneratedFileFlag_Symlink = DMibBit(3)
-		, EGeneratedFileFlag_ByDigest = DMibBit(4)
+		, EGeneratedFileFlag_Symlink           = DMibBit(3)
+		, EGeneratedFileFlag_ByDigest          = DMibBit(4)
 	};
 
 	struct CGeneratorArchiveState

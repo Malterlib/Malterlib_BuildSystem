@@ -39,14 +39,7 @@ namespace NMib::NBuildSystem::NRepository
 				, .m_HostingProvider = _Options.m_HostingProvider
 				, .m_fOnCreate = g_ActorFunctor / [=](CStr _Name, CStr _CreatedValues) -> TCFuture<void>
 				{
-					_Options.m_fOutputInfo
-						(
-							EOutputType_Warning
-							, "{}Appying policy resulted in created repository '{}'"_f
-							<< _Options.f_PretendDescription()
-							<< _Options.m_Url
-						)
-					;
+					_Options.m_fOutputInfo(EOutputType_Warning, "{}Appying policy resulted in created repository '{}'"_f << _Options.f_PretendDescription() << _Options.m_Url);
 
 					co_return {};
 				}
@@ -88,10 +81,7 @@ namespace NMib::NBuildSystem::NRepository
 					_Options.m_fOutputInfo
 						(
 							EOutputType_Normal
-							, "{}Appying policy resulted in add permissions to repository '{}': {}"_f
-							<< _Options.f_PretendDescription()
- 							<< _Options.m_Url
-							<< _CreatedValues
+							, "{}Appying policy resulted in add permissions to repository '{}': {}"_f << _Options.f_PretendDescription() << _Options.m_Url << _CreatedValues
 						)
 					;
 
@@ -102,10 +92,7 @@ namespace NMib::NBuildSystem::NRepository
 					_Options.m_fOutputInfo
 						(
 							EOutputType_Warning
-							, "{}Appying policy resulted in updated permissions on repository '{}': {}"_f
-							<< _Options.f_PretendDescription()
-							<< _Options.m_Url
-							<< _UpdatedValues
+							, "{}Appying policy resulted in updated permissions on repository '{}': {}"_f << _Options.f_PretendDescription() << _Options.m_Url << _UpdatedValues
 						)
 					;
 
@@ -116,10 +103,7 @@ namespace NMib::NBuildSystem::NRepository
 					_Options.m_fOutputInfo
 						(
 							EOutputType_Warning
-							, "{}Appying policy resulted in removed permissions on repository '{}': {}"_f
-							<< _Options.f_PretendDescription()
-							<< _Options.m_Url
-							<< _DeletedValues
+							, "{}Appying policy resulted in removed permissions on repository '{}': {}"_f << _Options.f_PretendDescription() << _Options.m_Url << _DeletedValues
 						)
 					;
 
@@ -148,10 +132,7 @@ namespace NMib::NBuildSystem::NRepository
 					_Options.m_fOutputInfo
 						(
 							EOutputType_Normal
-							, "{}Appying policy resulted in created branch protection rule for branch pattern '{}' on '{}'"_f
-							<< _Options.f_PretendDescription()
-							<< _Name
-							<< _Options.m_Url
+							, "{}Appying policy resulted in created branch protection rule for branch pattern '{}' on '{}'"_f << _Options.f_PretendDescription() << _Name << _Options.m_Url
 						)
 					;
 
@@ -195,10 +176,7 @@ namespace NMib::NBuildSystem::NRepository
 					_Options.m_fOutputInfo
 						(
 							EOutputType_Normal
-							, "{}Appying policy resulted in created generic ruleset for branch pattern '{}' on '{}'"_f
-							<< _Options.f_PretendDescription()
-							<< _Name
-							<< _Options.m_Url
+							, "{}Appying policy resulted in created generic ruleset for branch pattern '{}' on '{}'"_f << _Options.f_PretendDescription() << _Name << _Options.m_Url
 						)
 					;
 
@@ -208,7 +186,7 @@ namespace NMib::NBuildSystem::NRepository
 				{
 					_Options.m_fOutputInfo
 						(
- 							EOutputType_Warning
+							EOutputType_Warning
 							, "{}Appying policy resulted in updated generic ruleset for branch pattern '{}' on '{}'. Updated values:\n{}"_f
 							<< _Options.f_PretendDescription()
 							<< _Name

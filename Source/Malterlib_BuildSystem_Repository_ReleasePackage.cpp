@@ -56,7 +56,7 @@ namespace NMib::NBuildSystem
 
 			CGitHostingProvider::CRelease Release;
 
-			for (umint iRetry = 0; ; ++iRetry)
+			for (umint iRetry = 0;; ++iRetry)
 			{
 				if (auto ExistingRelease = co_await _Options.m_HostingProvider(&CGitHostingProvider::f_GetRelease, _Options.m_Repository, CreateRelease.m_TagName))
 				{
@@ -95,14 +95,7 @@ namespace NMib::NBuildSystem
 			co_return fg_Move(Release);
 		}
 
-		TCFuture<bool> fg_UploadReleaseAsset
-			(
-				TCActor<CGitHostingProvider> _HostingProvider
-				, CStr _Repository
-				, CGitHostingProvider::CRelease _Release
-				, CStr _AssetName
-				, CStr _SourceFile
-			)
+		TCFuture<bool> fg_UploadReleaseAsset(TCActor<CGitHostingProvider> _HostingProvider, CStr _Repository, CGitHostingProvider::CRelease _Release, CStr _AssetName, CStr _SourceFile)
 		{
 			struct CFileReadState
 			{
@@ -152,9 +145,7 @@ namespace NMib::NBuildSystem
 					{
 						.m_Name = _AssetName
 						, .m_AssetSize = AssetSize
-						, .m_fReadData = g_ActorFunctor
-						/ [pFileReadState]
-						(umint _nBytes) mutable -> TCFuture<CByteVector>
+						, .m_fReadData = g_ActorFunctor / [pFileReadState](umint _nBytes) mutable -> TCFuture<CByteVector>
 						{
 							CByteVector Result;
 							{
@@ -192,12 +183,7 @@ namespace NMib::NBuildSystem
 			co_return bDeletedOld;
 		}
 
-		TCFuture<void> fg_ReleasePackage
-			(
-				CStr _RepoDir
-				, NRepository::CRemoteProperties _RemoteProperties
-				, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> _fOutput
-			)
+		TCFuture<void> fg_ReleasePackage(CStr _RepoDir, NRepository::CRemoteProperties _RemoteProperties, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> _fOutput)
 		{
 			DMibRequire(_RemoteProperties.m_ReleasePackage);
 

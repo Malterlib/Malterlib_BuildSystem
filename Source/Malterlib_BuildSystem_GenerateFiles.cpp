@@ -28,13 +28,14 @@ namespace NMib::NBuildSystem
 			, EEntityType _Type
 			, CPropertyKeyReference const *_pConditionalProperty
 			, bool _bConditional
-		) const
+		)
+		const
 	{
 		CStr Workspace;
 
 		bool bChanged = false;
 
-		auto * pParent = &_Entity;
+		auto *pParent = &_Entity;
 		while (pParent && pParent->m_pParent)
 		{
 			if (pParent->f_GetKey().m_Type == EEntityType_Workspace)
@@ -52,24 +53,16 @@ namespace NMib::NBuildSystem
 #endif
 				auto &&_fThis
 				, CEntity &_Entity
-			) -> void
+			)
+			-> void
 			{
 #ifdef DCompiler_Workaround_Apple_clang
-#define _fThis(...) _fThis(_fThis, __VA_ARGS__)
+#	define _fThis(...) _fThis(_fThis, __VA_ARGS__)
 #endif
 				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild; ++iChild)
 				{
 					auto &Key = iChild->f_GetKey();
-					if
-						(
-							_bRecursive
-							&&
-							(
-								Key.m_Type == EEntityType_Group
-								|| Key.m_Type == EEntityType_Target
-								|| Key.m_Type == EEntityType_Import
-							)
-						)
+					if (_bRecursive && (Key.m_Type == EEntityType_Group || Key.m_Type == EEntityType_Target || Key.m_Type == EEntityType_Import))
 					{
 						if (_Type == EEntityType_Workspace && Key.m_Type == EEntityType_Target)
 							continue;
@@ -212,9 +205,7 @@ namespace NMib::NBuildSystem
 
 						bool bWasCreated;
 						if (!f_AddGeneratedFile(Path, Contents, Workspace, bWasCreated, GeneratedFileFlags))
-						{
 							fsp_ThrowError(iChild->f_Data().m_Position, fg_Format("Same file generated with different data: {}", Path));
-						}
 
 						if (bWasCreated)
 						{
@@ -277,13 +268,13 @@ namespace NMib::NBuildSystem
 												try
 												{
 													auto Resolved = CFile::fs_ResolveSymbolicLink(Path);
-		#ifdef DPlatformFamily_Windows
+#ifdef DPlatformFamily_Windows
 													if (Resolved.f_CmpNoCase(Contents) == 0)
 														return true;
-		#else
+#else
 													if (Resolved == Contents)
 														return true;
-		#endif
+#endif
 												}
 												catch (CExceptionFile const &)
 												{
@@ -353,7 +344,7 @@ namespace NMib::NBuildSystem
 									uint8 BOM[] = {0xFF, 0xFE};
 									if (bUnicodeBOM)
 										FileDataVector.f_Insert(BOM, sizeof(BOM));
-									FileDataVector.f_Insert((const uint8 *)UTF16.f_GetStr(), UTF16.f_GetLen()*sizeof(ch16));
+									FileDataVector.f_Insert((uint8 const *)UTF16.f_GetStr(), UTF16.f_GetLen() * sizeof(ch16));
 								}
 								else
 									CFile::fs_WriteStringToVector(FileDataVector, CStr(Contents), bUnicodeBOM);
@@ -404,10 +395,10 @@ namespace NMib::NBuildSystem
 							auto &OldEntityData = pOldEntity->f_Data();
 
 							if
-								(
-									(OldEntityData.m_ExpandedOrGeneratedFrom && OldEntityData.m_ExpandedOrGeneratedFrom == ExpandedOrGeneratedFromSource)
-									|| OldEntityData.m_ExpandedOrGeneratedFromSet.f_FindEqual(ExpandedOrGeneratedFromSource)
-								)
+							(
+								(OldEntityData.m_ExpandedOrGeneratedFrom && OldEntityData.m_ExpandedOrGeneratedFrom == ExpandedOrGeneratedFromSource)
+								|| OldEntityData.m_ExpandedOrGeneratedFromSet.f_FindEqual(ExpandedOrGeneratedFromSource)
+							)
 							{
 								continue;
 							}
@@ -464,7 +455,7 @@ namespace NMib::NBuildSystem
 		;
 
 #ifdef DCompiler_Workaround_Apple_clang
-#define fGenerateFile(...) fGenerateFile(fGenerateFile, __VA_ARGS__)
+#	define fGenerateFile(...) fGenerateFile(fGenerateFile, __VA_ARGS__)
 #endif
 		fGenerateFile(_Entity);
 

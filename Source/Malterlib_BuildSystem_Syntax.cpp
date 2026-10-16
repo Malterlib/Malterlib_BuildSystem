@@ -122,7 +122,8 @@ namespace NMib::NBuildSystem
 			, CStr const &_TokenType
 			, CFilePosition const &_Position
 			, bool _bAppendAllowed
-		) -> CVariant
+		)
+		-> CVariant
 	{
 		if (_TokenType == gc_ConstString_Expression.m_String || _TokenType == gc_ConstString_AppendExpression.m_String)
 		{

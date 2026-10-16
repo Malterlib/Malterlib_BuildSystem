@@ -4,7 +4,8 @@
 #include "Malterlib_BuildSystem_ConstantStrings.h"
 
 // To find candidates for sharing const strings:
-// ag "gc_Str<" | grep 'gc_Str<' | grep -v -e Malterlib_BuildSystem_ConstantKeys.cpp -e Malterlib_BuildSystem_ConstantStrings.hpp | awk -F'gc_Str<"' '{print $2}' | awk -F'">' '{print $1}' | sort | uniq -cd
+// ag "gc_Str<" | grep 'gc_Str<' | grep -v -e Malterlib_BuildSystem_ConstantKeys.cpp -e Malterlib_BuildSystem_ConstantStrings.hpp | awk -F'gc_Str<"' '{print $2}' | awk -F'">' '{print $1}' |
+// sort | uniq -cd
 
 namespace NMib::NBuildSystem
 {

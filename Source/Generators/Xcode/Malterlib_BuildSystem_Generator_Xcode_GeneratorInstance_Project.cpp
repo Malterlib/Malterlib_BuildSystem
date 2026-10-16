@@ -14,7 +14,8 @@ namespace NMib::NBuildSystem::NXcode
 			, CStr const &_OutputDir
 			, TCMap<CConfiguration, TCSet<CStr>> &_Runnables
 			, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable
-		) const
+		)
+		const
 	{
 		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
@@ -103,7 +104,7 @@ namespace NMib::NBuildSystem::NXcode
 				if (Extension.f_IsEmpty())
 					NativeTarget.m_ProductPath = NativeTarget.m_ProductName;
 				else
-					NativeTarget.m_ProductPath = "{}.{}"_f <<  NativeTarget.m_ProductName << Extension;
+					NativeTarget.m_ProductPath = "{}.{}"_f << NativeTarget.m_ProductName << Extension;
 
 				if (NativeTarget.m_bDefaultTarget)
 					NativeTarget.m_ProductType = EvaluatedSettings.m_ProductType.m_Value;
@@ -141,9 +142,7 @@ namespace NMib::NBuildSystem::NXcode
 				;
 
 				for (auto &CustomScript : NativeTarget.m_CustomBuildScripts)
-				{
 					fAddScript(fAddScript, &CustomScript);
-				}
 
 				NativeTarget.m_CustomBuildScripts = fg_Move(NewCustomBuildScripts);
 			}
@@ -212,7 +211,7 @@ namespace NMib::NBuildSystem::NXcode
 
 				auto &PreBuildScript = NativeTarget.m_BuildScripts[gc_ConstString_PreBuildScript.m_String];
 				PreBuildScript.m_Inputs.f_Insert(LibraryPath);
-				PreBuildScript.m_Script +=	R"-----(
+				PreBuildScript.m_Script += R"-----(
 if [ -e "{0}" ]; then
 	MTool CopyWriteTimeIfNewer "{1}" "{0}"
 fi
@@ -220,7 +219,6 @@ fi
 					<< DummyPath.f_EscapeStrNoQuotes("\\'\r\n\t", "\\'rnt")
 					<< LibraryPath.f_EscapeStrNoQuotes("\\'\r\n\t", "\\'rnt")
 				;
-
 			}
 		}
 
@@ -233,7 +231,7 @@ fi
 
 		CStr FileData;
 
-		auto fOutput = [&] (CStr const &_Data)
+		auto fOutput = [&](CStr const &_Data)
 			{
 				FileData += _Data;
 				FileData += "\n";
@@ -324,7 +322,6 @@ fi
 			{
 				CByteVector FileDataVector;
 				CFile::fs_WriteStringToVector(FileDataVector, CStr(FileData), false);
-				;
 
 				if (!m_BuildSystem.f_WriteFile(FileDataVector, OutputFile) && bSchemesChanged)
 				{
@@ -346,7 +343,8 @@ fi
 			CProject &_Project
 			, CProjectDependency &_Dependency
 			, TCMap<CConfiguration, CEntityMutablePointer> const &_EnabledConfigurations
-		) const
+		)
+		const
 	{
 		TCMap<CConfiguration, CEntityMutablePointer> TargetConfigs;
 		for (auto &Entity : _EnabledConfigurations)
@@ -397,7 +395,6 @@ fi
 			else
 				PerConfig.m_CalculatedPath = "{}.{}"_f << PerConfig.m_CalculatedDependencyName << PerConfig.m_CalculatedDependencyExtension;
 		}
-
 	}
 
 	TCUnsafeFuture<void> CGeneratorInstance::fp_EvaluateFileTypeCompileFlags(CProjectState &_ProjectState, CProject &_Project) const
@@ -469,12 +466,7 @@ fi
 	}
 
 	template <typename tf_CValue, typename tf_FGetValue>
-	void CGeneratorInstance::fsp_GetSingleValue
-		(
-			TCMap<CConfiguration, CConfigResultCompile> const &_CompileEntities
-			, tf_CValue &o_Value
-			, tf_FGetValue const &_fGetValue
-		)
+	void CGeneratorInstance::fsp_GetSingleValue(TCMap<CConfiguration, CConfigResultCompile> const &_CompileEntities, tf_CValue &o_Value, tf_FGetValue const &_fGetValue)
 	{
 		CBuildSystemUniquePositions FirstPositions;
 		bool bFirst = true;
@@ -501,13 +493,7 @@ fi
 						Error.m_Positions = FirstPositions;
 					}
 
-					CBuildSystem::fs_ThrowError
-						(
-							Value.m_Positions
-							, "Value cannot be changed per configuration"
-							, OtherErrors
-						)
-					;
+					CBuildSystem::fs_ThrowError(Value.m_Positions, "Value cannot be changed per configuration", OtherErrors);
 				}
 			}
 		}
@@ -648,13 +634,13 @@ fi
 				else if (File.m_Type == gc_ConstString_Custom.m_String)
 					FileType = EBuildFileType_Custom;
 				else if
-					(
-						File.m_Type == gc_ConstString_Symbol_Cpp.m_String
-						|| File.m_Type == gc_ConstString_C.m_String
-						|| File.m_Type == gc_ConstString_Symbol_ObjCpp.m_String
-						|| File.m_Type == gc_ConstString_ObjC.m_String
-						|| File.m_Type == gc_ConstString_Assembler.m_String
-					)
+				(
+					File.m_Type == gc_ConstString_Symbol_Cpp.m_String
+					|| File.m_Type == gc_ConstString_C.m_String
+					|| File.m_Type == gc_ConstString_Symbol_ObjCpp.m_String
+					|| File.m_Type == gc_ConstString_ObjC.m_String
+					|| File.m_Type == gc_ConstString_Assembler.m_String
+				)
 				{
 					auto InitEarly = fp_GetSingleConfigValue(File.m_EnabledConfigs, gc_ConstKey_Compile_InitEarly, EEJsonType_Boolean, true);
 					auto &InitEarlyRef = InitEarly.m_Value.f_Get();
@@ -677,7 +663,7 @@ fi
 				else if (File.m_Type == "MalterlibFS")
 					FileType = EBuildFileType_MalterlibFS;
 
-				CBuildFileRef& BuildRef = _Project.mp_OrderedBuildTypes[FileType].f_Insert();
+				CBuildFileRef &BuildRef = _Project.mp_OrderedBuildTypes[FileType].f_Insert();
 				BuildRef.m_FileName = File.f_GetName();
 				BuildRef.m_Name = CFile::fs_GetFile(File.f_GetName());
 				BuildRef.m_FileRefGUID = File.f_GetFileRefGUID();
@@ -733,8 +719,7 @@ fi
 
 						auto fReplaceVariables = [&](CStr const &_String) -> CStr
 							{
-								return _String
-									.f_Replace("$(InputFileBase)", CFile::fs_GetFileNoExt(FileName))
+								return _String.f_Replace("$(InputFileBase)", CFile::fs_GetFileNoExt(FileName))
 									.f_Replace("$(InputFile)", CFile::fs_GetFile(FileName))
 									.f_Replace("$(InputFilePath)", FileName)
 								;
@@ -742,14 +727,10 @@ fi
 						;
 
 						auto ScriptContents = fReplaceVariables(CustomCommandLine.m_Value.f_Get().f_String()).f_EscapeStrNoQuotes("\\'\r\n\t", "\\'rnt");
-						CStr WorkingDirectory = fp_GetConfigValue
-							(
-								File.m_EnabledConfigs
-								, Configuration
-								, gc_ConstKey_Compile_Custom_WorkingDirectory
-								, EEJsonType_String
-								, false
-							).m_Value.f_Get().f_String()
+						CStr WorkingDirectory = fp_GetConfigValue(File.m_EnabledConfigs, Configuration, gc_ConstKey_Compile_Custom_WorkingDirectory, EEJsonType_String, false)
+							.m_Value
+							.f_Get()
+							.f_String()
 						;
 
 						auto InputsJson = fp_GetConfigValue(File.m_EnabledConfigs, Configuration, gc_ConstKey_Compile_Custom_Inputs, EEJsonType_Array, false);
@@ -787,7 +768,7 @@ fi
 							Script.m_Inputs = Inputs;
 							Script.m_bCustom = true;
 
-							for (auto &Output: Script.m_Outputs)
+							for (auto &Output : Script.m_Outputs)
 							{
 								CFileKey FileKey;
 								FileKey.m_FileName = Output;
@@ -796,7 +777,9 @@ fi
 								if (pFile && pFile->f_GetName() == Output)
 								{
 									CStr OutputType = fp_GetConfigValue(pFile->m_EnabledConfigs, Configuration, gc_ConstKey_Compile_Type, EEJsonType_String, false)
-										.m_Value.f_Get().f_String()
+										.m_Value
+										.f_Get()
+										.f_String()
 									;
 									Script.m_OutputTypes[OutputType];
 
@@ -828,9 +811,7 @@ fi
 										TCMap<CConfiguration, CEntityMutablePointer> EnabledConfigs;
 										EnabledConfigs[Configuration] = fg_Explicit(pNewEntity);
 
-										CStr OutputType = fp_GetConfigValue(EnabledConfigs, Configuration, gc_ConstKey_Compile_Type, EEJsonType_String, false)
-											.m_Value.f_Get().f_String()
-										;
+										CStr OutputType = fp_GetConfigValue(EnabledConfigs, Configuration, gc_ConstKey_Compile_Type, EEJsonType_String, false).m_Value.f_Get().f_String();
 										Script.m_OutputTypes[OutputType];
 
 										if (FileType == EBuildFileType_CCompile || FileType == EBuildFileType_CCompileInitEarly)
@@ -950,7 +931,7 @@ fi
 					ToPerform.f_Add
 						(
 							BuildRule.m_GUID
-							,[FileName, BuildRule, &o_Output]
+							, [FileName, BuildRule, &o_Output]
 							{
 								CStr OutputFiles;
 								CStr InputFiles;
@@ -959,8 +940,7 @@ fi
 
 								for (auto &Output : BuildRule.m_Outputs)
 								{
-									CStr OutputReplaced = Output
-										.f_Replace("$(InputFileBase)", "${INPUT_FILE_BASE}")
+									CStr OutputReplaced = Output.f_Replace("$(InputFileBase)", "${INPUT_FILE_BASE}")
 										.f_Replace("$(InputFile)", "${INPUT_FILE_NAME}")
 										.f_Replace("$(InputFilePath)", "${INPUT_FILE_PATH}")
 									;
@@ -971,8 +951,7 @@ fi
 
 								for (auto &Input : BuildRule.m_Inputs)
 								{
-									CStr InputReplaced = Input
-										.f_Replace("$(InputFileBase)", "${INPUT_FILE_BASE}")
+									CStr InputReplaced = Input.f_Replace("$(InputFileBase)", "${INPUT_FILE_BASE}")
 										.f_Replace("$(InputFile)", "${INPUT_FILE_NAME}")
 										.f_Replace("$(InputFilePath)", "${INPUT_FILE_PATH}")
 									;
@@ -1011,7 +990,6 @@ fi
 									<< BuildRule.m_WorkingDirectory.f_EscapeStrNoQuotes()
 									<< BuildRule.m_MalterlibCustomBuildCommandLine.f_EscapeStrNoQuotes()
 								;
-
 							}
 						)
 					;
@@ -1023,14 +1001,23 @@ fi
 		ToPerform.f_Perform();
 	}
 
-	void CGeneratorInstance::fp_GeneratePBXBuildFileSection(CProjectState &_ProjectState, CProject &_Project, CStr& _Output) const
+	void CGeneratorInstance::fp_GeneratePBXBuildFileSection(CProjectState &_ProjectState, CProject &_Project, CStr &_Output) const
 	{
 		TCSortedPerform<CStr const &> ToPerform;
 
 		for (auto Iter = _Project.mp_OrderedBuildTypes.f_GetIterator(); Iter; ++Iter)
 		{
-			if (Iter.f_GetKey() == EBuildFileType_None || Iter.f_GetKey() == EBuildFileType_CInclude || Iter.f_GetKey() == EBuildFileType_GenericNonCompile || Iter.f_GetKey() == EBuildFileType_Custom || Iter.f_GetKey() == EBuildFileType_GenericCustom)
+			if
+			(
+				Iter.f_GetKey() == EBuildFileType_None
+				|| Iter.f_GetKey() == EBuildFileType_CInclude
+				|| Iter.f_GetKey() == EBuildFileType_GenericNonCompile
+				|| Iter.f_GetKey() == EBuildFileType_Custom
+				|| Iter.f_GetKey() == EBuildFileType_GenericCustom
+			)
+			{
 				continue;
+			}
 
 			for (auto &File : *Iter)
 			{
@@ -1040,7 +1027,7 @@ fi
 					ToPerform.f_Add
 						(
 							BuildGUID
-							,[&, pFile, BuildGUID]
+							, [&, pFile, BuildGUID]
 							{
 								_Output
 									+= CStr::CFormat("\t\t{} /* {} in Sources */ = {{isa = PBXBuildFile; fileRef = {} /* {} */;")
@@ -1082,7 +1069,7 @@ fi
 		ToPerform.f_Perform();
 	}
 
-	void CGeneratorInstance::fp_GeneratePBXFileReferenceSection(CProject &_Project, CStr const &_OutputDir, CStr& _Output) const
+	void CGeneratorInstance::fp_GeneratePBXFileReferenceSection(CProject &_Project, CStr const &_OutputDir, CStr &_Output) const
 	{
 		TCSortedPerform<CStr const &> ToPerform;
 		// File references
@@ -1142,7 +1129,8 @@ fi
 							NativeTarget.f_GetProductReferenceGUID()
 							, [&]
 							{
-								_Output += CStr::CFormat("\t\t{} /* {} */ = {{isa = PBXFileReference; includeInIndex = 0; path = \"{}\"; sourceTree = {}; };\n")
+								_Output
+									+= CStr::CFormat("\t\t{} /* {} */ = {{isa = PBXFileReference; includeInIndex = 0; path = \"{}\"; sourceTree = {}; };\n")
 									<< NativeTarget.f_GetProductReferenceGUID()
 									<< NativeTarget.m_ProductName
 									<< NativeTarget.m_ProductPath
@@ -1208,10 +1196,9 @@ fi
 		}
 
 		ToPerform.f_Perform();
-
 	}
 
-	void CGeneratorInstance::fp_GeneratePBXGroupSection(CProject &_Project, CStr& _Output) const
+	void CGeneratorInstance::fp_GeneratePBXGroupSection(CProject &_Project, CStr &_Output) const
 	{
 		struct CGroupChild
 		{
@@ -1221,33 +1208,33 @@ fi
 
 		TCMap<CStr, TCVector<CGroupChild>> GroupChildren;
 
-		auto fOutputGroupChild = [&] (CStr const &_GUID, CStr const &_Name)
-		{
-			_Output += CStr::CFormat("\t\t\t\t{} /* {} */,\n") << _GUID << _Name;
-		};
+		auto fOutputGroupChild = [&](CStr const &_GUID, CStr const &_Name)
+			{
+				_Output += CStr::CFormat("\t\t\t\t{} /* {} */,\n") << _GUID << _Name;
+			}
+		;
 
 		TCSet<CStr> OutputGroups;
-		auto fOutputGroup = [&] (CStr const &_GUID, CStr const &_Name)
-		{
-			if (!OutputGroups(_GUID).f_WasCreated())
-				return; // Already output
-
-			_Output += CStr::CFormat("\t\t{} /* {} */") << _GUID << _Name;
-			_Output += " = {\n\t\t\tisa = PBXGroup;\n\t\t\tchildren = (\n";
-
-			auto pChildren = GroupChildren.f_FindEqual(_GUID);
-			if (pChildren)
+		auto fOutputGroup = [&](CStr const &_GUID, CStr const &_Name)
 			{
-				for (auto Iter = pChildren->f_GetIterator(); Iter; ++Iter)
-				{
-					fOutputGroupChild(Iter->m_GUID, Iter->m_Name);
-				}
-			}
+				if (!OutputGroups(_GUID).f_WasCreated())
+					return; // Already output
 
-			_Output += "\t\t\t);\n";
-			_Output += CStr::CFormat("\t\t\tname = {};\n") << fg_EscapeXcodeProjectVar(_Name);
-			_Output += "\t\t\tsourceTree = \"<group>\";\n\t\t};\n";
-		};
+				_Output += CStr::CFormat("\t\t{} /* {} */") << _GUID << _Name;
+				_Output += " = {\n\t\t\tisa = PBXGroup;\n\t\t\tchildren = (\n";
+
+				auto pChildren = GroupChildren.f_FindEqual(_GUID);
+				if (pChildren)
+				{
+					for (auto Iter = pChildren->f_GetIterator(); Iter; ++Iter)
+						fOutputGroupChild(Iter->m_GUID, Iter->m_Name);
+				}
+
+				_Output += "\t\t\t);\n";
+				_Output += CStr::CFormat("\t\t\tname = {};\n") << fg_EscapeXcodeProjectVar(_Name);
+				_Output += "\t\t\tsourceTree = \"<group>\";\n\t\t};\n";
+			}
+		;
 
 		TCSortedPerform<CStr const &> ToPerform;
 
@@ -1257,9 +1244,9 @@ fi
 		{
 			if (IterGroup->m_pParent)
 			{
-				auto & Children = GroupChildren[IterGroup->m_pParent->f_GetGUID()];
+				auto &Children = GroupChildren[IterGroup->m_pParent->f_GetGUID()];
 
-				CGroupChild& Child = Children.f_Insert();
+				CGroupChild &Child = Children.f_Insert();
 				Child.m_GUID = IterGroup->f_GetGUID();
 				Child.m_Name = CFile::fs_GetFile(IterGroup->m_Name);
 			}
@@ -1281,9 +1268,9 @@ fi
 		{
 			if (IterFile->m_pGroup)
 			{
-				auto & Children = GroupChildren[IterFile->m_pGroup->f_GetGUID()];
+				auto &Children = GroupChildren[IterFile->m_pGroup->f_GetGUID()];
 
-				CGroupChild& Child = Children.f_Insert();
+				CGroupChild &Child = Children.f_Insert();
 				Child.m_GUID = IterFile->f_GetFileRefGUID();
 				Child.m_Name = CFile::fs_GetFile(IterFile->f_GetName());
 			}
@@ -1299,7 +1286,7 @@ fi
 				{
 					if (!NativeTarget.m_ProductType.f_IsEmpty())
 					{
-						CGroupChild& Child = lProducts.f_Insert();
+						CGroupChild &Child = lProducts.f_Insert();
 						Child.m_GUID = NativeTarget.f_GetProductReferenceGUID();
 						Child.m_Name = NativeTarget.m_ProductName;
 					}
@@ -1324,7 +1311,7 @@ fi
 			{
 				for (auto &NativeTarget : NativeTargets)
 				{
-					CGroupChild& Child = lConfigurations.f_Insert();
+					CGroupChild &Child = lConfigurations.f_Insert();
 					Child.m_GUID = NativeTarget.m_BuildConfiguration.f_GetFileRefGUID();
 					Child.m_Name = CFile::fs_GetFileNoExt(NativeTarget.m_BuildConfiguration.f_GetFile());
 				}
@@ -1349,7 +1336,7 @@ fi
 				if (Dependency.m_bInternal || Dependency.m_bExternal)
 					continue;
 
-				CGroupChild& Child = ProjectDependencies.f_Insert();
+				CGroupChild &Child = ProjectDependencies.f_Insert();
 				Child.m_GUID = Dependency.f_GetFileRefGUID();
 				Child.m_Name = Dependency.f_GetName() + ".xcodeproj";
 			}
@@ -1367,8 +1354,7 @@ fi
 
 		// Generator group
 		{
-
-			TCVector<CGroupChild> & lChildren = GroupChildren[_Project.f_GetGeneratorGroupGUID()];
+			TCVector<CGroupChild> &lChildren = GroupChildren[_Project.f_GetGeneratorGroupGUID()];
 			{
 				auto &Group = lChildren.f_Insert();
 				Group.m_GUID = _Project.f_GetProductRefGroupGUID();
@@ -1432,10 +1418,9 @@ fi
 		;
 
 		ToPerform.f_Perform();
-
 	}
 
-	void CGeneratorInstance::fp_GeneratePBXProjectSection(CProject &_Project, CStr& _Output) const
+	void CGeneratorInstance::fp_GeneratePBXProjectSection(CProject &_Project, CStr &_Output) const
 	{
 		_Output += (CStr::CFormat("\t\t{} /* Project object */ ") << _Project.f_GetGUID());
 		if (m_XcodeVersion >= 7)
@@ -1446,9 +1431,13 @@ fi
 			_Output += "= {\n\t\t\tisa = PBXProject;\n\t\t\tattributes = {\n\t\t\t\tLastUpgradeCheck = 0510;\n\t\t\t};\n";
 		else
 			_Output += "= {\n\t\t\tisa = PBXProject;\n\t\t\tattributes = {\n\t\t\t\tLastUpgradeCheck = 0450;\n\t\t\t};\n";
-		_Output += (CStr::CFormat("\t\t\tbuildConfigurationList = {} /* Build configuration list for PBXProject \"{}\" */;\n")
-					<< _Project.f_GetBuildConfigurationListGUID()
-					<< _Project.f_GetName());
+		_Output +=
+			(
+				CStr::CFormat("\t\t\tbuildConfigurationList = {} /* Build configuration list for PBXProject \"{}\" */;\n")
+				<< _Project.f_GetBuildConfigurationListGUID()
+				<< _Project.f_GetName()
+			)
+		;
 		_Output += "\t\t\tcompatibilityVersion = \"Xcode 6.3\";\n";
 		_Output += "\t\t\tdevelopmentRegion = English;\n";
 		_Output += "\t\t\thasScannedForEncodings = 0;\n";
@@ -1458,7 +1447,7 @@ fi
 		_Output += (CStr::CFormat("\t\t\tmainGroup = {};\n") << _Project.f_GetMainGroupGUID());
 		_Output += (CStr::CFormat("\t\t\tproductRefGroup = {} /* Product Reference */;\n") << _Project.f_GetProductRefGroupGUID());
 		_Output += "\t\t\tprojectDirPath = \"\";\n\t\t\tprojectReferences = (\n";
-		TCSortedPerform<CStr const&> ToPerform;
+		TCSortedPerform<CStr const &> ToPerform;
 		for (auto &Dependency : _Project.m_DependenciesOrdered)
 		{
 			if (Dependency.m_bInternal || Dependency.m_bExternal)
@@ -1467,16 +1456,17 @@ fi
 			auto *pDependency = &Dependency;
 
 			ToPerform.f_Add
-			(
-				pDependency->f_GetName()
-				, [&, pDependency]
-				{
-					_Output += "\t\t\t\t{\n";
-					_Output += (CStr::CFormat("\t\t\t\t\tProductGroup = {} /* Products */;\n") << pDependency->f_GetProductRefGroupGUID());
-					_Output += (CStr::CFormat("\t\t\t\t\tProjectRef = {} /* {}.xcodeproj */;\n") << pDependency->f_GetFileRefGUID() << pDependency->f_GetName());
-					_Output += "\t\t\t\t},\n";
-				}
-			);
+				(
+					pDependency->f_GetName()
+					, [&, pDependency]
+					{
+						_Output += "\t\t\t\t{\n";
+						_Output += (CStr::CFormat("\t\t\t\t\tProductGroup = {} /* Products */;\n") << pDependency->f_GetProductRefGroupGUID());
+						_Output += (CStr::CFormat("\t\t\t\t\tProjectRef = {} /* {}.xcodeproj */;\n") << pDependency->f_GetFileRefGUID() << pDependency->f_GetName());
+						_Output += "\t\t\t\t},\n";
+					}
+				)
+			;
 		}
 		ToPerform.f_Perform();
 		_Output += "\t\t\t);\n";
@@ -1490,7 +1480,7 @@ fi
 		_Output += "\t\t\t);\n\t\t};\n";
 	}
 
-	void CGeneratorInstance::fp_GeneratePBXSourcesBuildPhaseSection(CProject &_Project, CStr& _Output) const
+	void CGeneratorInstance::fp_GeneratePBXSourcesBuildPhaseSection(CProject &_Project, CStr &_Output) const
 	{
 		for (auto &NativeTargets : _Project.m_NativeTargets)
 		{
@@ -1507,8 +1497,17 @@ fi
 
 				for (auto iBuildFiles = _Project.mp_OrderedBuildTypes.f_GetIterator(); iBuildFiles; ++iBuildFiles)
 				{
-					if (iBuildFiles.f_GetKey() == EBuildFileType_None || iBuildFiles.f_GetKey() == EBuildFileType_CInclude || iBuildFiles.f_GetKey() == EBuildFileType_GenericNonCompile || iBuildFiles.f_GetKey() == EBuildFileType_Custom || iBuildFiles.f_GetKey() == EBuildFileType_GenericCustom)
+					if
+					(
+						iBuildFiles.f_GetKey() == EBuildFileType_None
+						|| iBuildFiles.f_GetKey() == EBuildFileType_CInclude
+						|| iBuildFiles.f_GetKey() == EBuildFileType_GenericNonCompile
+						|| iBuildFiles.f_GetKey() == EBuildFileType_Custom
+						|| iBuildFiles.f_GetKey() == EBuildFileType_GenericCustom
+					)
+					{
 						continue;
+					}
 
 					for (auto &FileRef : *iBuildFiles)
 					{
@@ -1570,7 +1569,7 @@ fi
 		}
 	}
 
-	void CGeneratorInstance::fp_GeneratePBXFrameworksBuildPhaseSection(CProject &_Project, CStr& _Output) const
+	void CGeneratorInstance::fp_GeneratePBXFrameworksBuildPhaseSection(CProject &_Project, CStr &_Output) const
 	{
 		for (auto &NativeTargets : _Project.m_NativeTargets)
 		{
@@ -1585,14 +1584,14 @@ fi
 		}
 	}
 
-	void CGeneratorInstance::fp_GeneratePBXShellScriptBuildPhaseSection(CProject& _Project, CStr& _Output) const
+	void CGeneratorInstance::fp_GeneratePBXShellScriptBuildPhaseSection(CProject &_Project, CStr &_Output) const
 	{
 		for (auto &NativeTargets : _Project.m_NativeTargets)
 		{
 			auto &NativeTarget = NativeTargets.f_GetFirst();
 			auto &Configuration = _Project.m_NativeTargets.fs_GetKey(NativeTargets);
 
-			auto fOutputScript = [&] (CBuildScript& _Script)
+			auto fOutputScript = [&](CBuildScript &_Script)
 				{
 					_Output += CStr::CFormat("\t\t{} /* {} */ = ") << _Script.f_GetGUID(Configuration) << _Script.m_Name;
 					_Output += "{\n\t\t\tisa = PBXShellScriptBuildPhase;\n";
@@ -1635,22 +1634,23 @@ fi
 		}
 	}
 
-	void CGeneratorInstance::fp_GenerateXCConfigurationList(CProject &_Project, CStr& _Output) const
+	void CGeneratorInstance::fp_GenerateXCConfigurationList(CProject &_Project, CStr &_Output) const
 	{
 		TCSortedPerform<CStr const &> ToPerform;
 
-		auto fGenerateBuildConfigurationList = [&] (CStr const &_GUID, CStr const &_Name, CStr const &_Description, TCVector<CBuildConfiguration> const &_ConfigList)
-		{
-			_Output += CStr::CFormat("\t\t{} /* Build configuration list for {} \"{}\" */") << _GUID << _Description << _Name;
-			_Output += " = {\n\t\t\tisa = XCConfigurationList;\n\t\t\tbuildConfigurations = (\n";
+		auto fGenerateBuildConfigurationList = [&](CStr const &_GUID, CStr const &_Name, CStr const &_Description, TCVector<CBuildConfiguration> const &_ConfigList)
+			{
+				_Output += CStr::CFormat("\t\t{} /* Build configuration list for {} \"{}\" */") << _GUID << _Description << _Name;
+				_Output += " = {\n\t\t\tisa = XCConfigurationList;\n\t\t\tbuildConfigurations = (\n";
 
-			for (auto Iter = _ConfigList.f_GetIterator(); Iter; ++Iter)
-				_Output += CStr::CFormat("\t\t\t\t{} /* {} */,\n") << Iter->f_GetGUID() << Iter->m_ConfigName;
-			_Output += "\t\t\t);\n";
-			_Output += "\t\t\tdefaultConfigurationIsVisible = 0;\n";
-			_Output += CStr::CFormat("\t\t\tdefaultConfigurationName = \"{}\";\n") << _ConfigList.f_GetFirst().m_ConfigName;
-			_Output += "\t\t};\n";
-		};
+				for (auto Iter = _ConfigList.f_GetIterator(); Iter; ++Iter)
+					_Output += CStr::CFormat("\t\t\t\t{} /* {} */,\n") << Iter->f_GetGUID() << Iter->m_ConfigName;
+				_Output += "\t\t\t);\n";
+				_Output += "\t\t\tdefaultConfigurationIsVisible = 0;\n";
+				_Output += CStr::CFormat("\t\t\tdefaultConfigurationName = \"{}\";\n") << _ConfigList.f_GetFirst().m_ConfigName;
+				_Output += "\t\t};\n";
+			}
+		;
 
 		for (auto &NativeTargets : _Project.m_NativeTargets)
 		{
@@ -1681,29 +1681,30 @@ fi
 		ToPerform.f_Perform();
 	}
 
-	void CGeneratorInstance::fp_GenerateXCBuildConfigurationSection(CProject &_Project, CStr& _Output) const
+	void CGeneratorInstance::fp_GenerateXCBuildConfigurationSection(CProject &_Project, CStr &_Output) const
 	{
 		TCSortedPerform<CStr const &> ToPerform;
 
-		auto fGenerateBuildConfigurationList = [&] (CBuildConfiguration const &_Config, bool _bUseReference)
-		{
-			ToPerform.f_Add
-				(
-					_Config.f_GetGUID()
-					, [&_Output, pConfig = &_Config, _bUseReference]
-					{
-						auto &Config = *pConfig;
-						_Output += CStr::CFormat("\t\t{} /* {} */") << Config.f_GetGUID() << Config.m_ConfigName;
-						_Output += " = {\n\t\t\tisa = XCBuildConfiguration;\n";
-						if (_bUseReference)
-							_Output += CStr::CFormat("\t\t\tbaseConfigurationReference = {} /* {} */;\n") << Config.f_GetFileRefGUID() << CFile::fs_GetFileNoExt(Config.f_GetFile());
-						_Output += "\t\t\tbuildSettings = {\n\t\t\t};\n";
-						_Output += CStr::CFormat("\t\t\tname = \"{}\";\n") << Config.m_ConfigName;
-						_Output += "\t\t};\n";
-					}
-				)
-			;
-		};
+		auto fGenerateBuildConfigurationList = [&](CBuildConfiguration const &_Config, bool _bUseReference)
+			{
+				ToPerform.f_Add
+					(
+						_Config.f_GetGUID()
+						, [&_Output, pConfig = &_Config, _bUseReference]
+						{
+							auto &Config = *pConfig;
+							_Output += CStr::CFormat("\t\t{} /* {} */") << Config.f_GetGUID() << Config.m_ConfigName;
+							_Output += " = {\n\t\t\tisa = XCBuildConfiguration;\n";
+							if (_bUseReference)
+								_Output += CStr::CFormat("\t\t\tbaseConfigurationReference = {} /* {} */;\n") << Config.f_GetFileRefGUID() << CFile::fs_GetFileNoExt(Config.f_GetFile());
+							_Output += "\t\t\tbuildSettings = {\n\t\t\t};\n";
+							_Output += CStr::CFormat("\t\t\tname = \"{}\";\n") << Config.m_ConfigName;
+							_Output += "\t\t};\n";
+						}
+					)
+				;
+			}
+		;
 
 		for (auto &NativeTargets : _Project.m_NativeTargets)
 		{
@@ -1716,7 +1717,7 @@ fi
 		ToPerform.f_Perform();
 	}
 
-	void CGeneratorInstance::fp_GeneratePBXContainerItemProxySection(CProject& _Project, CStr& _Output) const
+	void CGeneratorInstance::fp_GeneratePBXContainerItemProxySection(CProject &_Project, CStr &_Output) const
 	{
 		TCSortedPerform<CStr const &> ToPerform;
 
@@ -1748,10 +1749,7 @@ fi
 
 							CNativeTarget TargetDummy;
 							TargetDummy.m_Name = PerConfig.f_GetName(Dependency, "");
-							_Output += "\t\t\tproxyType = 1;\n\t\t\tremoteGlobalIDString = {};\n\t\t\tremoteInfo = \"{}\";\n\t\t};\n"_f
-								<< TargetDummy.f_GetGUID()
-								<< TargetDummy.m_Name
-							;
+							_Output += "\t\t\tproxyType = 1;\n\t\t\tremoteGlobalIDString = {};\n\t\t\tremoteInfo = \"{}\";\n\t\t};\n"_f << TargetDummy.f_GetGUID() << TargetDummy.m_Name;
 						}
 					)
 				;
@@ -1761,7 +1759,7 @@ fi
 		ToPerform.f_Perform();
 	}
 
-	void CGeneratorInstance::fp_GeneratePBXTargetDependencySection(CProject& _Project, CStr& _Output) const
+	void CGeneratorInstance::fp_GeneratePBXTargetDependencySection(CProject &_Project, CStr &_Output) const
 	{
 		TCSortedPerform<CStr const &> ToPerform;
 
@@ -1783,7 +1781,8 @@ fi
 
 							_Output += "\t\t{} /* PBXTargetDependency */ = "_f << PerConfig.f_GetTargetGUID(Dependency);
 							_Output += "{\n\t\t\tisa = PBXTargetDependency;\n";
-							_Output += "\t\t\tname = \"{}\";\n\t\t\ttargetProxy = {} /* PBXContainerItemProxy */;\n"_f
+							_Output
+								+= "\t\t\tname = \"{}\";\n\t\t\ttargetProxy = {} /* PBXContainerItemProxy */;\n"_f
 								<< PerConfig.f_GetName(Dependency, "")
 								<< PerConfig.f_GetContainerItemGUID(Dependency)
 							;
@@ -1797,7 +1796,7 @@ fi
 		ToPerform.f_Perform();
 	}
 
-	void CGeneratorInstance::fp_GeneratePBXAggregateTargetSection(CProject &_Project, CStr& _Output) const
+	void CGeneratorInstance::fp_GeneratePBXAggregateTargetSection(CProject &_Project, CStr &_Output) const
 	{
 		bool bBegin = false;
 		for (auto &NativeTargets : _Project.m_NativeTargets)
@@ -1818,7 +1817,8 @@ fi
 			_Output += CStr::CFormat("\t\t{} /* {} */ = ") << NativeTarget.f_GetGUID() << NativeTarget.m_Name;
 			_Output += "{\n\t\t\tisa = PBXAggregateTarget;\n";
 
-			_Output += CStr::CFormat("\t\t\tbuildConfigurationList = {} /* Build configuration list for PBXAggregateTarget \"{}\" */;\n")
+			_Output
+				+= CStr::CFormat("\t\t\tbuildConfigurationList = {} /* Build configuration list for PBXAggregateTarget \"{}\" */;\n")
 				<< NativeTarget.f_GetBuildConfigurationListGUID()
 				<< NativeTarget.m_Name
 			;
@@ -1869,7 +1869,7 @@ fi
 			_Output += "/* End PBXAggregateTarget section */\n\n";
 	}
 
-	void CGeneratorInstance::fp_GeneratePBXNativeTargetSection(CProjectState &_ProjectState, CProject &_Project, CStr& _Output) const
+	void CGeneratorInstance::fp_GeneratePBXNativeTargetSection(CProjectState &_ProjectState, CProject &_Project, CStr &_Output) const
 	{
 		for (auto &NativeTargets : _Project.m_NativeTargets)
 		{
@@ -1884,7 +1884,8 @@ fi
 
 				_Output += CStr::CFormat("\t\t{} /* {} */") << NativeTarget.f_GetGUID() << NativeTarget.m_Name;
 				_Output += " = {\n";
-				_Output += CStr::CFormat("\t\t\tisa = PBXNativeTarget;\n\t\t\tbuildConfigurationList = {} /* Build configuration list for PBXNativeTarget \"{}\" */;\n")
+				_Output
+					+= CStr::CFormat("\t\t\tisa = PBXNativeTarget;\n\t\t\tbuildConfigurationList = {} /* Build configuration list for PBXNativeTarget \"{}\" */;\n")
 					<< NativeTarget.f_GetBuildConfigurationListGUID()
 					<< NativeTarget.m_Name
 				;
@@ -1934,9 +1935,9 @@ fi
 				// Sources, Frameworks, Headers
 				_Output += CStr::CFormat("\t\t\t\t{} /* Sources */,\n") << NativeTarget.f_GetSourcesBuildPhaseGUID();
 				_Output += CStr::CFormat("\t\t\t\t{} /* Frameworks */,\n") << NativeTarget.f_GetFrameworksBuildPhaseGUID();
-	#if 0
+#if 0
 				_Output += CStr::CFormat("\t\t\t\t{} /* Headers */,\n") << NativeTarget.f_GetHeadersBuildPhaseGUID();
-	#endif
+#endif
 
 				// Post build scripts
 				for (auto iScript = NativeTarget.m_BuildScripts.f_GetIterator(); iScript; ++iScript)
@@ -2007,7 +2008,8 @@ fi
 					_Output += CStr::CFormat("\t\t\t\t{} /* PBXTargetDependency */,\n") << pPerConfig->f_GetTargetGUID(Dependency);
 				}
 				_Output += "\t\t\t);\n";
-				_Output += CStr::CFormat("\t\t\tname = {};\n\t\t\tproductName = {};\n\t\t\tproductReference = {} /* {} */;\n\t\t\tproductType = \"{}\";\n\t\t};\n")
+				_Output
+					+= CStr::CFormat("\t\t\tname = {};\n\t\t\tproductName = {};\n\t\t\tproductReference = {} /* {} */;\n\t\t\tproductType = \"{}\";\n\t\t};\n")
 					<< fg_EscapeXcodeProjectVar(NativeTarget.m_Name)
 					<< fg_EscapeXcodeProjectVar(NativeTarget.m_ProductName)
 					<< NativeTarget.f_GetProductReferenceGUID()
@@ -2018,7 +2020,7 @@ fi
 		}
 	}
 
-	void CGeneratorInstance::fspr_MergeScheme(CXMLNode const* _pExistingNode, CXMLNode const* _pPrevNode, CXMLNode* _pNewNode)
+	void CGeneratorInstance::fspr_MergeScheme(CXMLNode const *_pExistingNode, CXMLNode const *_pPrevNode, CXMLNode *_pNewNode)
 	{
 		// Merge attributes.
 		TCSet<CXMLNode *> AlreadyMerged;
@@ -2039,7 +2041,7 @@ fi
 				PrevAttributes[pAttribute->Name()];
 
 			// Find change attributes
-			for (CXMLAttribute const *pAttribute = pNewElement->FirstAttribute(); pAttribute; )
+			for (CXMLAttribute const *pAttribute = pNewElement->FirstAttribute(); pAttribute;)
 			{
 				auto *pThisAttribute = const_cast<CXMLAttribute *>(pAttribute);
 				pAttribute = pAttribute->Next();
@@ -2053,7 +2055,7 @@ fi
 					continue;
 				}
 				else if (ExistingAttributes.f_Exists(Name) && PrevAttributes.f_Exists(Name))
-					// This purposefully allows the config to override user setting if config added a new attribute that the user manually added previously
+				// This purposefully allows the config to override user setting if config added a new attribute that the user manually added previously
 				{
 					// Possibly changed by user
 					CStr ExistingValue;
@@ -2088,7 +2090,6 @@ fi
 
 			if (fg_StrCmp(pNewElement->Value(), "CommandLineArguments") == 0)
 			{
-
 				TCMap<CStr, CXMLNode const *> ExistingArgs;
 				TCMap<CStr, CXMLNode const *> PrevArgs;
 				TCMap<CStr, CXMLNode *> NewArgs;
@@ -2160,12 +2161,11 @@ fi
 		CXMLDocument::CConstNodeIterator iPrevChild(_pPrevNode);
 		CXMLDocument::CNodeIterator iNewChild(_pNewNode);
 
-
 		while (iExistingChild || iPrevChild || iNewChild)
 		{
-			CXMLNode const* pExistingChild = iExistingChild;
-			CXMLNode const* pPrevChild = iPrevChild;
-			CXMLNode * pNewChild = iNewChild;
+			CXMLNode const *pExistingChild = iExistingChild;
+			CXMLNode const *pPrevChild = iPrevChild;
+			CXMLNode *pNewChild = iNewChild;
 
 			++iExistingChild;
 			++iPrevChild;
@@ -2197,16 +2197,19 @@ fi
 			}
 			else
 			{
-				if (
-						pExistingChild
-						&& pPrevChild
-						&& pNewChild
-						&& CXMLDocument::f_GetNodeType(pExistingChild) == CXMLDocument::f_GetNodeType(pPrevChild)
-						&& CXMLDocument::f_GetNodeType(pExistingChild) == CXMLDocument::f_GetNodeType(pNewChild)
-						&& pExistingChild->Value() == pPrevChild->Value()
-						&& pExistingChild->Value() == pNewChild->Value()
-					)
+				if
+				(
+					pExistingChild
+					&& pPrevChild
+					&& pNewChild
+					&& CXMLDocument::f_GetNodeType(pExistingChild) == CXMLDocument::f_GetNodeType(pPrevChild)
+					&& CXMLDocument::f_GetNodeType(pExistingChild) == CXMLDocument::f_GetNodeType(pNewChild)
+					&& pExistingChild->Value() == pPrevChild->Value()
+					&& pExistingChild->Value() == pNewChild->Value()
+				)
+				{
 					fspr_MergeScheme(pExistingChild, pPrevChild, pNewChild); // All the same, merge the contents
+				}
 				else
 				{
 				}
@@ -2217,10 +2220,11 @@ fi
 	bool CGeneratorInstance::fp_GenerateSchemes
 		(
 			CProjectState &_ProjectState
-			, CProject& _Project
+			, CProject &_Project
 			, TCMap<CConfiguration, TCSet<CStr>> &_Runnables
 			, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable
-		) const
+		)
+		const
 	{
 		bool bSchemesChanged = false;
 
@@ -2232,7 +2236,7 @@ fi
 
 		for (auto Iter = _Project.m_EnabledProjectConfigs.f_GetIterator(); Iter; ++Iter)
 		{
-			CConfiguration const& Configuration = Iter.f_GetKey();
+			CConfiguration const &Configuration = Iter.f_GetKey();
 
 			auto *pNativeTarget = _Project.m_NativeTargets.f_FindEqual(Configuration);
 			if (!pNativeTarget)
@@ -2260,40 +2264,41 @@ fi
 				XMLFile.f_SetAttribute(pScheme, "LastUpgradeVersion", "0450");
 			XMLFile.f_SetAttribute(pScheme, "version", "1.3");
 
-			auto fGenerateBuildReference = [&] (CXMLElement* _pParent) -> CStr
-			{
-				auto pBuildReference = XMLFile.f_CreateElement(_pParent, "BuildableReference");
-				XMLFile.f_SetAttribute(pBuildReference, "BuildableIdentifier", "primary");
-
-				XMLFile.f_SetAttribute(pBuildReference, "BlueprintIdentifier", NativeTarget.f_GetGUID());
-
-				CStr BuildableName;
-				CStr Extension = _ProjectState.m_EvaluatedTargetSettings[Configuration].m_Element[gc_ConstString_EXECUTABLE_EXTENSION.m_String].f_GetValue();
-				if (Extension.f_IsEmpty())
-					BuildableName = _ProjectState.m_EvaluatedTargetSettings[Configuration].m_Element[gc_ConstString_PRODUCT_NAME.m_String].f_GetValue();
-				else
+			auto fGenerateBuildReference = [&](CXMLElement *_pParent) -> CStr
 				{
-					BuildableName = CStr::CFormat("{}.{}")
-						<< _ProjectState.m_EvaluatedTargetSettings[Configuration].m_Element[gc_ConstString_PRODUCT_NAME.m_String].f_GetValue()
-						<< Extension
-					;
+					auto pBuildReference = XMLFile.f_CreateElement(_pParent, "BuildableReference");
+					XMLFile.f_SetAttribute(pBuildReference, "BuildableIdentifier", "primary");
+
+					XMLFile.f_SetAttribute(pBuildReference, "BlueprintIdentifier", NativeTarget.f_GetGUID());
+
+					CStr BuildableName;
+					CStr Extension = _ProjectState.m_EvaluatedTargetSettings[Configuration].m_Element[gc_ConstString_EXECUTABLE_EXTENSION.m_String].f_GetValue();
+					if (Extension.f_IsEmpty())
+						BuildableName = _ProjectState.m_EvaluatedTargetSettings[Configuration].m_Element[gc_ConstString_PRODUCT_NAME.m_String].f_GetValue();
+					else
+					{
+						BuildableName
+							= CStr::CFormat("{}.{}") << _ProjectState.m_EvaluatedTargetSettings[Configuration].m_Element[gc_ConstString_PRODUCT_NAME.m_String].f_GetValue() << Extension
+						;
+					}
+
+					XMLFile.f_SetAttribute(pBuildReference, "BuildableName", BuildableName);
+					XMLFile.f_SetAttribute(pBuildReference, "BlueprintName", _Project.f_GetName());
+					XMLFile.f_SetAttribute(pBuildReference, "ReferencedContainer", (CStr::CFormat("container:{}.xcodeproj") << _Project.f_GetName()).f_GetStr());
+					return BuildableName;
 				}
+			;
 
-				XMLFile.f_SetAttribute(pBuildReference, "BuildableName", BuildableName);
-				XMLFile.f_SetAttribute(pBuildReference, "BlueprintName", _Project.f_GetName());
-				XMLFile.f_SetAttribute(pBuildReference, "ReferencedContainer", (CStr::CFormat("container:{}.xcodeproj") << _Project.f_GetName()).f_GetStr());
-				return BuildableName;
-			};
-
-			auto fGenerateRunnablePath = [&] (CXMLElement* _pParent) -> bool
-			{
-				CElement const& Element = _ProjectState.m_EvaluatedTargetSettings[Configuration].m_Element[gc_ConstString_LocalDebuggerCommand.m_String];
-				if (Element.f_GetValue().f_IsEmpty())
-					return false;
-				auto pPathRunnable = XMLFile.f_CreateElement(_pParent, "PathRunnable");
-				XMLFile.f_SetAttribute(pPathRunnable, "FilePath", Element.f_GetValue());
-				return true;
-			};
+			auto fGenerateRunnablePath = [&](CXMLElement *_pParent) -> bool
+				{
+					CElement const &Element = _ProjectState.m_EvaluatedTargetSettings[Configuration].m_Element[gc_ConstString_LocalDebuggerCommand.m_String];
+					if (Element.f_GetValue().f_IsEmpty())
+						return false;
+					auto pPathRunnable = XMLFile.f_CreateElement(_pParent, "PathRunnable");
+					XMLFile.f_SetAttribute(pPathRunnable, "FilePath", Element.f_GetValue());
+					return true;
+				}
+			;
 
 			// BuildAction
 			{
@@ -2343,7 +2348,7 @@ fi
 				if (fGenerateRunnablePath(pLaunchAction))
 				{
 					_Runnables[Configuration][SchemeName];
-					CElement const& Element = _ProjectState.m_EvaluatedTargetSettings[Configuration].m_Element[gc_ConstString_customWorkingDirectory.m_String];
+					CElement const &Element = _ProjectState.m_EvaluatedTargetSettings[Configuration].m_Element[gc_ConstString_customWorkingDirectory.m_String];
 					if (!Element.f_GetValue().f_IsEmpty())
 					{
 						bUsingCustomWorkingDirectory = true;
@@ -2362,7 +2367,7 @@ fi
 				// Command line options
 				if (_ProjectState.m_EvaluatedTargetSettings[Configuration].m_Element.f_Exists(gc_ConstString_CommandLineArgument.m_String))
 				{
-					CElement const& Element = _ProjectState.m_EvaluatedTargetSettings[Configuration].m_Element[gc_ConstString_CommandLineArgument.m_String];
+					CElement const &Element = _ProjectState.m_EvaluatedTargetSettings[Configuration].m_Element[gc_ConstString_CommandLineArgument.m_String];
 					if (!Element.f_IsEmpty())
 					{
 						auto pCommandLineArguments = XMLFile.f_CreateElement(pLaunchAction, "CommandLineArguments");
@@ -2375,7 +2380,7 @@ fi
 					}
 				}
 
-				 XMLFile.f_CreateElement(pLaunchAction, "AdditionalOptions");
+				XMLFile.f_CreateElement(pLaunchAction, "AdditionalOptions");
 			}
 
 			// ProfileAction
@@ -2389,7 +2394,7 @@ fi
 				bool bUsingCustomWorkingDirectory = false;
 				if (fGenerateRunnablePath(pProfileAction))
 				{
-					CElement const& Element = _ProjectState.m_EvaluatedTargetSettings[Configuration].m_Element[gc_ConstString_customWorkingDirectory.m_String];
+					CElement const &Element = _ProjectState.m_EvaluatedTargetSettings[Configuration].m_Element[gc_ConstString_customWorkingDirectory.m_String];
 					if (!Element.f_GetValue().f_IsEmpty())
 					{
 						bUsingCustomWorkingDirectory = true;
@@ -2416,7 +2421,7 @@ fi
 				XMLFile.f_SetAttribute(pArchiveAction, "revealArchiveInOrganizer", gc_ConstString_YES);
 			}
 
-			CStr FileName = CFile::fs_AppendPath(OutputDir,  (CStr::CFormat("{}.xcscheme") << SchemeName).f_GetStr());
+			CStr FileName = CFile::fs_AppendPath(OutputDir, (CStr::CFormat("{}.xcscheme") << SchemeName).f_GetStr());
 
 			CStr RawXMLData = XMLFile.f_GetAsString(EXMLOutputDialect_Xcode);
 

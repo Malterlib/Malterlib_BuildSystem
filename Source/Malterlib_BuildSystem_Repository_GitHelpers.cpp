@@ -357,14 +357,7 @@ namespace NMib::NBuildSystem::NRepository
 		CFile::fs_DeleteFile(TargetGitFile);
 		CFile::fs_RenameFile(MainGitDir, _TargetWorktreeSubRepoDir + "/.git");
 
-		co_await _Launches.f_Launch
-			(
-				_TargetWorktreeSubRepoDir
-				, {"worktree", "repair"}
-				, {}
-				, CProcessLaunchActor::ESimpleLaunchFlag_GenerateExceptionOnNonZeroExitCode
-			)
-		;
+		co_await _Launches.f_Launch(_TargetWorktreeSubRepoDir, {"worktree", "repair"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_GenerateExceptionOnNonZeroExitCode);
 
 		CFile::fs_DeleteDirectoryRecursive(_MainSubRepoDir, true);
 
@@ -397,7 +390,7 @@ namespace NMib::NBuildSystem::NRepository
 		if (CFile::fs_FileExists(WorktreeEntryDir, EFileAttrib_Directory))
 		{
 			// Find a unique name if the entry already exists
-			for (umint i = 1; ; ++i)
+			for (umint i = 1;; ++i)
 			{
 				WorktreeEntryDir = "{}/{}{}"_f << WorktreesDir << _WorktreeName << i;
 				if (!CFile::fs_FileExists(WorktreeEntryDir, EFileAttrib_Directory))
@@ -416,14 +409,7 @@ namespace NMib::NBuildSystem::NRepository
 
 		CFile::fs_WriteStringToFile(_WorktreeSubRepoDir + "/.git", "gitdir: {}\n"_f << WorktreeEntryDir, false);
 
-		co_await _Launches.f_Launch
-			(
-				_MainSubRepoDir
-				, {"worktree", "repair"}
-				, {}
-				, CProcessLaunchActor::ESimpleLaunchFlag_GenerateExceptionOnNonZeroExitCode
-			)
-		;
+		co_await _Launches.f_Launch(_MainSubRepoDir, {"worktree", "repair"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_GenerateExceptionOnNonZeroExitCode);
 
 		co_return {};
 	}
@@ -628,15 +614,7 @@ namespace NMib::NBuildSystem::NRepository
 		if (LaunchResult.m_ExitCode)
 		{
 			CStr Output = LaunchResult.f_GetCombinedOut().f_Trim();
-			if
-			(
-				!_bReportBadRevision
-				&&
-				(
-					Output.f_StartsWith("fatal: bad revision ")
-					|| Output.f_StartsWith("fatal: Invalid revision range ")
-				)
-			)
+			if (!_bReportBadRevision && (Output.f_StartsWith("fatal: bad revision ") || Output.f_StartsWith("fatal: Invalid revision range ")))
 			{
 				TCVector<CLogEntry> LogEntries;
 				auto &DummyEntry = LogEntries.f_Insert();
@@ -906,23 +884,16 @@ namespace NMib::NBuildSystem::NRepository
 		o_OutputType = EOutputType_Warning;
 		switch (_Action)
 		{
-		case EHandleRepositoryAction_None:
-			return "(No recommendation)";
-		case EHandleRepositoryAction_Leave:
-			return "(Leave as is)";
+		case EHandleRepositoryAction_None: return "(No recommendation)";
+		case EHandleRepositoryAction_Leave: return "(Leave as is)";
 		case EHandleRepositoryAction_ManualResolve:
 			o_OutputType = EOutputType_Error;
 			return "(Resolve manually)";
-		case EHandleRepositoryAction_Reset:
-			return "reset";
-		case EHandleRepositoryAction_Rebase:
-			return "rebase";
-		case EHandleRepositoryAction_Init:
-			return "init";
-		case EHandleRepositoryAction_CloneRemote:
-			return "clone-remote";
-		case EHandleRepositoryAction_ForkRemote:
-			return "fork-remote";
+		case EHandleRepositoryAction_Reset: return "reset";
+		case EHandleRepositoryAction_Rebase: return "rebase";
+		case EHandleRepositoryAction_Init: return "init";
+		case EHandleRepositoryAction_CloneRemote: return "clone-remote";
+		case EHandleRepositoryAction_ForkRemote: return "fork-remote";
 		case EHandleRepositoryAction_Auto:
 		default:
 			return "internal error";
@@ -1108,7 +1079,8 @@ namespace NMib::NBuildSystem::NRepository
 								, {}
 								, CProcessLaunchActor::ESimpleLaunchFlag_None
 							)
-						).f_Wrap()
+						)
+						.f_Wrap()
 					;
 
 					co_await _BuildSystem.f_CheckCancelled();
@@ -1195,7 +1167,7 @@ namespace NMib::NBuildSystem::NRepository
 
 					co_return {};
 				}
-				> Results;
+				> Results
 			;
 		}
 

@@ -301,7 +301,7 @@ namespace NMib::NBuildSystem
 							if (!bSuccess)
 							{
 								f_OutputConsole("Removed file write protection: {}{\n}"_f << _Destination);
-								CFile::fs_SetAttributes(_Destination, (Attributes & ~EFileAttrib_ReadOnly)  | (mp_SupportedAttributes & EFileAttrib_UserWrite) | mp_ValidAttributes);
+								CFile::fs_SetAttributes(_Destination, (Attributes & ~EFileAttrib_ReadOnly) | (mp_SupportedAttributes & EFileAttrib_UserWrite) | mp_ValidAttributes);
 							}
 						}
 					}
@@ -361,30 +361,16 @@ namespace NMib::NBuildSystem
 	{
 		for (auto iValue = _InitialValues.f_GetIterator(); iValue; ++iValue)
 		{
-			if
-				(
-					_Type == EEvaluatedPropertyType_ExternalEnvironment
-					&& iValue->f_IsString()
-					&& iValue->f_String() == gc_ConstString_undefined.m_String
-				)
-			{
+			if (_Type == EEvaluatedPropertyType_ExternalEnvironment && iValue->f_IsString() && iValue->f_String() == gc_ConstString_undefined.m_String)
 				continue;
-			}
 
 			auto &Evaluated = _Entity.m_EvaluatedProperties.m_Properties[iValue.f_GetKey()];
 			Evaluated.m_Value = *iValue;
 			Evaluated.m_Type = _Type;
 			Evaluated.m_pProperty = &mp_ExternalProperty[iValue.f_GetKey().f_GetType()];
 
-			if
-				(
-					_Type == EEvaluatedPropertyType_ExternalEnvironment
-					&& iValue->f_IsString()
-					&& iValue->f_String() == gc_ConstString_3FFADB4E_9D9D_4CD7_8FA8_539C6ABF79BA.m_String
-				)
-			{
+			if (_Type == EEvaluatedPropertyType_ExternalEnvironment && iValue->f_IsString() && iValue->f_String() == gc_ConstString_3FFADB4E_9D9D_4CD7_8FA8_539C6ABF79BA.m_String)
 				Evaluated.m_Value = gc_ConstString_undefined;
-			}
 
 			if (f_EnablePositions())
 			{

@@ -46,15 +46,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 						auto &Entity = **Dependency.m_EnabledConfigs.f_FindEqual(Config);
 
-						CGeneratorSettings::fs_PopulateSetting
-							(
-								gc_ConstKey_GeneratorSetting_Dependency
-								, EPropertyType_Dependency
-								, m_BuildSystem
-								, Entity
-								, *pResult
-							 )
-						;
+						CGeneratorSettings::fs_PopulateSetting(gc_ConstKey_GeneratorSetting_Dependency, EPropertyType_Dependency, m_BuildSystem, Entity, *pResult);
 
 						if ((nDepenencies % 100) == 0)
 							co_await g_Yield;
@@ -137,10 +129,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 					fg_AddStrSep
 						(
 							ConfigsDependencyDebug
-							, "{}   Indirect {}   IndirectOrdered {}"_f
-							<< Debug.f_Key().f_GetFullName()
-							<< Debug.f_Value().m_bIndirect
-							<< Debug.f_Value().m_bIndirectOrdered
+							, "{}   Indirect {}   IndirectOrdered {}"_f << Debug.f_Key().f_GetFullName() << Debug.f_Value().m_bIndirect << Debug.f_Value().m_bIndirectOrdered
 							, "\n   "
 						)
 					;

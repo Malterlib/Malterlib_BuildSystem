@@ -117,7 +117,10 @@ namespace NMib::NBuildSystem
 						, mp_AnsiFlags
 						, gc_Str<".">.m_Str
 						, mp_MaxRepoWidth
-						, [&](CStr const &_Line) { f_OutputConsole(_Line); }
+						, [&](CStr const &_Line)
+						{
+							f_OutputConsole(_Line);
+						}
 					)
 				;
 			}
@@ -137,12 +140,12 @@ namespace NMib::NBuildSystem
 
 					// Snapshot everything into the coroutine frame before the first co_await.
 					// After the first suspension, all captured references are unsafe.
-					CGitLaunches LocalLaunches       = Launches;
-					CStr LocalBaseDir                = f_GetBaseDir();
-					CStr LocalUniqueStashName        = UniqueStashName;
+					CGitLaunches LocalLaunches = Launches;
+					CStr LocalBaseDir = f_GetBaseDir();
+					CStr LocalUniqueStashName = UniqueStashName;
 					EAnsiEncodingFlag LocalAnsiFlags = mp_AnsiFlags;
-					umint LocalMaxRepoWidth          = mp_MaxRepoWidth;
-					auto LocalOutputConsole          = mp_fOutputConsole;
+					umint LocalMaxRepoWidth = mp_MaxRepoWidth;
+					auto LocalOutputConsole = mp_fOutputConsole;
 
 					auto fLocalOutputInfo = [&](EOutputType _OutputType, CStr const &_Info)
 						{
@@ -153,7 +156,10 @@ namespace NMib::NBuildSystem
 									, LocalAnsiFlags
 									, gc_Str<".">.m_Str
 									, LocalMaxRepoWidth
-									, [&](CStr const &_Line) { LocalOutputConsole(_Line, false); }
+									, [&](CStr const &_Line)
+									{
+										LocalOutputConsole(_Line, false);
+									}
 								)
 							;
 						}
@@ -326,13 +332,8 @@ namespace NMib::NBuildSystem
 		co_return ERetry_None;
 	}
 
-	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Branch
-		(
-			CGenerateOptions const &_GenerateOptions
-			, CRepoFilter const &_Filter
-			, CStr const &_Branch
-			, ERepoBranchFlag _Flags
-		)
+	auto CBuildSystem::f_Action_Repository_Branch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, CStr const &_Branch, ERepoBranchFlag _Flags)
+		-> TCUnsafeFuture<CBuildSystem::ERetry>
 	{
 		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
@@ -449,12 +450,7 @@ namespace NMib::NBuildSystem
 						else
 							RemotesFuture = TCVector<CStr>();
 
-						auto [LaunchResult, RemotesVector] = co_await
-							(
-								Launches.f_Launch(Repo, Params, {}, CProcessLaunchActor::ESimpleLaunchFlag_None)
-								+ fg_Move(RemotesFuture)
-							)
-						;
+						auto [LaunchResult, RemotesVector] = co_await (Launches.f_Launch(Repo, Params, {}, CProcessLaunchActor::ESimpleLaunchFlag_None) + fg_Move(RemotesFuture));
 
 						if (LaunchResult.m_ExitCode != 0)
 						{
@@ -660,13 +656,8 @@ namespace NMib::NBuildSystem
 		co_return ERetry_None;
 	}
 
-	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_CleanupTags
-		(
-			CGenerateOptions const &_GenerateOptions
-			, CRepoFilter const &_Filter
-			, ERepoCleanupTagsFlag _Flags
-			, TCVector<CStr> const &_Tags
-		)
+	auto CBuildSystem::f_Action_Repository_CleanupTags(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoCleanupTagsFlag _Flags, TCVector<CStr> const &_Tags)
+		-> TCUnsafeFuture<CBuildSystem::ERetry>
 	{
 		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
@@ -728,12 +719,7 @@ namespace NMib::NBuildSystem
 						else
 							RemotesFuture = TCVector<CStr>();
 
-						auto [TagResult, RemotesVector] = co_await
-							(
-								Launches.f_Launch(Repo, {"tag"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None)
-								+ fg_Move(RemotesFuture)
-							)
-						;
+						auto [TagResult, RemotesVector] = co_await (Launches.f_Launch(Repo, {"tag"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None) + fg_Move(RemotesFuture));
 
 						if (TagResult.m_ExitCode != 0)
 						{
@@ -950,7 +936,7 @@ namespace NMib::NBuildSystem
 										co_return {};
 									}
 								)
-								> Results;
+								> Results
 							;
 						}
 

@@ -5,7 +5,7 @@
 #include <Mib/Concurrency/Actor/Timer>
 #include <Mib/CommandLine/TableRenderer>
 #ifdef DPlatformFamily_Windows
-#include <Mib/Core/PlatformSpecific/WindowsFilePath>
+#	include <Mib/Core/PlatformSpecific/WindowsFilePath>
 #endif
 
 namespace NMib::NBuildSystem::NRepository
@@ -117,12 +117,7 @@ namespace NMib::NBuildSystem::NRepository
 
 					CStr ReplacedRepo = _Name.f_Replace("/", CStr("{}{}/{}"_f << Colors.f_Default() << Colors.f_Foreground256(250) << RepoColor));
 
-					TableRenderer.f_AddRow
-						(
-							"{}{}{}"_f << RepoColor << ReplacedRepo << Colors.f_Default()
-							, CStr::fs_Join(AllLines, "\n")
-						)
-					;
+					TableRenderer.f_AddRow("{}{}{}"_f << RepoColor << ReplacedRepo << Colors.f_Default(), CStr::fs_Join(AllLines, "\n"));
 
 					if (bIsSection)
 						TableRenderer.f_ForceRowSeparator();
@@ -266,6 +261,7 @@ namespace NMib::NBuildSystem::NRepository
 				g_TimerDestructionTrackerCallstack.f_Capture();
 			}
 		}
+
 		bool m_bLastAlive = true;
 	};
 #endif
@@ -519,7 +515,8 @@ namespace NMib::NBuildSystem::NRepository
 			, TCMap<CStr, CStr> const &_Environment
 			, CProcessLaunchActor::ESimpleLaunchFlag _Flags
 			, CStr const &_Application
-		) const
+		)
+		const
 	{
 		TCVector<CStr> CommandLineParams;
 		if (_Application == "git")
@@ -540,9 +537,7 @@ namespace NMib::NBuildSystem::NRepository
 		{
 			CStr ParentChain = fg_GetSys()->f_GetEnvironmentVariable(gc_Str<"MalterlibInvocationCommands">.m_Str);
 			LaunchParams.m_Params.m_Environment[gc_Str<"MalterlibInvocationCommands">.m_Str]
-				= ParentChain.f_IsEmpty()
-				? m_pState->m_InvocationCommand
-				: CStr("{} {}"_f << ParentChain << m_pState->m_InvocationCommand)
+				= ParentChain.f_IsEmpty() ? m_pState->m_InvocationCommand : CStr("{} {}"_f << ParentChain << m_pState->m_InvocationCommand)
 			;
 		}
 		if (_Application != "git")
@@ -558,7 +553,8 @@ namespace NMib::NBuildSystem::NRepository
 			, TCMap<CStr, CStr> const &_Environment
 			, CProcessLaunchActor::ESimpleLaunchFlag _Flags
 			, CStr const &_Application
-		) const
+		)
+		const
 	{
 		return f_Launch(_Repo.m_Location, _Params, _Environment, _Flags, _Application);
 	}
@@ -588,7 +584,7 @@ namespace NMib::NBuildSystem::NRepository
 	uint32 CGitLaunches::fs_MaxProcesses()
 	{
 #ifdef DPlatformFamily_Windows
-		return fg_Min(fg_Max(32000u / (NSys::fg_Thread_GetVirtualCores()*3u), 32u), 512u);
+		return fg_Min(fg_Max(32000u / (NSys::fg_Thread_GetVirtualCores() * 3u), 32u), 512u);
 #else
 		return 512u;
 #endif
@@ -602,7 +598,8 @@ namespace NMib::NBuildSystem::NRepository
 			, CStr _Prefix
 			, TCMap<CStr, CStr> _Environment
 			, CStr _Application
-		) const
+		)
+		const
 	{
 		auto This = *this;
 		auto &State = *This.m_pState;
@@ -624,9 +621,7 @@ namespace NMib::NBuildSystem::NRepository
 		{
 			CStr ParentChain = fg_GetSys()->f_GetEnvironmentVariable(gc_Str<"MalterlibInvocationCommands">.m_Str);
 			LaunchParams.m_Params.m_Environment[gc_Str<"MalterlibInvocationCommands">.m_Str]
-				= ParentChain.f_IsEmpty()
-				? State.m_InvocationCommand
-				: CStr("{} {}"_f << ParentChain << State.m_InvocationCommand)
+				= ParentChain.f_IsEmpty() ? State.m_InvocationCommand : CStr("{} {}"_f << ParentChain << State.m_InvocationCommand)
 			;
 		}
 		if (_Application != "git")

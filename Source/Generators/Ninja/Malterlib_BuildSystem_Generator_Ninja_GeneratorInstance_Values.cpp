@@ -138,7 +138,6 @@ namespace NMib::NBuildSystem::NNinja
 										FlagList.f_Insert(ArrayEntry.f_StringArray());
 									else
 										_BuildSystem.fs_ThrowError(OutEntry.m_Positions, "FlagsShared value is of unsupported type: {}"_f << Value);
-
 								}
 							}
 							else
@@ -156,12 +155,7 @@ namespace NMib::NBuildSystem::NNinja
 		}
 	}
 
-	void CGeneratorInstance::fp_SetEvaluatedValuesTarget
-		(
-			CEntityMutablePointer const &_Entity
-			, CConfigResultTarget &o_Result
-			, CStr const &_Name
-		) const
+	void CGeneratorInstance::fp_SetEvaluatedValuesTarget(CEntityMutablePointer const &_Entity, CConfigResultTarget &o_Result, CStr const &_Name) const
 	{
 		auto *pConfig = _Entity.f_Get();
 		auto pTopConfig = pConfig;
@@ -177,13 +171,7 @@ namespace NMib::NBuildSystem::NNinja
 			}
 
 			CBuildSystemPropertyInfo PropertyInfo;
-			auto Value = m_BuildSystem.f_EvaluateEntityProperty
-				(
-					*pTopConfig
-					, gc_ConstKey_GeneratorSetting_Target
-					, PropertyInfo
-				)
-			;
+			auto Value = m_BuildSystem.f_EvaluateEntityProperty(*pTopConfig, gc_ConstKey_GeneratorSetting_Target, PropertyInfo);
 			auto ValueMove = Value.f_Move();
 
 			auto Cleanup = g_OnScopeExit / [&]
@@ -194,13 +182,7 @@ namespace NMib::NBuildSystem::NNinja
 			;
 
 			CBuildSystemPropertyInfo PropertyInfoValidateSettings;
-			m_BuildSystem.f_EvaluateEntityProperty
-				(
-					*pTopConfig
-					, gc_ConstKey_GeneratorSetting_TargetValidateSettings
-					, PropertyInfoValidateSettings
-				)
-			;
+			m_BuildSystem.f_EvaluateEntityProperty(*pTopConfig, gc_ConstKey_GeneratorSetting_TargetValidateSettings, PropertyInfoValidateSettings);
 
 			CRuleAndBuild::fs_RuleFromJson(o_Result.m_PreBuild, m_BuildSystem, fg_Move(ValueMove[gc_Str<"Rule_PreBuild">.m_Str]));
 			CRuleAndBuild::fs_RuleFromJson(o_Result.m_Build, m_BuildSystem, fg_Move(ValueMove[gc_Str<"Rule_Build">.m_Str]), &o_Result.m_SharedFlags);
@@ -213,13 +195,14 @@ namespace NMib::NBuildSystem::NNinja
 
 	auto CGeneratorInstance::fp_GetConfigValue
 		(
-		 	TCMap<CConfiguration, CEntityMutablePointer> const &_Configs
-		 	, CConfiguration const &_Configuration
-		 	, CPropertyKeyReference const &_PropertyKey
+			TCMap<CConfiguration, CEntityMutablePointer> const &_Configs
+			, CConfiguration const &_Configuration
+			, CPropertyKeyReference const &_PropertyKey
 			, EEJsonType _ExpectedType
 			, bool _bOptional
-		) const
-	 	-> CSingleValue
+		)
+		const
+		-> CSingleValue
 	{
 		auto pEntity = _Configs.f_FindEqual(_Configuration);
 		if (!pEntity)
@@ -228,12 +211,7 @@ namespace NMib::NBuildSystem::NNinja
 			if (!_Configs.f_IsEmpty())
 				Position = _Configs.f_FindSmallest()->f_Get()->f_Data().m_Position;
 
-			m_BuildSystem.fs_ThrowError
-				(
-					Position
-					, "When getting {}.{} Could not find config '{}' in enabled configs: {vs}"_f << _PropertyKey << _Configuration << _Configs.f_KeySet()
-				)
-			;
+			m_BuildSystem.fs_ThrowError(Position, "When getting {}.{} Could not find config '{}' in enabled configs: {vs}"_f << _PropertyKey << _Configuration << _Configs.f_KeySet());
 		}
 
 		CBuildSystemPropertyInfo PropertyInfo;

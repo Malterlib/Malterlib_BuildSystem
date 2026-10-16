@@ -155,8 +155,7 @@ namespace NMib::NBuildSystem
 							Files.f_Insert(FullPath);
 						}
 
-						auto fAddFile
-							= [&](CStr const &_File)
+						auto fAddFile = [&](CStr const &_File)
 							{
 								auto SourceFile = mp_SourceFiles(_File);
 								if (bImport && !SourceFile.f_WasCreated())
@@ -174,7 +173,7 @@ namespace NMib::NBuildSystem
 								fpr_HandleIncludes(IncludedRegistry, Path, o_Errors);
 
 								auto pPrevious = &_Registry;
-								for (auto iChild = IncludedRegistry.f_GetChildIterator(); iChild; )
+								for (auto iChild = IncludedRegistry.f_GetChildIterator(); iChild;)
 								{
 									auto pChild = iChild.f_GetCurrent();
 									++iChild;
@@ -209,11 +208,9 @@ namespace NMib::NBuildSystem
 
 		CBuildSystemRegistry *pPrevious = nullptr;
 		for (auto iChild = mp_ResultRegistry.f_GetChildIterator(); iChild; ++iChild)
-		{
 			pPrevious = iChild;
-		}
 
-		for (auto iChild = TempRegistry.f_GetChildIterator(); iChild; )
+		for (auto iChild = TempRegistry.f_GetChildIterator(); iChild;)
 		{
 			auto pChild = iChild.f_GetCurrent();
 			++iChild;

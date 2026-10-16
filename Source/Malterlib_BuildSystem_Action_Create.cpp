@@ -78,7 +78,8 @@ namespace NMib::NBuildSystem
 
 		TCMap<CStr, CCreateTemplate> CreateTemplates = fg_GetCreateTemplates(*this, mp_Data);
 
-/*		for (auto &CreateTemplate : CreateTemplates)
+		/*
+		for (auto &CreateTemplate : CreateTemplates)
 		{
 
 		}*/

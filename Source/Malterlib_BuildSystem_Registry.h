@@ -42,5 +42,5 @@ namespace NMib::NBuildSystem
 #include "Malterlib_BuildSystem_Syntax.hpp"
 
 #ifndef DMibPNoShortCuts
-	using namespace NMib::NBuildSystem;
+using namespace NMib::NBuildSystem;
 #endif

@@ -31,34 +31,34 @@ namespace NMib::NContainer
 			NContainer::CByteVector f_ParseBinary(uch8 const * &o_pParse, bool _bWithinParenthesis);
 			NTime::CTime f_ParseDate(uch8 const * &o_pParse, bool _bWithinParenthesis);
 
-			bool f_ParseValue(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse);
-			void f_ParseAfterValue(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse);
+			bool f_ParseValue(NEncoding::CJsonSorted &o_Value, uch8 const * &o_pParse);
+			void f_ParseAfterValue(NEncoding::CJsonSorted &o_Value, uch8 const * &o_pParse);
 
-			void f_PreParse(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse);
-			void f_PostParse(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse);
+			void f_PreParse(NEncoding::CJsonSorted &o_Value, uch8 const * &o_pParse);
+			void f_PostParse(NEncoding::CJsonSorted &o_Value, uch8 const * &o_pParse);
 
 			void f_ThrowError(NStr::CStr const &_Error, uch8 const *_pLocation) const;
 
 			template <typename tf_CParseContext>
-			bool f_ParseValue(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse)
+			bool f_ParseValue(NEncoding::CJsonSorted &o_Value, uch8 const * &o_pParse)
 			{
 				return f_ParseValue(o_Value, o_pParse);
 			}
 
 			template <typename tf_CParseContext>
-			void f_ParseAfterValue(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse)
+			void f_ParseAfterValue(NEncoding::CJsonSorted &o_Value, uch8 const * &o_pParse)
 			{
 				f_ParseAfterValue(o_Value, o_pParse);
 			}
 
 			template <typename tf_CParseContext>
-			void f_PreParse(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse)
+			void f_PreParse(NEncoding::CJsonSorted &o_Value, uch8 const * &o_pParse)
 			{
 				f_PreParse(o_Value, o_pParse);
 			}
 
 			template <typename tf_CParseContext>
-			void f_PostParse(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse)
+			void f_PostParse(NEncoding::CJsonSorted &o_Value, uch8 const * &o_pParse)
 			{
 				f_PostParse(o_Value, o_pParse);
 			}
@@ -72,9 +72,9 @@ namespace NMib::NContainer
 
 		enum EParseExpressionFlag
 		{
-			EParseExpressionFlag_None = 0
-			, EParseExpressionFlag_SupportAppend = DMibBit(0)
-			, EParseExpressionFlag_NoParentheses = DMibBit(1)
+			EParseExpressionFlag_None                    = 0
+			, EParseExpressionFlag_SupportAppend         = DMibBit(0)
+			, EParseExpressionFlag_NoParentheses         = DMibBit(1)
 			, EParseExpressionFlag_ParsingFunctionParams = DMibBit(2)
 		};
 
@@ -82,23 +82,23 @@ namespace NMib::NContainer
 		{
 			CJsonParseContext();
 
-			NEncoding::CJsonSorted f_ParseEvalStringToken(uch8 const *&o_pParse);
-			NEncoding::CJsonSorted f_ParseWildcardStringToken(uch8 const *&o_pParse);
-			NEncoding::CEJsonSorted f_ParseIdentifierTokenEJson(uch8 const *&o_pParse);
-			NEncoding::CJsonSorted f_ParseIdentifierToken(uch8 const *&o_pParse);
-			NEncoding::CJsonSorted f_ParseFunctionToken(uch8 const *&o_pParse, NEncoding::CJsonSorted *_pFirstParam, NStr::CStr const &_FunctionName, NStr::CStr const &_PropertyType);
-			NEncoding::CJsonSorted f_ParseJsonAccessor(uch8 const *&o_pParse, NEncoding::CJsonSorted &&_Param);
-			NEncoding::CJsonSorted f_ParseExpression(uch8 const *&o_pParse, EParseExpressionFlag _Flags, NEncoding::CJsonSorted *_pFirstParam = nullptr);
-			NEncoding::CJsonSorted f_ParseDefine(uch8 const *&o_pParse, bool _bLegacy);
-			NEncoding::CJsonSorted f_ParseFunctionType(uch8 const *&o_pParse);
+			NEncoding::CJsonSorted f_ParseEvalStringToken(uch8 const * &o_pParse);
+			NEncoding::CJsonSorted f_ParseWildcardStringToken(uch8 const * &o_pParse);
+			NEncoding::CEJsonSorted f_ParseIdentifierTokenEJson(uch8 const * &o_pParse);
+			NEncoding::CJsonSorted f_ParseIdentifierToken(uch8 const * &o_pParse);
+			NEncoding::CJsonSorted f_ParseFunctionToken(uch8 const * &o_pParse, NEncoding::CJsonSorted *_pFirstParam, NStr::CStr const &_FunctionName, NStr::CStr const &_PropertyType);
+			NEncoding::CJsonSorted f_ParseJsonAccessor(uch8 const * &o_pParse, NEncoding::CJsonSorted &&_Param);
+			NEncoding::CJsonSorted f_ParseExpression(uch8 const * &o_pParse, EParseExpressionFlag _Flags, NEncoding::CJsonSorted *_pFirstParam = nullptr);
+			NEncoding::CJsonSorted f_ParseDefine(uch8 const * &o_pParse, bool _bLegacy);
+			NEncoding::CJsonSorted f_ParseFunctionType(uch8 const * &o_pParse);
 			NEncoding::CJsonSorted f_ParseDefaultType(NStr::CStr const &_Identifier);
-			NEncoding::CJsonSorted f_ParseType(uch8 const *&o_pParse);
-			NEncoding::CJsonSorted f_ParseOneOf(uch8 const *&o_pParse);
-			NEncoding::CJsonSorted f_ParseDefaulted(uch8 const *&o_pParse, NEncoding::CJsonSorted &&_Type);
-			void f_ParsePostDefine(uch8 const *&o_pParse, NEncoding::CJsonSorted &o_Value);
-			NStr::CStr f_ParseIdentifier(uch8 const *&o_pParse);
-			NStr::CStr f_ParseIdentifierWithNamespace(uch8 const *&o_pParse);
-			NStr::CStr f_ParseIdentifierLax(uch8 const *&o_pParse);
+			NEncoding::CJsonSorted f_ParseType(uch8 const * &o_pParse);
+			NEncoding::CJsonSorted f_ParseOneOf(uch8 const * &o_pParse);
+			NEncoding::CJsonSorted f_ParseDefaulted(uch8 const * &o_pParse, NEncoding::CJsonSorted &&_Type);
+			void f_ParsePostDefine(uch8 const * &o_pParse, NEncoding::CJsonSorted &o_Value);
+			NStr::CStr f_ParseIdentifier(uch8 const * &o_pParse);
+			NStr::CStr f_ParseIdentifierWithNamespace(uch8 const * &o_pParse);
+			NStr::CStr f_ParseIdentifierLax(uch8 const * &o_pParse);
 
 			template <typename tf_CStr>
 			static void fs_GenerateExpression(tf_CStr &o_String, NEncoding::CJsonSorted const &_Token, bool _bQuoteStrings, umint _Depth);
@@ -107,38 +107,38 @@ namespace NMib::NContainer
 			static void fs_GenerateEvalString(tf_CStr &o_String, NEncoding::CJsonSorted const &_Token, umint _Depth);
 
 			template <typename tf_CParseContext>
-			void f_ParseKey(NStr::CStr &o_Key, uch8 const *&o_pParse);
+			void f_ParseKey(NStr::CStr &o_Key, uch8 const * &o_pParse);
 
-			void f_ParseEvalStringString(NStr::CStr &o_Key, uch8 const *&o_pParse);
+			void f_ParseEvalStringString(NStr::CStr &o_Key, uch8 const * &o_pParse);
 
-			bool f_ParseValue(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse);
-			void f_ParseAfterValue(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse);
+			bool f_ParseValue(NEncoding::CJsonSorted &o_Value, uch8 const * &o_pParse);
+			void f_ParseAfterValue(NEncoding::CJsonSorted &o_Value, uch8 const * &o_pParse);
 
-			void f_PreParse(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse);
-			void f_PostParse(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse);
+			void f_PreParse(NEncoding::CJsonSorted &o_Value, uch8 const * &o_pParse);
+			void f_PostParse(NEncoding::CJsonSorted &o_Value, uch8 const * &o_pParse);
 
 			void f_ThrowError(NStr::CStr const &_Error, uch8 const *_pLocation) const;
 
 			template <typename tf_CParseContext>
-			bool f_ParseValue(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse)
+			bool f_ParseValue(NEncoding::CJsonSorted &o_Value, uch8 const * &o_pParse)
 			{
 				return f_ParseValue(o_Value, o_pParse);
 			}
 
 			template <typename tf_CParseContext>
-			void f_ParseAfterValue(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse)
+			void f_ParseAfterValue(NEncoding::CJsonSorted &o_Value, uch8 const * &o_pParse)
 			{
 				f_ParseAfterValue(o_Value, o_pParse);
 			}
 
 			template <typename tf_CParseContext>
-			void f_PreParse(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse)
+			void f_PreParse(NEncoding::CJsonSorted &o_Value, uch8 const * &o_pParse)
 			{
 				f_PreParse(o_Value, o_pParse);
 			}
 
 			template <typename tf_CParseContext>
-			void f_PostParse(NEncoding::CJsonSorted &o_Value, uch8 const *&o_pParse)
+			void f_PostParse(NEncoding::CJsonSorted &o_Value, uch8 const * &o_pParse)
 			{
 				f_PostParse(o_Value, o_pParse);
 			}
@@ -162,6 +162,7 @@ namespace NMib::NContainer
 					}
 				;
 			}
+
 			auto f_DisableParseAfterValue()
 			{
 				bool bOldParseAfterValue = m_bParseAfterValue;
@@ -172,6 +173,7 @@ namespace NMib::NContainer
 					}
 				;
 			}
+
 			auto f_ParsingPrefixOperand()
 			{
 				auto OldParsingPrefixOperandExpressionDepth = m_ParsingPrefixOperandExpressionDepth;
@@ -185,6 +187,7 @@ namespace NMib::NContainer
 					}
 				;
 			}
+
 			auto f_ParsingBinaryOperand()
 			{
 				auto OldParsingBinaryOperandExpressionDepth = m_ParsingBinaryOperandExpressionDepth;
@@ -198,6 +201,7 @@ namespace NMib::NContainer
 					}
 				;
 			}
+
 			auto f_ParsingFunctionParams()
 			{
 				auto Old = m_ParsingFunctionParamsDepth;

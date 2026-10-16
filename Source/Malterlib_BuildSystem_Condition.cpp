@@ -46,12 +46,12 @@ namespace NMib::NBuildSystem
 			{
 				auto &LeftIdentifier = Child.m_Left.f_Identifier();
 				if
-					(
-						LeftIdentifier.m_PropertyType == EPropertyType_This
-						&& LeftIdentifier.m_Name == gc_ConstString_Type
-						&& Child.m_Right.f_IsConstantString()
-						&& Child.m_Right.f_ConstantString() == gc_ConstString_File.m_String
-					)
+				(
+					LeftIdentifier.m_PropertyType == EPropertyType_This
+					&& LeftIdentifier.m_Name == gc_ConstString_Type
+					&& Child.m_Right.f_IsConstantString()
+					&& Child.m_Right.f_ConstantString() == gc_ConstString_File.m_String
+				)
 				{
 					return true;
 				}
@@ -69,14 +69,30 @@ namespace NMib::NBuildSystem
 		{
 			switch (_Operator)
 			{
-			case CBuildSystemSyntax::COperator::EOperator_LessThan: o_ConditionType = EConditionType_CompareLessThan; return true;
-			case CBuildSystemSyntax::COperator::EOperator_LessThanEqual: o_ConditionType = EConditionType_CompareLessThanEqual; return true;
-			case CBuildSystemSyntax::COperator::EOperator_GreaterThan: o_ConditionType = EConditionType_CompareGreaterThan; return true;
-			case CBuildSystemSyntax::COperator::EOperator_GreaterThanEqual: o_ConditionType = EConditionType_CompareGreaterThanEqual; return true;
-			case CBuildSystemSyntax::COperator::EOperator_Equal: o_ConditionType = EConditionType_CompareEqual; return true;
-			case CBuildSystemSyntax::COperator::EOperator_NotEqual: o_ConditionType = EConditionType_CompareNotEqual; return true;
-			case CBuildSystemSyntax::COperator::EOperator_MatchEqual: o_ConditionType = EConditionType_MatchEqual; return true;
-			case CBuildSystemSyntax::COperator::EOperator_MatchNotEqual: o_ConditionType = EConditionType_MatchNotEqual; return true;
+			case CBuildSystemSyntax::COperator::EOperator_LessThan:
+				o_ConditionType = EConditionType_CompareLessThan;
+				return true;
+			case CBuildSystemSyntax::COperator::EOperator_LessThanEqual:
+				o_ConditionType = EConditionType_CompareLessThanEqual;
+				return true;
+			case CBuildSystemSyntax::COperator::EOperator_GreaterThan:
+				o_ConditionType = EConditionType_CompareGreaterThan;
+				return true;
+			case CBuildSystemSyntax::COperator::EOperator_GreaterThanEqual:
+				o_ConditionType = EConditionType_CompareGreaterThanEqual;
+				return true;
+			case CBuildSystemSyntax::COperator::EOperator_Equal:
+				o_ConditionType = EConditionType_CompareEqual;
+				return true;
+			case CBuildSystemSyntax::COperator::EOperator_NotEqual:
+				o_ConditionType = EConditionType_CompareNotEqual;
+				return true;
+			case CBuildSystemSyntax::COperator::EOperator_MatchEqual:
+				o_ConditionType = EConditionType_MatchEqual;
+				return true;
+			case CBuildSystemSyntax::COperator::EOperator_MatchNotEqual:
+				o_ConditionType = EConditionType_MatchNotEqual;
+				return true;
 			case CBuildSystemSyntax::COperator::EOperator_Append: break;
 			case CBuildSystemSyntax::COperator::EOperator_Prepend: break;
 			}
@@ -138,8 +154,7 @@ namespace NMib::NBuildSystem
 						Condition.m_Right = RightValue;
 					}
 					break;
-				default:
-					return false;
+				default: return false;
 				}
 
 				bHandled = true;

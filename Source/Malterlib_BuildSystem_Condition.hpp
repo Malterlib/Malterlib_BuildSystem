@@ -15,34 +15,18 @@ namespace NMib::NBuildSystem
 		case EConditionType_And:
 		case EConditionType_Not:
 			{
-				o_Str += tf_CStr::CFormat("{sj*}{}\n")
-					<< ""
-					<< _Depth*3
-					<< CCondition::fs_ConditionTypeToStr(m_Type)
-				;
-				o_Str += tf_CStr::CFormat("{sj*}{{\n")
-					<< ""
-					<< _Depth*3
-				;
+				o_Str += tf_CStr::CFormat("{sj*}{}\n") << "" << _Depth * 3 << CCondition::fs_ConditionTypeToStr(m_Type);
+				o_Str += tf_CStr::CFormat("{sj*}{{\n") << "" << _Depth * 3;
 
 				for (auto &Child : m_Children)
 					Child.f_FormatRecursive(o_Str, _Depth + 1);
 
-				o_Str += tf_CStr::CFormat("{sj*}}\n")
-					<< ""
-					<< _Depth*3
-				;
+				o_Str += tf_CStr::CFormat("{sj*}}\n") << "" << _Depth * 3;
 				break;
 			}
 		default:
 			{
-				o_Str += tf_CStr::CFormat("{sj*}{} {} {}\n")
-					<< ""
-					<< _Depth*3
-					<< m_Left
-					<< CCondition::fs_ConditionTypeToStr(m_Type)
-					<< m_Right
-				;
+				o_Str += tf_CStr::CFormat("{sj*}{} {} {}\n") << "" << _Depth * 3 << m_Left << CCondition::fs_ConditionTypeToStr(m_Type) << m_Right;
 				break;
 			}
 		}

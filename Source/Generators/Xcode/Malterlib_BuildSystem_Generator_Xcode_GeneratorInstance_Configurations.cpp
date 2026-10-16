@@ -8,7 +8,7 @@ namespace NMib::NBuildSystem
 {
 	namespace NXcode
 	{
-		void CGeneratorInstance::fp_GenerateBuildConfigurationFiles(CProjectState &_ProjectState, CProject& _Project, CStr const &_OutputDir) const
+		void CGeneratorInstance::fp_GenerateBuildConfigurationFiles(CProjectState &_ProjectState, CProject &_Project, CStr const &_OutputDir) const
 		{
 			CStr OutputDir = CFile::fs_AppendPath(_OutputDir, _Project.f_GetName());
 
@@ -32,7 +32,7 @@ namespace NMib::NBuildSystem
 
 					fp_GenerateBuildConfigurationFile(_ProjectState, _Project, Configuration, OutputFile, _OutputDir, NativeTarget);
 
-					CBuildConfiguration& BuildConfig = NativeTarget.m_BuildConfiguration;
+					CBuildConfiguration &BuildConfig = NativeTarget.m_BuildConfiguration;
 					BuildConfig.m_ConfigName = "{} {}"_f << Configuration.m_Platform << Configuration.m_Configuration;
 					BuildConfig.m_ConfigFileName = CFile::fs_GetFile(OutputFile);
 					BuildConfig.m_Path = OutputFile;
@@ -44,10 +44,11 @@ namespace NMib::NBuildSystem
 		void CGeneratorInstance::fp_GenerateBuildConfigurationFilesList
 			(
 				CProjectState &_ProjectState
-				, CProject& _Project
+				, CProject &_Project
 				, CStr const &_OutputDir
-				, TCVector<CBuildConfiguration>& _ConfigList
-			) const
+				, TCVector<CBuildConfiguration> &_ConfigList
+			)
+			const
 		{
 			CStr OutputDir = CFile::fs_AppendPath(_OutputDir, _Project.f_GetName());
 
@@ -55,14 +56,14 @@ namespace NMib::NBuildSystem
 
 			for (auto iConfig = _Project.m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
 			{
-				CConfiguration const& Configuration = iConfig.f_GetKey();
+				CConfiguration const &Configuration = iConfig.f_GetKey();
 
 				CStr OutputFile = CFile::fs_AppendPath(OutputDir, CStr("Configurations"));
 				_ProjectState.f_CreateDirectory(OutputFile);
 
 				OutputFile = CFile::fs_AppendPath(OutputFile, (CStr::CFormat("{} {}.xcconfig") << Configuration.m_Platform << Configuration.m_Configuration).f_GetStr());
 
-				CBuildConfiguration& BuildConfig = _ConfigList.f_Insert();
+				CBuildConfiguration &BuildConfig = _ConfigList.f_Insert();
 				BuildConfig.m_ConfigName = "{} {}"_f << Configuration.m_Platform << Configuration.m_Configuration;
 				BuildConfig.m_ConfigFileName = CFile::fs_GetFile(OutputFile);
 				BuildConfig.m_Path = OutputFile;
@@ -70,7 +71,7 @@ namespace NMib::NBuildSystem
 			}
 		}
 
-		TCUnsafeFuture<void> CGeneratorInstance::fp_EvaluateTargetSettings(CProjectState &_ProjectState, CProject& _Project) const
+		TCUnsafeFuture<void> CGeneratorInstance::fp_EvaluateTargetSettings(CProjectState &_ProjectState, CProject &_Project) const
 		{
 			co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
@@ -123,9 +124,7 @@ namespace NMib::NBuildSystem
 				TCMap<CConfiguration, CEntityMutablePointer> EnabledConfigs;
 				EnabledConfigs[Configuration] = *pEnabledConfig;
 
-				NativeTarget.m_ScriptExport = fp_GetSingleConfigValue(EnabledConfigs, gc_ConstKey_Target_ExportScriptEnvironmentContents, EEJsonType_String, false)
-					.m_Value.f_MoveString()
-				;
+				NativeTarget.m_ScriptExport = fp_GetSingleConfigValue(EnabledConfigs, gc_ConstKey_Target_ExportScriptEnvironmentContents, EEJsonType_String, false).m_Value.f_MoveString();
 				NativeTarget.m_bGenerateScheme = fp_GetSingleConfigValue(EnabledConfigs, gc_ConstKey_Target_GenerateScheme, EEJsonType_Boolean, false).m_Value.f_Get().f_Boolean();
 
 				// Build scripts
@@ -154,7 +153,7 @@ namespace NMib::NBuildSystem
 							PostBuildScript.m_Inputs = InputsElement.f_ValueArray();
 							PostBuildScript.m_Outputs = OutputsElement.f_ValueArray();
 
-							CElement const& BuildScript = pEvaluated->m_Element[gc_ConstString_PostBuildScript.m_String];
+							CElement const &BuildScript = pEvaluated->m_Element[gc_ConstString_PostBuildScript.m_String];
 							PostBuildScript.m_Name = BuildScript.f_GetProperty();
 							PostBuildScript.m_Script = BuildScript.f_GetValue().f_Replace("\r\n", "\n");
 						}
@@ -171,7 +170,7 @@ namespace NMib::NBuildSystem
 							if (auto pDependencyFile = pEvaluated->m_Element.f_FindEqual(gc_ConstKey_Target_DependencyFile.m_Name))
 								DependencyFile = pDependencyFile->f_GetValue();
 
-							CElement const& BuildScript = pEvaluated->m_Element[gc_ConstString_ToolBuildScript.m_String];
+							CElement const &BuildScript = pEvaluated->m_Element[gc_ConstString_ToolBuildScript.m_String];
 							ToolBuildScript.m_Name = BuildScript.f_GetProperty();
 							ToolBuildScript.m_Script =
 								"export MalterlibDependencyFile=\"{}\"\n"
@@ -200,7 +199,7 @@ namespace NMib::NBuildSystem
 							PreBuildScript.m_Inputs = InputsElement.f_ValueArray();
 							PreBuildScript.m_Outputs = OutputsElement.f_ValueArray();
 
-							CElement const& BuildScript = pEvaluated->m_Element[gc_ConstString_PreBuildScript.m_String];
+							CElement const &BuildScript = pEvaluated->m_Element[gc_ConstString_PreBuildScript.m_String];
 							PreBuildScript.m_Name = BuildScript.f_GetProperty();
 							PreBuildScript.m_Script = BuildScript.f_GetValue().f_Replace("\r\n", "\n");
 						}
@@ -218,7 +217,7 @@ namespace NMib::NBuildSystem
 			co_return {};
 		}
 
-		void CGeneratorInstance::fp_EvaluateDependencies(CProject& _Project) const
+		void CGeneratorInstance::fp_EvaluateDependencies(CProject &_Project) const
 		{
 			for (auto &Dependency : _Project.m_DependenciesOrdered)
 			{
@@ -256,7 +255,6 @@ namespace NMib::NBuildSystem
 					}
 				}
 
-
 				fp_CalculateDependencyProductPath(*pDependProject, Dependency, EnabledConfigurations);
 			}
 		}
@@ -266,34 +264,35 @@ namespace NMib::NBuildSystem
 			return _Type.f_Replace("+", "P");
 		}
 
-		void CGeneratorInstance::fp_GenerateCompilerFlags(CProjectState &_ProjectState, CProject& _Project) const
+		void CGeneratorInstance::fp_GenerateCompilerFlags(CProjectState &_ProjectState, CProject &_Project) const
 		{
-			auto fGetSharedFlags = [&] (CStr const &_Type, umint _SettingsNumber, bool _bKey) -> CStr
-			{
-				if (!_bKey)
+			auto fGetSharedFlags = [&](CStr const &_Type, umint _SettingsNumber, bool _bKey) -> CStr
 				{
-					if (_SettingsNumber != 0)
-						return (CStr::CFormat("$({0}SharedFlags) $({0}Flags{1})") << fp_MakeNiceSharedFlagValue(_Type) << _SettingsNumber);
-					return (CStr::CFormat("$({}SharedFlags)") << fp_MakeNiceSharedFlagValue(_Type));
+					if (!_bKey)
+					{
+						if (_SettingsNumber != 0)
+							return (CStr::CFormat("$({0}SharedFlags) $({0}Flags{1})") << fp_MakeNiceSharedFlagValue(_Type) << _SettingsNumber);
+						return (CStr::CFormat("$({}SharedFlags)") << fp_MakeNiceSharedFlagValue(_Type));
+					}
+					else
+					{
+						if (_SettingsNumber != 0)
+							return (CStr::CFormat("{}Flags{}") << fp_MakeNiceSharedFlagValue(_Type) << _SettingsNumber);
+						return (CStr::CFormat("{}SharedFlags") << fp_MakeNiceSharedFlagValue(_Type));
+					}
 				}
-				else
-				{
-					if (_SettingsNumber != 0)
-						return (CStr::CFormat("{}Flags{}") << fp_MakeNiceSharedFlagValue(_Type) << _SettingsNumber);
-					return (CStr::CFormat("{}SharedFlags") << fp_MakeNiceSharedFlagValue(_Type));
-				}
-			};
+			;
 
 			for (auto iConfig = _Project.m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
 			{
-				CConfiguration const& Configuration = iConfig.f_GetKey();
+				CConfiguration const &Configuration = iConfig.f_GetKey();
 				TCMap<CStr, CConfigResultCompile> MergedSharedSettings;
 				TCMap<CStr, bool> PrefixHeadersEnabled;
 				{
 					for (auto iFlag = _ProjectState.m_EvaluatedTypeCompileFlags.f_GetIterator(); iFlag; ++iFlag)
 					{
-						CStr const& Type = iFlag.f_GetKey();
-						auto const& ConfigData = (*iFlag)[Configuration];
+						CStr const &Type = iFlag.f_GetKey();
+						auto const &ConfigData = (*iFlag)[Configuration];
 
 						CStr TranslatedType = Type;
 
@@ -328,12 +327,11 @@ namespace NMib::NBuildSystem
 				TCMap<CStr, TCMap<CStr, CStr>> SharedFlags;
 				TCMap<CStr, TCMap<CStr, TCSet<TCVariant<CStr, TCVector<CStr>>>>> SharedFlagsSet;
 				TCMap<CStr, TCSet<CStr>> NonSharedFlags;
-				TCMap<CStr, TCMap<CStr, CElement const*>> GlobalNonShared;
+				TCMap<CStr, TCMap<CStr, CElement const *>> GlobalNonShared;
 				TCMap<CStr, TCMap<CStr, TCSet<TCVariant<CStr, TCVector<CStr>>>>> NonSharedFlagsSet;
 				TCMap<CStr, TCMap<CStr, CElement>> GlobalNonSharedSet;
 
 				{
-
 					for (auto iFile = _Project.m_Files.f_GetIterator(); iFile; ++iFile)
 					{
 						if (iFile->m_bHasCompilerFlags)
@@ -367,7 +365,16 @@ namespace NMib::NBuildSystem
 											if (!iFlag->m_ValueSet.f_FindEqual(Value))
 											{
 												if (bPrefixHeadersEnabled)
-													m_BuildSystem.fs_ThrowError(iFlag->m_Positions, "Per file settings cannot remove a compile flag when precompile prefix headers are enabled: {} in {}"_f << iFlag->m_ValueSet << Value);
+												{
+													m_BuildSystem.fs_ThrowError
+														(
+															iFlag->m_Positions
+															, "Per file settings cannot remove a compile flag when precompile prefix headers are enabled: {} in {}"_f
+															<< iFlag->m_ValueSet
+															<< Value
+														)
+													;
+												}
 												else
 												{
 													NonSharedSet[iFlag->f_GetProperty()][Value];
@@ -385,7 +392,14 @@ namespace NMib::NBuildSystem
 									else if (!pType->f_IsSameValue(*iFlag))
 									{
 										if (bPrefixHeadersEnabled)
-											m_BuildSystem.fs_ThrowError(iFlag->m_Positions, "Per file settings cannot have a different value for a compile flag when precompile prefix headers are enabled");
+										{
+											m_BuildSystem.fs_ThrowError
+												(
+													iFlag->m_Positions
+													, "Per file settings cannot have a different value for a compile flag when precompile prefix headers are enabled"
+												)
+											;
+										}
 										else
 										{
 											NonShared[iFlag->f_GetProperty()];
@@ -440,189 +454,187 @@ namespace NMib::NBuildSystem
 					}
 				}
 
-				auto fGenerateFlags = [&] (CConfigResultCompile const &_ConfigData, CStr const &_FileType, bool _bFileType) -> CStr
-				{
-					CStr CompileFlags;
-
-					auto fAddFlag = [&](CStr const &_Value)
-						{
-							if (_bFileType)
-							{
-								if (_FileType == gc_ConstString_Symbol_Cpp.m_String)
-								{
-									OtherCPPFlags += CStr::CFormat(" {}") << fs_EscapeCommandLineArgument(_Value);
-									return;
-								}
-								else if (_FileType == gc_ConstString_Symbol_ObjCpp.m_String)
-								{
-									OtherObjCPPFlags += CStr::CFormat(" {}") << fs_EscapeCommandLineArgument(_Value);
-									return;
-								}
-								else if (_FileType == gc_ConstString_C.m_String)
-								{
-									OtherCFlags += CStr::CFormat(" {}") << fs_EscapeCommandLineArgument(_Value);
-									return;
-								}
-								else if (_FileType == gc_ConstString_ObjC.m_String)
-								{
-									OtherObjCFlags += CStr::CFormat(" {}") << fs_EscapeCommandLineArgument(_Value);
-									return;
-								}
-								else if (_FileType == gc_ConstString_Assembler.m_String)
-								{
-									OtherAssemblerFlags += CStr::CFormat(" {}") << fs_EscapeCommandLineArgument(_Value);
-									return;
-								}
-							}
-							CompileFlags += (CStr::CFormat(" {}") << fs_EscapeCommandLineArgument(_Value));
-						}
-					;
-					auto fBuildFlags = [&] (CElement const &_Element, TCSet<TCVariant<CStr, TCVector<CStr>>> const *_pValueSet = nullptr)
+				auto fGenerateFlags = [&](CConfigResultCompile const &_ConfigData, CStr const &_FileType, bool _bFileType) -> CStr
 					{
-						if (_Element.f_GetProperty() == gc_ConstString_GCC_PRECOMPILE_PREFIX_HEADER.m_String)
-							return;
-						else if (_Element.f_GetProperty() == gc_ConstString_GCC_PREFIX_HEADER.m_String)
-							return;
+						CStr CompileFlags;
 
-						if (_Element.m_bUseValues)
-						{
-							if (_pValueSet)
+						auto fAddFlag = [&](CStr const &_Value)
 							{
-								for (auto &Value : CElement::fs_ValueArray(*_pValueSet))
-									fAddFlag(Value);
+								if (_bFileType)
+								{
+									if (_FileType == gc_ConstString_Symbol_Cpp.m_String)
+									{
+										OtherCPPFlags += CStr::CFormat(" {}") << fs_EscapeCommandLineArgument(_Value);
+										return;
+									}
+									else if (_FileType == gc_ConstString_Symbol_ObjCpp.m_String)
+									{
+										OtherObjCPPFlags += CStr::CFormat(" {}") << fs_EscapeCommandLineArgument(_Value);
+										return;
+									}
+									else if (_FileType == gc_ConstString_C.m_String)
+									{
+										OtherCFlags += CStr::CFormat(" {}") << fs_EscapeCommandLineArgument(_Value);
+										return;
+									}
+									else if (_FileType == gc_ConstString_ObjC.m_String)
+									{
+										OtherObjCFlags += CStr::CFormat(" {}") << fs_EscapeCommandLineArgument(_Value);
+										return;
+									}
+									else if (_FileType == gc_ConstString_Assembler.m_String)
+									{
+										OtherAssemblerFlags += CStr::CFormat(" {}") << fs_EscapeCommandLineArgument(_Value);
+										return;
+									}
+								}
+								CompileFlags += (CStr::CFormat(" {}") << fs_EscapeCommandLineArgument(_Value));
 							}
-							else
+						;
+						auto fBuildFlags = [&](CElement const &_Element, TCSet<TCVariant<CStr, TCVector<CStr>>> const *_pValueSet = nullptr)
 							{
-								for (auto &Value : _Element.f_ValueArray())
-									fAddFlag(Value);
+								if (_Element.f_GetProperty() == gc_ConstString_GCC_PRECOMPILE_PREFIX_HEADER.m_String)
+									return;
+								else if (_Element.f_GetProperty() == gc_ConstString_GCC_PREFIX_HEADER.m_String)
+									return;
+
+								if (_Element.m_bUseValues)
+								{
+									if (_pValueSet)
+									{
+										for (auto &Value : CElement::fs_ValueArray(*_pValueSet))
+											fAddFlag(Value);
+									}
+									else
+									{
+										for (auto &Value : _Element.f_ValueArray())
+											fAddFlag(Value);
+									}
+								}
+								else
+								{
+									CStr Value = _Element.f_GetValue();
+									if (!Value.f_IsEmpty())
+										fAddFlag(Value);
+								}
 							}
-						}
-						else
+						;
+
+						CStr TranslatedType = _FileType;
+
+						auto const &NonShared = NonSharedFlags[TranslatedType];
+						auto const &NonSharedSet = NonSharedFlagsSet[TranslatedType];
+
+						CConfigResultCompile const &TypeConfigData = MergedSharedSettings[TranslatedType];
+
+						for (auto iElement = _ConfigData.m_Element.f_GetIterator(); iElement; ++iElement)
 						{
-							CStr Value = _Element.f_GetValue();
-							if (!Value.f_IsEmpty())
-								fAddFlag(Value);
-						}
-					};
-
-					CStr TranslatedType = _FileType;
-
-					auto const &NonShared = NonSharedFlags[TranslatedType];
-					auto const &NonSharedSet = NonSharedFlagsSet[TranslatedType];
-
-					CConfigResultCompile const &TypeConfigData = MergedSharedSettings[TranslatedType];
-
-					for (auto iElement = _ConfigData.m_Element.f_GetIterator(); iElement; ++iElement)
-					{
-						if (iElement->m_bXcodeProperty)
-						{
-							if (_bFileType)
+							if (iElement->m_bXcodeProperty)
 							{
-								if
+								if (_bFileType)
+								{
+									if
 									(
 										iElement->f_GetProperty() == gc_ConstString_GCC_PRECOMPILE_PREFIX_HEADER.m_String
 										|| iElement->f_GetProperty() == gc_ConstString_GCC_PREFIX_HEADER.m_String
 									)
-								{
-									if (SettingsFromTypes.f_Exists(iElement->f_GetProperty()))
 									{
-										if (iElement->f_GetValue() != SettingsFromTypes[iElement->f_GetProperty()])
-											m_BuildSystem.fs_ThrowError(_Project.m_ProjectPosition, "Prefix headers and PrecompilePrefixHeaders per file type are not supported");
+										if (SettingsFromTypes.f_Exists(iElement->f_GetProperty()))
+										{
+											if (iElement->f_GetValue() != SettingsFromTypes[iElement->f_GetProperty()])
+												m_BuildSystem.fs_ThrowError(_Project.m_ProjectPosition, "Prefix headers and PrecompilePrefixHeaders per file type are not supported");
+										}
 									}
-								}
-								if (iElement->m_bUseValues)
-								{
-									CStr Values;
-									for (auto &Value : iElement->f_ValueArray())
-										fg_AddStrSep(Values, Value, " ");
-									SettingsFromTypes[iElement->f_GetProperty()] = Values;
-								}
-								else
-									SettingsFromTypes[iElement->f_GetProperty()] = iElement->f_GetValue();
-							}
-
-							continue;
-						}
-
-						if (_bFileType)
-						{
-							if (iElement->m_bUseValues)
-							{
-								auto pNonShared = NonSharedSet.f_FindEqual(iElement->f_GetProperty());
-								TCSet<TCVariant<CStr, TCVector<CStr>>> ToSet;
-								TCSet<TCVariant<CStr, TCVector<CStr>>> *pToSet = nullptr;
-								if (pNonShared)
-								{
-									for (auto &Value : iElement->m_ValueSet)
+									if (iElement->m_bUseValues)
 									{
-										if (!pNonShared->f_FindEqual(Value))
-											ToSet[Value];
+										CStr Values;
+										for (auto &Value : iElement->f_ValueArray())
+											fg_AddStrSep(Values, Value, " ");
+										SettingsFromTypes[iElement->f_GetProperty()] = Values;
 									}
-									pToSet = &ToSet;
+									else
+										SettingsFromTypes[iElement->f_GetProperty()] = iElement->f_GetValue();
 								}
 
-								fBuildFlags(*iElement, pToSet);
 								continue;
 							}
-							else
+
+							if (_bFileType)
 							{
-								if (NonShared.f_FindEqual(iElement->f_GetProperty()))
-									continue;
-							}
-						}
-						else
-						{
-							if (iElement->m_bUseValues)
-							{
-								if (TypeConfigData.m_Element.f_FindEqual(iElement.f_GetKey()))
+								if (iElement->m_bUseValues)
 								{
 									auto pNonShared = NonSharedSet.f_FindEqual(iElement->f_GetProperty());
 									TCSet<TCVariant<CStr, TCVector<CStr>>> ToSet;
+									TCSet<TCVariant<CStr, TCVector<CStr>>> *pToSet = nullptr;
 									if (pNonShared)
 									{
 										for (auto &Value : iElement->m_ValueSet)
 										{
-											if (pNonShared->f_FindEqual(Value))
+											if (!pNonShared->f_FindEqual(Value))
 												ToSet[Value];
 										}
+										pToSet = &ToSet;
 									}
 
-									fBuildFlags(*iElement, &ToSet);
+									fBuildFlags(*iElement, pToSet);
 									continue;
+								}
+								else
+								{
+									if (NonShared.f_FindEqual(iElement->f_GetProperty()))
+										continue;
 								}
 							}
 							else
 							{
-								if (!NonShared.f_FindEqual(iElement->f_GetProperty()) && TypeConfigData.m_Element.f_FindEqual(iElement.f_GetKey()))
-									continue;
+								if (iElement->m_bUseValues)
+								{
+									if (TypeConfigData.m_Element.f_FindEqual(iElement.f_GetKey()))
+									{
+										auto pNonShared = NonSharedSet.f_FindEqual(iElement->f_GetProperty());
+										TCSet<TCVariant<CStr, TCVector<CStr>>> ToSet;
+										if (pNonShared)
+										{
+											for (auto &Value : iElement->m_ValueSet)
+											{
+												if (pNonShared->f_FindEqual(Value))
+													ToSet[Value];
+											}
+										}
+
+										fBuildFlags(*iElement, &ToSet);
+										continue;
+									}
+								}
+								else
+								{
+									if (!NonShared.f_FindEqual(iElement->f_GetProperty()) && TypeConfigData.m_Element.f_FindEqual(iElement.f_GetKey()))
+										continue;
+								}
 							}
+
+							fBuildFlags(*iElement);
 						}
 
-						fBuildFlags(*iElement);
-					}
-
-					if (!_bFileType)
-					{
-						auto const &GlobalNonSharedType = GlobalNonShared[TranslatedType];
-						for (auto iNonShared = GlobalNonSharedType.f_GetIterator(); iNonShared; ++iNonShared)
+						if (!_bFileType)
 						{
-							if (!_ConfigData.m_Element.f_FindEqual(iNonShared.f_GetKey()))
+							auto const &GlobalNonSharedType = GlobalNonShared[TranslatedType];
+							for (auto iNonShared = GlobalNonSharedType.f_GetIterator(); iNonShared; ++iNonShared)
 							{
-								fBuildFlags(**iNonShared);
+								if (!_ConfigData.m_Element.f_FindEqual(iNonShared.f_GetKey()))
+									fBuildFlags(**iNonShared);
+							}
+							auto const &GlobalNonSharedTypeSet = GlobalNonSharedSet[TranslatedType];
+							for (auto iNonShared = GlobalNonSharedTypeSet.f_GetIterator(); iNonShared; ++iNonShared)
+							{
+								if (!_ConfigData.m_Element.f_FindEqual(iNonShared.f_GetKey()))
+									fBuildFlags(*iNonShared);
 							}
 						}
-						auto const &GlobalNonSharedTypeSet = GlobalNonSharedSet[TranslatedType];
-						for (auto iNonShared = GlobalNonSharedTypeSet.f_GetIterator(); iNonShared; ++iNonShared)
-						{
-							if (!_ConfigData.m_Element.f_FindEqual(iNonShared.f_GetKey()))
-							{
-								fBuildFlags(*iNonShared);
-							}
-						}
-					}
 
-					return CompileFlags;
-				};
+						return CompileFlags;
+					}
+				;
 
 				// Compiler flags per file
 				{
@@ -641,7 +653,7 @@ namespace NMib::NBuildSystem
 						CStr FlagsForFile = fGenerateFlags(ConfigData, iFile->m_Type, false);
 						if (!FlagsForFile.f_IsEmpty())
 						{
-							auto & OverriddenType = GeneratedOverriddenFlags[iFile->m_Type];
+							auto &OverriddenType = GeneratedOverriddenFlags[iFile->m_Type];
 							auto MappedOveridden = OverriddenType(FlagsForFile);
 							if (MappedOveridden.f_WasCreated())
 								*MappedOveridden = ++SettingsNumber[iFile->m_Type];
@@ -679,9 +691,10 @@ namespace NMib::NBuildSystem
 									}
 									else
 									{
-										_ProjectState.m_EvaluatedTypeCompileFlags[iFile->m_Type][Configuration]
-											.m_Element[gc_ConstString_MOC_OUTPUT_PATTERN.m_String]
-											.f_SetValue(iFlag->f_GetValue())
+										_ProjectState.m_EvaluatedTypeCompileFlags[iFile->m_Type][Configuration].m_Element[gc_ConstString_MOC_OUTPUT_PATTERN.m_String].f_SetValue
+											(
+												iFlag->f_GetValue()
+											)
 										;
 									}
 								}
@@ -716,7 +729,7 @@ namespace NMib::NBuildSystem
 				{
 					for (auto iFlag = _ProjectState.m_EvaluatedTypeCompileFlags.f_GetIterator(); iFlag; ++iFlag)
 					{
-						CStr const& Type = iFlag.f_GetKey();
+						CStr const &Type = iFlag.f_GetKey();
 						CConfigResultCompile const &ConfigData = (*iFlag)[Configuration];
 
 						// Generate any flags that do not appear in the overridden properties map
@@ -729,7 +742,7 @@ namespace NMib::NBuildSystem
 
 			for (auto iConfig = _Project.m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
 			{
-				CConfiguration const& Configuration = iConfig.f_GetKey();
+				CConfiguration const &Configuration = iConfig.f_GetKey();
 
 				for (auto iFile = _Project.m_Files.f_GetIterator(); iFile; ++iFile)
 				{
@@ -737,7 +750,7 @@ namespace NMib::NBuildSystem
 					{
 						if (_ProjectState.m_CompileFlagsValues.f_Exists(iFile->f_GetCompileFlagsGUID()))
 						{
-							TCMap<CConfiguration, CStr>& SpecificSettings = _ProjectState.m_CompileFlagsValues[iFile->f_GetCompileFlagsGUID()];
+							TCMap<CConfiguration, CStr> &SpecificSettings = _ProjectState.m_CompileFlagsValues[iFile->f_GetCompileFlagsGUID()];
 							SpecificSettings[Configuration];
 						}
 					}
@@ -750,6 +763,7 @@ namespace NMib::NBuildSystem
 			CProjectDependency::CPerConfig *m_pPerConfig = nullptr;
 			bool m_bInternal = false;
 		};
+
 		struct CLinkGroup
 		{
 			DLinkDS_Link(CLinkGroup, m_Link);
@@ -779,24 +793,22 @@ namespace NMib::NBuildSystem
 		void CGeneratorInstance::fp_GenerateBuildConfigurationFile
 			(
 				CProjectState &_ProjectState
-				, CProject& _Project
+				, CProject &_Project
 				, CConfiguration const &_Configuration
 				, CStr const &_OutputFile
 				, CStr const &_OutputDir
 				, CNativeTarget const &_NativeTarget
-			) const
+			)
+			const
 		{
 			CStr FileData;
 
 			FileData += "ESCSLASH = /\n";
 
-			auto fEscVar
-				= [](CStr const &_Var) -> CStr
+			auto fEscVar = [](CStr const &_Var) -> CStr
 				{
 					if (_Var.f_Find("//") >= 0)
-					{
 						return _Var.f_Replace("//", "${ESCSLASH}${ESCSLASH}");
-					}
 					return _Var;
 				}
 			;
@@ -894,7 +906,7 @@ namespace NMib::NBuildSystem
 
 			bool bDoneAdditionalLibraries = false;
 			CStr LDFlagsFirst;
-//				bool bDoneSearchPaths = false;
+			// bool bDoneSearchPaths = false;
 
 			// Per configuration target settings
 			{
@@ -917,8 +929,8 @@ namespace NMib::NBuildSystem
 					CStr ExtraAfter;
 					if (bSearchPaths)
 					{
-//							bDoneSearchPaths = true;
-						//Extra = "$DependencySearchPaths ";
+						// bDoneSearchPaths = true;
+						// Extra = "$DependencySearchPaths ";
 					}
 					else if (bAdditionalLibraries)
 					{
@@ -991,7 +1003,13 @@ namespace NMib::NBuildSystem
 							if (_Configuration.m_PlatformBase.f_StartsWith("macOS"))
 								LinkForced += "-force_load \"{}/{}\" "_f << LinkConfig.m_pPerConfig->m_SearchPath << LinkConfig.m_pPerConfig->m_CalculatedPath;
 							else
-								LinkForced += "-Xlinker --whole-archive \"{}/{}\" -Xlinker --no-whole-archive "_f << LinkConfig.m_pPerConfig->m_SearchPath << LinkConfig.m_pPerConfig->m_CalculatedPath;
+							{
+								LinkForced
+									+= "-Xlinker --whole-archive \"{}/{}\" -Xlinker --no-whole-archive "_f
+									<< LinkConfig.m_pPerConfig->m_SearchPath
+									<< LinkConfig.m_pPerConfig->m_CalculatedPath
+								;
+							}
 						}
 						else
 							Link += "\"{}/{}\" "_f << LinkConfig.m_pPerConfig->m_SearchPath << LinkConfig.m_pPerConfig->m_CalculatedPath;

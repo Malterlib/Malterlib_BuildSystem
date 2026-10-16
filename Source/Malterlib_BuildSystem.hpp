@@ -33,8 +33,7 @@ namespace NMib::NBuildSystem
 	}
 
 	template <typename t_CValue>
-	auto CBuildSystem::fs_FindContainingPath(NContainer::TCMap<NStr::CStr, t_CValue> const &_Paths, NStr::CStr const &_Path, NStr::CStr &o_OwnerPath)
-		-> decltype(_Paths.f_FindEqual(_Path))
+	auto CBuildSystem::fs_FindContainingPath(NContainer::TCMap<NStr::CStr, t_CValue> const &_Paths, NStr::CStr const &_Path, NStr::CStr &o_OwnerPath) -> decltype(_Paths.f_FindEqual(_Path))
 	{
 		o_OwnerPath.f_Clear();
 

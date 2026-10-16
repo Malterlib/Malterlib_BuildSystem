@@ -65,14 +65,8 @@ namespace NMib::NBuildSystem
 
 			while (Directory)
 			{
-				if
-				(
-					CFile::fs_FileExists(Directory, EFileAttrib_Directory)
-					&& CFile::fs_GetUniqueIdentifier(Directory) == BaseIdentifier
-				)
-				{
+				if (CFile::fs_FileExists(Directory, EFileAttrib_Directory) && CFile::fs_GetUniqueIdentifier(Directory) == BaseIdentifier)
 					return Suffix ? (_BaseDir / Suffix) : _BaseDir;
-				}
 
 				CStr Parent = CFile::fs_GetPath(Directory);
 				if (!Parent || Parent == Directory)
@@ -107,7 +101,6 @@ namespace NMib::NBuildSystem
 		{
 			DMibError("Failed to save Environment.json: {}"_f << _Exception);
 		}
-
 	}
 
 	void CBuildSystem::f_NoReconcileOptions()
@@ -120,18 +113,13 @@ namespace NMib::NBuildSystem
 		mp_bForceUpdate = true;
 	}
 
-
 	bool CBuildSystem::f_SingleThreaded() const
 	{
 		return mp_bSingleThreaded;
 	}
 
-	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::fp_GeneratePrepare
-		(
-			CGenerateOptions const &_GenerateOptions
-			, CGenerateEphemeralState &_GenerateState
-			, TCFunction<TCFuture<bool> ()> &&_fPreParse
-		)
+	auto CBuildSystem::fp_GeneratePrepare(CGenerateOptions const &_GenerateOptions, CGenerateEphemeralState &_GenerateState, TCFunction<TCFuture<bool> ()> &&_fPreParse)
+		-> TCUnsafeFuture<CBuildSystem::ERetry>
 	{
 		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
@@ -296,7 +284,7 @@ namespace NMib::NBuildSystem
 			_GenerateState.m_GlobalState.m_GeneratedFiles.f_Clear();
 		else
 		{
-			for (auto iFile = _GenerateState.m_GlobalState.m_GeneratedFiles.f_GetIterator(); iFile; )
+			for (auto iFile = _GenerateState.m_GlobalState.m_GeneratedFiles.f_GetIterator(); iFile;)
 			{
 				iFile->m_Workspaces.f_Remove(mp_GenerateWorkspace);
 				if (iFile->m_Workspaces.f_IsEmpty())
@@ -323,9 +311,9 @@ namespace NMib::NBuildSystem
 
 		{
 			CStr Ret = ProgramDirectory / "MTool";
-			#ifdef DPlatformFamily_Windows
-				Ret += ".exe";
-			#endif
+#ifdef DPlatformFamily_Windows
+			Ret += ".exe";
+#endif
 			mp_MToolExe = Ret;
 		}
 		{
@@ -333,9 +321,9 @@ namespace NMib::NBuildSystem
 
 			CStr CmakeProgramPath = CFile::fs_GetProgramDirectory() / "MToolCMake";
 
-			#ifdef DPlatformFamily_Windows
-				CmakeProgramPath += ".exe";
-			#endif
+#ifdef DPlatformFamily_Windows
+			CmakeProgramPath += ".exe";
+#endif
 
 			CUniversallyUniqueIdentifier UUID{EUniversallyUniqueIdentifierGenerate_StringHash, UUIDNamespace, CmakeProgramPath.f_LowerCase()};
 
@@ -346,9 +334,9 @@ namespace NMib::NBuildSystem
 		}
 		{
 			CStr Ret = ProgramDirectory / "mib";
-			#ifdef DPlatformFamily_Windows
-				Ret += ".exe";
-			#endif
+#ifdef DPlatformFamily_Windows
+			Ret += ".exe";
+#endif
 
 			mp_MalterlibExe = Ret;
 		}
@@ -372,8 +360,7 @@ namespace NMib::NBuildSystem
 			case EEJsonType_Object:
 			case EEJsonType_Array:
 				PreprocessorEnvironment(Key.m_Name, Value.f_AsString());
-			default:
-				continue;
+			default: continue;
 			}
 		}
 
@@ -603,7 +590,7 @@ namespace NMib::NBuildSystem
 										{
 											auto iLeft = Files.f_GetIterator();
 											auto iRight = Search.f_GetIterator();
-											for (;iLeft; ++iLeft, ++iRight)
+											for (; iLeft; ++iLeft, ++iRight)
 											{
 												if (iLeft->m_Path != iRight->m_Path)
 												{
@@ -662,18 +649,10 @@ namespace NMib::NBuildSystem
 
 									if (Value != *iEnv)
 									{
-										f_OutputConsole
-											(
-												"Dependency check: Regenerating build system because env var '{}' changed: '{}' != '{}'{\n}"_f
-												<< iEnv.f_GetKey()
-												<< Value
-												<< *iEnv
-											)
-										;
+										f_OutputConsole("Dependency check: Regenerating build system because env var '{}' changed: '{}' != '{}'{\n}"_f << iEnv.f_GetKey() << Value << *iEnv);
 										GenerateState.m_bDependenciesChanged = true;
 										break;
 									}
-
 								}
 							}
 
@@ -767,12 +746,8 @@ namespace NMib::NBuildSystem
 
 		{
 			CGeneratorArchiveState State;
-			auto fUpdateFileInfo = [&]
-				(
-					TCMap<CStr, CGeneratorArchiveState::CProcessedFile> &_Files
-					, CStr const &_FileName
-					, TCSharedPointer<CHashDigest_SHA256> const &_pDigest
-				) -> CGeneratorArchiveState::CProcessedFile &
+			auto fUpdateFileInfo = [&](TCMap<CStr, CGeneratorArchiveState::CProcessedFile> &_Files, CStr const &_FileName, TCSharedPointer<CHashDigest_SHA256> const &_pDigest)
+				-> CGeneratorArchiveState::CProcessedFile &
 				{
 					CStr FileName = CFile::fs_MakePathRelative(_FileName, GenerateState.m_OutputDir);
 					auto &ProcessedFile = _Files[FileName];
@@ -820,6 +795,7 @@ namespace NMib::NBuildSystem
 					CStr const *m_pPath;
 					NTime::CTime *m_pWriteTime;
 				};
+
 				TCFutureVector<void> Results;
 				TCVector<CToEdit> CurrentInsert;
 				TCVector<TCVector<CToEdit>> ToProcess;

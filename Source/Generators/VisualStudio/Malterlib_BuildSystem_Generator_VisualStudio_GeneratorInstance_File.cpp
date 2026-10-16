@@ -134,7 +134,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 			, CProjectState &_ProjectState
 			, CProjectXMLState &_XMLState
 			, TCMap<CStr, CGeneratorSettingsVSType> &_Compile
-		) const
+		)
+		const
 	{
 		for (auto &File : _Project.m_Files)
 		{

@@ -40,18 +40,13 @@ namespace NMib::NContainer
 			{
 				DMibError
 					(
-						fg_Format
-						(
-							"Failed to parse \"{}\" as a date: {}. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]"
-							, CStr(pParseStart, _pEnd - pParseStart)
-							, _Error
-						)
+						fg_Format("Failed to parse \"{}\" as a date: {}. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]", CStr(pParseStart, _pEnd - pParseStart), _Error)
 					)
 				;
 			}
 		;
 
-		auto fParseInt = [&](ch8 const *&_pParse, auto _Type, ch8 const *_pTerminators)
+		auto fParseInt = [&](ch8 const * &_pParse, auto _Type, ch8 const *_pTerminators)
 			{
 				auto pStart = _pParse;
 				bool bFailed = false;
@@ -303,7 +298,11 @@ namespace NMib::NContainer
 		return NBuildSystem::CBuildSystemSyntax::CRootValue::fs_FromJson(o_ParseContext.m_StringCache, NEncoding::CEJsonSorted::fs_FromJson(fg_Move(Output)), ParseLocation, true);
 	}
 
-	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_ValueIsEmpty(NBuildSystem::CBuildSystemSyntax::CRootValue const &_Value, bool _bForceEscape)
+	bool TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::fs_ValueIsEmpty
+		(
+			NBuildSystem::CBuildSystemSyntax::CRootValue const &_Value
+			, bool _bForceEscape
+		)
 	{
 		if (!_Value.m_Value.f_IsValid())
 		{

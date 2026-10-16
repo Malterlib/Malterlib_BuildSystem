@@ -220,7 +220,8 @@ namespace
 						Group["Name"] = iGroup->m_Name;
 					}
 
-/*					for (auto iGroup = _Groups.f_GetIterator(); iGroup; ++iGroup)
+					/*
+					for (auto iGroup = _Groups.f_GetIterator(); iGroup; ++iGroup)
 					{
 						if (iGroup->m_pParent)
 						{
@@ -275,7 +276,8 @@ namespace
 						Target["Name"] = TargetInfo.m_EntityName;
 						Target["EnabledConfigs"][Config.f_GetFullName()] = true;
 
-/*						if (TargetInfo.m_pGroup)
+						/*
+						if (TargetInfo.m_pGroup)
 						{
 							auto pGroup = WorkspaceGroupMapping.f_FindEqual(&*TargetInfo.m_pGroup);
 							DCheck(pGroup);
@@ -305,7 +307,8 @@ namespace
 							auto &File = Target["Files"][FileName.m_GroupPath][FileName.m_FileName];
 							fStorePosition(File["Position"], FileInfo.m_pEntity->f_Data().m_Position);
 							File["EnabledConfigs"][Config.f_GetFullName()] = true;
-/*							if (FileInfo.m_pGroup)
+							/*
+							if (FileInfo.m_pGroup)
 							{
 								auto pGroup = TargetGroupMapping.f_FindEqual(&*FileInfo.m_pGroup);
 								DCheck(pGroup);

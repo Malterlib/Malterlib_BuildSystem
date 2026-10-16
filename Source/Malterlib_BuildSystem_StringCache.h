@@ -48,7 +48,7 @@ namespace NMib::NBuildSystem
 		{
 		}
 
-		constexpr operator NStr::CStr const &() const
+		constexpr operator NStr::CStr const & () const
 		{
 			return m_String;
 		}

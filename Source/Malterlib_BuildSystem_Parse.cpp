@@ -32,7 +32,8 @@ namespace NMib::NBuildSystem
 			, TCFunction<void (CBuildSystemSyntax::CIdentifier const &_Identifier)> const &_fOnIdentifier
 			, ch8 const *_pTypeError
 			, EHandleKeyFlag _Flags
-		) const
+		)
+		const
 	{
 		auto fThrowError = [&]
 			{
@@ -170,13 +171,13 @@ namespace NMib::NBuildSystem
 						auto &Value = Registry.f_GetThisValue();
 
 						if
-							(
-								_Identifier.m_PropertyType == EPropertyType_Property
-								&& _Identifier.m_EntityType == EEntityType_Invalid
-								&& _Identifier.f_IsNameConstantString()
-								&& (_Identifier.f_NameConstantString() == gc_ConstString_Import.m_String || _Identifier.f_NameConstantString() == gc_ConstString_Include.m_String)
-								&& Value.m_Value.f_IsValid()
-							)
+						(
+							_Identifier.m_PropertyType == EPropertyType_Property
+							&& _Identifier.m_EntityType == EEntityType_Invalid
+							&& _Identifier.f_IsNameConstantString()
+							&& (_Identifier.f_NameConstantString() == gc_ConstString_Import.m_String || _Identifier.f_NameConstantString() == gc_ConstString_Include.m_String)
+							&& Value.m_Value.f_IsValid()
+						)
 						{
 							return; // Error recovery to allow repositories to be handled
 						}
@@ -204,13 +205,13 @@ namespace NMib::NBuildSystem
 						auto &Value = Registry.f_GetThisValue();
 
 						if
-							(
-								_Identifier.m_PropertyType == EPropertyType_Property
-								&& _Identifier.m_EntityType == EEntityType_Invalid
-								&& _Identifier.f_IsNameConstantString()
-								&& (_Identifier.f_NameConstantString() == gc_ConstString_Import.m_String || _Identifier.f_NameConstantString() == gc_ConstString_Include.m_String)
-								&& Value.m_Value.f_IsValid()
-							)
+						(
+							_Identifier.m_PropertyType == EPropertyType_Property
+							&& _Identifier.m_EntityType == EEntityType_Invalid
+							&& _Identifier.f_IsNameConstantString()
+							&& (_Identifier.f_NameConstantString() == gc_ConstString_Import.m_String || _Identifier.f_NameConstantString() == gc_ConstString_Include.m_String)
+							&& Value.m_Value.f_IsValid()
+						)
 						{
 							return; // Error recovery to allow repositories to be handled
 						}
@@ -275,7 +276,7 @@ namespace NMib::NBuildSystem
 		{
 			for (auto &ExistingType : *pExistingTypes)
 			{
-				if ((!ExistingType.m_pConditions && !_pConditions) || (( !!ExistingType.m_pConditions && !!_pConditions) && *ExistingType.m_pConditions == *_pConditions))
+				if ((!ExistingType.m_pConditions && !_pConditions) || ((!!ExistingType.m_pConditions && !!_pConditions) && *ExistingType.m_pConditions == *_pConditions))
 				{
 					fs_ThrowError
 						(
@@ -354,7 +355,7 @@ namespace NMib::NBuildSystem
 		{
 			for (auto &ExistingType : *pExistingTypes)
 			{
-				if ((!ExistingType.m_pConditions && !_pConditions) || (( !!ExistingType.m_pConditions && !!_pConditions) && *ExistingType.m_pConditions == *_pConditions))
+				if ((!ExistingType.m_pConditions && !_pConditions) || ((!!ExistingType.m_pConditions && !!_pConditions) && *ExistingType.m_pConditions == *_pConditions))
 				{
 					fs_ThrowError
 						(
@@ -396,7 +397,8 @@ namespace NMib::NBuildSystem
 			, CBuildSystemRegistry &_Registry
 			, TCSharedPointer<CCondition> const &_pConditions
 			, CStr const &_Namespaces
-		) const
+		)
+		const
 	{
 		auto &Value = _Registry.f_GetThisValue();
 		if (_VariableName.f_GetType() == EPropertyType_Type)
@@ -474,7 +476,8 @@ namespace NMib::NBuildSystem
 			, NStorage::TCSharedPointer<CCondition> const &_pConditions
 			, EPropertyFlag &o_DebugFlags
 			, NStorage::TCSharedPointer<CCondition> &o_pConditions
-		) const
+		)
+		const
 	{
 		CCondition TempCondition;
 		CCondition *pDestinationCondition = &TempCondition;
@@ -548,7 +551,8 @@ namespace NMib::NBuildSystem
 			, CEntity &o_Entity
 			, CBuildSystemRegistry &_Registry
 			, TCSharedPointer<CCondition> const &_pConditions
-		) const
+		)
+		const
 	{
 		if (_PropertyKey.f_GetType() == EPropertyType_Type)
 			return;
@@ -581,7 +585,8 @@ namespace NMib::NBuildSystem
 			, CBuildSystemRegistry &_Registry
 			, TCSharedPointer<CCondition> const &_pConditions
 			, bool _bDefines
-		) const
+		)
+		const
 	{
 		if (_Identifier.m_EntityType != EEntityType_Invalid)
 			fsp_ThrowError(_Registry, "You cannot specify an entity type for a property expression");
@@ -621,10 +626,11 @@ namespace NMib::NBuildSystem
 				auto &&_fThis
 				, CBuildSystemRegistry &_Registry
 				, CCondition const *_pConditions
-			) -> void
+			)
+			-> void
 			{
 #ifdef DCompiler_Workaround_Apple_clang
-#define _fThis(...) _fThis(_fThis, __VA_ARGS__)
+#	define _fThis(...) _fThis(_fThis, __VA_ARGS__)
 #endif
 				CCondition Conditions;
 				TCSharedPointer<CCondition> pConditions;
@@ -719,7 +725,7 @@ namespace NMib::NBuildSystem
 			}
 		;
 #ifdef DCompiler_Workaround_Apple_clang
-#define fParseRecursiveNamespaces(...) fParseRecursiveNamespaces(fParseRecursiveNamespaces, __VA_ARGS__)
+#	define fParseRecursiveNamespaces(...) fParseRecursiveNamespaces(fParseRecursiveNamespaces, __VA_ARGS__)
 #endif
 
 		CCondition Conditions;
@@ -741,11 +747,7 @@ namespace NMib::NBuildSystem
 			if (ParentKey.m_Type == EEntityType_Group)
 			{
 				auto *pParent = &_Parent;
-				while
-					(
-						pParent->m_pParent
-						&& pParent->m_pParent->f_GetKey().m_Type != EEntityType_Root
-					)
+				while (pParent->m_pParent && pParent->m_pParent->f_GetKey().m_Type != EEntityType_Root)
 				{
 					pParent = pParent->m_pParent;
 					if (pParent->f_GetKey().m_Type == EEntityType_Target)
@@ -762,13 +764,13 @@ namespace NMib::NBuildSystem
 		{
 			bAllowChildren = true;
 			if
-				(
-					ParentKey.m_Type != EEntityType_Target
-					&& ParentKey.m_Type != EEntityType_Root
-					&& ParentKey.m_Type != EEntityType_Workspace
-					&& ParentKey.m_Type != EEntityType_Group
-					&& ParentKey.m_Type != EEntityType_Import
-				)
+			(
+				ParentKey.m_Type != EEntityType_Target
+				&& ParentKey.m_Type != EEntityType_Root
+				&& ParentKey.m_Type != EEntityType_Workspace
+				&& ParentKey.m_Type != EEntityType_Group
+				&& ParentKey.m_Type != EEntityType_Import
+			)
 			{
 				fsp_ThrowError(_Registry, "A group can only be specified in target, workspace, root, group or import scope");
 			}
@@ -829,9 +831,7 @@ namespace NMib::NBuildSystem
 				fsp_ThrowError(_Registry, "A file generation can only be specified in target, root or group scope");
 		}
 		else
-		{
 			fsp_ThrowError(_Registry, CStr::CFormat("Unrecognized entity type {}") << EntityType);
-		}
 
 		auto const &EntityName = _Registry.f_GetThisValue();
 
