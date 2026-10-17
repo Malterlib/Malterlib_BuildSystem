@@ -11,10 +11,14 @@
 #define DPrefixLocation_1_7 "Test.MHeader(1,7):"
 #define DPrefixLocation_1_12 "Test.MHeader(1,12):"
 #define DPrefixLocation_1_14 "Test.MHeader(1,14):"
+#define DPrefixLocation_1_13 "Test.MHeader(1,13):"
+#define DPrefixLocation_2_1 "Test.MHeader(2,1):"
 #else
 #define DPrefixLocation_1_7 "Test.MHeader:1:7:"
 #define DPrefixLocation_1_12 "Test.MHeader:1:12:"
 #define DPrefixLocation_1_14 "Test.MHeader:1:14:"
+#define DPrefixLocation_1_13 "Test.MHeader:1:13:"
+#define DPrefixLocation_2_1 "Test.MHeader:2:1:"
 #endif
 
 namespace
@@ -1421,6 +1425,24 @@ namespace
 			DMibExpect(ParamType1.f_GetAsType<CBuildSystemSyntax::CDefaultType>().m_Type, ==, CBuildSystemSyntax::CDefaultType::EType_FloatingPoint);
 		}
 
+		void f_TestFunctionParamsMissingComma()
+		{
+			DMibExpectNoException(fs_ParseString("F(\"a\"\n, \"b\")"));
+
+			DMibExpectException
+				(
+					fs_ParseString("F(\"a\" \"b\")")
+					, DMibExceptionInstanceParse(DPrefixLocation_1_13 " Expected , between function parameters"_f, {})
+				)
+			;
+			DMibExpectException
+				(
+					fs_ParseString("F(\"a\"\n\"b\")")
+					, DMibExceptionInstanceParse(DPrefixLocation_2_1 " Expected , between function parameters"_f, {})
+				)
+			;
+		}
+
 		void f_TestFunction()
 		{
 			f_TestFunctionNoParam();
@@ -1428,6 +1450,7 @@ namespace
 			f_TestFunctionParamsEllipsis();
 			f_TestFunctionParamsOptional();
 			f_TestFunctionParamsDefaulted();
+			f_TestFunctionParamsMissingComma();
 		}
 
 		void f_TestFormat()
