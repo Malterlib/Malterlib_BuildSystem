@@ -50,6 +50,14 @@
 			1 + 2
 				* 3
 		)
+		Documentation: string = "Doxygen"
+		ArgumentTernary: string = Join(["x", "y"], Documentation <==> "Doxygen" ? "+" : "-")
+		ArgumentTernarySplit: string = Join(
+			["x", "y"]
+			, Documentation <==> "Doxygen"
+				? "+"
+				: "-"
+		)
 		Element: [int] = [
 			1 + 2
 				* 3
@@ -65,7 +73,7 @@
 	GenerateFile
 	{
 		Name BuildSystemOutputDir / "TestGenerateFile.txt"
-		Contents `@(Multiply->ToString()) @(Compare->EJsonToString("")) @(Member->ToString()) @(Chain) @(Ternary->ToString()) @(Argument) @(ArgumentOperator) @(Element->EJsonToString("")) @(ObjectMember->EJsonToString(""))\n`
+		Contents `@(Multiply->ToString()) @(Compare->EJsonToString("")) @(Member->ToString()) @(Chain) @(Ternary->ToString()) @(Argument) @(ArgumentOperator) @(Element->EJsonToString("")) @(ObjectMember->EJsonToString("")) @(ArgumentTernary) @(ArgumentTernarySplit)\n`
 		Executable false
 		UnixLineEnds true
 		UnicodeBOM false
