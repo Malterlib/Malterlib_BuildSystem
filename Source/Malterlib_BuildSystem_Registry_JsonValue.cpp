@@ -240,8 +240,17 @@ namespace NMib::NContainer
 			f_ParsePostDefine(o_pParse, o_Value);
 		else
 		{
+			auto fParseWhiteSpace = [&](uch8 const *&o_pWhiteSpace)
+				{
+					if (f_LineBreakIsWhiteSpace())
+						fg_ParseWhiteSpace(o_pWhiteSpace);
+					else
+						fg_ParseWhiteSpaceNoLines(o_pWhiteSpace);
+				}
+			;
+
 			auto *pParse = o_pParse;
-			fg_ParseWhiteSpaceNoLines(pParse);
+			fParseWhiteSpace(pParse);
 
 			if (fg_StrStartsWith(pParse, "//") || fg_StrStartsWith(pParse, "/*"))
 				return;
@@ -267,7 +276,7 @@ namespace NMib::NContainer
 				Object[CEJsonConstStrings::mc_Type] = gc_ConstString_BuildSystemToken;
 				Object[CEJsonConstStrings::mc_Value] = f_ParseExpression(pParse, EParseExpressionFlag_SupportAppend | EParseExpressionFlag_NoParentheses, &FirstParam);
 				o_pParse = pParse;
-				fg_ParseWhiteSpaceNoLines(pParse);
+				fParseWhiteSpace(pParse);
 				if (fg_StrStartsWith(pParse, "//") || fg_StrStartsWith(pParse, "/*"))
 					break;
 			}

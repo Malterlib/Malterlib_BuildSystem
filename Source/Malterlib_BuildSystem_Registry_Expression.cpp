@@ -566,8 +566,10 @@ namespace NMib::NContainer
 		if (_pFirstParam)
 			FunctionParams.f_Insert(fg_Move(*_pFirstParam));
 
+		auto BracketScope = f_InBracket();
 		bool bEndedParen = false;
 		bool bLastTokenValid = true;
+		bool bAfterParam = false;
 
 		while (*pParse)
 		{
@@ -586,6 +588,8 @@ namespace NMib::NContainer
 					f_ThrowError(", is not valid here", pParse);
 				++pParse;
 			}
+			else if (bAfterParam)
+				f_ThrowError("Expected , between function parameters", pParse);
 			else
 			{
 				CJsonSorted Param;
@@ -594,10 +598,12 @@ namespace NMib::NContainer
 				NJson::fg_ParseJsonValue(Param, pParse, *this);
 				FunctionParams.f_Insert(fg_Move(Param));
 				bLastTokenValid = true;
+				bAfterParam = true;
 				continue;
 			}
 
 			bLastTokenValid = false;
+			bAfterParam = false;
 		}
 
 		if (!bEndedParen)
@@ -624,6 +630,14 @@ namespace NMib::NContainer
 		;
 
 		bool bUseParentheses = !(_Flags & EParseExpressionFlag_NoParentheses);
+		umint nBrackets = bUseParentheses ? 1 : 0;
+		m_BracketDepth += nBrackets;
+		auto BracketCleanup = g_OnScopeExit / [&]
+			{
+				m_BracketDepth -= nBrackets;
+			}
+		;
+
 		if (bUseParentheses)
 		{
 			if (*pParse != '(')
@@ -659,7 +673,7 @@ namespace NMib::NContainer
 
 		umint nParsed = 0;
 
-		while (*pParse && !fg_CharIsNewLine(*pParse))
+		while (*pParse && (f_LineBreakIsWhiteSpace() || !fg_CharIsNewLine(*pParse)))
 		{
 			++nParsed;
 
@@ -681,7 +695,10 @@ namespace NMib::NContainer
 			else
 			{
 				auto *pTestParse = pParse;
-				fg_ParseWhiteSpaceNoLines(pTestParse);
+				if (f_LineBreakIsWhiteSpace())
+					fg_ParseWhiteSpace(pTestParse);
+				else
+					fg_ParseWhiteSpaceNoLines(pTestParse);
 
 				if
 					(
