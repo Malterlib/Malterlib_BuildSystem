@@ -1,0 +1,81 @@
+*Configuration
+{
+	Debug "Debug Config"
+	Release "Release Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
+
+%GenerateFile "TestFile"
+{
+	Property
+	{
+		Multiply: int = (
+			1 + 2
+				* 3
+		)
+		Compare: bool = (
+			1 == 2
+			|| 3
+				== 3
+		)
+		Member: int = (
+			1 + "abcd"
+				->Length()
+		)
+		Chain: string = (
+			"a/b"->GetPath()
+				->GetFile()
+		)
+		Ternary: int = (
+			1 == 1
+			? 3
+			: 4
+				+ 5
+		)
+		Argument: string = Join(
+			["x", "y"]
+			, "a/b"->GetPath()
+				->Replace("a", "+")
+		)
+		ArgumentOperator: string = ToString(
+			1 + 2
+				* 3
+		)
+		Documentation: string = "Doxygen"
+		ArgumentTernary: string = Join(["x", "y"], Documentation <==> "Doxygen" ? "+" : "-")
+		ArgumentTernarySplit: string = Join(
+			["x", "y"]
+			, Documentation <==> "Doxygen"
+				? "+"
+				: "-"
+		)
+		Element: [int] = [
+			1 + 2
+				* 3
+			, "abcd"
+				->Length()
+		]
+		ObjectMember: {Value: int} = {
+			Value: 1 + 2
+				* 3
+		}
+	}
+
+	GenerateFile
+	{
+		Name BuildSystemOutputDir / "TestGenerateFile.txt"
+		Contents `@(Multiply->ToString()) @(Compare->EJsonToString("")) @(Member->ToString()) @(Chain) @(Ternary->ToString()) @(Argument) @(ArgumentOperator) @(Element->EJsonToString("")) @(ObjectMember->EJsonToString("")) @(ArgumentTernary) @(ArgumentTernarySplit)\n`
+		Executable false
+		UnixLineEnds true
+		UnicodeBOM false
+	}
+}

@@ -208,8 +208,23 @@ namespace NMib::NContainer
 					}
 				;
 			}
+			auto f_InBracket()
+			{
+				++m_BracketDepth;
+				return g_OnScopeExit / [this]
+					{
+						--m_BracketDepth;
+					}
+				;
+			}
+			// A line break ends a statement, and nothing inside a bracket.
+			bool f_LineBreakIsWhiteSpace() const
+			{
+				return m_BracketDepth || m_ObjectArrayParseDepth;
+			}
 
 			umint m_ParseDepth = 0;
+			umint m_BracketDepth = 0; // The parentheses and parameter lists open around what is parsed
 			umint m_ExpressionDepth = 0;
 			umint m_ParsingFunctionParamsDepth = 0;
 			umint m_ParsingPrefixOperandExpressionDepth = 0;
