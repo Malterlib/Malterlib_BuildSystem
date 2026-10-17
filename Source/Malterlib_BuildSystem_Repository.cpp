@@ -3167,12 +3167,13 @@ namespace NMib::NBuildSystem
 						CStr ExistingHash = CFile::fs_ReadStringFromFile(HashFile, true).f_Trim();
 						if (ExistingHash == NewHashString)
 						{
-							// Guard only against third-party tools overwriting the dispatcher
-							// at .git/hooks/<type> after we installed it (notably `git lfs
-							// install`, which rewrites pre-push/post-checkout/post-commit/
-							// post-merge). The source-only hash still matches in that case, so
-							// without this check the configured hooks would silently stop
-							// running until the user ran with --force-update-hooks.
+							// Guard against the dispatcher at .git/hooks/<type> having been
+							// overwritten after we installed it: by a third-party tool (notably
+							// `git lfs install`, which rewrites pre-push/post-checkout/post-commit/
+							// post-merge), or by the mib of another worktree, which shares the
+							// dispatcher but can be a different build. This worktree's hash still
+							// matches in both cases, so without this check the dispatcher would
+							// stay foreign until the user ran with --force-update-hooks.
 							//
 							// We deliberately do NOT enumerate the managed payload under
 							// .git/hooks/malterlib/... Users who hand-delete files inside that
@@ -3198,7 +3199,7 @@ namespace NMib::NBuildSystem
 								}
 
 								CStr WrapperContent = CFile::fs_ReadStringFromFile(WrapperPath, true);
-								if (WrapperContent.f_Find("# Managed by Malterlib") < 0)
+								if (WrapperContent != CStr(gc_pHookDispatcherScript))
 								{
 									bNeedsUpdate = true;
 									break;
