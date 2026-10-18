@@ -169,6 +169,21 @@ Property
 }
 ```
 
+#### User Settings
+A property a user can set is documented by a `// User(Section)=Default: Description` comment, and generation adds it,
+commented out, to `BuildSystem/Default/UserSettings.MSettings`. The comment ends the declaration's line, or starts the
+comment lines directly above the declaration, its description running on through them:
+```malterlib-build
+Property
+{
+	MalterlibAllSchemes: bool = false // User(Build System)=true: Generate schemes for all targets
+	// User(Linking)=true: Discard the load command for a framework or library that no surviving
+	// symbol references
+	MalterlibDeadStripDylibs: bool = false
+}
+```
+The lines after a declaration document what follows it.
+
 ### Built-in Functions
 
 The DSL provides numerous built-in functions for path manipulation, string operations, and more:

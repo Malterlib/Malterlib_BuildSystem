@@ -47,6 +47,123 @@ namespace NMib::NBuildSystem
 		return pChild;
 	}
 
+	// A setting a user can make is documented by a comment: '// User(Section)=Default: Description'. It ends the
+	// definition's line, or starts the comment lines directly above the definition and runs on through them; the lines
+	// after a definition belong to what follows it. The section defaults to General.
+	auto CBuildSystem::fs_ParseUserSettingComment(CStr const &_Whitespace, CStr const &_LeadingWhitespace) -> TCOptional<CUserSettingComment>
+	{
+		CStr Line;
+		{
+			CStr Trailing = _Whitespace;
+			CStr OwnLine = fg_GetStrLineSep(Trailing);
+			auto iTrailing = OwnLine.f_Find("// User");
+			if (iTrailing >= 0)
+				Line = OwnLine.f_Extract(iTrailing);
+			else
+			{
+				auto Lines = _LeadingWhitespace.f_Split("\n");
+				aint iBlockStart = Lines.f_GetLen();
+				for (aint iLine = aint(Lines.f_GetLen()) - 1; iLine >= 1; --iLine)
+				{
+					auto Trimmed = Lines[iLine].f_Trim();
+					if (Trimmed.f_IsEmpty() && iLine == aint(Lines.f_GetLen()) - 1)
+						continue;
+
+					if (!Trimmed.f_StartsWith("//"))
+						break;
+
+					iBlockStart = iLine;
+				}
+
+				for (umint iLine = umint(iBlockStart); iLine < Lines.f_GetLen(); ++iLine)
+				{
+					auto Trimmed = Lines[iLine].f_Trim();
+					if (Line.f_IsEmpty())
+					{
+						if (Trimmed.f_StartsWith("// User"))
+							Line = Trimmed;
+					}
+					else if (Trimmed.f_StartsWith("//"))
+						Line += " " + CStr(Trimmed.f_GetStr() + 2, Trimmed.f_GetLen() - 2).f_Trim();
+				}
+			}
+		}
+
+		if (Line.f_IsEmpty())
+			return {};
+
+		CStr Section = "General";
+		CStr DefaultValue;
+
+		CStr ToParse = Line.f_Extract(7);
+
+		auto pParse = ToParse.f_GetStr();
+		fg_ParseWhiteSpace(pParse);
+		if (*pParse == '(')
+		{
+			++pParse;
+			auto pStart = pParse;
+			while (*pParse && *pParse != ')')
+				++pParse;
+
+			if (*pParse != ')')
+				return {};
+			Section = CStr(pStart, pParse - pStart);
+			++pParse;
+		}
+
+		fg_ParseWhiteSpace(pParse);
+
+		if (*pParse == '=')
+		{
+			++pParse;
+			fg_ParseWhiteSpace(pParse);
+			if (fg_StrStartsWith(pParse, "---("))
+			{
+				pParse += 4;
+				auto pStart = pParse;
+				while (*pParse && !fg_StrStartsWith(pParse, ")---"))
+					++pParse;
+
+				DefaultValue = CStr(pStart, pParse - pStart).f_Trim();
+
+				if (fg_StrStartsWith(pParse, ")---"))
+					pParse += 4;
+
+				fg_ParseWhiteSpace(pParse);
+			}
+			else if (*pParse == '\"')
+			{
+				auto pStart = pParse;
+				fg_ParseEscape<'\"'>(pParse, '\"');
+
+				DefaultValue = CStr(pStart, pParse - pStart);
+
+				fg_ParseWhiteSpace(pParse);
+			}
+			else
+			{
+				auto pStart = pParse;
+				while (*pParse && *pParse != ':' && !fg_CharIsNewLine(*pParse))
+					++pParse;
+
+				DefaultValue = CStr(pStart, pParse - pStart).f_Trim();
+
+				fg_ParseWhiteSpace(pParse);
+			}
+		}
+
+		if (*pParse != ':')
+			return {};
+
+		++pParse;
+		fg_ParseWhiteSpace(pParse);
+
+		CStr Description = pParse;
+
+		return CUserSettingComment{.m_Section = fg_Move(Section), .m_DefaultValue = fg_Move(DefaultValue), .m_Description = fg_Move(Description)};
+	}
+
 	void CBuildSystem::CUserSettingsState::f_Parse(CStringCache &o_StringCache)
 	{
 		CStr AllWhitespace;
@@ -271,83 +388,12 @@ namespace NMib::NBuildSystem
 
 			for (auto &Definition : Definitions)
 			{
-				auto iWhiteStart = Definition.m_Type.m_Whitespace.f_Find("// User");
-				if (iWhiteStart < 0)
+				auto Comment = fs_ParseUserSettingComment(Definition.m_Type.m_Whitespace, Definition.m_Type.m_LeadingWhitespace);
+				if (!Comment)
 					continue;
 
-				CStr Section = "General";
-				CStr DefaultValue;
-
-				CStr LineCandidate = Definition.m_Type.m_Whitespace.f_GetStr() + iWhiteStart;
-				CStr Line = fg_GetStrLineSep(LineCandidate);
-				CStr ToParse = Line.f_Extract(7);
-
-				auto pParse = ToParse.f_GetStr();
-				fg_ParseWhiteSpace(pParse);
-				if (*pParse == '(')
-				{
-					++pParse;
-					auto pStart = pParse;
-					while (*pParse && *pParse != ')')
-						++pParse;
-
-					if (*pParse != ')')
-						continue;
-					Section = CStr(pStart, pParse - pStart);
-					++pParse;
-				}
-
-				fg_ParseWhiteSpace(pParse);
-
-				if (*pParse == '=')
-				{
-					++pParse;
-					fg_ParseWhiteSpace(pParse);
-					if (fg_StrStartsWith(pParse, "---("))
-					{
-						pParse += 4;
-						auto pStart = pParse;
-						while (*pParse && !fg_StrStartsWith(pParse, ")---"))
-							++pParse;
-
-						DefaultValue = CStr(pStart, pParse - pStart).f_Trim();
-
-						if (fg_StrStartsWith(pParse, ")---"))
-							pParse += 4;
-
-						fg_ParseWhiteSpace(pParse);
-					}
-					else if (*pParse == '\"')
-					{
-						auto pStart = pParse;
-						fg_ParseEscape<'\"'>(pParse, '\"');
-
-						DefaultValue = CStr(pStart, pParse - pStart);
-
-						fg_ParseWhiteSpace(pParse);
-					}
-					else
-					{
-						auto pStart = pParse;
-						while (*pParse && *pParse != ':' && !fg_CharIsNewLine(*pParse))
-							++pParse;
-
-						DefaultValue = CStr(pStart, pParse - pStart).f_Trim();
-
-						fg_ParseWhiteSpace(pParse);
-					}
-				}
-
-				if (*pParse != ':')
-					continue;
-
-				++pParse;
-				fg_ParseWhiteSpace(pParse);
-
-				CStr Description = pParse;
-
-				UserVariablesBySection[CPropertyKey{mp_StringCache, VariableKey.f_GetType(), Section}][VariableKey]
-					= {.m_Description = fg_Move(Description), .m_DefaultValue = fg_Move(DefaultValue)}
+				UserVariablesBySection[CPropertyKey{mp_StringCache, VariableKey.f_GetType(), Comment->m_Section}][VariableKey]
+					= {.m_Description = fg_Move(Comment->m_Description), .m_DefaultValue = fg_Move(Comment->m_DefaultValue)}
 				;
 			}
 		}

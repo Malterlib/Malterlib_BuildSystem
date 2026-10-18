@@ -47,6 +47,66 @@ namespace
 				}
 			};
 
+			DMibTestSuite("UserSettingComment")
+			{
+				auto fParse = [](CStr const &_Whitespace, CStr const &_LeadingWhitespace)
+					{
+						return CBuildSystem::fs_ParseUserSettingComment(_Whitespace, _LeadingWhitespace);
+					}
+				;
+
+				{
+					DMibTestPath("Trailing");
+					auto Comment = fParse(" // User(Debug)=true: Enable it\n", "\n");
+					DMibAssertTrue(!!Comment);
+					DMibExpect(Comment->m_Section, ==, "Debug");
+					DMibExpect(Comment->m_DefaultValue, ==, "true");
+					DMibExpect(Comment->m_Description, ==, "Enable it");
+				}
+				{
+					DMibTestPath("Above");
+					auto Comment = fParse("\n", " // Previous\n\n\t// Banner\n\n\t// User(Linking)=true: Discard what no\n\t// symbol references\n");
+					DMibAssertTrue(!!Comment);
+					DMibExpect(Comment->m_Section, ==, "Linking");
+					DMibExpect(Comment->m_DefaultValue, ==, "true");
+					DMibExpect(Comment->m_Description, ==, "Discard what no symbol references");
+				}
+				{
+					DMibTestPath("General");
+					auto Comment = fParse(" // User: Described\n", "\n");
+					DMibAssertTrue(!!Comment);
+					DMibExpect(Comment->m_Section, ==, "General");
+					DMibExpect(Comment->m_Description, ==, "Described");
+				}
+
+				// What follows a definition documents the next one, and the line in front of the definition's own lines is
+				// the end of the one before.
+				DMibExpectFalse(!!fParse(" // Plain\n\t// User(Tools): For the next one\n", "\n"));
+				DMibExpectFalse(!!fParse("\n", " // User(Tools): Of the one before\n"));
+				DMibExpectFalse(!!fParse("\n", "\n\t// User(Tools): Separated\n\n"));
+
+				// The comment lines a file starts with stand above its first declaration.
+				{
+					DMibTestPath("FirstInFile");
+					CStringCache StringCache;
+					CBuildSystemRegistryParseContext ParseContext(StringCache);
+					CBuildSystemRegistry Registry;
+					Registry.f_ParseStrWithContext(ParseContext, "// User(Review)=true: Root setting\nProperty.RootSetting: bool = false\nOther 1\n", "Test.MSettings");
+					auto iChild = Registry.f_GetChildIterator();
+					DMibAssertTrue(!!iChild);
+					auto Comment = fParse((*iChild).f_GetWhiteSpace(ERegistryWhiteSpaceLocation_After), CBuildSystem::fs_GetLeadingWhiteSpace(*iChild));
+					DMibAssertTrue(!!Comment);
+					DMibExpect(Comment->m_Section, ==, "Review");
+					DMibExpect(Comment->m_Description, ==, "Root setting");
+					++iChild;
+					{
+						DMibTestPath("Next");
+						DMibAssertTrue(!!iChild);
+						DMibExpectFalse(!!fParse((*iChild).f_GetWhiteSpace(ERegistryWhiteSpaceLocation_After), CBuildSystem::fs_GetLeadingWhiteSpace(*iChild)));
+					}
+				}
+			};
+
 			DMibTestSuite("FindContainingPath_FindsOwner")
 			{
 				TCMap<CStr, int32> Paths;

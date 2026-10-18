@@ -37,6 +37,7 @@ namespace NMib::NBuildSystem
 		CBuildSystemSyntax::CType m_Type;
 		CFilePosition m_Position;
 		NStr::CStr m_Whitespace;
+		NStr::CStr m_LeadingWhitespace; // The comment lines the definition stands under
 	};
 
 	#define DMibBuildSystemTypeWithPosition(...) CTypeWithPosition{.m_Type = CBuildSystemSyntax::CType{__VA_ARGS__}, .m_Position = CFilePosition(NStr::CParseLocation{.m_File = DMibPFile, .m_Line = DMibPLine})}

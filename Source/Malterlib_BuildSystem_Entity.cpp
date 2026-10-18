@@ -315,6 +315,7 @@ namespace NMib::NBuildSystem
 						, Definition.m_Type.m_Type
 						, Definition.m_Type.m_Position
 						, Definition.m_Type.m_Whitespace
+						, Definition.m_Type.m_LeadingWhitespace
 						, Definition.m_pConditions
 						, Definition.m_DebugFlags
 					)

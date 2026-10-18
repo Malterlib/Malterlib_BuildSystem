@@ -6,6 +6,34 @@
 
 namespace NMib::NBuildSystem
 {
+	// The whitespace and comments between an entry and the one in front of it. The registry keeps the lines in front of a
+	// key with what precedes it: the previous entry, or the opening of the scope the key is first in. A file has no
+	// opening, so the lines in front of its first key are that key's own.
+	CStr CBuildSystem::fs_GetLeadingWhiteSpace(CBuildSystemRegistry const &_Registry)
+	{
+		auto *pParent = _Registry.f_GetParent();
+		if (!pParent)
+			return {};
+
+		CBuildSystemRegistry const *pPrevious = nullptr;
+		for (auto iChild = pParent->f_GetChildIterator(); iChild; ++iChild)
+		{
+			if (&*iChild == &_Registry)
+				break;
+
+			pPrevious = &*iChild;
+		}
+
+		// No line ends in front of the file's first lines, so they start below an empty one.
+		if (!pPrevious && !pParent->f_GetParent())
+			return "\n" + _Registry.f_GetWhiteSpace(ERegistryWhiteSpaceLocation_BeforeKey);
+
+		if (!pPrevious)
+			return pParent->f_GetWhiteSpace(ERegistryWhiteSpaceLocation_AfterChildScopeStart);
+
+		return pPrevious->f_GetWhiteSpace(ERegistryWhiteSpaceLocation_After) + pPrevious->f_GetWhiteSpace(ERegistryWhiteSpaceLocation_AfterChildScopeEnd);
+	}
+
 	CStr CBuildSystem::fs_GetNameIdentifierString(CBuildSystemRegistry const &_Registry)
 	{
 		auto &Name = _Registry.f_GetName();
@@ -318,6 +346,7 @@ namespace NMib::NBuildSystem
 			, CBuildSystemSyntax::CType const &_Type
 			, CFilePosition const &_Position
 			, CStr const &_Whitespace
+			, CStr const &_LeadingWhitespace
 			, TCSharedPointer<CCondition> const &_pConditions
 			, EPropertyFlag _PropertyFlags
 		)
@@ -386,7 +415,7 @@ namespace NMib::NBuildSystem
 			pParent->f_ChildDependentDataWritable().m_ChildrenVariableDefinitions[_VariableName][_Position];
 		}
 
-		_DestinationEntity.f_DataWritable().m_VariableDefinitions[_VariableName].f_Insert({{_Type, _Position, _Whitespace}, _pConditions, _PropertyFlags});
+		_DestinationEntity.f_DataWritable().m_VariableDefinitions[_VariableName].f_Insert({{_Type, _Position, _Whitespace, _LeadingWhitespace}, _pConditions, _PropertyFlags});
 	}
 
 	void CBuildSystem::fp_ParsePropertyValueDefines
@@ -442,6 +471,7 @@ namespace NMib::NBuildSystem
 					, Type
 					, _Registry.f_GetLocation()
 					, _Registry.f_GetWhiteSpace(ERegistryWhiteSpaceLocation_After)
+					, fs_GetLeadingWhiteSpace(_Registry)
 					, pConditions
 					, DebugFlags
 				)

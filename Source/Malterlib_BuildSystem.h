@@ -625,6 +625,16 @@ namespace NMib::NBuildSystem
 		void f_OutputConsole(NStr::CStr const &_Output, bool _bError = false) const;
 		NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &f_OutputConsoleFunctor() const;
 
+		struct CUserSettingComment
+		{
+			NStr::CStr m_Section;
+			NStr::CStr m_DefaultValue;
+			NStr::CStr m_Description;
+		};
+
+		static auto fs_ParseUserSettingComment(NStr::CStr const &_Whitespace, NStr::CStr const &_LeadingWhitespace) -> NStorage::TCOptional<CUserSettingComment>;
+		static NStr::CStr fs_GetLeadingWhiteSpace(CBuildSystemRegistry const &_Registry);
+
 		static void fs_AddEntityVariableDefinition
 			(
 				CBuildSystem const *_pBuildSystem
@@ -633,6 +643,7 @@ namespace NMib::NBuildSystem
 				, CBuildSystemSyntax::CType const &_Type
 				, CFilePosition const &_Position
 				, NStr::CStr const &_Whitespace
+				, NStr::CStr const &_LeadingWhitespace
 				, NStorage::TCSharedPointer<CCondition> const &_pConditions
 				, EPropertyFlag _Flags
 			)
