@@ -106,25 +106,30 @@ use {0}git commit --amend{1} later if you want to replace the placeholder with r
 }
 
 
-CStr fg_ReconcileRemovedHelp(EAnsiEncodingFlag _AnsiFlags)
+// _BuildSystemName is the build system that reports the repositories, which no other build system of the checkout sees
+CStr fg_ReconcileRemovedHelp(EAnsiEncodingFlag _AnsiFlags, CStr const &_BuildSystemName)
 {
 	NMib::NBuildSystem::NRepository::CColors Colors(_AnsiFlags);
+
+	CStr OutputDirectory;
+	if (_BuildSystemName != "BuildSystem/Default")
+		OutputDirectory = " --output-directory {}"_f << fg_StrEscapeBashSingleQuotes(_BuildSystemName);
 
 	return R"---(
 Removed sub-repositories needs to be reconciled.
 
 Choose how you want to reconcile changes:
 
-Leave removed repositories on disk    : {0}./mib update-repos '--reconcile-removed=*:leave'{1}
-Delete removed repositories from disk : {0}./mib update-repos '--reconcile-removed=*:delete'{1}
+Leave removed repositories on disk    : {0}./mib update-repos{3} '--reconcile-removed=*:leave'{1}
+Delete removed repositories from disk : {0}./mib update-repos{3} '--reconcile-removed=*:delete'{1}
 
 {2}Warning:{1} Specifying {0}delete{1} for reconcile removed will delete the repository and any unpushed work permanently.
 
 To choose separate action for different repositories you can specify wildcards. The last matching wildcard wins:
-{0}./mib update-repos '--reconcile-removed=*:leave,External/*:delete'{1}
+{0}./mib update-repos{3} '--reconcile-removed=*:leave,External/*:delete'{1}
 
 To force the action even for repositories that you have not yet seen the recommended action for
-{0}./mib update-repos '--reconcile-remove=*:delete' --reconcile-force{1}
+{0}./mib update-repos{3} '--reconcile-remove=*:delete' --reconcile-force{1}
 
 To show current status without reconciling use:
 {0}./mib status --skip-update{1}
@@ -132,6 +137,7 @@ To show current status without reconciling use:
 		<< Colors.f_RepositoryName()
 		<< Colors.f_Default()
 		<< Colors.f_StatusError()
+		<< OutputDirectory
 	;
 }
 
@@ -561,24 +567,7 @@ namespace NMib::NBuildSystem
 
 		TCSet<CStr> CStateHandler::f_GetLastSeenRepositories()
 		{
-			CStr RepositoryStateFile = mp_OutputDir / "RepositoryState.json";
-
-			if (!CFile::fs_FileExists(RepositoryStateFile))
-				return {};
-
-			CEJsonSorted StateFile = CEJsonSorted::fs_FromString(CFile::fs_ReadStringFromFile(RepositoryStateFile, true), RepositoryStateFile);
-
-			TCSet<CStr> SeenRepositories;
-
-			if (auto *pSeenReposJson = StateFile.f_GetMember("SeenRepositories", EEJsonType_Object))
-			{
-				for (auto &SeenJson : pSeenReposJson->f_Object())
-				{
-					SeenRepositories[SeenJson.f_Name()];
-				}
-			}
-
-			return SeenRepositories;
+			return CRepositoryState::fs_Read(mp_OutputDir / "RepositoryState.json").m_SeenRepositories;
 		}
 
 		void CStateHandler::f_IncrementBranchCreated(CStr const &_FromBranch, CStr const &_ToBranch, CStr const &_Repository)
@@ -4550,6 +4539,18 @@ namespace NMib::NBuildSystem
 		if (mp_GenerateOptions.m_bSkipUpdate && !mp_bForceUpdate)
 			co_return ERetry_None;
 
+		auto BaseDir = f_GetBaseDir();
+
+		// The commands of every build system of the checkout update its repositories, as builds that build host tools do, so
+		// they wait for each other instead of refusing
+		auto pRepositoriesLock = co_await f_Lock
+			(
+				BaseDir / "BuildSystem/.mib_repositories_lock"
+				, "update of the repositories in '{}'"_f << BaseDir
+				, CBuildSystemLockSettings{.m_Wait = EBuildSystemLockWait::mc_Wait, .m_Timeout = mp_GenerateOptions.m_LockSettings.m_Timeout}
+			)
+		;
+
 		TCVector<TCMap<CStr, CReposLocation>> ReposOrdered = fg_GetRepos(*this, mp_Data, mp_bApplyRepoPolicy ? EGetRepoFlag::mc_IncludePolicy : EGetRepoFlag::mc_None);
 
 		TCMap<CStr, CRepository const *> AllRepositories;
@@ -4565,8 +4566,6 @@ namespace NMib::NBuildSystem
 
 		TCAtomic<bool> bChanged;
 		TCAtomic<bool> bBinariesChange;
-
-		auto BaseDir = f_GetBaseDir();
 
 		CStateHandler StateHandler{BaseDir, mp_OutputDir, mp_AnsiFlags, mp_fOutputConsole};
 
@@ -4935,10 +4934,89 @@ namespace NMib::NBuildSystem
 			bool bForceReset = fg_GetSys()->f_GetEnvironmentVariable("MalterlibRepositoryHardReset", "") == gc_ConstString_true.m_String;
 			bool bLastSeenActionNeeded = false;
 
-			for (auto &LastSeen : LastSeenRepositories)
+			auto BuildSystems = CBuildSystemsRegistry::fs_Read(BaseDir);
+			CStr BuildSystemName = CBuildSystemsRegistry::fs_Name(BaseDir, mp_OutputDir);
+
+			// On file systems that ignore case, spellings of the output directory that differ in case are this build system
+			if (CFile::fs_FileExists(mp_OutputDir, EFileAttrib_Directory))
+			{
+				auto OutputDirIdentifier = CFile::fs_GetUniqueIdentifier(mp_OutputDir);
+				TCVector<CStr> Aliases;
+				for (auto iBuildSystem = BuildSystems.m_BuildSystems.f_GetIterator(); iBuildSystem; ++iBuildSystem)
+				{
+					CStr OutputDir = CBuildSystemsRegistry::fs_OutputDir(BaseDir, iBuildSystem.f_GetKey());
+					if
+						(
+							iBuildSystem.f_GetKey() != BuildSystemName
+							&& CFile::fs_FileExists(OutputDir, EFileAttrib_Directory)
+							&& CFile::fs_GetUniqueIdentifier(OutputDir) == OutputDirIdentifier
+						)
+					{
+						Aliases.f_Insert(iBuildSystem.f_GetKey());
+					}
+				}
+
+				// What an alias saw, this build system saw, which matters when its state is gone
+				for (auto &Alias : Aliases)
+				{
+					CRepositoryState AliasState = fg_Move(BuildSystems.m_BuildSystems[Alias]);
+					BuildSystems.m_BuildSystems.f_Remove(Alias);
+
+					auto &State = BuildSystems.m_BuildSystems[BuildSystemName];
+					for (auto &Seen : AliasState.m_SeenRepositories)
+						State.m_SeenRepositories[Seen];
+				}
+			}
+
+			// A build system whose state is gone, as when its output directory was deleted, leaves the repositories that it saw
+			// for this command to reconcile, also when it is this one
+			TCSet<CStr> RemovedCandidates = LastSeenRepositories;
+			for (auto &Orphaned : BuildSystems.m_Orphaned.m_SeenRepositories)
+				RemovedCandidates[Orphaned];
+
+			for (auto iBuildSystem = BuildSystems.m_BuildSystems.f_GetIterator(); iBuildSystem; )
+			{
+				auto &Name = iBuildSystem.f_GetKey();
+				if (!CFile::fs_FileExists(CBuildSystemsRegistry::fs_OutputDir(BaseDir, Name) / "RepositoryState.json"))
+				{
+					for (auto &Seen : iBuildSystem->m_SeenRepositories)
+						RemovedCandidates[Seen];
+
+					// The entry of this build system is written again with what it sees now
+					if (Name != BuildSystemName)
+					{
+						iBuildSystem.f_Remove();
+						continue;
+					}
+				}
+
+				++iBuildSystem;
+			}
+
+			// A repository is only removed when the last build system that saw it no longer sees it
+			TCSet<CStr> SeenByOthers;
+			for (auto &State : BuildSystems.m_BuildSystems)
+			{
+				if (BuildSystems.m_BuildSystems.fs_GetKey(State) == BuildSystemName)
+					continue;
+
+				for (auto &Seen : State.m_SeenRepositories)
+					SeenByOthers[Seen];
+			}
+
+			for (auto &LastSeen : RemovedCandidates)
+				MaxRepoWidth = fg_Max(MaxRepoWidth, (umint)LastSeen.f_GetLen());
+
+			for (auto &LastSeen : RemovedCandidates)
 			{
 				CStr FullRepoPath = BaseDir / LastSeen;
-				if (!SeenRepositories.f_FindEqual(LastSeen) && !ExcludeFromSeenRepositories.f_FindEqual(LastSeen) && CFile::fs_FileExists(FullRepoPath, EFileAttrib_Directory))
+				if
+					(
+						!SeenRepositories.f_FindEqual(LastSeen)
+						&& !ExcludeFromSeenRepositories.f_FindEqual(LastSeen)
+						&& !SeenByOthers.f_FindEqual(LastSeen)
+						&& CFile::fs_FileExists(FullRepoPath, EFileAttrib_Directory)
+					)
 				{
 					EHandleRepositoryRemovedAction Action = fGetReconcileRemovedActionByName(LastSeen);
 
@@ -5017,7 +5095,7 @@ namespace NMib::NBuildSystem
 			if (bLastSeenActionNeeded)
 			{
 				if (!SeenRepositories.f_IsEmpty())
-					co_return DMibErrorInstanceBuildSystemReconcileHelp(fg_ReconcileRemovedHelp(mp_AnsiFlags));
+					co_return DMibErrorInstanceBuildSystemReconcileHelp(fg_ReconcileRemovedHelp(mp_AnsiFlags, BuildSystemName));
 			}
 			else
 			{
@@ -5043,6 +5121,11 @@ namespace NMib::NBuildSystem
 					CFile::fs_CreateDirectory(CFile::fs_GetPath(RepositoryStateFile));
 					f_WriteFile(FileData, RepositoryStateFile);
 				}
+
+				// Every candidate for removal was handled, or another build system or this one still sees it
+				BuildSystems.m_BuildSystems[BuildSystemName].m_SeenRepositories = SeenRepositories;
+				BuildSystems.m_Orphaned = {};
+				BuildSystems.f_Write(BaseDir);
 			}
 		}
 

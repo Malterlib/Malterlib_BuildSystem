@@ -220,6 +220,28 @@ namespace NMib::NBuildSystem::NRepository
 		CStr m_DefaultBranch;
 	};
 
+	// The repositories that a build system saw the last time it updated them, in RepositoryState.json in its output directory
+	struct CRepositoryState
+	{
+		static CRepositoryState fs_Read(CStr const &_StateFile);
+
+		TCSet<CStr> m_SeenRepositories; // Relative to the checkout
+	};
+
+	// The generated build systems of a checkout and the repositories that each saw last, in BuildSystem/BuildSystems.json.
+	// The checkout needs the repositories that any of its build systems sees.
+	struct CBuildSystemsRegistry
+	{
+		static CStr fs_File(CStr const &_BaseDir);
+		static CStr fs_Name(CStr const &_BaseDir, CStr const &_OutputDir);
+		static CStr fs_OutputDir(CStr const &_BaseDir, CStr const &_Name);
+		static CBuildSystemsRegistry fs_Read(CStr const &_BaseDir);
+		void f_Write(CStr const &_BaseDir) const;
+
+		TCMap<CStr, CRepositoryState> m_BuildSystems; // By output directory, relative to the checkout when it is inside it
+		CRepositoryState m_Orphaned; // Seen by build systems that are gone, and not reconciled yet
+	};
+
 	struct CStateHandler
 	{
 		CStateHandler
