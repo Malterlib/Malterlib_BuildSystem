@@ -201,6 +201,7 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_ApplyPolicyPretend(EPropertyType_Repository, gc_Str<"ApplyPolicyPretend">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_BootstrapSource(EPropertyType_Repository, gc_Str<"BootstrapSource">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_GitIgnoreType(EPropertyType_Repository, gc_Str<"GitIgnoreType">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Repository_ReconcileRemoved(EPropertyType_Repository, gc_Str<"ReconcileRemoved">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_License(EPropertyType_Repository, gc_Str<"License">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_CheckLicense(EPropertyType_Repository, gc_Str<"CheckLicense">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Repository_HookHelperFiles(EPropertyType_Repository, gc_Str<"HookHelperFiles">);
@@ -443,6 +444,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_DefaultBranch);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_DefaultUpstreamBranch);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_ExcludeFromSeen);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_ReconcileRemoved);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_Format);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_Tidy);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Repository_Location);

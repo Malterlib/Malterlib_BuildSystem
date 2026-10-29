@@ -159,6 +159,7 @@ namespace NMib::NBuildSystem::NRepository
 
 		bool m_bSubmodule = false;
 		bool m_bExcludeFromSeen = false;
+		bool m_bLeaveWhenRemoved = false;				// Repository.ReconcileRemoved "Leave"
 		bool m_bFormat = false;							// The repository's sources are formatted by 'mib format'.
 		bool m_bTidy = false;							// The repository's sources are checked by 'mib tidy' and the checks plugin.
 		TCVector<CStr> m_TidyIncludeFiles;				// Wildcards relative to the repository: the files checked, or all when empty.
@@ -226,6 +227,7 @@ namespace NMib::NBuildSystem::NRepository
 		static CRepositoryState fs_Read(CStr const &_StateFile);
 
 		TCSet<CStr> m_SeenRepositories; // Relative to the checkout
+		TCSet<CStr> m_LeaveWhenRemoved; // The seen repositories that set Repository.ReconcileRemoved "Leave"
 	};
 
 	// The generated build systems of a checkout and the repositories that each saw last, in BuildSystem/BuildSystems.json.
@@ -261,7 +263,7 @@ namespace NMib::NBuildSystem::NRepository
 		static CConfigFile fs_ParseConfigFile(CStr const &_Contents, CStr const &_FileName);
 		CLowLevelRecursiveLock &f_ConsoleOutputLock();
 		void f_ConsoleOutput(CStr const &_Output, bool _bError = false);
-		TCSet<CStr> f_GetLastSeenRepositories();
+		CRepositoryState f_GetLastRepositoryState();
 		EAnsiEncodingFlag f_AnsiFlags() const;
 		TCFuture<CActorSubscription> f_SequenceConfigChanges(CStr const &_Path);
 		TCFuture<CActorSubscription> f_SequenceLfsReleaseIndexUpdates();

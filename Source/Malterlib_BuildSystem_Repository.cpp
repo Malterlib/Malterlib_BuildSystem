@@ -565,9 +565,9 @@ namespace NMib::NBuildSystem
 			return ConfigFile;
 		}
 
-		TCSet<CStr> CStateHandler::f_GetLastSeenRepositories()
+		CRepositoryState CStateHandler::f_GetLastRepositoryState()
 		{
-			return CRepositoryState::fs_Read(mp_OutputDir / "RepositoryState.json").m_SeenRepositories;
+			return CRepositoryState::fs_Read(mp_OutputDir / "RepositoryState.json");
 		}
 
 		void CStateHandler::f_IncrementBranchCreated(CStr const &_FromBranch, CStr const &_ToBranch, CStr const &_Repository)
@@ -4147,6 +4147,7 @@ namespace NMib::NBuildSystem
 					auto bTagPreviousOnForcePush = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_TagPreviousOnForcePush, true);
 					auto bBootstrapSource = _BuildSystem.f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Repository_BootstrapSource, false);
 					auto GitIgnoreTypeStr = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, gc_ConstKey_Repository_GitIgnoreType, CStr());
+					auto ReconcileRemovedStr = _BuildSystem.f_EvaluateEntityPropertyString(ChildEntity, gc_ConstKey_Repository_ReconcileRemoved, CStr());
 					auto ExtraFetchSpecs = _BuildSystem.f_EvaluateEntityPropertyStringArray(ChildEntity, gc_ConstKey_Repository_ExtraFetchSpecs, TCVector<CStr>());
 					auto HooksJson = _BuildSystem.f_EvaluateEntityPropertyObject(ChildEntity, gc_ConstKey_Repository_Hooks, CEJsonSorted()).f_Move();
 
@@ -4198,6 +4199,7 @@ namespace NMib::NBuildSystem
 					Repo.m_ProtectedTags.f_AddContainer(ProtectedTags);
 					Repo.m_bUpdateSubmodules = bUpdateSubmodules;
 					Repo.m_bExcludeFromSeen = bExcludeFromSeen;
+					Repo.m_bLeaveWhenRemoved = ReconcileRemovedStr == "Leave";
 					Repo.m_bFormat = bFormat;
 					if (TidyJson.f_IsObject())
 					{
@@ -4658,11 +4660,13 @@ namespace NMib::NBuildSystem
 
 		umint MaxRepoWidth = 0;
 
-		auto LastSeenRepositories = StateHandler.f_GetLastSeenRepositories();
+		auto LastRepositoryState = StateHandler.f_GetLastRepositoryState();
+		auto &LastSeenRepositories = LastRepositoryState.m_SeenRepositories;
 		for (auto &RepoName : LastSeenRepositories)
 			MaxRepoWidth = fg_Max(MaxRepoWidth, (umint)RepoName.f_GetLen());
 
 		TCSet<CStr> SeenRepositories;
+		TCSet<CStr> LeaveWhenRemoved;
 		TCSet<CStr> ExcludeFromSeenRepositories;
 
 		for (auto &Repos : ReposOrdered)
@@ -4676,7 +4680,11 @@ namespace NMib::NBuildSystem
 					{
 						RepoName = CFile::fs_MakePathRelative(Repo.m_Location, BaseDir);
 						if (!Repo.m_bExcludeFromSeen)
+						{
 							SeenRepositories[RepoName];
+							if (Repo.m_bLeaveWhenRemoved)
+								LeaveWhenRemoved[RepoName];
+						}
 						else
 							ExcludeFromSeenRepositories[RepoName];
 					}
@@ -4965,14 +4973,19 @@ namespace NMib::NBuildSystem
 					auto &State = BuildSystems.m_BuildSystems[BuildSystemName];
 					for (auto &Seen : AliasState.m_SeenRepositories)
 						State.m_SeenRepositories[Seen];
+					for (auto &Leave : AliasState.m_LeaveWhenRemoved)
+						State.m_LeaveWhenRemoved[Leave];
 				}
 			}
 
 			// A build system whose state is gone, as when its output directory was deleted, leaves the repositories that it saw
 			// for this command to reconcile, also when it is this one
 			TCSet<CStr> RemovedCandidates = LastSeenRepositories;
+			TCSet<CStr> CandidatesToLeave = LastRepositoryState.m_LeaveWhenRemoved; // Left on disk when removed, as last seen
 			for (auto &Orphaned : BuildSystems.m_Orphaned.m_SeenRepositories)
 				RemovedCandidates[Orphaned];
+			for (auto &Orphaned : BuildSystems.m_Orphaned.m_LeaveWhenRemoved)
+				CandidatesToLeave[Orphaned];
 
 			for (auto iBuildSystem = BuildSystems.m_BuildSystems.f_GetIterator(); iBuildSystem; )
 			{
@@ -4981,6 +4994,8 @@ namespace NMib::NBuildSystem
 				{
 					for (auto &Seen : iBuildSystem->m_SeenRepositories)
 						RemovedCandidates[Seen];
+					for (auto &Leave : iBuildSystem->m_LeaveWhenRemoved)
+						CandidatesToLeave[Leave];
 
 					// The entry of this build system is written again with what it sees now
 					if (Name != BuildSystemName)
@@ -5019,6 +5034,11 @@ namespace NMib::NBuildSystem
 					)
 				{
 					EHandleRepositoryRemovedAction Action = fGetReconcileRemovedActionByName(LastSeen);
+					if (Action == EHandleRepositoryRemovedAction_None && CandidatesToLeave.f_FindEqual(LastSeen))
+					{
+						fg_OutputRepositoryInfo(EOutputType_Normal, "Repository has been removed, leaving it on disk", StateHandler, LastSeen, MaxRepoWidth);
+						Action = EHandleRepositoryRemovedAction_Leave;
+					}
 
 					if (bForceReset || Action == EHandleRepositoryRemovedAction_Delete)
 					{
@@ -5108,6 +5128,12 @@ namespace NMib::NBuildSystem
 				for (auto &LastSeen : SeenRepositories)
 					SeenRepositoriesJson[LastSeen] = 1;
 
+				// A separate member keeps the state readable by MTools that do not know it
+				auto &LeaveWhenRemovedJson = StateFile["LeaveWhenRemoved"];
+				LeaveWhenRemovedJson = EJsonType_Object;
+				for (auto &Leave : LeaveWhenRemoved)
+					LeaveWhenRemovedJson[Leave] = 1;
+
 				CStr FileContents = StateFile.f_ToString();
 
 				bool bWasCreated = false;
@@ -5123,7 +5149,9 @@ namespace NMib::NBuildSystem
 				}
 
 				// Every candidate for removal was handled, or another build system or this one still sees it
-				BuildSystems.m_BuildSystems[BuildSystemName].m_SeenRepositories = SeenRepositories;
+				auto &BuildSystemState = BuildSystems.m_BuildSystems[BuildSystemName];
+				BuildSystemState.m_SeenRepositories = SeenRepositories;
+				BuildSystemState.m_LeaveWhenRemoved = LeaveWhenRemoved;
 				BuildSystems.m_Orphaned = {};
 				BuildSystems.f_Write(BaseDir);
 			}

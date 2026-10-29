@@ -443,6 +443,13 @@ namespace NMib::NBuildSystem
 						CPropertyKey(gc_ConstKey_Repository_GitIgnoreType)
 						, DMibBuildSystemTypeWithPosition(fg_Defaulted(fg_OneOf("GitIgnore", "GitInfoExclude", "CoreExcludesFile"), "GitIgnore"))
 					}
+					,
+					{
+						// What happens when no build system of the checkout uses the repository any more, unless
+						// --reconcile-removed says otherwise. Ask: the command lists it and stops. Leave: it is left on disk.
+						CPropertyKey(gc_ConstKey_Repository_ReconcileRemoved)
+						, DMibBuildSystemTypeWithPosition(fg_Defaulted(fg_OneOf("Ask", "Leave"), "Ask"))
+					}
 					, {CPropertyKey(gc_ConstKey_Repository_NoPushRemotes), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
 					, {CPropertyKey(gc_ConstKey_Repository_LfsReleaseStore), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					, {CPropertyKey(gc_ConstKey_Repository_TagPreviousOnForcePush), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, true))}

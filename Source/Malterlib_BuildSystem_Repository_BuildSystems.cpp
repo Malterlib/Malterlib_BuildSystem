@@ -32,6 +32,7 @@ namespace NMib::NBuildSystem::NRepository
 		{
 			CRepositoryState State;
 			State.m_SeenRepositories = fg_ReadRepositorySet(_Json, "SeenRepositories");
+			State.m_LeaveWhenRemoved = fg_ReadRepositorySet(_Json, "LeaveWhenRemoved");
 
 			return State;
 		}
@@ -40,6 +41,7 @@ namespace NMib::NBuildSystem::NRepository
 		{
 			CEJsonSorted Json;
 			Json["SeenRepositories"] = fg_RepositorySetJson(_State.m_SeenRepositories);
+			Json["LeaveWhenRemoved"] = fg_RepositorySetJson(_State.m_LeaveWhenRemoved);
 
 			return Json;
 		}
