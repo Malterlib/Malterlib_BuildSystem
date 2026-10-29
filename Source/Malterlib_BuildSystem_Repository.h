@@ -242,6 +242,7 @@ namespace NMib::NBuildSystem::NRepository
 
 		TCMap<CStr, CRepositoryState> m_BuildSystems; // By output directory, relative to the checkout when it is inside it
 		CRepositoryState m_Orphaned; // Seen by build systems that are gone, and not reconciled yet
+		TCSet<CStr> m_KeptRepositories; // Removed and left on disk, so that --ignore-leave can reconcile them again
 	};
 
 	struct CStateHandler

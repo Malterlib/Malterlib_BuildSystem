@@ -106,14 +106,19 @@ use {0}git commit --amend{1} later if you want to replace the placeholder with r
 }
 
 
-// _BuildSystemName is the build system that reports the repositories, which no other build system of the checkout sees
-CStr fg_ReconcileRemovedHelp(EAnsiEncodingFlag _AnsiFlags, CStr const &_BuildSystemName)
+// _BuildSystemName is the build system that reports the repositories, which no other build system of the checkout sees.
+// The commands repeat --ignore-leave when the repositories are only removed with it.
+CStr fg_ReconcileRemovedHelp(EAnsiEncodingFlag _AnsiFlags, CStr const &_BuildSystemName, bool _bIgnoreLeave)
 {
 	NMib::NBuildSystem::NRepository::CColors Colors(_AnsiFlags);
 
 	CStr OutputDirectory;
 	if (_BuildSystemName != "BuildSystem/Default")
 		OutputDirectory = " --output-directory {}"_f << fg_StrEscapeBashSingleQuotes(_BuildSystemName);
+
+	CStr Options = OutputDirectory;
+	if (_bIgnoreLeave)
+		Options += " --ignore-leave";
 
 	return R"---(
 Removed sub-repositories needs to be reconciled.
@@ -131,12 +136,16 @@ To choose separate action for different repositories you can specify wildcards. 
 To force the action even for repositories that you have not yet seen the recommended action for
 {0}./mib update-repos{3} '--reconcile-remove=*:delete' --reconcile-force{1}
 
+To reconcile the repositories that were left on disk again, as if no repository set Repository.ReconcileRemoved "Leave":
+{0}./mib update-repos{4} --ignore-leave '--reconcile-removed=*:delete'{1}
+
 To show current status without reconciling use:
 {0}./mib status --skip-update{1}
 )---"_f
 		<< Colors.f_RepositoryName()
 		<< Colors.f_Default()
 		<< Colors.f_StatusError()
+		<< Options
 		<< OutputDirectory
 	;
 }
@@ -5008,6 +5017,17 @@ namespace NMib::NBuildSystem
 				++iBuildSystem;
 			}
 
+			// With --ignore-leave, the repositories that were left on disk are removed repositories again, and the leave
+			// setting does not keep any
+			TCSet<CStr> KeptRepositories = BuildSystems.m_KeptRepositories;
+			if (mp_GenerateOptions.m_bIgnoreLeave)
+			{
+				for (auto &Kept : KeptRepositories)
+					RemovedCandidates[Kept];
+
+				CandidatesToLeave.f_Clear();
+			}
+
 			// A repository is only removed when the last build system that saw it no longer sees it
 			TCSet<CStr> SeenByOthers;
 			for (auto &State : BuildSystems.m_BuildSystems)
@@ -5102,7 +5122,11 @@ namespace NMib::NBuildSystem
 							fg_OutputRepositoryInfo(EOutputType_Warning, "Deleting repository permanently from disk: {}"_f << FullRepoPath, StateHandler, LastSeen, MaxRepoWidth);
 							CFile::fs_DeleteDirectoryRecursive(FullRepoPath, true);
 						}
+
+						KeptRepositories.f_Remove(LastSeen);
 					}
+					else if (Action == EHandleRepositoryRemovedAction_Leave)
+						KeptRepositories[LastSeen];
 					else if (Action != EHandleRepositoryRemovedAction_Leave)
 					{
 						if (!SeenRepositories.f_IsEmpty())
@@ -5115,7 +5139,7 @@ namespace NMib::NBuildSystem
 			if (bLastSeenActionNeeded)
 			{
 				if (!SeenRepositories.f_IsEmpty())
-					co_return DMibErrorInstanceBuildSystemReconcileHelp(fg_ReconcileRemovedHelp(mp_AnsiFlags, BuildSystemName));
+					co_return DMibErrorInstanceBuildSystemReconcileHelp(fg_ReconcileRemovedHelp(mp_AnsiFlags, BuildSystemName, mp_GenerateOptions.m_bIgnoreLeave));
 			}
 			else
 			{
@@ -5153,6 +5177,24 @@ namespace NMib::NBuildSystem
 				BuildSystemState.m_SeenRepositories = SeenRepositories;
 				BuildSystemState.m_LeaveWhenRemoved = LeaveWhenRemoved;
 				BuildSystems.m_Orphaned = {};
+
+				// A kept repository that a build system uses again, or that is gone from disk, is no longer kept
+				for (auto iKept = KeptRepositories.f_GetIterator(); iKept; )
+				{
+					bool bSeen = false;
+					for (auto &State : BuildSystems.m_BuildSystems)
+						bSeen = bSeen || State.m_SeenRepositories.f_FindEqual(*iKept);
+
+					if (bSeen || !CFile::fs_FileExists(BaseDir / *iKept, EFileAttrib_Directory))
+					{
+						iKept.f_Remove();
+						continue;
+					}
+
+					++iKept;
+				}
+
+				BuildSystems.m_KeptRepositories = fg_Move(KeptRepositories);
 				BuildSystems.f_Write(BaseDir);
 			}
 		}

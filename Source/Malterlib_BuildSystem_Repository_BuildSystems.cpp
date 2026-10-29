@@ -116,6 +116,8 @@ namespace NMib::NBuildSystem::NRepository
 		if (auto *pOrphanedJson = RegistryJson.f_GetMember("Orphaned", EEJsonType_Object))
 			Registry.m_Orphaned = fg_ParseRepositoryState(*pOrphanedJson);
 
+		Registry.m_KeptRepositories = fg_ReadRepositorySet(RegistryJson, "KeptRepositories");
+
 		fg_ReadStates(Registry, _BaseDir);
 
 		return Registry;
@@ -131,6 +133,7 @@ namespace NMib::NBuildSystem::NRepository
 			BuildSystemsJson[m_BuildSystems.fs_GetKey(State)] = fg_RepositoryStateJson(State);
 
 		RegistryJson["Orphaned"] = fg_RepositoryStateJson(m_Orphaned);
+		RegistryJson["KeptRepositories"] = fg_RepositorySetJson(m_KeptRepositories);
 
 		CStr RegistryFile = fs_File(_BaseDir);
 		CByteVector FileData;
