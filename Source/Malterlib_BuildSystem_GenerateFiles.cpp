@@ -340,6 +340,7 @@ namespace NMib::NBuildSystem
 
 									CFile::fs_CreateDirectory(CFile::fs_GetPath(Path));
 									CFile::fs_CreateSymbolicLink(Contents, Path, bSymlinkDirectory ? EFileAttrib_Directory : EFileAttrib_None, ESymbolicLinkFlag_Relative);
+									f_SetFileWritten(CStr(Path));
 								}
 								while (false)
 									;

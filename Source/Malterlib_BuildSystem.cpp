@@ -320,6 +320,14 @@ namespace NMib::NBuildSystem
 	{
 		//m_BuildSystem.f_OutputConsole("Changed: {}\n"_f << _File);
 		mp_FileChanged = true;
+		f_SetFileWritten(_File);
+	}
+
+	void CBuildSystem::f_SetFileWritten(CStr const &_File) const
+	{
+		DMibLock(mp_GeneratedFilesLock);
+		if (auto *pFile = mp_GeneratedFiles.f_FindEqual(_File))
+			pFile->m_bWritten = true;
 	}
 
 	TCMap<CPropertyKey, NEncoding::CEJsonSorted> CBuildSystem::f_GetExternalValues(CEntity const &_Entity) const

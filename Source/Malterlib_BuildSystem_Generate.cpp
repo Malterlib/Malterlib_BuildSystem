@@ -506,6 +506,33 @@ namespace NMib::NBuildSystem
 		co_return ERetry_None;
 	}
 
+	// A generation that stops, as when it is cancelled, has written files that no saved state lists, so the next generation
+	// would not know to delete those it no longer generates. The global state then lists the files of the previous one and
+	// every file that it wrote; not the ones it only registered, which can be files that it does not own. The workspace
+	// state is kept: what made the generation run, or the files that it rewrote, make the next one run.
+	void CBuildSystem::fp_SaveStateOfStoppedGeneration(CGenerateEphemeralState const &_GenerateState) const
+	{
+		CGeneratorArchiveState State = _GenerateState.m_BeforeGlobalState;
+		{
+			DMibLock(mp_GeneratedFilesLock);
+			for (auto iFile = mp_GeneratedFiles.f_GetIterator(); iFile; ++iFile)
+			{
+				if (!iFile->m_bWritten)
+					continue;
+
+				auto &File = State.m_GeneratedFiles[CFile::fs_MakePathRelative(iFile.f_GetKey(), _GenerateState.m_OutputDir)];
+				File.m_Workspaces += iFile->m_Workspaces;
+				File.m_Flags = iFile->m_Flags;
+			}
+		}
+
+		CBinaryStreamMemory<> Stream;
+		Stream << State;
+
+		CFile::fs_CreateDirectory(CFile::fs_GetPath(_GenerateState.m_GlobalGeneratorStateFileName));
+		CFile::fs_CopyFileDiff(Stream.f_MoveVector(), _GenerateState.m_GlobalGeneratorStateFileName, CTime::fs_NowUTC());
+	}
+
 	TCUnsafeFuture<bool> CBuildSystem::f_Action_Generate(CGenerateOptions const &_GenerateOptions, ERetry &o_Retry)
 	{
 		co_await ECoroutineFlag_CaptureMalterlibExceptions;
@@ -750,7 +777,12 @@ namespace NMib::NBuildSystem
 		fp64 Time2 = GenerateState.m_Stopwatch.f_GetTime();
 		f_OutputConsole("Parsed data {fe2} s{\n}"_f << (Time2 - Time1));
 
-		co_await GenerateState.m_pGenerator->f_Generate(this, &mp_Data, GenerateState.m_OutputDir, NumWorkspaceTargets);
+		auto GenerateResult = co_await GenerateState.m_pGenerator->f_Generate(this, &mp_Data, GenerateState.m_OutputDir, NumWorkspaceTargets).f_Wrap();
+		if (!GenerateResult)
+		{
+			fp_SaveStateOfStoppedGeneration(GenerateState);
+			co_return GenerateResult.f_GetException();
+		}
 
 		fp64 Time3 = GenerateState.m_Stopwatch.f_GetTime();
 

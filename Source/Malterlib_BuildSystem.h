@@ -319,6 +319,7 @@ namespace NMib::NBuildSystem
 		void f_PopulateTargetAllFiles(CExpandEntityState &_ExpandState, CEntity &o_Target) const;
 		bool f_WriteFile(NContainer::CByteVector const &_FileData, NStr::CStr const &_File, NFile::EFileAttrib _AddAttribs = NFile::EFileAttrib_None) const;
 		void f_SetFileChanged(NStr::CStr const &_File) const;
+		void f_SetFileWritten(NStr::CStr const &_File) const;
 		NContainer::TCMap<NStr::CStr, NStorage::TCSharedPointer<NCryptography::CHashDigest_SHA256>> f_GetSourceFiles() const;
 		CEntity const *f_EvaluateData
 			(
@@ -733,6 +734,7 @@ namespace NMib::NBuildSystem
 			NContainer::TCSet<NStr::CStr> m_Workspaces;
 			bool m_bGeneral = false;
 			bool m_bAdded = false;
+			bool m_bWritten = false; // By this generation; a generation that stops only records the files it wrote
 			EGeneratedFileFlag m_Flags = EGeneratedFileFlag_None;
 		};
 
@@ -849,6 +851,7 @@ namespace NMib::NBuildSystem
 			bool m_bTried = false;
 		};
 
+		void fp_SaveStateOfStoppedGeneration(CGenerateEphemeralState const &_GenerateState) const;
 		NConcurrency::TCUnsafeFuture<ERetry> fp_GeneratePrepare
 			(
 				CGenerateOptions const &_GenerateOptions
