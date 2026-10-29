@@ -47,6 +47,8 @@ namespace NMib::NBuildSystem::NRepository
 			CStr m_PackageName;
 			TCVector<CStr> m_Files;
 			TCVector<CStr> m_CompressArguments;
+			CStr m_MToolFile; // Empty when the package has no MTool to check
+			uint32 m_MToolVersion = 0;
 			bool m_bCompress = false;
 		};
 

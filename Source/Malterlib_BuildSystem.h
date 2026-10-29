@@ -706,7 +706,9 @@ namespace NMib::NBuildSystem
 
 		static NContainer::TCMap<uint32, CVisualStudioVersion> fs_GetVisualStudioVersions(NStr::CStr &o_Errors, NStr::CStr _ProgramData = fg_GetSys()->f_GetEnvironmentVariable("ProgramData"));
 
-		constexpr static uint32 mc_MToolVersion = 2;
+		// The build system reads it as MToolVersion to detect what the MTool that generates it supports. It equals the
+		// MalterlibBootstrapVersion of the bootstrap release that ships the MTool; MTools of releases before 6 report 2.
+		constexpr static uint32 mc_MToolVersion = 6;
 
 	private:
 		struct CChangePropertiesScope

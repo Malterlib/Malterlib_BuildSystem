@@ -4314,6 +4314,11 @@ namespace NMib::NBuildSystem
 								OutPackage.m_Files = Package["Files"].f_StringArray();
 								OutPackage.m_CompressArguments = Package["CompressArguments"].f_StringArray();
 								OutPackage.m_bCompress = Package["Compress"].f_Boolean();
+								if (auto const *pMTool = Package.f_GetMember("MTool", EEJsonType_Object))
+								{
+									OutPackage.m_MToolFile = (*pMTool)["File"].f_String();
+									OutPackage.m_MToolVersion = (*pMTool)["Version"].f_Integer();
+								}
 							}
 
 							return ReleasePackage;

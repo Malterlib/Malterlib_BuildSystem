@@ -1,6 +1,7 @@
 // Copyright © Unbroken AB
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+#include "Malterlib_BuildSystem.h"
 #include "Malterlib_BuildSystem_Repository.h"
 
 #include <Mib/CommandLine/AnsiEncodingParse>
@@ -15,6 +16,67 @@ namespace NMib::NBuildSystem
 {
 	namespace
 	{
+		// The MTool binary carries this text so that a release can check which MToolVersion the MTool it packages has,
+		// for any platform, without running it.
+		assure_used constexpr ch8 gc_MToolVersionMarker[] = "MalterlibMToolVersion=6;";
+
+		consteval uint32 fg_MToolVersionMarkerVersion()
+		{
+			uint32 Version = 0;
+			umint iChar = 0;
+			while (gc_MToolVersionMarker[iChar] != '=')
+				++iChar;
+
+			for (++iChar; gc_MToolVersionMarker[iChar] != ';'; ++iChar)
+				Version = Version * 10 + uint32(gc_MToolVersionMarker[iChar] - '0');
+
+			return Version;
+		}
+
+		static_assert(fg_MToolVersionMarkerVersion() == CBuildSystem::mc_MToolVersion, "Update gc_MToolVersionMarker with mc_MToolVersion");
+
+		TCFuture<void> fg_CheckMToolVersion(CStr _RepoDir, NRepository::CReleasePackage::CPackage _Package)
+		{
+			CStr MarkerPrefix = gc_MToolVersionMarker;
+			MarkerPrefix = MarkerPrefix.f_Left(MarkerPrefix.f_FindChar('=') + 1);
+			CStr Marker = "{}{};"_f << MarkerPrefix << _Package.m_MToolVersion;
+			CStr MToolFile = _RepoDir / _Package.m_MToolFile;
+
+			auto BlockingActorCheckout = fg_BlockingActor();
+			bool bFound = co_await
+				(
+					g_Dispatch(BlockingActorCheckout) / [MToolFile, Marker]() -> bool
+					{
+						CByteVector FileData = CFile::fs_ReadFile(MToolFile);
+						auto *pMarker = (uint8 const *)Marker.f_GetStr();
+						umint nMarker = Marker.f_GetLen();
+
+						for (umint iByte = 0; iByte + nMarker <= FileData.f_GetLen(); ++iByte)
+						{
+							if (NMemory::fg_MemCmp(FileData.f_GetArray() + iByte, pMarker, nMarker) == 0)
+								return true;
+						}
+
+						return false;
+					}
+				)
+			;
+
+			if (!bFound)
+			{
+				co_return DMibErrorInstance
+					(
+						"The MTool in '{}' of package {} does not have MToolVersion {}. Build the MTool of this release and commit it first"_f
+						<< MToolFile
+						<< _Package.m_PackageName
+						<< _Package.m_MToolVersion
+					)
+				;
+			}
+
+			co_return {};
+		}
+
 		TCFuture<CStr> fg_LaunchBsdTar(TCVector<CStr> _Params, CStr _WorkingDirectory)
 		{
 			TCActor<CProcessLaunchActor> ProcessLaunch = fg_Construct();
@@ -220,6 +282,13 @@ namespace NMib::NBuildSystem
 			CStr GitRepository = CStr::fs_Join(Url.f_GetPath(), "/").f_RemoveSuffix(".git");
 
 			auto &ReleasePackage = *_RemoteProperties.m_ReleasePackage;
+
+			for (auto &Package : ReleasePackage.m_Packages)
+			{
+				if (Package.m_MToolFile)
+					co_await fg_CheckMToolVersion(_RepoDir, Package);
+			}
+
 			[[maybe_unused]] auto Release = co_await fg_GetOrCreateRelease
 				(
 					CGetOrCreateRelease
