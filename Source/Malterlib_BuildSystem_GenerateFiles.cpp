@@ -358,16 +358,19 @@ namespace NMib::NBuildSystem
 								else
 									CFile::fs_WriteStringToVector(FileDataVector, CStr(Contents), bUnicodeBOM);
 
-								f_WriteFile(FileDataVector, Path);
-
-								auto OldAttribs = CFile::fs_GetAttributes(CStr(Path));
-								auto NewAttribs = OldAttribs;
-								if (bExecutable)
-									NewAttribs |= EFileAttrib_Executable;
-								else
-									NewAttribs &= ~EFileAttrib_Executable;
-								if (NewAttribs != OldAttribs)
-									CFile::fs_SetAttributes(CStr(Path), NewAttribs);
+								// The executable bit is set on the new file before it replaces the old one, so a script never runs without it.
+								// A file with unchanged contents is not written, so its executable bit is corrected in place.
+								if (!f_WriteFile(FileDataVector, Path, bExecutable ? EFileAttrib_Executable : EFileAttrib_None))
+								{
+									auto OldAttribs = CFile::fs_GetAttributes(CStr(Path));
+									auto NewAttribs = OldAttribs;
+									if (bExecutable)
+										NewAttribs |= EFileAttrib_Executable;
+									else
+										NewAttribs &= ~EFileAttrib_Executable;
+									if (NewAttribs != OldAttribs)
+										CFile::fs_SetAttributes(CStr(Path), NewAttribs);
+								}
 							}
 						}
 
