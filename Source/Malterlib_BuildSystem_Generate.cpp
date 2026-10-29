@@ -170,6 +170,18 @@ namespace NMib::NBuildSystem
 		mp_OutputDir = _GenerateState.m_OutputDir;
 		mp_GenerateWorkspace = GenerateSettings.m_Workspace;
 
+		// Before the settings are read and repositories are updated: the repository lock is taken inside this one
+		if (_GenerateState.m_bLockGeneration)
+		{
+			_GenerateState.m_pGenerationLock = co_await f_Lock
+				(
+					_GenerateState.m_OutputDir / ".mib_generate_lock"
+					, "generation of the build system in '{}'"_f << _GenerateState.m_OutputDir
+					, _GenerateOptions.m_LockSettings
+				)
+			;
+		}
+
 		{
 			CUniversallyUniqueIdentifier UniqueIdentifier
 				(
@@ -502,6 +514,7 @@ namespace NMib::NBuildSystem
 			co_return false; // For now we don't support clean
 
 		CGenerateEphemeralState GenerateState;
+		GenerateState.m_bLockGeneration = true;
 
 		NContainer::TCMap<NStr::CStr, uint32> NumWorkspaceTargets;
 

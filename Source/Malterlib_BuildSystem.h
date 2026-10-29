@@ -699,6 +699,13 @@ namespace NMib::NBuildSystem
 
 		NConcurrency::TCFuture<void> f_CheckCancelled() const;
 		void f_CheckCancelledException() const;
+		NConcurrency::TCUnsafeFuture<NStorage::TCUniquePointer<CBuildSystemLock>> f_Lock
+			(
+				NStr::CStr _LockFile
+				, NStr::CStr _What
+				, CBuildSystemLockSettings _Settings
+			) const
+		;
 		NStorage::TCSharedPointer<NAtomic::TCAtomic<bool>> f_GetCancelledPointer() const;
 
 		NConcurrency::TCFuture<void> f_SetupGlobalMTool() const;
@@ -756,8 +763,10 @@ namespace NMib::NBuildSystem
 			NContainer::TCMap<CPropertyKey, NEncoding::CEJsonSorted> m_GeneratorValues;
 			NStorage::TCUniquePointer<ICGeneratorInterface> m_pLocalGeneratorInterface;
 			COnScopeExitShared m_LocalGeneratorInterfaceCleanup;
+			NStorage::TCUniquePointer<CBuildSystemLock> m_pGenerationLock;
 			bool m_bUseCachedEnvironment = false;
 			bool m_bDisableUserSettings = false;
+			bool m_bLockGeneration = false; // Set by actions that write the generated build system
 
 			align_cacheline NAtomic::TCAtomic<bool> m_bDependenciesChanged;
 		};

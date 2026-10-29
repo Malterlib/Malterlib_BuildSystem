@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include "Malterlib_BuildSystem_Lock.h"
+
 namespace NMib::NBuildSystem
 {
 	enum EGenerationFlag // : uint32
@@ -61,6 +63,7 @@ namespace NMib::NBuildSystem
 		CGenerateSettings m_Settings;
 		NContainer::TCMap<NStr::CStr, EHandleRepositoryAction> m_ReconcileActions;
 		NContainer::TCMap<NStr::CStr, EHandleRepositoryRemovedAction> m_ReconcileRemovedActions;
+		CBuildSystemLockSettings m_LockSettings;
 		EDetailedPositions m_DetailedPositions = EDetailedPositions_OnDemand;
 		uint32 m_GitFetchTimeout = 5;
 		bool m_bReconcileForce = false;
