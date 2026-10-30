@@ -408,6 +408,17 @@ namespace NMib::NBuildSystem
 		if (bIsPerforceRoot)
 			PerforceRefs = co_await fg_PerforceResolveRefs(_From, _To, PerforceRootConfigFiles, f_GetBaseDir());
 
+		CStr From = _From;
+		CStr BaseBranch;
+		bool bFromComparison = From.f_IsEmpty() && !bIsPerforceRoot;
+		if (bFromComparison)
+		{
+			auto MainBranchInfo = fg_GetMainRepoBranchInfo(f_GetBaseDir(), FilteredRepositories.m_ReposOrdered);
+			CStr DefaultBranch = MainBranchInfo.m_DefaultBranch.f_IsEmpty() ? CStr("master") : MainBranchInfo.m_DefaultBranch;
+			BaseBranch = fg_EffectiveBaseBranch(_GenerateOptions.m_BaseBranch ? *_GenerateOptions.m_BaseBranch : MainBranchInfo.m_BaseBranch, DefaultBranch);
+			From = "origin/{}"_f << fg_GetComparisonBranch(f_GetBaseDir(), "origin", DefaultBranch, BaseBranch);
+		}
+
 		struct CState
 		{
 			TCMap<CStr, CStr> m_StartCommits;
@@ -428,7 +439,7 @@ namespace NMib::NBuildSystem
 		}
 		else
 		{
-			pState->m_StartCommits[f_GetBaseDir()] = _From;
+			pState->m_StartCommits[f_GetBaseDir()] = From;
 			pState->m_EndCommits[f_GetBaseDir()] = _To;
 		}
 
@@ -492,6 +503,21 @@ namespace NMib::NBuildSystem
 						}
 						else
 							State.m_StartCommits[Repo.m_Location];
+
+						// With a base, each repository starts from what status compares it with, whatever its parent compares with: its
+						// base branch on origin, or else its own default branch, which can be ahead of the pin in the parent's base
+						if
+							(
+								bFromComparison
+								&& !BaseBranch.f_IsEmpty()
+								&& CFile::fs_FileExists(Repo.m_Location / ".git", EFileAttrib_Directory | EFileAttrib_File)
+							)
+						{
+							// A repository that origin doesn't have yet keeps the start of a new repository
+							CStr ComparisonBranch = fg_GetComparisonBranch(Repo.m_Location, "origin", Repo.m_OriginProperties.m_DefaultBranch, BaseBranch);
+							if (!ComparisonBranch.f_IsEmpty() && fg_RemoteBranchExists(Repo, fg_GetRepositoryDynamicInfo(Repo), ComparisonBranch))
+								State.m_StartCommits[Repo.m_Location] = CStr("origin/") + ComparisonBranch;
+						}
 
 						auto pEndConfigFile = State.m_EndConfigFiles.f_FindEqual(ConfigFile);
 						if (pEndConfigFile)
@@ -969,7 +995,7 @@ namespace NMib::NBuildSystem
 					{
 						auto [FromResult, ToResult] = co_await
 							(
-								Launches.f_Launch(**pRepo, {"rev-parse", "{}^0"_f << _From}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None)
+								Launches.f_Launch(**pRepo, {"rev-parse", "{}^0"_f << From}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None)
 								+ Launches.f_Launch(**pRepo, {"rev-parse", "{}^0"_f << _To}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None)
 							)
 						;
@@ -985,10 +1011,10 @@ namespace NMib::NBuildSystem
 							ToHash = CStr::fs_Join(ToResult.f_GetErrorOut().f_Trim().f_SplitLine(), " ").f_Replace("\t", " ");
 					}
 
-					umint MaxLen = fg_Max(_From.f_GetLen(), _To.f_GetLen());
+					umint MaxLen = fg_Max(From.f_GetLen(), _To.f_GetLen());
 
 					CStr Description;
-					Description += "{5}From {3}{a-,sj*,sf }  {4}{}\n"_f << _From << MaxLen << FromHash << Colors.f_ToPush() << Colors.f_Foreground256(246) << Colors.f_Default();
+					Description += "{5}From {3}{a-,sj*,sf }  {4}{}\n"_f << From << MaxLen << FromHash << Colors.f_ToPush() << Colors.f_Foreground256(246) << Colors.f_Default();
 					Description += "{5}To   {3}{a-,sj*,sf }  {4}{}"_f << _To << MaxLen << ToHash << Colors.f_ToPush() << Colors.f_Foreground256(246) << Colors.f_Default();
 
 					TableRenderer.f_AddDescription(Description);

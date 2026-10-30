@@ -304,6 +304,23 @@ build systems of the checkout wait for each other while they do (`BuildSystem/.m
 - Repositories that are left on disk are kept in `BuildSystems.json`. `--ignore-leave` reconciles them, and the removed
   repositories, as if none set `Repository.ReconcileRemoved "Leave"`, so that `--reconcile-removed` can delete them.
 
+### Base Branches
+A branch stacked on another branch that hasn't landed yet has that branch as its base. `./mib base <Branch>` sets the base of
+the root's current branch, `./mib base` shows it and `./mib base --clear` removes it; `./mib branch <Name> --base-branch
+<Branch>` creates a branch with its base. Each branch has a base of its own, in `.malterlib-base` in the root, a JSON object
+from branch to base that git doesn't track.
+
+- `repo-commit`, `status` and `list-commits` compare with `origin/<Base>` instead of the default branch, in each repository
+  that has the base branch on origin, so they only see the commits above the base. `--base-branch` overrides the base for
+  one run.
+- Repositories without the base branch on origin, such as those the base doesn't change or all of them once the base has
+  landed and its branches are deleted, compare with their default branch.
+- A base that names the root's default branch, as `--base-branch master` does, is each repository's own default branch,
+  whatever its name there, the same as no base.
+- Whether a branch needs a push never uses the base. `push` and `status` only treat a branch as pushed when its commits are
+  on the branch itself or the default branch: a base branch can be force-pushed, which would orphan commits that only it
+  holds.
+
 ## Testing
 
 ### Test Structure

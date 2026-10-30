@@ -219,6 +219,7 @@ namespace NMib::NBuildSystem::NRepository
 	{
 		CStr m_Branch;
 		CStr m_DefaultBranch;
+		CStr m_BaseBranch; // The branch the root's branch is based on, from .malterlib-base; empty when none is set
 	};
 
 	// The repositories that a build system saw the last time it updated them, in RepositoryState.json in its output directory
@@ -608,6 +609,11 @@ namespace NMib::NBuildSystem::NRepository
 	void fg_DetectGitBranchInfo(CStr const &_DataDir, CStr const &_CommonDir, CStr &o_Branch, CStr &o_DefaultBranch);
 	CStr fg_GetExpectedBranch(CRepository const &_Repo, CStr const &_MainRepoBranch, CStr const &_MainRepoDefaultBranch);
 	CMainRepoBranchInfo fg_GetMainRepoBranchInfo(CStr const &_BaseDir, TCVector<TCMap<CStr, CReposLocation>> const &_ReposOrdered);
+	CStr fg_GetBaseBranchFile(CStr const &_BaseDir);
+	TCMap<CStr, CStr> fg_ReadBaseBranches(CStr const &_BaseDir);
+	CStr fg_EffectiveBaseBranch(CStr const &_BaseBranch, CStr const &_RootDefaultBranch);
+	void fg_WriteBaseBranches(CStr const &_BaseDir, TCMap<CStr, CStr> const &_BaseBranches);
+	CStr fg_GetComparisonBranch(CStr const &_RepoLocation, CStr const &_Remote, CStr const &_DefaultBranch, CStr const &_BaseBranch);
 	CStr fg_GetRemoteHead(CRepository const &_Repo, CRepositoryDynamicInfo const &_DynamicInfo, CStr const &_Remote);
 	CStr fg_HandleRepositoryActionToString(EHandleRepositoryAction _Action, EOutputType &o_OutputType);
 

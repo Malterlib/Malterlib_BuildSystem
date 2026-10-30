@@ -692,13 +692,13 @@ namespace NMib::NBuildSystem
 				CGitLaunches _Launches
 				, t_CLaunchTarget _LaunchTarget
 				, t_COutputScope _OutputScope
-				, CStr _DefaultBranch
+				, CStr _ComparisonBranch
 			)
 		{
 			auto Result = co_await _Launches.f_Launch
 				(
 					_LaunchTarget
-					, {"merge-base", "origin/{}"_f << _DefaultBranch, "HEAD"}
+					, {"merge-base", "origin/{}"_f << _ComparisonBranch, "HEAD"}
 					, {}
 					, CProcessLaunchActor::ESimpleLaunchFlag_None
 				)
@@ -713,7 +713,7 @@ namespace NMib::NBuildSystem
 						, _OutputScope
 						, "git merge-base origin/{} HEAD failed (exit code {}): {}. Falling back to commit-at-HEAD without rebase;\n"
 						"any prior auto-generated commits on this branch will not be squashed."_f
-						<< _DefaultBranch << Result.m_ExitCode << Result.f_GetCombinedOut().f_Trim()
+						<< _ComparisonBranch << Result.m_ExitCode << Result.f_GetCombinedOut().f_Trim()
 					)
 				;
 			}
@@ -728,7 +728,7 @@ namespace NMib::NBuildSystem
 						, _OutputScope
 						, "No merge-base with 'origin/{}'. Proceeding in bootstrap mode: commit-at-HEAD without rebase.\n"
 						"Ensure the branch tracks an upstream once available to restore idempotent behavior."_f
-						<< _DefaultBranch
+						<< _ComparisonBranch
 					)
 				;
 			}
@@ -751,7 +751,7 @@ namespace NMib::NBuildSystem
 				, CRepository _Repo
 				, TCSet<CStr> _ConfigFiles
 				, TCSet<CStr> _AllConfigRelPaths
-				, CStr _DefaultBranch
+				, CStr _ComparisonBranch
 			)
 		{
 			CRepoPreflightResult Result;
@@ -765,8 +765,8 @@ namespace NMib::NBuildSystem
 			}
 
 			TCFuture<CProcessLaunchActor::CSimpleLaunchResult> MergeBaseFuture;
-			if (!_DefaultBranch.f_IsEmpty())
-				MergeBaseFuture = _Launches.f_Launch(_Repo, {"merge-base", "origin/{}"_f << _DefaultBranch, "HEAD"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
+			if (!_ComparisonBranch.f_IsEmpty())
+				MergeBaseFuture = _Launches.f_Launch(_Repo, {"merge-base", "origin/{}"_f << _ComparisonBranch, "HEAD"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 
 			auto AllStatuses = co_await fg_AllDone(StatusResults);
 
@@ -1864,6 +1864,9 @@ namespace NMib::NBuildSystem
 
 		auto ReposOrdered = fg_GetRepos(*this, mp_Data, EGetRepoFlag::mc_IncludeRepoCommit);
 		auto MainBranchInfo = fg_GetMainRepoBranchInfo(f_GetBaseDir(), ReposOrdered);
+		if (_GenerateOptions.m_BaseBranch)
+			MainBranchInfo.m_BaseBranch = *_GenerateOptions.m_BaseBranch;
+		MainBranchInfo.m_BaseBranch = fg_EffectiveBaseBranch(MainBranchInfo.m_BaseBranch, MainBranchInfo.m_DefaultBranch);
 
 		CGitLaunches Launches{f_GetGitLaunchOptions("repo-commit"), "Committing repos"};
 		auto DestroyLaunches = co_await co_await Launches.f_Init();
@@ -2098,15 +2101,16 @@ namespace NMib::NBuildSystem
 		}
 		else if (CFile::fs_FileExists(f_GetBaseDir() + "/.git", EFileAttrib_Directory | EFileAttrib_File))
 		{
-			// Git root: seed from merge-base with origin/defaultBranch when
-			// available. An empty result is tolerated (bootstrap mode); the
-			// helper emits warnings explaining the fallback.
+			// Git root: seed from merge-base with the origin branch to compare with,
+			// the base branch or the default branch, when available. An empty
+			// result is tolerated (bootstrap mode); the helper emits warnings
+			// explaining the fallback.
 			CStr MergeBase = co_await fg_ResolveMergeBaseWithBootstrapFallback
 				(
 					Launches
 					, f_GetBaseDir()
 					, CStr(".")
-					, MainBranchInfo.m_DefaultBranch
+					, fg_GetComparisonBranch(f_GetBaseDir(), "origin", MainBranchInfo.m_DefaultBranch, MainBranchInfo.m_BaseBranch)
 				)
 			;
 
@@ -2114,6 +2118,70 @@ namespace NMib::NBuildSystem
 				RootSeed[f_GetBaseDir()] = MergeBase;
 		}
 
+		// With a base, each repository of the subtree that _SubtreeRoot pins starts from what status and list-commits compare it
+		// with, whatever its parent compares with: its base branch on origin, or else its own default branch. Its sub-repositories
+		// are resolved from there. Repositories outside the subtree stay out, as their configuration files would join its message.
+		auto fSeedFromBases = [&](TCMap<CStr, CStr> &o_Seed, CStr const &_SubtreeRoot) -> TCUnsafeFuture<void>
+			{
+				co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+				CStr const &BaseBranch = MainBranchInfo.m_BaseBranch;
+				if (BaseBranch.f_IsEmpty())
+					co_return {};
+
+				TCSet<CStr> Subtree;
+				TCVector<CStr> ToVisit{_SubtreeRoot};
+				while (!ToVisit.f_IsEmpty())
+				{
+					CStr Location = ToVisit.f_GetLast();
+					ToVisit.f_Remove(ToVisit.f_GetLen() - 1);
+					if (!Subtree(Location).f_WasCreated())
+						continue;
+
+					auto *pConfigFiles = ConfigFilesByRepo.f_FindEqual(Location);
+					if (!pConfigFiles)
+						continue;
+
+					for (auto &ConfigFile : *pConfigFiles)
+					{
+						if (auto *pRepos = ReposByConfigFile.f_FindEqual(ConfigFile))
+						{
+							for (auto *pChild : *pRepos)
+								ToVisit.f_Insert(pChild->m_Location);
+						}
+					}
+				}
+
+				for (auto &Repos : FilteredRepos)
+				{
+					for (auto *pRepo : Repos)
+					{
+						if (!Subtree.f_FindEqual(pRepo->m_Location) || o_Seed.f_FindEqual(pRepo->m_Location) || pRepo->m_Location == f_GetBaseDir())
+							continue;
+
+						CStr DefaultBranch = pRepo->m_OriginProperties.m_DefaultBranch;
+						CStr ComparisonBranch = fg_GetComparisonBranch(pRepo->m_Location, "origin", DefaultBranch, BaseBranch);
+						if (ComparisonBranch.f_IsEmpty())
+							continue;
+
+						auto MergeBase = co_await Launches.f_Launch
+							(
+								*pRepo
+								, {"merge-base", "origin/{}"_f << ComparisonBranch, "HEAD"}
+								, {}
+								, CProcessLaunchActor::ESimpleLaunchFlag_None
+							)
+						;
+						if (MergeBase.m_ExitCode == 0)
+							o_Seed[pRepo->m_Location] = MergeBase.f_GetStdOut().f_Trim();
+					}
+				}
+
+				co_return {};
+			}
+		;
+
+		co_await fSeedFromBases(RootSeed, f_GetBaseDir());
 		auto pStartCommits = co_await fg_ResolveStartCommits(Launches, f_GetBaseDir(), RootSeed, FilteredRepos, ConfigFilesByRepo, ReposByConfigFile);
 
 		// Phase 4: Process stages depth-first
@@ -2185,9 +2253,11 @@ namespace NMib::NBuildSystem
 					co_return DMibErrorInstance(Message);
 				}
 
+				CStr ComparisonBranch = fg_GetComparisonBranch(Repo.m_Location, "origin", DefaultBranch, MainBranchInfo.m_BaseBranch);
+
 				// For the root repo use the pre-resolved start commits from the
-				// merge-base chain. For all other repos seed from the
-				// merge-base with origin/{defaultBranch} so the nested section
+				// merge-base chain. For all other repos seed from the merge-base
+				// with the origin branch to compare with so the nested section
 				// describes commits introduced on this branch since the branch
 				// point. Each resolution walks the full subtree so grandchild
 				// commits use a consistent range.
@@ -2197,7 +2267,7 @@ namespace NMib::NBuildSystem
 					pRepoStartCommits = pStartCommits.f_ShareAsConst();
 				else
 				{
-					CStr MergeBase = co_await fg_ResolveMergeBaseWithBootstrapFallback(Launches, Repo, Repo, DefaultBranch);
+					CStr MergeBase = co_await fg_ResolveMergeBaseWithBootstrapFallback(Launches, Repo, Repo, ComparisonBranch);
 
 					if (MergeBase.f_IsEmpty())
 						pRepoStartCommits = fg_Construct<TCMap<CStr, CStr>>();
@@ -2205,6 +2275,7 @@ namespace NMib::NBuildSystem
 					{
 						TCMap<CStr, CStr> RepoSeed;
 						RepoSeed[Repo.m_Location] = MergeBase;
+						co_await fSeedFromBases(RepoSeed, Repo.m_Location);
 						pRepoStartCommits = co_await fg_ResolveStartCommits(Launches, f_GetBaseDir(), RepoSeed, FilteredRepos, ConfigFilesByRepo, ReposByConfigFile);
 					}
 				}
@@ -2238,7 +2309,7 @@ namespace NMib::NBuildSystem
 							, pRepositoryByIdentity.f_ShareAsConst()
 							, TCSet<CStr>()
 						)
-						+ fg_RepoPreFlight(Launches, Repo, StageFiles, AllConfigRelPaths, DefaultBranch)
+						+ fg_RepoPreFlight(Launches, Repo, StageFiles, AllConfigRelPaths, ComparisonBranch)
 					)
 				;
 

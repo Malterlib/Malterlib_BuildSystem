@@ -336,6 +336,9 @@ namespace NMib::NBuildSystem
 	{
 		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
+		if (_GenerateOptions.m_BaseBranch && *_GenerateOptions.m_BaseBranch == _Branch)
+			co_return DMibErrorInstance("A branch can't be its own base branch");
+
 		CGenerateEphemeralState GenerateState;
 		// fp_GeneratePrepare parses the build system data and reconciles nested repos
 		// against the current branch. This is intentional: the user should see whether
@@ -344,15 +347,81 @@ namespace NMib::NBuildSystem
 		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
 			co_return Retry;
 
-		if (!(_Flags & ERepoBranchFlag_Force))
+		bool bForce = _Flags & ERepoBranchFlag_Force;
+		if (!bForce && !_Filter.f_IsEmpty())
+			co_return DMibErrorInstance("Cannot use repository filters with non-forced branch. Use --force to branch individual repositories.");
+
+		ERetry Retry = bForce ? co_await fp_ForceBranchRepos(_Filter, _Branch, _Flags) : co_await fp_BranchRootRepo(GenerateState, _Branch, _Flags);
+
+		// Only once the branch exists, so that a branch command that fails leaves the bases as they were
+		if (_GenerateOptions.m_BaseBranch && !(_Flags & ERepoBranchFlag_Pretend))
+			fp_SetBaseBranch(_Branch, *_GenerateOptions.m_BaseBranch);
+
+		co_return Retry;
+	}
+
+	void CBuildSystem::fp_SetBaseBranch(CStr const &_Branch, CStr const &_BaseBranch)
+	{
+		auto BaseBranches = fg_ReadBaseBranches(f_GetBaseDir());
+		if (_BaseBranch.f_IsEmpty())
+			BaseBranches.f_Remove(_Branch);
+		else
+			BaseBranches[_Branch] = _BaseBranch;
+
+		fg_WriteBaseBranches(f_GetBaseDir(), BaseBranches);
+
+		if (BaseBranches.f_IsEmpty())
+			return;
+
+		bool bIsGitRoot = CFile::fs_FileExists(f_GetBaseDir() / ".git", EFileAttrib_Directory | EFileAttrib_File);
+		CStateHandler StateHandler{f_GetBaseDir(), mp_OutputDir, mp_AnsiFlags, mp_fOutputConsole};
+		StateHandler.f_AddGitIgnore
+			(
+				fg_GetBaseBranchFile(f_GetBaseDir())
+				, *this
+				, bIsGitRoot ? EGitIgnoreType::mc_GitInfoExclude : EGitIgnoreType::mc_GitIgnore
+			)
+		;
+	}
+
+	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Base
+		(
+			CGenerateOptions const &_GenerateOptions
+			, CStr const &_BaseBranch
+			, bool _bClear
+			, TCSharedPointer<CCommandLineControl> const &_pCommandLine
+		)
+	{
+		co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+		CGenerateEphemeralState GenerateState;
+		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
+			co_return Retry;
+
+		auto ReposOrdered = fg_GetRepos(*this, mp_Data, EGetRepoFlag::mc_None);
+		auto MainBranchInfo = fg_GetMainRepoBranchInfo(f_GetBaseDir(), ReposOrdered);
+		if (MainBranchInfo.m_Branch.f_IsEmpty())
+			co_return DMibErrorInstance("The root repository is not on a branch, so it can't have a base branch");
+
+		if (_bClear)
 		{
-			if (!_Filter.f_IsEmpty())
-				co_return DMibErrorInstance("Cannot use repository filters with non-forced branch. Use --force to branch individual repositories.");
-
-			co_return co_await fp_BranchRootRepo(GenerateState, _Branch, _Flags);
+			fp_SetBaseBranch(MainBranchInfo.m_Branch, {});
+			*_pCommandLine += "Removed the base branch of '{}'\n"_f << MainBranchInfo.m_Branch;
 		}
+		else if (!_BaseBranch.f_IsEmpty())
+		{
+			if (_BaseBranch == MainBranchInfo.m_Branch)
+				co_return DMibErrorInstance("A branch can't be its own base branch");
 
-		co_return co_await fp_ForceBranchRepos(_Filter, _Branch, _Flags);
+			fp_SetBaseBranch(MainBranchInfo.m_Branch, _BaseBranch);
+			*_pCommandLine += "The base branch of '{}' is now '{}'\n"_f << MainBranchInfo.m_Branch << _BaseBranch;
+		}
+		else if (MainBranchInfo.m_BaseBranch.f_IsEmpty())
+			*_pCommandLine += "'{}' has no base branch, so it compares with the default branches\n"_f << MainBranchInfo.m_Branch;
+		else
+			*_pCommandLine += "{}\n"_f << MainBranchInfo.m_BaseBranch;
+
+		co_return ERetry_None;
 	}
 
 	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Unbranch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoBranchFlag _Flags)

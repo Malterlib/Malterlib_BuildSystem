@@ -264,6 +264,34 @@ namespace NMib::NBuildSystem
 		if (_Flags & ERepoStatusFlag_UpdateRemotes)
 			co_await fg_UpdateRemotes(*this, FilteredRepositories);
 
+		auto MainBranchInfo = fg_GetMainRepoBranchInfo(f_GetBaseDir(), FilteredRepositories.m_ReposOrdered);
+		CStr BaseBranch = fg_EffectiveBaseBranch
+			(
+				_GenerateOptions.m_BaseBranch ? *_GenerateOptions.m_BaseBranch : MainBranchInfo.m_BaseBranch
+				, MainBranchInfo.m_DefaultBranch
+			)
+		;
+		if (!BaseBranch.f_IsEmpty() && fg_GetComparisonBranch(f_GetBaseDir(), "origin", MainBranchInfo.m_DefaultBranch, BaseBranch) != BaseBranch)
+			f_OutputConsole("Base branch {} no longer exists on origin; comparing against the default branches\n"_f << BaseBranch);
+
+		// The base of the root's branch, as repo-commit and list-commits compare with it, also in a repository on another branch.
+		// With --all-branches, each branch is compared with its own base, unless the command line gives one.
+		auto BaseBranches = fg_ReadBaseBranches(f_GetBaseDir());
+		auto fBaseOfBranch = [=, BaseOverride = _GenerateOptions.m_BaseBranch, RootDefault = MainBranchInfo.m_DefaultBranch](CStr const &_Branch) -> CStr
+			{
+				if (!(_Flags & ERepoStatusFlag_AllBranches))
+					return BaseBranch;
+
+				if (BaseOverride)
+					return fg_EffectiveBaseBranch(*BaseOverride, RootDefault);
+
+				if (auto *pBase = BaseBranches.f_FindEqual(_Branch))
+					return fg_EffectiveBaseBranch(*pBase, RootDefault);
+
+				return {};
+			}
+		;
+
 		CGitLaunches Launches{f_GetGitLaunchOptions("status"), "Getting repo status"};
 		auto DestroyLaunchs = co_await co_await Launches.f_Init();
 
@@ -319,6 +347,8 @@ namespace NMib::NBuildSystem
 								TCSet<CStr> ToPushMissing;
 								TCSet<CStr> ToPullAdded;
 								TCMap<CStr, CStr> DefaultBranchByRemote;
+								TCFutureMap<CStr, TCVector<CLogEntry>> ToPushDefault;
+								TCFutureMap<CStr, TCVector<CLogEntry>> ToPullDefault;
 
 								for (auto &Remote : State.m_Remotes)
 								{
@@ -387,21 +417,47 @@ namespace NMib::NBuildSystem
 										}
 									}
 
-									if (Branch != DefaultBranch && !DefaultBranch.f_IsEmpty())
+									// Whether the branch needs a push is decided against the default branch above. Only the comparison
+									// with the other branches uses the base: a base branch can be force-pushed, which would orphan a
+									// commit that only it holds.
+									CStr ComparisonBranch = DefaultBranch;
+									CStr BranchBase = fBaseOfBranch(Branch);
+									if (!BranchBase.f_IsEmpty() && State.f_HasRemoteBranch("{}/{}"_f << Remote << BranchBase))
+										ComparisonBranch = BranchBase;
+
+									if (Branch != ComparisonBranch && !ComparisonBranch.f_IsEmpty())
 									{
-										CStr AgainstDefaultName = "{}/{}"_f << Remote << DefaultBranch;
-										CStr ExtraRemoteBranch = "{}/{}"_f << Remote << DefaultBranch;
+										CStr AgainstDefaultName = "{}/{}"_f << Remote << ComparisonBranch;
+										CStr ExtraRemoteBranch = "{}/{}"_f << Remote << ComparisonBranch;
 										if (State.f_HasRemoteBranch(ExtraRemoteBranch))
 										{
-											DefaultBranchByRemote[Remote] = DefaultBranch;
+											if (ComparisonBranch == DefaultBranch)
+												DefaultBranchByRemote[Remote] = DefaultBranch;
+
 											fg_GetLogEntries(Launches, Repo, ExtraRemoteBranch, Branch) > ToPush[AgainstDefaultName];
 											if (ToPullAdded(AgainstDefaultName).f_WasCreated())
 												fg_GetLogEntries(Launches, Repo, Branch, ExtraRemoteBranch) > ToPull[AgainstDefaultName];
 										}
 									}
+
+									// Being the same as the default branch hides a push the branch needs, which being the same as the base
+									// doesn't
+									CStr DefaultRemoteBranch = "{}/{}"_f << Remote << DefaultBranch;
+									if
+										(
+											ComparisonBranch != DefaultBranch
+											&& Branch != DefaultBranch
+											&& !DefaultBranch.f_IsEmpty()
+											&& State.f_HasRemoteBranch(DefaultRemoteBranch)
+										)
+									{
+										fg_GetLogEntries(Launches, Repo, DefaultRemoteBranch, Branch) > ToPushDefault[Remote];
+										fg_GetLogEntries(Launches, Repo, Branch, DefaultRemoteBranch) > ToPullDefault[Remote];
+									}
 								}
 
 								auto [ToPushResults, ToPullResults] = co_await (fg_AllDoneWrapped(ToPush) + fg_AllDoneWrapped(ToPull));
+								auto [ToPushDefaultResults, ToPullDefaultResults] = co_await (fg_AllDone(ToPushDefault) + fg_AllDone(ToPullDefault));
 
 								TCMap<CStr, TCVector<CLogEntry>> ToRemotePush;
 								TCMap<CStr, TCVector<CLogEntry>> ToLocalPull;
@@ -498,6 +554,14 @@ namespace NMib::NBuildSystem
 									auto pDefaultToPull = fFindLogEntries(ToLocalPullByHashes, DefaultRemoteBranch);
 
 									if (pDefaultToPush && pDefaultToPush->f_IsEmpty() && pDefaultToPull && pDefaultToPull->f_IsEmpty())
+										SameAsDefaultRemotes[Remote];
+								}
+
+								for (auto &DefaultToPush : ToPushDefaultResults)
+								{
+									auto &Remote = ToPushDefaultResults.fs_GetKey(DefaultToPush);
+									auto *pDefaultToPull = ToPullDefaultResults.f_FindEqual(Remote);
+									if (DefaultToPush.f_IsEmpty() && pDefaultToPull && pDefaultToPull->f_IsEmpty())
 										SameAsDefaultRemotes[Remote];
 								}
 

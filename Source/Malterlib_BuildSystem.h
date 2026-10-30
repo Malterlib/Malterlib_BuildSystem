@@ -548,6 +548,14 @@ namespace NMib::NBuildSystem
 
 		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_Branch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, NStr::CStr const &_Branch, ERepoBranchFlag _Flags);
 		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_Unbranch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoBranchFlag _Flags);
+		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_Base
+			(
+				CGenerateOptions const &_GenerateOptions
+				, NStr::CStr const &_BaseBranch
+				, bool _bClear
+				, NStorage::TCSharedPointer<NConcurrency::CCommandLineControl> const &_pCommandLine
+			)
+		;
 
 		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_CleanupBranches
 			(
@@ -1140,6 +1148,7 @@ namespace NMib::NBuildSystem
 		void fp_TracePropertyEval(bool _bSuccess, CEntity const &_Entity, CPropertyKey const &_PropertyKey, CProperty const &_Property, NEncoding::CEJsonSorted const &_Value) const;
 
 		NConcurrency::TCUnsafeFuture<ERetry> fp_HandleRepositories(NContainer::TCMap<CPropertyKey, NEncoding::CEJsonSorted> const &_Values);
+		void fp_SetBaseBranch(NStr::CStr const &_Branch, NStr::CStr const &_BaseBranch);
 		NConcurrency::TCUnsafeFuture<ERetry> fp_BranchRootRepo(CGenerateEphemeralState &_GenerateState, NStorage::TCOptional<NStr::CStr> const &_Branch, ERepoBranchFlag _Flags);
 		NConcurrency::TCUnsafeFuture<ERetry> fp_ForceBranchRepos(CRepoFilter const &_Filter, NStorage::TCOptional<NStr::CStr> const &_Branch, ERepoBranchFlag _Flags);
 

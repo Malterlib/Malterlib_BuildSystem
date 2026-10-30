@@ -88,8 +88,9 @@ namespace NMib::NBuildSystem::NRepository
 	CStr fsg_ResolveRefHash(CStr const &_CommonDir, CStr const &_Ref)
 	{
 		{
+			// A file only: refs/remotes/origin/feature is a directory of refs when origin has feature/topic but no feature
 			CStr RefFile = "{}/{}"_f << _CommonDir << _Ref;
-			if (CFile::fs_FileExists(RefFile))
+			if (CFile::fs_FileExists(RefFile, EFileAttrib_File))
 				return CFile::fs_ReadStringFromFile(RefFile, true).f_TrimRight("\n");
 		}
 
@@ -929,9 +930,91 @@ namespace NMib::NBuildSystem::NRepository
 		}
 	}
 
+	CStr fg_GetBaseBranchFile(CStr const &_BaseDir)
+	{
+		return _BaseDir / ".malterlib-base";
+	}
+
+	// The base branches of the root's branches, as a JSON object from branch to base, so that a base only applies to the
+	// branch it was set for
+	TCMap<CStr, CStr> fg_ReadBaseBranches(CStr const &_BaseDir)
+	{
+		CStr BaseFile = fg_GetBaseBranchFile(_BaseDir);
+		if (!CFile::fs_FileExists(BaseFile))
+			return {};
+
+		auto Json = CEJsonSorted::fs_FromString(CFile::fs_ReadStringFromFile(BaseFile, true), BaseFile);
+		if (!Json.f_IsObject())
+			DMibError("'{}' has to hold a JSON object from branch to base branch"_f << BaseFile);
+
+		TCMap<CStr, CStr> BaseBranches;
+		for (auto &Entry : Json.f_Object())
+		{
+			if (!Entry.f_Value().f_IsString() || Entry.f_Value().f_String().f_IsEmpty())
+				DMibError("The base branch of '{}' in '{}' has to be a nonempty string"_f << Entry.f_Name() << BaseFile);
+
+			BaseBranches[Entry.f_Name()] = Entry.f_Value().f_String();
+		}
+
+		return BaseBranches;
+	}
+
+	void fg_WriteBaseBranches(CStr const &_BaseDir, TCMap<CStr, CStr> const &_BaseBranches)
+	{
+		CStr BaseFile = fg_GetBaseBranchFile(_BaseDir);
+		if (_BaseBranches.f_IsEmpty())
+		{
+			if (CFile::fs_FileExists(BaseFile))
+				CFile::fs_DeleteFile(BaseFile);
+
+			return;
+		}
+
+		CEJsonSorted Json(EJsonType_Object);
+		for (auto &BaseBranch : _BaseBranches)
+			Json[_BaseBranches.fs_GetKey(BaseBranch)] = BaseBranch;
+
+		CFile::fs_WriteStringToFile(BaseFile, Json.f_ToString() + "\n", false);
+	}
+
+	// The branch to compare a repository's commits with: the base branch where the repository has it on the remote, and
+	// otherwise the default branch, so repositories that the base branch doesn't change compare with their default branch
+	// A base that names the root's default branch is the default branch of each repository, whatever its name there, as when no
+	// base is set. Returns the base to compare with, empty for the default branches.
+	CStr fg_EffectiveBaseBranch(CStr const &_BaseBranch, CStr const &_RootDefaultBranch)
+	{
+		if (_BaseBranch == _RootDefaultBranch)
+			return {};
+
+		return _BaseBranch;
+	}
+
+	CStr fg_GetComparisonBranch(CStr const &_RepoLocation, CStr const &_Remote, CStr const &_DefaultBranch, CStr const &_BaseBranch)
+	{
+		if (_BaseBranch.f_IsEmpty())
+			return _DefaultBranch;
+
+		if (!CFile::fs_FileExists(_RepoLocation / ".git", EFileAttrib_Directory | EFileAttrib_File))
+			return _DefaultBranch;
+
+		CStr CommonDir = fg_GetGitCommonDir(fg_GetGitDataDir(_RepoLocation, CFilePosition{}), CFilePosition{});
+		if (fsg_ResolveRefHash(CommonDir, "refs/remotes/{}/{}"_f << _Remote << _BaseBranch).f_IsEmpty())
+			return _DefaultBranch;
+
+		return _BaseBranch;
+	}
+
 	CMainRepoBranchInfo fg_GetMainRepoBranchInfo(CStr const &_BaseDir, TCVector<TCMap<CStr, CReposLocation>> const &_ReposOrdered)
 	{
 		CMainRepoBranchInfo Info;
+
+		auto fSetBaseBranch = [&]
+			{
+				auto BaseBranches = fg_ReadBaseBranches(_BaseDir);
+				if (auto *pBaseBranch = BaseBranches.f_FindEqual(Info.m_Branch))
+					Info.m_BaseBranch = *pBaseBranch;
+			}
+		;
 
 		for (auto &Repos : _ReposOrdered)
 		{
@@ -944,6 +1027,7 @@ namespace NMib::NBuildSystem::NRepository
 						auto DynamicInfo = fg_GetRepositoryDynamicInfo(Repo);
 						Info.m_Branch = fg_GetBranch(Repo, DynamicInfo);
 						Info.m_DefaultBranch = Repo.m_OriginProperties.m_DefaultBranch;
+						fSetBaseBranch();
 						return Info;
 					}
 				}
@@ -976,6 +1060,8 @@ namespace NMib::NBuildSystem::NRepository
 
 			Info.m_DefaultBranch = "master";
 		}
+
+		fSetBaseBranch();
 
 		return Info;
 	}
