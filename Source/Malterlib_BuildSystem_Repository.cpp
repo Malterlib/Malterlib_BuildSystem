@@ -728,6 +728,60 @@ namespace NMib::NBuildSystem
 			;
 		}
 
+		// Makes the LFS files of a repository that the update changed reflinks of the LFS storage. git lfs dedup clones every LFS
+		// file again, and git then rehashes all of them, so only the repositories an update changed are deduplicated, and the
+		// index is refreshed here instead of by the next git command. Filesystems without reflinks are passed over without a
+		// message, and other failures are reported without failing the update.
+		TCFuture<void> fg_DeduplicateLfsFiles(CGitLaunches _Launches, CStr _Location, CStr _Name)
+		{
+			auto fReport = [&](CStr const &_Step, CProcessLaunchActor::CSimpleLaunchResult const &_Result)
+				{
+					_Launches.f_Output
+						(
+							EOutputType_Normal
+							, _Name
+							, "{} failed, so its LFS files keep their own copies: {}\n"_f << _Step << _Result.f_GetCombinedOut().f_Trim()
+						)
+					;
+				}
+			;
+
+			auto LfsFiles = co_await _Launches.f_Launch(_Location, {"lfs", "ls-files", "--name-only"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
+			if (LfsFiles.m_ExitCode != 0)
+			{
+				fReport("git lfs ls-files", LfsFiles);
+				co_return {};
+			}
+
+			if (LfsFiles.f_GetStdOut().f_Trim().f_IsEmpty())
+				co_return {};
+
+			auto Test = co_await _Launches.f_Launch(_Location, {"lfs", "dedup", "--test"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
+			if (Test.m_ExitCode != 0)
+			{
+				if (Test.m_ExitCode == 2 && Test.f_GetCombinedOut().f_Find("does not support de-duplication") >= 0)
+					co_return {};
+
+				fReport("git lfs dedup --test", Test);
+				co_return {};
+			}
+
+			auto Dedup = co_await _Launches.f_Launch(_Location, {"lfs", "dedup"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
+			if (Dedup.m_ExitCode != 0)
+				fReport("git lfs dedup", Dedup);
+			else if (CStr Skipped = Dedup.f_GetErrorOut().f_Trim(); !Skipped.f_IsEmpty())
+			{
+				// git lfs dedup exits with 0 when it skips files it fails to clone, and only tells on stderr
+				_Launches.f_Output(EOutputType_Normal, _Name, "git lfs dedup left LFS files with their own copies: {}\n"_f << Skipped);
+			}
+
+			auto Refresh = co_await _Launches.f_Launch(_Location, {"update-index", "-q", "--refresh"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
+			if (Refresh.m_ExitCode != 0)
+				fReport("Refreshing the index after git lfs dedup", Refresh);
+
+			co_return {};
+		}
+
 		TCUnsafeFuture<bool> DMibWorkaroundUBSanSectionErrors fg_HandleRepository
 			(
 				CGitLaunches &_Launches
@@ -4557,6 +4611,15 @@ namespace NMib::NBuildSystem
 		;
 	}
 
+	bool CBuildSystem::fp_LfsDedupEnabled()
+	{
+		// Build systems that don't import Core's settings don't declare the setting
+		if (!mp_Data.m_RootEntity.f_Data().m_VariableDefinitions.f_FindEqual(gc_ConstKey_MalterlibRepositoryLfsDedup))
+			return true;
+
+		return f_EvaluateEntityPropertyBool(mp_Data.m_RootEntity, gc_ConstKey_MalterlibRepositoryLfsDedup, true);
+	}
+
 	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::fp_HandleRepositories(TCMap<CPropertyKey, CEJsonSorted> const &_Values)
 	{
 		co_await ECoroutineFlag_CaptureMalterlibExceptions;
@@ -4594,6 +4657,9 @@ namespace NMib::NBuildSystem
 
 		TCAtomic<bool> bChanged;
 		TCAtomic<bool> bBinariesChange;
+
+		CLowLevelLock ChangedLocationsLock;
+		TCSet<CStr> ChangedLocations;
 
 		CStateHandler StateHandler{BaseDir, mp_OutputDir, mp_AnsiFlags, mp_fOutputConsole};
 
@@ -4814,6 +4880,11 @@ namespace NMib::NBuildSystem
 										)
 									{
 										bChanged.f_Exchange(true);
+										{
+											DLock(ChangedLocationsLock);
+											ChangedLocations[_Repo.m_Location];
+										}
+
 										CStr RelativePath = CFile::fs_MakePathRelative(_Repo.m_Location, BaseDir);
 										if (RelativePath.f_StartsWith("Binaries/Malterlib/"))
 											bBinariesChange.f_Exchange(true);
@@ -4836,6 +4907,15 @@ namespace NMib::NBuildSystem
 
 			if (bChanged.f_Load())
 				break;
+		}
+
+		if (!ChangedLocations.f_IsEmpty() && fp_LfsDedupEnabled())
+		{
+			TCFutureVector<void> DedupResults;
+			for (auto &Location : ChangedLocations)
+				fg_DeduplicateLfsFiles(Launches, Location, fg_RelativeToBase(Location, BaseDir)) > DedupResults;
+
+			co_await fg_AllDone(DedupResults);
 		}
 
 		StateHandler.f_OutputBranchSwitchSummary(MaxRepoWidth);

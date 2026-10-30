@@ -12,6 +12,7 @@ namespace NMib::NBuildSystem
 	extern CPropertyKeyReference const gc_ConstKey_MalterlibRepositoryEditorSequential;
 	extern CPropertyKeyReference const gc_ConstKey_MalterlibStrictUserSettings;
 	extern CPropertyKeyReference const gc_ConstKey_MalterlibDisableGlobalUserSettings;
+	extern CPropertyKeyReference const gc_ConstKey_MalterlibRepositoryLfsDedup;
 	extern CPropertyKeyReference const gc_ConstKey_MalterlibRepositoryEditorSleep;
 	extern CPropertyKeyReference const gc_ConstKey_MalterlibRepositoryEditorWorkingDir;
 	extern CPropertyKeyReference const gc_ConstKey_PerforceRoot;

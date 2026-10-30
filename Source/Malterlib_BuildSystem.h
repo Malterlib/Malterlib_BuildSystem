@@ -1160,6 +1160,7 @@ namespace NMib::NBuildSystem
 		NConcurrency::TCUnsafeFuture<ERetry> fp_HandleRepositories(NContainer::TCMap<CPropertyKey, NEncoding::CEJsonSorted> const &_Values);
 		void fp_SetBaseBranch(NStr::CStr const &_Branch, NStr::CStr const &_BaseBranch);
 		void fp_CheckStrictUserSettings();
+		bool fp_LfsDedupEnabled();
 		NConcurrency::TCUnsafeFuture<ERetry> fp_BranchRootRepo(CGenerateEphemeralState &_GenerateState, NStorage::TCOptional<NStr::CStr> const &_Branch, ERepoBranchFlag _Flags);
 		NConcurrency::TCUnsafeFuture<ERetry> fp_ForceBranchRepos(CRepoFilter const &_Filter, NStorage::TCOptional<NStr::CStr> const &_Branch, ERepoBranchFlag _Flags);
 

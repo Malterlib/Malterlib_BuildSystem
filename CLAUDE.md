@@ -298,6 +298,9 @@ The BuildSystem includes integrated repository management:
 - `./mib list-repos [--json]` lists the repositories the checkout defines, the root included, with the `.MRepo` file, the key
   as it is written there and the commit that pin each; it updates nothing. `Binary` is whether a repository keeps its files
   in the LFS release store, whose files a review can't read, not whether it holds binaries.
+- After `update-repos`, the LFS files of the repositories it changed become reflinks of the LFS storage (`git lfs dedup`), on
+  filesystems that support them; `MalterlibRepositoryLfsDedup false` turns it off. Dedup clones every LFS file again, which
+  makes git rehash them, so repositories the update didn't change are left alone.
 - `./mib push` plans every push, from the heads that `ls-remote` reports where each push goes, the remote's push URLs, which
   have to agree, and checks the whole plan before it pushes anything. A forced push of a default branch leases on, and tags, the head it overwrites, which has to be the commit
   the parent's default branch on origin pins; other branches lease on the head last fetched. `--pretend --json` prints the

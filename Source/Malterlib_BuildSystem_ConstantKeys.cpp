@@ -13,6 +13,7 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_MalterlibRepositoryEditorSequential(EPropertyType_Property, gc_Str<"MalterlibRepositoryEditorSequential">);
 	constexpr CPropertyKeyReference const gc_ConstKey_MalterlibStrictUserSettings(EPropertyType_Property, gc_Str<"MalterlibStrictUserSettings">);
 	constexpr CPropertyKeyReference const gc_ConstKey_MalterlibDisableGlobalUserSettings(EPropertyType_Property, gc_Str<"MalterlibDisableGlobalUserSettings">);
+	constexpr CPropertyKeyReference const gc_ConstKey_MalterlibRepositoryLfsDedup(EPropertyType_Property, gc_Str<"MalterlibRepositoryLfsDedup">);
 	constexpr CPropertyKeyReference const gc_ConstKey_MalterlibRepositoryEditorSleep(EPropertyType_Property, gc_Str<"MalterlibRepositoryEditorSleep">);
 	constexpr CPropertyKeyReference const gc_ConstKey_MalterlibRepositoryEditorWorkingDir(EPropertyType_Property, gc_Str<"MalterlibRepositoryEditorWorkingDir">);
 	constexpr CPropertyKeyReference const gc_ConstKey_PerforceRoot(EPropertyType_Property, gc_Str<"PerforceRoot">);
@@ -284,6 +285,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_MalterlibRepositoryEditorSequential);
 		o_StringCache.f_AddConstantString(gc_ConstKey_MalterlibStrictUserSettings);
 		o_StringCache.f_AddConstantString(gc_ConstKey_MalterlibDisableGlobalUserSettings);
+		o_StringCache.f_AddConstantString(gc_ConstKey_MalterlibRepositoryLfsDedup);
 		o_StringCache.f_AddConstantString(gc_ConstKey_MalterlibRepositoryEditorSleep);
 		o_StringCache.f_AddConstantString(gc_ConstKey_MalterlibRepositoryEditorWorkingDir);
 		o_StringCache.f_AddConstantString(gc_ConstKey_PerforceRoot);
