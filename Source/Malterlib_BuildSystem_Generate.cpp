@@ -253,6 +253,20 @@ namespace NMib::NBuildSystem
 			}
 		}
 
+		// From the environment, not a property: the settings files would otherwise decide whether one of them is read. The live
+		// environment decides even with a cached one, and the build files see the same value, from before the dependency check
+		// so that a change regenerates.
+		if (auto *pDisableGlobal = GenerateSettings.m_Environment.f_FindEqual("MalterlibDisableGlobalUserSettings"))
+		{
+			mp_bDisableGlobalUserSettings = *pDisableGlobal == "true";
+			mp_Environment["MalterlibDisableGlobalUserSettings"] = *pDisableGlobal;
+		}
+		else
+			mp_Environment.f_Remove("MalterlibDisableGlobalUserSettings");
+
+		// A dependency of the generation even where no build file reads it
+		fp_UsedExternal(gc_ConstKey_MalterlibDisableGlobalUserSettings);
+
 		if (_fPreParse && co_await _fPreParse())
 			co_return ERetry_None;
 
@@ -406,7 +420,7 @@ namespace NMib::NBuildSystem
 			{
 				if (!_GenerateState.m_bDisableUserSettings)
 				{
-					if (CFile::fs_FileExists(UserSettingsFileNameGlobal))
+					if (!mp_bDisableGlobalUserSettings && CFile::fs_FileExists(UserSettingsFileNameGlobal))
 					{
 						CBuildSystemPreprocessor Preprocessor(mp_UserSettingsGlobal.m_Registry, mp_SourceFiles, mp_FindCache, PreprocessorEnvironment, mp_StringCache);
 						Preprocessor.f_ReadFile(UserSettingsFileNameGlobal);
@@ -433,7 +447,8 @@ namespace NMib::NBuildSystem
 				if (!_GenerateState.m_bDisableUserSettings)
 				{
 					mp_SourceFiles[UserSettingsFileNameLocal];
-					mp_SourceFiles[UserSettingsFileNameGlobal];
+					if (!mp_bDisableGlobalUserSettings)
+						mp_SourceFiles[UserSettingsFileNameGlobal];
 				}
 
 				mp_SourceFiles[_GenerateState.m_EnvironmentStateFile];
@@ -503,7 +518,45 @@ namespace NMib::NBuildSystem
 				co_return Retry;
 		}
 
+		// Only once nothing is left to update: a setting can be declared in a repository that update-repos hasn't cloned yet
+		fp_CheckStrictUserSettings();
+
 		co_return ERetry_None;
+	}
+
+	// MalterlibStrictUserSettings makes every property that the local UserSettings.MSettings sets one the build system declares,
+	// so that a misspelled or removed setting isn't silently ignored. Deliberately only the root's properties, where user
+	// settings are: one set inside an entity, such as a %Target, would need the declarations that entity inherits.
+	void CBuildSystem::fp_CheckStrictUserSettings()
+	{
+		auto &RootData = mp_Data.m_RootEntity.f_Data();
+
+		// Build systems that don't import Core's settings don't declare the setting
+		if (mp_UserSettingsFileLocal.f_IsEmpty() || !RootData.m_VariableDefinitions.f_FindEqual(gc_ConstKey_MalterlibStrictUserSettings))
+			return;
+
+		if (!f_EvaluateEntityPropertyBool(mp_Data.m_RootEntity, gc_ConstKey_MalterlibStrictUserSettings, false))
+			return;
+
+		TCVector<CStr> Undeclared;
+		for (auto &Properties : RootData.m_Properties)
+		{
+			auto &PropertyKey = RootData.m_Properties.fs_GetKey(Properties);
+			if (mp_BuiltinVariablesDefinitions.f_FindEqual(PropertyKey) || RootData.m_VariableDefinitions.f_FindEqual(PropertyKey))
+				continue;
+
+			for (auto &Property : Properties)
+			{
+				if (!Property.m_pRegistry || Property.m_pRegistry->f_GetLocation().m_File != mp_UserSettingsFileLocal)
+					continue;
+
+				auto &Location = Property.m_pRegistry->f_GetLocation();
+				Undeclared.f_Insert("{}:{}:{}: {} is not a setting the build system declares"_f << Location.m_File << Location.m_Line << Location.m_Column << PropertyKey);
+			}
+		}
+
+		if (!Undeclared.f_IsEmpty())
+			DMibError("MalterlibStrictUserSettings is set, and {} sets undeclared properties:\n{}"_f << mp_UserSettingsFileLocal << CStr::fs_Join(Undeclared, "\n"));
 	}
 
 	// A generation that stops, as when it is cancelled, has written files that no saved state lists, so the next generation
@@ -803,7 +856,7 @@ namespace NMib::NBuildSystem
 			if (mp_UserSettingsLocal.m_bChanged)
 				fSaveFile(mp_UserSettingsLocal.m_Registry, mp_UserSettingsFileLocal);
 
-			if (mp_UserSettingsGlobal.m_bChanged)
+			if (mp_UserSettingsGlobal.m_bChanged && !mp_bDisableGlobalUserSettings)
 				fSaveFile(mp_UserSettingsGlobal.m_Registry, mp_UserSettingsFileGlobal);
 		}
 

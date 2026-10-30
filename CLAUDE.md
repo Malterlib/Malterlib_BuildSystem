@@ -184,6 +184,13 @@ Property
 ```
 The lines after a declaration document what follows it.
 
+- `MalterlibStrictUserSettings true` in `UserSettings.MSettings` makes every command fail, naming each one, when that file
+  sets a property at its root that the build system doesn't declare. It is checked once nothing is left to update, since a repository that
+  isn't cloned yet can declare a setting.
+- `MalterlibDisableGlobalUserSettings=true` in the environment leaves out the global `UserSettingGlobalV2.MSettings` in the
+  home directory: it is neither read nor written, and `BuildSystem/UserSettingGlobal.MSettings` doesn't link to it. The home
+  directory on macOS doesn't come from `HOME`, so tests that read user settings set it.
+
 ### Built-in Functions
 
 The DSL provides numerous built-in functions for path manipulation, string operations, and more:

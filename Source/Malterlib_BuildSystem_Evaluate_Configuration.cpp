@@ -446,7 +446,8 @@ namespace NMib::NBuildSystem
 				auto &VariableKey = UserVariables.fs_GetKey(UserVariable);
 
 				fAddSettings(mp_UserSettingsLocal, VariableKey, UserVariable.m_Description, Section, UserVariable.m_DefaultValue);
-				fAddSettings(mp_UserSettingsGlobal, VariableKey, UserVariable.m_Description, Section, UserVariable.m_DefaultValue);
+				if (!mp_bDisableGlobalUserSettings)
+					fAddSettings(mp_UserSettingsGlobal, VariableKey, UserVariable.m_Description, Section, UserVariable.m_DefaultValue);
 			}
 		}
 

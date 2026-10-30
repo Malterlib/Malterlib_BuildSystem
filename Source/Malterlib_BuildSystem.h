@@ -1159,6 +1159,7 @@ namespace NMib::NBuildSystem
 
 		NConcurrency::TCUnsafeFuture<ERetry> fp_HandleRepositories(NContainer::TCMap<CPropertyKey, NEncoding::CEJsonSorted> const &_Values);
 		void fp_SetBaseBranch(NStr::CStr const &_Branch, NStr::CStr const &_BaseBranch);
+		void fp_CheckStrictUserSettings();
 		NConcurrency::TCUnsafeFuture<ERetry> fp_BranchRootRepo(CGenerateEphemeralState &_GenerateState, NStorage::TCOptional<NStr::CStr> const &_Branch, ERepoBranchFlag _Flags);
 		NConcurrency::TCUnsafeFuture<ERetry> fp_ForceBranchRepos(CRepoFilter const &_Filter, NStorage::TCOptional<NStr::CStr> const &_Branch, ERepoBranchFlag _Flags);
 
@@ -1252,6 +1253,7 @@ namespace NMib::NBuildSystem
 
 		NStr::CStr mp_UserSettingsFileLocal;
 		NStr::CStr mp_UserSettingsFileGlobal;
+		bool mp_bDisableGlobalUserSettings = false; // From MalterlibDisableGlobalUserSettings in the environment
 		NEncoding::CEJsonSorted mp_FileLocationFile;
 		NEncoding::CEJsonSorted mp_GeneratorStateFileName;
 		NEncoding::CEJsonSorted mp_MToolExe;
