@@ -12,6 +12,8 @@ namespace NMib::NBuildSystem::NNinja
 
 	extern int64 g_CooperativeTimeSliceCycles;
 
+	void fg_EscapeEnvironmentValue(CStr::CAppender &_Appender, CStr const &_Value);
+
 	struct CRule
 	{
 		auto operator <=> (CRule const &_Right) const noexcept = default;

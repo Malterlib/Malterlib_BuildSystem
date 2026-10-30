@@ -24,6 +24,45 @@ namespace NMib::NBuildSystem::NNinja
 				for (auto &Entry : Value.f_Object())
 					Return.m_Environment[Entry.f_Name()] = Entry.f_Value().f_String();
 			}
+			else if (Name == gc_Str<"override_environment">.m_Str)
+			{
+				// Ninja's environment block: the variables it copies from its own environment by name, then the ones it sets
+				TCSet<CStr> Copied;
+				CStr Block;
+				{
+					CStr::CAppender Appender(Block);
+					bool bFirst = true;
+					auto fNextLine = [&]
+						{
+							if (!bFirst)
+								Appender += "\n";
+							bFirst = false;
+						}
+					;
+
+					for (auto &Copy : Value[gc_Str<"Copy">.m_Str].f_Array())
+					{
+						if (!Copied(Copy.f_String()).f_WasCreated())
+							continue;
+
+						fNextLine();
+						Appender += Copy.f_String();
+					}
+
+					for (auto &Entry : Value[gc_Str<"Set">.m_Str].f_Object())
+					{
+						if (Copied.f_FindEqual(Entry.f_Name()))
+							continue;
+
+						fNextLine();
+						Appender += Entry.f_Name();
+						Appender += '=';
+						fg_EscapeEnvironmentValue(Appender, Entry.f_Value().f_String());
+					}
+				}
+
+				Return.m_OtherProperties[Name] = Block;
+			}
 			else
 			{
 				if (Value.f_IsBoolean())

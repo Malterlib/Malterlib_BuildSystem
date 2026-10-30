@@ -16,25 +16,6 @@ namespace NMib::NBuildSystem::NNinja
 			return _Type == gc_Str<"C++">.m_Str || _Type == gc_Str<"C">.m_Str || _Type == gc_Str<"ObjC">.m_Str || _Type == gc_Str<"ObjC++">.m_Str;
 		}
 
-		// Escape an environment variable value for ninja's environment block format.
-		// In this format: \ becomes \\, and newline becomes \n (backslash-n literal)
-		void fg_EscapeEnvironmentValue(CStr::CAppender &_Appender, CStr const &_Value)
-		{
-			auto *pParse = _Value.f_GetStr();
-			while (*pParse)
-			{
-				auto Char = *pParse;
-				if (Char == '\\')
-					_Appender += "\\\\";
-				else if (Char == '\n')
-					_Appender += "\\n";
-				else
-					_Appender += Char;
-
-				++pParse;
-			}
-		}
-
 		// Parse ninja raw command format (command_raw = true):
 		// - Arguments are split by whitespace
 		// - Strings can be quoted with " or '
@@ -107,6 +88,25 @@ namespace NMib::NBuildSystem::NNinja
 			}
 
 			return Args;
+		}
+	}
+
+	// Escape an environment variable value for ninja's environment block format.
+	// In this format: \ becomes \\, and newline becomes \n (backslash-n literal)
+	void fg_EscapeEnvironmentValue(CStr::CAppender &_Appender, CStr const &_Value)
+	{
+		auto *pParse = _Value.f_GetStr();
+		while (*pParse)
+		{
+			auto Char = *pParse;
+			if (Char == '\\')
+				_Appender += "\\\\";
+			else if (Char == '\n')
+				_Appender += "\\n";
+			else
+				_Appender += Char;
+
+			++pParse;
 		}
 	}
 
@@ -600,7 +600,8 @@ namespace NMib::NBuildSystem::NNinja
 							fg_EscapeNinjaString(Appender, Rule.m_Command, false);
 							Appender += "\n  description = $malterlib_desc\n";
 
-							if (!Rule.m_Environment.f_IsEmpty())
+							// An override replaces the environment of the target too, and ninja refuses a rule with both
+							if (!Rule.m_Environment.f_IsEmpty() && !Rule.m_OtherProperties.f_FindEqual(gc_Str<"override_environment">.m_Str))
 							{
 								CStr Environment;
 								{
