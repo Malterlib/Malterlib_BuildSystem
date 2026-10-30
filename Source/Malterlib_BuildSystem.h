@@ -146,6 +146,7 @@ namespace NMib::NBuildSystem
 			, ERepoPushFlag_NonDefaultToAll = DMibBit(2)
 			, ERepoPushFlag_Force = DMibBit(3)
 			, ERepoPushFlag_PushPulls = DMibBit(4)
+			, ERepoPushFlag_Json = DMibBit(5)
 		};
 
 		enum ERepoCommitFlag
@@ -587,6 +588,7 @@ namespace NMib::NBuildSystem
 				, CRepoFilter const &_Filter
 				, NContainer::TCVector<NStr::CStr> const &_Remotes
 				, ERepoPushFlag _PushFlags
+				, NStorage::TCSharedPointer<NConcurrency::CCommandLineControl> const &_pCommandLine
 			)
 		;
 
