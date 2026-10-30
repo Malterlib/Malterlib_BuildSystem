@@ -26,6 +26,15 @@ namespace NMib::NBuildSystem
 	void CGenerateOptions::f_ParseReconcileActions(NEncoding::CEJsonSorted const &_Params)
 	{
 		m_bReconcileForce = _Params[gc_ConstString_ReconcileForce].f_Boolean();
+
+		if (auto *pValue = _Params.f_GetMember("VerifyHook"))
+		{
+			m_VerifyHook = pValue->f_String();
+			if (m_VerifyHook.f_IsEmpty())
+				DMibError("--verify-hook requires a nonempty command");
+
+			m_pVerifyHookBatch = fg_Construct();
+		}
 		m_bReconcileNoOptions = _Params[gc_ConstString_ReconcileNoOptions].f_Boolean();
 
 		if (auto *pValue = _Params.f_GetMember(gc_ConstString_ApplyRepoPolicy))

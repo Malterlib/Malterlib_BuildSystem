@@ -65,6 +65,8 @@ namespace NMib::NBuildSystem
 		NContainer::TCMap<NStr::CStr, EHandleRepositoryRemovedAction> m_ReconcileRemovedActions;
 		CBuildSystemLockSettings m_LockSettings;
 		NStorage::TCOptional<NStr::CStr> m_BaseBranch; // From --base-branch, overriding the base in .malterlib-base for one run
+		NStr::CStr m_VerifyHook; // The command update-repos runs on each batch of changes before writing them; only from the command line
+		NStorage::TCSharedPointer<NAtomic::TCAtomic<uint32>> m_pVerifyHookBatch; // The last batch number, shared by the passes of a run
 		EDetailedPositions m_DetailedPositions = EDetailedPositions_OnDemand;
 		uint32 m_GitFetchTimeout = 5;
 		bool m_bReconcileForce = false;

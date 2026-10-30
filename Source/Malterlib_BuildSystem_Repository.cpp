@@ -794,6 +794,7 @@ namespace NMib::NBuildSystem
 				, umint _MaxRepoWidth
 				, CMainRepoInfo const &_MainRepoInfo
 				, bool _bStash
+				, CVerifyHookRepository &o_VerifyHook
 			)
 		{
 			co_await ECoroutineFlag_CaptureMalterlibExceptions;
@@ -811,14 +812,27 @@ namespace NMib::NBuildSystem
 
 			bool bChanged = false;
 
+			bool bVerifyHook = !!o_VerifyHook.m_pLevel;
+
 			auto fLaunchGit = [&](TCVector<CStr> const &_Params, CStr const &_WorkingDir, TCMap<CStr, CStr> const &_Environment = {}) -> TCUnsafeFuture<CStr>
 				{
 					co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
-					TCVector<CStr> CommandLineParams{"-C", _WorkingDir};
+					TCVector<CStr> CommandLineParams;
+
+					// A recursive checkout would write submodules before their own batch has been verified
+					if (bVerifyHook)
+						CommandLineParams.f_Insert({"-c", "submodule.recurse=false"});
 					CommandLineParams.f_Insert(_Params);
 
-					auto Return = co_await _Launches.f_Launch(_WorkingDir, _Params, _Environment, CProcessLaunchActor::ESimpleLaunchFlag_GenerateExceptionOnNonZeroExitCode);
+					auto Return = co_await _Launches.f_Launch
+						(
+							_WorkingDir
+							, CommandLineParams
+							, _Environment
+							, CProcessLaunchActor::ESimpleLaunchFlag_GenerateExceptionOnNonZeroExitCode
+						)
+					;
 					co_return Return.f_GetStdOut();
 				}
 			;
@@ -954,9 +968,20 @@ namespace NMib::NBuildSystem
 				}
 			;
 
-			auto fFetchIfCommitMissing = [&](CStr const &_Hash, CStr const &_RepoDir, TCVector<CStr> _ExtraFetchParams = {}) -> TCUnsafeFuture<void>
+			auto fFetchIfCommitMissing = [&]
+				(
+					CStr const &_Hash
+					, CStr const &_RepoDir
+					, TCVector<CStr> _ExtraFetchParams = {}
+					, TCMap<CStr, CStr> _ExtraEnvironment = {}
+				)
+				-> TCUnsafeFuture<void>
 				{
 					co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+					auto FetchEnvironment = fg_FetchEnvironment(_BuildSystem);
+					for (auto &Value : _ExtraEnvironment)
+						FetchEnvironment[_ExtraEnvironment.fs_GetKey(Value)] = Value;
 
 					if (_Hash.f_IsEmpty() || co_await fLaunchGitQuestion({"cat-file", "-e", "{}^{{commit}"_f << _Hash}, _RepoDir, false))
 						co_return {};
@@ -966,12 +991,12 @@ namespace NMib::NBuildSystem
 						FetchParams.f_Insert("--force");
 					FetchParams.f_Insert(_ExtraFetchParams);
 
-					auto FetchResult = co_await fLaunchGit(FetchParams, _RepoDir, fg_FetchEnvironment(_BuildSystem)).f_Wrap();
+					auto FetchResult = co_await fLaunchGit(FetchParams, _RepoDir, FetchEnvironment).f_Wrap();
 
 					// A commit on no branch, such as one only a fork has, which GitHub serves through the parent by its full hash. The
 					// checkout follows in this run, so the commit needs no ref of its own.
 					if (!(co_await fLaunchGitQuestion({"cat-file", "-e", "{}^{{commit}"_f << _Hash}, _RepoDir, false)))
-						co_await fg_FetchCommitByHash(_Launches, _RepoDir, _Hash, fg_FetchEnvironment(_BuildSystem));
+						co_await fg_FetchCommitByHash(_Launches, _RepoDir, _Hash, FetchEnvironment);
 
 					if (!FetchResult)
 					{
@@ -992,6 +1017,464 @@ namespace NMib::NBuildSystem
 					co_return {};
 				}
 			;
+
+			// A clone, worktree or submodule that mib creates without a checkout is marked in its git directory until a checkout
+			// writes its index. A checkout that only lost its index, or that has untracked files, can't be told apart by its files.
+			// A full hash as a commit object: a branch or tag that is named like a hash would otherwise be resolved in its place
+			auto fCommitObject = [](CStr const &_Hash) -> CStr
+				{
+					return fg_IsFullCommitHash(_Hash) ? CStr(_Hash + "^{commit}") : _Hash;
+				}
+			;
+			auto fMarkPendingCheckout = [&](CStr const &_Location)
+				{
+					CFile::fs_WriteStringToFile(fg_GetGitDataDir(_Location, CFilePosition{}) / "MalterlibPendingCheckout", "", false);
+				}
+			;
+			auto fIsCheckedOut = [&](CStr const &_Location) -> bool
+				{
+					CStr DataDir = fg_GetGitDataDir(_Location, CFilePosition{});
+					return !CFile::fs_FileExists(DataDir / "MalterlibPendingCheckout") || CFile::fs_FileExists(DataDir / "index");
+				}
+			;
+
+			// With --verify-hook, waits for the hook to allow checking out _To where _From is on disk, empty for a working tree
+			// that doesn't exist yet. A repository goes through the hook once per pass, so every later checkout has to be of the
+			// commit the hook allowed.
+			auto fVerify = [&](CStr const &_From, CStr const &_To) -> TCUnsafeFuture<void>
+				{
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+					if (!bVerifyHook)
+						co_return {};
+
+					if (!o_VerifyHook.m_VerifiedTo.f_IsEmpty())
+					{
+						if (o_VerifyHook.m_VerifiedTo == _To)
+							co_return {};
+
+						co_return DMibErrorInstance("Would check out {} after the verify hook allowed {}"_f << _To << o_VerifyHook.m_VerifiedTo);
+					}
+
+					// A working tree that was never checked out, such as a clone of a refused batch, has none of its HEAD's files
+					CStr From = fIsCheckedOut(Location) ? _From : CStr();
+					if (From == _To)
+						co_return {};
+
+					// A pin such as a branch name resolves again when it is checked out, to what the hook may not have seen
+					// As long as the repository's object IDs: a name of the other length is a ref, which can move. Git before 2.29 doesn't
+					// know --show-object-format, and its repositories are SHA-1.
+					auto ObjectFormatResult = co_await _Launches.f_Launch
+						(
+							Location
+							, {"rev-parse", "--show-object-format"}
+							, {}
+							, CProcessLaunchActor::ESimpleLaunchFlag_None
+						)
+					;
+					umint ObjectIdLength = ObjectFormatResult.m_ExitCode == 0 && ObjectFormatResult.f_GetStdOut().f_Trim() == "sha256" ? 64 : 40;
+					if (!fg_IsFullCommitHash(_To) || _To.f_GetLen() != ObjectIdLength)
+					{
+						fOutputInfo(EOutputType_Error, "'{}' isn't a full commit hash, so it can't be verified with --verify-hook"_f << _To);
+						co_return DMibErrorInstance("'{}' isn't a full commit hash, so it can't be verified with --verify-hook"_f << _To);
+					}
+
+					// The hook can only look at what the repository has, and a clone has only what its refs advertised
+					co_await fFetchIfCommitMissing(_To, Location);
+
+					auto PinLocation = fg_GetRepositoryPinLocation(_Repo, _AllRepositories, o_StateHandler, BaseDir);
+
+					CVerifyHookEntry Entry;
+					Entry.m_Path = fg_RelativeToBase(Location, BaseDir);
+					Entry.m_Url = _Repo.m_OriginProperties.m_URL;
+					Entry.m_From = From;
+					Entry.m_To = _To;
+					Entry.m_Parent = PinLocation.m_Parent;
+					Entry.m_ConfigFile = PinLocation.m_ConfigFile;
+					Entry.m_ConfigKey = PinLocation.m_ConfigKey;
+					Entry.m_bNew = From.f_IsEmpty();
+
+					TCVector<CVerifyHookEntry> Entries;
+					Entries.f_Insert(fg_Move(Entry));
+					co_await o_VerifyHook.f_Verify(CVerifyHookLevel::EPhase_Repositories, fg_Move(Entries));
+
+					o_VerifyHook.m_VerifiedTo = _To;
+
+					co_return {};
+				}
+			;
+
+			// Runs the post-checkout hook of a checkout that ran without it, as git would have. git hook run came in git 2.36. Before
+			// it, a checkout of what is checked out runs the hook without changing files, with HEAD as both the previous and new.
+			auto fRunPostCheckout = [&](CStr const &_Previous, CStr const &_New) -> TCUnsafeFuture<void>
+				{
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+					if (co_await fg_GetGitVersion(_Launches) >= CGitVersion{2, 36})
+					{
+						co_await fLaunchGit({"hook", "run", "--ignore-missing", "post-checkout", "--", _Previous, _New, "1"}, Location);
+						co_return {};
+					}
+
+					auto BranchResult = co_await _Launches.f_Launch
+						(
+							Location
+							, {"symbolic-ref", "-q", "--short", "HEAD"}
+							, {}
+							, CProcessLaunchActor::ESimpleLaunchFlag_None
+						)
+					;
+					if (BranchResult.m_ExitCode == 0)
+						co_await fLaunchGit({"checkout", "-q", BranchResult.f_GetStdOut().f_Trim()}, Location);
+					else
+						co_await fLaunchGit({"checkout", "-q", "--detach", fCommitObject(_New)}, Location);
+
+					co_return {};
+				}
+			;
+
+			// Checks out a branch at the commit the hook allowed: the hook can run for long, while something else moves the branch
+			auto fCheckoutVerifiedBranch = [&](CStr const &_Branch, CStr const &_Verified) -> TCUnsafeFuture<void>
+				{
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+					if (!bVerifyHook)
+					{
+						co_await fLaunchGit({"checkout", _Branch}, Location);
+						co_return {};
+					}
+
+					auto fRevParse = [&](CStr const &_Ref) -> TCUnsafeFuture<CStr>
+						{
+							co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+							auto Result = co_await _Launches.f_Launch
+								(
+									Location
+									, {"rev-parse", "--verify", "--quiet", "{}^{{commit}}"_f << _Ref}
+									, {}
+									, CProcessLaunchActor::ESimpleLaunchFlag_None
+								)
+							;
+							co_return Result.m_ExitCode == 0 ? Result.f_GetStdOut().f_Trim() : CStr();
+						}
+					;
+
+					// A branch that only origin has is created from its remote-tracking branch
+					CStr LocalHash = co_await fRevParse("refs/heads/{}"_f << _Branch);
+					CStr BranchHash = LocalHash.f_IsEmpty() ? co_await fRevParse("refs/remotes/origin/{}"_f << _Branch) : LocalHash;
+					if (BranchHash != _Verified)
+						co_return DMibErrorInstance("Branch '{}' moved to {} while the verify hook allowed {}"_f << _Branch << BranchHash << _Verified);
+
+					// git checkout refuses a branch that another worktree has checked out, which attaching HEAD directly doesn't
+					{
+						CStr WorktreePath;
+						for (auto &Line : (co_await fLaunchGit({"worktree", "list", "--porcelain"}, Location)).f_SplitLine<true>())
+						{
+							if (Line.f_StartsWith("worktree "))
+								WorktreePath = Line.f_Extract(9);
+							else if (Line == CStr("branch refs/heads/" + _Branch) && !fg_AreGitPathsSame(WorktreePath, Location))
+								co_return DMibErrorInstance("Branch '{}' is already checked out in the worktree at {}"_f << _Branch << WorktreePath);
+						}
+					}
+
+					// The files come from the commit the hook allowed, not from the branch name, which resolves again. The branch is then
+					// attached only if it is still at that commit, which update-ref checks atomically.
+					// The post-checkout hook runs once the branch is attached, as it would for a checkout of the branch
+					CStr PreviousHead = (co_await fLaunchGit({"rev-parse", "HEAD"}, Location)).f_Trim();
+					co_await fLaunchGit({"-c", "core.hooksPath=/dev/null", "checkout", "-q", "--detach", fCommitObject(_Verified)}, Location);
+					if (LocalHash.f_IsEmpty())
+					{
+						co_await fLaunchGit({"branch", _Branch, fCommitObject(_Verified)}, Location);
+						co_await fLaunchGit({"branch", "-q", "--set-upstream-to=origin/{}"_f << _Branch, _Branch}, Location);
+					}
+					else
+						co_await fLaunchGit({"update-ref", "refs/heads/{}"_f << _Branch, fCommitObject(_Verified), fCommitObject(_Verified)}, Location);
+					co_await fLaunchGit({"symbolic-ref", "HEAD", "refs/heads/{}"_f << _Branch}, Location);
+					co_await fRunPostCheckout(PreviousHead, _Verified);
+
+					co_return {};
+				}
+			;
+
+			auto fRefuseUnverifiable = [&](CStr const &_What) -> CExceptionPointer
+				{
+					fOutputInfo(EOutputType_Error, "{} can't be verified, so it isn't done with --verify-hook"_f << _What);
+					return DMibErrorInstance("{} can't be verified, so it isn't done with --verify-hook"_f << _What);
+				}
+			;
+
+			// With --verify-hook, the submodules' commits are fetched, and new submodules cloned without a checkout, then the
+			// level's submodules go through the hook as a batch of their own before anything is checked out. Returns whether a
+			// submodule was checked out.
+			auto fUpdateSubmodules = [&](CStr const &_Location) -> TCUnsafeFuture<bool>
+				{
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+					if (!bVerifyHook)
+					{
+						co_await fLaunchGit({"submodule", "update", "--init"}, _Location);
+						co_return true;
+					}
+
+					co_await fLaunchGit({"submodule", "init"}, _Location);
+
+					struct CSubmoduleCheckout
+					{
+						CStr m_Location;
+						CStr m_Commit;
+						bool m_bNew = false;
+					};
+
+					TCVector<CVerifyHookEntry> Entries;
+					TCVector<CSubmoduleCheckout> Checkouts;
+
+					// Git's rules for the submodules that git submodule update checks out: submodule.<name>.active, else the
+					// submodule.active pathspecs, else a registered URL
+					auto fIsSubmoduleActive = [&](CStr const &_Name, CStr const &_Path) -> TCUnsafeFuture<bool>
+						{
+							co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+							auto fConfig = [&](TCVector<CStr> const &_Params) -> TCUnsafeFuture<CProcessLaunchActor::CSimpleLaunchResult>
+								{
+									co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+									TCVector<CStr> Params{"config"};
+									Params.f_Insert(_Params);
+									co_return co_await _Launches.f_Launch(_Location, Params, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
+								}
+							;
+
+							auto ActiveResult = co_await fConfig({"--type=bool", "--get", "submodule.{}.active"_f << _Name});
+							if (ActiveResult.m_ExitCode == 0)
+								co_return ActiveResult.f_GetStdOut().f_Trim() == "true";
+
+							auto PathspecsResult = co_await fConfig({"--get-all", "submodule.active"});
+							if (PathspecsResult.m_ExitCode == 0)
+							{
+								TCVector<CStr> Params{"-c", "core.quotePath=false", "ls-files", "--"};
+								Params.f_Insert(PathspecsResult.f_GetStdOut().f_SplitLine<true>());
+								auto Matched = co_await fLaunchGit(Params, _Location);
+								for (auto &Line : Matched.f_SplitLine<true>())
+								{
+									if (fg_UnquoteGitPath(Line) == _Path)
+										co_return true;
+								}
+
+								co_return false;
+							}
+
+							auto UrlResult = co_await fConfig({"--get", "submodule.{}.url"_f << _Name});
+							co_return UrlResult.m_ExitCode == 0;
+						}
+					;
+
+					// As git reads it: from the working tree, or from the index in a sparse checkout that leaves the file out
+					TCVector<CStr> GitModules{"config", "-f", ".gitmodules"};
+					if (!CFile::fs_FileExists(_Location / ".gitmodules", EFileAttrib_File))
+						GitModules = {"config", "--blob", ":.gitmodules"};
+
+					// Keys only, one a line, and each path on its own, as names and paths of submodules can have spaces
+					TCVector<CStr> KeysParams = GitModules;
+					KeysParams.f_Insert({"--name-only", "--get-regexp", "^submodule\\..*\\.path$"});
+					auto KeysResult = co_await _Launches.f_Launch(_Location, KeysParams, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
+
+					for (auto &Key : KeysResult.f_GetStdOut().f_SplitLine<true>())
+					{
+						CStr Name = Key.f_RemovePrefix("submodule.").f_RemoveSuffix(".path");
+						TCVector<CStr> PathParams = GitModules;
+						PathParams.f_Insert({"--get", Key});
+						// Only the newline that ends git's output: a path can end with one of its own
+						CStr Path = co_await fLaunchGit(PathParams, _Location);
+						if (Path.f_EndsWith("\n"))
+							Path = Path.f_Left(Path.f_GetLen() - 1);
+						if (Name.f_IsEmpty() || Path.f_IsEmpty())
+							co_return DMibErrorInstance("Failed to parse the submodule entry '{}' of .gitmodules"_f << Key);
+
+						if (!(co_await fIsSubmoduleActive(Name, Path)))
+							continue;
+
+						auto UrlResult = co_await _Launches.f_Launch
+							(
+								_Location
+								, {"config", "--get", "submodule.{}.url"_f << Name}
+								, {}
+								, CProcessLaunchActor::ESimpleLaunchFlag_None
+							)
+						;
+						if (UrlResult.m_ExitCode == 1)
+							continue;
+						if (UrlResult.m_ExitCode != 0)
+							co_return DMibErrorInstance("Failed to read the URL of submodule '{}': {}"_f << Name << UrlResult.f_GetCombinedOut().f_Trim());
+						CStr Url = UrlResult.f_GetStdOut().f_Trim();
+
+						// The index, as git submodule update checks out what it stages: "<mode> <hash> <stage>\t<path>"
+						CStr Staged = (co_await fLaunchGit({"--literal-pathspecs", "ls-files", "--stage", "--", Path}, _Location)).f_Trim();
+						if (Staged.f_IsEmpty())
+							continue;
+
+						CStr Mode;
+						CStr Commit;
+						CStr Stage;
+						aint nParsed = 0;
+						(CStr::CParse("{} {} {}\t") >> Mode >> Commit >> Stage).f_Parse(Staged, nParsed);
+						if (nParsed != 3 || Mode != "160000")
+							continue;
+						if (Stage != "0" || Staged.f_FindChar('\n') >= 0)
+							co_return DMibErrorInstance("Submodule '{}' has a merge conflict in the index"_f << Path);
+
+						CStr SubmoduleLocation = _Location / Path;
+
+						// As git submodule update refuses, a checkout through a symbolic link would change where the link leads,
+						// which the hook didn't see
+						{
+							CStr Component = _Location;
+							for (auto &Part : Path.f_Split("/"))
+							{
+								Component /= Part;
+								if (CFile::fs_FileExists(Component, EFileAttrib_Link))
+									co_return DMibErrorInstance("The path of submodule '{}' goes through the symbolic link {}"_f << Path << Component);
+							}
+						}
+
+						bool bExists = CFile::fs_FileExists(SubmoduleLocation / ".git", EFileAttrib_Directory | EFileAttrib_File);
+
+						CStr From;
+						if (bExists && fIsCheckedOut(SubmoduleLocation))
+							From = (co_await fLaunchGit({"rev-parse", "HEAD"}, SubmoduleLocation)).f_Trim();
+
+						if (From == Commit)
+							continue;
+
+						if (!bExists)
+						{
+							// Reconnecting the repository that git submodule deinit keeps isn't supported, which is deliberate: a
+							// clone over it fails, and git submodule update would check it out before the hook has seen it
+							CStr KeptGitDir = (co_await fLaunchGit({"rev-parse", "--path-format=absolute", "--git-path", "modules/{}"_f << Name}, _Location)).f_Trim();
+							if (CFile::fs_FileExists(KeptGitDir, EFileAttrib_Directory))
+							{
+								co_return DMibErrorInstance
+									(
+										"Submodule '{}' was deinitialized and its repository kept in {}. Initialize it with git submodule update --init, "
+										"or remove that directory, before updating with --verify-hook"_f
+										<< Path
+										<< KeptGitDir
+									)
+								;
+							}
+
+							if (CFile::fs_FileExists(SubmoduleLocation, EFileAttrib_Directory))
+							{
+								if (!CFile::fs_FindFiles(SubmoduleLocation + "/*").f_IsEmpty())
+									co_return DMibErrorInstance("The directory of submodule '{}' isn't empty"_f << Path);
+
+								CFile::fs_DeleteDirectory(SubmoduleLocation);
+							}
+
+							// As git submodule update clones it, under the transport restrictions for URLs that a repository chooses
+							auto CloneEnvironment = fg_FetchEnvironment(_BuildSystem);
+							CloneEnvironment["GIT_PROTOCOL_FROM_USER"] = "0";
+							co_await fLaunchGit({"clone", "--no-checkout", "--", Url, SubmoduleLocation}, _Location, CloneEnvironment);
+							co_await fLaunchGit({"submodule", "absorbgitdirs", "--", Path}, _Location);
+							fMarkPendingCheckout(SubmoduleLocation);
+						}
+
+						co_await fFetchIfCommitMissing(Commit, SubmoduleLocation, {}, {{"GIT_PROTOCOL_FROM_USER", "0"}});
+
+						Checkouts.f_Insert({SubmoduleLocation, Commit, From.f_IsEmpty()});
+
+						CVerifyHookEntry Entry;
+						Entry.m_Path = fg_RelativeToBase(SubmoduleLocation, BaseDir);
+						Entry.m_Url = Url;
+						Entry.m_From = From;
+						Entry.m_To = Commit;
+						Entry.m_Parent = fg_RelativeToBase(_Location, BaseDir);
+						Entry.m_bNew = From.f_IsEmpty();
+						Entry.m_bSubmodule = true;
+						Entries.f_Insert(fg_Move(Entry));
+					}
+
+					// A retry, such as of a clone's checkout, can only check out what the batch allowed
+					if (o_VerifyHook.m_iNextPhase > CVerifyHookLevel::EPhase_Submodules)
+					{
+						for (auto &Checkout : Checkouts)
+						{
+							auto *pVerified = o_VerifyHook.m_VerifiedSubmodules.f_FindEqual(Checkout.m_Location);
+							if (!pVerified || *pVerified != Checkout.m_Commit)
+							{
+								co_return DMibErrorInstance
+									(
+										"Would check out {} in submodule {} after the verify hook's submodule batch"_f
+										<< Checkout.m_Commit
+										<< fg_RelativeToBase(Checkout.m_Location, BaseDir)
+									)
+								;
+							}
+						}
+					}
+					else
+					{
+						co_await o_VerifyHook.f_Verify(CVerifyHookLevel::EPhase_Submodules, fg_Move(Entries));
+						for (auto &Checkout : Checkouts)
+							o_VerifyHook.m_VerifiedSubmodules[Checkout.m_Location] = Checkout.m_Commit;
+					}
+
+					// Exactly the commits the hook allowed, in checkout mode in place of a configured update mode, such as merge or
+					// rebase, which would make commits the hook never saw. A clone without a checkout is at its commit already, so
+					// its files are only written by a forced checkout.
+					for (auto &Checkout : Checkouts)
+					{
+						if (Checkout.m_bNew)
+						{
+							co_await fLaunchGit({"checkout", "-q", "-f", "--detach", fCommitObject(Checkout.m_Commit)}, Checkout.m_Location);
+							CFile::fs_DeleteFile(fg_GetGitDataDir(Checkout.m_Location, CFilePosition{}) / "MalterlibPendingCheckout");
+						}
+						else
+							co_await fLaunchGit({"checkout", "-q", "--detach", fCommitObject(Checkout.m_Commit)}, Checkout.m_Location);
+					}
+
+					co_return !Checkouts.f_IsEmpty();
+				}
+			;
+
+			// With --verify-hook, the worktree is added without a checkout, which follows once the hook has allowed its commit
+			auto fWorktreeAdd = [&](TCVector<CStr> _Params, CStr const &_MainSubRepoPath) -> TCUnsafeFuture<void>
+				{
+					co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+					if (!bVerifyHook)
+					{
+						co_await fLaunchGit(_Params, _MainSubRepoPath);
+						co_return {};
+					}
+
+					_Params.f_InsertAfter(1, "--no-checkout");
+					co_await fLaunchGit(_Params, _MainSubRepoPath);
+					fMarkPendingCheckout(Location);
+
+					CStr Head = (co_await fLaunchGit({"rev-parse", "HEAD"}, Location)).f_Trim();
+					co_await fVerify(CStr(), Head);
+
+					// The branch is shared with the main repository, where something else can move it while the hook runs
+					CStr HeadAfter = (co_await fLaunchGit({"rev-parse", "HEAD"}, Location)).f_Trim();
+					if (HeadAfter != Head)
+						co_return DMibErrorInstance("The worktree's HEAD moved to {} while the verify hook allowed {}"_f << HeadAfter << Head);
+
+					co_await fLaunchGit({"reset", "-q", "--hard", fCommitObject(Head)}, Location);
+
+					// The hook of the initial checkout, which git worktree add --no-checkout leaves out, from the null object ID
+					CStr NullObjectId;
+					for (umint iCharacter = 0; iCharacter < Head.f_GetLen(); ++iCharacter)
+						NullObjectId += "0";
+					co_await fRunPostCheckout(NullObjectId, Head);
+
+					co_return {};
+				}
+			;
+
+			// Without a pin, update-repos follows a branch, whose tip can move after the hook has seen it
+			if (bVerifyHook && !bIsRoot && ConfigHash.f_IsEmpty())
+				co_return fRefuseUnverifiable("Following {} without a pin in {}"_f << RepositoryIdentifier << _Repo.m_ConfigFile);
 
 			auto fGetStashPrefixForBranch = [&](CStr const &_Branch) -> CStr
 				{
@@ -1801,7 +2284,7 @@ namespace NMib::NBuildSystem
 								co_await fTryLaunchGit({"config", "--local", "--unset-all", "branch.{}.merge"_f << _CloneExpectedBranch}, Location);
 
 								if (_Repo.m_bUpdateSubmodules)
-									co_await fLaunchGit({"submodule", "update", "--init"}, Location);
+									co_await fUpdateSubmodules(Location);
 
 								if (_Repo.m_bBootstrapSource)
 									co_await _BuildSystem.f_SetupBootstrapMTool();
@@ -1984,6 +2467,7 @@ namespace NMib::NBuildSystem
 									CloneParams.f_Insert(fGetCloneConfigParams(_Repo.m_OriginProperties, gc_Str<"origin">.m_Str));
 									CloneParams.f_Insert({"-n", _Repo.m_OriginProperties.m_URL, Location});
 									co_await fLaunchGit(CloneParams, "");
+									fMarkPendingCheckout(Location);
 
 									if (_Repo.m_OriginProperties.m_bLfsReleaseStore)
 									{
@@ -2055,7 +2539,7 @@ namespace NMib::NBuildSystem
 								co_await fSetUpstreamTracking(_CloneExpectedBranch, Location);
 
 								if (_Repo.m_bUpdateSubmodules)
-									co_await fLaunchGit({"submodule", "update", "--init"}, Location);
+									co_await fUpdateSubmodules(Location);
 
 								if (_Repo.m_bBootstrapSource)
 									co_await _BuildSystem.f_SetupBootstrapMTool();
@@ -2205,6 +2689,12 @@ namespace NMib::NBuildSystem
 					// to surface immediately rather than silently kicking off a recovery path.
 					if (bForceReset)
 						co_return _pOriginalCloneError;
+
+					if (bVerifyHook)
+					{
+						fOutputInfo(EOutputType_Error, "Clone failed: {}"_f << NException::fg_ExceptionString(_pOriginalCloneError));
+						co_return fRefuseUnverifiable("Recovering from a missing origin");
+					}
 
 					EHandleRepositoryAction ResolvedAction = _ReconcileAction;
 					bool bExplicitRecovery =
@@ -2547,7 +3037,7 @@ namespace NMib::NBuildSystem
 											if (ExistingHash == ConfigHash)
 											{
 												// Already at the right commit, safe to use -B
-												co_await fLaunchGit({"worktree", "add", "-B", WorktreeExpectedBranch, Location, ConfigHash}, MainSubRepoPath);
+												co_await fWorktreeAdd({"worktree", "add", "-B", WorktreeExpectedBranch, Location, ConfigHash}, MainSubRepoPath);
 											}
 											else
 											{
@@ -2565,12 +3055,12 @@ namespace NMib::NBuildSystem
 												if (Action == EHandleRepositoryAction_Reset)
 												{
 													fOutputInfo(EOutputType_Warning, "Resetting worktree branch '{}' to {}"_f << WorktreeExpectedBranch << ConfigHash);
-													co_await fLaunchGit({"worktree", "add", "-B", WorktreeExpectedBranch, Location, ConfigHash}, MainSubRepoPath);
+													co_await fWorktreeAdd({"worktree", "add", "-B", WorktreeExpectedBranch, Location, ConfigHash}, MainSubRepoPath);
 												}
 												else if (Action == EHandleRepositoryAction_Leave)
 												{
 													fOutputInfo(EOutputType_Normal, "Leaving worktree branch '{}' at existing commit"_f << WorktreeExpectedBranch);
-													co_await fLaunchGit({"worktree", "add", "-B", WorktreeExpectedBranch, Location, ExistingHash}, MainSubRepoPath);
+													co_await fWorktreeAdd({"worktree", "add", "-B", WorktreeExpectedBranch, Location, ExistingHash}, MainSubRepoPath);
 												}
 												else if (Action == EHandleRepositoryAction_None || Action == EHandleRepositoryAction_Auto)
 												{
@@ -2629,7 +3119,7 @@ namespace NMib::NBuildSystem
 											else
 												WorktreeParams.f_Insert({Location});
 
-											co_await fLaunchGit(WorktreeParams, MainSubRepoPath);
+											co_await fWorktreeAdd(WorktreeParams, MainSubRepoPath);
 										}
 
 										bChanged = true;
@@ -2638,7 +3128,7 @@ namespace NMib::NBuildSystem
 											co_await fSetUpstreamTracking(WorktreeExpectedBranch, Location);
 
 										if (_Repo.m_bUpdateSubmodules)
-											co_await fLaunchGit({"submodule", "update", "--init"}, Location);
+											co_await fUpdateSubmodules(Location);
 
 										if (_Repo.m_bBootstrapSource)
 											co_await _BuildSystem.f_SetupBootstrapMTool();
@@ -2683,6 +3173,15 @@ namespace NMib::NBuildSystem
 										CFile::fs_CreateDirectory(Location);
 										co_await fg_TransferGitDirWorktreeToMain(_Launches, WorktreeSubRepoPath, Location, WorktreeName);
 
+										// The moved git directory comes without a working tree, and with the index of the worktree it left
+										if (bVerifyHook)
+										{
+											CStr TransferredIndex = fg_GetGitDataDir(Location, CFilePosition{}) / "index";
+											if (CFile::fs_FileExists(TransferredIndex))
+												CFile::fs_DeleteFile(TransferredIndex);
+											fMarkPendingCheckout(Location);
+										}
+
 										co_await fFetchIfCommitMissing(ConfigHash, Location);
 
 										CStr TransferExpectedBranch = fg_GetExpectedBranch(_Repo, _MainRepoInfo.m_Branch, _MainRepoInfo.m_DefaultBranch);
@@ -2691,8 +3190,9 @@ namespace NMib::NBuildSystem
 										TCVector<CStr> Params = {"checkout", "-B", TransferExpectedBranch};
 
 										if (!TransferConfigHash.f_IsEmpty())
-											Params.f_Insert(TransferConfigHash);
+											Params.f_Insert(fCommitObject(TransferConfigHash));
 
+										co_await fVerify(CStr(), TransferConfigHash);
 										co_await fLaunchGit(Params, Location);
 
 										bChanged = true;
@@ -2700,7 +3200,7 @@ namespace NMib::NBuildSystem
 										co_await fSetUpstreamTracking(TransferExpectedBranch, Location);
 
 										if (_Repo.m_bUpdateSubmodules)
-											co_await fLaunchGit({"submodule", "update", "--init"}, Location);
+											co_await fUpdateSubmodules(Location);
 
 										if (_Repo.m_bBootstrapSource)
 											co_await _BuildSystem.f_SetupBootstrapMTool();
@@ -2736,11 +3236,13 @@ namespace NMib::NBuildSystem
 
 								CStr CloneConfigHash = co_await fPopulateConfigHashFromBranchIfExists(ConfigHash, Location, CloneExpectedBranch);
 
+								co_await fVerify(CStr(), CloneConfigHash);
+
 								// Safe in the clone-new path, and lets retries overwrite files left by a failed LFS smudge checkout.
 								TCVector<CStr> Params = {"checkout", "-f", "-B", CloneExpectedBranch};
 
 								if (!CloneConfigHash.f_IsEmpty())
-									Params.f_Insert(CloneConfigHash);
+									Params.f_Insert(fCommitObject(CloneConfigHash));
 
 								co_await fLaunchGit(Params, Location);
 
@@ -2749,7 +3251,7 @@ namespace NMib::NBuildSystem
 								co_await fSetUpstreamTracking(CloneExpectedBranch, Location);
 
 								if (_Repo.m_bUpdateSubmodules)
-									co_await fLaunchGit({"submodule", "update", "--init"}, Location);
+									co_await fUpdateSubmodules(Location);
 
 								if (_Repo.m_bBootstrapSource)
 									co_await _BuildSystem.f_SetupBootstrapMTool();
@@ -2803,6 +3305,7 @@ namespace NMib::NBuildSystem
 									CloneParams.f_Insert({"-n", _Repo.m_OriginProperties.m_URL, Location});
 
 									co_await fLaunchGitCloneWithRetry(CloneParams);
+									fMarkPendingCheckout(Location);
 
 									if (_Repo.m_OriginProperties.m_bLfsReleaseStore)
 									{
@@ -2874,6 +3377,10 @@ namespace NMib::NBuildSystem
 				}
 				else
 				{
+					// git submodule add checks out the tip of a branch, which no pin fixes
+					if (bVerifyHook)
+						co_return fRefuseUnverifiable("Adding a Repository.Submodule repository");
+
 					if (ConfigHash.f_IsEmpty())
 						fOutputInfo(EOutputType_Normal, "Adding external repository (submodule)");
 					else
@@ -3426,7 +3933,10 @@ namespace NMib::NBuildSystem
 					co_return {};
 				}
 			;
-			co_await fManageHooks();
+			// A clone that was never checked out, such as of a batch the hook refused, doesn't have the hooks of its working tree
+			// yet. They are installed by the pass after its checkout.
+			if (fIsCheckedOut(Location))
+				co_await fManageHooks();
 
 			auto fSetupLfsReleaseStorage = [&, bDidSetup = false]() -> TCUnsafeFuture<void>
 				{
@@ -3676,6 +4186,32 @@ namespace NMib::NBuildSystem
 			else
 				TargetHash = HeadHash;
 
+			// A working tree that was never checked out, such as the clone of a batch the hook refused, is checked out as its clone
+			// would have been, wherever the clone left HEAD, also by an update without the hook
+			if (!bForceReset && !ExpectedBranch.f_IsEmpty() && !HeadHash.f_IsEmpty() && !fIsCheckedOut(Location))
+			{
+				CStr CloneConfigHash = co_await fPopulateConfigHashFromBranchIfExists(ConfigHash, Location, ExpectedBranch);
+				if (CloneConfigHash.f_IsEmpty())
+					CloneConfigHash = HeadHash;
+
+				co_await fFetchIfCommitMissing(CloneConfigHash, Location);
+				co_await fVerify(CStr(), CloneConfigHash);
+				co_await fLaunchGit({"checkout", "-f", "-B", ExpectedBranch, fCommitObject(CloneConfigHash)}, Location);
+				co_await fSetUpstreamTracking(ExpectedBranch, Location);
+
+				if (_Repo.m_bUpdateSubmodules)
+					co_await fUpdateSubmodules(Location);
+
+				if (_Repo.m_bBootstrapSource)
+					co_await _BuildSystem.f_SetupBootstrapMTool();
+
+				CurrentBranch = ExpectedBranch;
+				bNeedBranchSwitch = false;
+				HeadHash = CloneConfigHash;
+				TargetHash = CloneConfigHash;
+				bChanged = true;
+			}
+
 			bool bReconciliationHandled = false;
 			if
 				(
@@ -3713,12 +4249,13 @@ namespace NMib::NBuildSystem
 									// bForceReset is the CI hard-reset path: do not stash or restore
 									// local changes, because the requested mode is to discard them.
 									fOutputInfo(EOutputType_Warning, "Force Resetting to '{}'"_f << ConfigHash);
-									co_await fLaunchGit({"checkout", "-f", "-B", ExpectedBranch, ConfigHash}, Location);
+									co_await fVerify(HeadHash, ConfigHash);
+									co_await fLaunchGit({"checkout", "-f", "-B", ExpectedBranch, fCommitObject(ConfigHash)}, Location);
 
 									co_await fSetUpstreamTracking(ExpectedBranch, Location);
 									co_await fLaunchGit({"clean", "-fd"}, Location);
 									if (_Repo.m_bUpdateSubmodules)
-										co_await fLaunchGit({"submodule", "update", "--init"}, Location);
+										co_await fUpdateSubmodules(Location);
 
 									if (_Repo.m_bBootstrapSource)
 										co_await _BuildSystem.f_SetupBootstrapMTool();
@@ -3828,6 +4365,8 @@ namespace NMib::NBuildSystem
 
 								if (Action == EHandleRepositoryAction_Reset)
 								{
+									co_await fVerify(HeadHash, ConfigHash);
+
 									if (bNeedBranchSwitch)
 									{
 										CStr UniqueStashName = fMakeUniqueStashName(CurrentBranch);
@@ -3838,7 +4377,7 @@ namespace NMib::NBuildSystem
 											bStashed = co_await fStashIfNeeded(Location, CurrentBranch, UniqueStashName);
 
 										fOutputInfo(EOutputType_Warning, "Switching to branch '{}' and resetting to {}"_f << ExpectedBranch << ConfigHash);
-										co_await fLaunchGit({"checkout", "-B", ExpectedBranch, ConfigHash}, Location);
+										co_await fLaunchGit({"checkout", "-B", ExpectedBranch, fCommitObject(ConfigHash)}, Location);
 										RestoreOnFailure.f_Clear();
 
 										co_await fSetUpstreamTracking(ExpectedBranch, Location);
@@ -3847,22 +4386,29 @@ namespace NMib::NBuildSystem
 									else if ((co_await fLaunchGit({"rev-parse", "--abbrev-ref", "HEAD"}, Location)).f_Trim() == "HEAD")
 									{
 										fOutputInfo(EOutputType_Warning, "Resetting to {} and recovering from detached head"_f << ConfigHash);
-										co_await fLaunchGit({"checkout", "-f", "-B", ExpectedBranch, ConfigHash}, Location);
+										co_await fLaunchGit({"checkout", "-f", "-B", ExpectedBranch, fCommitObject(ConfigHash)}, Location);
 										co_await fSetUpstreamTracking(ExpectedBranch, Location);
 									}
 									else
 									{
 										fOutputInfo(EOutputType_Warning, "Resetting to {}"_f << ConfigHash);
-										co_await fLaunchGit({"reset", "--hard", ConfigHash}, Location);
+										co_await fLaunchGit({"reset", "--hard", fCommitObject(ConfigHash)}, Location);
 									}
 									if (_Repo.m_bUpdateSubmodules)
-										co_await fLaunchGit({"submodule", "update", "--init"}, Location);
+										co_await fUpdateSubmodules(Location);
 
 									if (_Repo.m_bBootstrapSource)
 										co_await _BuildSystem.f_SetupBootstrapMTool();
 								}
 								else if (Action == EHandleRepositoryAction_Rebase)
 								{
+									// The result has commits that no pin names
+									if (bVerifyHook)
+									{
+										bPassException = true;
+										co_return fRefuseUnverifiable("Rebasing on {}"_f << ConfigHash);
+									}
+
 									CStr UniqueStashName = fMakeUniqueStashName(CurrentBranch);
 									bool bStashed = false;
 									auto RestoreOnFailure = co_await fg_AsyncDestroy(fMakeStashRestoreHook(Location, UniqueStashName, bStashed));
@@ -3959,7 +4505,7 @@ namespace NMib::NBuildSystem
 											co_await fResolveConflicts(ConflictingFiles);
 
 										if (_Repo.m_bUpdateSubmodules)
-											co_await fLaunchGit({"submodule", "update", "--init"}, Location);
+											co_await fUpdateSubmodules(Location);
 
 										if (_Repo.m_bBootstrapSource)
 											co_await _BuildSystem.f_SetupBootstrapMTool();
@@ -3986,7 +4532,8 @@ namespace NMib::NBuildSystem
 											bStashed = co_await fStashIfNeeded(Location, CurrentBranch, UniqueStashName);
 
 										fOutputInfo(EOutputType_Normal, "Switching to branch '{}'"_f << ExpectedBranch);
-										co_await fLaunchGit({"checkout", ExpectedBranch}, Location);
+										co_await fVerify(HeadHash, TargetHash);
+										co_await fCheckoutVerifiedBranch(ExpectedBranch, TargetHash);
 										RestoreOnFailure.f_Clear();
 
 										co_await fUnstashIfExists(Location, ExpectedBranch);
@@ -4063,8 +4610,9 @@ namespace NMib::NBuildSystem
 						bStashed = co_await fStashIfNeeded(Location, CurrentBranch, UniqueStashName);
 
 					o_StateHandler.f_IncrementBranchCreated(CurrentBranch, ExpectedBranch, RepositoryIdentifier);
+					co_await fVerify(HeadHash, ExpectedBranchConfigHash.f_IsEmpty() ? HeadHash : ExpectedBranchConfigHash);
 					if (!ExpectedBranchConfigHash.f_IsEmpty())
-						co_await fLaunchGit({"checkout", "-b", ExpectedBranch, ExpectedBranchConfigHash}, Location);
+						co_await fLaunchGit({"checkout", "-b", ExpectedBranch, fCommitObject(ExpectedBranchConfigHash)}, Location);
 					else
 						co_await fLaunchGit({"checkout", "-b", ExpectedBranch}, Location);
 					RestoreOnFailure.f_Clear();
@@ -4084,13 +4632,36 @@ namespace NMib::NBuildSystem
 						bStashed = co_await fStashIfNeeded(Location, CurrentBranch, UniqueStashName);
 
 					o_StateHandler.f_IncrementBranchSwitched(CurrentBranch, ExpectedBranch, RepositoryIdentifier);
-					co_await fLaunchGit({"checkout", ExpectedBranch}, Location);
+					co_await fVerify(HeadHash, TargetHash);
+					co_await fCheckoutVerifiedBranch(ExpectedBranch, TargetHash);
 					RestoreOnFailure.f_Clear();
 
 					bool bUnstashed = co_await fUnstashIfExists(Location, ExpectedBranch);
 					if (HeadHash != TargetHash || bStashed || bUnstashed)
 						bChanged = true;
 				}
+			}
+
+			// A refused submodule batch leaves the repository at its new commit with the submodules behind, so a later pass catches up.
+			// Deliberately only with the hook: without it, submodules are only updated with a change of their parent, as a pass that
+			// updated them every time would move submodules that someone checked out at other commits.
+			if
+				(
+					bVerifyHook
+					&& _Repo.m_bUpdateSubmodules
+					&& o_VerifyHook.m_iNextPhase <= CVerifyHookLevel::EPhase_Submodules
+					&& fIsCheckedOut(Location)
+					&& !fg_IsSubmodule(DynamicInfo.m_DataDir)
+				)
+			{
+				if (co_await fUpdateSubmodules(Location))
+					bChanged = true;
+			}
+
+			{
+				CStr PendingCheckoutFile = fg_GetGitDataDir(Location, CFilePosition{}) / "MalterlibPendingCheckout";
+				if (fIsCheckedOut(Location) && CFile::fs_FileExists(PendingCheckoutFile))
+					CFile::fs_DeleteFile(PendingCheckoutFile);
 			}
 
 			CStr GitHeadHash = fg_GetGitHeadHash(_Repo, DynamicInfo);
@@ -4796,14 +5367,41 @@ namespace NMib::NBuildSystem
 
 		Launches.f_MeasureRepos(ReposOrdered, false);
 
+		// The batch numbers of a run go on in the process that a relaunch starts
+		CStr VerifyHookBatchFile = mp_OutputDir / "VerifyHookBatch";
+		auto &pVerifyHookBatch = mp_GenerateOptions.m_pVerifyHookBatch;
+		if (pVerifyHookBatch && pVerifyHookBatch->f_Load() == 0 && CFile::fs_FileExists(VerifyHookBatchFile))
+		{
+			pVerifyHookBatch->f_Exchange(CFile::fs_ReadStringFromFile(VerifyHookBatchFile, true).f_Trim().f_ToInt(uint32(0)));
+			CFile::fs_DeleteFile(VerifyHookBatchFile);
+		}
+
 		for (auto &Repos : ReposOrdered)
 		{
+			// Every repository of the level has to take part in each phase of the gate, so they run in parallel with a hook. Locations
+			// that are one directory through a symbolic link share its lock and would wait for each other: that isn't supported
+			TCSharedPointer<CVerifyHookLevel> pVerifyHook;
+			if (!mp_GenerateOptions.m_VerifyHook.f_IsEmpty())
+			{
+				umint nRepositories = 0;
+				for (auto &RepoLocation : Repos)
+					nRepositories += RepoLocation.m_Repositories.f_GetLen();
+
+				pVerifyHook = fg_Construct(mp_GenerateOptions.m_VerifyHook, BaseDir, pVerifyHookBatch, mp_pCancelled, nRepositories);
+			}
+			bool bSingleThreaded = mp_bSingleThreaded && !pVerifyHook;
+
 			co_await fg_ParallelForEach
 				(
 					Repos
 					, [&](auto &_Repos) mutable -> TCUnsafeFuture<void>
 					{
 						co_await ECoroutineFlag_CaptureMalterlibExceptions;
+						// Before anything can fail, so that a repository that never gets handled still arrives at the gates of its level
+						TCMap<CStr, TCUniquePointer<CVerifyHookRepository>> VerifyHookRepositories;
+						for (auto &Repo : _Repos.m_Repositories)
+							VerifyHookRepositories[Repo.m_Location] = fg_Construct(pVerifyHook);
+
 						co_await f_CheckCancelled();
 
 						CStr ReposDirectory = _Repos.f_GetPath();
@@ -4857,6 +5455,13 @@ namespace NMib::NBuildSystem
 								_Repos.m_Repositories
 								, [&](auto &_Repo) -> TCUnsafeFuture<void>
 								{
+									auto &VerifyHookRepository = **VerifyHookRepositories.f_FindEqual(_Repo.m_Location);
+									auto LeaveVerifyHook = g_OnScopeExit / [&]
+										{
+											VerifyHookRepository.f_Leave();
+										}
+									;
+
 									co_await ECoroutineFlag_CaptureMalterlibExceptions;
 									co_await f_CheckCancelled();
 
@@ -4876,6 +5481,7 @@ namespace NMib::NBuildSystem
 												, MaxRepoWidth
 												, MainRepoInfo
 												, mp_GenerateOptions.m_bStash
+												, VerifyHookRepository
 											)
 										)
 									{
@@ -4892,14 +5498,14 @@ namespace NMib::NBuildSystem
 
 									co_return {};
 								}
-								, mp_bSingleThreaded
+								, bSingleThreaded
 							)
 						;
 						co_await f_CheckCancelled();
 
 						co_return {};
 					}
-					, mp_bSingleThreaded
+					, bSingleThreaded
 				)
 			;
 
@@ -5298,6 +5904,9 @@ namespace NMib::NBuildSystem
 
 		if (bChanged.f_Load())
 		{
+			if (bBinariesChange.f_Load() && pVerifyHookBatch)
+				CFile::fs_WriteStringToFile(VerifyHookBatchFile, "{}\n"_f << pVerifyHookBatch->f_Load(), false);
+
 			if (mp_GenerateOptions.m_bReconcileForce)
 			{
 				if (bBinariesChange.f_Load())

@@ -214,6 +214,81 @@ namespace NMib::NBuildSystem::NRepository
 		CStr m_Pin; // The hash pinned there; empty when the file has no entry for the repository
 	};
 
+	// A change to a repository's working tree that the verify hook gets before update-repos writes it
+	struct CVerifyHookEntry
+	{
+		CJsonOrdered f_ToJson() const;
+
+		CStr m_Path; // Relative to the root
+		CStr m_Url;
+		CStr m_From; // The commit on disk; empty for a repository that has no working tree yet
+		CStr m_To; // The commit that will be on disk
+		CStr m_Parent;
+		CStr m_ConfigFile;
+		CStr m_ConfigKey;
+		bool m_bNew = false;
+		bool m_bSubmodule = false;
+	};
+
+	// The repositories of one level of update-repos, which wait for each other at each phase, so that the verify hook gets
+	// one batch for the level's repositories and then one for their submodules
+	struct CVerifyHookLevel
+	{
+		enum EPhase : umint
+		{
+			EPhase_Repositories
+			, EPhase_Submodules
+			, EPhase_Count
+		};
+
+		CVerifyHookLevel
+			(
+				CStr const &_Command
+				, CStr const &_BaseDir
+				, TCSharedPointer<TCAtomic<uint32>> const &_pBatch
+				, TCSharedPointer<TCAtomic<bool>> const &_pCancelled
+				, umint _nRepositories
+			)
+		;
+
+		struct CPhase
+		{
+			TCVector<CVerifyHookEntry> m_Entries;
+			TCVector<TCPromise<void>> m_Waiting;
+			umint m_nArrived = 0;
+		};
+
+		CStr m_Command;
+		CStr m_BaseDir;
+		TCSharedPointer<TCAtomic<uint32>> m_pBatch;
+		TCSharedPointer<TCAtomic<bool>> m_pCancelled; // The command's cancellation, which stops a running hook
+		umint m_nRepositories = 0;
+		CExceptionPointer m_pRefusal; // The refusal of a batch of the level, which every later phase of it gets; under m_Lock
+
+		CMutual m_Lock;
+		CPhase m_Phases[EPhase_Count];
+	};
+
+	// A repository's place at the gates of its level. Going out of scope arrives at the phases it didn't reach, so the other
+	// repositories don't wait for it.
+	struct CVerifyHookRepository
+	{
+		CVerifyHookRepository(TCSharedPointer<CVerifyHookLevel> const &_pLevel);
+		~CVerifyHookRepository();
+
+		void f_Leave();
+
+		CVerifyHookRepository(CVerifyHookRepository const &) = delete;
+		CVerifyHookRepository &operator = (CVerifyHookRepository const &) = delete;
+
+		TCFuture<void> f_Verify(CVerifyHookLevel::EPhase _Phase, TCVector<CVerifyHookEntry> &&_Entries);
+
+		TCSharedPointer<CVerifyHookLevel> m_pLevel;
+		CStr m_VerifiedTo; // The commit the repository batch allowed
+		TCMap<CStr, CStr> m_VerifiedSubmodules; // The commit the submodule batch allowed, by location, for retries of the checkout
+		umint m_iNextPhase = 0;
+	};
+
 	struct CMainRepoInfo
 	{
 		CStr m_Location;
@@ -625,6 +700,7 @@ namespace NMib::NBuildSystem::NRepository
 	CStr fg_GetBaseBranchFile(CStr const &_BaseDir);
 	TCMap<CStr, CStr> fg_ReadBaseBranches(CStr const &_BaseDir);
 	bool fg_IsFullCommitHash(CStr const &_Hash);
+	CStr fg_UnquoteGitPath(CStr const &_Path);
 	CStr fg_EffectiveBaseBranch(CStr const &_BaseBranch, CStr const &_RootDefaultBranch);
 	void fg_WriteBaseBranches(CStr const &_BaseDir, TCMap<CStr, CStr> const &_BaseBranches);
 	CStr fg_GetComparisonBranch(CStr const &_RepoLocation, CStr const &_Remote, CStr const &_DefaultBranch, CStr const &_BaseBranch);

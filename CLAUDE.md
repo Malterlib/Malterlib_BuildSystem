@@ -321,6 +321,16 @@ build systems of the checkout wait for each other while they do (`BuildSystem/.m
 - Repositories that are left on disk are kept in `BuildSystems.json`. `--ignore-leave` reconciles them, and the removed
   repositories, as if none set `Repository.ReconcileRemoved "Leave"`, so that `--reconcile-removed` can delete them.
 
+### Verify Hook
+`./mib update-repos --verify-hook <Command>` lets a caller verify every change before it reaches a working tree, such as a
+review bot that only lets reviewed content onto disk. `update-repos` works breadth first, a level of repositories at a time:
+it fetches the level and clones its new repositories without a checkout, runs the command with the level's changes as a
+JSON batch on stdin, and only checks them out when the command exits with 0. The submodules of a level are a batch of their
+own, of the active submodules at the commits in their parent's index, which are the commits checked out. Checkouts that
+can't be verified, such as a repository without a pin or with a pin that isn't a full commit hash, a rebase, recovering a
+missing origin or a deinitialized submodule that kept its repository, fail instead. The option only exists on the command
+line, so evaluated build files can't change it.
+
 ### Base Branches
 A branch stacked on another branch that hasn't landed yet has that branch as its base. `./mib base <Branch>` sets the base of
 the root's current branch, `./mib base` shows it and `./mib base --clear` removes it; `./mib branch <Name> --base-branch

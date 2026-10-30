@@ -611,6 +611,54 @@ namespace NMib::NBuildSystem::NRepository
 		return true;
 	}
 
+	// A path as git prints it, which it C-quotes, with C's escapes, when it has a double quote, a backslash or a control
+	// character, also with core.quotePath false
+	CStr fg_UnquoteGitPath(CStr const &_Path)
+	{
+		if (_Path.f_GetLen() < 2 || !_Path.f_StartsWith("\"") || !_Path.f_EndsWith("\""))
+			return _Path;
+
+		CStr Path;
+		{
+			CStr::CAppender Appender(Path);
+			ch8 const *pCharacter = _Path.f_GetStr() + 1;
+			ch8 const *pEnd = _Path.f_GetStr() + _Path.f_GetLen() - 1;
+			while (pCharacter < pEnd)
+			{
+				if (*pCharacter != '\\' || pCharacter + 1 >= pEnd)
+				{
+					Appender.f_AddChar(*pCharacter++);
+					continue;
+				}
+
+				ch8 Escaped = pCharacter[1];
+				pCharacter += 2;
+				switch (Escaped)
+				{
+				case 'a': Appender.f_AddChar('\a'); break;
+				case 'b': Appender.f_AddChar('\b'); break;
+				case 't': Appender.f_AddChar('\t'); break;
+				case 'n': Appender.f_AddChar('\n'); break;
+				case 'v': Appender.f_AddChar('\v'); break;
+				case 'f': Appender.f_AddChar('\f'); break;
+				case 'r': Appender.f_AddChar('\r'); break;
+				default:
+					if (Escaped >= '0' && Escaped <= '7')
+					{
+						uint32 Value = uint32(Escaped - '0');
+						for (umint iDigit = 0; iDigit < 2 && pCharacter < pEnd && *pCharacter >= '0' && *pCharacter <= '7'; ++iDigit)
+							Value = Value * 8 + uint32(*pCharacter++ - '0');
+						Appender.f_AddChar(ch8(Value));
+					}
+					else
+						Appender.f_AddChar(Escaped);
+				}
+			}
+		}
+
+		return Path;
+	}
+
 	// Fetches a commit by its full hash into the object store, from the first remote that has it, origin first. Fetching by
 	// hash moves no ref, so a remote-tracking ref keeps meaning what the checkout has seen. Returns whether a remote had it.
 	TCFuture<bool> fg_FetchCommitByHash(CGitLaunches _GitLaunches, CStr _RepoDir, CStr _Hash, TCMap<CStr, CStr> _Environment)
