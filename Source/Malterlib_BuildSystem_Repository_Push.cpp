@@ -613,20 +613,69 @@ namespace NMib::NBuildSystem
 													)
 												;
 
-												if (TagResult.m_ExitCode == 0)
+												// A tag left by an earlier run that stopped before publishing it is published now, so the run can be repeated
+												bool bTagExists = false;
+												if (TagResult.m_ExitCode != 0 && TagResult.f_GetCombinedOut().f_Find("already exists") >= 0)
 												{
-													Launches.f_Output
+													auto ExistingResult = co_await Launches.f_Launch
 														(
-															EOutputType_Normal
-															, Repo
-															, "Created previous {3}{}{4} commit as tag {3}{}{4}:\n{}\n"_f
-															<< CurrentBranch
-															<< TagInfo.m_TagName
-															<< TagResult.f_GetCombinedOut().f_Trim()
-															<< Colors.f_RepositoryName()
-															<< Colors.f_Default()
+															Repo
+															, {"rev-parse", "refs/tags/{}^{{commit}"_f << TagInfo.m_TagName}
+															, {}
+															, CProcessLaunchActor::ESimpleLaunchFlag_None
 														)
 													;
+
+													if (ExistingResult.m_ExitCode != 0 || ExistingResult.f_GetStdOut().f_Trim() != TagInfo.m_RemoteHash)
+													{
+														Launches.f_Output
+															(
+																EOutputType_Error
+																, Repo
+																, "Tag {} already exists at another commit than {}, the previous {} commit it has to keep"_f
+																<< TagInfo.m_TagName
+																<< TagInfo.m_RemoteHash
+																<< CurrentBranch
+															)
+														;
+
+														co_return DMibErrorInstance("Error status");
+													}
+
+													bTagExists = true;
+												}
+
+												if (TagResult.m_ExitCode == 0 || bTagExists)
+												{
+													if (bTagExists)
+													{
+														Launches.f_Output
+															(
+																EOutputType_Normal
+																, Repo
+																, "Previous {2}{}{3} commit already tagged as {2}{}{3}\n"_f
+																<< CurrentBranch
+																<< TagInfo.m_TagName
+																<< Colors.f_RepositoryName()
+																<< Colors.f_Default()
+															)
+														;
+													}
+													else
+													{
+														Launches.f_Output
+															(
+																EOutputType_Normal
+																, Repo
+																, "Created previous {3}{}{4} commit as tag {3}{}{4}:\n{}\n"_f
+																<< CurrentBranch
+																<< TagInfo.m_TagName
+																<< TagResult.f_GetCombinedOut().f_Trim()
+																<< Colors.f_RepositoryName()
+																<< Colors.f_Default()
+															)
+														;
+													}
 
 													auto TagPushResult = co_await Launches.f_Launch
 														(
@@ -668,7 +717,7 @@ namespace NMib::NBuildSystem
 														co_return DMibErrorInstance("Error status");
 													}
 												}
-												else if (TagResult.f_GetCombinedOut().f_Find("already exists") < 0)
+												else
 												{
 													Launches.f_Output
 														(
