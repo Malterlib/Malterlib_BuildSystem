@@ -4248,6 +4248,7 @@ namespace NMib::NBuildSystem
 					Repo.m_OriginProperties.m_DefaultBranch = DefaultBranch;
 					Repo.m_OriginProperties.m_bLfsReleaseStore = bLfsReleaseStore;
 					Repo.m_OriginProperties.m_bTagPreviousOnForcePush = bTagPreviousOnForcePush;
+					Repo.m_OriginProperties.m_ExtraFetchSpecs = fg_Move(ExtraFetchSpecs);
 
 					if (bIncludePolicy)
 					{
