@@ -2860,55 +2860,39 @@ namespace NMib::NBuildSystem
 
 						if (!ConfigRepoRoot.f_IsEmpty() && o_StateHandler.f_UpdateCoreExcludesFileLocation(ConfigRepoRoot))
 						{
-							auto ExpectedExcludeFile = BaseDir / "BuildSystem/.localgitignore";
+							// Git resolves a relative path from the root of the worktree it runs in, so the shared configuration names the
+							// file of every worktree. Tools that do not read config.worktree, as Sublime Merge, only see the shared one
+							CStr ExpectedExcludeFile = CFile::fs_MakePathRelative(BaseDir / "BuildSystem/.localgitignore", ConfigRepoRoot);
 							CStr GitDataDir = fg_GetGitDataDir(ConfigRepoRoot, _Repo.m_Position);
-							// For the main checkout fg_IsWorktree returns false and we write to
-							// the shared .git/config — this is correct because git reads
-							// core.excludesFile from shared config for the main worktree.
-							// Linked worktrees with extensions.worktreeConfig=true read their
-							// own config.worktree which overrides the shared value, so the
-							// main checkout's write does not affect them.
-							bool bConfigRepoIsWorktree = fg_IsWorktree(GitDataDir);
+							CStr SharedConfigFile = fg_GetGitCommonDir(GitDataDir, _Repo.m_Position) / "config";
+							CStr WorktreeConfigFile = GitDataDir / "config.worktree";
 
-							auto fNeedUpdate = [&]
+							auto fGetExcludesFile = [](CStr const &_ConfigFile) -> CStr
 								{
-									CStr ConfigFile;
-									if (bConfigRepoIsWorktree)
-									{
-										// With worktreeConfig, excludesFile is per-worktree in config.worktree
-										ConfigFile = GitDataDir + "/config.worktree";
-									}
-									else
-									{
-										CStr GitCommonDir = fg_GetGitCommonDir(GitDataDir, _Repo.m_Position);
-										ConfigFile = GitCommonDir + "/config";
-									}
-									if (CFile::fs_FileExists(ConfigFile))
-									{
-										CStr ConfigContents = CFile::fs_ReadStringFromFile(ConfigFile, true);
-										auto Config = CGitConfigParser::fs_Parse(ConfigContents);
+									if (!CFile::fs_FileExists(_ConfigFile))
+										return {};
 
-										CStr const *pCurrentExcludesFile = Config.f_GetValue("core", "excludesfile");
-										if (pCurrentExcludesFile && *pCurrentExcludesFile == ExpectedExcludeFile)
-											return false;
-									}
+									auto Config = CGitConfigParser::fs_Parse(CFile::fs_ReadStringFromFile(_ConfigFile, true));
+									if (CStr const *pExcludesFile = Config.f_GetValue("core", "excludesfile"))
+										return *pExcludesFile;
 
-									return true;
+									return {};
 								}
 							;
 
-							if (fNeedUpdate())
+							bool bUpdateShared = fGetExcludesFile(SharedConfigFile) != ExpectedExcludeFile;
+							bool bRemoveFromWorktree = fg_IsWorktree(GitDataDir) && !fGetExcludesFile(WorktreeConfigFile).f_IsEmpty();
+
+							if (bUpdateShared || bRemoveFromWorktree)
 							{
 								auto Subscription = co_await o_StateHandler.f_SequenceConfigChanges(ConfigRepoRoot);
 
-								if (bConfigRepoIsWorktree)
-								{
-									// Enable worktreeConfig extension and set excludesFile per-worktree
-									co_await fLaunchGit({"config", "--local", "extensions.worktreeConfig", "true"}, ConfigRepoRoot);
-									co_await fLaunchGit({"config", "--worktree", "core.excludesFile", ExpectedExcludeFile}, ConfigRepoRoot);
-								}
-								else
+								if (bUpdateShared)
 									co_await fLaunchGit({"config", "--local", "core.excludesFile", ExpectedExcludeFile}, ConfigRepoRoot);
+
+								// Older MTools set the file of a worktree there, which overrides the shared one in git
+								if (bRemoveFromWorktree)
+									co_await fLaunchGit({"config", "--file", WorktreeConfigFile, "--unset", "core.excludesFile"}, ConfigRepoRoot);
 							}
 						}
 					}
