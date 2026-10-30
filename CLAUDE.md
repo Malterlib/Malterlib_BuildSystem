@@ -289,6 +289,21 @@ The BuildSystem includes integrated repository management:
 - Synchronized operations across multiple repos
 - Git LFS support for binary dependencies
 
+### Removed Repositories
+Almost every command updates the repositories of the checkout, unless it is given `--skip-update`, and the commands of all
+build systems of the checkout wait for each other while they do (`BuildSystem/.mib_repositories_lock`).
+
+- Each build system decides from its own settings which repositories it uses, and records them in `RepositoryState.json`
+  in its output directory. `BuildSystem/BuildSystems.json` lists the build systems of the checkout with what each uses.
+- A repository is removed when no build system uses it any more. The command of the last build system that used it lists
+  it and stops, until `./mib update-repos --output-directory <Dir> '--reconcile-removed=<Wildcard>:<leave|delete>'`
+  reconciles it. The repositories of a build system whose state is gone are reported by the next command.
+- `Repository.ReconcileRemoved "Leave"` leaves a removed repository on disk without stopping. It is set on the repositories
+  of binaries, which other build systems use for other platforms. It needs an MTool of `MToolVersion` 6 or later, so the
+  binaries set it under `MalterlibRepositoryReconcileRemoved`.
+- Repositories that are left on disk are kept in `BuildSystems.json`. `--ignore-leave` reconciles them, and the removed
+  repositories, as if none set `Repository.ReconcileRemoved "Leave"`, so that `--reconcile-removed` can delete them.
+
 ## Testing
 
 ### Test Structure
