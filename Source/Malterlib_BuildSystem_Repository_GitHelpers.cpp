@@ -595,6 +595,53 @@ namespace NMib::NBuildSystem::NRepository
 		co_return fg_Move(Remotes);
 	}
 
+	// A SHA-1 or SHA-256 object name in full, as git writes it. Anything else, such as a branch name, resolves again where it is
+	// used, and one that starts with - would be read as an option.
+	bool fg_IsFullCommitHash(CStr const &_Hash)
+	{
+		if (_Hash.f_GetLen() != 40 && _Hash.f_GetLen() != 64)
+			return false;
+
+		for (auto Character : _Hash)
+		{
+			if (!((Character >= '0' && Character <= '9') || (Character >= 'a' && Character <= 'f')))
+				return false;
+		}
+
+		return true;
+	}
+
+	// Fetches a commit by its full hash into the object store, from the first remote that has it, origin first. Fetching by
+	// hash moves no ref, so a remote-tracking ref keeps meaning what the checkout has seen. Returns whether a remote had it.
+	TCFuture<bool> fg_FetchCommitByHash(CGitLaunches _GitLaunches, CStr _RepoDir, CStr _Hash, TCMap<CStr, CStr> _Environment)
+	{
+		// A pin comes from a file in the repository, so it is never passed on as anything but a hash
+		if (!fg_IsFullCommitHash(_Hash))
+			co_return false;
+
+		auto RemotesResult = co_await _GitLaunches.f_Launch(_RepoDir, {"remote"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
+		if (RemotesResult.m_ExitCode)
+			co_return DMibErrorInstance("Failed to list the remotes of '{}': {}"_f << _RepoDir << RemotesResult.f_GetCombinedOut().f_Trim());
+
+		TCVector<CStr> Remotes;
+		for (auto &Remote : RemotesResult.f_GetStdOut().f_SplitLine<true>())
+		{
+			if (Remote == "origin")
+				Remotes.f_InsertFirst(Remote);
+			else
+				Remotes.f_Insert(Remote);
+		}
+
+		for (auto &Remote : Remotes)
+		{
+			auto FetchResult = co_await _GitLaunches.f_Launch(_RepoDir, {"fetch", "--no-tags", "--end-of-options", Remote, _Hash}, _Environment, CProcessLaunchActor::ESimpleLaunchFlag_None);
+			if (FetchResult.m_ExitCode == 0)
+				co_return true;
+		}
+
+		co_return false;
+	}
+
 	TCFuture<CRemotes> fg_GetPushRemotes(CGitLaunches _GitLaunches, CRepository _Repo, TCVector<CStr> _Remotes)
 	{
 		auto Result = co_await _GitLaunches.f_Launch(_Repo, {"remote"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);

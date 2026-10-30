@@ -887,6 +887,12 @@ namespace NMib::NBuildSystem
 					FetchParams.f_Insert(_ExtraFetchParams);
 
 					auto FetchResult = co_await fLaunchGit(FetchParams, _RepoDir, fg_FetchEnvironment(_BuildSystem)).f_Wrap();
+
+					// A commit on no branch, such as one only a fork has, which GitHub serves through the parent by its full hash. The
+					// checkout follows in this run, so the commit needs no ref of its own.
+					if (!(co_await fLaunchGitQuestion({"cat-file", "-e", "{}^{{commit}"_f << _Hash}, _RepoDir, false)))
+						co_await fg_FetchCommitByHash(_Launches, _RepoDir, _Hash, fg_FetchEnvironment(_BuildSystem));
+
 					if (!FetchResult)
 					{
 						if (!(co_await fLaunchGitQuestion({"cat-file", "-e", "{}^{{commit}"_f << _Hash}, _RepoDir, false)))

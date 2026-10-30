@@ -597,6 +597,7 @@ namespace NMib::NBuildSystem::NRepository
 	TCFuture<TCVector<CLocalFileChange>> fg_GetLocalFileChanges(CGitLaunches _GitLaunches, CRepository _Repo, bool _bIncludeUntracked);
 	TCFuture<CGitBranches> fg_GetBranches(CGitLaunches _GitLaunches, CRepository _Repo, bool _bRemote);
 	TCFuture<TCVector<CStr>> fg_GetRemotes(CGitLaunches _GitLaunches, CRepository _Repo);
+	TCFuture<bool> fg_FetchCommitByHash(CGitLaunches _GitLaunches, CStr _RepoDir, CStr _Hash, TCMap<CStr, CStr> _Environment);
 	TCFuture<CRemotes> fg_GetPushRemotes(CGitLaunches _GitLaunches, CRepository _Repo, TCVector<CStr> _Remotes);
 	TCFuture<TCVector<CLogEntry>> fg_GetLogEntries(CGitLaunches _GitLaunches, CRepository _Repo, CStr _From, CStr _To, bool _bReportBadRevision = true);
 	TCFuture<TCVector<CLogEntryFull>> fg_GetLogEntriesFull(CGitLaunches _GitLaunches, CRepository _Repo, CStr _From, CStr _To);
@@ -611,6 +612,7 @@ namespace NMib::NBuildSystem::NRepository
 	CMainRepoBranchInfo fg_GetMainRepoBranchInfo(CStr const &_BaseDir, TCVector<TCMap<CStr, CReposLocation>> const &_ReposOrdered);
 	CStr fg_GetBaseBranchFile(CStr const &_BaseDir);
 	TCMap<CStr, CStr> fg_ReadBaseBranches(CStr const &_BaseDir);
+	bool fg_IsFullCommitHash(CStr const &_Hash);
 	CStr fg_EffectiveBaseBranch(CStr const &_BaseBranch, CStr const &_RootDefaultBranch);
 	void fg_WriteBaseBranches(CStr const &_BaseDir, TCMap<CStr, CStr> const &_BaseBranches);
 	CStr fg_GetComparisonBranch(CStr const &_RepoLocation, CStr const &_Remote, CStr const &_DefaultBranch, CStr const &_BaseBranch);
