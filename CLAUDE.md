@@ -288,6 +288,9 @@ The BuildSystem includes integrated repository management:
 - Branch management
 - Synchronized operations across multiple repos
 - Git LFS support for binary dependencies
+- `./mib list-repos [--json]` lists the repositories the checkout defines, the root included, with the `.MRepo` file, the key
+  as it is written there and the commit that pin each; it updates nothing. `Binary` is whether a repository keeps its files
+  in the LFS release store, whose files a review can't read, not whether it holds binaries.
 
 ### Removed Repositories
 Almost every command updates the repositories of the checkout, unless it is given `--skip-update`, and the commands of all

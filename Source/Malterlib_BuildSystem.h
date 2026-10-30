@@ -548,6 +548,14 @@ namespace NMib::NBuildSystem
 
 		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_Branch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, NStr::CStr const &_Branch, ERepoBranchFlag _Flags);
 		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_Unbranch(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, ERepoBranchFlag _Flags);
+		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_List
+			(
+				CGenerateOptions const &_GenerateOptions
+				, CRepoFilter const &_Filter
+				, bool _bJson
+				, NStorage::TCSharedPointer<NConcurrency::CCommandLineControl> const &_pCommandLine
+			)
+		;
 		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_Base
 			(
 				CGenerateOptions const &_GenerateOptions

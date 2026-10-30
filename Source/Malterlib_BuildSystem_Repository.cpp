@@ -380,6 +380,22 @@ namespace NMib::NBuildSystem
 			return pConfig->m_Hash;
 		}
 
+		// The entry of a repository in a config file as the file has it on disk, with the key as it is written there
+		CRepositoryConfig CStateHandler::f_GetConfig(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Identifier, bool _bIsStateFile)
+		{
+			DLock(mp_Lock);
+			auto &ConfigFile = fp_GetConfigFile(_FileName, _bIsStateFile);
+
+			CStr Identifier = _RepoPath;
+			if (!_RepoPath.f_StartsWith(mp_BasePath))
+				Identifier = _Identifier;
+
+			auto *pConfig = ConfigFile.m_Configs.f_FindEqual(Identifier);
+			if (!pConfig)
+				return {};
+			return *pConfig;
+		}
+
 		TCMap<CStr, CConfigFile> const &CStateHandler::f_GetNewFiles()
 		{
 			return mp_NewConfigFiles;
@@ -527,10 +543,15 @@ namespace NMib::NBuildSystem
 					{
 						auto &Config = ConfigFile.m_Configs[RepoName.f_Extract(1)];
 						Config.m_Hash = Repo.f_Value()["Hash"].f_String();
+						Config.m_Key = RepoName;
 						Config.m_bExternalPath = true;
 					}
 					else
-						ConfigFile.m_Configs[CFile::fs_GetExpandedPath(RepoName, BasePath)].m_Hash = Repo.f_Value()["Hash"].f_String();
+					{
+						auto &Config = ConfigFile.m_Configs[CFile::fs_GetExpandedPath(RepoName, BasePath)];
+						Config.m_Hash = Repo.f_Value()["Hash"].f_String();
+						Config.m_Key = RepoName;
+					}
 				}
 			}
 			else
@@ -550,10 +571,15 @@ namespace NMib::NBuildSystem
 					{
 						auto &Config = ConfigFile.m_Configs[Child.f_GetName().f_Extract(1)];
 						Config.m_Hash = Child.f_GetThisValue();
+						Config.m_Key = Child.f_GetName();
 						Config.m_bExternalPath = true;
 					}
 					else
-						ConfigFile.m_Configs[CFile::fs_GetExpandedPath(Child.f_GetName(), BasePath)].m_Hash = Child.f_GetThisValue();
+					{
+						auto &Config = ConfigFile.m_Configs[CFile::fs_GetExpandedPath(Child.f_GetName(), BasePath)];
+						Config.m_Hash = Child.f_GetThisValue();
+						Config.m_Key = Child.f_GetName();
+					}
 				}
 			}
 

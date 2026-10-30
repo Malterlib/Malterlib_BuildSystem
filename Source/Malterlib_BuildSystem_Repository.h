@@ -192,6 +192,7 @@ namespace NMib::NBuildSystem::NRepository
 	struct CRepositoryConfig
 	{
 		CStr m_Hash;
+		CStr m_Key; // The key exactly as it is in the file; empty for an entry that wasn't read from one
 		bool m_bExternalPath = false;
 	};
 
@@ -202,6 +203,15 @@ namespace NMib::NBuildSystem::NRepository
 		TCMap<CStr, CRepositoryConfig> m_Configs;
 		CStr m_LineEndings = "\n";
 		bool m_bIsStateFile = false;
+	};
+
+	// Where a repository is pinned, with paths relative to the root of the checkout
+	struct CRepositoryPinLocation
+	{
+		CStr m_Parent; // The repository whose tree has the config file
+		CStr m_ConfigFile;
+		CStr m_ConfigKey; // The key that pins the repository, exactly as the config file has it
+		CStr m_Pin; // The hash pinned there; empty when the file has no entry for the repository
 	};
 
 	struct CMainRepoInfo
@@ -259,6 +269,7 @@ namespace NMib::NBuildSystem::NRepository
 
 		void f_SetHash(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Hash, CStr const &_Identifier, bool _bIsStateFile);
 		CStr f_GetHash(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Identifier, bool _bIsStateFile);
+		CRepositoryConfig f_GetConfig(CStr const &_FileName, CStr const &_RepoPath, CStr const &_Identifier, bool _bIsStateFile);
 		TCMap<CStr, CConfigFile> const &f_GetNewFiles();
 		TCMap<CStr, CConfigFile> f_GetMergedFiles();
 		bool f_AddGitIgnore(CStr const &_FileName, CBuildSystem const &_BuildSystem, EGitIgnoreType _GitIgnoreType);
@@ -545,6 +556,7 @@ namespace NMib::NBuildSystem::NRepository
 	{
 		EFilterRepoFlag_None = 0
 		, EFilterRepoFlag_OnlyTracked = DBit(0)
+		, EFilterRepoFlag_IncludeNotCloned = DBit(1) // Repositories without a checkout pass filters that don't need one, for listings
 	};
 
 	struct CGitVersion
@@ -616,6 +628,15 @@ namespace NMib::NBuildSystem::NRepository
 	CStr fg_EffectiveBaseBranch(CStr const &_BaseBranch, CStr const &_RootDefaultBranch);
 	void fg_WriteBaseBranches(CStr const &_BaseDir, TCMap<CStr, CStr> const &_BaseBranches);
 	CStr fg_GetComparisonBranch(CStr const &_RepoLocation, CStr const &_Remote, CStr const &_DefaultBranch, CStr const &_BaseBranch);
+	CStr fg_RelativeToBase(CStr const &_Path, CStr const &_BaseDir);
+	CRepositoryPinLocation fg_GetRepositoryPinLocation
+		(
+			CRepository const &_Repo
+			, TCMap<CStr, CRepository const *> const &_RepositoryByLocation
+			, CStateHandler &_StateHandler
+			, CStr const &_BaseDir
+		)
+	;
 	CStr fg_GetRemoteHead(CRepository const &_Repo, CRepositoryDynamicInfo const &_DynamicInfo, CStr const &_Remote);
 	CStr fg_HandleRepositoryActionToString(EHandleRepositoryAction _Action, EOutputType &o_OutputType);
 

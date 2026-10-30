@@ -64,6 +64,19 @@ namespace NMib::NBuildSystem::NRepository
 					if (!_Filter.m_Tags.f_IsEmpty() && Repo.m_Tags.f_And(_Filter.m_Tags) != _Filter.m_Tags)
 						continue;
 
+					if (_Flags & EFilterRepoFlag_IncludeNotCloned)
+					{
+						if (_Filter.m_Branch.f_IsEmpty() && !_Filter.m_bOnlyChanged)
+						{
+							FilteredPerStage[iStage].f_Insert(&Repo);
+							continue;
+						}
+
+						// A repository without a checkout has no branch and no changes to match
+						if (!CFile::fs_FileExists(Repo.m_Location / ".git", EFileAttrib_Directory | EFileAttrib_File))
+							continue;
+					}
+
 					auto DynamicInfo = fg_GetRepositoryDynamicInfo(Repo);
 
 					if (!_Filter.m_Branch.f_IsEmpty() && fg_GetBranch(Repo, DynamicInfo) != _Filter.m_Branch)
