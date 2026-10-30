@@ -431,7 +431,7 @@ namespace NMib::NBuildSystem::NRepository
 		void f_Output(EOutputType _OutputType, CRepository const &_Repo, CStr const &_Output, CStr const &_Prefix = {}) const;
 		void f_Output(EOutputType _OutputType, CStr const &_Section, CStr const &_Output) const;
 		void f_RepoDone(umint _nDone = 1) const;
-		COnScopeExitShared f_RepoDoneScope() const;
+		CActorSubscription f_RepoDoneSubscription() const;
 		void f_SetOutputOrder(TCVector<TCSet<CStr>> const &_OutputOrder) const;
 
 		TCSharedPointer<CState> m_pState;

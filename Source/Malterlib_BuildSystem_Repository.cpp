@@ -4761,7 +4761,7 @@ namespace NMib::NBuildSystem
 									co_await ECoroutineFlag_CaptureMalterlibExceptions;
 									co_await f_CheckCancelled();
 
-									auto DoneScope = Launches.f_RepoDoneScope();
+									auto RepoDone = co_await fg_AsyncDestroy(Launches.f_RepoDoneSubscription());
 
 									if
 										(

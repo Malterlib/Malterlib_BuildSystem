@@ -1055,7 +1055,7 @@ namespace NMib::NBuildSystem::NRepository
 					TCFutureMap<CStr, void> RemoteQueryResults;
 					TCSharedPointer<TCMap<CStr, CBranchState>> pRemoteHeadBranches = fg_Construct();
 
-					auto RepoDoneScope = Launches.f_RepoDoneScope();
+					auto RepoDone = co_await fg_AsyncDestroy(Launches.f_RepoDoneSubscription());
 
 					auto Remotes = Repo.m_Remotes;
 					Remotes["origin"].m_Properties.m_URL = Repo.m_OriginProperties.m_URL;

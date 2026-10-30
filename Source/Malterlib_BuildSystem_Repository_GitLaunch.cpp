@@ -194,9 +194,11 @@ namespace NMib::NBuildSystem::NRepository
 			m_fOutputConsole(_Output, _bError);
 	}
 
-	COnScopeExitShared CGitLaunches::f_RepoDoneScope() const
+	// Destroying it counts the repository as done, on the actor that made it. Callers destroy it with fg_AsyncDestroy, so that
+	// it has released the state before the launches are destroyed.
+	CActorSubscription CGitLaunches::f_RepoDoneSubscription() const
 	{
-		return g_OnScopeExitActor / [pState = m_pState]
+		return g_ActorSubscription / [pState = m_pState]
 			{
 				auto &State = *pState;
 

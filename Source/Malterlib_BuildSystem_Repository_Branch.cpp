@@ -431,12 +431,12 @@ namespace NMib::NBuildSystem
 
 			auto CurrentBranch = fg_GetBranch(Repo, DynamicInfo);
 			auto &DeleteLaunchSequencer = *DeleteLaunchSequencers(pRepo, "BuildSystem Action Repository CleanupBranches DeleteLaunchSequencer {}"_f << Repo.f_GetName());
-			auto RepoDoneScope = Launches.f_RepoDoneScope();
-
 			fg_DirectDispatch
 				(
 					[=]() mutable -> TCFuture<void>
 					{
+						auto RepoDone = co_await fg_AsyncDestroy(Launches.f_RepoDoneSubscription());
+
 						TCVector<CStr> Params = {"branch", "--format", "%(refname:short)"};
 
 						TCFuture<TCVector<CStr>> RemotesFuture;
@@ -645,8 +645,6 @@ namespace NMib::NBuildSystem
 
 						co_await fg_AllDone(Results);
 
-						(void)RepoDoneScope;
-
 						co_return {};
 					}
 				)
@@ -715,12 +713,12 @@ namespace NMib::NBuildSystem
 
 			auto &DeleteLaunchSequencer = *DeleteLaunchSequencers(pRepo, "BuildSystem Action Repository CleanupTags DeleteLaunchSequencer {}"_f << Repo.f_GetName());
 
-			auto RepoDoneScope = Launches.f_RepoDoneScope();
-
 			fg_DirectDispatch
 				(
 					[=]() mutable -> TCFuture<void>
 					{
+						auto RepoDone = co_await fg_AsyncDestroy(Launches.f_RepoDoneSubscription());
+
 						TCFuture<TCVector<CStr>> RemotesFuture;
 
 						if (_Flags & ERepoCleanupTagsFlag_AllRemotes)
@@ -955,7 +953,6 @@ namespace NMib::NBuildSystem
 						}
 
 						co_await fg_AllDone(Results);
-						(void)RepoDoneScope;
 
 						co_return {};
 					}
