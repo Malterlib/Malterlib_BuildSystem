@@ -4,6 +4,8 @@
 #include <Mib/Core/Core>
 #include <Mib/BuildSystem/BuildSystem>
 #include <Mib/Process/ProcessLaunch>
+#include <Mib/Stream/Binary>
+#include <Mib/Test/Exception>
 #include "../Source/Malterlib_BuildSystem_RepositoryEditor.h"
 
 namespace
@@ -12,6 +14,7 @@ namespace
 	using namespace NMib::NBuildSystem;
 	using namespace NMib::NStr;
 	using namespace NMib::NContainer;
+	using namespace NMib::NStream;
 
 	class CGeneral_Tests : public NMib::NTest::CTest
 	{
@@ -178,6 +181,98 @@ namespace
 
 				fCheckNoContainingPath("DifferentWorkspace", "/opt/Source/OtherProject/External/mongo");
 				fCheckNoContainingPath("PrefixButNotChild", "/opt/Source/MalterlibSDK");
+			};
+
+			DMibTestSuite("GeneratorState")
+			{
+				CGeneratorArchiveState State;
+				State.m_GeneratedFiles["Generated.txt"].m_Workspaces["Workspace"];
+				State.m_SourceFiles["Source.MHeader"];
+				State.m_Environment["Variable"] = "Value";
+
+				auto fRead = [](CByteVector const &_Data)
+					{
+						CGeneratorArchiveState Read;
+						CBinaryStreamMemory<> Stream;
+						Stream.f_Open(_Data);
+						Stream >> Read;
+						return Read;
+					}
+				;
+
+				{
+					DMibTestPath("CurrentVersion");
+					CBinaryStreamMemory<> Stream;
+					Stream << State;
+
+					auto Read = fRead(Stream.f_MoveVector());
+					DMibExpect(Read.m_GeneratedFiles.f_GetLen(), ==, 1u);
+					DMibExpectTrue(Read.m_GeneratedFiles.f_FindEqual("Generated.txt"));
+					DMibExpect(Read.m_SourceFiles.f_GetLen(), ==, 1u);
+					DMibExpect(Read.m_Environment, ==, State.m_Environment);
+				}
+				{
+					DMibTestPath("GeneratedFilesLastVersion");
+					CBinaryStreamMemory<> Stream;
+					Stream << uint32(CGeneratorArchiveState::EFileVersion_GeneratedFilesLast);
+					Stream << State.m_ExeFile;
+					Stream << State.m_SourceFiles;
+					Stream << State.m_ReferencedFiles;
+					Stream << State.m_GeneratedFiles;
+					Stream << State.m_SourceSearches;
+					Stream << State.m_Environment;
+					Stream << State.m_NumWorkspaceTargets;
+					Stream << State.m_GenerationFlags;
+
+					auto Read = fRead(Stream.f_MoveVector());
+					DMibExpectTrue(Read.m_GeneratedFiles.f_FindEqual("Generated.txt"));
+					DMibExpect(Read.m_SourceFiles.f_GetLen(), ==, 1u);
+					DMibExpect(Read.m_Environment, ==, State.m_Environment);
+				}
+				{
+					DMibTestPath("LaterVersion");
+					CBinaryStreamMemory<> Stream;
+					Stream << State;
+					Stream << CStr("State that only the later version knows");
+
+					CByteVector Data = Stream.f_MoveVector();
+					uint32 LaterVersion = CGeneratorArchiveState::EFileVersion + 1;
+					NMemory::fg_MemCopy(Data.f_GetArray(), &LaterVersion, sizeof(LaterVersion));
+
+					auto Read = fRead(Data);
+					DMibExpectTrue(Read.m_GeneratedFiles.f_FindEqual("Generated.txt"));
+					DMibExpect(Read.m_SourceFiles.f_GetLen(), ==, 1u);
+					DMibExpect(Read.m_Environment, ==, State.m_Environment);
+				}
+				{
+					DMibTestPath("UnreadableLaterVersion");
+					uint32 LaterVersion = CGeneratorArchiveState::EFileVersion + 1;
+					CBinaryStreamMemory<> Stream;
+					Stream << LaterVersion;
+					Stream << LaterVersion;
+
+					DMibExpectException
+						(
+							fRead(Stream.f_MoveVector())
+							, DMibErrorInstance
+							(
+								CStr::CFormat("Generator state of version 0x{nh} needs a reader of version 0x{nh} or later") << LaterVersion << LaterVersion
+							)
+						)
+					;
+				}
+				{
+					DMibTestPath("TooOldVersion");
+					CBinaryStreamMemory<> Stream;
+					Stream << uint32(CGeneratorArchiveState::EFileVersion_GeneratedFilesLast - 1);
+
+					DMibExpectException
+						(
+							fRead(Stream.f_MoveVector())
+							, DMibErrorInstance(CStr::CFormat("Generator state of version 0x{nh} is too old to read") << uint32(CGeneratorArchiveState::EFileVersion_GeneratedFilesLast - 1))
+						)
+					;
+				}
 			};
 		}
 	};

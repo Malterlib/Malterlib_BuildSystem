@@ -19,9 +19,11 @@ namespace NMib::NBuildSystem
 
 	struct CGeneratorArchiveState
 	{
-		enum
+		enum : uint32
 		{
-			EFileVersion = 0x122
+			EFileVersion = 0x123 // Later versions only add state after the state of this version, so this version reads them
+			, EFileVersion_OldestReader = 0x123 // Streamed after the version: a later format that this version can't read raises it
+			, EFileVersion_GeneratedFilesLast = 0x122 // Still read: the last version that stored the generated files after other state
 		};
 
 		struct CProcessedFile

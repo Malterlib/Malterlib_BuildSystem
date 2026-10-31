@@ -290,6 +290,14 @@ namespace NMib::NBuildSystem
 			}
 			catch (CException const &_Exception)
 			{
+				f_OutputConsole
+					(
+						"Could not read the generator state '{}', so files that earlier generations made and this one doesn't stay on disk: {}\n"_f
+						<< _GenerateState.m_GlobalGeneratorStateFileName
+						<< _Exception
+						, true
+					)
+				;
 				if (mp_GenerateWorkspace)
 				{
 					DMibConErrOut("Generating all workspaces: Exception reading state: {}\n", _Exception);
@@ -299,6 +307,13 @@ namespace NMib::NBuildSystem
 			}
 			catch (...)
 			{
+				f_OutputConsole
+					(
+						"Could not read the generator state '{}', so files that earlier generations made and this one doesn't stay on disk\n"_f
+						<< _GenerateState.m_GlobalGeneratorStateFileName
+						, true
+					)
+				;
 				if (mp_GenerateWorkspace)
 				{
 					DMibConErrOut("Generating all workspaces: Generic exception reading state\n");

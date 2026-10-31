@@ -348,6 +348,16 @@ from branch to base that git doesn't track.
   on the branch itself or the default branch: a base branch can be force-pushed, which would orphan commits that only it
   holds.
 
+### Generator State
+A generation deletes the files that the previous generation of its build system generated and it doesn't, from the
+generator states in `GeneratorStates` of the output directory, so an MTool of another version has to read them.
+
+- A state starts with its version and the oldest version that can read it, then the generated files and the other state.
+  A later version only adds state after what earlier versions stream, so they read what they know and skip the rest.
+- A format that earlier versions can't read raises the oldest reader, so they reject it; a state that can't be read is
+  reported, since the files that only it lists stay on disk.
+- Version 0x122, which streamed the generated files after other state, is still read.
+
 ## Testing
 
 ### Test Structure
