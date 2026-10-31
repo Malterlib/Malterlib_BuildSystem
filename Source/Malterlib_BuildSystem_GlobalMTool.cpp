@@ -44,6 +44,24 @@ namespace NMib::NBuildSystem
 					if (!CFile::fs_FileExists(SourceFile))
 						return;
 
+					// LFS transfer agents run the installed MTool while an update installs a new one, so a file is replaced whole
+					// instead of rewritten in place; a running executable is moved aside as <file>~<ID>.TMP on Windows
+					if (!(CFile::fs_GetAttributesOnLink(SourceFile) & EFileAttrib_Link))
+					{
+						auto DestinationFile = _DestinationDirectory / _FileName;
+						CStr TemporaryFile = "{}~{}.TMP"_f << DestinationFile << fg_FastRandomID();
+						auto CleanupTemporary = g_OnScopeExit / [&]
+							{
+								if (CFile::fs_FileExists(TemporaryFile))
+									CFile::fs_DeleteFile(TemporaryFile);
+							}
+						;
+
+						CFile::fs_CopyFileDiff(SourceFile, TemporaryFile, true);
+						CFile::fs_AtomicReplaceFile(TemporaryFile, DestinationFile);
+						return;
+					}
+
 					CFile::fs_DiffCopyFileOrDirectory
 						(
 							SourceFile
