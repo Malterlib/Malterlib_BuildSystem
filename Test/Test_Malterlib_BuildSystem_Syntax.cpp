@@ -224,7 +224,8 @@ namespace
 					fs_ParseString("date(2019-11-15 13:50:50.o56)")
 					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_12 " Failed to parse \"2019-11-15 13:50:50.\" as a date: Failed to parse \".\" as a float. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]"_f
+						DPrefixLocation_1_12 " Failed to parse \"2019-11-15 13:50:50.\" as a date: Failed to parse \".\" as a float. Date format is: Year-Month-Day "
+							"[Hour[:Minute[:Second[.Fraction]]]]"_f
 						, {}
 					)
 				)
@@ -234,7 +235,8 @@ namespace
 					fs_ParseString("date(2019-11-15 13:50:50.1.647)")
 					, DMibExceptionInstanceParse
 					(
-						DPrefixLocation_1_12 " Failed to parse \"2019-11-15 13:50:50.\" as a date: Failed to parse \".\" as a float. Date format is: Year-Month-Day [Hour[:Minute[:Second[.Fraction]]]]"_f
+						DPrefixLocation_1_12 " Failed to parse \"2019-11-15 13:50:50.\" as a date: Failed to parse \".\" as a float. Date format is: Year-Month-Day "
+							"[Hour[:Minute[:Second[.Fraction]]]]"_f
 						, {}
 					)
 				)

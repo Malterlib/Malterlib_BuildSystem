@@ -2021,7 +2021,11 @@ namespace NMib::NBuildSystem
 					FilesList += ", ";
 				FilesList += File;
 			}
-			CStr Message = "repo-commit cannot find an owning %Repository for these config files: {}. Declare a parent %Repository that contains them (e.g. %Repository \".\" at the workspace base directory '{}')."_f << FilesList << f_GetBaseDir();
+			CStr Message = "repo-commit cannot find an owning %Repository for these config files: {}. Declare a parent %Repository that contains them (e.g. %Repository \".\" at the "
+				"workspace base directory '{}')."_f
+				<< FilesList
+				<< f_GetBaseDir()
+			;
 			Launches.f_Output(EOutputType_Error, ".", Message);
 			co_return DMibErrorInstance(Message);
 		}
