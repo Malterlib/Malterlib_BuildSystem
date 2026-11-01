@@ -21,13 +21,8 @@ namespace NMib::NBuildSystem
 			return Relative;
 		}
 
-		CRepositoryPinLocation fg_GetRepositoryPinLocation
-			(
-				CRepository const &_Repo
-				, TCMap<CStr, CRepository const *> const &_RepositoryByLocation
-				, CStateHandler &_StateHandler
-				, CStr const &_BaseDir
-			)
+		auto fg_GetRepositoryPinLocation(CRepository const &_Repo, TCMap<CStr, CRepository const *> const &_RepositoryByLocation, CStateHandler &_StateHandler, CStr const &_BaseDir)
+			-> CRepositoryPinLocation
 		{
 			CRepositoryPinLocation PinLocation;
 			if (_Repo.m_ConfigFile.f_IsEmpty())
@@ -50,13 +45,8 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_List
-		(
-			CGenerateOptions const &_GenerateOptions
-			, CRepoFilter const &_Filter
-			, bool _bJson
-			, TCSharedPointer<CCommandLineControl> const &_pCommandLine
-		)
+	auto CBuildSystem::f_Action_Repository_List(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, bool _bJson, TCSharedPointer<CCommandLineControl> const &_pCommandLine)
+		-> TCUnsafeFuture<CBuildSystem::ERetry>
 	{
 		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
@@ -163,10 +153,7 @@ namespace NMib::NBuildSystem
 				if (auto *pUpstream = Repo.m_Remotes.m_Remotes.f_FindEqual("upstream"))
 				{
 					Entry["UpstreamUrl"] = pUpstream->m_Properties.m_URL;
-					Entry["DefaultUpstreamBranch"] = pUpstream->m_Properties.m_DefaultBranch.f_IsEmpty()
-						? Repo.m_DefaultUpstreamBranch
-						: pUpstream->m_Properties.m_DefaultBranch
-					;
+					Entry["DefaultUpstreamBranch"] = pUpstream->m_Properties.m_DefaultBranch.f_IsEmpty() ? Repo.m_DefaultUpstreamBranch : pUpstream->m_Properties.m_DefaultBranch;
 				}
 
 				Entry["UpdateSubmodules"] = Repo.m_bUpdateSubmodules;
@@ -211,15 +198,7 @@ namespace NMib::NBuildSystem
 			if (!Entry["ConfigFile"].f_String().f_IsEmpty())
 				PinnedIn = "{} [{}]"_f << Entry["ConfigFile"].f_String() << Entry["ConfigKey"].f_String();
 
-			TableRenderer.f_AddRow
-				(
-					Entry["Path"].f_String()
-					, Entry["Pin"].f_String()
-					, PinnedIn
-					, Entry["DefaultBranch"].f_String()
-					, Entry["Url"].f_String()
-				)
-			;
+			TableRenderer.f_AddRow(Entry["Path"].f_String(), Entry["Pin"].f_String(), PinnedIn, Entry["DefaultBranch"].f_String(), Entry["Url"].f_String());
 		}
 
 		TableRenderer.f_Output(CTableRenderHelper::EOutputType_HumanReadable);

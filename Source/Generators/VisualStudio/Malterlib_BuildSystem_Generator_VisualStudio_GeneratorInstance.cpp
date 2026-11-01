@@ -7,8 +7,8 @@
 #include <Mib/XML/XML>
 #include <Mib/Encoding/Json>
 #ifdef DPlatformFamily_Windows
-#include <Mib/Core/PlatformSpecific/WindowsRegistry>
-#include <Mib/Core/PlatformSpecific/WindowsFilePath>
+#	include <Mib/Core/PlatformSpecific/WindowsRegistry>
+#	include <Mib/Core/PlatformSpecific/WindowsFilePath>
 #endif
 
 namespace NMib::NBuildSystem

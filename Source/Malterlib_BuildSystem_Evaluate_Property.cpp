@@ -90,39 +90,45 @@ namespace NMib::NBuildSystem
 		return nullptr;
 	}
 
-	CValuePotentiallyByRef CBuildSystem::f_EvaluateEntityProperty
+	auto CBuildSystem::f_EvaluateEntityProperty
 		(
 			CEntity &_Entity
 			, CPropertyKeyReference const &_PropertyKey
 			, CBuildSystemPropertyInfo &o_PropertyInfo
 			, CEvaluatedProperties *_pEvaluatedProperties
-		) const
+		)
+		const
+		-> CValuePotentiallyByRef
 	{
 		CEvaluationContext EvalContext(_pEvaluatedProperties ? _pEvaluatedProperties : &_Entity.m_EvaluatedProperties);
 		return fp_EvaluateEntityProperty(_Entity, _Entity, _PropertyKey, EvalContext, o_PropertyInfo, o_PropertyInfo.f_FallbackPosition(), nullptr, false);
 	}
 
-	CValuePotentiallyByRef CBuildSystem::f_EvaluateEntityPropertyNoDefault
+	auto CBuildSystem::f_EvaluateEntityPropertyNoDefault
 		(
 			CEntity &_Entity
 			, CPropertyKeyReference const &_PropertyKey
 			, CBuildSystemPropertyInfo &o_PropertyInfo
 			, CEvaluatedProperties *_pEvaluatedProperties
-		) const
+		)
+		const
+		-> CValuePotentiallyByRef
 	{
 		CEvaluationContext EvalContext(_pEvaluatedProperties ? _pEvaluatedProperties : &_Entity.m_EvaluatedProperties);
 		EvalContext.m_bFailUndefinedTypeCheck = false;
 		return fp_EvaluateEntityProperty(_Entity, _Entity, _PropertyKey, EvalContext, o_PropertyInfo, o_PropertyInfo.f_FallbackPosition(), nullptr, false);
 	}
 
-	NEncoding::CEJsonSorted CBuildSystem::f_EvaluateEntityPropertyUncached
+	auto CBuildSystem::f_EvaluateEntityPropertyUncached
 		(
 			CEntity &_Entity
 			, CPropertyKeyReference const &_PropertyKey
 			, CBuildSystemPropertyInfo &o_PropertyInfo
 			, TCMap<CPropertyKey, CEvaluatedProperty> const *_pInitialProperties
 			, CEvaluatedProperties *_pEvaluatedProperties
-		) const
+		)
+		const
+		-> NEncoding::CEJsonSorted
 	{
 		CEvaluatedProperties EvaluatedProperties;
 		if (_pInitialProperties)
@@ -131,14 +137,16 @@ namespace NMib::NBuildSystem
 		return fp_EvaluateEntityProperty(_Entity, _Entity, _PropertyKey, EvalContext, o_PropertyInfo, o_PropertyInfo.f_FallbackPosition(), nullptr, false).f_Move();
 	}
 
-	NContainer::TCVector<NStr::CStr> CBuildSystem::f_EvaluateEntityPropertyUncachedStringArray
+	auto CBuildSystem::f_EvaluateEntityPropertyUncachedStringArray
 		(
 			CEntity &_Entity
 			, CPropertyKeyReference const &_PropertyKey
 			, CBuildSystemPropertyInfo &o_PropertyInfo
 			, NContainer::TCMap<CPropertyKey, CEvaluatedProperty> const *_pInitialProperties
 			, NStorage::TCOptional<NContainer::TCVector<NStr::CStr>> const &_Default
-		) const
+		)
+		const
+		-> NContainer::TCVector<NStr::CStr>
 	{
 		auto Value = f_EvaluateEntityPropertyUncached(_Entity, _PropertyKey, o_PropertyInfo, _pInitialProperties);
 
@@ -155,14 +163,16 @@ namespace NMib::NBuildSystem
 		return fg_Move(Value).f_StringArray();
 	}
 
-	NStr::CStr CBuildSystem::f_EvaluateEntityPropertyUncachedString
+	auto CBuildSystem::f_EvaluateEntityPropertyUncachedString
 		(
 			CEntity &_Entity
 			, CPropertyKeyReference const &_PropertyKey
 			, CBuildSystemPropertyInfo &o_PropertyInfo
 			, NContainer::TCMap<CPropertyKey, CEvaluatedProperty> const *_pInitialProperties
 			, NStorage::TCOptional<NStr::CStr> const &_Default
-		) const
+		)
+		const
+		-> NStr::CStr
 	{
 		auto Value = f_EvaluateEntityPropertyUncached(_Entity, _PropertyKey, o_PropertyInfo, _pInitialProperties);
 
@@ -178,7 +188,6 @@ namespace NMib::NBuildSystem
 
 		return fg_Move(Value.f_String());
 	}
-
 
 	CValuePotentiallyByRef CBuildSystem::f_EvaluateEntityProperty(CEntity &_Entity, CPropertyKeyReference const &_PropertyKey) const
 	{
@@ -224,13 +233,15 @@ namespace NMib::NBuildSystem
 		return Value.f_MoveString();
 	}
 
-	CStr CBuildSystem::f_EvaluateEntityPropertyString
+	auto CBuildSystem::f_EvaluateEntityPropertyString
 		(
 			CEntity &_Entity
 			, CPropertyKeyReference const &_PropertyKey
 			, CBuildSystemPropertyInfo &o_PropertyInfo
 			, NStorage::TCOptional<NStr::CStr> &&_Default
-		) const
+		)
+		const
+		-> CStr
 	{
 		auto Value = f_EvaluateEntityProperty(_Entity, _PropertyKey, o_PropertyInfo);
 		auto &ValueRef = Value.f_Get();
@@ -291,14 +302,16 @@ namespace NMib::NBuildSystem
 		return ValueRef.f_Boolean();
 	}
 
-	bool CBuildSystem::f_EvaluateEntityPropertyBool
+	auto CBuildSystem::f_EvaluateEntityPropertyBool
 		(
 			CEntity &_Entity
 			, CPropertyKeyReference const &_PropertyKey
 			, CBuildSystemPropertyInfo &o_PropertyInfo
 			, NStorage::TCOptional<bool> const &_Default
 			, CEvaluatedProperties *_pEvaluatedProperties
-		) const
+		)
+		const
+		-> bool
 	{
 		auto Value = f_EvaluateEntityProperty(_Entity, _PropertyKey, o_PropertyInfo, _pEvaluatedProperties);
 		auto &ValueRef = Value.f_Get();
@@ -354,12 +367,7 @@ namespace NMib::NBuildSystem
 		return ValueRef.f_Float();
 	}
 
-	TCVector<CStr> CBuildSystem::f_EvaluateEntityPropertyStringArray
-		(
-			CEntity &_Entity
-			, CPropertyKeyReference const &_PropertyKey
-			, TCOptional<TCVector<NStr::CStr>> &&_Default
-		) const
+	TCVector<CStr> CBuildSystem::f_EvaluateEntityPropertyStringArray(CEntity &_Entity, CPropertyKeyReference const &_PropertyKey, TCOptional<TCVector<NStr::CStr>> &&_Default) const
 	{
 		CBuildSystemPropertyInfo PropertyInfo;
 		auto Value = f_EvaluateEntityProperty(_Entity, _PropertyKey, PropertyInfo);
@@ -394,10 +402,10 @@ namespace NMib::NBuildSystem
 
 				CBuildSystemUniquePositions Positions;
 				if
-					(
-						!Property.m_pCondition
-						|| fpr_EvalCondition(_Entity, _Entity, *Property.m_pCondition, EvalContext, Property.m_Flags & EPropertyFlag_TraceCondition, nullptr, f_EnablePositions(&Positions))
-					)
+				(
+					!Property.m_pCondition
+					|| fpr_EvalCondition(_Entity, _Entity, *Property.m_pCondition, EvalContext, Property.m_Flags & EPropertyFlag_TraceCondition, nullptr, f_EnablePositions(&Positions))
+				)
 				{
 					CEvalPropertyValueContext Context{_Entity, _Entity, Property.m_Position, EvalContext, nullptr, f_EnablePositions(&Positions)};
 					auto Value = fp_EvaluateRootValue(Context, Property.m_Value, &PropertyKey, bTypeAlreadyChecked);
@@ -426,12 +434,20 @@ namespace NMib::NBuildSystem
 			{
 				CEvaluationContext EvalContext(&_Entity.m_EvaluatedProperties);
 				CEvalPropertyValueContext Context{_Entity, _Entity, LastPropertyPosition, EvalContext, nullptr, f_EnablePositions(pEvaluated->m_pPositions.f_Get())};
-				fp_CheckValueConformToPropertyType(Context, _Entity.f_Data().m_Properties.fs_GetKey(Properties).f_Reference(), pEvaluated->m_Value, LastPropertyPosition, EDoesValueConformToTypeFlag_None);
+				fp_CheckValueConformToPropertyType
+					(
+						Context
+						, _Entity.f_Data().m_Properties.fs_GetKey(Properties).f_Reference()
+						, pEvaluated->m_Value
+						, LastPropertyPosition
+						, EDoesValueConformToTypeFlag_None
+					)
+				;
 			}
 		}
 	}
 
-	CValuePotentiallyByRef CBuildSystem::fp_EvaluateEntityProperty
+	auto CBuildSystem::fp_EvaluateEntityProperty
 		(
 			CEntity &_Entity
 			, CEntity &_OriginalEntity
@@ -441,7 +457,9 @@ namespace NMib::NBuildSystem
 			, CFilePosition const &_FallbackPosition
 			, CEvalPropertyValueContext const *_pParentContext
 			, bool _bMoveCache
-		) const
+		)
+		const
+		-> CValuePotentiallyByRef
 	{
 		auto &Stack = _EvalContext.m_EvalStack[_Key];
 		auto EvalStack = Stack(&_Entity);
@@ -489,8 +507,7 @@ namespace NMib::NBuildSystem
 			return CEJsonSorted();
 		}
 
-		auto Cleanup
-			= fg_OnScopeExit
+		auto Cleanup = fg_OnScopeExit
 			(
 				[&]
 				{
@@ -525,19 +542,19 @@ namespace NMib::NBuildSystem
 				{
 					CBuildSystemUniquePositions Positions;
 					if
+					(
+						!Prop.m_pCondition
+						|| fpr_EvalCondition
 						(
-							!Prop.m_pCondition
-							|| fpr_EvalCondition
-							(
-								*pContext
-								, _OriginalEntity
-								, *Prop.m_pCondition
-								, _EvalContext
-								, Prop.m_Flags & EPropertyFlag_TraceCondition
-								, _pParentContext
-								, f_EnablePositions(&Positions)
-							)
+							*pContext
+							, _OriginalEntity
+							, *Prop.m_pCondition
+							, _EvalContext
+							, Prop.m_Flags & EPropertyFlag_TraceCondition
+							, _pParentContext
+							, f_EnablePositions(&Positions)
 						)
+					)
 					{
 						CEvalPropertyValueContext Context{*pContext, _OriginalEntity, Prop.m_Position, _EvalContext, _pParentContext, f_EnablePositions(&Positions)};
 
@@ -638,11 +655,11 @@ namespace NMib::NBuildSystem
 		{
 			// Check for inherited evaluated properties
 			for
-				(
-					auto *pEvaluatedProperties = _EvalContext.m_pEvaluatedProperties->m_pParentProperties
-					; pEvaluatedProperties
-					; pEvaluatedProperties = pEvaluatedProperties->m_pParentProperties
-				)
+			(
+				auto *pEvaluatedProperties = _EvalContext.m_pEvaluatedProperties->m_pParentProperties
+				; pEvaluatedProperties
+				; pEvaluatedProperties = pEvaluatedProperties->m_pParentProperties
+			)
 			{
 				if (auto pValue = pEvaluatedProperties->m_Properties.f_FindEqual(_Key))
 				{

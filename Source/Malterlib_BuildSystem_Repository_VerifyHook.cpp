@@ -25,13 +25,7 @@ namespace NMib::NBuildSystem::NRepository
 
 		// Runs the hook with the batch on stdin. It gets this process's environment, and has no timeout: a hook can wait for as
 		// long as it needs, such as for a review of the batch.
-		TCFuture<CProcessLaunchActor::CSimpleLaunchResult> fg_LaunchVerifyHook
-			(
-				CStr _Command
-				, CStr _WorkingDirectory
-				, CStr _Input
-				, TCSharedPointer<TCAtomic<bool>> _pCancelled
-			)
+		TCFuture<CProcessLaunchActor::CSimpleLaunchResult> fg_LaunchVerifyHook(CStr _Command, CStr _WorkingDirectory, CStr _Input, TCSharedPointer<TCAtomic<bool>> _pCancelled)
 		{
 			auto Capture = co_await (g_CaptureExceptions % "Failed to run the verify hook");
 
@@ -68,14 +62,8 @@ namespace NMib::NBuildSystem::NRepository
 				{
 					switch (_State.f_GetTypeID())
 					{
-					case EProcessLaunchState_Launched:
-						pState->m_Launched.f_SetResult();
-
-						break;
-					case EProcessLaunchState_LaunchFailed:
-						pState->m_Launched.f_SetException(DMibErrorInstance(_State.f_Get<EProcessLaunchState_LaunchFailed>()));
-
-						break;
+					case EProcessLaunchState_Launched: pState->m_Launched.f_SetResult(); break;
+					case EProcessLaunchState_LaunchFailed: pState->m_Launched.f_SetException(DMibErrorInstance(_State.f_Get<EProcessLaunchState_LaunchFailed>())); break;
 					case EProcessLaunchState_Exited:
 						pState->m_Result.m_ExitCode = _State.f_Get<EProcessLaunchState_Exited>();
 						pState->m_bExited = true;
@@ -109,11 +97,7 @@ namespace NMib::NBuildSystem::NRepository
 					if (!Terminated)
 						co_return DMibErrorInstance("Cancelled, and failed to stop the verify hook: {}"_f << Terminated.f_GetExceptionStr());
 
-					co_return DMibErrorInstance
-						(
-							"Cancelled while the verify hook ran{}"_f << (Sent ? CStr() : CStr(", sending its batch failed: " + Sent.f_GetExceptionStr()))
-						)
-					;
+					co_return DMibErrorInstance("Cancelled while the verify hook ran{}"_f << (Sent ? CStr() : CStr(", sending its batch failed: " + Sent.f_GetExceptionStr())));
 				}
 
 				co_await fg_Timeout(0.2);

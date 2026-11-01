@@ -204,13 +204,7 @@ namespace NMib::NBuildSystem
 		fsp_ThrowError(_Registry.f_GetLocation(), _Error);
 	}
 
-	void CBuildSystem::fs_ThrowError
-		(
-			CEvalPropertyValueContext &_Context
-			, CFilePosition const &_Position
-			, NStr::CStr const &_Error
-			, NContainer::TCVector<CBuildSystemError> const &_Errors
-		)
+	void CBuildSystem::fs_ThrowError(CEvalPropertyValueContext &_Context, CFilePosition const &_Position, NStr::CStr const &_Error, NContainer::TCVector<CBuildSystemError> const &_Errors)
 	{
 		CBuildSystemUniquePositions Positions;
 		Positions.f_AddPosition(_Position, "");
@@ -272,12 +266,7 @@ namespace NMib::NBuildSystem
 		DMibErrorParse(ParseErrors.f_ToString(), ParseErrors.m_ParseErrors);
 	}
 
-	void CBuildSystem::fs_ThrowError
-		(
-			CEvalPropertyValueContext &_Context
-			, NStr::CStr const &_Error
-			, NContainer::TCVector<CBuildSystemError> const &_Errors
-		)
+	void CBuildSystem::fs_ThrowError(CEvalPropertyValueContext &_Context, NStr::CStr const &_Error, NContainer::TCVector<CBuildSystemError> const &_Errors)
 	{
 		fs_ThrowError(_Context, _Context.m_Position, _Error, _Errors);
 	}

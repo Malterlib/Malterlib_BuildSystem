@@ -24,12 +24,12 @@ namespace NMib::NBuildSystem
 
 	enum EEntityCopyFlag
 	{
-		EEntityCopyFlag_None = 0
-		, EEntityCopyFlag_CopyChildren = DMibBit(0)
-		, EEntityCopyFlag_CopyExternal = DMibBit(1)
-		, EEntityCopyFlag_MergeEntities = DMibBit(2)
+		EEntityCopyFlag_None                    = 0
+		, EEntityCopyFlag_CopyChildren          = DMibBit(0)
+		, EEntityCopyFlag_CopyExternal          = DMibBit(1)
+		, EEntityCopyFlag_MergeEntities         = DMibBit(2)
 		, EEntityCopyFlag_ClearExistingChildren = DMibBit(3)
-		, EEntityCopyFlag_NoCheckTypes = DMibBit(4)
+		, EEntityCopyFlag_NoCheckTypes          = DMibBit(4)
 	};
 
 	struct CTypeWithPosition
@@ -121,7 +121,7 @@ namespace NMib::NBuildSystem
 		void f_ForEachChild(NFunction::TCFunction<void (CEntity *_pChild)> const &_fChild);
 		NStr::CStr const &f_GetKeyName() const;
 		CFilePosition const &f_GetFirstValidPosition() const;
-		bool f_HasFullEval(EPropertyType _PropertyType)const ;
+		bool f_HasFullEval(EPropertyType _PropertyType) const;
 		bool f_HasParent(CEntity const *_pEntity) const;
 		bool f_HasOnlyGroups() const;
 

@@ -12,7 +12,8 @@ namespace NMib::NBuildSystem
 			switch (_Operator)
 			{
 			default:
-			case CBuildSystemSyntax::CBinaryOperator::EOperator_MatchEqual: return EConditionType_MatchEqual;
+			case CBuildSystemSyntax::CBinaryOperator::EOperator_MatchEqual:
+				return EConditionType_MatchEqual;
 			case CBuildSystemSyntax::CBinaryOperator::EOperator_MatchNotEqual: return EConditionType_MatchNotEqual;
 			case CBuildSystemSyntax::CBinaryOperator::EOperator_Equal: return EConditionType_CompareEqual;
 			case CBuildSystemSyntax::CBinaryOperator::EOperator_NotEqual: return EConditionType_CompareNotEqual;
@@ -129,8 +130,7 @@ namespace NMib::NBuildSystem
 					return fp_EvaluatePropertyValueParam(_Context, _Value.m_Right);
 			}
 			break;
-		default:
-			break;
+		default: break;
 		}
 
 		auto Left = fp_EvaluatePropertyValueParam(_Context, _Value.m_Left);
@@ -163,8 +163,7 @@ namespace NMib::NBuildSystem
 						)
 					)
 				;
-			default:
-				break;
+			default: break;
 			}
 
 			if (LeftRef.f_IsFloat() && RightRef.f_IsInteger())
@@ -178,8 +177,7 @@ namespace NMib::NBuildSystem
 				case COp::EOperator_Modulus:
 					Right.f_Set(CEJsonSorted(RightRef.f_AsFloat()));
 					break;
-				default:
-					break;
+				default: break;
 				}
 			}
 			else if (LeftRef.f_IsInteger() && RightRef.f_IsFloat())
@@ -193,8 +191,7 @@ namespace NMib::NBuildSystem
 				case COp::EOperator_Modulus:
 					Left.f_Set(CEJsonSorted(LeftRef.f_AsFloat()));
 					break;
-				default:
-					break;
+				default: break;
 				}
 			}
 		}
@@ -386,9 +383,7 @@ namespace NMib::NBuildSystem
 			case COp::EOperator_BitwiseNot: return ~RightRef.f_Integer();
 			case COp::EOperator_UnaryPlus: return +RightRef.f_Integer();
 			case COp::EOperator_UnaryMinus: return -RightRef.f_Integer();
-			default:
-				fs_ThrowError(_Context, "Integers not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << fg_IndentValue(RightRef));
-				break;
+			default: fs_ThrowError(_Context, "Integers not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << fg_IndentValue(RightRef)); break;
 			}
 		}
 		else if (RightRef.f_IsFloat())
@@ -397,9 +392,7 @@ namespace NMib::NBuildSystem
 			{
 			case COp::EOperator_UnaryPlus: return +RightRef.f_Float();
 			case COp::EOperator_UnaryMinus: return -RightRef.f_Float();
-			default:
-				fs_ThrowError(_Context, "Floats not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << fg_IndentValue(RightRef));
-				break;
+			default: fs_ThrowError(_Context, "Floats not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << fg_IndentValue(RightRef)); break;
 			}
 		}
 		else if (RightRef.f_IsBoolean())
@@ -407,9 +400,7 @@ namespace NMib::NBuildSystem
 			switch (_Value.m_Operator)
 			{
 			case COp::EOperator_LogicalNot: return !RightRef.f_Boolean();
-			default:
-				fs_ThrowError(_Context, "Floats not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << fg_IndentValue(RightRef));
-				break;
+			default: fs_ThrowError(_Context, "Floats not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << fg_IndentValue(RightRef)); break;
 			}
 		}
 		else if (RightRef.f_IsUserType())

@@ -17,8 +17,8 @@ namespace NMib::NBuildSystem::NRepository
 {
 	DMibImpErrorClassDefine(CExceptionBuildSystemReconcileHelp, NException::CException);
 
-#	define DMibErrorBuildSystemReconcileHelp(_Description) DMibImpError(NMib::NBuildSystem::NRepository::CExceptionBuildSystemReconcileHelp, _Description)
-#	define DMibErrorInstanceBuildSystemReconcileHelp(_Description) DMibImpErrorInstance(NMib::NBuildSystem::NRepository::CExceptionBuildSystemReconcileHelp, _Description)
+#define DMibErrorBuildSystemReconcileHelp(_Description) DMibImpError(NMib::NBuildSystem::NRepository::CExceptionBuildSystemReconcileHelp, _Description)
+#define DMibErrorInstanceBuildSystemReconcileHelp(_Description) DMibImpErrorInstance(NMib::NBuildSystem::NRepository::CExceptionBuildSystemReconcileHelp, _Description)
 
 	struct CColors : public CAnsiEncoding
 	{
@@ -85,6 +85,7 @@ namespace NMib::NBuildSystem::NRepository
 		CRemoteProperties m_Properties;
 		bool m_bCanPush = true;
 		TCAVLLink<> m_Link;
+
 	private:
 		friend class TCLinkedListMember<CRemote>;
 
@@ -94,9 +95,9 @@ namespace NMib::NBuildSystem::NRepository
 
 	enum class EGitIgnoreType : uint32
 	{
-		mc_GitIgnore,         // Use .gitignore in parent directory
-		mc_GitInfoExclude,    // Use .git/info/exclude
-		mc_CoreExcludesFile   // Use core.excludesFile (BuildSystem/.localgitignore)
+		mc_GitIgnore          // Use .gitignore in parent directory
+		, mc_GitInfoExclude   // Use .git/info/exclude
+		, mc_CoreExcludesFile // Use core.excludesFile (BuildSystem/.localgitignore)
 	};
 
 	struct CHooksConfig
@@ -159,11 +160,11 @@ namespace NMib::NBuildSystem::NRepository
 
 		bool m_bSubmodule = false;
 		bool m_bExcludeFromSeen = false;
-		bool m_bLeaveWhenRemoved = false;				// Repository.ReconcileRemoved "Leave"
-		bool m_bFormat = false;							// The repository's sources are formatted by 'mib format'.
-		bool m_bTidy = false;							// The repository's sources are checked by 'mib tidy' and the checks plugin.
-		TCVector<CStr> m_TidyIncludeFiles;				// Wildcards relative to the repository: the files checked, or all when empty.
-		TCVector<CStr> m_TidyExcludeFiles;				// Wildcards relative to the repository: the files not checked.
+		bool m_bLeaveWhenRemoved = false;  // Repository.ReconcileRemoved "Leave"
+		bool m_bFormat = false;            // The repository's sources are formatted by 'mib format'.
+		bool m_bTidy = false;              // The repository's sources are checked by 'mib tidy' and the checks plugin.
+		TCVector<CStr> m_TidyIncludeFiles; // Wildcards relative to the repository: the files checked, or all when empty.
+		TCVector<CStr> m_TidyExcludeFiles; // Wildcards relative to the repository: the files not checked.
 		bool m_bBootstrapSource = false;
 		bool m_bUpdateSubmodules = false;
 		EGitIgnoreType m_GitIgnoreType = EGitIgnoreType::mc_GitIgnore;
@@ -208,10 +209,10 @@ namespace NMib::NBuildSystem::NRepository
 	// Where a repository is pinned, with paths relative to the root of the checkout
 	struct CRepositoryPinLocation
 	{
-		CStr m_Parent; // The repository whose tree has the config file
+		CStr m_Parent;    // The repository whose tree has the config file
 		CStr m_ConfigFile;
 		CStr m_ConfigKey; // The key that pins the repository, exactly as the config file has it
-		CStr m_Pin; // The hash pinned there; empty when the file has no entry for the repository
+		CStr m_Pin;       // The hash pinned there; empty when the file has no entry for the repository
 	};
 
 	// A change to a repository's working tree that the verify hook gets before update-repos writes it
@@ -222,7 +223,7 @@ namespace NMib::NBuildSystem::NRepository
 		CStr m_Path; // Relative to the root
 		CStr m_Url;
 		CStr m_From; // The commit on disk; empty for a repository that has no working tree yet
-		CStr m_To; // The commit that will be on disk
+		CStr m_To;   // The commit that will be on disk
 		CStr m_Parent;
 		CStr m_ConfigFile;
 		CStr m_ConfigKey;
@@ -263,7 +264,7 @@ namespace NMib::NBuildSystem::NRepository
 		TCSharedPointer<TCAtomic<uint32>> m_pBatch;
 		TCSharedPointer<TCAtomic<bool>> m_pCancelled; // The command's cancellation, which stops a running hook
 		umint m_nRepositories = 0;
-		CExceptionPointer m_pRefusal; // The refusal of a batch of the level, which every later phase of it gets; under m_Lock
+		CExceptionPointer m_pRefusal;                 // The refusal of a batch of the level, which every later phase of it gets; under m_Lock
 
 		CMutual m_Lock;
 		CPhase m_Phases[EPhase_Count];
@@ -284,7 +285,7 @@ namespace NMib::NBuildSystem::NRepository
 		TCFuture<void> f_Verify(CVerifyHookLevel::EPhase _Phase, TCVector<CVerifyHookEntry> &&_Entries);
 
 		TCSharedPointer<CVerifyHookLevel> m_pLevel;
-		CStr m_VerifiedTo; // The commit the repository batch allowed
+		CStr m_VerifiedTo;                      // The commit the repository batch allowed
 		TCMap<CStr, CStr> m_VerifiedSubmodules; // The commit the submodule batch allowed, by location, for retries of the checkout
 		umint m_iNextPhase = 0;
 	};
@@ -327,8 +328,8 @@ namespace NMib::NBuildSystem::NRepository
 		void f_Write(CStr const &_BaseDir) const;
 
 		TCMap<CStr, CRepositoryState> m_BuildSystems; // By output directory, relative to the checkout when it is inside it
-		CRepositoryState m_Orphaned; // Seen by build systems that are gone, and not reconciled yet
-		TCSet<CStr> m_KeptRepositories; // Removed and left on disk, so that --ignore-leave can reconcile them again
+		CRepositoryState m_Orphaned;                  // Seen by build systems that are gone, and not reconciled yet
+		TCSet<CStr> m_KeptRepositories;               // Removed and left on disk, so that --ignore-leave can reconcile them again
 	};
 
 	struct CStateHandler
@@ -370,7 +371,7 @@ namespace NMib::NBuildSystem::NRepository
 			CStr m_ToBranch;
 			bool m_bCreated = false;
 
-			auto operator<=>(CBranchTransition const &_Other) const = default;
+			auto operator <=> (CBranchTransition const &_Other) const = default;
 		};
 
 		CConfigFile const &fp_GetConfigFile(CStr const &_FileName, bool _bIsStateFile);
@@ -417,25 +418,29 @@ namespace NMib::NBuildSystem::NRepository
 		void f_MeasureRepos(TCVector<TCVector<CRepository *>> const &_FilteredRepositories, bool _bReport = true);
 		void f_MeasureRepos(TCVector<TCMap<CStr, CReposLocation>> const &_Repositories, bool _bReport = true);
 
-		TCUnsafeFuture<CProcessLaunchActor::CSimpleLaunchResult> f_Launch
+		auto f_Launch
 			(
 				CRepository const &_Repo
 				, TCVector<CStr> const &_Params
 				, TCMap<CStr, CStr> const &_Environment
 				, CProcessLaunchActor::ESimpleLaunchFlag _Flags
 				, CStr const &_Application = "git"
-			) const
+			)
+			const
+			-> TCUnsafeFuture<CProcessLaunchActor::CSimpleLaunchResult>
 		;
-		TCUnsafeFuture<CProcessLaunchActor::CSimpleLaunchResult> f_Launch
+		auto f_Launch
 			(
 				CStr const &_Directory
 				, TCVector<CStr> const &_Params
 				, TCMap<CStr, CStr> const &_Environment
 				, CProcessLaunchActor::ESimpleLaunchFlag _Flags
 				, CStr const &_Application = "git"
-			) const
+			)
+			const
+			-> TCUnsafeFuture<CProcessLaunchActor::CSimpleLaunchResult>
 		;
-		TCUnsafeFuture<void> f_Launch
+		auto f_Launch
 			(
 				CRepository _Repo
 				, TCVector<CStr> _Params
@@ -443,7 +448,9 @@ namespace NMib::NBuildSystem::NRepository
 				, CStr _Prefix = {}
 				, TCMap<CStr, CStr> _Environment = {}
 				, CStr _Application = "git"
-			) const
+			)
+			const
+			-> TCUnsafeFuture<void>
 		;
 		TCUnsafeFuture<CProcessLaunchActor::CSimpleLaunchResult> f_OpenRepoEditor(CRepoEditor _Editor, CStr _Repo) const;
 
@@ -466,7 +473,6 @@ namespace NMib::NBuildSystem::NRepository
 			void f_OutputState() const;
 			void f_ConsoleOutput(CStr const &_Output, bool _bError = false) const;
 
-
 			CIntrusiveRefCount m_RefCount;
 
 			CMutual m_Lock;
@@ -485,7 +491,7 @@ namespace NMib::NBuildSystem::NRepository
 			TCMap<CStr, TCVector<CDeferredOutput>> m_DeferredOutput;
 			TCVector<TCSet<CStr>> m_OutputOrder;
 
-			CLaunchSequencer m_LaunchSequencer{"GitLaunches State LaunchSequencer", fg_Clamp(NSys::fg_Thread_GetVirtualCores()*2u, 32u, fs_MaxProcesses())};
+			CLaunchSequencer m_LaunchSequencer{"GitLaunches State LaunchSequencer", fg_Clamp(NSys::fg_Thread_GetVirtualCores() * 2u, 32u, fs_MaxProcesses())};
 
 			mutable CMutual m_ConsoleOutputLock;
 			mutable fp64 m_LastProgressOutputTime = 0.0;
@@ -508,7 +514,7 @@ namespace NMib::NBuildSystem::NRepository
 
 		struct COwner
 		{
-			COwner(TCSharedPointer<CState> const&_pState);
+			COwner(TCSharedPointer<CState> const &_pState);
 			~COwner();
 
 			TCSharedPointer<CState> m_pState;
@@ -629,8 +635,8 @@ namespace NMib::NBuildSystem::NRepository
 
 	enum EFilterRepoFlag
 	{
-		EFilterRepoFlag_None = 0
-		, EFilterRepoFlag_OnlyTracked = DBit(0)
+		EFilterRepoFlag_None               = 0
+		, EFilterRepoFlag_OnlyTracked      = DBit(0)
 		, EFilterRepoFlag_IncludeNotCloned = DBit(1) // Repositories without a checkout pass filters that don't need one, for listings
 	};
 
@@ -645,18 +651,18 @@ namespace NMib::NBuildSystem::NRepository
 
 	enum class EApplyPolicyFlag
 	{
-		mc_None = 0
-		, mc_Pretend = DMibBit(0)
+		mc_None            = 0
+		, mc_Pretend       = DMibBit(0)
 		, mc_CreateMissing = DMibBit(1)
 	};
 
 	enum class EGetRepoFlag
 	{
-		mc_None = 0
-		, mc_IncludePolicy = DMibBit(0)
+		mc_None                    = 0
+		, mc_IncludePolicy         = DMibBit(0)
 		, mc_IncludeReleasePackage = DMibBit(1)
-		, mc_IncludeLicense = DMibBit(2)
-		, mc_IncludeRepoCommit = DMibBit(3)
+		, mc_IncludeLicense        = DMibBit(2)
+		, mc_IncludeRepoCommit     = DMibBit(3)
 	};
 
 	TCUnsafeFuture<CGitVersion> fg_GetGitVersion(CGitLaunches &_Launches);
@@ -680,7 +686,18 @@ namespace NMib::NBuildSystem::NRepository
 
 	TCFunctionMovable<CStr (CProcessLaunchActor::CSimpleLaunchResult const &_Result)> fg_LogAllFunctor();
 
-	TCFuture<bool> fg_RepoIsChanged(CGitLaunches _GitLaunches, CRepository _Repo, CRepositoryDynamicInfo _DynamicInfo, EFilterRepoFlag _Flags, bool _bIncludePull, CStr _MainRepoBranch, CStr _MainRepoDefaultBranch);
+	auto fg_RepoIsChanged
+		(
+			CGitLaunches _GitLaunches
+			, CRepository _Repo
+			, CRepositoryDynamicInfo _DynamicInfo
+			, EFilterRepoFlag _Flags
+			, bool _bIncludePull
+			, CStr _MainRepoBranch
+			, CStr _MainRepoDefaultBranch
+		)
+		-> TCFuture<bool>
+	;
 	TCFuture<TCVector<CLocalFileChange>> fg_GetLocalFileChanges(CGitLaunches _GitLaunches, CRepository _Repo, bool _bIncludeUntracked);
 	TCFuture<CGitBranches> fg_GetBranches(CGitLaunches _GitLaunches, CRepository _Repo, bool _bRemote);
 	TCFuture<TCVector<CStr>> fg_GetRemotes(CGitLaunches _GitLaunches, CRepository _Repo);
@@ -705,13 +722,8 @@ namespace NMib::NBuildSystem::NRepository
 	void fg_WriteBaseBranches(CStr const &_BaseDir, TCMap<CStr, CStr> const &_BaseBranches);
 	CStr fg_GetComparisonBranch(CStr const &_RepoLocation, CStr const &_Remote, CStr const &_DefaultBranch, CStr const &_BaseBranch);
 	CStr fg_RelativeToBase(CStr const &_Path, CStr const &_BaseDir);
-	CRepositoryPinLocation fg_GetRepositoryPinLocation
-		(
-			CRepository const &_Repo
-			, TCMap<CStr, CRepository const *> const &_RepositoryByLocation
-			, CStateHandler &_StateHandler
-			, CStr const &_BaseDir
-		)
+	auto fg_GetRepositoryPinLocation(CRepository const &_Repo, TCMap<CStr, CRepository const *> const &_RepositoryByLocation, CStateHandler &_StateHandler, CStr const &_BaseDir)
+		-> CRepositoryPinLocation
 	;
 	CStr fg_GetRemoteHead(CRepository const &_Repo, CRepositoryDynamicInfo const &_DynamicInfo, CStr const &_Remote);
 	CStr fg_HandleRepositoryActionToString(EHandleRepositoryAction _Action, EOutputType &o_OutputType);
@@ -722,7 +734,7 @@ namespace NMib::NBuildSystem::NRepository
 	TCUnsafeFuture<void> fg_UpdateRemotes(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage = {});
 	TCMap<CStr, CStr> fg_FetchEnvironment(CBuildSystem const &_BuildSystem);
 
-	TCUnsafeFuture<CFilteredRepos> fg_GetFilteredRepos
+	auto fg_GetFilteredRepos
 		(
 			CBuildSystem::CRepoFilter const &_Filter
 			, CBuildSystem &_BuildSystem
@@ -730,21 +742,13 @@ namespace NMib::NBuildSystem::NRepository
 			, EGetRepoFlag _GetRepoFlags
 			, EFilterRepoFlag _Flags = EFilterRepoFlag_None
 		)
+		-> TCUnsafeFuture<CFilteredRepos>
 	;
 
 	TCFuture<void> fg_ApplyPolicies(CStr _Url, CStr _RepoDir, CEJsonSorted _Policy, EApplyPolicyFlag _Flags, TCFunction<void (EOutputType _OutputType, CStr const &_String)> _fOutputInfo);
 
 	template <typename tf_FOutput>
-	void fg_OutputRepositoryInfo
-		(
-			EOutputType _OutputType
-			, CStr const &_Info
-			, EAnsiEncodingFlag _AnsiFlags
-			, CStr const &_RepoName
-			, umint _MaxRepoWidth
-			, tf_FOutput const &_fOutput
-		)
-	;
+	void fg_OutputRepositoryInfo(EOutputType _OutputType, CStr const &_Info, EAnsiEncodingFlag _AnsiFlags, CStr const &_RepoName, umint _MaxRepoWidth, tf_FOutput const &_fOutput);
 }
 
 #include "Malterlib_BuildSystem_Repository.hpp"

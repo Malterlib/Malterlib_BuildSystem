@@ -101,7 +101,7 @@ namespace NMib::NBuildSystem
 		return m_TypeAndHash.m_Data <=> _Right.m_TypeAndHash.m_Data;
 	}
 
-	inline_always COrdering_Strong CPropertyKey::CCompareByString::operator() (CPropertyKey const &_Left, CPropertyKey const &_Right) const
+	inline_always COrdering_Strong CPropertyKey::CCompareByString::operator () (CPropertyKey const &_Left, CPropertyKey const &_Right) const
 	{
 		if (auto Compare = _Left.m_Name <=> _Right.m_Name; Compare != 0)
 			return Compare;

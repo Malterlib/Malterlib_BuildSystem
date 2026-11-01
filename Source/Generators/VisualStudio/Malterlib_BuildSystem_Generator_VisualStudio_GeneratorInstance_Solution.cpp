@@ -44,13 +44,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		{
 			CStr ProjectPath = CFile::fs_MakePathRelative(iProject->m_FileName, _OutputDir).f_ReplaceChar('/', '\\');
 
-			FileData
-				+= CStr::CFormat("Project(\"{}\") = \"{}\", \"{}\", \"{}\"\r\n")
-				<< iProject->f_GetSolutionTypeGUID()
-				<< iProject->f_GetName()
-				<< ProjectPath
-				<< iProject->f_GetGUID()
-			;
+			FileData += CStr::CFormat("Project(\"{}\") = \"{}\", \"{}\", \"{}\"\r\n") << iProject->f_GetSolutionTypeGUID() << iProject->f_GetName() << ProjectPath << iProject->f_GetGUID();
 			if (m_bEnableSourceControl)
 			{
 				FileData += "	GlobalSection(PerforceSourceControlProviderSolutionProperties) = preSolution\r\n";
@@ -62,9 +56,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		}
 		TCMap<CGroup *, TCLinkedList<CSolutionFile *>> GroupToFile;
 		for (auto iFile = _Solution.m_SolutionFiles.f_GetIterator(); iFile; ++iFile)
-		{
 			GroupToFile[iFile->m_pGroup].f_Insert(iFile);
-		}
 		CStr SolutionDir = CFile::fs_GetPath(OutputFile);
 
 		for (auto iGroup = _Solution.m_Groups.f_GetIterator(); iGroup; ++iGroup)
@@ -170,10 +162,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 		// Hide
 		{
 			FileData += "	GlobalSection(SolutionProperties) = preSolution\r\n"
-						"		HideSolutionNode = FALSE\r\n"
-						"	EndGlobalSection\r\n"
+				"		HideSolutionNode = FALSE\r\n"
+				"	EndGlobalSection\r\n"
 			;
-
 		}
 
 		// Group parenting

@@ -40,11 +40,7 @@ namespace NMib::NBuildSystem
 
 	void CBuildSystemLock::f_WriteOwner(CStr const &_Description) const
 	{
-		CStr Owner = "process {}, since {}, {}"_f
-			<< NProcess::NPlatform::fg_Process_GetCurrentUID()
-			<< CTime::fs_NowLocal()
-			<< _Description
-		;
+		CStr Owner = "process {}, since {}, {}"_f << NProcess::NPlatform::fg_Process_GetCurrentUID() << CTime::fs_NowLocal() << _Description;
 
 		CByteVector FileData;
 		CFile::fs_WriteStringToVector(FileData, Owner, false);
@@ -113,29 +109,12 @@ namespace NMib::NBuildSystem
 				co_return DMibErrorInstance("Failed to take the lock '{}' for {}: {}"_f << _LockFile << _What << Attempt.m_Error);
 
 			if (_Settings.m_Wait == EBuildSystemLockWait::mc_Refuse)
-			{
-				co_return DMibErrorInstance
-					(
-						"Another {} is already running ({}). To wait for it to finish instead, pass --wait-for-lock"_f
-						<< _What
-						<< Attempt.m_Owner
-					)
-				;
-			}
+				co_return DMibErrorInstance("Another {} is already running ({}). To wait for it to finish instead, pass --wait-for-lock"_f << _What << Attempt.m_Owner);
 
 			fp64 Waited = Stopwatch.f_GetTime();
 
 			if (_Settings.m_Timeout >= 0.0 && Waited >= _Settings.m_Timeout)
-			{
-				co_return DMibErrorInstance
-					(
-						"Gave up after waiting {fe0} seconds for another {} ({}) to finish"_f
-						<< Waited
-						<< _What
-						<< Attempt.m_Owner
-					)
-				;
-			}
+				co_return DMibErrorInstance("Gave up after waiting {fe0} seconds for another {} ({}) to finish"_f << Waited << _What << Attempt.m_Owner);
 
 			if (Waited >= NextReport)
 			{

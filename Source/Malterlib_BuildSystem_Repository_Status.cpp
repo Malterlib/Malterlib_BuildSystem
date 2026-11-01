@@ -184,11 +184,7 @@ namespace NMib::NBuildSystem
 
 							for (auto &Message : _Messages)
 							{
-								Return.f_Insert
-									(
-										"{}{sf ,sj*}{}"_f << Message.m_Branch << "" << (_MaxLen - CAnsiEncodingParse::fs_RenderedStrLen(Message.m_Branch)) << Message.m_Description
-									)
-								;
+								Return.f_Insert("{}{sf ,sj*}{}"_f << Message.m_Branch << "" << (_MaxLen - CAnsiEncodingParse::fs_RenderedStrLen(Message.m_Branch)) << Message.m_Description);
 								if (Message.m_Verbose)
 									Return.f_Insert(Message.m_Verbose.f_Indent("   ").f_SplitLine());
 							}
@@ -230,7 +226,7 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	TCUnsafeFuture<CBuildSystem::ERetry> CBuildSystem::f_Action_Repository_Status
+	auto CBuildSystem::f_Action_Repository_Status
 		(
 			CGenerateOptions const &_GenerateOptions
 			, CRepoFilter const &_Filter
@@ -238,6 +234,7 @@ namespace NMib::NBuildSystem
 			, TCVector<CStr> const &_HideBranches
 			, TCSharedPointer<CCommandLineControl> const &_pCommandLine
 		)
+		-> TCUnsafeFuture<CBuildSystem::ERetry>
 	{
 		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
@@ -265,12 +262,7 @@ namespace NMib::NBuildSystem
 			co_await fg_UpdateRemotes(*this, FilteredRepositories);
 
 		auto MainBranchInfo = fg_GetMainRepoBranchInfo(f_GetBaseDir(), FilteredRepositories.m_ReposOrdered);
-		CStr BaseBranch = fg_EffectiveBaseBranch
-			(
-				_GenerateOptions.m_BaseBranch ? *_GenerateOptions.m_BaseBranch : MainBranchInfo.m_BaseBranch
-				, MainBranchInfo.m_DefaultBranch
-			)
-		;
+		CStr BaseBranch = fg_EffectiveBaseBranch(_GenerateOptions.m_BaseBranch ? *_GenerateOptions.m_BaseBranch : MainBranchInfo.m_BaseBranch, MainBranchInfo.m_DefaultBranch);
 		if (!BaseBranch.f_IsEmpty() && fg_GetComparisonBranch(f_GetBaseDir(), "origin", MainBranchInfo.m_DefaultBranch, BaseBranch) != BaseBranch)
 			f_OutputConsole("Base branch {} no longer exists on origin; comparing against the default branches\n"_f << BaseBranch);
 
@@ -443,13 +435,7 @@ namespace NMib::NBuildSystem
 									// Being the same as the default branch hides a push the branch needs, which being the same as the base
 									// doesn't
 									CStr DefaultRemoteBranch = "{}/{}"_f << Remote << DefaultBranch;
-									if
-										(
-											ComparisonBranch != DefaultBranch
-											&& Branch != DefaultBranch
-											&& !DefaultBranch.f_IsEmpty()
-											&& State.f_HasRemoteBranch(DefaultRemoteBranch)
-										)
+									if (ComparisonBranch != DefaultBranch && Branch != DefaultBranch && !DefaultBranch.f_IsEmpty() && State.f_HasRemoteBranch(DefaultRemoteBranch))
 									{
 										fg_GetLogEntries(Launches, Repo, DefaultRemoteBranch, Branch) > ToPushDefault[Remote];
 										fg_GetLogEntries(Launches, Repo, Branch, DefaultRemoteBranch) > ToPullDefault[Remote];
@@ -477,19 +463,19 @@ namespace NMib::NBuildSystem
 
 								TCPromise<void> CombineResultsPromise;
 								if
+								(
+									!fg_CombineResults
 									(
-										!fg_CombineResults
-										(
-											CombineResultsPromise
-											, fg_Move(ToPushResults)
-											, [&](CStr const &_Remote, TCVector<CLogEntry> &&_Log)
-											{
-												auto &[Remotes, LogEntries] = ToRemotePushByHashes[fGetHashes(_Log)];
-												Remotes.f_Insert(_Remote);
-												LogEntries = fg_Move(_Log);
-											}
-										)
+										CombineResultsPromise
+										, fg_Move(ToPushResults)
+										, [&](CStr const &_Remote, TCVector<CLogEntry> &&_Log)
+										{
+											auto &[Remotes, LogEntries] = ToRemotePushByHashes[fGetHashes(_Log)];
+											Remotes.f_Insert(_Remote);
+											LogEntries = fg_Move(_Log);
+										}
 									)
+								)
 								{
 									auto Result = CombineResultsPromise.f_MoveResult();
 									CStr Error = Result.f_GetExceptionStr();
@@ -498,19 +484,19 @@ namespace NMib::NBuildSystem
 								}
 
 								if
+								(
+									!fg_CombineResults
 									(
-										!fg_CombineResults
-										(
-											CombineResultsPromise
-											, fg_Move(ToPullResults)
-											, [&](CStr const &_Remote, TCVector<CLogEntry> &&_Log)
-											{
-												auto &[Remotes, LogEntries] = ToLocalPullByHashes[fGetHashes(_Log)];
-												Remotes.f_Insert(_Remote);
-												LogEntries = fg_Move(_Log);
-											}
-										)
+										CombineResultsPromise
+										, fg_Move(ToPullResults)
+										, [&](CStr const &_Remote, TCVector<CLogEntry> &&_Log)
+										{
+											auto &[Remotes, LogEntries] = ToLocalPullByHashes[fGetHashes(_Log)];
+											Remotes.f_Insert(_Remote);
+											LogEntries = fg_Move(_Log);
+										}
 									)
+								)
 								{
 									auto Result = CombineResultsPromise.f_MoveResult();
 									CStr Error = Result.f_GetExceptionStr();
@@ -686,10 +672,7 @@ namespace NMib::NBuildSystem
 											CMessage
 											{
 												.m_Branch = ""
-												, .m_Description = "{}Commit {}{}"_f
-												<< Colors.f_ToCommit()
-												<< Colors.f_Default()
-												<< State.m_LocalChanges.f_GetLen()
+												, .m_Description = "{}Commit {}{}"_f << Colors.f_ToCommit() << Colors.f_Default() << State.m_LocalChanges.f_GetLen()
 											}
 											, EMessageType_Local
 											, ""
@@ -766,49 +749,18 @@ namespace NMib::NBuildSystem
 									bool bNoPullNoPush = NoPullNoPush.f_FindEqual(RemoteName);
 
 									if (pToPush && !pToPush->f_IsEmpty())
-									{
-										RemoteMessages.f_Insert
-											(
-												"{}Push {}{}"_f
-												<< Colors.f_ToPush()
-												<< Colors.f_Default()
-												<< pToPush->f_GetLen()
-											)
-										;
-									}
+										RemoteMessages.f_Insert("{}Push {}{}"_f << Colors.f_ToPush() << Colors.f_Default() << pToPush->f_GetLen());
 
 									if (bMissing)
-									{
-										RemoteMessages.f_Insert
-											(
-												"{}Push {}?"_f
-												<< Colors.f_ToPush()
-												<< Colors.f_Default()
-											)
-										;
-									}
+										RemoteMessages.f_Insert("{}Push {}?"_f << Colors.f_ToPush() << Colors.f_Default());
 
 									if (pToPull && !pToPull->f_IsEmpty())
-									{
-										RemoteMessages.f_Insert
-											(
-												"{}Pull {}{}"_f
-												<< Colors.f_ToPull()
-												<< Colors.f_Default()
-												<< pToPull->f_GetLen()
-											)
-										;
-									}
+										RemoteMessages.f_Insert("{}Pull {}{}"_f << Colors.f_ToPull() << Colors.f_Default() << pToPull->f_GetLen());
 
 									CStr Description;
 
 									if (bNoPullNoPush)
-									{
-										Description = "{}Same{}"_f
-											<< Colors.f_Foreground256(248)
-											<< Colors.f_Default()
-										;
-									}
+										Description = "{}Same{}"_f << Colors.f_Foreground256(248) << Colors.f_Default();
 									else
 										Description = CStr::fs_Join(RemoteMessages, " ");
 
@@ -820,10 +772,7 @@ namespace NMib::NBuildSystem
 											(
 												CMessage
 												{
-													.m_Branch = "{}{}{}"_f
-													<< Colors.f_ChangedBranchName(TrimmedRemoteName)
-													<< TrimmedRemoteName
-													<< Colors.f_Default()
+													.m_Branch = "{}{}{}"_f << Colors.f_ChangedBranchName(TrimmedRemoteName) << TrimmedRemoteName << Colors.f_Default()
 													, .m_Description = Description
 												}
 												, fRemoteNameToMessageType(TrimmedRemoteName)
@@ -869,30 +818,12 @@ namespace NMib::NBuildSystem
 								if (bIsCurrentBranch && !State.m_LocalChanges.f_IsEmpty())
 								{
 									CMessage Message;
-									Message.m_Branch = "{}Local{}"_f
-										<< Colors.f_ChangedBranchName("Local")
-										<< Colors.f_Default()
-									;
+									Message.m_Branch = "{}Local{}"_f << Colors.f_ChangedBranchName("Local") << Colors.f_Default();
 
-									Message.m_Description = "{}To Commit{}"_f
-										<< Colors.f_ToCommit()
-										<< Colors.f_Default()
-									;
+									Message.m_Description = "{}To Commit{}"_f << Colors.f_ToCommit() << Colors.f_Default();
 
 									for (auto &Change : State.m_LocalChanges)
-									{
-										fg_AddStrSep
-											(
-												Message.m_Verbose
-												, "{}{}{} {}"_f
-												<< Colors.f_ToCommit()
-												<< Change.m_ChangeType
-												<< Colors.f_Default()
-												<< Change.m_File
-												, "\n"
-											)
-										;
-									}
+										fg_AddStrSep(Message.m_Verbose, "{}{}{} {}"_f << Colors.f_ToCommit() << Change.m_ChangeType << Colors.f_Default() << Change.m_File, "\n");
 
 									fAddVerboseMessage(fg_Move(Message), EMessageType_Local, "");
 								}
@@ -906,31 +837,12 @@ namespace NMib::NBuildSystem
 									auto TrimmedRemoteName = RemoteName.f_Trim();
 
 									CMessage Message;
-									Message.m_Branch = "{}{}{}"_f
-										<< Colors.f_ChangedBranchName(TrimmedRemoteName)
-										<< TrimmedRemoteName
-										<< Colors.f_Default()
-									;
+									Message.m_Branch = "{}{}{}"_f << Colors.f_ChangedBranchName(TrimmedRemoteName) << TrimmedRemoteName << Colors.f_Default();
 
-									Message.m_Description = "{}To Push{}"_f
-										<< Colors.f_ToPush()
-										<< Colors.f_Default()
-									;
+									Message.m_Description = "{}To Push{}"_f << Colors.f_ToPush() << Colors.f_Default();
 
 									for (auto &Commit : ToPush)
-									{
-										fg_AddStrSep
-											(
-												Message.m_Verbose
-												, "{}{}{} {}"_f
-												<< Colors.f_ToPush()
-												<< Commit.m_Hash
-												<< Colors.f_Default()
-												<< Commit.m_Description
-												, "\n"
-											)
-										;
-									}
+										fg_AddStrSep(Message.m_Verbose, "{}{}{} {}"_f << Colors.f_ToPush() << Commit.m_Hash << Colors.f_Default() << Commit.m_Description, "\n");
 
 									fAddVerboseMessage(fg_Move(Message), fRemoteNameToMessageType(TrimmedRemoteName), TrimmedRemoteName);
 								}
@@ -940,21 +852,11 @@ namespace NMib::NBuildSystem
 									auto TrimmedRemoteName = RemoteName.f_Trim();
 
 									CMessage Message;
-									Message.m_Branch = "{}{}{}"_f
-										<< Colors.f_ChangedBranchName(TrimmedRemoteName)
-										<< TrimmedRemoteName
-										<< Colors.f_Default()
-									;
+									Message.m_Branch = "{}{}{}"_f << Colors.f_ChangedBranchName(TrimmedRemoteName) << TrimmedRemoteName << Colors.f_Default();
 
-									Message.m_Description = "{}To Push{}"_f
-										<< Colors.f_ToPush()
-										<< Colors.f_Default()
-									;
+									Message.m_Description = "{}To Push{}"_f << Colors.f_ToPush() << Colors.f_Default();
 
-									Message.m_Verbose = "{}???????{} Branch missing on remote"_f
-										<< Colors.f_ToPush()
-										<< Colors.f_Default()
-									;
+									Message.m_Verbose = "{}???????{} Branch missing on remote"_f << Colors.f_ToPush() << Colors.f_Default();
 
 									fAddVerboseMessage(fg_Move(Message), fRemoteNameToMessageType(TrimmedRemoteName), TrimmedRemoteName);
 								}
@@ -969,31 +871,12 @@ namespace NMib::NBuildSystem
 
 									CMessage Message;
 
-									Message.m_Branch = "{}{}{}"_f
-										<< Colors.f_ChangedBranchName(TrimmedRemoteName)
-										<< TrimmedRemoteName
-										<< Colors.f_Default()
-									;
+									Message.m_Branch = "{}{}{}"_f << Colors.f_ChangedBranchName(TrimmedRemoteName) << TrimmedRemoteName << Colors.f_Default();
 
-									Message.m_Description = "{}To Pull{}"_f
-										<< Colors.f_ToPull()
-										<< Colors.f_Default()
-									;
+									Message.m_Description = "{}To Pull{}"_f << Colors.f_ToPull() << Colors.f_Default();
 
 									for (auto &Commit : ToPull)
-									{
-										fg_AddStrSep
-											(
-												Message.m_Verbose
-												, "{}{}{} {}"_f
-												<< Colors.f_ToPull()
-												<< Commit.m_Hash
-												<< Colors.f_Default()
-												<< Commit.m_Description
-												, "\n"
-											)
-										;
-									}
+										fg_AddStrSep(Message.m_Verbose, "{}{}{} {}"_f << Colors.f_ToPull() << Commit.m_Hash << Colors.f_Default() << Commit.m_Description, "\n");
 
 									fAddVerboseMessage(fg_Move(Message), fRemoteNameToMessageType(TrimmedRemoteName), TrimmedRemoteName);
 								}
@@ -1060,25 +943,15 @@ namespace NMib::NBuildSystem
 								{
 									auto Result = co_await Launches.f_OpenRepoEditor(RepoEditor, Repo.m_Location);
 									if (Result.m_ExitCode)
-									{
-										Launches.f_Output
-											(
-												EOutputType_Error
-												, Repo
-												, "Failed to launch repository editor: {}"_f
-												<< Result.f_GetCombinedOut().f_Trim()
-											)
-										;
-									}
+										Launches.f_Output(EOutputType_Error, Repo, "Failed to launch repository editor: {}"_f << Result.f_GetCombinedOut().f_Trim());
 
 									(void)_Subscription;
 
 									co_return {};
 								}
 							)
-							> EditorLaunchResults;
+							> EditorLaunchResults
 						;
-
 					}
 					co_await fg_AllDone(EditorLaunchResults);
 				}

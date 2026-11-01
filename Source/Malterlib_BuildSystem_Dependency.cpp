@@ -32,7 +32,7 @@ namespace NMib::NBuildSystem
 
 	void CMalterlibDependencyTracker::f_AddInputFile(CStr const &_File)
 	{
-		auto & Input = mp_Inputs.f_Insert();
+		auto &Input = mp_Inputs.f_Insert();
 		Input.m_Path = _File;
 		Input.m_Time = fg_GetTime(_File);
 		if (mp_bUseHash)
@@ -54,7 +54,7 @@ namespace NMib::NBuildSystem
 			, TCVector<CStr> const &_Excluded
 		)
 	{
-		auto & Find = mp_Finds.f_Insert();
+		auto &Find = mp_Finds.f_Insert();
 
 		Find.m_Pattern = CFile::fs_GetFile(_SearchPattern);
 		Find.m_Path = CFile::fs_GetPath(_SearchPattern);
@@ -81,13 +81,9 @@ namespace NMib::NBuildSystem
 					_Appender += Char;
 				}
 				else if (Char == '$')
-				{
 					_Appender += "$$";
-				}
 				else
-				{
 					_Appender += Char;
-				}
 				++pParse;
 			}
 		}
@@ -161,19 +157,12 @@ namespace NMib::NBuildSystem
 				{
 					if (mp_bUseHash)
 					{
-						Appender.f_Commit().m_String += "FileDigest {nfh,sj16,sf0} {nfh,sj16,sf0} {}"_f
-							<< File.m_Time.f_GetSeconds()
-							<< File.m_Time.f_GetFractionInt()
-							<< File.m_Digest.f_GetString()
+						Appender.f_Commit().m_String
+							+= "FileDigest {nfh,sj16,sf0} {nfh,sj16,sf0} {}"_f << File.m_Time.f_GetSeconds() << File.m_Time.f_GetFractionInt() << File.m_Digest.f_GetString()
 						;
 					}
 					else
-					{
-						Appender.f_Commit().m_String += "File {nfh,sj16,sf0} {nfh,sj16,sf0}"_f
-							<< File.m_Time.f_GetSeconds()
-							<< File.m_Time.f_GetFractionInt()
-						;
-					}
+						Appender.f_Commit().m_String += "File {nfh,sj16,sf0} {nfh,sj16,sf0}"_f << File.m_Time.f_GetSeconds() << File.m_Time.f_GetFractionInt();
 
 					fg_AddStrSepEscaped(Appender, File.m_Path, ' ', " \"\\");
 					Appender += '\n';
@@ -183,7 +172,8 @@ namespace NMib::NBuildSystem
 			// Write Finds for directory monitoring
 			for (auto &Find : mp_Finds)
 			{
-				Appender.f_Commit().m_String += "Directory {} {nfh,sj8,sf0} {} {nfh,sj16,sf0} {nfh,sj16,sf0}"_f
+				Appender.f_Commit().m_String
+					+= "Directory {} {nfh,sj8,sf0} {} {nfh,sj16,sf0} {nfh,sj16,sf0}"_f
 					<< Find.m_bRecurse
 					<< Find.m_Attributes
 					<< Find.m_bFollowLinks
@@ -206,7 +196,7 @@ namespace NMib::NBuildSystem
 				{
 					fg_AddStrSepEscaped(Appender, File, '\t', " \"\\");
 					Appender += '\n';
-				}	
+				}
 			}
 		}
 

@@ -16,6 +16,7 @@ namespace NMib::NBuildSystem
 		: mp_ValueVariant(_pValue)
 	{
 	}
+
 	CValuePotentiallyByRef::CValuePotentiallyByRef(NEncoding::CEJsonSorted &&_Value)
 		: mp_ValueVariant(fg_Move(_Value))
 	{
@@ -42,5 +43,4 @@ namespace NMib::NBuildSystem
 		}
 		mp_ValueVariant = fg_Move(_Other);
 	}
-
 }

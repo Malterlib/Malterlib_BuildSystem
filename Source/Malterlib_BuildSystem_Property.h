@@ -12,11 +12,11 @@ namespace NMib::NBuildSystem
 {
 	enum EPropertyFlag : uint32
 	{
-		EPropertyFlag_None = 0
-		, EPropertyFlag_TraceEval = DMibBit(0)
+		EPropertyFlag_None               = 0
+		, EPropertyFlag_TraceEval        = DMibBit(0)
 		, EPropertyFlag_TraceEvalSuccess = DMibBit(1)
-		, EPropertyFlag_TraceCondition = DMibBit(2)
-		, EPropertyFlag_NeedPerFile = DMibBit(3)
+		, EPropertyFlag_TraceCondition   = DMibBit(2)
+		, EPropertyFlag_NeedPerFile      = DMibBit(3)
 	};
 
 	struct CPropertyKey;

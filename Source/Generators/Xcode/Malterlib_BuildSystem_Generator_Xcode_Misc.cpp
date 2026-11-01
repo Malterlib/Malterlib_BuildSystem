@@ -13,7 +13,9 @@ namespace NMib::NBuildSystem::NXcode
 		if (!mp_GUID.f_IsEmpty())
 			return mp_GUID;
 
-		mp_GUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, m_Name + "PBXNativeTarget").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_GUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, m_Name + "PBXNativeTarget")
+			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
+		;
 		return mp_GUID;
 	}
 
@@ -22,7 +24,9 @@ namespace NMib::NBuildSystem::NXcode
 		if (!mp_SourcesBuildPhaseGUID.f_IsEmpty())
 			return mp_SourcesBuildPhaseGUID;
 
-		mp_SourcesBuildPhaseGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, m_Name + "PBXSourcesBuildPhase").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_SourcesBuildPhaseGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, m_Name + "PBXSourcesBuildPhase")
+			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
+		;
 		return mp_SourcesBuildPhaseGUID;
 	}
 
@@ -31,7 +35,9 @@ namespace NMib::NBuildSystem::NXcode
 		if (!mp_FrameworksBuildPhaseGUID.f_IsEmpty())
 			return mp_FrameworksBuildPhaseGUID;
 
-		mp_FrameworksBuildPhaseGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, m_Name + "PBXFrameworksBuildPhase").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_FrameworksBuildPhaseGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, m_Name + "PBXFrameworksBuildPhase")
+			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
+		;
 		return mp_FrameworksBuildPhaseGUID;
 	}
 
@@ -41,7 +47,9 @@ namespace NMib::NBuildSystem::NXcode
 		if (!mp_HeadersBuildPhaseGUID.f_IsEmpty())
 			return mp_HeadersBuildPhaseGUID;
 
-		mp_HeadersBuildPhaseGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, m_Name + "PBXHeadersBuildPhase").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_HeadersBuildPhaseGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, m_Name + "PBXHeadersBuildPhase")
+			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
+		;
 		return mp_HeadersBuildPhaseGUID;
 	}
 #endif
@@ -51,7 +59,9 @@ namespace NMib::NBuildSystem::NXcode
 		if (!mp_ProductReferenceGUID.f_IsEmpty())
 			return mp_ProductReferenceGUID;
 
-		mp_ProductReferenceGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, m_Name + "productReference").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_ProductReferenceGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, m_Name + "productReference")
+			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
+		;
 		return mp_ProductReferenceGUID;
 	}
 
@@ -65,7 +75,9 @@ namespace NMib::NBuildSystem::NXcode
 		if (!mp_DependencyFileRefGUID.f_IsEmpty())
 			return mp_DependencyFileRefGUID;
 
-		mp_DependencyFileRefGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, f_GetName() +"dependencyName").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_DependencyFileRefGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, f_GetName() + "dependencyName")
+			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
+		;
 		return mp_DependencyFileRefGUID;
 	}
 
@@ -74,7 +86,9 @@ namespace NMib::NBuildSystem::NXcode
 		if (!mp_DependencyProductRefGroupGUID.f_IsEmpty())
 			return mp_DependencyProductRefGroupGUID;
 
-		mp_DependencyProductRefGroupGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, f_GetName() + "productReference").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_DependencyProductRefGroupGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, f_GetName() + "productReference")
+			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
+		;
 		return mp_DependencyProductRefGroupGUID;
 	}
 
@@ -83,7 +97,14 @@ namespace NMib::NBuildSystem::NXcode
 		if (!mp_DependencyContainerItemGUID.f_IsEmpty())
 			return mp_DependencyContainerItemGUID;
 
-		mp_DependencyContainerItemGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, f_GetName(_Dependency, "PBXContainerItemProxy")).f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_DependencyContainerItemGUID = CUniversallyUniqueIdentifier
+			(
+				EUniversallyUniqueIdentifierGenerate_StringHash
+				, gc_GeneratorUUIDNamespace
+				, f_GetName(_Dependency, "PBXContainerItemProxy")
+			)
+			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
+		;
 		return mp_DependencyContainerItemGUID;
 	}
 
@@ -92,7 +113,9 @@ namespace NMib::NBuildSystem::NXcode
 		if (!mp_DependencyTargetGUID.f_IsEmpty())
 			return mp_DependencyTargetGUID;
 
-		mp_DependencyTargetGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, f_GetName(_Dependency, "PBXTargetDependency")).f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_DependencyTargetGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, f_GetName(_Dependency, "PBXTargetDependency"))
+			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
+		;
 		return mp_DependencyTargetGUID;
 	}
 
@@ -101,7 +124,14 @@ namespace NMib::NBuildSystem::NXcode
 		if (!mp_BuildConfigurationListGUID.f_IsEmpty())
 			return mp_BuildConfigurationListGUID;
 
-		mp_BuildConfigurationListGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, m_Name + "PBXNativeTargetXCBuildConfigurationList").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_BuildConfigurationListGUID = CUniversallyUniqueIdentifier
+			(
+				EUniversallyUniqueIdentifierGenerate_StringHash
+				, gc_GeneratorUUIDNamespace
+				, m_Name + "PBXNativeTargetXCBuildConfigurationList"
+			)
+			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
+		;
 		return mp_BuildConfigurationListGUID;
 	}
 
@@ -121,7 +151,9 @@ namespace NMib::NBuildSystem::NXcode
 			return mp_GUID;
 
 		CStr Project = m_bProject ? "PBXProject" : "PBXNativeTarget";
-		mp_GUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, m_Path + Project + "XCConfiguration").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_GUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, m_Path + Project + "XCConfiguration")
+			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
+		;
 		return mp_GUID;
 	}
 
@@ -130,7 +162,9 @@ namespace NMib::NBuildSystem::NXcode
 		if (!mp_FileRefGUID.f_IsEmpty())
 			return mp_FileRefGUID;
 
-		mp_FileRefGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, m_Path).f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_FileRefGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, m_Path)
+			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
+		;
 		return mp_FileRefGUID;
 	}
 
@@ -139,7 +173,14 @@ namespace NMib::NBuildSystem::NXcode
 		if (!mp_GUID.f_IsEmpty())
 			return mp_GUID;
 
-		mp_GUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, m_Name + _Configuration.f_GetFullName() + "PBXShellScriptBuildPhase").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_GUID = CUniversallyUniqueIdentifier
+			(
+				EUniversallyUniqueIdentifierGenerate_StringHash
+				, gc_GeneratorUUIDNamespace
+				, m_Name + _Configuration.f_GetFullName() + "PBXShellScriptBuildPhase"
+			)
+			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
+		;
 		return mp_GUID;
 	}
 
@@ -169,7 +210,9 @@ namespace NMib::NBuildSystem::NXcode
 		if (!mp_GUID.f_IsEmpty())
 			return mp_GUID;
 
-		mp_GUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, f_GetPath()).f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_GUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, f_GetPath())
+			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
+		;
 		return mp_GUID;
 	}
 
@@ -195,7 +238,9 @@ namespace NMib::NBuildSystem::NXcode
 		if (!mp_FileRefGUID.f_IsEmpty())
 			return mp_FileRefGUID;
 
-		mp_FileRefGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, f_GetName() + f_GetNameGroupPath()).f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_FileRefGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, f_GetName() + f_GetNameGroupPath())
+			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
+		;
 		return mp_FileRefGUID;
 	}
 
@@ -205,7 +250,14 @@ namespace NMib::NBuildSystem::NXcode
 		if (!BuildRefGUID.f_IsEmpty())
 			return BuildRefGUID;
 
-		BuildRefGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, f_GetName() + f_GetNameGroupPath() + _Configuration.f_GetFullName() + "BuildRef").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		BuildRefGUID = CUniversallyUniqueIdentifier
+			(
+				EUniversallyUniqueIdentifierGenerate_StringHash
+				, gc_GeneratorUUIDNamespace
+				, f_GetName() + f_GetNameGroupPath() + _Configuration.f_GetFullName() + "BuildRef"
+			)
+			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
+		;
 		return BuildRefGUID;
 	}
 
@@ -215,7 +267,9 @@ namespace NMib::NBuildSystem::NXcode
 		if (!BuildRuleGUID.f_IsEmpty())
 			return BuildRuleGUID;
 
-		BuildRuleGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, f_GetName() + _Configuration.f_GetFullName() + "BuildRule").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		BuildRuleGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, f_GetName() + _Configuration.f_GetFullName() + "BuildRule")
+			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
+		;
 		return BuildRuleGUID;
 	}
 
@@ -258,7 +312,9 @@ namespace NMib::NBuildSystem::NXcode
 		if (!mp_GUID.f_IsEmpty())
 			return mp_GUID;
 
-		mp_GUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, f_GetName() + "ProjectGUID").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_GUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, f_GetName() + "ProjectGUID")
+			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
+		;
 		return mp_GUID;
 	}
 
@@ -267,7 +323,14 @@ namespace NMib::NBuildSystem::NXcode
 		if (!mp_BuildConfigurationListGUID.f_IsEmpty())
 			return mp_BuildConfigurationListGUID;
 
-		mp_BuildConfigurationListGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, f_GetName() + "PBXProjectXCBuildConfigurationList").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_BuildConfigurationListGUID = CUniversallyUniqueIdentifier
+			(
+				EUniversallyUniqueIdentifierGenerate_StringHash
+				, gc_GeneratorUUIDNamespace
+				, f_GetName() + "PBXProjectXCBuildConfigurationList"
+			)
+			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
+		;
 		return mp_BuildConfigurationListGUID;
 	}
 
@@ -276,7 +339,9 @@ namespace NMib::NBuildSystem::NXcode
 		if (!mp_MainGroupGUID.f_IsEmpty())
 			return mp_MainGroupGUID;
 
-		mp_MainGroupGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, f_GetName() + "MainGroupGUID").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_MainGroupGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, f_GetName() + "MainGroupGUID")
+			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
+		;
 		return mp_MainGroupGUID;
 	}
 
@@ -285,7 +350,9 @@ namespace NMib::NBuildSystem::NXcode
 		if (!mp_GeneratorGroupGUID.f_IsEmpty())
 			return mp_GeneratorGroupGUID;
 
-		mp_GeneratorGroupGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, "~Automatic").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_GeneratorGroupGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, "~Automatic")
+			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
+		;
 		return mp_GeneratorGroupGUID;
 	}
 
@@ -294,7 +361,9 @@ namespace NMib::NBuildSystem::NXcode
 		if (!mp_ProductRefGroupGUID.f_IsEmpty())
 			return mp_ProductRefGroupGUID;
 
-		mp_ProductRefGroupGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, "~Automatic/Product Reference").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_ProductRefGroupGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, "~Automatic/Product Reference")
+			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
+		;
 		return mp_ProductRefGroupGUID;
 	}
 
@@ -303,7 +372,9 @@ namespace NMib::NBuildSystem::NXcode
 		if (!mp_ProjectDependenciesGroupGUID.f_IsEmpty())
 			return mp_ProjectDependenciesGroupGUID;
 
-		mp_ProjectDependenciesGroupGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, "~Automatic/Target Dependencies").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_ProjectDependenciesGroupGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, "~Automatic/Target Dependencies")
+			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
+		;
 		return mp_ProjectDependenciesGroupGUID;
 	}
 
@@ -312,7 +383,9 @@ namespace NMib::NBuildSystem::NXcode
 		if (!mp_ConfigurationsGroupGUID.f_IsEmpty())
 			return mp_ConfigurationsGroupGUID;
 
-		mp_ConfigurationsGroupGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, "~Automatic/Configurations").f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum);
+		mp_ConfigurationsGroupGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, "~Automatic/Configurations")
+			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
+		;
 		return mp_ConfigurationsGroupGUID;
 	}
 

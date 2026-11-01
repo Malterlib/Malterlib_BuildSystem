@@ -5,7 +5,7 @@
 #include "Malterlib_BuildSystem_Evaluate_BuiltinFunctions.h"
 
 #ifdef DPlatformFamily_Windows
-#include <Mib/Core/PlatformSpecific/WindowsRegistry>
+#	include <Mib/Core/PlatformSpecific/WindowsRegistry>
 #endif
 
 namespace NMib::NBuildSystem
@@ -28,7 +28,7 @@ namespace NMib::NBuildSystem
 							)
 							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
-		#ifdef DPlatformFamily_Windows
+#ifdef DPlatformFamily_Windows
 								if (_Params.f_GetLen() != 3 || !_Params[0].f_IsString() || !_Params[1].f_IsString() || !_Params[2].f_IsString())
 									fs_ThrowError(_Context, "Explode takes three string parameters: <Root> <Key> <ValueName>");
 
@@ -57,9 +57,9 @@ namespace NMib::NBuildSystem
 									return Registry.f_Read_Str(_Params[1].f_String(), _Params[2].f_String());
 
 								return {};
-		#else
+#else
 								return {};
-		#endif
+#endif
 							}
 							, DMibBuildSystemFilePosition
 						}

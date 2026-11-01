@@ -82,7 +82,7 @@ namespace NMib::NBuildSystem
 							)
 							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
-								constexpr static auto c_ByDigest = gc_Str<"ByDigest:">.m_Str;
+								static constexpr auto c_ByDigest = gc_Str<"ByDigest:">.m_Str;
 
 								auto const &GenerateStateFile = _Params[0].f_String();
 

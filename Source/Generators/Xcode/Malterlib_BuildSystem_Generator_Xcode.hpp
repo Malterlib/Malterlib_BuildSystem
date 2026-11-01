@@ -5,7 +5,7 @@
 
 namespace NMib::NBuildSystem::NXcode
 {
-	inline_small CStr const &CSolution::CCompare::operator() (CSolution const &_Node) const
+	inline_small CStr const &CSolution::CCompare::operator () (CSolution const &_Node) const
 	{
 		return _Node.m_EntityName;
 	}
@@ -78,4 +78,4 @@ namespace NMib::NBuildSystem::NXcode
 	{
 		return TCMap<CConfiguration, CPerConfig>::fs_GetKey(*this);
 	}
- }
+}

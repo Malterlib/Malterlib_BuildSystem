@@ -15,13 +15,14 @@ namespace NMib::NBuildSystem
 	{
 		virtual ~CBuildSystemGenerator();
 		virtual NContainer::TCMap<CPropertyKey, NEncoding::CEJsonSorted> f_GetValues(CBuildSystem const &_BuildSystem, NStr::CStr const &_OutputDir) = 0;
-		virtual NConcurrency::TCUnsafeFuture<void> f_Generate
+		virtual auto f_Generate
 			(
 				CBuildSystem const *_pBuildSystem
 				, CBuildSystemData const *_pBuildSystemData
 				, NStr::CStr _OutputDir
 				, NContainer::TCMap<NStr::CStr, uint32> &o_NumWorkspaceTargets
-			) = 0
+			)
+			-> NConcurrency::TCUnsafeFuture<void> = 0
 		;
 	};
 

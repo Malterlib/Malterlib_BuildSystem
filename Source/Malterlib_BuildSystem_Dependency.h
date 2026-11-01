@@ -63,6 +63,6 @@ namespace NMib::NBuildSystem
 }
 
 #ifndef DMibPNoShortCuts
-	using namespace NMib::NBuildSystem;
+using namespace NMib::NBuildSystem;
 #endif
 

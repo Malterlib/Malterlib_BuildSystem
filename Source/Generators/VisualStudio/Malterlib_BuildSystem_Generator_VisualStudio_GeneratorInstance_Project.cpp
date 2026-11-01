@@ -292,13 +292,13 @@ namespace NMib::NBuildSystem::NVisualStudio
 				for (auto iGroup = _Project.m_Groups.f_GetIterator(); iGroup; ++iGroup)
 				{
 					auto pGroupElement = CXMLDocument::f_CreateElement(pItemGroup, "Filter");
-					CXMLDocument::f_SetAttribute(pGroupElement, gc_ConstString_Include, iGroup->f_GetPath().f_ReplaceChar('/','\\'));
+					CXMLDocument::f_SetAttribute(pGroupElement, gc_ConstString_Include, iGroup->f_GetPath().f_ReplaceChar('/', '\\'));
 					CXMLDocument::f_AddElementAndText(pGroupElement, "UniqueIdentifier", iGroup->f_GetGUID());
 				}
 			}
 
 			CStr XMLData = FilterXML.f_GetAsString(EXMLOutputDialect_VisualStudio);
-			CStr FiltersFileName = FileName+".filters";
+			CStr FiltersFileName = FileName + ".filters";
 			bool bWasCreated = false;
 			if (!m_BuildSystem.f_AddGeneratedFile(FiltersFileName, XMLData, _Project.m_pSolution->f_GetName(), bWasCreated))
 				DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << FiltersFileName));

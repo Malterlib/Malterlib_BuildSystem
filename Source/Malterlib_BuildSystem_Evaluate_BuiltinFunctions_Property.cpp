@@ -33,13 +33,8 @@ namespace NMib::NBuildSystem
 		return Identifier;
 	}
 
-	NEncoding::CEJsonSorted CBuildSystem::fp_BuiltinFunction_OverridingType
-		(
-			CBuildSystem::CEvalPropertyValueContext &_Context
-			, TCVector<CEJsonSorted> &&_Params
-			, bool _bPositions
-			, bool _bType
-		) const
+	auto CBuildSystem::fp_BuiltinFunction_OverridingType(CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params, bool _bPositions, bool _bType) const
+		-> NEncoding::CEJsonSorted
 	{
 		CTypeWithPosition const *pOverrideType = nullptr;
 
@@ -166,13 +161,15 @@ namespace NMib::NBuildSystem
 			return Return;
 	}
 
-	CEJsonSorted CBuildSystem::fp_BuiltinFunction_GetProperty
+	auto CBuildSystem::fp_BuiltinFunction_GetProperty
 		(
 			CEvalPropertyValueContext &_Context
 			, NContainer::TCVector<NEncoding::CEJsonSorted> &&_Params
 			, EBuiltinFunctionGetProperty _Function
 			, CEvalPropertyValueContext const *_pParentContext
-		) const
+		)
+		const
+		-> CEJsonSorted
 	{
 		CBuildSystemSyntax::CIdentifier Identifier;
 		CStr EntityName;

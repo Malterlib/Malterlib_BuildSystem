@@ -24,13 +24,14 @@ namespace NMib::NBuildSystem
 
 	struct CGeneratorSettings
 	{
-		NConcurrency::TCUnsafeFuture<void> f_PopulateSettings
+		auto f_PopulateSettings
 			(
 				CPropertyKeyReference const &_GeneratorSetting
 				, EPropertyType _PropertyType
 				, CBuildSystem const &_BuildSystem
 				, NContainer::TCMap<CConfiguration, CEntityMutablePointer> const &_EntitiesPerConfig
 			)
+			-> NConcurrency::TCUnsafeFuture<void>
 		;
 
 		static void fs_PopulateSetting

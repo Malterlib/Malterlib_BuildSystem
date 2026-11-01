@@ -11,7 +11,7 @@ namespace NMib::NBuildSystem
 		auto pExists = m_FileExistsCache.f_FindEqual(_Path);
 		if (pExists)
 			return *pExists;
-		bool bExists = CFile::fs_FileExists(_Path, EFileAttrib_File);;
+		bool bExists = CFile::fs_FileExists(_Path, EFileAttrib_File);
 		m_FileExistsCache[_Path] = bExists;
 		return bExists;
 	}
@@ -20,9 +20,7 @@ namespace NMib::NBuildSystem
 	{
 		auto Mapped = m_CreateDirectoryCache(_Path);
 		if (Mapped.f_WasCreated())
-		{
 			CFile::fs_CreateDirectory(_Path);
-		}
 	}
 
 	class CBuildSystemGenerator_VisualStudio : public CBuildSystemGenerator, public CAllowUnsafeThis
@@ -116,7 +114,6 @@ namespace NMib::NBuildSystem
 					ExtraConfigText += ")";
 				}
 
-
 				CConfiguration ConfigToInsert;
 				if (Platform.f_IsEmpty())
 					ConfigToInsert.m_Platform = Arch;
@@ -181,9 +178,7 @@ namespace NMib::NBuildSystem
 
 				auto *pTotalTargets = OldNumWorkspaceTargets.f_FindEqual(Workspace.f_GetName());
 				if (pTotalTargets)
-				{
 					Workspace.m_nTotalTargets = *pTotalTargets;
-				}
 				else
 				{
 					if (Workspace.f_GetName() == "Tests")
@@ -251,15 +246,7 @@ namespace NMib::NBuildSystem
 
 									auto Start = Stopwatch.f_GetTime();
 
-									BuildSystem.f_GenerateBuildSystem_Workspace
-										(
-											_WorkspaceInfo.m_Config
-											, _WorkspaceInfo.m_ConfigData
-											, _WorkspaceInfo.m_pWorkspace
-											, ReservedGroups
-											, CStr()
-										)
-									;
+									BuildSystem.f_GenerateBuildSystem_Workspace(_WorkspaceInfo.m_Config, _WorkspaceInfo.m_ConfigData, _WorkspaceInfo.m_pWorkspace, ReservedGroups, CStr());
 
 									_WorkspaceInfo.m_Time = Stopwatch.f_GetTime() - Start;
 
@@ -398,12 +385,7 @@ namespace NMib::NBuildSystem
 
 						BuildSystem.f_OutputConsole
 							(
-								"{}Generate{}  {sl*,a-} {fe2,sl5} s{\n}"_f
-								<< Encoding.f_StatusNormal()
-								<< Encoding.f_Default()
-								<< Workspace.f_GetName()
-								<< MaxSolutionNameLength
-								<< RealTime
+								"{}Generate{}  {sl*,a-} {fe2,sl5} s{\n}"_f << Encoding.f_StatusNormal() << Encoding.f_Default() << Workspace.f_GetName() << MaxSolutionNameLength << RealTime
 							)
 						;
 
@@ -434,5 +416,4 @@ namespace NMib::NBuildSystem
 		DMibRuntimeClassMakeActive(CBuildSystemGenerator_VisualStudio2026);
 	}
 }
-
 

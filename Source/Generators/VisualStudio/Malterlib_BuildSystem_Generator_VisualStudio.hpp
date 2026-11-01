@@ -5,7 +5,7 @@
 
 namespace NMib::NBuildSystem::NVisualStudio
 {
-	CStr const &CSolution::CCompare::operator() (CSolution const &_Node) const
+	CStr const &CSolution::CCompare::operator () (CSolution const &_Node) const
 	{
 		return _Node.m_EntityName;
 	}

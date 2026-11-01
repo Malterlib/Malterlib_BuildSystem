@@ -47,7 +47,7 @@ namespace NMib::NBuildSystem
 				{
 					return _fFunctor(*pValue);
 				}
-				> Results;
+				> Results
 			;
 		}
 

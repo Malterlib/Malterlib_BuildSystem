@@ -45,23 +45,17 @@ namespace NMib::NBuildSystem
 			}
 		;
 
-		o_Result.m_Value = _BuildSystem.f_EvaluateEntityProperty
-			(
-				_Entity
-				, _GeneratorSetting
-				, o_Result.m_PropertyInfo
-			)
-			.f_Move();
-		;
+		o_Result.m_Value = _BuildSystem.f_EvaluateEntityProperty(_Entity, _GeneratorSetting, o_Result.m_PropertyInfo).f_Move();
 	}
 
-	TCUnsafeFuture<void> CGeneratorSettings::f_PopulateSettings
+	auto CGeneratorSettings::f_PopulateSettings
 		(
 			CPropertyKeyReference const &_GeneratorSetting
 			, EPropertyType _PropertyType
 			, CBuildSystem const &_BuildSystem
 			, TCMap<CConfiguration, CEntityMutablePointer> const &_EntitiesPerConfig
 		)
+		-> TCUnsafeFuture<void>
 	{
 		co_await ECoroutineFlag_CaptureExceptions;
 

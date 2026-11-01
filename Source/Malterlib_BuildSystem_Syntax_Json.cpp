@@ -177,12 +177,12 @@ namespace NMib::NBuildSystem
 					{
 						CValue &ArrayValue = Object;
 						if
-							(
-								ArrayValue.m_Value.f_IsOfType<CObject>()
-								|| ArrayValue.m_Value.f_IsOfType<CExpression>()
-								|| ArrayValue.m_Value.f_IsOfType<CExpressionAppend>()
-								|| (ArrayValue.f_IsConstant() && ArrayValue.f_Constant().f_IsObject())
-							)
+						(
+							ArrayValue.m_Value.f_IsOfType<CObject>()
+							|| ArrayValue.m_Value.f_IsOfType<CExpression>()
+							|| ArrayValue.m_Value.f_IsOfType<CExpressionAppend>()
+							|| (ArrayValue.f_IsConstant() && ArrayValue.f_Constant().f_IsObject())
+						)
 						{
 						}
 						else

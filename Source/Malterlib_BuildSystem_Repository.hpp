@@ -6,15 +6,7 @@
 namespace NMib::NBuildSystem::NRepository
 {
 	template <typename tf_FOutput>
-	void fg_OutputRepositoryInfo
-		(
-			EOutputType _OutputType
-			, CStr const &_Info
-			, EAnsiEncodingFlag _AnsiFlags
-			, CStr const &_RepoName
-			, umint _MaxRepoWidth
-			, tf_FOutput const &_fOutput
-		)
+	void fg_OutputRepositoryInfo(EOutputType _OutputType, CStr const &_Info, EAnsiEncodingFlag _AnsiFlags, CStr const &_RepoName, umint _MaxRepoWidth, tf_FOutput const &_fOutput)
 	{
 		CColors Colors(_AnsiFlags);
 		CStr RepoColor = Colors.f_StatusNormal();
@@ -29,14 +21,6 @@ namespace NMib::NBuildSystem::NRepository
 
 		CStr ReplacedRepo = RepoName.f_Replace("/", CStr("{}{}/{}"_f << Colors.f_Default() << Colors.f_Foreground256(250) << RepoColor));
 		CStr Indent = "{sf ,sj*}   "_f << "" << _MaxRepoWidth;
-		_fOutput
-			(
-				"{}{}{}   {}\n"_f
-				<< RepoColor
-				<< ReplacedRepo
-				<< Colors.f_Default()
-				<< _Info.f_Indent(Indent, false)
-			)
-		;
+		_fOutput("{}{}{}   {}\n"_f << RepoColor << ReplacedRepo << Colors.f_Default() << _Info.f_Indent(Indent, false));
 	}
 }

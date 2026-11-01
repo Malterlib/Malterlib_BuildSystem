@@ -98,7 +98,6 @@ namespace NMib::NBuildSystem
 			else
 				o_Str += ", ";
 
-
 			o_Str += typename tf_CStr::CFormat("{}") << *iParam;
 		}
 
@@ -545,7 +544,6 @@ namespace NMib::NBuildSystem
 		o_Str += ") ";
 		o_Str += typename tf_CStr::CFormat("{}") << m_Return.f_Get();
 	}
-
 
 	template <typename tf_CStr>
 	void CBuildSystemSyntax::CDefine::f_Format(tf_CStr &o_Str) const

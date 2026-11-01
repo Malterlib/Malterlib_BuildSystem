@@ -45,7 +45,6 @@ namespace NMib::NBuildSystem
 		return fg_TupleReferences(m_Type, m_bOptional) == fg_TupleReferences(_Right.m_Type, _Right.m_bOptional);
 	}
 
-
 	COrdering_Partial CBuildSystemSyntax::CEvalStringToken::operator <=> (CEvalStringToken const &_Right) const noexcept
 	{
 		return m_Token <=> _Right.m_Token;
@@ -451,5 +450,4 @@ namespace NMib::NBuildSystem
 	{
 		return m_Value.f_GetAsType<CKeyLogicalOperator>();
 	}
-
 }

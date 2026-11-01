@@ -30,9 +30,7 @@ namespace NMib::NBuildSystem
 	{
 		m_ToSort.f_Sort();
 		for (auto iPerform = m_ToSort.f_GetIterator(); iPerform; ++iPerform)
-		{
 			(*iPerform->m_pFunctor)();
-		}
 	}
 
 	template <typename t_CSortKey>
@@ -60,8 +58,6 @@ namespace NMib::NBuildSystem
 	{
 		m_ToSort.f_Sort();
 		for (auto iPerform = m_ToSort.f_GetIterator(); iPerform; ++iPerform)
-		{
 			(*iPerform->m_pFunctor)();
-		}
 	}
 }

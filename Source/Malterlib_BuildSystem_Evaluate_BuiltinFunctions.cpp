@@ -5,7 +5,7 @@
 #include "Malterlib_BuildSystem_Evaluate_BuiltinFunctions.h"
 
 #ifdef DPlatformFamily_Windows
-#include <Mib/Core/PlatformSpecific/WindowsRegistry>
+#	include <Mib/Core/PlatformSpecific/WindowsRegistry>
 #endif
 #include <Mib/Encoding/JsonShortcuts>
 

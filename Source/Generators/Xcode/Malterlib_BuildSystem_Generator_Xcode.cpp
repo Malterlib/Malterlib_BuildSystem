@@ -9,7 +9,6 @@ namespace NMib::NBuildSystem
 	class CBuildSystemGenerator_Xcode : public CBuildSystemGenerator, public CAllowUnsafeThis
 	{
 	public:
-
 		TCMap<CPropertyKey, CEJsonSorted> f_GetValues(CBuildSystem const &_BuildSystem, CStr const &_OutputDir) override
 		{
 			TCMap<CPropertyKey, CEJsonSorted> Values;
@@ -146,9 +145,7 @@ namespace NMib::NBuildSystem
 
 				auto *pTotalTargets = OldNumWorkspaceTargets.f_FindEqual(Workspace.f_GetName());
 				if (pTotalTargets)
-				{
 					Workspace.m_nTotalTargets = *pTotalTargets;
-				}
 				else
 				{
 					if (Workspace.f_GetName() == "Tests")

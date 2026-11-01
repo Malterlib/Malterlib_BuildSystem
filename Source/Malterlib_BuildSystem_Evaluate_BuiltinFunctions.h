@@ -8,12 +8,8 @@
 namespace NMib::NBuildSystem
 {
 	template <typename tf_CType>
-	CBuildSystemSyntax::CFunctionParameter fg_FunctionParam
-		(
-			tf_CType &&_Type
-			, CStr const &_Name
-			, CBuildSystemSyntax::CFunctionParameter::EParamType _ParamType = CBuildSystemSyntax::CFunctionParameter::EParamType_None
-		)
+	auto fg_FunctionParam(tf_CType &&_Type, CStr const &_Name, CBuildSystemSyntax::CFunctionParameter::EParamType _ParamType = CBuildSystemSyntax::CFunctionParameter::EParamType_None)
+		-> CBuildSystemSyntax::CFunctionParameter
 	;
 
 	extern CBuildSystemSyntax::CFunctionParameter::EParamType g_Optional;

@@ -8,11 +8,7 @@
 
 namespace NMib::NBuildSystem::NNinja
 {
-	TCUnsafeFuture<void> CGeneratorInstance::fp_GenerateProjectFile_FileTypes
-		(
-			CProject &_Project
-			, TCMap<CStr, CCompileType> const &_CompileTypes
-		) const
+	TCUnsafeFuture<void> CGeneratorInstance::fp_GenerateProjectFile_FileTypes(CProject &_Project, TCMap<CStr, CCompileType> const &_CompileTypes) const
 	{
 		co_await ECoroutineFlag_CaptureExceptions;
 
@@ -92,13 +88,7 @@ namespace NMib::NBuildSystem::NNinja
 						CGeneratorSettings::fs_PopulateSetting(gc_ConstKey_GeneratorSetting_Compile, EPropertyType_Compile, m_BuildSystem, TempEntity, Result);
 
 						CBuildSystemPropertyInfo PropertyInfoValidateSettings;
-						m_BuildSystem.f_EvaluateEntityProperty
-							(
-								TempEntity
-								, gc_ConstKey_GeneratorSetting_CompileValidateSettings
-								, PropertyInfoValidateSettings
-							)
-						;
+						m_BuildSystem.f_EvaluateEntityProperty(TempEntity, gc_ConstKey_GeneratorSetting_CompileValidateSettings, PropertyInfoValidateSettings);
 
 						pBuildConfig->f_FromGeneratorSetting(m_BuildSystem, fg_Move(Result));
 					}

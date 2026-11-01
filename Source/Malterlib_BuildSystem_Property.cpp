@@ -102,22 +102,37 @@ namespace NMib::NBuildSystem
 
 	EPropertyType fg_PropertyTypeFromStr(CStr const &_String)
 	{
-		if (_String == gc_ConstString_Property.m_String || _String == gc_ConstString_Empty) return EPropertyType_Property;
-		else if (_String == gc_ConstString_Compile.m_String) return EPropertyType_Compile;
-		else if (_String == gc_ConstString_Target.m_String) return EPropertyType_Target;
-		else if (_String == gc_ConstString_Workspace.m_String) return EPropertyType_Workspace;
-		else if (_String == gc_ConstString_Dependency.m_String) return EPropertyType_Dependency;
-		else if (_String == gc_ConstString_GenerateFile.m_String) return EPropertyType_GenerateFile;
-		else if (_String == gc_ConstString_Import.m_String) return EPropertyType_Import;
-		else if (_String == gc_ConstString_Repository.m_String) return EPropertyType_Repository;
-		else if (_String == gc_ConstString_CreateTemplate.m_String) return EPropertyType_CreateTemplate;
-		else if (_String == gc_ConstString_Group.m_String) return EPropertyType_Group;
-		else if (_String == gc_ConstString_this.m_String) return EPropertyType_This;
-		else if (_String == gc_ConstString_Builtin.m_String) return EPropertyType_Builtin;
-		else if (_String == gc_ConstString_Type.m_String) return EPropertyType_Type;
-		else if (_String == gc_ConstString_GeneratorSetting.m_String) return EPropertyType_GeneratorSetting;
+		if (_String == gc_ConstString_Property.m_String || _String == gc_ConstString_Empty)
+			return EPropertyType_Property;
+		else if (_String == gc_ConstString_Compile.m_String)
+			return EPropertyType_Compile;
+		else if (_String == gc_ConstString_Target.m_String)
+			return EPropertyType_Target;
+		else if (_String == gc_ConstString_Workspace.m_String)
+			return EPropertyType_Workspace;
+		else if (_String == gc_ConstString_Dependency.m_String)
+			return EPropertyType_Dependency;
+		else if (_String == gc_ConstString_GenerateFile.m_String)
+			return EPropertyType_GenerateFile;
+		else if (_String == gc_ConstString_Import.m_String)
+			return EPropertyType_Import;
+		else if (_String == gc_ConstString_Repository.m_String)
+			return EPropertyType_Repository;
+		else if (_String == gc_ConstString_CreateTemplate.m_String)
+			return EPropertyType_CreateTemplate;
+		else if (_String == gc_ConstString_Group.m_String)
+			return EPropertyType_Group;
+		else if (_String == gc_ConstString_this.m_String)
+			return EPropertyType_This;
+		else if (_String == gc_ConstString_Builtin.m_String)
+			return EPropertyType_Builtin;
+		else if (_String == gc_ConstString_Type.m_String)
+			return EPropertyType_Type;
+		else if (_String == gc_ConstString_GeneratorSetting.m_String)
+			return EPropertyType_GeneratorSetting;
 
-		else return EPropertyType_Invalid;
+		else
+			return EPropertyType_Invalid;
 	}
 
 	CStr fg_PropertyTypeToStr(EPropertyType _Type)
@@ -138,7 +153,9 @@ namespace NMib::NBuildSystem
 		case EPropertyType_Type: return gc_ConstString_Type;
 		case EPropertyType_GenerateFile: return gc_ConstString_GenerateFile;
 		case EPropertyType_GeneratorSetting: return gc_ConstString_GeneratorSetting;
-		default: DMibNeverGetHere; return CStr();
+		default:
+			DMibNeverGetHere;
+			return CStr();
 		}
 	}
 
@@ -149,19 +166,10 @@ namespace NMib::NBuildSystem
 			, EEJsonType _ExpectedType
 			, CBuildSystemUniquePositions const &_Positions
 			, bool _bOptional
-		) const
+		)
+		const
 	{
 		if ((_Value.f_IsValid() || !_bOptional) && _Value.f_EType() != _ExpectedType)
-		{
-			fs_ThrowError
-				(
-					_Positions
-					, "Wrong type for '{}'. Got {}, expected {}"_f
-					<< _PropertyKey
-					<< fg_EJsonTypeToString(_Value.f_EType())
-					<< fg_EJsonTypeToString(_ExpectedType)
-				)
-			;
-		}
+			fs_ThrowError(_Positions, "Wrong type for '{}'. Got {}, expected {}"_f << _PropertyKey << fg_EJsonTypeToString(_Value.f_EType()) << fg_EJsonTypeToString(_ExpectedType));
 	}
 }
