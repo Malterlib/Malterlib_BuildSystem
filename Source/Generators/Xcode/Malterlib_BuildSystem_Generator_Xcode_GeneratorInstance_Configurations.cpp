@@ -929,7 +929,7 @@ namespace NMib::NBuildSystem
 					CStr ExtraAfter;
 					if (bSearchPaths)
 					{
-						// 	bDoneSearchPaths = true;
+						// bDoneSearchPaths = true;
 						// Extra = "$DependencySearchPaths ";
 					}
 					else if (bAdditionalLibraries)
