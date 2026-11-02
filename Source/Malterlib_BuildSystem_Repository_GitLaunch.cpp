@@ -311,7 +311,7 @@ namespace NMib::NBuildSystem::NRepository
 
 		co_return fg_AsyncDestroyGeneric
 			(
-				[this]() -> TCFuture<void>
+				[this]() -> TCFuture<void> // NOLINT(malterlib-coroutine-unsafe-this): every caller declares the guard after this object, so it is alive when the guard starts this
 				{
 					auto This = fg_Move(*this);
 
