@@ -168,19 +168,8 @@ namespace NMib::NBuildSystem
 
 		TCVector<CEntityKey> Path;
 
-		auto fStoreBackup = [&]
-			(
-#ifndef DCompiler_Workaround_Apple_clang
-				this
-#endif
-				auto &&_fThis
-				, CEntity &_Entity
-			)
-			-> void
+		auto fStoreBackup = [&](this auto &&_fThis, CEntity &_Entity) -> void
 			{
-#ifdef DCompiler_Workaround_Apple_clang
-#	define _fThis(...) _fThis(_fThis, __VA_ARGS__)
-#endif
 				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild;)
 				{
 					auto &Child = *iChild;
@@ -206,9 +195,6 @@ namespace NMib::NBuildSystem
 			}
 		;
 
-#ifdef DCompiler_Workaround_Apple_clang
-#	define fStoreBackup(...) fStoreBackup(fStoreBackup, __VA_ARGS__)
-#endif
 		fStoreBackup(fg_RemoveQualifiers(_Target));
 	}
 
@@ -221,15 +207,7 @@ namespace NMib::NBuildSystem
 		{
 			// Remove old
 			{
-				auto fRemoveOld = [&]
-					(
-#ifndef DCompiler_Workaround_Apple_clang
-						this
-#endif
-						auto &&_fThis
-						, CEntity &_Entity
-					)
-					-> void
+				auto fRemoveOld = [&](this auto &&_fThis, CEntity &_Entity) -> void
 					{
 						for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild;)
 						{
@@ -253,9 +231,6 @@ namespace NMib::NBuildSystem
 					}
 				;
 
-#ifdef DCompiler_Workaround_Apple_clang
-#	define fRemoveOld(...) fRemoveOld(fRemoveOld, __VA_ARGS__)
-#endif
 				fRemoveOld(fg_RemoveQualifiers(_Target));
 			}
 			// Restore
@@ -288,16 +263,7 @@ namespace NMib::NBuildSystem
 
 		// Expand entities
 		{
-			auto fExpandDependency = [&]
-				(
-#ifndef DCompiler_Workaround_Apple_clang
-					this
-#endif
-					auto &&_fThis
-					, CEntity &_Entity
-					, bool _bUnexpandedGroup
-				)
-				-> void
+			auto fExpandDependency = [&](this auto &&_fThis, CEntity &_Entity, bool _bUnexpandedGroup) -> void
 				{
 					for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild;)
 					{
@@ -335,9 +301,6 @@ namespace NMib::NBuildSystem
 					}
 				}
 			;
-#ifdef DCompiler_Workaround_Apple_clang
-#	define fExpandDependency(...) fExpandDependency(fExpandDependency, __VA_ARGS__)
-#endif
 			fExpandDependency(fg_RemoveQualifiers(_Target), false);
 		}
 	}
@@ -365,15 +328,7 @@ namespace NMib::NBuildSystem
 	{
 		TCMap<CStr, TCVector<CStr>> AllFiles;
 		TCVector<CStr> AllFilesCombined;
-		auto fFindFiles = [&]
-			(
-#ifndef DCompiler_Workaround_Apple_clang
-				this
-#endif
-				auto &&_fThis
-				, CEntity &_Entity
-			)
-			-> void
+		auto fFindFiles = [&](this auto &&_fThis, CEntity &_Entity) -> void
 			{
 				for (auto iEntity = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iEntity; ++iEntity)
 				{
@@ -408,9 +363,6 @@ namespace NMib::NBuildSystem
 				}
 			}
 		;
-#ifdef DCompiler_Workaround_Apple_clang
-#	define fFindFiles(...) fFindFiles(fFindFiles, __VA_ARGS__)
-#endif
 		fFindFiles(o_Target);
 
 		for (auto &Files : AllFiles)
@@ -441,15 +393,7 @@ namespace NMib::NBuildSystem
 	{
 		DRequire(_Target.f_GetKey().m_Type == EEntityType_Target);
 		bool bChanged = false;
-		auto fExpandGroup = [&]
-			(
-#ifndef DCompiler_Workaround_Apple_clang
-				this
-#endif
-				auto &&_fThis
-				, CEntity &_Entity
-			)
-			-> void
+		auto fExpandGroup = [&](this auto &&_fThis, CEntity &_Entity) -> void
 			{
 				for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild;)
 				{
@@ -482,9 +426,6 @@ namespace NMib::NBuildSystem
 			}
 		;
 
-#ifdef DCompiler_Workaround_Apple_clang
-#	define fExpandGroup(...) fExpandGroup(fExpandGroup, __VA_ARGS__)
-#endif
 		fExpandGroup(fg_RemoveQualifiers(_Target));
 
 		return bChanged;

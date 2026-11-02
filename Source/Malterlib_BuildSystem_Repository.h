@@ -17,8 +17,8 @@ namespace NMib::NBuildSystem::NRepository
 {
 	DMibImpErrorClassDefine(CExceptionBuildSystemReconcileHelp, NException::CException);
 
-#define DMibErrorBuildSystemReconcileHelp(_Description) DMibImpError(NMib::NBuildSystem::NRepository::CExceptionBuildSystemReconcileHelp, _Description)
-#define DMibErrorInstanceBuildSystemReconcileHelp(_Description) DMibImpErrorInstance(NMib::NBuildSystem::NRepository::CExceptionBuildSystemReconcileHelp, _Description)
+#define DMibErrorBuildSystemReconcileHelp(d_Description) DMibImpError(NMib::NBuildSystem::NRepository::CExceptionBuildSystemReconcileHelp, d_Description)
+#define DMibErrorInstanceBuildSystemReconcileHelp(d_Description) DMibImpErrorInstance(NMib::NBuildSystem::NRepository::CExceptionBuildSystemReconcileHelp, d_Description)
 
 	struct CColors : public CAnsiEncoding
 	{

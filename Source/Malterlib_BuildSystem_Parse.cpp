@@ -648,20 +648,8 @@ namespace NMib::NBuildSystem
 		TCVector<CStr> Namespaces;
 		CStr NamespacesString;
 
-		auto fParseRecursiveNamespaces = [&]
-			(
-#ifndef DCompiler_Workaround_Apple_clang
-				this
-#endif
-				auto &&_fThis
-				, CBuildSystemRegistry &_Registry
-				, CCondition const *_pConditions
-			)
-			-> void
+		auto fParseRecursiveNamespaces = [&](this auto &&_fThis, CBuildSystemRegistry &_Registry, CCondition const *_pConditions) -> void
 			{
-#ifdef DCompiler_Workaround_Apple_clang
-#	define _fThis(...) _fThis(_fThis, __VA_ARGS__)
-#endif
 				CCondition Conditions;
 				TCSharedPointer<CCondition> pConditions;
 
@@ -754,9 +742,6 @@ namespace NMib::NBuildSystem
 				}
 			}
 		;
-#ifdef DCompiler_Workaround_Apple_clang
-#	define fParseRecursiveNamespaces(...) fParseRecursiveNamespaces(fParseRecursiveNamespaces, __VA_ARGS__)
-#endif
 
 		CCondition Conditions;
 		fParseRecursiveNamespaces(_Registry, &Conditions);
