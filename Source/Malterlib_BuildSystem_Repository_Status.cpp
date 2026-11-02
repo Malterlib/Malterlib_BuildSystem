@@ -945,8 +945,6 @@ namespace NMib::NBuildSystem
 									if (Result.m_ExitCode)
 										Launches.f_Output(EOutputType_Error, Repo, "Failed to launch repository editor: {}"_f << Result.f_GetCombinedOut().f_Trim());
 
-									(void)_Subscription;
-
 									co_return {};
 								}
 							)
