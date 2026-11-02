@@ -1504,10 +1504,11 @@ namespace NMib::NBuildSystem
 							EAnsiEncodingFlag LocalAnsiFlags = o_StateHandler.f_AnsiFlags();
 							umint LocalMaxRepoWidth = _MaxRepoWidth;
 							auto fLocalOutputConsole = _BuildSystem.f_OutputConsoleFunctor();
+							CStr LocalBaseDir = BaseDir;
 							CStr LocalRepoName;
 							{
-								if (_Repo.m_Location.f_StartsWith(BaseDir))
-									LocalRepoName = CFile::fs_MakePathRelative(_Repo.m_Location, BaseDir);
+								if (_Repo.m_Location.f_StartsWith(LocalBaseDir))
+									LocalRepoName = CFile::fs_MakePathRelative(_Repo.m_Location, LocalBaseDir);
 								else
 									LocalRepoName = _Repo.m_Location;
 								if (LocalRepoName.f_IsEmpty())
