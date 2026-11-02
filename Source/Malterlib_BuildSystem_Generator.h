@@ -11,7 +11,8 @@ namespace NMib::NBuildSystem
 	struct CBuildSystem;
 	struct CBuildSystemData;
 
-	struct CBuildSystemGenerator
+	// Generators run as part of the build system, which runs to completion
+	struct DMibRunsToCompletion CBuildSystemGenerator
 	{
 		virtual ~CBuildSystemGenerator();
 		virtual NContainer::TCMap<CPropertyKey, NEncoding::CEJsonSorted> f_GetValues(CBuildSystem const &_BuildSystem, NStr::CStr const &_OutputDir) = 0;
@@ -26,7 +27,7 @@ namespace NMib::NBuildSystem
 		;
 	};
 
-	struct ICGeneratorInterface
+	struct DMibRunsToCompletion ICGeneratorInterface
 	{
 		virtual ~ICGeneratorInterface() = default;
 		virtual CValuePotentiallyByRef f_GetBuiltin(CBuildSystemUniquePositions *_pStorePositions, NStr::CStr const &_Value, bool &o_bSuccess) const = 0;

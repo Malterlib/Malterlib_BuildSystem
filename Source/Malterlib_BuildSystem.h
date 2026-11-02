@@ -44,7 +44,8 @@ namespace NMib::NBuildSystem
 		CFilePosition const *m_pFallbackPosition = nullptr;
 	};
 
-	struct CBuildSystem : public NConcurrency::CAllowUnsafeThis
+	// The member functions run to completion: the build system runs on concurrent actors, and each command joins what it starts
+	struct DMibRunsToCompletion CBuildSystem : public NConcurrency::CAllowUnsafeThis
 	{
 		CBuildSystem
 			(
@@ -501,14 +502,13 @@ namespace NMib::NBuildSystem
 
 		bool f_SingleThreaded() const;
 
-		static auto fs_RunBuildSystem
+		DMibRunsToCompletionEntry static NConcurrency::TCUnsafeFuture<ERetry> fs_RunBuildSystem
 			(
 				NFunction::TCFunctionMovable<NConcurrency::TCFuture<CBuildSystem::ERetry> (CBuildSystem *_pBuildSystem)> _fCommand
 				, NStorage::TCSharedPointer<NConcurrency::CCommandLineControl> const &_pCommandLine
 				, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
 				, CGenerateOptions const &_GenerateOptions
 			)
-			-> NConcurrency::TCUnsafeFuture<ERetry>
 		;
 
 		NConcurrency::TCUnsafeFuture<bool> f_Action_Generate(CGenerateOptions const &_GenerateOptions, ERetry &o_Retry);

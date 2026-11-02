@@ -765,7 +765,8 @@ namespace NMib::NBuildSystem
 			co_return {};
 		}
 
-		TCUnsafeFuture<bool> DMibWorkaroundUBSanSectionErrors fg_HandleRepository
+		// Part of the build system run, which runs to completion
+		DMibRunsToCompletion TCUnsafeFuture<bool> DMibWorkaroundUBSanSectionErrors fg_HandleRepository
 			(
 				CGitLaunches &_Launches
 				, CStr const &_ReposDirectory

@@ -731,7 +731,7 @@ namespace NMib::NBuildSystem::NRepository
 	CStr fg_GetHostingProviderClassName(CStr const &_Url);
 	bool fg_IsSupportedHostingProvider(CStr const &_Url);
 
-	TCFuture<void> fg_UpdateRemotes(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage = {});
+	DMibRunsToCompletion TCFuture<void> fg_UpdateRemotes(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage = {});
 	TCMap<CStr, CStr> fg_FetchEnvironment(CBuildSystem const &_BuildSystem);
 
 	auto fg_GetFilteredRepos

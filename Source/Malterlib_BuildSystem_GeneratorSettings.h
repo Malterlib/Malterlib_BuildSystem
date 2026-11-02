@@ -22,7 +22,7 @@ namespace NMib::NBuildSystem
 		bool m_bIsFullEval = false;
 	};
 
-	struct CGeneratorSettings
+	struct DMibRunsToCompletion CGeneratorSettings
 	{
 		auto f_PopulateSettings
 			(
