@@ -199,7 +199,7 @@ namespace NMib::NBuildSystem
 			}
 
 		private:
-			void fp_AddBuiltin(CCommentStyleConfig _Style, std::initializer_list<CStr> _Extensions)
+			void fp_AddBuiltin(CCommentStyleConfig &&_Style, std::initializer_list<CStr> _Extensions)
 			{
 				auto &Out = mp_BuiltinStyles.f_Insert(fg_Move(_Style));
 
@@ -207,7 +207,7 @@ namespace NMib::NBuildSystem
 					mp_ExtensionMap[Ext] = &Out;
 			}
 
-			void fp_AddBuiltinFileName(CCommentStyleConfig _Style, CStr const &_FileName)
+			void fp_AddBuiltinFileName(CCommentStyleConfig &&_Style, CStr const &_FileName)
 			{
 				auto &Out = mp_BuiltinStyles.f_Insert(fg_Move(_Style));
 				mp_FileNameMap[_FileName] = &Out;

@@ -700,7 +700,7 @@ namespace NMib::NBuildSystem
 			bool m_bReverse = false;
 		};
 
-		auto fGetLogEntries = [&](TCVector<CLogEntryFull> _Entries, TCVector<CLogEntryFull> _ReverseEntries, CStr const &_RelativePath) -> TCVector<CLogEntry>
+		auto fGetLogEntries = [&](TCVector<CLogEntryFull> &&_Entries, TCVector<CLogEntryFull> &&_ReverseEntries, CStr const &_RelativePath) -> TCVector<CLogEntry>
 			{
 				auto fFilterEntries = [](TCVector<CLogEntryFull> &o_Entries, umint _MaxEntries, CStr const &_Message)
 					{
@@ -741,7 +741,7 @@ namespace NMib::NBuildSystem
 			CStr Repo = LogEntriesPerRepo.fs_GetKey(LogEntriesResult);
 			CStr RelativePath = CFile::fs_MakePathRelative(Repo, f_GetBaseDir());
 			if (!RelativePath.f_StartsWith("External/"))
-				LogEntriesPerRepoSorted.f_Insert({Repo, fGetLogEntries(LogEntriesResult, ReverseLogEntriesPerRepo[Repo], RelativePath)});
+				LogEntriesPerRepoSorted.f_Insert({Repo, fGetLogEntries(fg_Move(LogEntriesResult), fg_Move(ReverseLogEntriesPerRepo[Repo]), RelativePath)});
 		}
 
 		for (auto &LogEntriesResult : LogEntriesPerRepo)
@@ -749,7 +749,7 @@ namespace NMib::NBuildSystem
 			CStr Repo = LogEntriesPerRepo.fs_GetKey(LogEntriesResult);
 			CStr RelativePath = CFile::fs_MakePathRelative(Repo, f_GetBaseDir());
 			if (RelativePath.f_StartsWith("External/"))
-				LogEntriesPerRepoSorted.f_Insert({Repo, fGetLogEntries(LogEntriesResult, ReverseLogEntriesPerRepo[Repo], RelativePath)});
+				LogEntriesPerRepoSorted.f_Insert({Repo, fGetLogEntries(fg_Move(LogEntriesResult), fg_Move(ReverseLogEntriesPerRepo[Repo]), RelativePath)});
 		}
 
 		TCMap<NTime::CTime, CStr> ChangelogEntries;

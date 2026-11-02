@@ -94,7 +94,7 @@ namespace NMib::NBuildSystem
 		return mp_bShowProgress;
 	}
 
-	CBuildSystem::CGitLaunchOptions CBuildSystem::f_GetGitLaunchOptions(NStr::CStr _Command) const
+	CBuildSystem::CGitLaunchOptions CBuildSystem::f_GetGitLaunchOptions(NStr::CStr &&_Command) const
 	{
 		return
 			{

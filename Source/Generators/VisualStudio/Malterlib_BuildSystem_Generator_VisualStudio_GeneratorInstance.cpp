@@ -13,7 +13,7 @@
 
 namespace NMib::NBuildSystem
 {
-	auto CBuildSystem::fs_GetVisualStudioVersions(NStr::CStr &o_Errors, CStr _ProgramData) -> NContainer::TCMap<uint32, CVisualStudioVersion>
+	auto CBuildSystem::fs_GetVisualStudioVersions(NStr::CStr &o_Errors, CStr const &_ProgramData) -> NContainer::TCMap<uint32, CVisualStudioVersion>
 	{
 #ifdef DPlatformFamily_Windows
 		CStr CachePath = _ProgramData / "Microsoft/VisualStudio/Packages";
