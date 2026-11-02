@@ -1170,7 +1170,7 @@ namespace NMib::NBuildSystem::NRepository
 		return {{"GIT_HTTP_CONNECT_TIMEOUT", CStr::fs_ToStr(Options.m_GitFetchTimeout)}};
 	}
 
-	TCUnsafeFuture<void> DMibWorkaroundUBSanSectionErrors fg_UpdateRemotes(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage)
+	TCFuture<void> DMibWorkaroundUBSanSectionErrors fg_UpdateRemotes(CBuildSystem &_BuildSystem, CFilteredRepos const &_FilteredRepositories, CStr const &_ExtraMessage)
 	{
 		co_await (ECoroutineFlag_CaptureMalterlibExceptions);
 
@@ -1182,15 +1182,30 @@ namespace NMib::NBuildSystem::NRepository
 
 		TCFutureVector<void> Results;
 
+		// Joins the dispatched updates on every exit, also when cancelled, while _BuildSystem and Launches are alive
+		auto JoinResults = co_await fg_AsyncDestroy
+			(
+				[&]() -> TCFuture<void>
+				{
+					co_await fg_AllDone(Results);
+					co_return {};
+				}
+			)
+		;
+
 		auto AllRepos = _FilteredRepositories.f_GetAllRepos();
 
 		TCMap<CStr, CStr> FetchEnvironment = fg_FetchEnvironment(_BuildSystem);
+
+		auto pCancelled = _BuildSystem.f_GetCancelledPointer();
 
 		for (auto &[RepoBound, iSequence] : AllRepos)
 		{
 			auto &Repo = RepoBound;
 
-			co_await _BuildSystem.f_CheckCancelled();
+			// Cancelled: leave through the join below, since the cleanup of the launches removes the timer that stops their processes
+			if (pCancelled && pCancelled->f_Load())
+				break;
 
 			struct CBranchState
 			{
@@ -1353,7 +1368,9 @@ namespace NMib::NBuildSystem::NRepository
 			;
 		}
 
-		co_await fg_AllDone(Results);
+		co_await fg_Move(JoinResults);
+
+		co_await _BuildSystem.f_CheckCancelled();
 
 		co_return {};
 	}
