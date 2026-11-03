@@ -263,7 +263,7 @@ namespace NMib::NBuildSystem
 			try
 			{
 				CByteVector FileData = CFile::fs_ReadFileTry(_GenerateState.m_GlobalGeneratorStateFileName);
-				CBinaryStreamMemory<> Stream;
+				TCBinaryStreamMemory<> Stream;
 				Stream.f_Open(FileData);
 				Stream >> _GenerateState.m_GlobalState;
 
@@ -581,7 +581,7 @@ namespace NMib::NBuildSystem
 			}
 		}
 
-		CBinaryStreamMemory<> Stream;
+		TCBinaryStreamMemory<> Stream;
 		Stream << State;
 
 		CFile::fs_CreateDirectory(CFile::fs_GetPath(_GenerateState.m_GlobalGeneratorStateFileName));
@@ -616,7 +616,7 @@ namespace NMib::NBuildSystem
 						try
 						{
 							CByteVector FileData = CFile::fs_ReadFileTry(GenerateState.m_WorkspaceGeneratorStateFileName);
-							CBinaryStreamMemory<> Stream;
+							TCBinaryStreamMemory<> Stream;
 							Stream.f_Open(FileData);
 							Stream >> State;
 							NumWorkspaceTargets = State.m_NumWorkspaceTargets;
@@ -993,14 +993,14 @@ namespace NMib::NBuildSystem
 			State.m_NumWorkspaceTargets = NumWorkspaceTargets;
 
 			{
-				CBinaryStreamMemory<> Stream;
+				TCBinaryStreamMemory<> Stream;
 				Stream << State;
 
 				CFile::fs_CreateDirectory(CFile::fs_GetPath(GenerateState.m_WorkspaceGeneratorStateFileName));
 				CFile::fs_CopyFileDiff(Stream.f_MoveVector(), GenerateState.m_WorkspaceGeneratorStateFileName, CTime::fs_NowUTC());
 			}
 			{
-				CBinaryStreamMemory<> Stream;
+				TCBinaryStreamMemory<> Stream;
 				Stream << GenerateState.m_GlobalState;
 
 				CFile::fs_CreateDirectory(CFile::fs_GetPath(GenerateState.m_GlobalGeneratorStateFileName));

@@ -178,7 +178,7 @@ namespace
 				auto fRead = [](CByteVector const &_Data)
 					{
 						CGeneratorArchiveState Read;
-						CBinaryStreamMemory<> Stream;
+						TCBinaryStreamMemory<> Stream;
 						Stream.f_Open(_Data);
 						Stream >> Read;
 						return Read;
@@ -187,7 +187,7 @@ namespace
 
 				{
 					DMibTestPath("CurrentVersion");
-					CBinaryStreamMemory<> Stream;
+					TCBinaryStreamMemory<> Stream;
 					Stream << State;
 
 					auto Read = fRead(Stream.f_MoveVector());
@@ -198,8 +198,8 @@ namespace
 				}
 				{
 					DMibTestPath("GeneratedFilesLastVersion");
-					CBinaryStreamMemory<> Stream;
-					Stream << uint32(CGeneratorArchiveState::EFileVersion_GeneratedFilesLast);
+					TCBinaryStreamMemory<> Stream;
+					Stream << uint32(CGeneratorArchiveState::mc_FileVersion_GeneratedFilesLast);
 					Stream << State.m_ExeFile;
 					Stream << State.m_SourceFiles;
 					Stream << State.m_ReferencedFiles;
@@ -216,12 +216,12 @@ namespace
 				}
 				{
 					DMibTestPath("LaterVersion");
-					CBinaryStreamMemory<> Stream;
+					TCBinaryStreamMemory<> Stream;
 					Stream << State;
 					Stream << CStr("State that only the later version knows");
 
 					CByteVector Data = Stream.f_MoveVector();
-					uint32 LaterVersion = CGeneratorArchiveState::EFileVersion + 1;
+					uint32 LaterVersion = CGeneratorArchiveState::mc_FileVersion + 1;
 					NMemory::fg_MemCopy(Data.f_GetArray(), &LaterVersion, sizeof(LaterVersion));
 
 					auto Read = fRead(Data);
@@ -231,8 +231,8 @@ namespace
 				}
 				{
 					DMibTestPath("UnreadableLaterVersion");
-					uint32 LaterVersion = CGeneratorArchiveState::EFileVersion + 1;
-					CBinaryStreamMemory<> Stream;
+					uint32 LaterVersion = CGeneratorArchiveState::mc_FileVersion + 1;
+					TCBinaryStreamMemory<> Stream;
 					Stream << LaterVersion;
 					Stream << LaterVersion;
 
@@ -245,13 +245,16 @@ namespace
 				}
 				{
 					DMibTestPath("TooOldVersion");
-					CBinaryStreamMemory<> Stream;
-					Stream << uint32(CGeneratorArchiveState::EFileVersion_GeneratedFilesLast - 1);
+					TCBinaryStreamMemory<> Stream;
+					Stream << uint32(CGeneratorArchiveState::mc_FileVersion_GeneratedFilesLast - 1);
 
 					DMibExpectException
 						(
 							fRead(Stream.f_MoveVector())
-							, DMibErrorInstance(CStr::CFormat("Generator state of version 0x{nh} is too old to read") << uint32(CGeneratorArchiveState::EFileVersion_GeneratedFilesLast - 1))
+							, DMibErrorInstance
+							(
+								CStr::CFormat("Generator state of version 0x{nh} is too old to read") << uint32(CGeneratorArchiveState::mc_FileVersion_GeneratedFilesLast - 1)
+							)
 						)
 					;
 				}

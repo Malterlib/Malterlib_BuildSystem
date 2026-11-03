@@ -285,7 +285,7 @@ namespace NMib::NBuildSystem
 
 								State.m_Parameters = FunctionParams;
 
-								CBinaryStreamMemory<> Stream;
+								TCBinaryStreamMemory<> Stream;
 								Stream << State;
 								Stream << Ret;
 

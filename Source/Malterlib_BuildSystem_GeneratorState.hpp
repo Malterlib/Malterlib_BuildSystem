@@ -36,8 +36,8 @@ namespace NMib::NBuildSystem
 	template <typename tf_CStream>
 	void CGeneratorArchiveState::f_Feed(tf_CStream &_Stream) const
 	{
-		_Stream << uint32(EFileVersion);
-		_Stream << uint32(EFileVersion_OldestReader);
+		_Stream << uint32(mc_FileVersion);
+		_Stream << uint32(mc_FileVersion_OldestReader);
 		_Stream << m_GeneratedFiles;
 		_Stream << m_ExeFile;
 		_Stream << m_SourceFiles;
@@ -54,7 +54,7 @@ namespace NMib::NBuildSystem
 		uint32 Version;
 		_Stream >> Version;
 
-		if (Version == EFileVersion_GeneratedFilesLast)
+		if (Version == mc_FileVersion_GeneratedFilesLast)
 		{
 			_Stream >> m_ExeFile;
 			_Stream >> m_SourceFiles;
@@ -67,12 +67,12 @@ namespace NMib::NBuildSystem
 			return;
 		}
 
-		if (Version < EFileVersion)
+		if (Version < mc_FileVersion)
 			DMibError(NStr::CStr::CFormat("Generator state of version 0x{nh} is too old to read") << Version);
 
 		uint32 OldestReader;
 		_Stream >> OldestReader;
-		if (OldestReader > EFileVersion)
+		if (OldestReader > mc_FileVersion)
 			DMibError(NStr::CStr::CFormat("Generator state of version 0x{nh} needs a reader of version 0x{nh} or later") << Version << OldestReader);
 
 		_Stream >> m_GeneratedFiles;

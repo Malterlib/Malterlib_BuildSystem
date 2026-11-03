@@ -100,10 +100,10 @@ namespace NMib::NBuildSystem
 
 	CValuePotentiallyByRef CBuildSystem::fp_EvaluatePropertyValueBinaryOperator(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CBinaryOperator const &_Value) const
 	{
-		using COp = CBuildSystemSyntax::CBinaryOperator;
+		using CBinaryOperator = CBuildSystemSyntax::CBinaryOperator;
 		switch (_Value.m_Operator)
 		{
-		case COp::EOperator_And:
+		case CBinaryOperator::EOperator_And:
 			{
 				auto Left = fp_EvaluatePropertyValueParam(_Context, _Value.m_Left);
 				if (fg_IsTruthy(Left.f_Get()))
@@ -112,7 +112,7 @@ namespace NMib::NBuildSystem
 					return Left;
 			}
 			break;
-		case COp::EOperator_Or:
+		case CBinaryOperator::EOperator_Or:
 			{
 				auto Left = fp_EvaluatePropertyValueParam(_Context, _Value.m_Left);
 				if (fg_IsTruthy(Left.f_Get()))
@@ -121,7 +121,7 @@ namespace NMib::NBuildSystem
 					return fp_EvaluatePropertyValueParam(_Context, _Value.m_Right);
 			}
 			break;
-		case COp::EOperator_NullishCoalescing:
+		case CBinaryOperator::EOperator_NullishCoalescing:
 			{
 				auto Left = fp_EvaluatePropertyValueParam(_Context, _Value.m_Left);
 				if (Left.f_Get().f_IsValid() && !Left.f_Get().f_IsNull())
@@ -141,14 +141,14 @@ namespace NMib::NBuildSystem
 
 			switch (_Value.m_Operator)
 			{
-			case COp::EOperator_MatchEqual:
-			case COp::EOperator_MatchNotEqual:
-			case COp::EOperator_Equal:
-			case COp::EOperator_NotEqual:
-			case COp::EOperator_LessThan:
-			case COp::EOperator_GreaterThan:
-			case COp::EOperator_LessThanEqual:
-			case COp::EOperator_GreaterThanEqual:
+			case CBinaryOperator::EOperator_MatchEqual:
+			case CBinaryOperator::EOperator_MatchNotEqual:
+			case CBinaryOperator::EOperator_Equal:
+			case CBinaryOperator::EOperator_NotEqual:
+			case CBinaryOperator::EOperator_LessThan:
+			case CBinaryOperator::EOperator_GreaterThan:
+			case CBinaryOperator::EOperator_LessThanEqual:
+			case CBinaryOperator::EOperator_GreaterThanEqual:
 				return CEJsonSorted
 					(
 						fsp_CompareValueRecursive
@@ -170,11 +170,11 @@ namespace NMib::NBuildSystem
 			{
 				switch (_Value.m_Operator)
 				{
-				case COp::EOperator_Add:
-				case COp::EOperator_Subtract:
-				case COp::EOperator_Divide:
-				case COp::EOperator_Multiply:
-				case COp::EOperator_Modulus:
+				case CBinaryOperator::EOperator_Add:
+				case CBinaryOperator::EOperator_Subtract:
+				case CBinaryOperator::EOperator_Divide:
+				case CBinaryOperator::EOperator_Multiply:
+				case CBinaryOperator::EOperator_Modulus:
 					Right.f_Set(CEJsonSorted(RightRef.f_AsFloat()));
 					break;
 				default: break;
@@ -184,11 +184,11 @@ namespace NMib::NBuildSystem
 			{
 				switch (_Value.m_Operator)
 				{
-				case COp::EOperator_Add:
-				case COp::EOperator_Subtract:
-				case COp::EOperator_Divide:
-				case COp::EOperator_Multiply:
-				case COp::EOperator_Modulus:
+				case CBinaryOperator::EOperator_Add:
+				case CBinaryOperator::EOperator_Subtract:
+				case CBinaryOperator::EOperator_Divide:
+				case CBinaryOperator::EOperator_Multiply:
+				case CBinaryOperator::EOperator_Modulus:
 					Left.f_Set(CEJsonSorted(LeftRef.f_AsFloat()));
 					break;
 				default: break;
@@ -206,7 +206,7 @@ namespace NMib::NBuildSystem
 		{
 			switch (_Value.m_Operator)
 			{
-			case COp::EOperator_Add:
+			case CBinaryOperator::EOperator_Add:
 				{
 					auto NewValue = Left.f_Move();
 
@@ -247,7 +247,7 @@ namespace NMib::NBuildSystem
 		{
 			switch (_Value.m_Operator)
 			{
-			case COp::EOperator_Add:
+			case CBinaryOperator::EOperator_Add:
 				{
 					auto Return = Left.f_Move();
 					Return.f_Array().f_Insert(Right.f_MoveArray());
@@ -268,8 +268,8 @@ namespace NMib::NBuildSystem
 		{
 			switch (_Value.m_Operator)
 			{
-			case COp::EOperator_Add: return CEJsonSorted(LeftRef.f_String() + RightRef.f_String());
-			case COp::EOperator_Divide: return CEJsonSorted(LeftRef.f_String() / RightRef.f_String());
+			case CBinaryOperator::EOperator_Add: return CEJsonSorted(LeftRef.f_String() + RightRef.f_String());
+			case CBinaryOperator::EOperator_Divide: return CEJsonSorted(LeftRef.f_String() / RightRef.f_String());
 			default:
 				fs_ThrowError
 					(
@@ -284,16 +284,16 @@ namespace NMib::NBuildSystem
 		{
 			switch (_Value.m_Operator)
 			{
-			case COp::EOperator_Add: return CEJsonSorted(LeftRef.f_Integer() + RightRef.f_Integer());
-			case COp::EOperator_Subtract: return CEJsonSorted(LeftRef.f_Integer() - RightRef.f_Integer());
-			case COp::EOperator_Divide: return CEJsonSorted(LeftRef.f_Integer() / RightRef.f_Integer());
-			case COp::EOperator_Multiply: return CEJsonSorted(LeftRef.f_Integer() * RightRef.f_Integer());
-			case COp::EOperator_Modulus: return CEJsonSorted(LeftRef.f_Integer() % RightRef.f_Integer());
-			case COp::EOperator_BitwiseLeftShift: return CEJsonSorted(LeftRef.f_Integer() << RightRef.f_Integer());
-			case COp::EOperator_BitwiseRightShift: return CEJsonSorted(LeftRef.f_Integer() >> RightRef.f_Integer());
-			case COp::EOperator_BitwiseAnd: return CEJsonSorted(LeftRef.f_Integer() & RightRef.f_Integer());
-			case COp::EOperator_BitwiseXor: return CEJsonSorted(LeftRef.f_Integer() ^ RightRef.f_Integer());
-			case COp::EOperator_BitwiseOr: return CEJsonSorted(LeftRef.f_Integer() | RightRef.f_Integer());
+			case CBinaryOperator::EOperator_Add: return CEJsonSorted(LeftRef.f_Integer() + RightRef.f_Integer());
+			case CBinaryOperator::EOperator_Subtract: return CEJsonSorted(LeftRef.f_Integer() - RightRef.f_Integer());
+			case CBinaryOperator::EOperator_Divide: return CEJsonSorted(LeftRef.f_Integer() / RightRef.f_Integer());
+			case CBinaryOperator::EOperator_Multiply: return CEJsonSorted(LeftRef.f_Integer() * RightRef.f_Integer());
+			case CBinaryOperator::EOperator_Modulus: return CEJsonSorted(LeftRef.f_Integer() % RightRef.f_Integer());
+			case CBinaryOperator::EOperator_BitwiseLeftShift: return CEJsonSorted(LeftRef.f_Integer() << RightRef.f_Integer());
+			case CBinaryOperator::EOperator_BitwiseRightShift: return CEJsonSorted(LeftRef.f_Integer() >> RightRef.f_Integer());
+			case CBinaryOperator::EOperator_BitwiseAnd: return CEJsonSorted(LeftRef.f_Integer() & RightRef.f_Integer());
+			case CBinaryOperator::EOperator_BitwiseXor: return CEJsonSorted(LeftRef.f_Integer() ^ RightRef.f_Integer());
+			case CBinaryOperator::EOperator_BitwiseOr: return CEJsonSorted(LeftRef.f_Integer() | RightRef.f_Integer());
 			default:
 				fs_ThrowError
 					(
@@ -308,11 +308,11 @@ namespace NMib::NBuildSystem
 		{
 			switch (_Value.m_Operator)
 			{
-			case COp::EOperator_Add: return CEJsonSorted(LeftRef.f_Float() + RightRef.f_Float());
-			case COp::EOperator_Subtract: return CEJsonSorted(LeftRef.f_Float() - RightRef.f_Float());
-			case COp::EOperator_Divide: return CEJsonSorted(LeftRef.f_Float() / RightRef.f_Float());
-			case COp::EOperator_Multiply: return CEJsonSorted(LeftRef.f_Float() * RightRef.f_Float());
-			case COp::EOperator_Modulus: return CEJsonSorted(LeftRef.f_Float().f_Mod(RightRef.f_Float()));
+			case CBinaryOperator::EOperator_Add: return CEJsonSorted(LeftRef.f_Float() + RightRef.f_Float());
+			case CBinaryOperator::EOperator_Subtract: return CEJsonSorted(LeftRef.f_Float() - RightRef.f_Float());
+			case CBinaryOperator::EOperator_Divide: return CEJsonSorted(LeftRef.f_Float() / RightRef.f_Float());
+			case CBinaryOperator::EOperator_Multiply: return CEJsonSorted(LeftRef.f_Float() * RightRef.f_Float());
+			case CBinaryOperator::EOperator_Modulus: return CEJsonSorted(LeftRef.f_Float().f_Mod(RightRef.f_Float()));
 			default:
 				fs_ThrowError
 					(
@@ -364,7 +364,7 @@ namespace NMib::NBuildSystem
 
 	CEJsonSorted CBuildSystem::fp_EvaluatePropertyValuePrefixOperator(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CPrefixOperator const &_Value) const
 	{
-		using COp = CBuildSystemSyntax::CPrefixOperator;
+		using CBinaryOperator = CBuildSystemSyntax::CPrefixOperator;
 
 		auto Right = fp_EvaluatePropertyValueParam(_Context, _Value.m_Right);
 		auto &RightRef = Right.f_Get();
@@ -379,10 +379,10 @@ namespace NMib::NBuildSystem
 		{
 			switch (_Value.m_Operator)
 			{
-			case COp::EOperator_LogicalNot: return !RightRef.f_Integer();
-			case COp::EOperator_BitwiseNot: return ~RightRef.f_Integer();
-			case COp::EOperator_UnaryPlus: return +RightRef.f_Integer();
-			case COp::EOperator_UnaryMinus: return -RightRef.f_Integer();
+			case CBinaryOperator::EOperator_LogicalNot: return !RightRef.f_Integer();
+			case CBinaryOperator::EOperator_BitwiseNot: return ~RightRef.f_Integer();
+			case CBinaryOperator::EOperator_UnaryPlus: return +RightRef.f_Integer();
+			case CBinaryOperator::EOperator_UnaryMinus: return -RightRef.f_Integer();
 			default: fs_ThrowError(_Context, "Integers not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << fg_IndentValue(RightRef)); break;
 			}
 		}
@@ -390,8 +390,8 @@ namespace NMib::NBuildSystem
 		{
 			switch (_Value.m_Operator)
 			{
-			case COp::EOperator_UnaryPlus: return +RightRef.f_Float();
-			case COp::EOperator_UnaryMinus: return -RightRef.f_Float();
+			case CBinaryOperator::EOperator_UnaryPlus: return +RightRef.f_Float();
+			case CBinaryOperator::EOperator_UnaryMinus: return -RightRef.f_Float();
 			default: fs_ThrowError(_Context, "Floats not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << fg_IndentValue(RightRef)); break;
 			}
 		}
@@ -399,7 +399,7 @@ namespace NMib::NBuildSystem
 		{
 			switch (_Value.m_Operator)
 			{
-			case COp::EOperator_LogicalNot: return !RightRef.f_Boolean();
+			case CBinaryOperator::EOperator_LogicalNot: return !RightRef.f_Boolean();
 			default: fs_ThrowError(_Context, "Floats not supported for prefix operator {}:\n{}"_f << fg_OperatorName(_Value.m_Operator) << fg_IndentValue(RightRef)); break;
 			}
 		}
