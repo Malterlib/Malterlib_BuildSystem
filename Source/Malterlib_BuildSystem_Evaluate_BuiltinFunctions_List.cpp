@@ -393,8 +393,8 @@ namespace NMib::NBuildSystem
 								CEJsonSorted Return;
 								auto &ReturnArray = Return.f_Array();
 
-								for (umint i = iStart; i < iEnd; ++i)
-									ReturnArray.f_Insert(fg_Move(SourceArray[i]));
+								for (umint iItem = iStart; iItem < iEnd; ++iItem)
+									ReturnArray.f_Insert(fg_Move(SourceArray[iItem]));
 
 								return Return;
 							}

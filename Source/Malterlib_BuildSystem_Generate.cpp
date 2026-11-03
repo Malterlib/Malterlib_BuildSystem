@@ -12,7 +12,7 @@
 
 namespace NMib::NBuildSystem
 {
-	constexpr CUniversallyUniqueIdentifier const g_GeneratorStateUUIDNamespace(0x8220886E, 0x63BD, 0x4F4E, 0xB32B, 0x71D68D7346D4_uint64);
+	constexpr CUniversallyUniqueIdentifier const gc_GeneratorStateUUIDNamespace(0x8220886E, 0x63BD, 0x4F4E, 0xB32B, 0x71D68D7346D4_uint64);
 
 	namespace
 	{
@@ -174,7 +174,7 @@ namespace NMib::NBuildSystem
 			CUniversallyUniqueIdentifier UniqueIdentifier
 				(
 					EUniversallyUniqueIdentifierGenerate_StringHash
-					, g_GeneratorStateUUIDNamespace
+					, gc_GeneratorStateUUIDNamespace
 					, "Global!" + _GenerateState.m_RelativeFileLocation + GenerateSettings.m_Generator
 				)
 			;
@@ -186,7 +186,7 @@ namespace NMib::NBuildSystem
 			CUniversallyUniqueIdentifier UniqueIdentifier
 				(
 					EUniversallyUniqueIdentifierGenerate_StringHash
-					, g_GeneratorStateUUIDNamespace
+					, gc_GeneratorStateUUIDNamespace
 					, _GenerateState.m_RelativeFileLocation + GenerateSettings.m_Generator + mp_GenerateWorkspace
 				)
 			;

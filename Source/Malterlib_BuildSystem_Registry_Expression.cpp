@@ -21,8 +21,8 @@ namespace NMib::NContainer
 		)
 	{
 		m_StringMap.f_SetAtLeastLen(_iDestination + _nChars, 0);
-		for (umint i = 0; i < _nChars; ++i)
-			m_StringMap[_iDestination + i] = _iSource + i;
+		for (umint iChar = 0; iChar < _nChars; ++iChar)
+			m_StringMap[_iDestination + iChar] = _iSource + iChar;
 	}
 
 	void TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CJsonParseContextCatureStringMap::f_ThrowError

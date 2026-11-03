@@ -623,15 +623,15 @@ namespace NMib::NBuildSystem
 								CStr Params[32];
 								auto Parse = CStr::CParse(_Params[1].f_String());
 
-								for (auto i = 0; i < 32; ++i)
-									Parse >> Params[i];
+								for (auto iParam = 0; iParam < 32; ++iParam)
+									Parse >> Params[iParam];
 
 								Parse.f_Parse(_Params[0].f_String());
 
 								auto Format = CStr::CFormat(_Params[2].f_String());
 
-								for (auto i = 0; i < 32; ++i)
-									Format << Params[i];
+								for (auto iParam = 0; iParam < 32; ++iParam)
+									Format << Params[iParam];
 
 								return Format.f_GetStr();
 							}
@@ -1103,8 +1103,8 @@ namespace NMib::NBuildSystem
 									Output.f_Insert(CStr(SourceString));
 								else
 								{
-									for (umint i = 0; i < SourceLength; i += ChunkLength)
-										Output.f_Insert(CStr(SourceString.f_Extract(i, ChunkLength)));
+									for (umint iOffset = 0; iOffset < SourceLength; iOffset += ChunkLength)
+										Output.f_Insert(CStr(SourceString.f_Extract(iOffset, ChunkLength)));
 								}
 
 								return Output;

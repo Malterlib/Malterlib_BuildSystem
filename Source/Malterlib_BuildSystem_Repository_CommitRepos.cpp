@@ -859,11 +859,11 @@ namespace NMib::NBuildSystem
 				bool bLastIsConfigOnly = !LastAnalysis.m_ConfigFilesChanged.f_IsEmpty() && !LastAnalysis.m_bHasNonConfigChanges;
 				bool bNoOtherConfigCommits = true;
 				bool bHasMixedCommits = false;
-				for (umint i = 0; i < _CommitAnalyses.f_GetLen() - 1; ++i)
+				for (umint iAnalysis = 0; iAnalysis < _CommitAnalyses.f_GetLen() - 1; ++iAnalysis)
 				{
-					if (!_CommitAnalyses[i].m_ConfigFilesChanged.f_IsEmpty() && !_CommitAnalyses[i].m_bHasNonConfigChanges)
+					if (!_CommitAnalyses[iAnalysis].m_ConfigFilesChanged.f_IsEmpty() && !_CommitAnalyses[iAnalysis].m_bHasNonConfigChanges)
 						bNoOtherConfigCommits = false;
-					if (!_CommitAnalyses[i].m_ConfigFilesChanged.f_IsEmpty() && _CommitAnalyses[i].m_bHasNonConfigChanges)
+					if (!_CommitAnalyses[iAnalysis].m_ConfigFilesChanged.f_IsEmpty() && _CommitAnalyses[iAnalysis].m_bHasNonConfigChanges)
 						bHasMixedCommits = true;
 				}
 
@@ -1385,10 +1385,10 @@ namespace NMib::NBuildSystem
 						auto DepotPaths = fg_PerforceConnectAndResolveDepotPaths(_ConfigFilePaths, _BaseDir, Client);
 
 						TCSet<CStr> Submitted;
-						for (umint i = 0; i < _ConfigFilePaths.f_GetLen(); ++i)
+						for (umint iConfigFile = 0; iConfigFile < _ConfigFilePaths.f_GetLen(); ++iConfigFile)
 						{
-							if (!DepotPaths[i].f_IsEmpty())
-								Submitted[_ConfigFilePaths[i]];
+							if (!DepotPaths[iConfigFile].f_IsEmpty())
+								Submitted[_ConfigFilePaths[iConfigFile]];
 						}
 						return Submitted;
 					}
@@ -1443,12 +1443,12 @@ namespace NMib::NBuildSystem
 						TCVector<CStr> ChangedConfigFiles;
 						TCVector<CStr> ChangedDepotPaths;
 						TCVector<CStr> NewConfigFiles;
-						for (umint i = 0; i < _ConfigFilePaths.f_GetLen(); ++i)
+						for (umint iConfigFile = 0; iConfigFile < _ConfigFilePaths.f_GetLen(); ++iConfigFile)
 						{
-							if (DepotPaths[i].f_IsEmpty())
+							if (DepotPaths[iConfigFile].f_IsEmpty())
 							{
-								if (CFile::fs_FileExists(_ConfigFilePaths[i]))
-									NewConfigFiles.f_Insert(_ConfigFilePaths[i]);
+								if (CFile::fs_FileExists(_ConfigFilePaths[iConfigFile]))
+									NewConfigFiles.f_Insert(_ConfigFilePaths[iConfigFile]);
 								continue;
 							}
 
@@ -1456,22 +1456,22 @@ namespace NMib::NBuildSystem
 							// always an error: repo-commit will not delete config files
 							// automatically, the user must restore the file or remove the
 							// corresponding entry from the build configuration.
-							if (!CFile::fs_FileExists(_ConfigFilePaths[i]))
+							if (!CFile::fs_FileExists(_ConfigFilePaths[iConfigFile]))
 							{
-								CStr Message = "Config file '{}' is missing from the workspace. Restore the file before running repo-commit."_f << _ConfigFilePaths[i];
+								CStr Message = "Config file '{}' is missing from the workspace. Restore the file before running repo-commit."_f << _ConfigFilePaths[iConfigFile];
 								_Launches.f_Output(EOutputType_Error, ".", Message);
 								DMibError(Message);
 							}
 
 							CStr SubmittedContent;
 							if (LatestCL > 0)
-								Client.f_NoThrow().f_GetTextFileContents("{}@{}"_f << DepotPaths[i] << LatestCL, SubmittedContent);
+								Client.f_NoThrow().f_GetTextFileContents("{}@{}"_f << DepotPaths[iConfigFile] << LatestCL, SubmittedContent);
 
-							CStr WorkspaceContent = CFile::fs_ReadStringFromFile(_ConfigFilePaths[i]);
+							CStr WorkspaceContent = CFile::fs_ReadStringFromFile(_ConfigFilePaths[iConfigFile]);
 							if (WorkspaceContent != SubmittedContent)
 							{
-								ChangedConfigFiles.f_Insert(_ConfigFilePaths[i]);
-								ChangedDepotPaths.f_Insert(DepotPaths[i]);
+								ChangedConfigFiles.f_Insert(_ConfigFilePaths[iConfigFile]);
+								ChangedDepotPaths.f_Insert(DepotPaths[iConfigFile]);
 							}
 						}
 
@@ -1557,17 +1557,17 @@ namespace NMib::NBuildSystem
 							for (auto &DepotPath : ChangedDepotPaths)
 								AlreadyIncluded[DepotPath];
 
-							for (umint i = 0; i < _ConfigFilePaths.f_GetLen(); ++i)
+							for (umint iConfigFile = 0; iConfigFile < _ConfigFilePaths.f_GetLen(); ++iConfigFile)
 							{
-								if (DepotPaths[i].f_IsEmpty())
+								if (DepotPaths[iConfigFile].f_IsEmpty())
 									continue;
-								if (AlreadyIncluded.f_FindEqual(DepotPaths[i]))
+								if (AlreadyIncluded.f_FindEqual(DepotPaths[iConfigFile]))
 									continue;
-								if (!OpenedElsewhere.f_FindEqual(DepotPaths[i]))
+								if (!OpenedElsewhere.f_FindEqual(DepotPaths[iConfigFile]))
 									continue;
 
-								ChangedConfigFiles.f_Insert(_ConfigFilePaths[i]);
-								ChangedDepotPaths.f_Insert(DepotPaths[i]);
+								ChangedConfigFiles.f_Insert(_ConfigFilePaths[iConfigFile]);
+								ChangedDepotPaths.f_Insert(DepotPaths[iConfigFile]);
 							}
 						}
 
@@ -1715,8 +1715,8 @@ namespace NMib::NBuildSystem
 						// to resolve that state by hand (typically `p4 revert`) before
 						// repo-commit can take over, otherwise the generated CL would
 						// carry the wrong action.
-						for (umint i = 0; i < ChangedConfigFiles.f_GetLen(); ++i)
-							Client.f_OpenForEdit(ChangedConfigFiles[i]);
+						for (umint iConfigFile = 0; iConfigFile < ChangedConfigFiles.f_GetLen(); ++iConfigFile)
+							Client.f_OpenForEdit(ChangedConfigFiles[iConfigFile]);
 
 						// `p4 add` a brand-new file. If it's already opened from a
 						// previous run, skip the call so the throwing variant only

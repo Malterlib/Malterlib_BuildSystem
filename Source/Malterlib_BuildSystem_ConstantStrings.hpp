@@ -9,6 +9,7 @@
 
 namespace NMib::NBuildSystem
 {
+	// NOLINTBEGIN(malterlib-variable-naming): each name spells the string it holds
 	constexpr CStringAndHash const gc_ConstString_Accessors = gc_Str<"Accessors">;
 	constexpr CStringAndHash const gc_ConstString_any = gc_Str<"any">;
 	constexpr CStringAndHash const gc_ConstString_AppendExpression = gc_Str<"AppendExpression">;
@@ -578,6 +579,7 @@ namespace NMib::NBuildSystem
 
 	constexpr CStringAndHash const gc_ConstString_MessageHeader = gc_Str<"MessageHeader">;
 	constexpr CStringAndHash const gc_ConstString_TransformScript = gc_Str<"TransformScript">;
+	// NOLINTEND(malterlib-variable-naming)
 
 	void fg_CacheConstantStrings(CStringCache &o_StringCache)
 	{

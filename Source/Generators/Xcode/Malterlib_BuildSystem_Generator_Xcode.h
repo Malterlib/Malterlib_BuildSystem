@@ -300,7 +300,7 @@ namespace NMib::NBuildSystem::NXcode
 
 		TCMap<CConfiguration, TCLinkedList<CNativeTarget>> m_NativeTargets;
 
-		TCMap<EBuildFileType, TCVector<CBuildFileRef>> mp_OrderedBuildTypes;
+		TCMap<EBuildFileType, TCVector<CBuildFileRef>> m_OrderedBuildTypes;
 		TCVector<CBuildConfiguration> m_BuildConfigurationList;
 
 		CStr m_EntityName;

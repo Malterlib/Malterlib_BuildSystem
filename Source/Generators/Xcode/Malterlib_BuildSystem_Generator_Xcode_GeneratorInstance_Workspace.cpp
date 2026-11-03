@@ -64,12 +64,12 @@ namespace NMib::NBuildSystem::NXcode
 					XMLFile.fs_SetAttribute(pGroupRef, "name", _pGroup->m_Name);
 					_pGroup->m_OutputToWorkspace = true;
 
-					TCVector<CGroup *> &lChildGroups = MapGroupToGroups[_pGroup];
-					for (auto iChildGroup = lChildGroups.f_GetIterator(); iChildGroup; ++iChildGroup)
+					TCVector<CGroup *> &ChildGroups = MapGroupToGroups[_pGroup];
+					for (auto iChildGroup = ChildGroups.f_GetIterator(); iChildGroup; ++iChildGroup)
 						fOutputGroup(pGroupRef, *iChildGroup);
 
-					TCVector<CProject *> &lChildProjects = MapProjectsToGroups[_pGroup];
-					for (auto iProject = lChildProjects.f_GetIterator(); iProject; ++iProject)
+					TCVector<CProject *> &ChildProjects = MapProjectsToGroups[_pGroup];
+					for (auto iProject = ChildProjects.f_GetIterator(); iProject; ++iProject)
 					{
 						auto pFileRef = XMLFile.fs_CreateElement(pGroupRef, "FileRef");
 						XMLFile.fs_SetAttribute

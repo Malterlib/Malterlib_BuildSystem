@@ -24,8 +24,8 @@ namespace NMib::NBuildSystem
 			TCFunction<void ()> *m_pFunctor;
 		};
 
-		TCLinkedList<TCFunction<void ()>> m_ToPerform;
-		TCVector<CToSortBy> m_ToSort;
+		TCLinkedList<TCFunction<void ()>> mp_ToPerform;
+		TCVector<CToSortBy> mp_ToSort;
 	};
 
 	template <typename t_CSortKey>
@@ -46,8 +46,8 @@ namespace NMib::NBuildSystem
 			TCFunction<void ()> *m_pFunctor;
 		};
 
-		TCLinkedList<TCFunction<void ()>> m_ToPerform;
-		TCVector<CToSortBy> m_ToSort;
+		TCLinkedList<TCFunction<void ()>> mp_ToPerform;
+		TCVector<CToSortBy> mp_ToSort;
 	};
 
 	CStr fg_EscapeXcodeProjectVar(CStr const &_Var);

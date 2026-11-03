@@ -15,8 +15,8 @@ namespace NMib::NContainer
 
 	namespace
 	{
-		constexpr ch8 const g_PrefixOperatorCharacters[] = "+<>=!";
-		constexpr ch8 const g_PrefixOperatorCharactersStart[] = "<>=";
+		constexpr ch8 const gc_PrefixOperatorCharacters[] = "+<>=!";
+		constexpr ch8 const gc_PrefixOperatorCharactersStart[] = "<>=";
 	}
 
 	NTime::CTime TCRegistry_CustomKeyValue<CBuildSystemSyntax::CRootKey, CBuildSystemSyntax::CRootValue>::CEJsonParseContext::f_ParseDate(uch8 const * &o_pParse, bool _bWithinParenthesis)
@@ -419,12 +419,12 @@ namespace NMib::NContainer
 			o_pParse = pParse;
 			return true;
 		}
-		else if (NStr::fg_StrFindChar(g_PrefixOperatorCharactersStart, *pParse) >= 0 || (*pParse == '+' && pParse[1] == '=') || (*pParse == '!' && pParse[1] == '='))
+		else if (NStr::fg_StrFindChar(gc_PrefixOperatorCharactersStart, *pParse) >= 0 || (*pParse == '+' && pParse[1] == '=') || (*pParse == '!' && pParse[1] == '='))
 		{
 			auto pParseStart = pParse;
 			++pParse;
 
-			while (NStr::fg_StrFindChar(g_PrefixOperatorCharacters, *pParse) >= 0)
+			while (NStr::fg_StrFindChar(gc_PrefixOperatorCharacters, *pParse) >= 0)
 				++pParse;
 
 			CStr Operator(pParseStart, pParse - pParseStart);

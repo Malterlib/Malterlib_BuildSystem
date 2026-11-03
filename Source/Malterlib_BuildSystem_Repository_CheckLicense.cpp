@@ -488,9 +488,9 @@ namespace NMib::NBuildSystem
 			// Check if the existing header is correct
 			CStr ExpectedHeader = fg_FormatHeader(_HeaderLines, _StyleConfig, _LineEnding);
 			CStr ActualHeader;
-			for (umint i = Result.m_HeaderStartLine; i < Result.m_HeaderEndLine; ++i)
+			for (umint iLine = Result.m_HeaderStartLine; iLine < Result.m_HeaderEndLine; ++iLine)
 			{
-				ActualHeader += _Lines[i];
+				ActualHeader += _Lines[iLine];
 				ActualHeader += _LineEnding;
 			}
 
@@ -516,9 +516,9 @@ namespace NMib::NBuildSystem
 			CStr Result;
 
 			// Lines before the header (e.g. shebang)
-			for (umint i = 0; i < _CheckResult.m_HeaderStartLine; ++i)
+			for (umint iLine = 0; iLine < _CheckResult.m_HeaderStartLine; ++iLine)
 			{
-				Result += _Lines[i];
+				Result += _Lines[iLine];
 				Result += _LineEnding;
 			}
 
@@ -531,11 +531,11 @@ namespace NMib::NBuildSystem
 				Result += _LineEnding;
 
 			// Rest of the file
-			for (umint i = iAfterHeader; i < _Lines.f_GetLen(); ++i)
+			for (umint iLine = iAfterHeader; iLine < _Lines.f_GetLen(); ++iLine)
 			{
-				if (i > iAfterHeader)
+				if (iLine > iAfterHeader)
 					Result += _LineEnding;
-				Result += _Lines[i];
+				Result += _Lines[iLine];
 			}
 
 			return Result;

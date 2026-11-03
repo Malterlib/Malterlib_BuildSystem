@@ -107,11 +107,11 @@ namespace NMib::NBuildSystem
 						DError("Cannot write depfile: no outputs specified");
 
 					// All outputs as targets: output1 output2: input1 input2
-					for (aint i = 0; i < mp_Outputs.f_GetLen(); ++i)
+					for (aint iOutput = 0; iOutput < mp_Outputs.f_GetLen(); ++iOutput)
 					{
-						if (i > 0)
+						if (iOutput > 0)
 							Appender += ' ';
-						fg_EscapeGccDepPath(Appender, mp_Outputs[i]);
+						fg_EscapeGccDepPath(Appender, mp_Outputs[iOutput]);
 					}
 					Appender += ':';
 

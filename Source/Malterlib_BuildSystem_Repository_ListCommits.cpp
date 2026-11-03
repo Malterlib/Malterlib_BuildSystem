@@ -87,11 +87,11 @@ namespace NMib::NBuildSystem
 						// Check if any workspace file differs from the latest submitted
 						// version. New files (empty depot path) always count as a change.
 						bool bWorkspaceHasChanges = false;
-						for (umint i = 0; i < _ConfigFilePaths.f_GetLen(); ++i)
+						for (umint iConfigFile = 0; iConfigFile < _ConfigFilePaths.f_GetLen(); ++iConfigFile)
 						{
-							if (DepotPaths[i].f_IsEmpty())
+							if (DepotPaths[iConfigFile].f_IsEmpty())
 							{
-								if (CFile::fs_FileExists(_ConfigFilePaths[i]))
+								if (CFile::fs_FileExists(_ConfigFilePaths[iConfigFile]))
 								{
 									bWorkspaceHasChanges = true;
 									break;
@@ -100,10 +100,10 @@ namespace NMib::NBuildSystem
 							}
 
 							CStr SubmittedContent;
-							if (!Client.f_NoThrow().f_GetTextFileContents("{}@{}"_f << DepotPaths[i] << HighestCL, SubmittedContent))
+							if (!Client.f_NoThrow().f_GetTextFileContents("{}@{}"_f << DepotPaths[iConfigFile] << HighestCL, SubmittedContent))
 								continue;
 
-							CStr WorkspaceContent = CFile::fs_ReadStringFromFile(_ConfigFilePaths[i]);
+							CStr WorkspaceContent = CFile::fs_ReadStringFromFile(_ConfigFilePaths[iConfigFile]);
 							if (WorkspaceContent != SubmittedContent)
 							{
 								bWorkspaceHasChanges = true;
@@ -998,20 +998,20 @@ namespace NMib::NBuildSystem
 				CStr DateStr = "{tc6}"_f << Date;
 				umint nLines = Lines.f_GetLen();
 				CStr ToOutput = "{} "_f << DateStr;
-				for (umint i = 0; i < nLines; ++i)
+				for (umint iLine = 0; iLine < nLines; ++iLine)
 				{
-					if (Lines[i] == "Copied from Perforce")
+					if (Lines[iLine] == "Copied from Perforce")
 						break;
 
-					if (i != 0)
+					if (iLine != 0)
 					{
 						ToOutput += "{sj*}"_f << "" << (DateStr.f_GetLen() + 1);
-						ToOutput += "{}\n"_f << Lines[i];
+						ToOutput += "{}\n"_f << Lines[iLine];
 					}
 					else
-						ToOutput += "{}\n"_f << fColorSection(Lines[i]);
+						ToOutput += "{}\n"_f << fColorSection(Lines[iLine]);
 
-					if (i != 0 && i == nLines - 1)
+					if (iLine != 0 && iLine == nLines - 1)
 						ToOutput += "\n";
 				}
 				f_OutputConsole(ToOutput);

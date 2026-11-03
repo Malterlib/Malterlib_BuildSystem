@@ -7,6 +7,7 @@
 
 namespace NMib::NBuildSystem
 {
+	// NOLINTBEGIN(malterlib-variable-naming): each name spells the string it holds
 	extern CStringAndHash const gc_ConstString_Accessors;
 	extern CStringAndHash const gc_ConstString_any;
 	extern CStringAndHash const gc_ConstString_AppendExpression;
@@ -577,6 +578,7 @@ namespace NMib::NBuildSystem
 
 	extern CStringAndHash const gc_ConstString_MessageHeader;
 	extern CStringAndHash const gc_ConstString_TransformScript;
+	// NOLINTEND(malterlib-variable-naming)
 
 	void fg_CacheConstantStrings(CStringCache &o_StringCache);
 }

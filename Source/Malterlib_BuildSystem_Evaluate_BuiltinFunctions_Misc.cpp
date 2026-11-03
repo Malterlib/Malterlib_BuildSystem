@@ -8,7 +8,7 @@
 
 namespace NMib::NBuildSystem
 {
-	constexpr CUniversallyUniqueIdentifier const g_GeneratorFunctionUUIDHashUUIDNamespace(0x010669A0, 0x1AEC, 0x48C9, 0x878A, 0xCFC5FFD996C6_uint64);
+	constexpr CUniversallyUniqueIdentifier const gc_GeneratorFunctionUUIDHashUUIDNamespace(0x010669A0, 0x1AEC, 0x48C9, 0x878A, 0xCFC5FFD996C6_uint64);
 
 	CStr fg_FormatJsonValue(CEJsonSorted const &_Value, bool _bSingleLine)
 	{
@@ -449,7 +449,7 @@ namespace NMib::NBuildSystem
 										DMibNeverGetHere;
 								}
 
-								return CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, g_GeneratorFunctionUUIDHashUUIDNamespace, _Params[0].f_String())
+								return CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorFunctionUUIDHashUUIDNamespace, _Params[0].f_String())
 									.f_GetAsString(UUIDFormat)
 								;
 							}

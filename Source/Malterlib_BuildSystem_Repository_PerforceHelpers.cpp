@@ -47,7 +47,7 @@ namespace NMib::NBuildSystem::NRepository
 
 		TCVector<CStr> DepotPaths;
 		DepotPaths.f_SetLen(_ConfigFilePaths.f_GetLen());
-		for (umint i = 0; i < _ConfigFilePaths.f_GetLen(); ++i)
+		for (umint iConfigFile = 0; iConfigFile < _ConfigFilePaths.f_GetLen(); ++iConfigFile)
 		{
 			// `p4 where` (used by f_GetDepotPath) just maps a client-view
 			// path to its depot spelling; it succeeds for any path that
@@ -63,8 +63,8 @@ namespace NMib::NBuildSystem::NRepository
 			// A stray `p4 add` on such files during a rerun is a silent
 			// no-op (Perforce refuses to re-add an already-opened file).
 			CStr DepotPath;
-			if (o_Client.f_NoThrow().f_GetDepotPath(_ConfigFilePaths[i], DepotPath) && o_Client.f_NoThrow().f_FileExistsInDepot(_ConfigFilePaths[i]))
-				DepotPaths[i] = fg_Move(DepotPath);
+			if (o_Client.f_NoThrow().f_GetDepotPath(_ConfigFilePaths[iConfigFile], DepotPath) && o_Client.f_NoThrow().f_FileExistsInDepot(_ConfigFilePaths[iConfigFile]))
+				DepotPaths[iConfigFile] = fg_Move(DepotPath);
 		}
 
 		return DepotPaths;

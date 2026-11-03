@@ -7,9 +7,9 @@ namespace NMib::NBuildSystem
 {
 	CFilePosition const &CFilePosition::fs_Default()
 	{
-		static constinit CFilePosition Default;
+		static constinit CFilePosition s_Default;
 
-		return Default;
+		return s_Default;
 	}
 
 	CFilePosition CFilePosition::fs_FromJson(CEJsonSorted const &_Value)

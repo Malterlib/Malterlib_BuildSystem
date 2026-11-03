@@ -664,7 +664,7 @@ fi
 				else if (File.m_Type == "MalterlibFS")
 					FileType = EBuildFileType_MalterlibFS;
 
-				CBuildFileRef &BuildRef = _Project.mp_OrderedBuildTypes[FileType].f_Insert();
+				CBuildFileRef &BuildRef = _Project.m_OrderedBuildTypes[FileType].f_Insert();
 				BuildRef.m_FileName = File.f_GetName();
 				BuildRef.m_Name = CFile::fs_GetFile(File.f_GetName());
 				BuildRef.m_FileRefGUID = File.f_GetFileRefGUID();
@@ -913,10 +913,10 @@ fi
 
 		for (auto FileType : {EBuildFileType_Custom, EBuildFileType_GenericCustom})
 		{
-			if (!_Project.mp_OrderedBuildTypes.f_FindEqual(FileType))
+			if (!_Project.m_OrderedBuildTypes.f_FindEqual(FileType))
 				continue;
 
-			auto &CustomBuildType = _Project.mp_OrderedBuildTypes[FileType];
+			auto &CustomBuildType = _Project.m_OrderedBuildTypes[FileType];
 
 			for (auto &File : CustomBuildType)
 			{
@@ -1006,7 +1006,7 @@ fi
 	{
 		TCSortedPerform<CStr const &> ToPerform;
 
-		for (auto Iter = _Project.mp_OrderedBuildTypes.f_GetIterator(); Iter; ++Iter)
+		for (auto Iter = _Project.m_OrderedBuildTypes.f_GetIterator(); Iter; ++Iter)
 		{
 			if
 			(
@@ -1279,7 +1279,7 @@ fi
 
 		// Product reference group
 		{
-			TCVector<CGroupChild> &lProducts = GroupChildren[_Project.f_GetProductRefGroupGUID()];
+			TCVector<CGroupChild> &Products = GroupChildren[_Project.f_GetProductRefGroupGUID()];
 
 			for (auto &NativeTargets : _Project.m_NativeTargets)
 			{
@@ -1287,7 +1287,7 @@ fi
 				{
 					if (!NativeTarget.m_ProductType.f_IsEmpty())
 					{
-						CGroupChild &Child = lProducts.f_Insert();
+						CGroupChild &Child = Products.f_Insert();
 						Child.m_GUID = NativeTarget.f_GetProductReferenceGUID();
 						Child.m_Name = NativeTarget.m_ProductName;
 					}
@@ -1306,13 +1306,13 @@ fi
 
 		// Configurations group
 		{
-			TCVector<CGroupChild> &lConfigurations = GroupChildren[_Project.f_GetConfigurationsGroupGUID()];
+			TCVector<CGroupChild> &Configurations = GroupChildren[_Project.f_GetConfigurationsGroupGUID()];
 
 			for (auto &NativeTargets : _Project.m_NativeTargets)
 			{
 				for (auto &NativeTarget : NativeTargets)
 				{
-					CGroupChild &Child = lConfigurations.f_Insert();
+					CGroupChild &Child = Configurations.f_Insert();
 					Child.m_GUID = NativeTarget.m_BuildConfiguration.f_GetFileRefGUID();
 					Child.m_Name = CFile::fs_GetFileNoExt(NativeTarget.m_BuildConfiguration.f_GetFile());
 				}
@@ -1355,19 +1355,19 @@ fi
 
 		// Generator group
 		{
-			TCVector<CGroupChild> &lChildren = GroupChildren[_Project.f_GetGeneratorGroupGUID()];
+			TCVector<CGroupChild> &Children = GroupChildren[_Project.f_GetGeneratorGroupGUID()];
 			{
-				auto &Group = lChildren.f_Insert();
+				auto &Group = Children.f_Insert();
 				Group.m_GUID = _Project.f_GetProductRefGroupGUID();
 				Group.m_Name = gc_ConstString_Product_Reference;
 			}
 			{
-				auto &Group = lChildren.f_Insert();
+				auto &Group = Children.f_Insert();
 				Group.m_GUID = _Project.f_GetConfigurationsGroupGUID();
 				Group.m_Name = gc_ConstString_Configurations;
 			}
 			{
-				auto &Group = lChildren.f_Insert();
+				auto &Group = Children.f_Insert();
 				Group.m_GUID = _Project.f_GetProjectDependenciesGroupGUID();
 				Group.m_Name = gc_ConstString_Target_Dependencies;
 			}
@@ -1496,7 +1496,7 @@ fi
 				_Output += " = {\n\t\t\tisa = PBXSourcesBuildPhase;\n";
 				_Output += (CStr::CFormat("\t\t\tbuildActionMask = {};\n\t\t\tfiles = (\n") << NativeTarget.m_BuildActionMask);
 
-				for (auto iBuildFiles = _Project.mp_OrderedBuildTypes.f_GetIterator(); iBuildFiles; ++iBuildFiles)
+				for (auto iBuildFiles = _Project.m_OrderedBuildTypes.f_GetIterator(); iBuildFiles; ++iBuildFiles)
 				{
 					if
 					(

@@ -242,8 +242,8 @@ namespace NMib::NBuildSystem::NRepository
 	}
 
 #if DMibConfig_RefCountDebugging
-	constinit static CLowLevelLockAggregate g_TimerDestructionTrackerLock;
-	constinit static NException::CCallstack g_TimerDestructionTrackerCallstack = {0};
+	constinit static CLowLevelLockAggregate gs_TimerDestructionTrackerLock;
+	constinit static NException::CCallstack gs_TimerDestructionTrackerCallstack = {0};
 
 	struct CTrackTimerDestruction
 	{
@@ -259,8 +259,8 @@ namespace NMib::NBuildSystem::NRepository
 		{
 			if (m_bLastAlive)
 			{
-				DMibLock(g_TimerDestructionTrackerLock);
-				g_TimerDestructionTrackerCallstack.f_Capture();
+				DMibLock(gs_TimerDestructionTrackerLock);
+				gs_TimerDestructionTrackerCallstack.f_Capture();
 			}
 		}
 
@@ -331,9 +331,9 @@ namespace NMib::NBuildSystem::NRepository
 						if (This.m_pState.f_GetRefCount() != 0)
 						{
 							{
-								DMibLock(g_TimerDestructionTrackerLock);
+								DMibLock(gs_TimerDestructionTrackerLock);
 								DMibTrace("    Destruction callstack\n");
-								g_TimerDestructionTrackerCallstack.f_Trace(8);
+								gs_TimerDestructionTrackerCallstack.f_Trace(8);
 							}
 
 							umint iCallstack = 0;

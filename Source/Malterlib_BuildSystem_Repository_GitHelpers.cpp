@@ -391,9 +391,9 @@ namespace NMib::NBuildSystem::NRepository
 		if (CFile::fs_FileExists(WorktreeEntryDir, EFileAttrib_Directory))
 		{
 			// Find a unique name if the entry already exists
-			for (umint i = 1;; ++i)
+			for (umint iSuffix = 1;; ++iSuffix)
 			{
-				WorktreeEntryDir = "{}/{}{}"_f << WorktreesDir << _WorktreeName << i;
+				WorktreeEntryDir = "{}/{}{}"_f << WorktreesDir << _WorktreeName << iSuffix;
 				if (!CFile::fs_FileExists(WorktreeEntryDir, EFileAttrib_Directory))
 					break;
 			}
@@ -1379,14 +1379,14 @@ namespace NMib::NBuildSystem::NRepository
 	{
 		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
-		static CGitVersion GitVersion;
-		static constinit CLowLevelLockAggregate Lock;
+		static CGitVersion s_GitVersion;
+		static constinit CLowLevelLockAggregate s_Lock;
 
 		{
-			DMibLock(Lock);
+			DMibLock(s_Lock);
 
-			if (GitVersion.m_Major)
-				co_return GitVersion;
+			if (s_GitVersion.m_Major)
+				co_return s_GitVersion;
 		}
 
 		CStr VersionStr = (co_await _Launches.f_Launch(CStr(""), {"--version"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_GenerateExceptionOnNonZeroExitCode)).f_GetStdOut().f_Trim();
@@ -1399,8 +1399,8 @@ namespace NMib::NBuildSystem::NRepository
 			co_return DMibErrorInstance("Failed to parse git version");
 
 		{
-			DMibLock(Lock);
-			GitVersion = Version;
+			DMibLock(s_Lock);
+			s_GitVersion = Version;
 		}
 
 		co_return Version;
