@@ -23,9 +23,8 @@ namespace NMib::NBuildSystem
 			CFile::fs_CreateDirectory(_Path);
 	}
 
-	class CBuildSystemGenerator_VisualStudio : public CBuildSystemGenerator, public CAllowUnsafeThis
+	struct CBuildSystemGenerator_VisualStudio : public CBuildSystemGenerator, public CAllowUnsafeThis
 	{
-	public:
 		TCMap<CPropertyKey, CEJsonSorted> f_GetValues(CBuildSystem const &_BuildSystem, CStr const &_OutputDir) override
 		{
 			TCMap<CPropertyKey, CEJsonSorted> Values;

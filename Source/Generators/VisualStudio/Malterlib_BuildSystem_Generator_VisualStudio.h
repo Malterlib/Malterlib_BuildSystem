@@ -330,9 +330,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 			CEntityPointer m_pEntity;
 		};
 
-		class CCompare
+		struct CCompare
 		{
-		public:
 			inline_small CStr const &operator () (CSolution const &_Node) const;
 		};
 

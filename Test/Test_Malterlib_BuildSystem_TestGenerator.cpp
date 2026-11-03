@@ -17,102 +17,8 @@ namespace
 
 	constexpr CStr gc_TestGeneratorDependencyFiles = gc_Str<"TestGeneratorDependencyFiles">;
 
-	class CBuildSystemGenerator_Test : public CBuildSystemGenerator, public ICGeneratorInterface
+	struct CBuildSystemGenerator_Test : public CBuildSystemGenerator, public ICGeneratorInterface
 	{
-		// CGeneratorInterface
-		CValuePotentiallyByRef f_GetBuiltin(CBuildSystemUniquePositions *_pStorePositions, CStr const &_Value, bool &o_bSuccess) const override
-		{
-			CStr Result;
-			if (_Value == "BasePathRelativeProject")
-			{
-				Result = ".";
-				if (_pStorePositions)
-					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.BasePathRelativeProject")->f_AddValue(Result, false);
-
-				o_bSuccess = true;
-				return CEJsonSorted(Result);
-			}
-			else if (_Value == "BasePath")
-			{
-				Result = mp_BaseDir;
-				if (_pStorePositions)
-					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.BasePath")->f_AddValue(Result, false);
-
-				o_bSuccess = true;
-				return CEJsonSorted(Result);
-			}
-			else if (_Value == "GeneratedBuildSystemDir")
-			{
-				Result = mp_OutputDir;
-				if (_pStorePositions)
-					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.GeneratedBuildSystemDir")->f_AddValue(Result, false);
-
-				o_bSuccess = true;
-				return CEJsonSorted(Result);
-			}
-			else if (_Value == "ProjectPath")
-			{
-				Result = ".";
-				if (_pStorePositions)
-					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.ProjectPath")->f_AddValue(Result, false);
-
-				o_bSuccess = true;
-				return CEJsonSorted(Result);
-			}
-			else if (_Value == "Inherit")
-			{
-				Result = "";
-				if (_pStorePositions)
-					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.Inherit")->f_AddValue(Result, false);
-
-				o_bSuccess = true;
-				return CEJsonSorted(Result);
-			}
-			else if (_Value == "IntermediateDirectory")
-			{
-				Result = mp_OutputDir / "Intermediate";
-				if (_pStorePositions)
-					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.IntermediateDirectory")->f_AddValue(Result, false);
-
-				o_bSuccess = true;
-				return CEJsonSorted(Result);
-			}
-			else if (_Value == "OutputDirectory")
-			{
-				Result = mp_OutputDir / "Output";
-				if (_pStorePositions)
-					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.OutputDirectory")->f_AddValue(Result, false);
-
-				o_bSuccess = true;
-				return CEJsonSorted(Result);
-			}
-			else if (_Value == "SourceFileName")
-			{
-				Result = "";
-				if (_pStorePositions)
-					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.SourceFileName")->f_AddValue(Result, false);
-
-				o_bSuccess = true;
-				return CEJsonSorted(Result);
-			}
-
-			return CEJsonSorted();
-		}
-
-		NStr::CStr f_GetExpandedPath(NStr::CStr const &_Path, NStr::CStr const &_Base) const override
-		{
-			return CFile::fs_GetExpandedPath(_Path, _Base);
-		}
-
-		CSystemEnvironment f_GetBuildEnvironment(NStr::CStr const &_Platform, NStr::CStr const &_Architecture) const override
-		{
-			return fg_GetSys()->f_Environment();
-		}
-
-		CStr mp_OutputDir;
-		CStr mp_BaseDir;
-
-	public:
 		TCMap<CPropertyKey, CEJsonSorted> f_GetValues(CBuildSystem const &_BuildSystem, CStr const &_OutputDir) override
 		{
 			TCMap<CPropertyKey, CEJsonSorted> Values;
@@ -324,6 +230,100 @@ namespace
 
 			co_return {};
 		}
+
+	private:
+		// CGeneratorInterface
+		CValuePotentiallyByRef f_GetBuiltin(CBuildSystemUniquePositions *_pStorePositions, CStr const &_Value, bool &o_bSuccess) const override
+		{
+			CStr Result;
+			if (_Value == "BasePathRelativeProject")
+			{
+				Result = ".";
+				if (_pStorePositions)
+					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.BasePathRelativeProject")->f_AddValue(Result, false);
+
+				o_bSuccess = true;
+				return CEJsonSorted(Result);
+			}
+			else if (_Value == "BasePath")
+			{
+				Result = mp_BaseDir;
+				if (_pStorePositions)
+					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.BasePath")->f_AddValue(Result, false);
+
+				o_bSuccess = true;
+				return CEJsonSorted(Result);
+			}
+			else if (_Value == "GeneratedBuildSystemDir")
+			{
+				Result = mp_OutputDir;
+				if (_pStorePositions)
+					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.GeneratedBuildSystemDir")->f_AddValue(Result, false);
+
+				o_bSuccess = true;
+				return CEJsonSorted(Result);
+			}
+			else if (_Value == "ProjectPath")
+			{
+				Result = ".";
+				if (_pStorePositions)
+					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.ProjectPath")->f_AddValue(Result, false);
+
+				o_bSuccess = true;
+				return CEJsonSorted(Result);
+			}
+			else if (_Value == "Inherit")
+			{
+				Result = "";
+				if (_pStorePositions)
+					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.Inherit")->f_AddValue(Result, false);
+
+				o_bSuccess = true;
+				return CEJsonSorted(Result);
+			}
+			else if (_Value == "IntermediateDirectory")
+			{
+				Result = mp_OutputDir / "Intermediate";
+				if (_pStorePositions)
+					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.IntermediateDirectory")->f_AddValue(Result, false);
+
+				o_bSuccess = true;
+				return CEJsonSorted(Result);
+			}
+			else if (_Value == "OutputDirectory")
+			{
+				Result = mp_OutputDir / "Output";
+				if (_pStorePositions)
+					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.OutputDirectory")->f_AddValue(Result, false);
+
+				o_bSuccess = true;
+				return CEJsonSorted(Result);
+			}
+			else if (_Value == "SourceFileName")
+			{
+				Result = "";
+				if (_pStorePositions)
+					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.SourceFileName")->f_AddValue(Result, false);
+
+				o_bSuccess = true;
+				return CEJsonSorted(Result);
+			}
+
+			return CEJsonSorted();
+		}
+
+		NStr::CStr f_GetExpandedPath(NStr::CStr const &_Path, NStr::CStr const &_Base) const override
+		{
+			return CFile::fs_GetExpandedPath(_Path, _Base);
+		}
+
+		CSystemEnvironment f_GetBuildEnvironment(NStr::CStr const &_Platform, NStr::CStr const &_Architecture) const override
+		{
+			return fg_GetSys()->f_Environment();
+		}
+
+		CStr mp_OutputDir;
+		CStr mp_BaseDir;
 	};
 
 	DMibRuntimeClass(CBuildSystemGenerator, CBuildSystemGenerator_Test);

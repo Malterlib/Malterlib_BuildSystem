@@ -12,9 +12,8 @@ namespace NMib::NBuildSystem::NNinja
 
 namespace NMib::NBuildSystem
 {
-	class CBuildSystemGenerator_Ninja : public CBuildSystemGenerator, public CAllowUnsafeThis
+	struct CBuildSystemGenerator_Ninja : public CBuildSystemGenerator, public CAllowUnsafeThis
 	{
-	public:
 		CBuildSystemGenerator_Ninja()
 		{
 			DMibLock(NNinja::g_CooperativeTimeSliceCyclesLock);

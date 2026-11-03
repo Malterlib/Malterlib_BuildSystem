@@ -87,7 +87,7 @@ namespace NMib::NBuildSystem::NRepository
 		TCAVLLink<> m_Link;
 
 	private:
-		friend class TCLinkedListMember<CRemote>;
+		friend struct TCLinkedListMember<CRemote>;
 
 		CRemote(CRemote const &_Other);
 		CRemote(CRemote &&_Other);
@@ -576,7 +576,6 @@ namespace NMib::NBuildSystem::NRepository
 
 	struct CGitBranches
 	{
-	public:
 		TCSet<CStr> m_Branches;
 		CStr m_Current;
 	};

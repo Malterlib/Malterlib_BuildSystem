@@ -337,9 +337,8 @@ namespace NMib::NBuildSystem::NXcode
 
 	struct align_cacheline CSolution
 	{
-		class CCompare
+		struct CCompare
 		{
-		public:
 			inline_always CStr const &operator () (CSolution const &_Node) const;
 		};
 

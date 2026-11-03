@@ -6,9 +6,8 @@
 
 namespace NMib::NBuildSystem
 {
-	class CBuildSystemGenerator_Xcode : public CBuildSystemGenerator, public CAllowUnsafeThis
+	struct CBuildSystemGenerator_Xcode : public CBuildSystemGenerator, public CAllowUnsafeThis
 	{
-	public:
 		TCMap<CPropertyKey, CEJsonSorted> f_GetValues(CBuildSystem const &_BuildSystem, CStr const &_OutputDir) override
 		{
 			TCMap<CPropertyKey, CEJsonSorted> Values;

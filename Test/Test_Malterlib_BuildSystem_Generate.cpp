@@ -114,159 +114,8 @@ namespace
 		}
 	};
 
-	class CGenerate_Tests : public NMib::NTest::CTest
+	struct CGenerate_Tests : public NMib::NTest::CTest
 	{
-		// A non-fresh generate reuses the previous output and source files so dependency checks see only the changes made by the test
-		CEJsonSorted fp_Generate(CStr const &_TestName, TCOptional<TCMap<CStr, CStr>> const &_Environment, bool _bFresh = true, bool *o_pChanged = nullptr)
-		{
-			CStr TempDirectory = CFile::fs_GetProgramDirectory() / "BuildSystemTests" / _TestName;
-			CStr OutputDirectory = CFile::fs_GetProgramDirectory() / "BuildSystemTestsOutput" / _TestName;
-
-			if (_bFresh)
-			{
-				CExeFS SourceFS;
-				if (!fg_OpenExeFS(SourceFS))
-					DMibError("Could not open ExeFS");
-
-				CFileSystemInterface_VirtualFS SourceVirtualFS(SourceFS.m_FileSystem);
-				CFileSystemInterface_Disk DestinationFS;
-
-				if (CFile::fs_FileExists(OutputDirectory))
-					CFile::fs_DeleteDirectoryRecursive(OutputDirectory);
-
-				CFile::fs_CreateDirectory(OutputDirectory);
-
-				CFile::fs_CreateDirectory(TempDirectory);
-
-				[[maybe_unused]] auto Files = SourceVirtualFS.f_FindFiles("*", EFileAttrib_File | EFileAttrib_Directory, true);
-
-				SourceVirtualFS.f_CopyFiles(CStr("TestFiles") / _TestName / "*", DestinationFS, TempDirectory);
-			}
-
-			CGenerateOptions GenerateOptions;
-			auto &GenerateSettings = GenerateOptions.m_Settings;
-			GenerateSettings.m_SourceFile = TempDirectory / "Test.MBuildSystem";
-			GenerateSettings.m_OutputDir = OutputDirectory;
-			GenerateSettings.m_Generator = "Test";
-			if (_Environment)
-				GenerateSettings.m_Environment = *_Environment;
-
-			GenerateSettings.m_GenerationFlags |= EGenerationFlag_AbsoluteFilePaths | EGenerationFlag_SingleThreaded | EGenerationFlag_DisableUserSettings;
-
-			GenerateOptions.m_DetailedPositions = EDetailedPositions_Enable;
-			GenerateOptions.m_bDetailedValues = true;
-
-			bool bChanged = false;
-			CBuildSystem::ERetry Retry;
-
-			{
-				CActorRunLoopTestHelper RunLoopHelper;
-
-				TCDistributedActor<CCommandLineControlActorTest> pCommandLineControlActor = fg_Construct();
-				TCSharedPointer<CCommandLineControl> pCommandLineControl = fg_Construct();
-				pCommandLineControl->m_ControlActor = pCommandLineControlActor->f_ShareInterface<ICCommandLineControl>();
-
-				(
-					g_Dispatch / [&]() -> TCUnsafeFuture<void>
-					{
-						co_await ECoroutineFlag_CaptureMalterlibExceptions;
-
-						Retry = co_await CBuildSystem::fs_RunBuildSystem
-							(
-								[&](NBuildSystem::CBuildSystem *_pBuildSystem) -> TCUnsafeFuture<CBuildSystem::ERetry>
-								{
-									co_await ECoroutineFlag_CaptureMalterlibExceptions;
-
-									CBuildSystem::ERetry Retry = CBuildSystem::ERetry_None;
-									if (co_await _pBuildSystem->f_Action_Generate(GenerateOptions, Retry))
-										bChanged = true;
-									co_return Retry;
-								}
-								, pCommandLineControl
-								, [](CStr const &_Output, bool _bError)
-								{
-								}
-								, GenerateOptions
-							)
-						;
-
-						co_return {};
-					}
-				)
-				.f_CallSync(RunLoopHelper.m_pRunLoop);
-			}
-
-			DMibExpect(Retry, ==, CBuildSystem::ERetry_None)(ETestFlag_Aggregated);
-
-			if (o_pChanged)
-				*o_pChanged = bChanged;
-
-			auto GeneratorFile = OutputDirectory / "BuildSystemData.json";
-
-			return CEJsonSorted::fs_FromString(CFile::fs_ReadStringFromFile(GeneratorFile), GeneratorFile);
-		}
-
-		struct CTestGenerate
-		{
-			CStr m_OutputDirectory;
-			CStr m_SourceDirectory;
-			CStr m_ExpectedContents;
-			CEJsonSorted m_BuildSystemData;
-		};
-
-		CTestGenerate fp_TestGenerate(CStr const &_TestName, TCOptional<TCMap<CStr, CStr>> const &_Environment = {})
-		{
-			CTestGenerate TestGenerate;
-			TestGenerate.m_SourceDirectory = CFile::fs_GetProgramDirectory() / "BuildSystemTests" / _TestName;
-			TestGenerate.m_OutputDirectory = CFile::fs_GetProgramDirectory() / "BuildSystemTestsOutput" / _TestName;
-
-			fg_TestAddCleanupPath(TestGenerate.m_SourceDirectory);
-			fg_TestAddCleanupPath(TestGenerate.m_OutputDirectory);
-
-			auto BuildSystemData = fp_Generate(_TestName, _Environment);
-			CStr BuildSystemDataFile = TestGenerate.m_SourceDirectory / "ExpectedBuildSystemData.json";
-
-			CStr StringContents = CFile::fs_ReadStringFromFile(BuildSystemDataFile, true);
-			StringContents = StringContents.f_Replace(("/Deploy/Tests/BuildSystemTests/{}/"_f << _TestName).f_GetStr(), ("{}/"_f << TestGenerate.m_SourceDirectory).f_GetStr());
-			StringContents = StringContents.f_Replace(("/Deploy/Tests/BuildSystemTestsOutput/{}/"_f << _TestName).f_GetStr(), ("{}/"_f << TestGenerate.m_OutputDirectory).f_GetStr());
-
-			CEJsonSorted ExpectedBuildSystemData = CEJsonSorted::fs_FromString(StringContents, BuildSystemDataFile);
-			DMibAssert(BuildSystemData, ==, ExpectedBuildSystemData)(ETestFlag_Aggregated);
-			TestGenerate.m_BuildSystemData = fg_Move(ExpectedBuildSystemData);
-			CStr ExpectedContentsFile = TestGenerate.m_SourceDirectory / "ExpectedContents.txt";
-
-			if (CFile::fs_FileExists(ExpectedContentsFile))
-				TestGenerate.m_ExpectedContents = CFile::fs_ReadStringFromFile(ExpectedContentsFile, true);
-
-			return TestGenerate;
-		}
-
-		CParseLocation fp_GetLocationInFile(CStr const &_FileName, CStr const &_String)
-		{
-			CExeFS SourceFS;
-			if (!fg_OpenExeFS(SourceFS))
-				DMibError("Could not open ExeFS");
-
-			CStr BuildSystemSourceDir = CFile::fs_GetExpandedPath(CStr(DMibPFile) + "/../../Source");
-#ifdef DPlatformFamily_Windows
-			BuildSystemSourceDir = BuildSystemSourceDir.f_ReplaceChar('\\', '/');
-#endif
-
-			CFileSystemInterface_VirtualFS SourceVirtualFS(SourceFS.m_FileSystem);
-
-			auto FileContents = SourceVirtualFS.f_ReadStringFromFile(CStr("Source") / _FileName, true);
-			uint32 iLine = 0;
-			for (auto &Line : FileContents.f_SplitLine())
-			{
-				++iLine;
-				if (auto iFound = Line.f_Find(_String); iFound >= 0)
-					return CParseLocation{BuildSystemSourceDir / _FileName, 0, iLine, 0};
-			}
-
-			DMibError("String '{}' not found in file '{}'"_f << _String << _FileName);
-		}
-
-	public:
 		void f_DoTests()
 		{
 			DMibTestSuite("Empty")
@@ -606,6 +455,157 @@ namespace
 				DMibAssertTrue(CFile::fs_FileExists(TestGenerate.m_OutputDirectory / "TestGenerateFile.txt"));
 				DMibExpect(CFile::fs_ReadStringFromFile(TestGenerate.m_OutputDirectory / "TestGenerateFile.txt"), ==, TestGenerate.m_ExpectedContents);
 			};
+		}
+
+	private:
+		// A non-fresh generate reuses the previous output and source files so dependency checks see only the changes made by the test
+		CEJsonSorted fp_Generate(CStr const &_TestName, TCOptional<TCMap<CStr, CStr>> const &_Environment, bool _bFresh = true, bool *o_pChanged = nullptr)
+		{
+			CStr TempDirectory = CFile::fs_GetProgramDirectory() / "BuildSystemTests" / _TestName;
+			CStr OutputDirectory = CFile::fs_GetProgramDirectory() / "BuildSystemTestsOutput" / _TestName;
+
+			if (_bFresh)
+			{
+				CExeFS SourceFS;
+				if (!fg_OpenExeFS(SourceFS))
+					DMibError("Could not open ExeFS");
+
+				CFileSystemInterface_VirtualFS SourceVirtualFS(SourceFS.m_FileSystem);
+				CFileSystemInterface_Disk DestinationFS;
+
+				if (CFile::fs_FileExists(OutputDirectory))
+					CFile::fs_DeleteDirectoryRecursive(OutputDirectory);
+
+				CFile::fs_CreateDirectory(OutputDirectory);
+
+				CFile::fs_CreateDirectory(TempDirectory);
+
+				[[maybe_unused]] auto Files = SourceVirtualFS.f_FindFiles("*", EFileAttrib_File | EFileAttrib_Directory, true);
+
+				SourceVirtualFS.f_CopyFiles(CStr("TestFiles") / _TestName / "*", DestinationFS, TempDirectory);
+			}
+
+			CGenerateOptions GenerateOptions;
+			auto &GenerateSettings = GenerateOptions.m_Settings;
+			GenerateSettings.m_SourceFile = TempDirectory / "Test.MBuildSystem";
+			GenerateSettings.m_OutputDir = OutputDirectory;
+			GenerateSettings.m_Generator = "Test";
+			if (_Environment)
+				GenerateSettings.m_Environment = *_Environment;
+
+			GenerateSettings.m_GenerationFlags |= EGenerationFlag_AbsoluteFilePaths | EGenerationFlag_SingleThreaded | EGenerationFlag_DisableUserSettings;
+
+			GenerateOptions.m_DetailedPositions = EDetailedPositions_Enable;
+			GenerateOptions.m_bDetailedValues = true;
+
+			bool bChanged = false;
+			CBuildSystem::ERetry Retry;
+
+			{
+				CActorRunLoopTestHelper RunLoopHelper;
+
+				TCDistributedActor<CCommandLineControlActorTest> pCommandLineControlActor = fg_Construct();
+				TCSharedPointer<CCommandLineControl> pCommandLineControl = fg_Construct();
+				pCommandLineControl->m_ControlActor = pCommandLineControlActor->f_ShareInterface<ICCommandLineControl>();
+
+				(
+					g_Dispatch / [&]() -> TCUnsafeFuture<void>
+					{
+						co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+						Retry = co_await CBuildSystem::fs_RunBuildSystem
+							(
+								[&](NBuildSystem::CBuildSystem *_pBuildSystem) -> TCUnsafeFuture<CBuildSystem::ERetry>
+								{
+									co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
+									CBuildSystem::ERetry Retry = CBuildSystem::ERetry_None;
+									if (co_await _pBuildSystem->f_Action_Generate(GenerateOptions, Retry))
+										bChanged = true;
+									co_return Retry;
+								}
+								, pCommandLineControl
+								, [](CStr const &_Output, bool _bError)
+								{
+								}
+								, GenerateOptions
+							)
+						;
+
+						co_return {};
+					}
+				)
+				.f_CallSync(RunLoopHelper.m_pRunLoop);
+			}
+
+			DMibExpect(Retry, ==, CBuildSystem::ERetry_None)(ETestFlag_Aggregated);
+
+			if (o_pChanged)
+				*o_pChanged = bChanged;
+
+			auto GeneratorFile = OutputDirectory / "BuildSystemData.json";
+
+			return CEJsonSorted::fs_FromString(CFile::fs_ReadStringFromFile(GeneratorFile), GeneratorFile);
+		}
+
+		struct CTestGenerate
+		{
+			CStr m_OutputDirectory;
+			CStr m_SourceDirectory;
+			CStr m_ExpectedContents;
+			CEJsonSorted m_BuildSystemData;
+		};
+
+		CTestGenerate fp_TestGenerate(CStr const &_TestName, TCOptional<TCMap<CStr, CStr>> const &_Environment = {})
+		{
+			CTestGenerate TestGenerate;
+			TestGenerate.m_SourceDirectory = CFile::fs_GetProgramDirectory() / "BuildSystemTests" / _TestName;
+			TestGenerate.m_OutputDirectory = CFile::fs_GetProgramDirectory() / "BuildSystemTestsOutput" / _TestName;
+
+			fg_TestAddCleanupPath(TestGenerate.m_SourceDirectory);
+			fg_TestAddCleanupPath(TestGenerate.m_OutputDirectory);
+
+			auto BuildSystemData = fp_Generate(_TestName, _Environment);
+			CStr BuildSystemDataFile = TestGenerate.m_SourceDirectory / "ExpectedBuildSystemData.json";
+
+			CStr StringContents = CFile::fs_ReadStringFromFile(BuildSystemDataFile, true);
+			StringContents = StringContents.f_Replace(("/Deploy/Tests/BuildSystemTests/{}/"_f << _TestName).f_GetStr(), ("{}/"_f << TestGenerate.m_SourceDirectory).f_GetStr());
+			StringContents = StringContents.f_Replace(("/Deploy/Tests/BuildSystemTestsOutput/{}/"_f << _TestName).f_GetStr(), ("{}/"_f << TestGenerate.m_OutputDirectory).f_GetStr());
+
+			CEJsonSorted ExpectedBuildSystemData = CEJsonSorted::fs_FromString(StringContents, BuildSystemDataFile);
+			DMibAssert(BuildSystemData, ==, ExpectedBuildSystemData)(ETestFlag_Aggregated);
+			TestGenerate.m_BuildSystemData = fg_Move(ExpectedBuildSystemData);
+			CStr ExpectedContentsFile = TestGenerate.m_SourceDirectory / "ExpectedContents.txt";
+
+			if (CFile::fs_FileExists(ExpectedContentsFile))
+				TestGenerate.m_ExpectedContents = CFile::fs_ReadStringFromFile(ExpectedContentsFile, true);
+
+			return TestGenerate;
+		}
+
+		CParseLocation fp_GetLocationInFile(CStr const &_FileName, CStr const &_String)
+		{
+			CExeFS SourceFS;
+			if (!fg_OpenExeFS(SourceFS))
+				DMibError("Could not open ExeFS");
+
+			CStr BuildSystemSourceDir = CFile::fs_GetExpandedPath(CStr(DMibPFile) + "/../../Source");
+#ifdef DPlatformFamily_Windows
+			BuildSystemSourceDir = BuildSystemSourceDir.f_ReplaceChar('\\', '/');
+#endif
+
+			CFileSystemInterface_VirtualFS SourceVirtualFS(SourceFS.m_FileSystem);
+
+			auto FileContents = SourceVirtualFS.f_ReadStringFromFile(CStr("Source") / _FileName, true);
+			uint32 iLine = 0;
+			for (auto &Line : FileContents.f_SplitLine())
+			{
+				++iLine;
+				if (auto iFound = Line.f_Find(_String); iFound >= 0)
+					return CParseLocation{BuildSystemSourceDir / _FileName, 0, iLine, 0};
+			}
+
+			DMibError("String '{}' not found in file '{}'"_f << _String << _FileName);
 		}
 	};
 }
