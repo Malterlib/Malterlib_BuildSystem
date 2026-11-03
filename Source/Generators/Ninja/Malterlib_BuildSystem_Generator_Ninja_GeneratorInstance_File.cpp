@@ -145,8 +145,8 @@ namespace NMib::NBuildSystem::NNinja
 
 		for (auto &File : _Project.m_Files)
 		{
-			for (auto &PerConfig : File.m_EnabledConfigs)
-				File.m_Builds.m_Builds[File.m_EnabledConfigs.fs_GetKey(PerConfig)];
+			for (auto &pPerConfig : File.m_EnabledConfigs)
+				File.m_Builds.m_Builds[File.m_EnabledConfigs.fs_GetKey(pPerConfig)];
 		}
 
 		co_await g_Yield;

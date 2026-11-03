@@ -504,9 +504,9 @@ namespace
 			{
 				CActorRunLoopTestHelper RunLoopHelper;
 
-				TCDistributedActor<CCommandLineControlActorTest> pCommandLineControlActor = fg_Construct();
+				TCDistributedActor<CCommandLineControlActorTest> CommandLineControlActor = fg_Construct();
 				TCSharedPointer<CCommandLineControl> pCommandLineControl = fg_Construct();
-				pCommandLineControl->m_ControlActor = pCommandLineControlActor->f_ShareInterface<ICCommandLineControl>();
+				pCommandLineControl->m_ControlActor = CommandLineControlActor->f_ShareInterface<ICCommandLineControl>();
 
 				(
 					g_Dispatch / [&]() -> TCUnsafeFuture<void>

@@ -245,7 +245,7 @@ namespace NMib::NBuildSystem
 
 	void CBuildSystem::f_SetGeneratorInterface(ICGeneratorInterface *_pInterface) const
 	{
-		mp_GeneratorInterface = _pInterface;
+		mp_pGeneratorInterface = _pInterface;
 	}
 
 	bool CBuildSystem::f_WriteFile(CByteVector const &_FileData, CStr const &_File, EFileAttrib _AddAttribs) const
@@ -319,7 +319,7 @@ namespace NMib::NBuildSystem
 	void CBuildSystem::f_SetFileChanged(CStr const &_File) const
 	{
 		//m_BuildSystem.f_OutputConsole("Changed: {}\n"_f << _File);
-		mp_FileChanged = true;
+		mp_bFileChanged = true;
 		f_SetFileWritten(_File);
 	}
 

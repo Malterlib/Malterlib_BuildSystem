@@ -77,7 +77,7 @@ namespace NMib::NBuildSystem
 		void f_AddFirstFromPositions(CBuildSystemUniquePositions const &_Other);
 		void f_AddPositions(CBuildSystemUniquePositions const &_Other);
 		void f_AddPositions(CBuildSystemUniquePositions &&_Other);
-		void f_AddPositions(NStorage::TCSharedPointer<CBuildSystemUniquePositions> const &_Other);
+		void f_AddPositions(NStorage::TCSharedPointer<CBuildSystemUniquePositions> const &_pOther);
 
 		static CBuildSystemUniquePositions fs_FromJson(NEncoding::CEJsonSorted const &_Value);
 		static CBuildSystemUniquePositions fs_FromJson(NEncoding::CEJsonSorted &&_Value);

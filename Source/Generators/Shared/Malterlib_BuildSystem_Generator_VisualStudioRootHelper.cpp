@@ -12,7 +12,7 @@ namespace NMib::NBuildSystem
 
 	CEJsonSorted const &CVisualStudioRootHelper::f_GetVisualStudioRoot(uint32 _Version) const
 	{
-		if (m_VisualStudioRootCached.f_Load())
+		if (m_bVisualStudioRootCached.f_Load())
 			return m_VisualStudioRoot;
 
 		DMibLock(m_VisualStudioRootLock);
@@ -50,7 +50,7 @@ namespace NMib::NBuildSystem
 		}
 
 		m_VisualStudioRoot = fg_Move(VisualStudioRoot);
-		m_VisualStudioRootCached.f_Exchange(true);
+		m_bVisualStudioRootCached.f_Exchange(true);
 
 		return m_VisualStudioRoot;
 	}

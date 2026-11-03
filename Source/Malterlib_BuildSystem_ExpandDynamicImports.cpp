@@ -600,7 +600,7 @@ namespace NMib::NBuildSystem
 		LaunchParams.m_WorkingDirectory = TempDirectory;
 		LaunchParams.m_bSeparateStdErr = false;
 		LaunchParams.m_bMergeEnvironment = false;
-		LaunchParams.m_Environment = mp_GeneratorInterface->f_GetBuildEnvironment(Platform, Architecture);
+		LaunchParams.m_Environment = mp_pGeneratorInterface->f_GetBuildEnvironment(Platform, Architecture);
 		CStr HidePrefixes;
 		if (SharedTempDirectory)
 			fg_AddStrSep(HidePrefixes, SharedTempDirectory, ";");

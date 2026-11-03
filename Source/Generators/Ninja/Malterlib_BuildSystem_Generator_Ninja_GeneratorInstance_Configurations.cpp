@@ -9,9 +9,9 @@ namespace NMib::NBuildSystem::NNinja
 	{
 		co_await ECoroutineFlag_CaptureExceptions;
 
-		for (auto &Entity : _Project.m_EnabledProjectConfigs)
+		for (auto &pEntity : _Project.m_EnabledProjectConfigs)
 		{
-			auto &Config = _Project.m_EnabledProjectConfigs.fs_GetKey(Entity);
+			auto &Config = _Project.m_EnabledProjectConfigs.fs_GetKey(pEntity);
 			_Project.m_EvaluatedTargetSettings[Config];
 			_Project.m_CompileCommandsFilePath[Config];
 		}
@@ -25,9 +25,9 @@ namespace NMib::NBuildSystem::NNinja
 					co_await m_BuildSystem.f_CheckCancelled();
 
 					auto &Config = TCMap<CConfiguration, CConfigResultTarget>::fs_GetKey(o_Result);
-					auto &Entity = _Project.m_EnabledProjectConfigs[Config];
+					auto &pEntity = _Project.m_EnabledProjectConfigs[Config];
 
-					fp_SetEvaluatedValuesTarget(Entity, o_Result, _Project.m_EntityName);
+					fp_SetEvaluatedValuesTarget(pEntity, o_Result, _Project.m_EntityName);
 
 					_Project.m_CompileCommandsFilePath[Config] = fp_GetConfigValue(_Project.m_EnabledProjectConfigs, Config, gc_ConstKey_Target_CompileCommandsFile, EEJsonType_String, false)
 						.m_Value

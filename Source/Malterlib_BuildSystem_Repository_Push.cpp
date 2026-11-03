@@ -588,13 +588,13 @@ namespace NMib::NBuildSystem
 				// go to remotes that are ahead too
 				if (!RemoteHead.f_IsEmpty() && OwnPushUrlRemotes.f_FindEqual(Remote) && !(_PushFlags & CBuildSystem::ERepoPushFlag_PushPulls))
 				{
-					auto bHasTarget = co_await fg_IsAncestor(_Launches, _Repo, Target, RemoteHead).f_Wrap();
-					if (!bHasTarget)
+					auto HasTarget = co_await fg_IsAncestor(_Launches, _Repo, Target, RemoteHead).f_Wrap();
+					if (!HasTarget)
 					{
-						fError(bHasTarget.f_GetExceptionStr());
+						fError(HasTarget.f_GetExceptionStr());
 						continue;
 					}
-					if (*bHasTarget)
+					if (*HasTarget)
 						continue;
 				}
 
@@ -602,22 +602,22 @@ namespace NMib::NBuildSystem
 					Push.m_Kind = EPushKind::mc_New;
 				else
 				{
-					auto bIsAncestor = co_await fg_IsAncestor(_Launches, _Repo, RemoteHead, Target).f_Wrap();
-					if (!bIsAncestor)
+					auto IsAncestor = co_await fg_IsAncestor(_Launches, _Repo, RemoteHead, Target).f_Wrap();
+					if (!IsAncestor)
 					{
-						fError(bIsAncestor.f_GetExceptionStr());
+						fError(IsAncestor.f_GetExceptionStr());
 						continue;
 					}
 
 					// The remote is ahead and has all of the branch's commits
-					if (!*bIsAncestor)
+					if (!*IsAncestor)
 					{
-						auto bBehind = co_await fg_IsAncestor(_Launches, _Repo, Target, RemoteHead).f_Wrap();
-						if (bBehind && *bBehind && !(_PushFlags & CBuildSystem::ERepoPushFlag_PushPulls))
+						auto Behind = co_await fg_IsAncestor(_Launches, _Repo, Target, RemoteHead).f_Wrap();
+						if (Behind && *Behind && !(_PushFlags & CBuildSystem::ERepoPushFlag_PushPulls))
 							continue;
 					}
 
-					Push.m_Kind = *bIsAncestor ? EPushKind::mc_Update : EPushKind::mc_ForceUpdate;
+					Push.m_Kind = *IsAncestor ? EPushKind::mc_Update : EPushKind::mc_ForceUpdate;
 				}
 
 				if (Push.m_Kind == EPushKind::mc_ForceUpdate)

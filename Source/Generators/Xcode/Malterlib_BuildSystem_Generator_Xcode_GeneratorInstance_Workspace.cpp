@@ -57,12 +57,12 @@ namespace NMib::NBuildSystem::NXcode
 
 		TCFunction<void (CXMLElement *_pParent, CGroup *_pGroup)> fOutputGroup = [&](CXMLElement *_pParent, CGroup *_pGroup)
 			{
-				if (!_pGroup->m_OutputToWorkspace)
+				if (!_pGroup->m_bOutputToWorkspace)
 				{
 					auto pGroupRef = XMLFile.fs_CreateElement(_pParent, gc_ConstString_Group);
 					XMLFile.fs_SetAttribute(pGroupRef, "location", "container:");
 					XMLFile.fs_SetAttribute(pGroupRef, "name", _pGroup->m_Name);
-					_pGroup->m_OutputToWorkspace = true;
+					_pGroup->m_bOutputToWorkspace = true;
 
 					TCVector<CGroup *> &ChildGroups = MapGroupToGroups[_pGroup];
 					for (auto iChildGroup = ChildGroups.f_GetIterator(); iChildGroup; ++iChildGroup)
@@ -271,11 +271,11 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 		CStr OutputDir = CFile::fs_AppendPath(_OutputDir, CStr("xcshareddata/xcschemes"));
 		_WorkspaceState.f_CreateDirectory(OutputDir);
 
-		for (auto Iter = _Solution.m_EnabledConfigs.f_GetIterator(); Iter; ++Iter)
+		for (auto iConfig = _Solution.m_EnabledConfigs.f_GetIterator(); iConfig; ++iConfig)
 		{
 			CXMLDocument XMLFile(false);
 
-			CConfiguration const &Configuration = Iter.f_GetKey();
+			CConfiguration const &Configuration = iConfig.f_GetKey();
 			CStr Name = (CStr::CFormat("{} {}") << Configuration.m_Platform << Configuration.m_Configuration).f_GetStr();
 
 			auto pScheme = XMLFile.f_CreateDefaultDocument("Scheme");

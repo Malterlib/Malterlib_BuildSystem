@@ -9,7 +9,7 @@ namespace NMib::NBuildSystem
 	auto CBuildSystem::fp_BuiltinFunction_FindFiles(CEvalPropertyValueContext &_Context, NContainer::TCVector<NEncoding::CEJsonSorted> &&_Params, EFindFilesFunctionType _Function) const
 		-> NEncoding::CEJsonSorted
 	{
-		CStr WholePath = mp_GeneratorInterface->f_GetExpandedPath(_Params[0].f_String(), CFile::fs_GetPath(_Context.m_Position.m_File));
+		CStr WholePath = mp_pGeneratorInterface->f_GetExpandedPath(_Params[0].f_String(), CFile::fs_GetPath(_Context.m_Position.m_File));
 		WholePath = WholePath / _Params[1].f_String();
 
 		CFindOptions FindOptions(WholePath);

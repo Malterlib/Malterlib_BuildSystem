@@ -63,8 +63,8 @@ namespace NMib::NBuildSystem
 
 		auto &Settings = f_Settings();
 
-		for (auto &Entity : _EntitiesPerConfig)
-			Settings[_EntitiesPerConfig.fs_GetKey(Entity)];
+		for (auto &pEntity : _EntitiesPerConfig)
+			Settings[_EntitiesPerConfig.fs_GetKey(pEntity)];
 
 		co_await fg_ParallelForEach
 			(

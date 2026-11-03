@@ -94,10 +94,10 @@ namespace NMib::NBuildSystem::NRepository
 						TCPromiseFuturePair<bool> ChangedDonePromise;
 						fg_Move(ChangedDonePromise.m_Future) > DeferredResults[&Repo];
 						fg_RepoIsChanged(Launches, Repo, DynamicInfo, _Flags, _Filter.m_bIncludePull, MainBranchInfo.m_Branch, MainBranchInfo.m_DefaultBranch)
-							> [Launches, ChangedDonePromise = fg_Move(ChangedDonePromise.m_Promise)](TCAsyncResult<bool> &&_bChanged)
+							> [Launches, ChangedDonePromise = fg_Move(ChangedDonePromise.m_Promise)](TCAsyncResult<bool> &&_Changed)
 							{
 								Launches.f_RepoDone();
-								ChangedDonePromise.f_SetResult(_bChanged);
+								ChangedDonePromise.f_SetResult(_Changed);
 							}
 						;
 						continue;

@@ -17,7 +17,7 @@ namespace NMib::NBuildSystem
 
 		CBuildSystem const &m_BuildSystem;
 		mutable CLowLevelLock m_VisualStudioRootLock;
-		mutable TCAtomic<bool> m_VisualStudioRootCached;
+		mutable TCAtomic<bool> m_bVisualStudioRootCached;
 		mutable CEJsonSorted m_VisualStudioRoot;
 
 		mutable CMutual m_GetEnvironmentLock;

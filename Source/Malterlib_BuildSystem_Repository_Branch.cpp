@@ -145,7 +145,7 @@ namespace NMib::NBuildSystem
 					CStr LocalUniqueStashName = UniqueStashName;
 					EAnsiEncodingFlag LocalAnsiFlags = mp_AnsiFlags;
 					umint LocalMaxRepoWidth = mp_MaxRepoWidth;
-					auto LocalOutputConsole = mp_fOutputConsole;
+					auto fLocalOutputConsole = mp_fOutputConsole;
 
 					auto fLocalOutputInfo = [&](EOutputType _OutputType, CStr const &_Info)
 						{
@@ -158,7 +158,7 @@ namespace NMib::NBuildSystem
 									, LocalMaxRepoWidth
 									, [&](CStr const &_Line)
 									{
-										LocalOutputConsole(_Line, false);
+										fLocalOutputConsole(_Line, false);
 									}
 								)
 							;

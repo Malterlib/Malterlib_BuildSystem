@@ -167,8 +167,8 @@ namespace NMib::NBuildSystem
 	{
 		CStr AllWhitespace;
 
-		for (auto &Property : m_Properties)
-			m_Defined[m_Properties.fs_GetKey(Property)];
+		for (auto &pProperty : m_Properties)
+			m_Defined[m_Properties.fs_GetKey(pProperty)];
 
 		auto fIsRoot = [&](CBuildSystemRegistry const &_Registry)
 			{

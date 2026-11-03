@@ -7,9 +7,9 @@
 
 namespace NMib::NBuildSystem::NXcode
 {
-	void CGeneratorInstance::fp_SetEvaluatedValuesCompile(CEntityMutablePointer const &_Config, bool _bFile, CConfigResultCompile &o_Result) const
+	void CGeneratorInstance::fp_SetEvaluatedValuesCompile(CEntityMutablePointer const &_pConfig, bool _bFile, CConfigResultCompile &o_Result) const
 	{
-		auto pTopConfig = _Config.f_Get();
+		auto pTopConfig = _pConfig.f_Get();
 
 		CEJsonSorted GeneratorSettings;
 
@@ -131,9 +131,9 @@ namespace NMib::NBuildSystem::NXcode
 		}
 	}
 
-	void CGeneratorInstance::fp_SetEvaluatedValuesTarget(CEntityMutablePointer const &_Entity, CGeneratorInstance::CConfigResultTarget &o_Result, CStr const &_Name) const
+	void CGeneratorInstance::fp_SetEvaluatedValuesTarget(CEntityMutablePointer const &_pEntity, CGeneratorInstance::CConfigResultTarget &o_Result, CStr const &_Name) const
 	{
-		auto *pConfig = _Entity.f_Get();
+		auto *pConfig = _pEntity.f_Get();
 		auto pTopConfig = pConfig;
 
 		bool bIsFullEval = false;

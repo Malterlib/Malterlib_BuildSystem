@@ -75,9 +75,9 @@ namespace NMib::NBuildSystem
 		{
 			co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
-			for (auto &Entity : _Project.m_EnabledProjectConfigs)
+			for (auto &pEntity : _Project.m_EnabledProjectConfigs)
 			{
-				auto &Config = _Project.m_EnabledProjectConfigs.fs_GetKey(Entity);
+				auto &Config = _Project.m_EnabledProjectConfigs.fs_GetKey(pEntity);
 				_ProjectState.m_EvaluatedTargetSettings[Config];
 			}
 
@@ -90,9 +90,9 @@ namespace NMib::NBuildSystem
 						co_await m_BuildSystem.f_CheckCancelled();
 
 						auto &Config = TCMap<CConfiguration, CConfigResultTarget>::fs_GetKey(o_Result);
-						auto &Entity = _Project.m_EnabledProjectConfigs[Config];
+						auto &pEntity = _Project.m_EnabledProjectConfigs[Config];
 
-						fp_SetEvaluatedValuesTarget(Entity, o_Result, _Project.m_EntityName);
+						fp_SetEvaluatedValuesTarget(pEntity, o_Result, _Project.m_EntityName);
 
 						co_return {};
 					}
@@ -241,9 +241,9 @@ namespace NMib::NBuildSystem
 				if (!pDependProject)
 					m_BuildSystem.fs_ThrowError(Dependency.m_Position, CStr::CFormat("Dependency {} not found in workspace") << ProjectDependency);
 
-				for (auto &Entity : EnabledConfigurations)
+				for (auto &pEntity : EnabledConfigurations)
 				{
-					auto &Configuration = EnabledConfigurations.fs_GetKey(Entity);
+					auto &Configuration = EnabledConfigurations.fs_GetKey(pEntity);
 					if (!pDependProject->m_EnabledProjectConfigs.f_FindEqual(Configuration))
 					{
 						m_BuildSystem.fs_ThrowError
@@ -895,8 +895,8 @@ namespace NMib::NBuildSystem
 
 			// Xcode settings
 			{
-				for (auto ISetting = _ProjectState.m_XcodeSettingsFromTypes[_Configuration].f_GetIterator(); ISetting; ++ISetting)
-					fOutputConfigValue(ISetting.f_GetKey(), *ISetting);
+				for (auto iSetting = _ProjectState.m_XcodeSettingsFromTypes[_Configuration].f_GetIterator(); iSetting; ++iSetting)
+					fOutputConfigValue(iSetting.f_GetKey(), *iSetting);
 			}
 
 			// MLSRCROOT

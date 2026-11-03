@@ -6,11 +6,11 @@
 namespace NMib::NBuildSystem
 {
 	// Runs the functor for each value on concurrent actors and joins them all, so it runs to completion like its caller
-	template <typename tf_CContainer, typename tf_CFunctor>
+	template <typename tf_CContainer, typename tf_FFunctor>
 	DMibRunsToCompletion NConcurrency::TCUnsafeFuture<void> DMibWorkaroundUBSanSectionErrorsDisable fg_ParallelForEach
 		(
 			tf_CContainer &&_Container
-			, tf_CFunctor &&_fFunctor
+			, tf_FFunctor &&_fFunctor
 			, bool _bSingleThreaded
 		)
 	{

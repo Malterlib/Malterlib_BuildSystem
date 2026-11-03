@@ -1957,7 +1957,7 @@ namespace NMib::NBuildSystem
 			else
 			{
 				bool bSuccess = false;
-				auto Return = mp_GeneratorInterface->f_GetBuiltin(_Context.m_pStorePositions, PropertyName, bSuccess);
+				auto Return = mp_pGeneratorInterface->f_GetBuiltin(_Context.m_pStorePositions, PropertyName, bSuccess);
 				if (!bSuccess)
 					fs_ThrowError(_Context, CStr::CFormat("Unrecognized builtin '{}'") << PropertyName);
 				return Return;
@@ -2320,7 +2320,7 @@ namespace NMib::NBuildSystem
 		if (_Context.m_pStorePositions)
 			pPosition = _Context.m_pStorePositions->f_AddPosition(_pFunction->m_Position, "Call builtin '{}'"_f << _FunctionCall.m_PropertyKey.m_Name);
 
-		if (_pFunction->m_fFunction.f_IsOfType<FEvalPropertyFunction>())
+		if (_pFunction->m_Function.f_IsOfType<FEvalPropertyFunction>())
 		{
 			TCVector<CEJsonSorted> Params;
 			TCVector<CEJsonSorted> *pEllipsis = nullptr;
@@ -2345,7 +2345,7 @@ namespace NMib::NBuildSystem
 				)
 			;
 
-			auto Return = _pFunction->m_fFunction.f_GetAsType<FEvalPropertyFunction>()(*this, _Context, fg_Move(Params));
+			auto Return = _pFunction->m_Function.f_GetAsType<FEvalPropertyFunction>()(*this, _Context, fg_Move(Params));
 
 			if (pPosition)
 				pPosition->f_AddValue(Return, f_EnableValues());
@@ -2355,7 +2355,7 @@ namespace NMib::NBuildSystem
 		else
 		{
 			// Lazy path: pass raw function call to let function evaluate params on-demand
-			auto Return = _pFunction->m_fFunction.f_GetAsType<FEvalPropertyFunctionLazy>()(*this, _Context, _FunctionCall, *_pFunction);
+			auto Return = _pFunction->m_Function.f_GetAsType<FEvalPropertyFunctionLazy>()(*this, _Context, _FunctionCall, *_pFunction);
 			if (pPosition)
 				pPosition->f_AddValue(Return, f_EnableValues());
 

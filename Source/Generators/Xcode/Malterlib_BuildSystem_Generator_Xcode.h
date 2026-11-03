@@ -120,7 +120,7 @@ namespace NMib::NBuildSystem::NXcode
 
 		CStr m_Name;
 		TCPointer<CGroup> m_pParent;
-		bool m_OutputToWorkspace = false;
+		bool m_bOutputToWorkspace = false;
 
 	private:
 		CStr mp_GUID;
@@ -523,8 +523,8 @@ namespace NMib::NBuildSystem::NXcode
 
 		static CStr fsp_EscapeCommandLineArgument(CStr const &_String);
 
-		void fp_SetEvaluatedValuesTarget(CEntityMutablePointer const &_Entity, CConfigResultTarget &o_Result, CStr const &_Name) const;
-		void fp_SetEvaluatedValuesCompile(CEntityMutablePointer const &_Entity, bool _bFile, CConfigResultCompile &o_Result) const;
+		void fp_SetEvaluatedValuesTarget(CEntityMutablePointer const &_pEntity, CConfigResultTarget &o_Result, CStr const &_Name) const;
+		void fp_SetEvaluatedValuesCompile(CEntityMutablePointer const &_pEntity, bool _bFile, CConfigResultCompile &o_Result) const;
 
 		auto fp_GetSingleConfigValue(TCMap<CConfiguration, CEntityMutablePointer> const &_Configs, CPropertyKeyReference const &_PropertyKey, EEJsonType _ExpectedType, bool _bOptional) const
 			-> CSingleValue

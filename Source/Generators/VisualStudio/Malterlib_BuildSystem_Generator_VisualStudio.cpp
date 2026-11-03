@@ -124,15 +124,15 @@ namespace NMib::NBuildSystem
 					ConfigToInsert.m_Configuration += ExtraConfigText;
 
 				{
-					TCUniquePointer<CLocalConfiguraitonData> NewConfig = fg_Construct();
+					TCUniquePointer<CLocalConfiguraitonData> pNewConfig = fg_Construct();
 
-					auto &ConfigData = *NewConfig;
+					auto &ConfigData = *pNewConfig;
 					ConfigData.m_Tuples = *iTuple;
 					ConfigData.m_FullConfiguration = CStr::CFormat("{} - {} - {}{}") << Platform << Arch << Config << ExtraConfigText;
 					ConfigData.m_SolutionPlatform = CStr::CFormat("{} - {}") << Platform << Arch;
 					ConfigData.m_SolutionConfiguration = CStr::CFormat("{}{}") << Config << ExtraConfigText;
 
-					*(Configurations[ConfigToInsert] = fg_Move(NewConfig));
+					*(Configurations[ConfigToInsert] = fg_Move(pNewConfig));
 				}
 			}
 

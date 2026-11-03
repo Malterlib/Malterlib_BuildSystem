@@ -321,7 +321,7 @@ namespace NMib::NBuildSystem::NNinja
 
 		TCUnsafeFuture<void> fp_EvaluateTargetSettings(CProject &_Project) const;
 
-		void fp_SetEvaluatedValuesTarget(CEntityMutablePointer const &_Entity, CConfigResultTarget &o_Result, CStr const &_Name) const;
+		void fp_SetEvaluatedValuesTarget(CEntityMutablePointer const &_pEntity, CConfigResultTarget &o_Result, CStr const &_Name) const;
 
 		auto fp_GetConfigValue
 			(

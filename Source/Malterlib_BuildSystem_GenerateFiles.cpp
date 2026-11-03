@@ -165,7 +165,7 @@ namespace NMib::NBuildSystem
 								continue;
 						}
 
-						CStr Path = mp_GeneratorInterface->f_GetExpandedPath(f_EvaluateEntityPropertyString(TempEntity, gc_ConstKey_GenerateFile_Name, CStr()), f_GetBaseDir());
+						CStr Path = mp_pGeneratorInterface->f_GetExpandedPath(f_EvaluateEntityPropertyString(TempEntity, gc_ConstKey_GenerateFile_Name, CStr()), f_GetBaseDir());
 
 						if (Path.f_IsEmpty())
 							fsp_ThrowError(iChild->f_Data().m_Position, "No path specified for generated file");

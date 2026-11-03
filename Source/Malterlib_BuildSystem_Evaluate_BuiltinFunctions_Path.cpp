@@ -43,7 +43,7 @@ namespace NMib::NBuildSystem
 							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Path))
 							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
-								CStr WholePath = _This.mp_GeneratorInterface->f_GetExpandedPath(_Params[0].f_String(), CFile::fs_GetPath(_Context.m_Position.m_File));
+								CStr WholePath = _This.mp_pGeneratorInterface->f_GetExpandedPath(_Params[0].f_String(), CFile::fs_GetPath(_Context.m_Position.m_File));
 								return CFile::fs_MakePathRelative(WholePath, _This.f_GetBaseDir());
 							}
 							, DMibBuildSystemFilePosition
@@ -187,8 +187,8 @@ namespace NMib::NBuildSystem
 							fg_FunctionType(g_String, fg_FunctionParam(g_String, gc_ConstString__Path), fg_FunctionParam(g_String, gc_ConstString__Base))
 							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
-								CStr WholePath = _This.mp_GeneratorInterface->f_GetExpandedPath(_Params[0].f_String(), CFile::fs_GetPath(_Context.m_Position.m_File));
-								CStr WholePathBase = _This.mp_GeneratorInterface->f_GetExpandedPath(_Params[1].f_String(), CFile::fs_GetPath(_Context.m_Position.m_File));
+								CStr WholePath = _This.mp_pGeneratorInterface->f_GetExpandedPath(_Params[0].f_String(), CFile::fs_GetPath(_Context.m_Position.m_File));
+								CStr WholePathBase = _This.mp_pGeneratorInterface->f_GetExpandedPath(_Params[1].f_String(), CFile::fs_GetPath(_Context.m_Position.m_File));
 								return CFile::fs_MakePathRelative(WholePath, WholePathBase);
 							}
 							, DMibBuildSystemFilePosition
@@ -203,9 +203,9 @@ namespace NMib::NBuildSystem
 							, [](CBuildSystem const &_This, CBuildSystem::CEvalPropertyValueContext &_Context, TCVector<CEJsonSorted> &&_Params) -> CEJsonSorted
 							{
 								if (_Params[1].f_IsValid())
-									return _This.mp_GeneratorInterface->f_GetExpandedPath(_Params[0].f_String(), _Params[1].f_String());
+									return _This.mp_pGeneratorInterface->f_GetExpandedPath(_Params[0].f_String(), _Params[1].f_String());
 								else
-									return _This.mp_GeneratorInterface->f_GetExpandedPath(_Params[0].f_String(), CFile::fs_GetPath(_Context.m_Position.m_File));
+									return _This.mp_pGeneratorInterface->f_GetExpandedPath(_Params[0].f_String(), CFile::fs_GetPath(_Context.m_Position.m_File));
 							}
 							, DMibBuildSystemFilePosition
 						}

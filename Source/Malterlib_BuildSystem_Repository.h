@@ -396,7 +396,7 @@ namespace NMib::NBuildSystem::NRepository
 		TCSet<CStr> mp_CoreExcludesFileLocationUpdated;
 
 		CLowLevelLock mp_IsPerforceRootLock;
-		TCOptional<bool> mp_bIsPerforceRoot;
+		TCOptional<bool> mp_IsPerforceRoot;
 
 		CLowLevelRecursiveLock mp_BranchTransitionsLock;
 		TCMap<CBranchTransition, TCVector<CStr>> mp_BranchTransitions;

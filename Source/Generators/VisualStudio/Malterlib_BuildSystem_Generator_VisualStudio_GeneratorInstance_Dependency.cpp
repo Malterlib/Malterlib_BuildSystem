@@ -17,8 +17,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 				continue;
 
 			auto &GeneratorSettings = Dependency.m_GeneratorSettings.f_ConstructSettings();
-			for (auto &Config : Dependency.m_EnabledConfigs)
-				GeneratorSettings[Dependency.m_EnabledConfigs.fs_GetKey(Config)];
+			for (auto &pConfig : Dependency.m_EnabledConfigs)
+				GeneratorSettings[Dependency.m_EnabledConfigs.fs_GetKey(pConfig)];
 		}
 
 		co_await fg_ParallelForEach
@@ -89,9 +89,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 			auto const &ProjectDependency = _Project.m_Dependencies.fs_GetKey(Dependency);
 			bool bInvalid = false;
 
-			for (auto &Entity : Dependency.m_EnabledConfigs)
+			for (auto &pEntity : Dependency.m_EnabledConfigs)
 			{
-				auto &Config = Dependency.m_EnabledConfigs.fs_GetKey(Entity);
+				auto &Config = Dependency.m_EnabledConfigs.fs_GetKey(pEntity);
 				if (!_Project.m_EnabledProjectConfigs.f_FindEqual(Config))
 				{
 					bInvalid = true;
@@ -104,9 +104,9 @@ namespace NMib::NBuildSystem::NVisualStudio
 			if (!pDependProject)
 				m_BuildSystem.fs_ThrowError(Dependency.m_Position, CStr::CFormat("Dependency {} not found in workspace") << ProjectDependency);
 
-			for (auto &Entity : pDependProject->m_EnabledProjectConfigs)
+			for (auto &pEntity : pDependProject->m_EnabledProjectConfigs)
 			{
-				auto &Config = pDependProject->m_EnabledProjectConfigs.fs_GetKey(Entity);
+				auto &Config = pDependProject->m_EnabledProjectConfigs.fs_GetKey(pEntity);
 				if (!_Project.m_EnabledProjectConfigs.f_FindEqual(Config))
 					continue;
 

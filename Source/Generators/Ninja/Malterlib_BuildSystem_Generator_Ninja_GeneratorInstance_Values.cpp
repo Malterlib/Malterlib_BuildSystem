@@ -194,9 +194,9 @@ namespace NMib::NBuildSystem::NNinja
 		}
 	}
 
-	void CGeneratorInstance::fp_SetEvaluatedValuesTarget(CEntityMutablePointer const &_Entity, CConfigResultTarget &o_Result, CStr const &_Name) const
+	void CGeneratorInstance::fp_SetEvaluatedValuesTarget(CEntityMutablePointer const &_pEntity, CConfigResultTarget &o_Result, CStr const &_Name) const
 	{
-		auto *pConfig = _Entity.f_Get();
+		auto *pConfig = _pEntity.f_Get();
 		auto pTopConfig = pConfig;
 
 		bool bIsFullEval = false;

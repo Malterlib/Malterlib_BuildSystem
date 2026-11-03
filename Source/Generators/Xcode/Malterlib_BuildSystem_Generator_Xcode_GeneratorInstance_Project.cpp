@@ -348,9 +348,9 @@ fi
 		const
 	{
 		TCMap<CConfiguration, CEntityMutablePointer> TargetConfigs;
-		for (auto &Entity : _EnabledConfigurations)
+		for (auto &pEntity : _EnabledConfigurations)
 		{
-			auto &Configuration = _EnabledConfigurations.fs_GetKey(Entity);
+			auto &Configuration = _EnabledConfigurations.fs_GetKey(pEntity);
 			TargetConfigs[Configuration] = _Project.m_EnabledProjectConfigs[Configuration];
 		}
 
@@ -361,9 +361,9 @@ fi
 		auto EnableLinkerGroups = fp_GetConfigValues(TargetConfigs, gc_ConstKey_Target_EnableLinkerGroups, EEJsonType_Boolean, false);
 		auto LinkerGroup = fp_GetConfigValues(TargetConfigs, gc_ConstKey_Target_LinkerGroup, EEJsonType_String, true);
 
-		for (auto &Entity : _EnabledConfigurations)
+		for (auto &pEntity : _EnabledConfigurations)
 		{
-			auto &Configuration = _EnabledConfigurations.fs_GetKey(Entity);
+			auto &Configuration = _EnabledConfigurations.fs_GetKey(pEntity);
 
 			auto *pPerConfig = _Dependency.m_PerConfig.f_FindEqual(Configuration);
 			DCheck(pPerConfig);
@@ -402,11 +402,11 @@ fi
 	{
 		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
-		for (auto Iter = _ProjectState.m_EvaluatedTypesInUse.f_GetIterator(); Iter; ++Iter)
+		for (auto iType = _ProjectState.m_EvaluatedTypesInUse.f_GetIterator(); iType; ++iType)
 		{
 			co_await g_Yield;
 
-			CStr Type = Iter.f_GetKey();
+			CStr Type = iType.f_GetKey();
 
 			TCMap<CPropertyKey, CEJsonSorted> StartValuesCompile;
 			StartValuesCompile[gc_ConstKey_Compile_Type] = Type;
@@ -448,9 +448,9 @@ fi
 						co_await m_BuildSystem.f_CheckCancelled();
 
 						auto &Config = TCMap<CConfiguration, CConfigResultCompile>::fs_GetKey(o_Result);
-						auto &Entity = Configs[Config];
+						auto &pEntity = Configs[Config];
 
-						fp_SetEvaluatedValuesCompile(Entity, false, o_Result);
+						fp_SetEvaluatedValuesCompile(pEntity, false, o_Result);
 
 						co_return {};
 					}
@@ -506,8 +506,8 @@ fi
 
 		for (auto &File : _Project.m_Files)
 		{
-			for (auto &Config : File.m_EnabledConfigs)
-				File.m_CompileResults[File.m_EnabledConfigs.fs_GetKey(Config)];
+			for (auto &pConfig : File.m_EnabledConfigs)
+				File.m_CompileResults[File.m_EnabledConfigs.fs_GetKey(pConfig)];
 		}
 
 		co_await fg_ParallelForEach
@@ -669,9 +669,9 @@ fi
 				BuildRef.m_Name = CFile::fs_GetFile(File.f_GetName());
 				BuildRef.m_FileRefGUID = File.f_GetFileRefGUID();
 
-				for (auto &Entity : File.m_EnabledConfigs)
+				for (auto &pEntity : File.m_EnabledConfigs)
 				{
-					auto &Configuration = File.m_EnabledConfigs.fs_GetKey(Entity);
+					auto &Configuration = File.m_EnabledConfigs.fs_GetKey(pEntity);
 					BuildRef.m_BuildGUIDs[Configuration] = File.f_GetBuildRefGUID(Configuration);
 				}
 
@@ -1006,21 +1006,21 @@ fi
 	{
 		TCSortedPerform<CStr const &> ToPerform;
 
-		for (auto Iter = _Project.m_OrderedBuildTypes.f_GetIterator(); Iter; ++Iter)
+		for (auto iBuildType = _Project.m_OrderedBuildTypes.f_GetIterator(); iBuildType; ++iBuildType)
 		{
 			if
 			(
-				Iter.f_GetKey() == EBuildFileType_None
-				|| Iter.f_GetKey() == EBuildFileType_CInclude
-				|| Iter.f_GetKey() == EBuildFileType_GenericNonCompile
-				|| Iter.f_GetKey() == EBuildFileType_Custom
-				|| Iter.f_GetKey() == EBuildFileType_GenericCustom
+				iBuildType.f_GetKey() == EBuildFileType_None
+				|| iBuildType.f_GetKey() == EBuildFileType_CInclude
+				|| iBuildType.f_GetKey() == EBuildFileType_GenericNonCompile
+				|| iBuildType.f_GetKey() == EBuildFileType_Custom
+				|| iBuildType.f_GetKey() == EBuildFileType_GenericCustom
 			)
 			{
 				continue;
 			}
 
-			for (auto &File : *Iter)
+			for (auto &File : *iBuildType)
 			{
 				auto pFile = &File;
 				for (auto &BuildGUID : File.m_BuildGUIDs)
@@ -1075,9 +1075,9 @@ fi
 		TCSortedPerform<CStr const &> ToPerform;
 		// File references
 		{
-			for (auto IterFile = _Project.m_Files.f_GetIterator(); IterFile; ++IterFile)
+			for (auto iFile = _Project.m_Files.f_GetIterator(); iFile; ++iFile)
 			{
-				auto *pFile = &*IterFile;
+				auto *pFile = &*iFile;
 				ToPerform.f_Add
 					(
 						pFile->f_GetFileRefGUID()
@@ -1227,8 +1227,8 @@ fi
 				auto pChildren = GroupChildren.f_FindEqual(_GUID);
 				if (pChildren)
 				{
-					for (auto Iter = pChildren->f_GetIterator(); Iter; ++Iter)
-						fOutputGroupChild(Iter->m_GUID, Iter->m_Name);
+					for (auto iChild = pChildren->f_GetIterator(); iChild; ++iChild)
+						fOutputGroupChild(iChild->m_GUID, iChild->m_Name);
 				}
 
 				_Output += "\t\t\t);\n";
@@ -1241,18 +1241,18 @@ fi
 
 		TCSet<CStr> AddedGroups;
 
-		for (auto IterGroup = _Project.m_Groups.f_GetIterator(); IterGroup; ++IterGroup)
+		for (auto iGroup = _Project.m_Groups.f_GetIterator(); iGroup; ++iGroup)
 		{
-			if (IterGroup->m_pParent)
+			if (iGroup->m_pParent)
 			{
-				auto &Children = GroupChildren[IterGroup->m_pParent->f_GetGUID()];
+				auto &Children = GroupChildren[iGroup->m_pParent->f_GetGUID()];
 
 				CGroupChild &Child = Children.f_Insert();
-				Child.m_GUID = IterGroup->f_GetGUID();
-				Child.m_Name = CFile::fs_GetFile(IterGroup->m_Name);
+				Child.m_GUID = iGroup->f_GetGUID();
+				Child.m_Name = CFile::fs_GetFile(iGroup->m_Name);
 			}
 
-			auto pGroup = &*IterGroup;
+			auto pGroup = &*iGroup;
 
 			ToPerform.f_Add
 				(
@@ -1265,15 +1265,15 @@ fi
 			;
 		}
 
-		for (auto IterFile = _Project.m_Files.f_GetIterator(); IterFile; ++IterFile)
+		for (auto iFile = _Project.m_Files.f_GetIterator(); iFile; ++iFile)
 		{
-			if (IterFile->m_pGroup)
+			if (iFile->m_pGroup)
 			{
-				auto &Children = GroupChildren[IterFile->m_pGroup->f_GetGUID()];
+				auto &Children = GroupChildren[iFile->m_pGroup->f_GetGUID()];
 
 				CGroupChild &Child = Children.f_Insert();
-				Child.m_GUID = IterFile->f_GetFileRefGUID();
-				Child.m_Name = CFile::fs_GetFile(IterFile->f_GetName());
+				Child.m_GUID = iFile->f_GetFileRefGUID();
+				Child.m_Name = CFile::fs_GetFile(iFile->f_GetName());
 			}
 		}
 
@@ -1394,18 +1394,18 @@ fi
 					_Output += (CStr::CFormat("\t\t{}") << _Project.f_GetMainGroupGUID());
 					_Output += " = {\n\t\t\tisa = PBXGroup;\n\t\t\tchildren = (\n";
 
-					for (auto IterGroup = _Project.m_Groups.f_GetIterator(); IterGroup; ++IterGroup)
+					for (auto iGroup = _Project.m_Groups.f_GetIterator(); iGroup; ++iGroup)
 					{
-						if (IterGroup->m_pParent == nullptr)
+						if (iGroup->m_pParent == nullptr)
 						{
-							OutputRootGroups[IterGroup->f_GetGUID()];
-							fOutputGroupChild(IterGroup->f_GetGUID(), IterGroup->m_Name);
+							OutputRootGroups[iGroup->f_GetGUID()];
+							fOutputGroupChild(iGroup->f_GetGUID(), iGroup->m_Name);
 						}
 					}
-					for (auto IterFile = _Project.m_Files.f_GetIterator(); IterFile; ++IterFile)
+					for (auto iFile = _Project.m_Files.f_GetIterator(); iFile; ++iFile)
 					{
-						if (IterFile->m_pGroup == nullptr)
-							fOutputGroupChild(IterFile->f_GetFileRefGUID(), CFile::fs_GetFile(IterFile->f_GetName()));
+						if (iFile->m_pGroup == nullptr)
+							fOutputGroupChild(iFile->f_GetFileRefGUID(), CFile::fs_GetFile(iFile->f_GetName()));
 					}
 
 					if (OutputRootGroups(_Project.f_GetGeneratorGroupGUID()).f_WasCreated())
@@ -1644,8 +1644,8 @@ fi
 				_Output += CStr::CFormat("\t\t{} /* Build configuration list for {} \"{}\" */") << _GUID << _Description << _Name;
 				_Output += " = {\n\t\t\tisa = XCConfigurationList;\n\t\t\tbuildConfigurations = (\n";
 
-				for (auto Iter = _ConfigList.f_GetIterator(); Iter; ++Iter)
-					_Output += CStr::CFormat("\t\t\t\t{} /* {} */,\n") << Iter->f_GetGUID() << Iter->m_ConfigName;
+				for (auto iConfig = _ConfigList.f_GetIterator(); iConfig; ++iConfig)
+					_Output += CStr::CFormat("\t\t\t\t{} /* {} */,\n") << iConfig->f_GetGUID() << iConfig->m_ConfigName;
 				_Output += "\t\t\t);\n";
 				_Output += "\t\t\tdefaultConfigurationIsVisible = 0;\n";
 				_Output += CStr::CFormat("\t\t\tdefaultConfigurationName = \"{}\";\n") << _ConfigList.f_GetFirst().m_ConfigName;
@@ -2047,23 +2047,23 @@ fi
 				auto *pThisAttribute = const_cast<CXMLAttribute *>(pAttribute);
 				pAttribute = pAttribute->Next();
 
-				auto Name = pThisAttribute->Name();
+				auto pName = pThisAttribute->Name();
 
-				if (!ExistingAttributes.f_Exists(Name) && PrevAttributes.f_Exists(Name))
+				if (!ExistingAttributes.f_Exists(pName) && PrevAttributes.f_Exists(pName))
 				{
 					// Removed by user
-					pNewElement->DeleteAttribute(Name);
+					pNewElement->DeleteAttribute(pName);
 					continue;
 				}
-				else if (ExistingAttributes.f_Exists(Name) && PrevAttributes.f_Exists(Name))
+				else if (ExistingAttributes.f_Exists(pName) && PrevAttributes.f_Exists(pName))
 				// This purposefully allows the config to override user setting if config added a new attribute that the user manually added previously
 				{
 					// Possibly changed by user
 					CStr ExistingValue;
-					if (auto pAttribute = pExistingElement->Attribute(Name))
+					if (auto pAttribute = pExistingElement->Attribute(pName))
 						ExistingValue = pAttribute;
 					CStr PrevValue;
-					if (auto pAttribute = pPrevElement->Attribute(Name))
+					if (auto pAttribute = pPrevElement->Attribute(pName))
 						PrevValue = pAttribute;
 					if (ExistingValue != PrevValue)
 					{
@@ -2071,21 +2071,21 @@ fi
 						pThisAttribute->SetAttribute(ExistingValue.f_GetStr());
 					}
 				}
-				NewAttributes[Name];
+				NewAttributes[pName];
 			}
 
 			// Find user added attributes
 			for (CXMLAttribute const *pAttribute = pExistingElement->FirstAttribute(); pAttribute; pAttribute = pAttribute->Next())
 			{
-				auto Name = pAttribute->Name();
+				auto pName = pAttribute->Name();
 
-				if (!NewAttributes.f_Exists(Name) && !PrevAttributes.f_Exists(Name))
+				if (!NewAttributes.f_Exists(pName) && !PrevAttributes.f_Exists(pName))
 				{
 					// User added attribute, copy over
 					CStr ExistingValue;
-					if (auto pAttribute = pExistingElement->Attribute(Name))
+					if (auto pAttribute = pExistingElement->Attribute(pName))
 						ExistingValue = pAttribute;
-					pNewElement->SetAttribute(Name, ExistingValue);
+					pNewElement->SetAttribute(pName, ExistingValue);
 				}
 			}
 
@@ -2236,9 +2236,9 @@ fi
 		OutputDir = CFile::fs_AppendPath(OutputDir, gc_ConstString_xcschemes.m_String);
 		_ProjectState.f_CreateDirectory(OutputDir);
 
-		for (auto Iter = _Project.m_EnabledProjectConfigs.f_GetIterator(); Iter; ++Iter)
+		for (auto iConfig = _Project.m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
 		{
-			CConfiguration const &Configuration = Iter.f_GetKey();
+			CConfiguration const &Configuration = iConfig.f_GetKey();
 
 			auto *pNativeTarget = _Project.m_NativeTargets.f_FindEqual(Configuration);
 			if (!pNativeTarget)

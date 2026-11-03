@@ -18,8 +18,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 			auto &GeneratorSettings = File.m_GeneratorSettings.f_ConstructSettings();
 
-			for (auto &Config : File.m_EnabledConfigs)
-				GeneratorSettings[File.m_EnabledConfigs.fs_GetKey(Config)];
+			for (auto &pConfig : File.m_EnabledConfigs)
+				GeneratorSettings[File.m_EnabledConfigs.fs_GetKey(pConfig)];
 		}
 
 		co_await fg_ParallelForEach

@@ -17,7 +17,7 @@
 #include <Mib/Process/ProcessLaunchActor>
 #include <Mib/Web/HTTP/URL>
 
-static constexpr ch8 const gc_pHookDispatcherScript[] =
+static constexpr ch8 const gc_HookDispatcherScript[] =
 	{
 #embed "Malterlib_BuildSystem_Repository_HookDispatcher.sh"
 		, '\0'
@@ -295,9 +295,9 @@ namespace NMib::NBuildSystem
 		bool CStateHandler::fp_IsPerforceRoot()
 		{
 			DLock(mp_IsPerforceRootLock);
-			if (!mp_bIsPerforceRoot)
-				mp_bIsPerforceRoot = CPerforceClient::fs_HasP4Config(mp_BasePath);
-			return *mp_bIsPerforceRoot;
+			if (!mp_IsPerforceRoot)
+				mp_IsPerforceRoot = CPerforceClient::fs_HasP4Config(mp_BasePath);
+			return *mp_IsPerforceRoot;
 		}
 
 		EAnsiEncodingFlag CStateHandler::f_AnsiFlags() const
@@ -2682,9 +2682,9 @@ namespace NMib::NBuildSystem
 						{
 							if (!ProbeErrors.f_HasError())
 								return;
-							auto Bundled = fg_Move(ProbeErrors).f_GetException();
+							auto pBundled = fg_Move(ProbeErrors).f_GetException();
 
-							CStr Error = "Probe errors while evaluating remotes:\n{}"_f << NException::fg_ExceptionString(Bundled);
+							CStr Error = "Probe errors while evaluating remotes:\n{}"_f << NException::fg_ExceptionString(pBundled);
 							if (_bIndent)
 								Error = ("   " + Error).f_Indent("      ", false);
 							else
@@ -3606,7 +3606,7 @@ namespace NMib::NBuildSystem
 					{
 						CStr HashDiscriminator = WorktreeId ? WorktreeId : CStr("@main");
 						HooksHash.f_AddData(HashDiscriminator.f_GetStr(), HashDiscriminator.f_GetLen());
-						HooksHash.f_AddData(gc_pHookDispatcherScript, sizeof(gc_pHookDispatcherScript) - 1);
+						HooksHash.f_AddData(gc_HookDispatcherScript, sizeof(gc_HookDispatcherScript) - 1);
 						// The injected values are not part of the embedded script, so hash them
 						// separately or a relocated workspace would keep a stale dispatcher.
 						HooksHash.f_AddData(HookWorkspaceRoot.f_GetStr(), HookWorkspaceRoot.f_GetLen());
@@ -3717,7 +3717,7 @@ namespace NMib::NBuildSystem
 								}
 
 								CStr WrapperContent = CFile::fs_ReadStringFromFile(WrapperPath, true);
-								if (WrapperContent != CStr(gc_pHookDispatcherScript))
+								if (WrapperContent != CStr(gc_HookDispatcherScript))
 								{
 									bNeedsUpdate = true;
 									break;
@@ -3858,7 +3858,7 @@ namespace NMib::NBuildSystem
 								fOutputInfo(EOutputType_Warning, "Overwriting existing '{}' hook not managed by Malterlib"_f << HookType);
 						}
 
-						CStr Script = gc_pHookDispatcherScript;
+						CStr Script = gc_HookDispatcherScript;
 
 						NContainer::CByteVector ScriptData;
 						CFile::fs_WriteStringToVector(ScriptData, Script, false);

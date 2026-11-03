@@ -408,12 +408,12 @@ namespace NMib::NBuildSystem
 		{
 			_GenerateState.m_pLocalGeneratorInterface = fg_Construct<CLocalGeneratorInteface>(_GenerateState.m_OutputDir);
 
-			_GenerateState.m_LocalGeneratorInterfaceCleanup = g_OnScopeExitShared / [this, pOldInterface = fg_Move(mp_GeneratorInterface)]() mutable
+			_GenerateState.m_LocalGeneratorInterfaceCleanup = g_OnScopeExitShared / [this, pOldInterface = fg_Move(mp_pGeneratorInterface)]() mutable
 				{
-					mp_GeneratorInterface = fg_Move(pOldInterface);
+					mp_pGeneratorInterface = fg_Move(pOldInterface);
 				}
 			;
-			mp_GeneratorInterface = _GenerateState.m_pLocalGeneratorInterface.f_Get();
+			mp_pGeneratorInterface = _GenerateState.m_pLocalGeneratorInterface.f_Get();
 
 			bool bTryParsed = false;
 
@@ -1074,6 +1074,6 @@ namespace NMib::NBuildSystem
 		f_OutputConsole("Saved state {fe2} s{\n}"_f << (Time4 - Time3));
 		f_OutputConsole("Total time {fe2} s{\n}"_f << Time4);
 
-		co_return mp_FileChanged;
+		co_return mp_bFileChanged;
 	}
 }
