@@ -43,10 +43,7 @@ namespace NMib::NBuildSystem
 		{
 			struct CCompare
 			{
-				inline_small CKey const &operator () (CPosition const &_Node) const
-				{
-					return _Node.m_Key;
-				}
+				inline_small CKey const &operator () (CPosition const &_Node) const;
 			};
 
 			CPosition(CPosition const &_Right) = delete;

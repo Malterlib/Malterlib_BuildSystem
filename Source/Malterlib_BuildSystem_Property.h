@@ -81,10 +81,7 @@ namespace NMib::NBuildSystem
 		inline_always CEvaluatedProperty();
 		bool f_IsExternal() const;
 		template <typename tf_CStr>
-		void f_Format(tf_CStr &o_Str) const
-		{
-			o_Str += typename tf_CStr::CFormat("{}") << m_Value;
-		}
+		void f_Format(tf_CStr &o_Str) const;
 
 		NEncoding::CEJsonSorted m_Value;
 		EEvaluatedPropertyType m_Type;

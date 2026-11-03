@@ -24,10 +24,7 @@ namespace NMib::NBuildSystem
 
 	struct CBuildSystemRegistryParseContext : public CBuildSystemRegistry::CParseContext
 	{
-		CBuildSystemRegistryParseContext(CStringCache &_StringCache)
-			: m_StringCache(_StringCache)
-		{
-		}
+		CBuildSystemRegistryParseContext(CStringCache &_StringCache);
 
 		CStringCache &m_StringCache;
 		bool m_bParsingNamespace = false;

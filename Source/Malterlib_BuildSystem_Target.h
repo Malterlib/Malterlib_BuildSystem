@@ -41,10 +41,7 @@ namespace NMib::NBuildSystem
 		NStr::CStr m_GroupPath;
 
 		template <typename tf_CStr>
-		void f_Format(tf_CStr &o_Str) const
-		{
-			o_Str += typename tf_CStr::CFormat("{} - {}") << m_GroupPath << m_FileName;
-		}
+		void f_Format(tf_CStr &o_Str) const;
 
 		auto operator <=> (CFileKey const &_Other) const noexcept = default;
 	};
@@ -81,3 +78,5 @@ namespace NMib::NBuildSystem
 		bool m_bObjectLibrary = false;
 	};
 }
+
+#include "Malterlib_BuildSystem_Target.hpp"

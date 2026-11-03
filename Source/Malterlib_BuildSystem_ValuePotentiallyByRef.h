@@ -31,10 +31,7 @@ namespace NMib::NBuildSystem
 		void f_Set(NEncoding::CEJsonSorted &&_Other);
 
 		template <typename tf_CStr>
-		void f_Format(tf_CStr &o_Str) const
-		{
-			o_Str += typename tf_CStr::CFormat("{}") << f_Get();
-		}
+		void f_Format(tf_CStr &o_Str) const;
 
 	private:
 		NStorage::TCVariant<NEncoding::CEJsonSorted const *, NEncoding::CEJsonSorted *, NEncoding::CEJsonSorted> mp_ValueVariant;

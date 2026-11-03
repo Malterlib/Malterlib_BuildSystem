@@ -7,6 +7,41 @@
 
 namespace NMib::NBuildSystem
 {
+	constexpr CPropertyKeyTypeAndHash::CPropertyKeyTypeAndHash()
+		: CPropertyKeyTypeAndHash(EPropertyType_Property, 0)
+	{
+	}
+
+	constexpr CPropertyKeyTypeAndHash::CPropertyKeyTypeAndHash(EPropertyType _Type, uint32 _NameHash)
+		: m_Data(uint64(_Type) << 32 | uint64(_NameHash))
+	{
+	}
+
+	constexpr EPropertyType CPropertyKeyTypeAndHash::f_GetType() const
+	{
+		return (EPropertyType)(m_Data >> 32);
+	}
+
+	constexpr uint32 CPropertyKeyTypeAndHash::f_GetNameHash() const
+	{
+		return (m_Data & DMibBitRangeTyped(0, 31, uint64));
+	}
+
+	constexpr EPropertyType CPropertyKey::f_GetType() const
+	{
+		return m_TypeAndHash.f_GetType();
+	}
+
+	constexpr uint32 CPropertyKey::f_GetNameHash() const
+	{
+		return m_TypeAndHash.f_GetNameHash();
+	}
+
+	constexpr CStringAndHash CPropertyKey::f_GetStringAndHash() const
+	{
+		return CStringAndHash(CAssertAddedToStringCache(), m_Name, m_TypeAndHash.f_GetNameHash());
+	}
+
 	template <typename tf_CStr>
 	void CBuildSystemSyntax::CEvalStringToken::f_Format(tf_CStr &o_Str) const
 	{

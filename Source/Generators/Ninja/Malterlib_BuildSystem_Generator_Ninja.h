@@ -21,24 +21,11 @@ namespace NMib::NBuildSystem::NNinja
 		static CRule fs_FromJson(CEJsonSorted &&_Json);
 
 		template <typename tf_CStream>
-		void f_Stream(tf_CStream &o_Stream)
-		{
-			o_Stream % m_Command;
-			o_Stream % m_Environment;
-			o_Stream % m_OtherProperties;
-		}
-
+		void f_Stream(tf_CStream &o_Stream);
 		template <typename tf_CStr>
-		void f_Format(tf_CStr &o_Str) const
-		{
-			o_Str += typename tf_CStr::CFormat("Command: {} Environment: {vs} Other: {vs}\n") << m_Command << m_Environment << m_OtherProperties;
-		}
+		void f_Format(tf_CStr &o_Str) const;
 
-		bool f_IsPhony() const
-		{
-			auto pPhonyValue = m_OtherProperties.f_FindEqual(gc_Str<"phony">.m_Str);
-			return pPhonyValue && *pPhonyValue == "true";
-		}
+		bool f_IsPhony() const;
 
 		CStr m_Command;
 		TCMap<CStr, CStr> m_Environment;
@@ -54,32 +41,9 @@ namespace NMib::NBuildSystem::NNinja
 		static CBuild fs_FromJson(CEJsonSorted &&_Json);
 
 		template <typename tf_CStream>
-		void f_Stream(tf_CStream &o_Stream)
-		{
-			o_Stream % m_Description;
-			o_Stream % m_Inputs;
-			o_Stream % m_Outputs;
-			o_Stream % m_ImplicitOutputs;
-			o_Stream % m_ImplicitDependencies;
-			o_Stream % m_OrderDependencies;
-			o_Stream % m_Validations;
-			o_Stream % m_Variables;
-		}
-
+		void f_Stream(tf_CStream &o_Stream);
 		template <typename tf_CStr>
-		void f_Format(tf_CStr &o_Str) const
-		{
-			o_Str
-				+= typename tf_CStr::CFormat("Description: {} Inputs: {} Outputs: {} ImplicitDependencies: {} OrderDependencies: {} Validations: {} Variables: {vs}\n")
-				<< m_Description
-				<< m_Inputs
-				<< m_Outputs
-				<< m_ImplicitDependencies
-				<< m_OrderDependencies
-				<< m_Validations
-				<< m_Variables
-			;
-		}
+		void f_Format(tf_CStr &o_Str) const;
 
 		void f_MergeFrom(CBuildAndRuleEntry const &_Entry, CBuildAndRuleEntry &o_Entry);
 
@@ -98,10 +62,7 @@ namespace NMib::NBuildSystem::NNinja
 		void f_MergeFrom(CBuildSystem const &_BuildSystem, CBuildAndRuleEntry const &_Entry, TCMap<int64, TCVector<TCVariant<CStr, TCVector<CStr>>>> &o_PrioritizedFlags);
 
 		template <typename tf_CStr>
-		void f_Format(tf_CStr &o_Str) const
-		{
-			o_Str += typename tf_CStr::CFormat("Rule: {}\nBuild: {}\nFlags: {}") << m_Rule << m_Build << m_Flags;
-		}
+		void f_Format(tf_CStr &o_Str) const;
 
 		CBuildSystemUniquePositions m_Positions;
 		CRule m_Rule;
@@ -128,10 +89,7 @@ namespace NMib::NBuildSystem::NNinja
 		;
 
 		template <typename tf_CStr>
-		void f_Format(tf_CStr &o_Str) const
-		{
-			o_Str += typename tf_CStr::CFormat("Type: {}\nEntries: {}\n") << m_Type << m_Entries;
-		}
+		void f_Format(tf_CStr &o_Str) const;
 
 		TCMap<CStr, CBuildAndRuleEntry> m_Entries;
 		CStr m_Type;
@@ -147,10 +105,7 @@ namespace NMib::NBuildSystem::NNinja
 	struct CConfigResultTarget
 	{
 		template <typename tf_CStr>
-		void f_Format(tf_CStr &o_Str) const
-		{
-			o_Str += typename tf_CStr::CFormat("PreBuild: {} Build: {} PostBuild: {}\n") << m_PreBuild << m_Build << m_PostBuild;
-		}
+		void f_Format(tf_CStr &o_Str) const;
 
 		CRuleAndBuild m_PreBuild;
 		CRuleAndBuild m_Build;
@@ -162,10 +117,7 @@ namespace NMib::NBuildSystem::NNinja
 	struct CConfigResultCompile
 	{
 		template <typename tf_CStr>
-		void f_Format(tf_CStr &o_Str) const
-		{
-			o_Str += typename tf_CStr::CFormat("Build: {}\n") << m_Build;
-		}
+		void f_Format(tf_CStr &o_Str) const;
 
 		CRuleAndBuild m_Build;
 	};
@@ -205,10 +157,7 @@ namespace NMib::NBuildSystem::NNinja
 	{
 		CStr const &f_GetName() const;
 
-		CWorkspace(CStr const &_Name)
-			: m_Name(_Name)
-		{
-		}
+		CWorkspace(CStr const &_Name);
 
 		CStr m_Name;
 
@@ -292,25 +241,16 @@ namespace NMib::NBuildSystem::NNinja
 		struct CCompileType
 		{
 			template <typename tf_CStr>
-			void f_Format(tf_CStr &o_Str) const
-			{
-				o_Str += typename tf_CStr::CFormat("{vs}") << m_EnabledConfigs;
-			}
+			void f_Format(tf_CStr &o_Str) const;
 
-			CStr const &f_GetType() const
-			{
-				return TCMap<CStr, CCompileType>::fs_GetKey(*this);
-			}
+			CStr const &f_GetType() const;
 
 			TCSet<CConfiguration> m_EnabledConfigs;
 		};
 
 		struct CSingleValue
 		{
-			CSingleValue(CValuePotentiallyByRef &&_Value)
-				: m_Value(fg_Move(_Value))
-			{
-			}
+			CSingleValue(CValuePotentiallyByRef &&_Value);
 
 			CBuildSystemUniquePositions m_Positions;
 			CValuePotentiallyByRef m_Value;
@@ -336,3 +276,5 @@ namespace NMib::NBuildSystem::NNinja
 		;
 	};
 }
+
+#include "Malterlib_BuildSystem_Generator_Ninja.hpp"

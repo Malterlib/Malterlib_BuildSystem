@@ -4,6 +4,24 @@
 #include "Malterlib_BuildSystem_Generator_Xcode.h"
 #include <Mib/Core/RuntimeType>
 
+namespace NMib::NBuildSystem::NXcode
+{
+	CSolution::CSolution(CStr const &_Name)
+		: m_Name(_Name)
+	{
+	}
+
+	CStr const &CElement::f_GetProperty() const
+	{
+		return TCMap<CStr, CElement>::fs_GetKey(*this);
+	}
+
+	CGeneratorInstance::CSingleValue::CSingleValue(CValuePotentiallyByRef &&_Value)
+		: m_Value(fg_Move(_Value))
+	{
+	}
+}
+
 namespace NMib::NBuildSystem
 {
 	struct CBuildSystemGenerator_Xcode : public CBuildSystemGenerator, public CAllowUnsafeThis

@@ -40,6 +40,11 @@ namespace NMib::NBuildSystem
 		return *this;
 	}
 
+	inline auto CBuildSystemUniquePositions::CPosition::CCompare::operator () (CPosition const &_Node) const -> CKey const &
+	{
+		return _Node.m_Key;
+	}
+
 	template <typename t_CType>
 	template <typename tf_CValue>
 	void TCValueWithPositions<t_CType>::f_SetFrom(tf_CValue &&_Value, NStr::CStr const &_Name, CBuildSystemPropertyInfo const &_PropertyInfo, t_CType &&_DefaultValue)

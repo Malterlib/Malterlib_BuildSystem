@@ -20,6 +20,14 @@ namespace NMib::NBuildSystem
 	{
 	}
 
+	template <typename tf_FFunction>
+	CBuildSystem::CBuiltinFunction::CBuiltinFunction(CBuildSystemSyntax::CFunctionType const &_Type, tf_FFunction &&_fFunction, CFilePosition &&_Position)
+		: m_Type(_Type)
+		, m_Function(FEvalPropertyFunction(fg_Move(_fFunction)))
+		, m_Position(fg_Move(_Position))
+	{
+	}
+
 	CBuildSystem::CChangePropertiesScope::CChangePropertiesScope(CEvaluationContext &_Context, CEvaluatedProperties *_pNewProperties)
 		: m_Context(_Context)
 	{

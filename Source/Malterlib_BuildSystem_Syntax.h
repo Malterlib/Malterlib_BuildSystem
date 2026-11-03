@@ -51,15 +51,8 @@ namespace NMib::NBuildSystem
 
 	struct CPropertyKeyTypeAndHash
 	{
-		constexpr CPropertyKeyTypeAndHash()
-			: CPropertyKeyTypeAndHash(EPropertyType_Property, 0)
-		{
-		}
-
-		constexpr CPropertyKeyTypeAndHash(EPropertyType _Type, uint32 _NameHash)
-			: m_Data(uint64(_Type) << 32 | uint64(_NameHash))
-		{
-		}
+		constexpr CPropertyKeyTypeAndHash();
+		constexpr CPropertyKeyTypeAndHash(EPropertyType _Type, uint32 _NameHash);
 
 		CPropertyKeyTypeAndHash(CPropertyKeyTypeAndHash const &_Other) = default;
 		CPropertyKeyTypeAndHash(CPropertyKeyTypeAndHash &&_Other) = default;
@@ -69,15 +62,8 @@ namespace NMib::NBuildSystem
 
 		auto operator <=> (CPropertyKeyTypeAndHash const &_Right) const noexcept = default;
 
-		constexpr inline_always EPropertyType f_GetType() const
-		{
-			return (EPropertyType)(m_Data >> 32);
-		}
-
-		constexpr inline_always uint32 f_GetNameHash() const
-		{
-			return (m_Data & DMibBitRangeTyped(0, 31, uint64));
-		}
+		constexpr inline_always EPropertyType f_GetType() const;
+		constexpr inline_always uint32 f_GetNameHash() const;
 
 		uint64 m_Data;
 	};
@@ -114,20 +100,9 @@ namespace NMib::NBuildSystem
 		template <typename tf_CStr>
 		void f_Format(tf_CStr &o_Str) const;
 
-		constexpr inline_always EPropertyType f_GetType() const
-		{
-			return m_TypeAndHash.f_GetType();
-		}
-
-		constexpr inline_always uint32 f_GetNameHash() const
-		{
-			return m_TypeAndHash.f_GetNameHash();
-		}
-
-		constexpr CStringAndHash f_GetStringAndHash() const
-		{
-			return CStringAndHash(CAssertAddedToStringCache(), m_Name, m_TypeAndHash.f_GetNameHash());
-		}
+		constexpr inline_always EPropertyType f_GetType() const;
+		constexpr inline_always uint32 f_GetNameHash() const;
+		constexpr CStringAndHash f_GetStringAndHash() const;
 
 		CPropertyKeyTypeAndHash m_TypeAndHash;
 		NStr::CStr const m_Name;

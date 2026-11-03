@@ -7,15 +7,11 @@ namespace NMib::NBuildSystem
 	{
 		template <typename tf_CValue>
 		TCValueWithPositions<tf_CValue> f_GetSetting(NStr::CStr const &_Name) const;
-
 		template <typename tf_CValue>
 		tf_CValue f_GetSettingWithoutPositions(NStr::CStr const &_Name) const;
 
 		template <typename tf_CStr>
-		void f_Format(tf_CStr &o_Str) const
-		{
-			o_Str += typename tf_CStr::CFormat("{}") << m_Value;
-		}
+		void f_Format(tf_CStr &o_Str) const;
 
 		NEncoding::CEJsonSorted m_Value;
 		CBuildSystemPropertyInfo m_PropertyInfo;
@@ -46,52 +42,21 @@ namespace NMib::NBuildSystem
 
 		template <typename tf_CValue>
 		TCValueWithPositions<tf_CValue> f_GetSingleSetting(NStr::CStr const &_Name) const &;
-
 		template <typename tf_CValue>
 		TCValueWithPositions<tf_CValue> f_GetSingleSetting(NStr::CStr const &_Name) &&;
-
 		template <typename tf_CValue>
 		tf_CValue f_GetSingleSettingWithoutPositions(NStr::CStr const &_Name) const;
 
 		template <typename tf_CValue>
 		TCValueWithPositions<tf_CValue> f_GetSetting(CConfiguration const &_Config, NStr::CStr const &_Name) const &;
-
 		template <typename tf_CValue>
 		tf_CValue f_GetSettingWithoutPositions(CConfiguration const &_Config, NStr::CStr const &_Name) const &;
 
-		NContainer::TCMap<CConfiguration, CGeneratorSetting> &f_ConstructSettings()
-		{
-#if DMibEnableSafeCheck > 0
-			DMibFastCheck(!m_Settings);
-			m_Settings = fg_Construct();
-			return *m_Settings;
-#else
-			return m_Settings;
-#endif
-		}
+		NContainer::TCMap<CConfiguration, CGeneratorSetting> &f_ConstructSettings();
+		void f_DestructSettings();
 
-		void f_DestructSettings()
-		{
-			m_Settings.f_Clear();
-		}
-
-		NContainer::TCMap<CConfiguration, CGeneratorSetting> &f_Settings()
-		{
-#if DMibEnableSafeCheck > 0
-			return *m_Settings;
-#else
-			return m_Settings;
-#endif
-		}
-
-		NContainer::TCMap<CConfiguration, CGeneratorSetting> const &f_Settings() const
-		{
-#if DMibEnableSafeCheck > 0
-			return *m_Settings;
-#else
-			return m_Settings;
-#endif
-		}
+		NContainer::TCMap<CConfiguration, CGeneratorSetting> &f_Settings();
+		NContainer::TCMap<CConfiguration, CGeneratorSetting> const &f_Settings() const;
 
 #if DMibEnableSafeCheck > 0
 		NStorage::TCOptional<NContainer::TCMap<CConfiguration, CGeneratorSetting>> m_Settings;

@@ -20,6 +20,12 @@ namespace NMib::NBuildSystem::NVisualStudio
 		return fg_TupleReferences(m_Parent, m_Entity, m_Property, m_Value) <=> fg_TupleReferences(_Right.m_Parent, _Right.m_Entity, _Right.m_Property, _Right.m_Value);
 	}
 
+	template <typename tf_CStr>
+	void CGeneratorInstance::CCompileType::f_Format(tf_CStr &o_Str) const
+	{
+		o_Str += typename tf_CStr::CFormat("{}={vs}") << m_VSType << m_EnabledConfigs;
+	}
+
 	template <typename tf_CSet0, typename tf_CSet1>
 	bool NVisualStudio::CGeneratorInstance::fp_IsSameConfig(tf_CSet0 const &_Configs, tf_CSet1 const &_AllConfigs) const
 	{

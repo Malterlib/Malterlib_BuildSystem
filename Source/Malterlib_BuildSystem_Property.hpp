@@ -31,6 +31,12 @@ namespace NMib::NBuildSystem
 	}
 
 	template <typename tf_CStr>
+	void CEvaluatedProperty::f_Format(tf_CStr &o_Str) const
+	{
+		o_Str += typename tf_CStr::CFormat("{}") << m_Value;
+	}
+
+	template <typename tf_CStr>
 	void CPropertyKey::f_Format(tf_CStr &o_Str) const
 	{
 		o_Str += typename tf_CStr::CFormat("{}.{}") << fg_PropertyTypeToStr(f_GetType()) << m_Name;

@@ -41,6 +41,13 @@ namespace NMib::NBuildSystem
 		fg_Malterlib_BuildSystem_MakeActive_Ninja();
 	}
 
+	CBuildSystem::CBuiltinFunction::CBuiltinFunction(CBuildSystemSyntax::CFunctionType const &_Type, FEvalPropertyFunctionLazy &&_fFunction, CFilePosition &&_Position)
+		: m_Type(_Type)
+		, m_Function(fg_Move(_fFunction))
+		, m_Position(fg_Move(_Position))
+	{
+	}
+
 	CFilePosition const &CBuildSystemPropertyInfo::f_FallbackPosition() const
 	{
 		if (m_pFallbackPosition)

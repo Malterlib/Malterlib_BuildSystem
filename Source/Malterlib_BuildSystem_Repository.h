@@ -182,10 +182,7 @@ namespace NMib::NBuildSystem::NRepository
 
 	struct CReposLocation
 	{
-		CStr const &f_GetPath() const
-		{
-			return TCMap<CStr, CReposLocation>::fs_GetKey(*this);
-		}
+		CStr const &f_GetPath() const;
 
 		TCMap<CStr, CRepository> m_Repositories;
 	};
@@ -546,10 +543,7 @@ namespace NMib::NBuildSystem::NRepository
 	{
 		struct CBranch
 		{
-			CStr const &f_GetType() const
-			{
-				return TCMap<CStr, CBranch>::fs_GetKey(*this);
-			}
+			CStr const &f_GetType() const;
 
 			CStr m_Name;
 			bool m_bOnlyChanged = true;

@@ -148,6 +148,19 @@ To show current status without reconciling use:
 	;
 }
 
+namespace NMib::NBuildSystem::NRepository
+{
+	CStr const &CReposLocation::f_GetPath() const
+	{
+		return TCMap<CStr, CReposLocation>::fs_GetKey(*this);
+	}
+
+	CStr const &CBranchSettings::CBranch::f_GetType() const
+	{
+		return TCMap<CStr, CBranch>::fs_GetKey(*this);
+	}
+}
+
 namespace NMib::NBuildSystem
 {
 	namespace

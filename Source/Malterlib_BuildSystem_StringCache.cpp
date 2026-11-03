@@ -53,4 +53,10 @@ namespace NMib::NBuildSystem
 	{
 		fp_AddConstantString(_Key.m_Name, _Key.f_GetNameHash());
 	}
+
+	CStringAndHash::CStringAndHash(CStringCache &o_StringCache, NStr::CStr const &_String, uint32 _Hash)
+		: m_String(o_StringCache.f_AddString(_String, _Hash))
+		, m_Hash(_Hash)
+	{
+	}
 }

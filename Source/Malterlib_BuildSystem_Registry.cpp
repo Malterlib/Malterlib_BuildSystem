@@ -319,6 +319,11 @@ namespace NMib::NContainer
 
 namespace NMib::NBuildSystem
 {
+	CBuildSystemRegistryParseContext::CBuildSystemRegistryParseContext(CStringCache &_StringCache)
+		: m_StringCache(_StringCache)
+	{
+	}
+
 	CStr const &fg_RegistryNameStringForPath(CBuildSystemSyntax::CRootKey const &_Key)
 	{
 		if (!_Key.f_IsValue() || !_Key.f_Value().f_IsConstantString())

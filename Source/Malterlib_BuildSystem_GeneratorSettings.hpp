@@ -135,6 +135,12 @@ namespace NMib::NBuildSystem
 		return ReturnValue;
 	}
 
+	template <typename tf_CStr>
+	void CGeneratorSetting::f_Format(tf_CStr &o_Str) const
+	{
+		o_Str += typename tf_CStr::CFormat("{}") << m_Value;
+	}
+
 	template <typename tf_CValue>
 	tf_CValue CGeneratorSettings::f_GetSingleSettingWithoutPositions(NStr::CStr const &_Name) const
 	{

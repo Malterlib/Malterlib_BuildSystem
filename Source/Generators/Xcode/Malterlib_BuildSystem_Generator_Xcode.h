@@ -145,16 +145,10 @@ namespace NMib::NBuildSystem::NXcode
 		inline void f_SetValue(CStr const &_Value);
 		inline bool f_IsSameValue(CElement const &_Other) const;
 		inline bool f_IsEmpty() const;
-		CStr const &f_GetProperty() const
-		{
-			return TCMap<CStr, CElement>::fs_GetKey(*this);
-		}
+		CStr const &f_GetProperty() const;
 
 		template <typename tf_CStr>
-		void f_Format(tf_CStr &o_Str) const
-		{
-			o_Str += typename tf_CStr::CFormat("m_ValueSet {vs}   m_Value {}   m_bXcodeProperty {}   m_bUseValues {}\n") << m_ValueSet << m_Value << m_bXcodeProperty << m_bUseValues;
-		}
+		void f_Format(tf_CStr &o_Str) const;
 
 		TCSet<TCVariant<CStr, TCVector<CStr>>> m_ValueSet;
 		CStr m_Value;
@@ -166,10 +160,7 @@ namespace NMib::NBuildSystem::NXcode
 	struct CConfigResultCompile
 	{
 		template <typename tf_CStr>
-		void f_Format(tf_CStr &o_Str) const
-		{
-			o_Str += typename tf_CStr::CFormat("Elements: {}\n") << m_Element;
-		}
+		void f_Format(tf_CStr &o_Str) const;
 
 		TCValueWithPositions<CStr> m_Type;
 		CPBXFileReference m_PBXFileReference;
@@ -345,10 +336,7 @@ namespace NMib::NBuildSystem::NXcode
 		CStr const &f_GetName() const;
 		void f_FindRecursiveDependencies(CBuildSystem const &_BuildSystem);
 
-		CSolution(CStr const &_Name)
-			: m_Name(_Name)
-		{
-		}
+		CSolution(CStr const &_Name);
 
 		CStr m_Name;
 
@@ -405,10 +393,7 @@ namespace NMib::NBuildSystem::NXcode
 		struct CConfigResultTarget
 		{
 			template <typename tf_CStr>
-			void f_Format(tf_CStr &o_Str) const
-			{
-				o_Str += typename tf_CStr::CFormat("Elements: {}\n") << m_Element;
-			}
+			void f_Format(tf_CStr &o_Str) const;
 
 			TCValueWithPositions<CStr> m_TargetType;
 			TCValueWithPositions<CStr> m_ProductType;
@@ -418,16 +403,10 @@ namespace NMib::NBuildSystem::NXcode
 
 		struct CSingleValue
 		{
-			CSingleValue(CValuePotentiallyByRef &&_Value)
-				: m_Value(fg_Move(_Value))
-			{
-			}
+			CSingleValue(CValuePotentiallyByRef &&_Value);
 
 			template <typename tf_CStr>
-			void f_Format(tf_CStr &o_Str) const
-			{
-				o_Str += typename tf_CStr::CFormat("{}") << m_Value;
-			}
+			void f_Format(tf_CStr &o_Str) const;
 
 			CBuildSystemUniquePositions m_Positions;
 			CValuePotentiallyByRef m_Value;

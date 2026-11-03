@@ -87,4 +87,38 @@ namespace NMib::NBuildSystem
 
 		co_return {};
 	}
+
+	NContainer::TCMap<CConfiguration, CGeneratorSetting> &CGeneratorSettings::f_ConstructSettings()
+	{
+#if DMibEnableSafeCheck > 0
+		DMibFastCheck(!m_Settings);
+		m_Settings = fg_Construct();
+		return *m_Settings;
+#else
+		return m_Settings;
+#endif
+	}
+
+	void CGeneratorSettings::f_DestructSettings()
+	{
+		m_Settings.f_Clear();
+	}
+
+	NContainer::TCMap<CConfiguration, CGeneratorSetting> &CGeneratorSettings::f_Settings()
+	{
+#if DMibEnableSafeCheck > 0
+		return *m_Settings;
+#else
+		return m_Settings;
+#endif
+	}
+
+	NContainer::TCMap<CConfiguration, CGeneratorSetting> const &CGeneratorSettings::f_Settings() const
+	{
+#if DMibEnableSafeCheck > 0
+		return *m_Settings;
+#else
+		return m_Settings;
+#endif
+	}
 }

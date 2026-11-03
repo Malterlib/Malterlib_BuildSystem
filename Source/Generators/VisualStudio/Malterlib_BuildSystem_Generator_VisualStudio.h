@@ -138,48 +138,12 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 		struct CParsedGeneratorSettings
 		{
-			bool f_SettingsConstructed()
-			{
-#if DMibEnableSafeCheck > 0
-				return !!m_Settings;
-#else
-				return true;
-#endif
-			}
+			bool f_SettingsConstructed();
+			TCMap<CConfiguration, CParsedGeneratorSetting> &f_ConstructSettings();
+			void f_DestructSettings();
 
-			TCMap<CConfiguration, CParsedGeneratorSetting> &f_ConstructSettings()
-			{
-#if DMibEnableSafeCheck > 0
-				DMibFastCheck(!m_Settings);
-				m_Settings = fg_Construct();
-				return *m_Settings;
-#else
-				return m_Settings;
-#endif
-			}
-
-			void f_DestructSettings()
-			{
-				m_Settings.f_Clear();
-			}
-
-			TCMap<CConfiguration, CParsedGeneratorSetting> &f_Settings()
-			{
-#if DMibEnableSafeCheck > 0
-				return *m_Settings;
-#else
-				return m_Settings;
-#endif
-			}
-
-			TCMap<CConfiguration, CParsedGeneratorSetting> const &f_Settings() const
-			{
-#if DMibEnableSafeCheck > 0
-				return *m_Settings;
-#else
-				return m_Settings;
-#endif
-			}
+			TCMap<CConfiguration, CParsedGeneratorSetting> &f_Settings();
+			TCMap<CConfiguration, CParsedGeneratorSetting> const &f_Settings() const;
 
 			CStr m_VSType;
 			CStr m_Type;
@@ -338,10 +302,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		CStr const &f_GetName() const;
 		void f_FindRecursiveDependencies(CBuildSystem const &_BuildSystem);
 
-		CSolution(CStr const &_Name)
-			: m_Name(_Name)
-		{
-		}
+		CSolution(CStr const &_Name);
 
 		CStr m_Name;
 
@@ -428,10 +389,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		struct CCompileType
 		{
 			template <typename tf_CStr>
-			void f_Format(tf_CStr &o_Str) const
-			{
-				o_Str += typename tf_CStr::CFormat("{}={vs}") << m_VSType << m_EnabledConfigs;
-			}
+			void f_Format(tf_CStr &o_Str) const;
 
 			CStr m_VSType;
 			TCSet<CConfiguration> m_EnabledConfigs;

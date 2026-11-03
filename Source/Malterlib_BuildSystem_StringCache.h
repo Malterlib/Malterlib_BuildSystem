@@ -29,29 +29,12 @@ namespace NMib::NBuildSystem
 
 	struct CStringAndHash
 	{
-		CStringAndHash(CStringCache &o_StringCache, NStr::CStr const &_String, uint32 _Hash)
-			: m_String(o_StringCache.f_AddString(_String, _Hash))
-			, m_Hash(_Hash)
-		{
-		}
-
-		constexpr CStringAndHash(CAssertAddedToStringCache _Dummy, NStr::CStr const &_String, uint32 _Hash)
-			: m_String(_String)
-			, m_Hash(_Hash)
-		{
-		}
-
+		CStringAndHash(CStringCache &o_StringCache, NStr::CStr const &_String, uint32 _Hash);
+		constexpr CStringAndHash(CAssertAddedToStringCache _Dummy, NStr::CStr const &_String, uint32 _Hash);
 		template <umint tf_nChars>
-		constexpr CStringAndHash(NStr::TCStrConstDataAndStr<tf_nChars, ch8> const &_String)
-			: m_Hash(fg_StrHash(_String.m_StrData.m_Data))
-			, m_String(_String)
-		{
-		}
+		constexpr CStringAndHash(NStr::TCStrConstDataAndStr<tf_nChars, ch8> const &_String);
 
-		constexpr operator NStr::CStr const & () const
-		{
-			return m_String;
-		}
+		constexpr operator NStr::CStr const & () const;
 
 		CStringAndHash(CStringAndHash &&_Other) = default;
 		CStringAndHash(CStringAndHash const &_Other) = default;
@@ -59,12 +42,11 @@ namespace NMib::NBuildSystem
 		auto operator <=> (CStringAndHash const &_Right) const noexcept = default;
 
 		template <typename tf_CStr>
-		void f_Format(tf_CStr &o_Str) const
-		{
-			o_Str += typename tf_CStr::CFormat("{}") << m_String;
-		}
+		void f_Format(tf_CStr &o_Str) const;
 
 		uint32 m_Hash = 0;
 		NStr::CStr m_String;
 	};
 }
+
+#include "Malterlib_BuildSystem_StringCache.hpp"

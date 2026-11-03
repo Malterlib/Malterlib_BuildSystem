@@ -8,6 +8,27 @@ namespace NMib::NBuildSystem::NNinja
 {
 	constinit CLowLevelLockAggregate g_CooperativeTimeSliceCyclesLock;
 	constinit int64 g_CooperativeTimeSliceCycles = 0;
+
+	bool CRule::f_IsPhony() const
+	{
+		auto pPhonyValue = m_OtherProperties.f_FindEqual(gc_Str<"phony">.m_Str);
+		return pPhonyValue && *pPhonyValue == "true";
+	}
+
+	CWorkspace::CWorkspace(CStr const &_Name)
+		: m_Name(_Name)
+	{
+	}
+
+	CStr const &CGeneratorInstance::CCompileType::f_GetType() const
+	{
+		return TCMap<CStr, CCompileType>::fs_GetKey(*this);
+	}
+
+	CGeneratorInstance::CSingleValue::CSingleValue(CValuePotentiallyByRef &&_Value)
+		: m_Value(fg_Move(_Value))
+	{
+	}
 }
 
 namespace NMib::NBuildSystem

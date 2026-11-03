@@ -4,6 +4,57 @@
 #include "Malterlib_BuildSystem_Generator_VisualStudio.h"
 #include <Mib/Core/RuntimeType>
 
+namespace NMib::NBuildSystem::NVisualStudio
+{
+	bool CGeneratorSettings::CParsedGeneratorSettings::f_SettingsConstructed()
+	{
+#if DMibEnableSafeCheck > 0
+		return !!m_Settings;
+#else
+		return true;
+#endif
+	}
+
+	auto CGeneratorSettings::CParsedGeneratorSettings::f_ConstructSettings() -> TCMap<CConfiguration, CParsedGeneratorSetting> &
+	{
+#if DMibEnableSafeCheck > 0
+		DMibFastCheck(!m_Settings);
+		m_Settings = fg_Construct();
+		return *m_Settings;
+#else
+		return m_Settings;
+#endif
+	}
+
+	void CGeneratorSettings::CParsedGeneratorSettings::f_DestructSettings()
+	{
+		m_Settings.f_Clear();
+	}
+
+	auto CGeneratorSettings::CParsedGeneratorSettings::f_Settings() -> TCMap<CConfiguration, CParsedGeneratorSetting> &
+	{
+#if DMibEnableSafeCheck > 0
+		return *m_Settings;
+#else
+		return m_Settings;
+#endif
+	}
+
+	auto CGeneratorSettings::CParsedGeneratorSettings::f_Settings() const -> TCMap<CConfiguration, CParsedGeneratorSetting> const &
+	{
+#if DMibEnableSafeCheck > 0
+		return *m_Settings;
+#else
+		return m_Settings;
+#endif
+	}
+
+	CSolution::CSolution(CStr const &_Name)
+		: m_Name(_Name)
+	{
+	}
+}
+
 namespace NMib::NBuildSystem
 {
 	bool NVisualStudio::CGeneratorInstance::CProjectState::f_FileExists(CStr const &_Path)

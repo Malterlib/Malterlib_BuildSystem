@@ -56,6 +56,30 @@ namespace NMib::NBuildSystem::NXcode
 		return m_Value == _Other.m_Value;
 	}
 
+	template <typename tf_CStr>
+	void CElement::f_Format(tf_CStr &o_Str) const
+	{
+		o_Str += typename tf_CStr::CFormat("m_ValueSet {vs}   m_Value {}   m_bXcodeProperty {}   m_bUseValues {}\n") << m_ValueSet << m_Value << m_bXcodeProperty << m_bUseValues;
+	}
+
+	template <typename tf_CStr>
+	void CConfigResultCompile::f_Format(tf_CStr &o_Str) const
+	{
+		o_Str += typename tf_CStr::CFormat("Elements: {}\n") << m_Element;
+	}
+
+	template <typename tf_CStr>
+	void CGeneratorInstance::CConfigResultTarget::f_Format(tf_CStr &o_Str) const
+	{
+		o_Str += typename tf_CStr::CFormat("Elements: {}\n") << m_Element;
+	}
+
+	template <typename tf_CStr>
+	void CGeneratorInstance::CSingleValue::f_Format(tf_CStr &o_Str) const
+	{
+		o_Str += typename tf_CStr::CFormat("{}") << m_Value;
+	}
+
 	template <typename tf_CSet0, typename tf_CSet1>
 	bool CGeneratorInstance::fp_IsSameConfig(tf_CSet0 const &_Configs, tf_CSet1 const &_AllConfigs) const
 	{

@@ -102,4 +102,10 @@ namespace NMib::NBuildSystem
 		}
 		return fg_Move(mp_ValueVariant.f_Get<2>().f_String());
 	}
+
+	template <typename tf_CStr>
+	void CValuePotentiallyByRef::f_Format(tf_CStr &o_Str) const
+	{
+		o_Str += typename tf_CStr::CFormat("{}") << f_Get();
+	}
 }
