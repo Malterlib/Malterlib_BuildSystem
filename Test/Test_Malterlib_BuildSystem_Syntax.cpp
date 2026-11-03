@@ -38,7 +38,7 @@ namespace
 		{
 		}
 
-		CBuildSystemSyntax::CRootValue fs_ParseString(CStr const &_String)
+		static CBuildSystemSyntax::CRootValue fs_ParseString(CStr const &_String)
 		{
 			CBuildSystemSyntax::CIdentifier Identifier;
 			CBuildSystemRegistry RegistryTest;

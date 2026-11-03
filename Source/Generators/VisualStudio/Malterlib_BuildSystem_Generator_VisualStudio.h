@@ -285,7 +285,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 		CStr const &f_GetName() const;
 		CStr f_GetPath() const;
 		CStr const &f_GetGUID();
-		void fr_FindRecursiveDependencies(CBuildSystem const &_BuildSystem, TCSet<CStr> &_Stack, CProjectDependency const *_pDepend, TCMap<CStr, CProject> &_Projects);
+		void f_FindRecursiveDependencies(CBuildSystem const &_BuildSystem, TCSet<CStr> &_Stack, CProjectDependency const *_pDepend, TCMap<CStr, CProject> &_Projects);
 		CStr const &f_GetSolutionTypeGUID() const;
 
 		TCMap<CStr, CProjectFile> m_Files;

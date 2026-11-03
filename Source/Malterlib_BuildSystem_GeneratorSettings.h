@@ -44,9 +44,6 @@ namespace NMib::NBuildSystem
 			)
 		;
 
-		template <typename tf_CValue, typename tf_CThis>
-		static TCValueWithPositions<tf_CValue> fsp_GetSingleSetting(tf_CThis &&_This, NStr::CStr const &_Name);
-
 		template <typename tf_CValue>
 		TCValueWithPositions<tf_CValue> f_GetSingleSetting(NStr::CStr const &_Name) const &;
 
@@ -101,6 +98,10 @@ namespace NMib::NBuildSystem
 #else
 		NContainer::TCMap<CConfiguration, CGeneratorSetting> m_Settings;
 #endif
+
+	private:
+		template <typename tf_CValue, typename tf_CThis>
+		static TCValueWithPositions<tf_CValue> fsp_GetSingleSetting(tf_CThis &&_This, NStr::CStr const &_Name);
 	};
 }
 

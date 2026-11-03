@@ -27,7 +27,7 @@ namespace NMib::NBuildSystem
 		DMibError(NStr::CStr::CFormat("{} {}") << _Registry.f_GetLocation() << _Error);
 	}
 
-	void CBuildSystemPreprocessor::fpr_FindFilesRecursive(CBuildSystemRegistry &_Registry, TCVector<CStr> &o_Files, CStr const &_Path, CStr const &_ToFind)
+	void CBuildSystemPreprocessor::fp_FindFilesRecursive(CBuildSystemRegistry &_Registry, TCVector<CStr> &o_Files, CStr const &_Path, CStr const &_ToFind)
 	{
 		CStr PrePath = _Path;
 		CStr ToFind = _ToFind;
@@ -55,7 +55,7 @@ namespace NMib::NBuildSystem
 					CFindOptions FindOptions(FullPath, EFileAttrib_Directory);
 					auto Files = mp_FindCache.f_FindFiles(FindOptions, true);
 					for (auto &File : Files)
-						fpr_FindFilesRecursive(_Registry, o_Files, File.m_Path, ToFind);
+						fp_FindFilesRecursive(_Registry, o_Files, File.m_Path, ToFind);
 				}
 				return;
 			}
@@ -71,7 +71,7 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	void CBuildSystemPreprocessor::fpr_HandleIncludes(CBuildSystemRegistry &_RootRegistry, CStr const &_Path, TCVector<CError> &o_Errors)
+	void CBuildSystemPreprocessor::fp_HandleIncludes(CBuildSystemRegistry &_RootRegistry, CStr const &_Path, TCVector<CError> &o_Errors)
 	{
 		_RootRegistry.f_TransformFunc
 			(
@@ -130,7 +130,7 @@ namespace NMib::NBuildSystem
 						if (FullPath.f_FindChars("*?") >= 0)
 						{
 							// Wildcard search
-							fpr_FindFilesRecursive(_Registry, Files, CStr(), FullPath);
+							fp_FindFilesRecursive(_Registry, Files, CStr(), FullPath);
 
 							if (Files.f_IsEmpty())
 							{
@@ -170,7 +170,7 @@ namespace NMib::NBuildSystem
 								CBuildSystemRegistryParseContext Context(mp_StringCache);
 								IncludedRegistry.f_ParseStrWithContext(Context, FileData, _File);
 
-								fpr_HandleIncludes(IncludedRegistry, Path, o_Errors);
+								fp_HandleIncludes(IncludedRegistry, Path, o_Errors);
 
 								auto pPrevious = &_Registry;
 								for (auto iChild = IncludedRegistry.f_GetChildIterator(); iChild;)
@@ -219,7 +219,7 @@ namespace NMib::NBuildSystem
 		}
 
 		TCVector<CError> Errors;
-		fpr_HandleIncludes(mp_ResultRegistry, Path, Errors);
+		fp_HandleIncludes(mp_ResultRegistry, Path, Errors);
 		if (!Errors.f_IsEmpty())
 			fsp_ThrowError(*Errors.f_GetFirst().m_pRootRegistry, Errors.f_GetFirst().m_Error);
 	}

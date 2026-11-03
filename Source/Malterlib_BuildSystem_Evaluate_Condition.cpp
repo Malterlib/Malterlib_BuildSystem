@@ -9,7 +9,7 @@ namespace NMib::NBuildSystem
 	{
 		DMibRequire(_Condition.m_Type == EConditionType_Root);
 		CEvaluationContext EvalContext(_pEvaluatedProperties ? _pEvaluatedProperties : &_Context.m_EvaluatedProperties);
-		return fpr_EvalCondition(_Context, _Context, _Condition, EvalContext, _bTrace, nullptr, nullptr);
+		return fp_EvalCondition(_Context, _Context, _Condition, EvalContext, _bTrace, nullptr, nullptr);
 	}
 
 	NStr::CStr const &CCondition::fs_ConditionTypeToStr(EConditionType _Type)
@@ -39,7 +39,6 @@ namespace NMib::NBuildSystem
 			, EConditionType _ConditionType
 			, NFunction::TCFunctionNoAlloc<void (NStr::CStr const &_Error)> const &_fOnError
 		)
-		const
 		-> bool
 	{
 		if (_Left.f_IsUserType())
@@ -320,7 +319,7 @@ namespace NMib::NBuildSystem
 		return bRet;
 	}
 
-	auto CBuildSystem::fpr_EvalCondition
+	auto CBuildSystem::fp_EvalCondition
 		(
 			CEntity &_Context
 			, CEntity &_OriginalContext
@@ -348,7 +347,7 @@ namespace NMib::NBuildSystem
 				for (auto iCondition = _Condition.m_Children.f_GetIterator(); iCondition; ++iCondition)
 				{
 					auto &Condition = *iCondition;
-					if (fpr_EvalCondition(_Context, _OriginalContext, Condition, _EvalContext, _TraceDepth ? _TraceDepth + 1 : 0, _pParentContext, o_pPositions))
+					if (fp_EvalCondition(_Context, _OriginalContext, Condition, _EvalContext, _TraceDepth ? _TraceDepth + 1 : 0, _pParentContext, o_pPositions))
 					{
 						if (_TraceDepth)
 						{
@@ -392,7 +391,7 @@ namespace NMib::NBuildSystem
 				for (auto iCondition = _Condition.m_Children.f_GetIterator(); iCondition; ++iCondition)
 				{
 					auto &Condition = (*iCondition);
-					if (!fpr_EvalCondition(_Context, _OriginalContext, Condition, _EvalContext, _TraceDepth ? _TraceDepth + 1 : 0, _pParentContext, o_pPositions))
+					if (!fp_EvalCondition(_Context, _OriginalContext, Condition, _EvalContext, _TraceDepth ? _TraceDepth + 1 : 0, _pParentContext, o_pPositions))
 					{
 						if (_TraceDepth)
 							f_OutputConsole("{sj*}Failure{\n}"_f << "" << (_TraceDepth * 3));
@@ -412,7 +411,7 @@ namespace NMib::NBuildSystem
 				for (auto iCondition = _Condition.m_Children.f_GetIterator(); iCondition; ++iCondition)
 				{
 					auto &Condition = (*iCondition);
-					bool bRet = !fpr_EvalCondition(_Context, _OriginalContext, Condition, _EvalContext, _TraceDepth ? _TraceDepth + 1 : 0, _pParentContext, o_pPositions);
+					bool bRet = !fp_EvalCondition(_Context, _OriginalContext, Condition, _EvalContext, _TraceDepth ? _TraceDepth + 1 : 0, _pParentContext, o_pPositions);
 					if (_TraceDepth)
 					{
 						if (bRet)

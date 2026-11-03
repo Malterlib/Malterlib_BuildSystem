@@ -464,31 +464,31 @@ namespace NMib::NBuildSystem
 								{
 									if (_FileType == gc_ConstString_Symbol_Cpp.m_String)
 									{
-										OtherCPPFlags += CStr::CFormat(" {}") << fs_EscapeCommandLineArgument(_Value);
+										OtherCPPFlags += CStr::CFormat(" {}") << fsp_EscapeCommandLineArgument(_Value);
 										return;
 									}
 									else if (_FileType == gc_ConstString_Symbol_ObjCpp.m_String)
 									{
-										OtherObjCPPFlags += CStr::CFormat(" {}") << fs_EscapeCommandLineArgument(_Value);
+										OtherObjCPPFlags += CStr::CFormat(" {}") << fsp_EscapeCommandLineArgument(_Value);
 										return;
 									}
 									else if (_FileType == gc_ConstString_C.m_String)
 									{
-										OtherCFlags += CStr::CFormat(" {}") << fs_EscapeCommandLineArgument(_Value);
+										OtherCFlags += CStr::CFormat(" {}") << fsp_EscapeCommandLineArgument(_Value);
 										return;
 									}
 									else if (_FileType == gc_ConstString_ObjC.m_String)
 									{
-										OtherObjCFlags += CStr::CFormat(" {}") << fs_EscapeCommandLineArgument(_Value);
+										OtherObjCFlags += CStr::CFormat(" {}") << fsp_EscapeCommandLineArgument(_Value);
 										return;
 									}
 									else if (_FileType == gc_ConstString_Assembler.m_String)
 									{
-										OtherAssemblerFlags += CStr::CFormat(" {}") << fs_EscapeCommandLineArgument(_Value);
+										OtherAssemblerFlags += CStr::CFormat(" {}") << fsp_EscapeCommandLineArgument(_Value);
 										return;
 									}
 								}
-								CompileFlags += (CStr::CFormat(" {}") << fs_EscapeCommandLineArgument(_Value));
+								CompileFlags += (CStr::CFormat(" {}") << fsp_EscapeCommandLineArgument(_Value));
 							}
 						;
 						auto fBuildFlags = [&](CElement const &_Element, TCSet<TCVariant<CStr, TCVector<CStr>>> const *_pValueSet = nullptr)

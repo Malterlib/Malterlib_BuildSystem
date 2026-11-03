@@ -17,7 +17,7 @@ namespace NMib::NBuildSystem
 		return CStr();
 	}
 
-	void CGroupInfo::fr_PruneEmpty()
+	void CGroupInfo::f_PruneEmpty()
 	{
 		for (auto iChild = m_Children.f_GetIterator(); iChild;)
 		{
@@ -26,7 +26,7 @@ namespace NMib::NBuildSystem
 
 			if (pChild->m_bIsGroup)
 			{
-				((CGroupInfo *)pChild)->fr_PruneEmpty();
+				((CGroupInfo *)pChild)->f_PruneEmpty();
 				if (((CGroupInfo *)pChild)->m_Children.f_IsEmpty())
 					pChild->m_GroupMemberLink.f_Unlink();
 			}

@@ -105,8 +105,8 @@ namespace NMib::NBuildSystem
 		NContainer::TCVector<CEntityKey> f_GetPathKey() const;
 		inline_always void f_CheckParents() const;
 		CEntity const *f_GetRoot() const;
-		void fr_GetPath(NStr::CStr &_Destination) const;
-		void fr_GetPathForGetProperty(NStr::CStr &_Destination) const;
+		void f_GetPathRecursive(NStr::CStr &_Destination) const;
+		void f_GetPathForGetPropertyRecursive(NStr::CStr &_Destination) const;
 		NStr::CStr f_GetPath() const;
 		NStr::CStr f_GetPathForGetProperty() const;
 		void f_CopyTypes(CEntity const &_Other);
@@ -151,8 +151,8 @@ namespace NMib::NBuildSystem
 #endif
 
 	private:
-		void fpr_GetPathKey(NContainer::TCVector<CEntityKey> &_Dest) const;
-		void fpr_CheckParents() const;
+		void fp_GetPathKey(NContainer::TCVector<CEntityKey> &_Dest) const;
+		void fp_CheckParents() const;
 
 #if defined(DMibBuildSystem_DebugReferences) && defined(DMibBuildSystem_DebugReferencesAdvanced)
 		static NThread::CMutual mp_DebugSetLock;

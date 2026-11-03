@@ -289,7 +289,7 @@ namespace NMib::NBuildSystem::NXcode
 		CStr const &f_GetProjectDependenciesGroupGUID();
 		CStr const &f_GetConfigurationsGroupGUID();
 		CStr const &f_GetBuildConfigurationListGUID();
-		void fr_FindRecursiveDependencies(CBuildSystem const &_BuildSystem, TCSet<CStr> &_Stack, CProjectDependency const *_pDepend, TCMap<CStr, CProject> &_Projects);
+		void f_FindRecursiveDependencies(CBuildSystem const &_BuildSystem, TCSet<CStr> &_Stack, CProjectDependency const *_pDepend, TCMap<CStr, CProject> &_Projects);
 
 		CNativeTarget &f_GetDefaultNativeTarget(CConfiguration const &_Configuration);
 
@@ -511,7 +511,7 @@ namespace NMib::NBuildSystem::NXcode
 		void fp_GeneratePBXContainerItemProxySection(CProject &_Project, CStr &_Output) const;
 		void fp_GeneratePBXTargetDependencySection(CProject &_Project, CStr &_Output) const;
 
-		static void fspr_MergeScheme(CXMLNode const *_pExistingNode, CXMLNode const *_pPrevNode, CXMLNode *_pNewNode);
+		static void fsp_MergeScheme(CXMLNode const *_pExistingNode, CXMLNode const *_pPrevNode, CXMLNode *_pNewNode);
 		bool fp_GenerateSchemes(CProjectState &_ProjectState, CProject &_Project, TCMap<CConfiguration, TCSet<CStr>> &_Runnables, TCMap<CConfiguration, TCMap<CStr, CStr>> &_Buildable) const;
 
 		// Values
@@ -521,7 +521,7 @@ namespace NMib::NBuildSystem::NXcode
 		TCUnsafeFuture<void> fp_EvaluateTargetSettings(CProjectState &_ProjectState, CProject &_Project) const;
 		void fp_EvaluateDependencies(CProject &_Project) const;
 
-		static CStr fs_EscapeCommandLineArgument(CStr const &_String);
+		static CStr fsp_EscapeCommandLineArgument(CStr const &_String);
 
 		void fp_SetEvaluatedValuesTarget(CEntityMutablePointer const &_Entity, CConfigResultTarget &o_Result, CStr const &_Name) const;
 		void fp_SetEvaluatedValuesCompile(CEntityMutablePointer const &_Entity, bool _bFile, CConfigResultCompile &o_Result) const;

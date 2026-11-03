@@ -978,7 +978,7 @@ namespace NMib::NBuildSystem
 			const
 		;
 		void fp_ParseData(CEntity &_RootEntity, CBuildSystemRegistry &_Registry, NContainer::TCMap<NStr::CStr, CConfigurationType> *_pConfigurations) const;
-		auto fpr_EvalCondition
+		auto fp_EvalCondition
 			(
 				CEntity &_Context
 				, CEntity &_OriginalContext
@@ -1033,14 +1033,13 @@ namespace NMib::NBuildSystem
 		CValuePotentiallyByRef fp_EvaluatePropertyValueTernary(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CTernary const &_Value) const;
 		NEncoding::CEJsonSorted fp_EvaluatePropertyValuePrefixOperator(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CPrefixOperator const &_Value) const;
 		CValuePotentiallyByRef fp_EvaluatePropertyValueBinaryOperator(CEvalPropertyValueContext &_Context, CBuildSystemSyntax::CBinaryOperator const &_Value) const;
-		auto fsp_CompareValueRecursive
+		static auto fsp_CompareValueRecursive
 			(
 				NEncoding::CEJsonSorted const &_Left
 				, NEncoding::CEJsonSorted const &_Right
 				, EConditionType _ConditionType
 				, NFunction::TCFunctionNoAlloc<void (NStr::CStr const &_Error)> const &_fOnError
 			)
-			const
 			-> bool
 		;
 
@@ -1077,8 +1076,8 @@ namespace NMib::NBuildSystem
 			-> CValuePotentiallyByRef
 		;
 
-		void fpr_EvaluateData(CEntity &_Entity) const;
-		void fpr_EvaluateData(CEntity &_Entity, NContainer::TCSet<CEntity *> &o_Deleted) const;
+		void fp_EvaluateDataRecursive(CEntity &_Entity) const;
+		void fp_EvaluateDataRecursive(CEntity &_Entity, NContainer::TCSet<CEntity *> &o_Deleted) const;
 		void fp_EvaluateAllProperties(CEntity &_Entity, bool _bDoTypeChecks) const;
 		NContainer::TCVector<NContainer::TCVector<CConfigurationTuple>> fp_EvaluateConfigurationTuples(NContainer::TCMap<CPropertyKey, NEncoding::CEJsonSorted> const &_InitialValues) const;
 		auto fp_EvaluateData
@@ -1096,7 +1095,7 @@ namespace NMib::NBuildSystem
 		auto fp_EvaluateTargetsInWorkspace(CBuildSystemData &_Destination, NContainer::TCMap<NStr::CStr, CEntityMutablePointer> const &_Targets, CEntity &_Workspace) const
 			-> NContainer::TCMap<CEntity *, NContainer::TCSet<NStr::CStr>>
 		;
-		CEntity *fpr_FindChildTarget(CEntity &_Entity, CEntityKey const &_EntityKey) const;
+		CEntity *fp_FindChildTarget(CEntity &_Entity, CEntityKey const &_EntityKey) const;
 		void fp_EvaluateTarget
 			(
 				CBuildSystemData &_Destination

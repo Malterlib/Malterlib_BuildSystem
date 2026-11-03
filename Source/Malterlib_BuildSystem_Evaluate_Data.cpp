@@ -18,7 +18,7 @@ namespace NMib::NBuildSystem
 		return pRet;
 	}
 
-	void CBuildSystem::fpr_EvaluateData(CEntity &_Entity, TCSet<CEntity *> &o_Deleted) const
+	void CBuildSystem::fp_EvaluateDataRecursive(CEntity &_Entity, TCSet<CEntity *> &o_Deleted) const
 	{
 		auto &EntityData = _Entity.f_Data();
 		if (!f_EvalCondition(_Entity, EntityData.m_Condition, EntityData.m_DebugFlags & EPropertyFlag_TraceCondition))
@@ -40,11 +40,11 @@ namespace NMib::NBuildSystem
 		{
 			auto &Child = *iChild;
 			++iChild;
-			fpr_EvaluateData(Child, o_Deleted);
+			fp_EvaluateDataRecursive(Child, o_Deleted);
 		}
 	}
 
-	void CBuildSystem::fpr_EvaluateData(CEntity &_Entity) const
+	void CBuildSystem::fp_EvaluateDataRecursive(CEntity &_Entity) const
 	{
 		for (auto iChild = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iChild;)
 		{
@@ -57,7 +57,7 @@ namespace NMib::NBuildSystem
 				_Entity.m_ChildEntitiesMap.f_Remove(pToRemove);
 				continue;
 			}
-			fpr_EvaluateData(Child);
+			fp_EvaluateDataRecursive(Child);
 			++iChild;
 		}
 	}
@@ -159,7 +159,7 @@ namespace NMib::NBuildSystem
 				)
 			)
 			{
-				fpr_EvaluateData(*iChild);
+				fp_EvaluateDataRecursive(*iChild);
 			}
 
 			++iChild;

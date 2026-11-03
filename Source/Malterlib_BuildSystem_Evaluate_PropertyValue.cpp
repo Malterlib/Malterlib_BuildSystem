@@ -835,16 +835,7 @@ namespace NMib::NBuildSystem
 				if
 				(
 					!Type.m_pConditions
-					|| fpr_EvalCondition
-					(
-						_Context.m_Context
-						, _Context.m_OriginalContext
-						, *Type.m_pConditions
-						, _Context.m_EvalContext
-						, Type.m_DebugFlags
-						, &_Context
-						, _Context.m_pStorePositions
-					)
+					|| fp_EvalCondition(_Context.m_Context, _Context.m_OriginalContext, *Type.m_pConditions, _Context.m_EvalContext, Type.m_DebugFlags, &_Context, _Context.m_pStorePositions)
 				)
 				{
 					if (auto iLast = _UserType.f_FindReverse("::"); iLast >= 0)
@@ -889,7 +880,7 @@ namespace NMib::NBuildSystem
 					if
 					(
 						!Definition.m_pConditions
-						|| fpr_EvalCondition
+						|| fp_EvalCondition
 						(
 							_Context.m_Context
 							, _Context.m_OriginalContext

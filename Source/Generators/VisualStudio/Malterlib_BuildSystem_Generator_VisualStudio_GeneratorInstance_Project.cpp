@@ -65,23 +65,23 @@ namespace NMib::NBuildSystem::NVisualStudio
 				ProjectState.f_CreateDirectory(_OutputDir / "obj");
 				PropsFileName = _OutputDir / "obj" / CFile::fs_GetFile(FileName) + ".before.props";
 				XMLState.m_pProject = XMLState.m_XMLFile.f_CreateDefaultDocument("Project");
-				CXMLDocument::f_SetAttribute(XMLState.m_pProject, "Sdk", "Microsoft.NET.Sdk");
+				CXMLDocument::fs_SetAttribute(XMLState.m_pProject, "Sdk", "Microsoft.NET.Sdk");
 
 				XMLState.m_pPropsProject = XMLState.m_PropsXMLFile.f_CreateDefaultDocument("Project");
-				XMLState.m_pPreProject = CXMLDocument::f_CreateElement(XMLState.m_pPropsProject, gc_ConstString_PropertyGroup);
+				XMLState.m_pPreProject = CXMLDocument::fs_CreateElement(XMLState.m_pPropsProject, gc_ConstString_PropertyGroup);
 			}
 			else
 			{
 				XMLState.m_pPropsProject = XMLState.m_PropsXMLFile.f_CreateDefaultDocument("Project", "xml version=\"1.0\" encoding=\"utf-8\"");
-				CXMLDocument::f_SetAttribute(XMLState.m_pPropsProject, "ToolsVersion", f_GetToolsVersion());
-				CXMLDocument::f_SetAttribute(XMLState.m_pPropsProject, "xmlns", "http://schemas.microsoft.com/developer/msbuild/2003");
+				CXMLDocument::fs_SetAttribute(XMLState.m_pPropsProject, "ToolsVersion", f_GetToolsVersion());
+				CXMLDocument::fs_SetAttribute(XMLState.m_pPropsProject, "xmlns", "http://schemas.microsoft.com/developer/msbuild/2003");
 
 				XMLState.m_pProject = XMLState.m_XMLFile.f_CreateDefaultDocument("Project", "xml version=\"1.0\" encoding=\"utf-8\"");
-				CXMLDocument::f_SetAttribute(XMLState.m_pProject, "DefaultTargets", "Build");
-				CXMLDocument::f_SetAttribute(XMLState.m_pProject, "ToolsVersion", f_GetToolsVersion());
-				CXMLDocument::f_SetAttribute(XMLState.m_pProject, "xmlns", "http://schemas.microsoft.com/developer/msbuild/2003");
+				CXMLDocument::fs_SetAttribute(XMLState.m_pProject, "DefaultTargets", "Build");
+				CXMLDocument::fs_SetAttribute(XMLState.m_pProject, "ToolsVersion", f_GetToolsVersion());
+				CXMLDocument::fs_SetAttribute(XMLState.m_pProject, "xmlns", "http://schemas.microsoft.com/developer/msbuild/2003");
 
-				XMLState.m_pPreProject = CXMLDocument::f_CreateElement(XMLState.m_pProject, gc_ConstString_PropertyGroup);
+				XMLState.m_pPreProject = CXMLDocument::fs_CreateElement(XMLState.m_pProject, gc_ConstString_PropertyGroup);
 			}
 
 			TCSet<CStr> AllPlatforms;
@@ -98,24 +98,24 @@ namespace NMib::NBuildSystem::NVisualStudio
 			// Configurations
 			if (LanguageType == ELanguageType_Native)
 			{
-				auto pConfigs = CXMLDocument::f_CreateElement(XMLState.m_pProject, "ItemGroup");
-				CXMLDocument::f_SetAttribute(pConfigs, "Label", "ProjectConfigurations");
+				auto pConfigs = CXMLDocument::fs_CreateElement(XMLState.m_pProject, "ItemGroup");
+				CXMLDocument::fs_SetAttribute(pConfigs, "Label", "ProjectConfigurations");
 				for (auto iConfig = _Project.m_EnabledProjectConfigs.f_GetIterator(); iConfig; ++iConfig)
 				{
 					CStr Platform = _Project.m_Platforms[iConfig.f_GetKey()];
 
-					auto pConfig = CXMLDocument::f_CreateElement(pConfigs, "ProjectConfiguration");
-					CXMLDocument::f_SetAttribute(pConfig, gc_ConstString_Include, iConfig.f_GetKey().m_Configuration + "|" + Platform);
-					auto pConfigName = CXMLDocument::f_CreateElement(pConfig, gc_ConstString_Configuration);
-					CXMLDocument::f_AddText(pConfigName, iConfig.f_GetKey().m_Configuration);
-					auto pPlatformName = CXMLDocument::f_CreateElement(pConfig, gc_ConstString_Platform);
-					CXMLDocument::f_AddText(pPlatformName, Platform);
+					auto pConfig = CXMLDocument::fs_CreateElement(pConfigs, "ProjectConfiguration");
+					CXMLDocument::fs_SetAttribute(pConfig, gc_ConstString_Include, iConfig.f_GetKey().m_Configuration + "|" + Platform);
+					auto pConfigName = CXMLDocument::fs_CreateElement(pConfig, gc_ConstString_Configuration);
+					CXMLDocument::fs_AddText(pConfigName, iConfig.f_GetKey().m_Configuration);
+					auto pPlatformName = CXMLDocument::fs_CreateElement(pConfig, gc_ConstString_Platform);
+					CXMLDocument::fs_AddText(pPlatformName, Platform);
 				}
 			}
 			else if (XMLState.m_bIsDotNet)
 			{
-				CXMLDocument::f_AddElementAndText(XMLState.m_pPreProject, "Platforms", CStr::fs_Join(TCVector<CStr>::fs_FromContainer(AllPlatforms), ";"));
-				CXMLDocument::f_AddElementAndText(XMLState.m_pPreProject, "Configurations", CStr::fs_Join(TCVector<CStr>::fs_FromContainer(AllConfigurations), ";"));
+				CXMLDocument::fs_AddElementAndText(XMLState.m_pPreProject, "Platforms", CStr::fs_Join(TCVector<CStr>::fs_FromContainer(AllPlatforms), ";"));
+				CXMLDocument::fs_AddElementAndText(XMLState.m_pPreProject, "Configurations", CStr::fs_Join(TCVector<CStr>::fs_FromContainer(AllConfigurations), ";"));
 			}
 
 			// Globals
@@ -123,15 +123,15 @@ namespace NMib::NBuildSystem::NVisualStudio
 				XMLState.m_pGlobals = XMLState.m_pPreProject;
 				if (LanguageType == ELanguageType_Native)
 				{
-					XMLState.m_pGlobals = CXMLDocument::f_CreateElement(XMLState.m_pProject, gc_ConstString_PropertyGroup);
-					CXMLDocument::f_SetAttribute(XMLState.m_pGlobals, "Label", "Globals");
+					XMLState.m_pGlobals = CXMLDocument::fs_CreateElement(XMLState.m_pProject, gc_ConstString_PropertyGroup);
+					CXMLDocument::fs_SetAttribute(XMLState.m_pGlobals, "Label", "Globals");
 				}
 
-				CXMLDocument::f_AddElementAndText(XMLState.m_pGlobals, "ProjectGuid", _Project.f_GetGUID());
+				CXMLDocument::fs_AddElementAndText(XMLState.m_pGlobals, "ProjectGuid", _Project.f_GetGUID());
 				if (LanguageType == ELanguageType_Native)
-					CXMLDocument::f_AddElementAndText(XMLState.m_pGlobals, "RootNamespace", _Project.f_GetName());
+					CXMLDocument::fs_AddElementAndText(XMLState.m_pGlobals, "RootNamespace", _Project.f_GetName());
 				if (m_bEnableSourceControl)
-					CXMLDocument::f_AddElementAndText(XMLState.m_pGlobals, "SccProvider", "Perforce Source Control Provider:{8D316614-311A-48F4-85F7-DF7020F62357}");
+					CXMLDocument::fs_AddElementAndText(XMLState.m_pGlobals, "SccProvider", "Perforce Source Control Provider:{8D316614-311A-48F4-85F7-DF7020F62357}");
 			}
 
 			// Default imports
@@ -139,8 +139,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 			{
 				for (auto &Target : *ImportTargets)
 				{
-					auto pImport = CXMLDocument::f_CreateElement(XMLState.m_pProject, gc_ConstString_Import);
-					CXMLDocument::f_SetAttribute(pImport, "Project", Target);
+					auto pImport = CXMLDocument::fs_CreateElement(XMLState.m_pProject, gc_ConstString_Import);
+					CXMLDocument::fs_SetAttribute(pImport, "Project", Target);
 				}
 			}
 
@@ -149,17 +149,17 @@ namespace NMib::NBuildSystem::NVisualStudio
 				XMLState.m_pConfiguration = XMLState.m_pPreProject;
 				if (LanguageType == ELanguageType_Native)
 				{
-					XMLState.m_pConfiguration = CXMLDocument::f_CreateElement(XMLState.m_pProject, gc_ConstString_PropertyGroup);
-					CXMLDocument::f_SetAttribute(XMLState.m_pConfiguration, "Label", gc_ConstString_Configuration);
+					XMLState.m_pConfiguration = CXMLDocument::fs_CreateElement(XMLState.m_pProject, gc_ConstString_PropertyGroup);
+					CXMLDocument::fs_SetAttribute(XMLState.m_pConfiguration, "Label", gc_ConstString_Configuration);
 				}
 			}
 
 			// Base path
 			{
 				CStr Path = CFile::fs_MakePathRelative(m_BuildSystem.f_GetBaseDir(), _OutputDir + "/Dummy").f_ReplaceChar('/', '\\');
-				auto pProperties = CXMLDocument::f_CreateElement(XMLState.m_pProject, gc_ConstString_PropertyGroup);
-				CXMLDocument::f_SetAttribute(pProperties, "Label", "Malterlib");
-				CXMLDocument::f_AddElementAndText(pProperties, "MalterlibBaseDir", CStr::CFormat("$([System.IO.Path]::GetFullPath(\"$(MSBuildProjectDirectory){}\\\"))") << Path);
+				auto pProperties = CXMLDocument::fs_CreateElement(XMLState.m_pProject, gc_ConstString_PropertyGroup);
+				CXMLDocument::fs_SetAttribute(pProperties, "Label", "Malterlib");
+				CXMLDocument::fs_AddElementAndText(pProperties, "MalterlibBaseDir", CStr::CFormat("$([System.IO.Path]::GetFullPath(\"$(MSBuildProjectDirectory){}\\\"))") << Path);
 			}
 
 			// Props
@@ -167,32 +167,32 @@ namespace NMib::NBuildSystem::NVisualStudio
 			{
 				for (auto &Proprety : *Properties)
 				{
-					auto pImport = CXMLDocument::f_CreateElement(XMLState.m_pProject, gc_ConstString_Import);
-					CXMLDocument::f_SetAttribute(pImport, "Project", Proprety);
+					auto pImport = CXMLDocument::fs_CreateElement(XMLState.m_pProject, gc_ConstString_Import);
+					CXMLDocument::fs_SetAttribute(pImport, "Project", Proprety);
 				}
 			}
 
 			// User proprety sheets
 			if (LanguageType == ELanguageType_Native)
 			{
-				auto pImportGroup = CXMLDocument::f_CreateElement(XMLState.m_pProject, "ImportGroup");
-				CXMLDocument::f_SetAttribute(pImportGroup, "Label", "PropertySheets");
+				auto pImportGroup = CXMLDocument::fs_CreateElement(XMLState.m_pProject, "ImportGroup");
+				CXMLDocument::fs_SetAttribute(pImportGroup, "Label", "PropertySheets");
 
-				auto pImport = CXMLDocument::f_CreateElement(pImportGroup, gc_ConstString_Import);
-				CXMLDocument::f_SetAttribute(pImport, "Project", "$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props");
-				CXMLDocument::f_SetAttribute(pImport, "Condition", "exists('$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props')");
+				auto pImport = CXMLDocument::fs_CreateElement(pImportGroup, gc_ConstString_Import);
+				CXMLDocument::fs_SetAttribute(pImport, "Project", "$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props");
+				CXMLDocument::fs_SetAttribute(pImport, "Condition", "exists('$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props')");
 
-				pImport = CXMLDocument::f_CreateElement(pImportGroup, gc_ConstString_Import);
-				CXMLDocument::f_SetAttribute(pImport, "Project", CFile::fs_GetFile(PropsFileName));
+				pImport = CXMLDocument::fs_CreateElement(pImportGroup, gc_ConstString_Import);
+				CXMLDocument::fs_SetAttribute(pImport, "Project", CFile::fs_GetFile(PropsFileName));
 			}
 
 			if (LanguageType == ELanguageType_Native)
 			{
-				XMLState.m_pPropsPropertyGroup = CXMLDocument::f_CreateElement(XMLState.m_pPropsProject, gc_ConstString_PropertyGroup);
-				XMLState.m_pPropsItemDefinitionGroup = CXMLDocument::f_CreateElement(XMLState.m_pPropsProject, "ItemDefinitionGroup");
+				XMLState.m_pPropsPropertyGroup = CXMLDocument::fs_CreateElement(XMLState.m_pPropsProject, gc_ConstString_PropertyGroup);
+				XMLState.m_pPropsItemDefinitionGroup = CXMLDocument::fs_CreateElement(XMLState.m_pPropsProject, "ItemDefinitionGroup");
 			}
 			else
-				XMLState.m_pPropsPropertyGroup = CXMLDocument::f_CreateElement(XMLState.m_pProject, gc_ConstString_PropertyGroup);
+				XMLState.m_pPropsPropertyGroup = CXMLDocument::fs_CreateElement(XMLState.m_pProject, gc_ConstString_PropertyGroup);
 
 			// Files
 
@@ -210,11 +210,11 @@ namespace NMib::NBuildSystem::NVisualStudio
 			auto CompileTypeSettingsPerVSType = co_await f_GenerateProjectFile_FileTypes(_Project, ProjectState, CompileTypes);
 			co_await f_GenerateProjectFile_Dependency(_Project, ProjectState);
 
-			XMLState.m_pFileItemGroup = CXMLDocument::f_CreateElement(XMLState.m_pProject, "ItemGroup");
+			XMLState.m_pFileItemGroup = CXMLDocument::fs_CreateElement(XMLState.m_pProject, "ItemGroup");
 
 			// .Net new SDK project type automatically adds everything it sees inside the directory
 			if (LanguageType != ELanguageType_Native)
-				CXMLDocument::f_SetAttribute(CXMLDocument::f_CreateElement(XMLState.m_pFileItemGroup, gc_ConstString_None), gc_ConstString_Remove, "**");
+				CXMLDocument::fs_SetAttribute(CXMLDocument::fs_CreateElement(XMLState.m_pFileItemGroup, gc_ConstString_None), gc_ConstString_Remove, "**");
 
 			auto Targets = TargetSettings.f_GetSingleSettingWithoutPositions<TCOptional<TCVector<CStr>>>(gc_ConstString_ImportTargets);
 
@@ -228,8 +228,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 			{
 				for (auto &Target : *Targets)
 				{
-					auto pImport = CXMLDocument::f_CreateElement(XMLState.m_pProject, gc_ConstString_Import);
-					CXMLDocument::f_SetAttribute(pImport, "Project", Target);
+					auto pImport = CXMLDocument::fs_CreateElement(XMLState.m_pProject, gc_ConstString_Import);
+					CXMLDocument::fs_SetAttribute(pImport, "Project", Target);
 				}
 			}
 		}
@@ -270,30 +270,30 @@ namespace NMib::NBuildSystem::NVisualStudio
 		{
 			CXMLDocument FilterXML;
 			auto pProject = FilterXML.f_CreateDefaultDocument("Project", "xml version=\"1.0\" encoding=\"utf-8\"");
-			CXMLDocument::f_SetAttribute(pProject, "ToolsVersion", f_GetToolsVersion());
-			CXMLDocument::f_SetAttribute(pProject, "xmlns", "http://schemas.microsoft.com/developer/msbuild/2003");
+			CXMLDocument::fs_SetAttribute(pProject, "ToolsVersion", f_GetToolsVersion());
+			CXMLDocument::fs_SetAttribute(pProject, "xmlns", "http://schemas.microsoft.com/developer/msbuild/2003");
 
 			// Files
 			{
-				auto pItemGroup = CXMLDocument::f_CreateElement(pProject, "ItemGroup");
+				auto pItemGroup = CXMLDocument::fs_CreateElement(pProject, "ItemGroup");
 				for (auto iFile = _Project.m_Files.f_GetIterator(); iFile; ++iFile)
 				{
-					auto pFileElement = CXMLDocument::f_CreateElement(pItemGroup, iFile->m_VSType);
-					CXMLDocument::f_SetAttribute(pFileElement, gc_ConstString_Include, iFile->m_VSFile);
+					auto pFileElement = CXMLDocument::fs_CreateElement(pItemGroup, iFile->m_VSType);
+					CXMLDocument::fs_SetAttribute(pFileElement, gc_ConstString_Include, iFile->m_VSFile);
 					CStr GroupPath = iFile->f_GetGroupPath().f_ReplaceChar('/', '\\');
 					if (!GroupPath.f_IsEmpty())
-						CXMLDocument::f_AddElementAndText(pFileElement, "Filter", GroupPath);
+						CXMLDocument::fs_AddElementAndText(pFileElement, "Filter", GroupPath);
 				}
 			}
 
 			// Groups
 			{
-				auto pItemGroup = CXMLDocument::f_CreateElement(pProject, "ItemGroup");
+				auto pItemGroup = CXMLDocument::fs_CreateElement(pProject, "ItemGroup");
 				for (auto iGroup = _Project.m_Groups.f_GetIterator(); iGroup; ++iGroup)
 				{
-					auto pGroupElement = CXMLDocument::f_CreateElement(pItemGroup, "Filter");
-					CXMLDocument::f_SetAttribute(pGroupElement, gc_ConstString_Include, iGroup->f_GetPath().f_ReplaceChar('/', '\\'));
-					CXMLDocument::f_AddElementAndText(pGroupElement, "UniqueIdentifier", iGroup->f_GetGUID());
+					auto pGroupElement = CXMLDocument::fs_CreateElement(pItemGroup, "Filter");
+					CXMLDocument::fs_SetAttribute(pGroupElement, gc_ConstString_Include, iGroup->f_GetPath().f_ReplaceChar('/', '\\'));
+					CXMLDocument::fs_AddElementAndText(pGroupElement, "UniqueIdentifier", iGroup->f_GetGUID());
 				}
 			}
 

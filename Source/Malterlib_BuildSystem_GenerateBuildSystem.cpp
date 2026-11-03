@@ -496,7 +496,7 @@ namespace NMib::NBuildSystem
 
 												TCSet<CEntity *> Deleted;
 												if (pRootCreated)
-													fpr_EvaluateData(*pRootCreated, Deleted);
+													fp_EvaluateDataRecursive(*pRootCreated, Deleted);
 												pEntity = pParent;
 
 												if (Deleted.f_FindEqual(pEntity) || !(bExternal || f_EvaluateEntityPropertyBool(*pEntity, gc_ConstKey_Dependency_Indirect, false)))
@@ -830,7 +830,7 @@ namespace NMib::NBuildSystem
 					;
 					fFindFiles(*_Target.m_pOuterEntity, nullptr);
 
-					_Target.m_RootGroup.fr_PruneEmpty();
+					_Target.m_RootGroup.f_PruneEmpty();
 					for (auto iGroup = _Target.m_Groups.f_GetIterator(); iGroup;)
 					{
 						if (iGroup->m_Children.f_IsEmpty())
@@ -845,7 +845,7 @@ namespace NMib::NBuildSystem
 		f_ExpandWorkspaceEntities(Evaluated, *Workspace.m_pEntity);
 		f_GenerateWorkspaceFiles(Evaluated, *Workspace.m_pEntity);
 
-		Workspace.m_RootGroup.fr_PruneEmpty();
+		Workspace.m_RootGroup.f_PruneEmpty();
 		for (auto iGroup = Workspace.m_Groups.f_GetIterator(); iGroup;)
 		{
 			if (iGroup->m_Children.f_IsEmpty())

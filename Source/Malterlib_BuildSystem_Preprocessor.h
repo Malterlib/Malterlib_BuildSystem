@@ -31,8 +31,8 @@ namespace NMib::NBuildSystem
 		};
 
 		static void fsp_ThrowError(CBuildSystemRegistry const &_Registry, CStr const &_Error);
-		void fpr_HandleIncludes(CBuildSystemRegistry &_Registry, CStr const &_Path, TCVector<CError> &o_Errors);
-		void fpr_FindFilesRecursive(CBuildSystemRegistry &_Registry, TCVector<CStr> &o_Files, CStr const &_Path, CStr const &_ToFind);
+		void fp_HandleIncludes(CBuildSystemRegistry &_Registry, CStr const &_Path, TCVector<CError> &o_Errors);
+		void fp_FindFilesRecursive(CBuildSystemRegistry &_Registry, TCVector<CStr> &o_Files, CStr const &_Path, CStr const &_ToFind);
 
 		CBuildSystemRegistry &mp_ResultRegistry;
 		TCMap<CStr, TCSharedPointer<CHashDigest_SHA256>> &mp_SourceFiles;

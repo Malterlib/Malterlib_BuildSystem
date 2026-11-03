@@ -85,7 +85,7 @@ namespace NMib::NBuildSystem::NRepository
 		;
 	}
 
-	CStr fsg_ResolveRefHash(CStr const &_CommonDir, CStr const &_Ref)
+	static CStr fsg_ResolveRefHash(CStr const &_CommonDir, CStr const &_Ref)
 	{
 		{
 			// A file only: refs/remotes/origin/feature is a directory of refs when origin has feature/topic but no feature

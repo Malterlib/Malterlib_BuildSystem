@@ -215,7 +215,7 @@ namespace NMib::NBuildSystem
 
 		for (auto iChild = ToEval.f_GetIterator(); iChild;)
 		{
-			fpr_EvaluateData(**iChild);
+			fp_EvaluateDataRecursive(**iChild);
 			++iChild;
 		}
 

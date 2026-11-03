@@ -404,7 +404,7 @@ namespace NMib::NBuildSystem
 				if
 				(
 					!Property.m_pCondition
-					|| fpr_EvalCondition(_Entity, _Entity, *Property.m_pCondition, EvalContext, Property.m_Flags & EPropertyFlag_TraceCondition, nullptr, f_EnablePositions(&Positions))
+					|| fp_EvalCondition(_Entity, _Entity, *Property.m_pCondition, EvalContext, Property.m_Flags & EPropertyFlag_TraceCondition, nullptr, f_EnablePositions(&Positions))
 				)
 				{
 					CEvalPropertyValueContext Context{_Entity, _Entity, Property.m_Position, EvalContext, nullptr, f_EnablePositions(&Positions)};
@@ -544,7 +544,7 @@ namespace NMib::NBuildSystem
 					if
 					(
 						!Prop.m_pCondition
-						|| fpr_EvalCondition
+						|| fp_EvalCondition
 						(
 							*pContext
 							, _OriginalEntity

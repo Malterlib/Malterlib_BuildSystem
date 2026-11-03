@@ -38,7 +38,7 @@ namespace NMib::NBuildSystem::NXcode
 
 		// Workspace root
 		auto pWorkspace = XMLFile.f_CreateDefaultDocument(gc_ConstString_Workspace, "xml version=\"1.0\" encoding=\"UTF-8\"");
-		XMLFile.f_SetAttribute(pWorkspace, "version", "1.0");
+		XMLFile.fs_SetAttribute(pWorkspace, "version", "1.0");
 
 		TCMap<TCPointer<CGroup>, TCVector<CGroup *>> MapGroupToGroups;
 		TCMap<TCPointer<CGroup>, TCVector<CProject *>> MapProjectsToGroups;
@@ -59,9 +59,9 @@ namespace NMib::NBuildSystem::NXcode
 			{
 				if (!pGroup->m_OutputToWorkspace)
 				{
-					auto pGroupRef = XMLFile.f_CreateElement(_pParent, gc_ConstString_Group);
-					XMLFile.f_SetAttribute(pGroupRef, "location", "container:");
-					XMLFile.f_SetAttribute(pGroupRef, "name", pGroup->m_Name);
+					auto pGroupRef = XMLFile.fs_CreateElement(_pParent, gc_ConstString_Group);
+					XMLFile.fs_SetAttribute(pGroupRef, "location", "container:");
+					XMLFile.fs_SetAttribute(pGroupRef, "name", pGroup->m_Name);
 					pGroup->m_OutputToWorkspace = true;
 
 					TCVector<CGroup *> &lChildGroups = MapGroupToGroups[pGroup];
@@ -71,8 +71,8 @@ namespace NMib::NBuildSystem::NXcode
 					TCVector<CProject *> &lChildProjects = MapProjectsToGroups[pGroup];
 					for (auto iProject = lChildProjects.f_GetIterator(); iProject; ++iProject)
 					{
-						auto pFileRef = XMLFile.f_CreateElement(pGroupRef, "FileRef");
-						XMLFile.f_SetAttribute
+						auto pFileRef = XMLFile.fs_CreateElement(pGroupRef, "FileRef");
+						XMLFile.fs_SetAttribute
 							(
 								pFileRef
 								, "location"
@@ -91,8 +91,8 @@ namespace NMib::NBuildSystem::NXcode
 		{
 			if (!iProject->m_pGroup)
 			{
-				auto pFileRef = XMLFile.f_CreateElement(pWorkspace, "FileRef");
-				XMLFile.f_SetAttribute
+				auto pFileRef = XMLFile.fs_CreateElement(pWorkspace, "FileRef");
+				XMLFile.fs_SetAttribute
 					(
 						pFileRef
 						, "location"
@@ -280,22 +280,22 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 
 			auto pScheme = XMLFile.f_CreateDefaultDocument("Scheme");
 			if (m_XcodeVersion >= 7)
-				XMLFile.f_SetAttribute(pScheme, "LastUpgradeVersion", fg_Format("{sj2,sf0}90", m_XcodeVersion));
+				XMLFile.fs_SetAttribute(pScheme, "LastUpgradeVersion", fg_Format("{sj2,sf0}90", m_XcodeVersion));
 			else if (m_XcodeVersion == 6)
-				XMLFile.f_SetAttribute(pScheme, "LastUpgradeVersion", "0640");
+				XMLFile.fs_SetAttribute(pScheme, "LastUpgradeVersion", "0640");
 			else if (m_XcodeVersion == 5)
-				XMLFile.f_SetAttribute(pScheme, "LastUpgradeVersion", "0510");
+				XMLFile.fs_SetAttribute(pScheme, "LastUpgradeVersion", "0510");
 			else
-				XMLFile.f_SetAttribute(pScheme, "LastUpgradeVersion", "0450");
-			XMLFile.f_SetAttribute(pScheme, "version", "1.3");
+				XMLFile.fs_SetAttribute(pScheme, "LastUpgradeVersion", "0450");
+			XMLFile.fs_SetAttribute(pScheme, "version", "1.3");
 
 			auto fGenerateBuildReference = [&](CXMLElement *_pParent, CProject &_Project)
 				{
 					auto &NativeTarget = _Project.f_GetDefaultNativeTarget(Configuration);
 
-					auto pBuildReference = XMLFile.f_CreateElement(_pParent, "BuildableReference");
-					XMLFile.f_SetAttribute(pBuildReference, "BuildableIdentifier", "primary");
-					XMLFile.f_SetAttribute(pBuildReference, "BlueprintIdentifier", NativeTarget.f_GetGUID());
+					auto pBuildReference = XMLFile.fs_CreateElement(_pParent, "BuildableReference");
+					XMLFile.fs_SetAttribute(pBuildReference, "BuildableIdentifier", "primary");
+					XMLFile.fs_SetAttribute(pBuildReference, "BlueprintIdentifier", NativeTarget.f_GetGUID());
 
 					CStr BuildableName;
 					auto pBuildable = _Buildable.f_FindEqual(Configuration);
@@ -306,9 +306,9 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 							BuildableName = *pName;
 					}
 
-					XMLFile.f_SetAttribute(pBuildReference, "BuildableName", BuildableName);
-					XMLFile.f_SetAttribute(pBuildReference, "BlueprintName", _Project.f_GetName());
-					XMLFile.f_SetAttribute
+					XMLFile.fs_SetAttribute(pBuildReference, "BuildableName", BuildableName);
+					XMLFile.fs_SetAttribute(pBuildReference, "BlueprintName", _Project.f_GetName());
+					XMLFile.fs_SetAttribute
 						(
 							pBuildReference
 							, "ReferencedContainer"
@@ -320,11 +320,11 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 
 			// BuildAction
 			{
-				auto pBuildAction = XMLFile.f_CreateElement(pScheme, "BuildAction");
-				XMLFile.f_SetAttribute(pBuildAction, "parallelizeBuildables", gc_ConstString_YES);
-				XMLFile.f_SetAttribute(pBuildAction, "buildImplicitDependencies", gc_ConstString_YES);
+				auto pBuildAction = XMLFile.fs_CreateElement(pScheme, "BuildAction");
+				XMLFile.fs_SetAttribute(pBuildAction, "parallelizeBuildables", gc_ConstString_YES);
+				XMLFile.fs_SetAttribute(pBuildAction, "buildImplicitDependencies", gc_ConstString_YES);
 
-				auto pBuildActionEntries = XMLFile.f_CreateElement(pBuildAction, "BuildActionEntries");
+				auto pBuildActionEntries = XMLFile.fs_CreateElement(pBuildAction, "BuildActionEntries");
 
 				for (auto &Project : _Solution.m_Projects)
 				{
@@ -337,12 +337,12 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 
 					if (!m_BuildSystem.f_EvaluateEntityPropertyBool(**pConfig, gc_ConstKey_Target_Disabled, false))
 					{
-						auto pBuildActionEntry = XMLFile.f_CreateElement(pBuildActionEntries, "BuildActionEntry");
-						XMLFile.f_SetAttribute(pBuildActionEntry, "buildForTesting", gc_ConstString_YES);
-						XMLFile.f_SetAttribute(pBuildActionEntry, "buildForRunning", gc_ConstString_YES);
-						XMLFile.f_SetAttribute(pBuildActionEntry, "buildForProfiling", gc_ConstString_YES);
-						XMLFile.f_SetAttribute(pBuildActionEntry, "buildForArchiving", gc_ConstString_YES);
-						XMLFile.f_SetAttribute(pBuildActionEntry, "buildForAnalyzing", gc_ConstString_YES);
+						auto pBuildActionEntry = XMLFile.fs_CreateElement(pBuildActionEntries, "BuildActionEntry");
+						XMLFile.fs_SetAttribute(pBuildActionEntry, "buildForTesting", gc_ConstString_YES);
+						XMLFile.fs_SetAttribute(pBuildActionEntry, "buildForRunning", gc_ConstString_YES);
+						XMLFile.fs_SetAttribute(pBuildActionEntry, "buildForProfiling", gc_ConstString_YES);
+						XMLFile.fs_SetAttribute(pBuildActionEntry, "buildForArchiving", gc_ConstString_YES);
+						XMLFile.fs_SetAttribute(pBuildActionEntry, "buildForAnalyzing", gc_ConstString_YES);
 
 						fGenerateBuildReference(pBuildActionEntry, Project);
 					}
@@ -351,64 +351,64 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 
 			// TestAction
 			{
-				auto pTestAction = XMLFile.f_CreateElement(pScheme, "TestAction");
-				XMLFile.f_SetAttribute(pTestAction, "buildConfiguration", Name);
-				XMLFile.f_SetAttribute(pTestAction, "selectedDebuggerIdentifier", "Xcode.DebuggerFoundation.Debugger.LLDB");
-				XMLFile.f_SetAttribute(pTestAction, "selectedLauncherIdentifier", "Xcode.DebuggerFoundation.Launcher.LLDB");
-				XMLFile.f_SetAttribute(pTestAction, "shouldUseLaunchSchemeArgsEnv", gc_ConstString_YES);
-				XMLFile.f_CreateElement(pTestAction, "Testables");
+				auto pTestAction = XMLFile.fs_CreateElement(pScheme, "TestAction");
+				XMLFile.fs_SetAttribute(pTestAction, "buildConfiguration", Name);
+				XMLFile.fs_SetAttribute(pTestAction, "selectedDebuggerIdentifier", "Xcode.DebuggerFoundation.Debugger.LLDB");
+				XMLFile.fs_SetAttribute(pTestAction, "selectedLauncherIdentifier", "Xcode.DebuggerFoundation.Launcher.LLDB");
+				XMLFile.fs_SetAttribute(pTestAction, "shouldUseLaunchSchemeArgsEnv", gc_ConstString_YES);
+				XMLFile.fs_CreateElement(pTestAction, "Testables");
 			}
 
 			// LaunchAction
 			{
-				auto pLaunchAction = XMLFile.f_CreateElement(pScheme, "LaunchAction");
-				XMLFile.f_SetAttribute(pLaunchAction, "buildConfiguration", Name);
-				XMLFile.f_SetAttribute(pLaunchAction, "selectedDebuggerIdentifier", "Xcode.DebuggerFoundation.Debugger.LLDB");
-				XMLFile.f_SetAttribute(pLaunchAction, "selectedLauncherIdentifier", "Xcode.DebuggerFoundation.Launcher.LLDB");
-				XMLFile.f_SetAttribute(pLaunchAction, "launchStyle", "0");
-				XMLFile.f_SetAttribute(pLaunchAction, "useCustomWorkingDirectory", gc_ConstString_NO);
-				XMLFile.f_SetAttribute(pLaunchAction, gc_ConstString_customWorkingDirectory, "[MulitLaunchSchemes]");
+				auto pLaunchAction = XMLFile.fs_CreateElement(pScheme, "LaunchAction");
+				XMLFile.fs_SetAttribute(pLaunchAction, "buildConfiguration", Name);
+				XMLFile.fs_SetAttribute(pLaunchAction, "selectedDebuggerIdentifier", "Xcode.DebuggerFoundation.Debugger.LLDB");
+				XMLFile.fs_SetAttribute(pLaunchAction, "selectedLauncherIdentifier", "Xcode.DebuggerFoundation.Launcher.LLDB");
+				XMLFile.fs_SetAttribute(pLaunchAction, "launchStyle", "0");
+				XMLFile.fs_SetAttribute(pLaunchAction, "useCustomWorkingDirectory", gc_ConstString_NO);
+				XMLFile.fs_SetAttribute(pLaunchAction, gc_ConstString_customWorkingDirectory, "[MulitLaunchSchemes]");
 
 				auto &Runnables = _Runnables[Configuration];
 				if (!Runnables.f_IsEmpty())
 				{
-					auto pCommandLineArguments = XMLFile.f_CreateElement(pLaunchAction, "CommandLineArguments");
+					auto pCommandLineArguments = XMLFile.fs_CreateElement(pLaunchAction, "CommandLineArguments");
 					for (auto &Runnable : Runnables)
 					{
-						auto pCommandLineArgument = XMLFile.f_CreateElement(pCommandLineArguments, gc_ConstString_CommandLineArgument);
-						XMLFile.f_SetAttribute(pCommandLineArgument, gc_ConstString_argument, Runnable);
-						XMLFile.f_SetAttribute(pCommandLineArgument, "isEnabled", gc_ConstString_NO);
+						auto pCommandLineArgument = XMLFile.fs_CreateElement(pCommandLineArguments, gc_ConstString_CommandLineArgument);
+						XMLFile.fs_SetAttribute(pCommandLineArgument, gc_ConstString_argument, Runnable);
+						XMLFile.fs_SetAttribute(pCommandLineArgument, "isEnabled", gc_ConstString_NO);
 					}
 				}
 
-				XMLFile.f_SetAttribute(pLaunchAction, "ignoresPersistentStateOnLaunch", gc_ConstString_NO);
-				XMLFile.f_SetAttribute(pLaunchAction, "debugDocumentVersioning", gc_ConstString_YES);
-				XMLFile.f_SetAttribute(pLaunchAction, "debugServiceExtension", "internal");
-				XMLFile.f_SetAttribute(pLaunchAction, "allowLocationSimulation", gc_ConstString_YES);
-				XMLFile.f_CreateElement(pLaunchAction, "AdditionalOptions");
+				XMLFile.fs_SetAttribute(pLaunchAction, "ignoresPersistentStateOnLaunch", gc_ConstString_NO);
+				XMLFile.fs_SetAttribute(pLaunchAction, "debugDocumentVersioning", gc_ConstString_YES);
+				XMLFile.fs_SetAttribute(pLaunchAction, "debugServiceExtension", "internal");
+				XMLFile.fs_SetAttribute(pLaunchAction, "allowLocationSimulation", gc_ConstString_YES);
+				XMLFile.fs_CreateElement(pLaunchAction, "AdditionalOptions");
 			}
 
 			// ProfileAction
 			{
-				auto pProfileAction = XMLFile.f_CreateElement(pScheme, "ProfileAction");
-				XMLFile.f_SetAttribute(pProfileAction, "buildConfiguration", Name);
-				XMLFile.f_SetAttribute(pProfileAction, "shouldUseLaunchSchemeArgsEnv", gc_ConstString_YES);
-				XMLFile.f_SetAttribute(pProfileAction, "savedToolIdentifier", "");
-				XMLFile.f_SetAttribute(pProfileAction, "useCustomWorkingDirectory", gc_ConstString_NO);
-				XMLFile.f_SetAttribute(pProfileAction, "debugDocumentVersioning", gc_ConstString_YES);
+				auto pProfileAction = XMLFile.fs_CreateElement(pScheme, "ProfileAction");
+				XMLFile.fs_SetAttribute(pProfileAction, "buildConfiguration", Name);
+				XMLFile.fs_SetAttribute(pProfileAction, "shouldUseLaunchSchemeArgsEnv", gc_ConstString_YES);
+				XMLFile.fs_SetAttribute(pProfileAction, "savedToolIdentifier", "");
+				XMLFile.fs_SetAttribute(pProfileAction, "useCustomWorkingDirectory", gc_ConstString_NO);
+				XMLFile.fs_SetAttribute(pProfileAction, "debugDocumentVersioning", gc_ConstString_YES);
 			}
 
 			// AnalyzeAction
 			{
-				auto pArchiveAction = XMLFile.f_CreateElement(pScheme, "AnalyzeAction");
-				XMLFile.f_SetAttribute(pArchiveAction, "buildConfiguration", Name);
+				auto pArchiveAction = XMLFile.fs_CreateElement(pScheme, "AnalyzeAction");
+				XMLFile.fs_SetAttribute(pArchiveAction, "buildConfiguration", Name);
 			}
 
 			// ArchiveAction
 			{
-				auto pArchiveAction = XMLFile.f_CreateElement(pScheme, "ArchiveAction");
-				XMLFile.f_SetAttribute(pArchiveAction, "buildConfiguration", Name);
-				XMLFile.f_SetAttribute(pArchiveAction, "revealArchiveInOrganizer", gc_ConstString_YES);
+				auto pArchiveAction = XMLFile.fs_CreateElement(pScheme, "ArchiveAction");
+				XMLFile.fs_SetAttribute(pArchiveAction, "buildConfiguration", Name);
+				XMLFile.fs_SetAttribute(pArchiveAction, "revealArchiveInOrganizer", gc_ConstString_YES);
 			}
 
 			CStr FileName = CFile::fs_AppendPath
@@ -435,7 +435,7 @@ R"xxx(<?xml version="1.0" encoding="UTF-8"?>
 
 					CXMLDocument PrevScheme;
 					PrevScheme.f_ParseFile(FileName + ".gen");
-					fspr_MergeScheme(ExistingScheme.f_GetRootNode(), PrevScheme.f_GetRootNode(), XMLFile.f_GetRootNode());
+					fsp_MergeScheme(ExistingScheme.f_GetRootNode(), PrevScheme.f_GetRootNode(), XMLFile.f_GetRootNode());
 				}
 			}
 

@@ -382,7 +382,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 					pDefaultParentElement = *pGroup;
 				else
 				{
-					pDefaultParentElement = CXMLDocument::f_CreateElement(_XMLState.m_pPropsItemDefinitionGroup, _Parsed.m_VSType);
+					pDefaultParentElement = CXMLDocument::fs_CreateElement(_XMLState.m_pPropsItemDefinitionGroup, _Parsed.m_VSType);
 					_XMLState.m_ItemDefinitionGroups[_Parsed.m_VSType] = pDefaultParentElement;
 				}
 			}
@@ -449,8 +449,8 @@ namespace NMib::NBuildSystem::NVisualStudio
 											auto pLabelGroup = _XMLState.m_PropertyGroupLabels.f_FindEqual(_Setting.m_Label);
 											if (!pLabelGroup)
 											{
-												pParentElement = CXMLDocument::f_CreateElement(_XMLState.m_pPropsProject, gc_ConstString_PropertyGroup);
-												CXMLDocument::f_SetAttribute(pParentElement, gc_ConstString_Label, _Setting.m_Label);
+												pParentElement = CXMLDocument::fs_CreateElement(_XMLState.m_pPropsProject, gc_ConstString_PropertyGroup);
+												CXMLDocument::fs_SetAttribute(pParentElement, gc_ConstString_Label, _Setting.m_Label);
 												_XMLState.m_PropertyGroupLabels[_Setting.m_Label] = pParentElement;
 											}
 											else
@@ -470,7 +470,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 											pParentElement = *pGroup;
 										else
 										{
-											pParentElement = CXMLDocument::f_CreateElement(_XMLState.m_pPropsItemDefinitionGroup, _Setting.m_Name);
+											pParentElement = CXMLDocument::fs_CreateElement(_XMLState.m_pPropsItemDefinitionGroup, _Setting.m_Name);
 											_XMLState.m_ItemDefinitionGroups[_Setting.m_Name] = pParentElement;
 										}
 									}
@@ -488,14 +488,14 @@ namespace NMib::NBuildSystem::NVisualStudio
 							if (!Condition.f_IsEmpty())
 								CBuildSystem::fs_ThrowError(AppliedTo.m_Positions, "Attribute propreties cannot be varied per configuration");
 
-							CXMLDocument::f_SetAttribute(pParentElement, pSetting->m_Key.f_Extract(1), Value);
+							CXMLDocument::fs_SetAttribute(pParentElement, pSetting->m_Key.f_Extract(1), Value);
 							continue;
 						}
 					}
 
-					auto pMainValue = CXMLDocument::f_AddElementAndText(pParentElement, pSetting->m_Key, Value);
+					auto pMainValue = CXMLDocument::fs_AddElementAndText(pParentElement, pSetting->m_Key, Value);
 					if (!Condition.f_IsEmpty())
-						CXMLDocument::f_SetAttribute(pMainValue, gc_ConstString_Condition, Condition);
+						CXMLDocument::fs_SetAttribute(pMainValue, gc_ConstString_Condition, Condition);
 				}
 			}
 		}

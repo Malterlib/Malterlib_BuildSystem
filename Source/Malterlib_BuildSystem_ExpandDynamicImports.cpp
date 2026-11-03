@@ -2027,7 +2027,7 @@ namespace NMib::NBuildSystem
 				pInsertAfter = &Entity;
 
 				if (Key.m_Type != EEntityType_Target && Key.m_Type != EEntityType_Workspace)
-					fpr_EvaluateData(Entity);
+					fp_EvaluateDataRecursive(Entity);
 			}
 		}
 	}

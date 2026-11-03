@@ -394,7 +394,7 @@ namespace NMib::NBuildSystem::NXcode
 	{
 	}
 
-	void CProject::fr_FindRecursiveDependencies(CBuildSystem const &_BuildSystem, TCSet<CStr> &_Stack, CProjectDependency const *_pDepend, TCMap<CStr, CProject> &_Projects)
+	void CProject::f_FindRecursiveDependencies(CBuildSystem const &_BuildSystem, TCSet<CStr> &_Stack, CProjectDependency const *_pDepend, TCMap<CStr, CProject> &_Projects)
 	{
 		if (m_bCheckedDependencies)
 			return;
@@ -424,7 +424,7 @@ namespace NMib::NBuildSystem::NXcode
 			auto pProject = _Projects.f_FindEqual(iDepend.f_GetKey());
 			if (!pProject)
 				_BuildSystem.fs_ThrowError(iDepend->m_Position, CStr::CFormat("Dependency {} not found in workspace") << iDepend.f_GetKey());
-			pProject->fr_FindRecursiveDependencies(_BuildSystem, _Stack, iDepend, _Projects);
+			pProject->f_FindRecursiveDependencies(_BuildSystem, _Stack, iDepend, _Projects);
 		}
 
 		m_bCheckedDependencies = true;
@@ -463,7 +463,7 @@ namespace NMib::NBuildSystem::NXcode
 		for (auto iProject = m_Projects.f_GetIterator(); iProject; ++iProject)
 		{
 			TCSet<CStr> Stack;
-			iProject->fr_FindRecursiveDependencies(_BuildSystem, Stack, nullptr, m_Projects);
+			iProject->f_FindRecursiveDependencies(_BuildSystem, Stack, nullptr, m_Projects);
 		}
 	}
 }

@@ -340,17 +340,17 @@ namespace NMib::NBuildSystem
 		}
 	}
 
-	void CEntity::fpr_GetPathKey(TCVector<CEntityKey> &_Dest) const
+	void CEntity::fp_GetPathKey(TCVector<CEntityKey> &_Dest) const
 	{
 		if (m_pParent && m_pParent->f_GetKey().m_Type != EEntityType_Root)
-			m_pParent->fpr_GetPathKey(_Dest);
+			m_pParent->fp_GetPathKey(_Dest);
 		_Dest.f_Insert(f_GetKey());
 	}
 
 	TCVector<CEntityKey> CEntity::f_GetPathKey() const
 	{
 		TCVector<CEntityKey> Ret;
-		fpr_GetPathKey(Ret);
+		fp_GetPathKey(Ret);
 		return Ret;
 	}
 
@@ -366,10 +366,10 @@ namespace NMib::NBuildSystem
 		return pRet;
 	}
 
-	void CEntity::fr_GetPath(CStr &_Destination) const
+	void CEntity::f_GetPathRecursive(CStr &_Destination) const
 	{
 		if (m_pParent)
-			m_pParent->fr_GetPath(_Destination);
+			m_pParent->f_GetPathRecursive(_Destination);
 
 		if (!_Destination.f_IsEmpty())
 			_Destination += gc_ConstString_Symbol_AccessObject.m_String;
@@ -384,7 +384,7 @@ namespace NMib::NBuildSystem
 			_Destination += "{}:{}"_f << fg_EntityTypeToStr(Key.m_Type) << Key.m_Name;
 	}
 
-	void CEntity::fr_GetPathForGetProperty(CStr &_Destination) const
+	void CEntity::f_GetPathForGetPropertyRecursive(CStr &_Destination) const
 	{
 		auto &Key = f_GetKey();
 
@@ -392,7 +392,7 @@ namespace NMib::NBuildSystem
 			return;
 
 		if (m_pParent)
-			m_pParent->fr_GetPathForGetProperty(_Destination);
+			m_pParent->f_GetPathForGetPropertyRecursive(_Destination);
 
 		if (!_Destination.f_IsEmpty())
 			_Destination += ".";
@@ -461,7 +461,7 @@ namespace NMib::NBuildSystem
 	CStr CEntity::f_GetPath() const
 	{
 		CStr Ret;
-		fr_GetPath(Ret);
+		f_GetPathRecursive(Ret);
 
 		return Ret;
 	}
@@ -469,7 +469,7 @@ namespace NMib::NBuildSystem
 	CStr CEntity::f_GetPathForGetProperty() const
 	{
 		CStr Ret;
-		fr_GetPathForGetProperty(Ret);
+		f_GetPathForGetPropertyRecursive(Ret);
 
 		return Ret;
 	}
@@ -627,7 +627,7 @@ namespace NMib::NBuildSystem
 			iChild->f_CheckChildren();
 	}
 
-	void CEntity::fpr_CheckParents() const
+	void CEntity::fp_CheckParents() const
 	{
 		for (auto iChild = m_ChildEntitiesOrdered.f_GetIterator(); iChild; ++iChild)
 		{
@@ -637,7 +637,7 @@ namespace NMib::NBuildSystem
 				DConOut("pChild->m_pParent != this" DNewLine, 0);
 				DMibPDebugBreak;
 			}
-			pChild->fpr_CheckParents();
+			pChild->fp_CheckParents();
 		}
 	}
 

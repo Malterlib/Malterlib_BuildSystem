@@ -228,7 +228,7 @@ namespace NMib::NBuildSystem::NXcode
 		return m_Value;
 	}
 
-	CStr CGeneratorInstance::fs_EscapeCommandLineArgument(CStr const &_String)
+	CStr CGeneratorInstance::fsp_EscapeCommandLineArgument(CStr const &_String)
 	{
 		if (_String.f_FindChars(" \\\"") >= 0)
 			return _String.f_EscapeStr();

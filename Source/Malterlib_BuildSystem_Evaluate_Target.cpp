@@ -12,12 +12,12 @@ namespace NMib::NBuildSystem
 
 		for (auto iChild = ToEval.f_GetIterator(); iChild;)
 		{
-			fpr_EvaluateData(**iChild);
+			fp_EvaluateDataRecursive(**iChild);
 			++iChild;
 		}
 	}
 
-	CEntity *CBuildSystem::fpr_FindChildTarget(CEntity &_Entity, CEntityKey const &_EntityKey) const
+	CEntity *CBuildSystem::fp_FindChildTarget(CEntity &_Entity, CEntityKey const &_EntityKey) const
 	{
 		for (auto iEntity = _Entity.m_ChildEntitiesOrdered.f_GetIterator(); iEntity; ++iEntity)
 		{
@@ -28,7 +28,7 @@ namespace NMib::NBuildSystem
 			case EEntityType_Import:
 			case EEntityType_Group:
 				{
-					auto pRet = fpr_FindChildTarget(ChildEntity, _EntityKey);
+					auto pRet = fp_FindChildTarget(ChildEntity, _EntityKey);
 					if (pRet)
 						return pRet;
 				}
@@ -107,7 +107,7 @@ namespace NMib::NBuildSystem
 		CEntityKey EntityKey;
 		EntityKey.m_Type = EEntityType_Target;
 		EntityKey.m_Name.m_Value = Name;
-		CEntity *pChildEntity = fpr_FindChildTarget(_Entity, EntityKey);
+		CEntity *pChildEntity = fp_FindChildTarget(_Entity, EntityKey);
 		bool bWasCreated = false;
 		if (!pChildEntity)
 		{

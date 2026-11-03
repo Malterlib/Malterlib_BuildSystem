@@ -7,7 +7,7 @@ namespace NMib::NBuildSystem
 {
 	void CEntity::f_CheckParents() const
 	{
-		fpr_CheckParents();
+		fp_CheckParents();
 	}
 
 	template <typename tf_CStr>

@@ -151,15 +151,15 @@ namespace NMib::NBuildSystem::NVisualStudio
 				continue;
 
 			CItemState ItemState;
-			ItemState.m_pItemElement = CXMLDocument::f_CreateElement(_XMLState.m_pFileItemGroup, File.m_VSType);
+			ItemState.m_pItemElement = CXMLDocument::fs_CreateElement(_XMLState.m_pFileItemGroup, File.m_VSType);
 			ItemState.m_pCompile = &_Compile;
 
-			CXMLDocument::f_SetAttribute(ItemState.m_pItemElement, gc_ConstString_Include, File.m_VSFile);
+			CXMLDocument::fs_SetAttribute(ItemState.m_pItemElement, gc_ConstString_Include, File.m_VSFile);
 			if (_XMLState.m_bIsDotNet)
 			{
 				CStr GroupPath = File.f_GetGroupPath().f_ReplaceChar('/', '\\');
 				if (!GroupPath.f_IsEmpty())
-					CXMLDocument::f_AddElementAndText(ItemState.m_pItemElement, gc_ConstKey_Dependency_Link.m_Name, GroupPath + "\\" + CFile::fs_GetFile(File.m_VSFile));
+					CXMLDocument::fs_AddElementAndText(ItemState.m_pItemElement, gc_ConstKey_Dependency_Link.m_Name, GroupPath + "\\" + CFile::fs_GetFile(File.m_VSFile));
 			}
 
 			for (auto &pPrefixHeader : File.m_PrefixHeaders)

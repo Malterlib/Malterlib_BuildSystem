@@ -19,7 +19,7 @@ namespace NMib::NBuildSystem
 
 		NStr::CStr const &f_GetPath() const;
 		NStr::CStr f_GetGroupPath() const;
-		void fr_PruneEmpty();
+		void f_PruneEmpty();
 
 		NStr::CStr m_Name;
 		NStorage::TCPointer<CGroupInfo> m_pParent;

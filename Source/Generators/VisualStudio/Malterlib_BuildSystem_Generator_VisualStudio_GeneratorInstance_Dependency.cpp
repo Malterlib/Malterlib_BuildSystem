@@ -64,7 +64,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 	void CGeneratorInstance::f_GenerateProjectFile_AddToXML_Dependency(CProject &_Project, CProjectState &_ProjectState, CProjectXMLState &_XMLState) const
 	{
-		_XMLState.m_pDependenciesItemGroup = CXMLDocument::f_CreateElement(_XMLState.m_pProject, "ItemGroup");
+		_XMLState.m_pDependenciesItemGroup = CXMLDocument::fs_CreateElement(_XMLState.m_pProject, "ItemGroup");
 
 		for (auto &Dependency : _Project.m_Dependencies)
 		{
@@ -79,7 +79,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 					continue;
 
 				CItemState ItemState;
-				ItemState.m_pItemElement = CXMLDocument::f_CreateElement(_XMLState.m_pDependenciesItemGroup, ParsedSettings.m_VSType);
+				ItemState.m_pItemElement = CXMLDocument::fs_CreateElement(_XMLState.m_pDependenciesItemGroup, ParsedSettings.m_VSType);
 
 				CGeneratorSettings::fs_AddToXMLFiles<false, true>(_XMLState, _Project, fg_Move(ParsedSettings), &ItemState);
 
@@ -176,11 +176,11 @@ namespace NMib::NBuildSystem::NVisualStudio
 				}
 			}
 
-			auto pReference = CXMLDocument::f_CreateElement(_XMLState.m_pDependenciesItemGroup, "ProjectReference");
+			auto pReference = CXMLDocument::fs_CreateElement(_XMLState.m_pDependenciesItemGroup, "ProjectReference");
 			CStr DependencyProjectFile = CFile::fs_MakeNiceFilename(pDependProject->f_GetName()) + ".vcxproj";
-			CXMLDocument::f_SetAttribute(pReference, gc_ConstString_Include, DependencyProjectFile);
-			CXMLDocument::f_AddElementAndText(pReference, "Project", pDependProject->f_GetGUID());
-			CXMLDocument::f_AddElementAndText(pReference, gc_ConstString_Name, pDependProject->f_GetName());
+			CXMLDocument::fs_SetAttribute(pReference, gc_ConstString_Include, DependencyProjectFile);
+			CXMLDocument::fs_AddElementAndText(pReference, "Project", pDependProject->f_GetGUID());
+			CXMLDocument::fs_AddElementAndText(pReference, gc_ConstString_Name, pDependProject->f_GetName());
 
 			CItemState ItemState;
 			ItemState.m_pItemElement = pReference;
