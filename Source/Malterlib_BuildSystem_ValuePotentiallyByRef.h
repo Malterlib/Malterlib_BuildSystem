@@ -14,11 +14,11 @@ namespace NMib::NBuildSystem
 		CValuePotentiallyByRef(NEncoding::CEJsonSorted *_pValue, bool _bConfirm);
 		CValuePotentiallyByRef(NEncoding::CEJsonSorted &&_Value);
 
-		CValuePotentiallyByRef(CValuePotentiallyByRef const &);
-		CValuePotentiallyByRef(CValuePotentiallyByRef &&);
+		CValuePotentiallyByRef(CValuePotentiallyByRef const &_Other);
+		CValuePotentiallyByRef(CValuePotentiallyByRef &&_Other);
 
-		CValuePotentiallyByRef &operator = (CValuePotentiallyByRef const &) = delete;
-		CValuePotentiallyByRef &operator = (CValuePotentiallyByRef &&) = delete;
+		CValuePotentiallyByRef &operator = (CValuePotentiallyByRef const &_Other) = delete;
+		CValuePotentiallyByRef &operator = (CValuePotentiallyByRef &&_Other) = delete;
 
 		inline_always NEncoding::CEJsonSorted *f_MakeMutable();
 		inline_always NEncoding::CEJsonSorted const &f_Get() const;

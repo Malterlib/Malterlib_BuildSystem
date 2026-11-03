@@ -130,10 +130,10 @@ namespace NMib::NBuildSystem::NRepository
 	{
 		CRepository(CStr const &_Name);
 		CRepository(CRepository const &_Other) = default;
-		CRepository(CRepository &&) = default;
+		CRepository(CRepository &&_Other) = default;
 
 		CRepository &operator = (CRepository const &_Other) = default;
-		CRepository &operator = (CRepository &&) = default;
+		CRepository &operator = (CRepository &&_Other) = default;
 
 		CStr const &f_GetName() const;
 
@@ -279,8 +279,8 @@ namespace NMib::NBuildSystem::NRepository
 
 		void f_Leave();
 
-		CVerifyHookRepository(CVerifyHookRepository const &) = delete;
-		CVerifyHookRepository &operator = (CVerifyHookRepository const &) = delete;
+		CVerifyHookRepository(CVerifyHookRepository const &_Other) = delete;
+		CVerifyHookRepository &operator = (CVerifyHookRepository const &_Other) = delete;
 
 		TCFuture<void> f_Verify(CVerifyHookLevel::EPhase _Phase, TCVector<CVerifyHookEntry> &&_Entries);
 

@@ -641,8 +641,8 @@ namespace NMib::NBuildSystem
 		// root-repo site (CStr path + CStr section name "." for output) and
 		// the sub-repo site (CRepository for both), since `f_Launch` and
 		// `f_Output` each have overloads for the two shapes.
-		template <typename t_CLaunchTarget, typename t_COutputScope>
-		TCFuture<CStr> fg_ResolveMergeBaseWithBootstrapFallback(CGitLaunches _Launches, t_CLaunchTarget _LaunchTarget, t_COutputScope _OutputScope, CStr _ComparisonBranch)
+		template <typename tf_CLaunchTarget, typename tf_COutputScope>
+		TCFuture<CStr> fg_ResolveMergeBaseWithBootstrapFallback(CGitLaunches _Launches, tf_CLaunchTarget _LaunchTarget, tf_COutputScope _OutputScope, CStr _ComparisonBranch)
 		{
 			auto Result = co_await _Launches.f_Launch(_LaunchTarget, {"merge-base", "origin/{}"_f << _ComparisonBranch, "HEAD"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
 

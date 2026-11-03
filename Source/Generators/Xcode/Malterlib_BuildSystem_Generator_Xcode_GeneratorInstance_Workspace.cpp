@@ -55,20 +55,20 @@ namespace NMib::NBuildSystem::NXcode
 				MapProjectsToGroups[iProject->m_pGroup].f_Insert(iProject);
 		}
 
-		TCFunction<void (CXMLElement *_pParent, CGroup *pGroup)> fOutputGroup = [&](CXMLElement *_pParent, CGroup *pGroup)
+		TCFunction<void (CXMLElement *_pParent, CGroup *_pGroup)> fOutputGroup = [&](CXMLElement *_pParent, CGroup *_pGroup)
 			{
-				if (!pGroup->m_OutputToWorkspace)
+				if (!_pGroup->m_OutputToWorkspace)
 				{
 					auto pGroupRef = XMLFile.fs_CreateElement(_pParent, gc_ConstString_Group);
 					XMLFile.fs_SetAttribute(pGroupRef, "location", "container:");
-					XMLFile.fs_SetAttribute(pGroupRef, "name", pGroup->m_Name);
-					pGroup->m_OutputToWorkspace = true;
+					XMLFile.fs_SetAttribute(pGroupRef, "name", _pGroup->m_Name);
+					_pGroup->m_OutputToWorkspace = true;
 
-					TCVector<CGroup *> &lChildGroups = MapGroupToGroups[pGroup];
+					TCVector<CGroup *> &lChildGroups = MapGroupToGroups[_pGroup];
 					for (auto iChildGroup = lChildGroups.f_GetIterator(); iChildGroup; ++iChildGroup)
 						fOutputGroup(pGroupRef, *iChildGroup);
 
-					TCVector<CProject *> &lChildProjects = MapProjectsToGroups[pGroup];
+					TCVector<CProject *> &lChildProjects = MapProjectsToGroups[_pGroup];
 					for (auto iProject = lChildProjects.f_GetIterator(); iProject; ++iProject)
 					{
 						auto pFileRef = XMLFile.fs_CreateElement(pGroupRef, "FileRef");

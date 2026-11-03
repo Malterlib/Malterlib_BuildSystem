@@ -33,7 +33,7 @@ namespace NMib::NBuildSystem
 	{
 		struct CKey
 		{
-			auto operator <=> (CKey const &) const noexcept = default;
+			auto operator <=> (CKey const &_Right) const noexcept = default;
 
 			CFilePosition m_Position;
 			NStr::CStr m_Identifier;

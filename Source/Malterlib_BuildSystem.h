@@ -56,8 +56,8 @@ namespace NMib::NBuildSystem
 				, bool _bShowProgress = true
 			)
 		;
-		CBuildSystem(CBuildSystem const &) = delete;
-		CBuildSystem(CBuildSystem &&) = delete;
+		CBuildSystem(CBuildSystem const &_Other) = delete;
+		CBuildSystem(CBuildSystem &&_Other) = delete;
 
 		enum ERetry
 		{
@@ -476,8 +476,8 @@ namespace NMib::NBuildSystem
 		;
 		[[noreturn]] static void fs_ThrowError(CEvalPropertyValueContext &_Context, NStr::CStr const &_Error, NContainer::TCVector<CBuildSystemError> const &_Errors = {});
 
-		template <typename t_CValue>
-		static auto fs_FindContainingPath(NContainer::TCMap<NStr::CStr, t_CValue> const &_Paths, NStr::CStr const &_Path, NStr::CStr &o_OwnerPath) -> decltype(_Paths.f_FindEqual(_Path));
+		template <typename tf_CValue>
+		static auto fs_FindContainingPath(NContainer::TCMap<NStr::CStr, tf_CValue> const &_Paths, NStr::CStr const &_Path, NStr::CStr &o_OwnerPath) -> decltype(_Paths.f_FindEqual(_Path));
 
 		static NStr::CStr fs_GetNameIdentifierString(CBuildSystemRegistry const &_Registry);
 		void f_AddSourceFile(NStr::CStr const &_File, NStorage::TCSharedPointer<NCryptography::CHashDigest_SHA256> &&_pDigest) const;

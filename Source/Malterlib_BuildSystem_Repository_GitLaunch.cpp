@@ -248,7 +248,7 @@ namespace NMib::NBuildSystem::NRepository
 	struct CTrackTimerDestruction
 	{
 		CTrackTimerDestruction() = default;
-		CTrackTimerDestruction(CTrackTimerDestruction const &) = delete;
+		CTrackTimerDestruction(CTrackTimerDestruction const &_Other) = delete;
 
 		CTrackTimerDestruction(CTrackTimerDestruction &&_Other)
 			: m_bLastAlive(fg_Exchange(_Other.m_bLastAlive, false))

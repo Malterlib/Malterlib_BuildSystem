@@ -61,13 +61,13 @@ namespace NMib::NBuildSystem
 		{
 		}
 
-		CPropertyKeyTypeAndHash(CPropertyKeyTypeAndHash const &) = default;
-		CPropertyKeyTypeAndHash(CPropertyKeyTypeAndHash &&) = default;
+		CPropertyKeyTypeAndHash(CPropertyKeyTypeAndHash const &_Other) = default;
+		CPropertyKeyTypeAndHash(CPropertyKeyTypeAndHash &&_Other) = default;
 
-		CPropertyKeyTypeAndHash &operator = (CPropertyKeyTypeAndHash const &) = default;
-		CPropertyKeyTypeAndHash &operator = (CPropertyKeyTypeAndHash &&) = default;
+		CPropertyKeyTypeAndHash &operator = (CPropertyKeyTypeAndHash const &_Other) = default;
+		CPropertyKeyTypeAndHash &operator = (CPropertyKeyTypeAndHash &&_Other) = default;
 
-		auto operator <=> (CPropertyKeyTypeAndHash const &) const noexcept = default;
+		auto operator <=> (CPropertyKeyTypeAndHash const &_Right) const noexcept = default;
 
 		constexpr inline_always EPropertyType f_GetType() const
 		{

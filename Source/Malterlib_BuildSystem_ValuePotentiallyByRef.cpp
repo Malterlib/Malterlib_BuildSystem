@@ -22,9 +22,9 @@ namespace NMib::NBuildSystem
 	{
 	}
 
-	CValuePotentiallyByRef::CValuePotentiallyByRef(CValuePotentiallyByRef const &) = default;
+	CValuePotentiallyByRef::CValuePotentiallyByRef(CValuePotentiallyByRef const &_Other) = default;
 
-	CValuePotentiallyByRef::CValuePotentiallyByRef(CValuePotentiallyByRef &&) = default;
+	CValuePotentiallyByRef::CValuePotentiallyByRef(CValuePotentiallyByRef &&_Other) = default;
 
 	void CValuePotentiallyByRef::f_Set(NEncoding::CEJsonSorted &&_Other)
 	{

@@ -35,7 +35,7 @@ namespace NMib::NBuildSystem
 		{
 		}
 
-		constexpr CStringAndHash(CAssertAddedToStringCache, NStr::CStr const &_String, uint32 _Hash)
+		constexpr CStringAndHash(CAssertAddedToStringCache _Dummy, NStr::CStr const &_String, uint32 _Hash)
 			: m_String(_String)
 			, m_Hash(_Hash)
 		{
@@ -53,10 +53,10 @@ namespace NMib::NBuildSystem
 			return m_String;
 		}
 
-		CStringAndHash(CStringAndHash &&) = default;
-		CStringAndHash(CStringAndHash const &) = default;
+		CStringAndHash(CStringAndHash &&_Other) = default;
+		CStringAndHash(CStringAndHash const &_Other) = default;
 
-		auto operator <=> (CStringAndHash const &) const noexcept = default;
+		auto operator <=> (CStringAndHash const &_Right) const noexcept = default;
 
 		template <typename tf_CStr>
 		void f_Format(tf_CStr &o_Str) const
