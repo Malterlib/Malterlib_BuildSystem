@@ -967,6 +967,22 @@ namespace NMib::NBuildSystem
 				File.m_Flags = iFile->m_Flags;
 			}
 
+			// Without an update the repositories' files keep what the last update wrote, so they stay generated files rather than
+			// unused ones.
+			if (mp_GenerateOptions.m_bSkipUpdate && !mp_bForceUpdate)
+			{
+				for (auto iFile = GenerateState.m_BeforeGlobalState.m_GeneratedFiles.f_GetIterator(); iFile; ++iFile)
+				{
+					auto &FileName = iFile.f_GetKey();
+					if (!iFile->f_IsRepositoriesFile(FileName) || GenerateState.m_GlobalState.m_GeneratedFiles.f_FindEqual(FileName))
+						continue;
+
+					auto &File = GenerateState.m_GlobalState.m_GeneratedFiles[FileName];
+					File = *iFile;
+					File.m_Flags |= EGeneratedFileFlag_Repositories;
+				}
+			}
+
 			State.m_SourceSearches = mp_FindCache.f_GetAllTagged();
 
 			umint nFileSearches = 0;

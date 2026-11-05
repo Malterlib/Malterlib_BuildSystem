@@ -5536,7 +5536,7 @@ namespace NMib::NBuildSystem
 				CStr FileContents = fBuildConfigFileContents(_File, _FileName);
 
 				bool bWasCreated = false;
-				if (!f_AddGeneratedFile(_FileName, FileContents, "", bWasCreated))
+				if (!f_AddGeneratedFile(_FileName, FileContents, "", bWasCreated, EGeneratedFileFlag_Repositories))
 					fs_ThrowError(CFilePosition{}, CStr::CFormat("File '{}' already generated with other contents") << _FileName);
 
 				if (bWasCreated)
@@ -5808,7 +5808,7 @@ namespace NMib::NBuildSystem
 				CStr FileContents = StateFile.f_ToString();
 
 				bool bWasCreated = false;
-				if (!f_AddGeneratedFile(RepositoryStateFile, FileContents, "", bWasCreated))
+				if (!f_AddGeneratedFile(RepositoryStateFile, FileContents, "", bWasCreated, EGeneratedFileFlag_Repositories))
 					fs_ThrowError(CFilePosition{}, CStr::CFormat("File '{}' already generated with other contents") << RepositoryStateFile);
 
 				if (bWasCreated)

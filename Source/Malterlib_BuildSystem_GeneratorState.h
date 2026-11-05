@@ -15,6 +15,7 @@ namespace NMib::NBuildSystem
 		, EGeneratedFileFlag_KeepGeneratedFile = DMibBit(2)
 		, EGeneratedFileFlag_Symlink           = DMibBit(3)
 		, EGeneratedFileFlag_ByDigest          = DMibBit(4)
+		, EGeneratedFileFlag_Repositories      = DMibBit(5) // Written by the update of the repositories
 	};
 
 	struct CGeneratorArchiveState
@@ -34,6 +35,7 @@ namespace NMib::NBuildSystem
 			void f_Consume(tf_CStream &_Stream);
 
 			bool f_FileChanged(NAtomic::TCAtomic<bool> &o_bChanged, NStr::CStr const &_OutputDirectory, CBuildSystem const &_BuildSystem);
+			bool f_IsRepositoriesFile(NStr::CStr const &_FileName) const;
 
 			NContainer::TCSet<NStr::CStr> m_Workspaces;
 			NTime::CTime m_WriteTime;

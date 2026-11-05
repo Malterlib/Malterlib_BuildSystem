@@ -186,6 +186,18 @@ namespace
 				;
 
 				{
+					DMibTestPath("RepositoriesFilesOfOlderState");
+					CGeneratorArchiveState::CProcessedFile Unflagged;
+					DMibExpectTrue(Unflagged.f_IsRepositoriesFile("Repos.MRepo"));
+					DMibExpectTrue(Unflagged.f_IsRepositoriesFile("Sub/Repos.MRepoState"));
+					DMibExpectTrue(Unflagged.f_IsRepositoriesFile("RepositoryState.json"));
+					DMibExpectFalse(Unflagged.f_IsRepositoriesFile("Generated.txt"));
+
+					CGeneratorArchiveState::CProcessedFile Flagged;
+					Flagged.m_Flags = EGeneratedFileFlag_Repositories;
+					DMibExpectTrue(Flagged.f_IsRepositoriesFile("Generated.txt"));
+				}
+				{
 					DMibTestPath("CurrentVersion");
 					TCBinaryStreamMemory<> Stream;
 					Stream << State;

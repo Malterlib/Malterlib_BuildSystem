@@ -9,6 +9,16 @@ namespace NMib::NBuildSystem
 	CGeneratorArchiveState::CProcessedFile::CProcessedFile() = default;
 	CGeneratorArchiveState::CGeneratorArchiveState() = default;
 
+	// Written by the update of the repositories. A state from before EGeneratedFileFlag_Repositories knows such a file only by its name.
+	bool CGeneratorArchiveState::CProcessedFile::f_IsRepositoriesFile(CStr const &_FileName) const
+	{
+		return (m_Flags & EGeneratedFileFlag_Repositories)
+			|| _FileName.f_EndsWith(".MRepo")
+			|| _FileName.f_EndsWith(".MRepoState")
+			|| NFile::CFile::fs_GetFile(_FileName) == "RepositoryState.json"
+		;
+	}
+
 	bool CGeneratorArchiveState::CProcessedFile::f_FileChanged(TCAtomic<bool> &o_bChanged, CStr const &_OutputDirectory, CBuildSystem const &_BuildSystem)
 	{
 		CStr FileName = CFile::fs_GetExpandedPath(f_GetFileName(), _OutputDirectory);
