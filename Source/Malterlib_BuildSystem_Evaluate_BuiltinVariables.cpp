@@ -48,6 +48,24 @@ namespace NMib::NBuildSystem
 	{
 		mp_TypeForPropertyAny = CTypeWithPosition{g_Any};
 
+		CBuildSystemSyntax::CType const TidyType = fg_Defaulted
+			(
+				CBuildSystemSyntax::CType
+				(
+					CBuildSystemSyntax::CClassType
+					{
+						{
+							{gc_ConstString_Enabled, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_Boolean, false)}}
+							, {gc_ConstString_IncludeFiles, CBuildSystemSyntax::CClassType::CMember{g_StringArrayDefaultedEmpty}}
+							, {gc_ConstString_ExcludeFiles, CBuildSystemSyntax::CClassType::CMember{g_StringArrayDefaultedEmpty}}
+						}
+						, {}
+					}
+				)
+				, CEJsonSorted{"Enabled"_= false, "IncludeFiles"_= _[], "ExcludeFiles"_= _[]}
+			)
+		;
+
 		f_RegisterBuiltinVariables
 			(
 				{
@@ -133,6 +151,12 @@ namespace NMib::NBuildSystem
 													, true
 												}
 											}
+											// As Repository.Format, Tidy, CheckLicense and License. A builtin type cannot name License's CLicenseConfig,
+											// which only build systems that import Shared_RepositoryLicense.MSettings have.
+											, {gc_ConstKey_Repository_Format.m_Name, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_Boolean, false), true}}
+											, {gc_ConstKey_Repository_Tidy.m_Name, CBuildSystemSyntax::CClassType::CMember{TidyType, true}}
+											, {gc_ConstKey_Repository_CheckLicense.m_Name, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_Boolean, false), true}}
+											, {gc_ConstKey_Repository_License.m_Name, CBuildSystemSyntax::CClassType::CMember{g_ObjectWithAny, true}}
 										}
 										, {}
 									}
@@ -405,32 +429,7 @@ namespace NMib::NBuildSystem
 					, {CPropertyKey(gc_ConstKey_Repository_Submodule), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					, {CPropertyKey(gc_ConstKey_Repository_ExcludeFromSeen), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
 					, {CPropertyKey(gc_ConstKey_Repository_Format), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_Boolean, false))}
-					,
-					{
-						// Enabled: the repository's sources are checked by 'mib tidy' and the checks plugin. IncludeFiles and
-						// ExcludeFiles are wildcards matched against the paths relative to the repository: only the files
-						// that match an include, when there are any, and no exclude are checked and reported.
-						CPropertyKey(gc_ConstKey_Repository_Tidy)
-						, DMibBuildSystemTypeWithPosition
-						(
-							fg_Defaulted
-							(
-								CBuildSystemSyntax::CType
-								(
-									CBuildSystemSyntax::CClassType
-									{
-										{
-											{gc_ConstString_Enabled, CBuildSystemSyntax::CClassType::CMember{fg_Defaulted(g_Boolean, false)}}
-											, {gc_ConstString_IncludeFiles, CBuildSystemSyntax::CClassType::CMember{g_StringArrayDefaultedEmpty}}
-											, {gc_ConstString_ExcludeFiles, CBuildSystemSyntax::CClassType::CMember{g_StringArrayDefaultedEmpty}}
-										}
-										, {}
-									}
-								)
-								, CEJsonSorted{"Enabled"_= false, "IncludeFiles"_= _[], "ExcludeFiles"_= _[]}
-							)
-						)
-					}
+					, {CPropertyKey(gc_ConstKey_Repository_Tidy), DMibBuildSystemTypeWithPosition(TidyType)}
 					, {CPropertyKey(gc_ConstKey_Repository_SubmoduleName), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
 					, {CPropertyKey(gc_ConstKey_Repository_Type), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}
 					, {CPropertyKey(gc_ConstKey_Repository_UserName), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, ""))}

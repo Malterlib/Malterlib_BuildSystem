@@ -82,8 +82,9 @@ namespace NMib::NBuildSystem
 			NContainer::TCSet<NStr::CStr> m_Tags;
 			bool m_bOnlyChanged = false;
 			bool m_bIncludePull = false;
-			bool m_bFormat = false; // Only repositories with Repository.Format.
-			bool m_bTidy = false;   // Only repositories with Repository.Tidy.Enabled.
+			bool m_bFormat = false;              // Only repositories with Repository.Format.
+			bool m_bTidy = false;                // Only repositories with Repository.Tidy.Enabled.
+			bool m_bIncludePerforceRoot = false; // The Perforce root's entry; branch and only-changed filters leave it out
 		};
 
 		// The files of a repository that 'mib tidy' and the checks plugin check: wildcards matched against the paths
@@ -486,6 +487,7 @@ namespace NMib::NBuildSystem
 		;
 
 		NStr::CStr f_GetEnvironmentVariable(NStr::CStr const &_Name, NStr::CStr const &_Default = {}, bool *o_pExists = nullptr) const;
+		NContainer::TCMap<NStr::CStr, NStr::CStr> f_GetPerforceEnvironment() const;
 
 		void f_NoReconcileOptions();
 		void f_ForceUpdate();
@@ -520,8 +522,6 @@ namespace NMib::NBuildSystem
 		;
 
 		NConcurrency::TCUnsafeFuture<ERetry> f_Action_Repository_ForEachRepoDir(CGenerateOptions const &_GenerateOptions, CRepoFilter const &_Filter, CForEachRepoDirOptions const &_Options);
-		// The locations of the filtered repositories, in dependency order, and with
-		// o_pAllLocations, the locations of every repository, which tells what nests in them.
 		auto f_Action_Repository_GetLocations
 			(
 				CGenerateOptions const &_GenerateOptions
@@ -529,6 +529,7 @@ namespace NMib::NBuildSystem
 				, NContainer::TCVector<NStr::CStr> &o_Locations
 				, NContainer::TCVector<NStr::CStr> *o_pAllLocations = nullptr
 				, NContainer::TCMap<NStr::CStr, CRepoTidyFiles> *o_pTidyFiles = nullptr
+				, NStr::CStr *o_pPerforceRoot = nullptr
 			)
 			-> NConcurrency::TCUnsafeFuture<ERetry>
 		;
@@ -1099,6 +1100,7 @@ namespace NMib::NBuildSystem
 		void fp_UpdateDependenciesNames(CEntity *_pTargetOuterEntity) const;
 		void fp_EvaluateWorkspace(CBuildSystemData &_Destination, CEntity &_Entity) const;
 		void fp_UsedExternal(CPropertyKeyReference const &_PropertyKey) const;
+		NStr::CStr fp_GetUsedExternalValue(NStr::CStr const &_Name) const;
 		auto fp_GenerateFiles
 			(
 				CBuildSystemData &_BuildSystemData
@@ -1184,6 +1186,9 @@ namespace NMib::NBuildSystem
 
 		mutable NThread::CLowLevelLock mp_ExecuteCommandsLock;
 		mutable NContainer::TCMap<NStr::CStr, CExecuteCommand> mp_ExecuteCommands;
+
+		mutable NThread::CLowLevelLock mp_PerforceRootExcludedLock;
+		mutable NStorage::TCOptional<NContainer::TCVector<NStr::CStr>> mp_PerforceRootExcluded; // Listed once per run
 
 		NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> mp_fOutputConsole;
 

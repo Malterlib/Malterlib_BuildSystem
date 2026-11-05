@@ -753,7 +753,7 @@ namespace NMib::NBuildSystem
 								for (auto iEnv = State.m_Environment.f_GetIterator(); iEnv; ++iEnv)
 								{
 									//f_OutputConsole("{} = {}{\n}"_f << iEnv.f_GetKey() << *iEnv);
-									CStr Value = f_GetEnvironmentVariable(iEnv.f_GetKey());
+									CStr Value = fp_GetUsedExternalValue(iEnv.f_GetKey());
 
 									if (Value != *iEnv)
 									{
@@ -998,10 +998,7 @@ namespace NMib::NBuildSystem
 			f_OutputConsole("{} executable launches{\n}"_f << mp_nExecuteLaunches.f_Load());
 
 			for (auto iEnv = mp_UsedExternals.f_GetIterator(); iEnv; ++iEnv)
-			{
-				CStr Value = f_GetEnvironmentVariable(iEnv->m_Name);
-				State.m_Environment[iEnv->m_Name] = Value;
-			}
+				State.m_Environment[iEnv->m_Name] = fp_GetUsedExternalValue(iEnv->m_Name);
 
 			GenerateState.m_GlobalState.m_GenerationFlags = mp_GenerateOptions.m_Settings.m_GenerationFlags;
 

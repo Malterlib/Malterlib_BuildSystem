@@ -4,6 +4,7 @@
 #include "Malterlib_BuildSystem.h"
 #include "Malterlib_BuildSystem_Repository.h"
 
+#include <Mib/Perforce/Ignore>
 #include <Mib/Perforce/Wrapper>
 #include <Mib/Concurrency/AsyncDestroy>
 #include <Mib/Encoding/EJson>
@@ -4628,42 +4629,91 @@ namespace NMib::NBuildSystem
 			co_return bChanged;
 		}
 
-		// Reads the global PerforceRoot.RepoCommit DSL object off the root
-		// entity. The Perforce root is not a %Repository, so both repo-commit
-		// (when generating the outermost changelist) and list-commits (when
-		// deciding whether to collapse a log entry to its first line) route
-		// through this helper to stay aligned on the configured MessageHeader
-		// and TransformScript. Returns an empty optional when the property is
-		// unset so callers can distinguish "no user override" from "override
-		// with empty fields".
-		NStorage::TCOptional<CRepoCommitOptions> fg_GetPerforceRootRepoCommitOptions(CBuildSystem &_BuildSystem, CBuildSystemData &_Data)
+		// A base directory without git where p4 opens a P4CONFIG file, from the environment generation uses.
+		bool fg_IsPerforceRoot(CBuildSystem const &_BuildSystem)
 		{
+			CStr BaseDir = _BuildSystem.f_GetBaseDir();
+			if (CFile::fs_FileExists(BaseDir / ".git", EFileAttrib_Directory | EFileAttrib_File))
+				return false;
+
+			auto Settings = NPerforce::CPerforceIgnore::fs_GetSettings(BaseDir, _BuildSystem.f_GetPerforceEnvironment());
+			return !Settings.f_GetSettingsFiles(BaseDir).m_ConfigFile.f_IsEmpty();
+		}
+
+		void fg_ParseTidySettings(CEJsonSorted const &_Tidy, CRepository &o_Repository)
+		{
+			if (!_Tidy.f_IsObject())
+				return;
+
+			if (auto pEnabled = _Tidy.f_GetMember(gc_ConstString_Enabled, EJsonType_Boolean))
+				o_Repository.m_bTidy = pEnabled->f_Boolean();
+
+			auto fGetFiles = [&](CStringAndHash const &_Member, TCVector<CStr> &o_Files)
+				{
+					if (auto pFiles = _Tidy.f_GetMember(_Member, EJsonType_Array))
+					{
+						for (auto &File : pFiles->f_Array())
+							o_Files.f_Insert(File.f_String());
+					}
+				}
+			;
+			fGetFiles(gc_ConstString_IncludeFiles, o_Repository.m_TidyIncludeFiles);
+			fGetFiles(gc_ConstString_ExcludeFiles, o_Repository.m_TidyExcludeFiles);
+		}
+
+		// The made-up entry of the Perforce root, or empty. A %Repository would be cloned and updated as git, so its settings are
+		// the PerforceRoot property.
+		NStorage::TCOptional<CRepository> fg_GetPerforceRootRepository(CBuildSystem &_BuildSystem, CBuildSystemData &_Data, EGetRepoFlag _Flags)
+		{
+			CStr BaseDir = _BuildSystem.f_GetBaseDir();
+			if (!fg_IsPerforceRoot(_BuildSystem))
+				return {};
+
+			CRepository Repository(CFile::fs_GetFile(BaseDir));
+			Repository.m_Identity = gc_ConstKey_PerforceRoot.m_Name;
+			Repository.m_Location = BaseDir;
+			Repository.m_Type = gc_ConstString_Root.m_String;
+			Repository.m_bPerforceRoot = true;
+
 			auto const PerforceRootJson = _BuildSystem.f_EvaluateEntityPropertyObject(_Data.m_RootEntity, gc_ConstKey_PerforceRoot, CEJsonSorted()).f_Move();
 			if (!PerforceRootJson.f_IsValid() || !PerforceRootJson.f_IsObject())
-				return {};
+				return Repository;
 
-			// `PerforceRoot` is an optional DSL object that contains an
-			// optional `RepoCommit` sub-object. When the user writes
-			// `PerforceRoot {}` (or no RepoCommit inside it) the nested member
-			// is absent, and the const `operator[]` on TCJsonValue throws
-			// `DMibError` for a missing member. Use `f_GetMember` so the
-			// helper returns an empty optional in that case instead of aborting
-			// repo-commit / list-commits with a hard error.
-			auto *pRepoCommitJson = PerforceRootJson.f_GetMember(gc_ConstKey_Repository_RepoCommit.m_Name);
-			if (!pRepoCommitJson || !pRepoCommitJson->f_IsObject())
-				return {};
+			// The members are optional, while the members of one that is set get their defaults.
+			if (auto *pFormat = PerforceRootJson.f_GetMember(gc_ConstKey_Repository_Format.m_Name, EJsonType_Boolean))
+				Repository.m_bFormat = pFormat->f_Boolean();
 
-			// Both members are declared as `fg_Defaulted(g_String, "")` with
-			// `, true` (optional) in fp_RegisterBuiltinVariables. The evaluator
-			// always runs with EDoesValueConformToTypeFlag_CanApplyDefault, so
-			// whenever the enclosing RepoCommit object is present any missing
-			// sibling is materialized as the empty-string default before we
-			// read it — the typed f_String() accessors are safe even for
-			// one-field user configs.
-			CRepoCommitOptions Options;
-			Options.m_MessageHeader = (*pRepoCommitJson)[gc_ConstString_MessageHeader].f_String();
-			Options.m_TransformScript = (*pRepoCommitJson)[gc_ConstString_TransformScript].f_String();
-			return Options;
+			if (auto *pTidy = PerforceRootJson.f_GetMember(gc_ConstKey_Repository_Tidy.m_Name))
+				fg_ParseTidySettings(*pTidy, Repository);
+
+			if (fg_IsSet(_Flags, EGetRepoFlag::mc_IncludeLicense))
+			{
+				if (auto *pCheckLicense = PerforceRootJson.f_GetMember(gc_ConstKey_Repository_CheckLicense.m_Name, EJsonType_Boolean))
+					Repository.m_bCheckLicense = pCheckLicense->f_Boolean();
+
+				Repository.m_License = CEJsonSorted(EJsonType_Object);
+				if (auto *pLicense = PerforceRootJson.f_GetMember(gc_ConstKey_Repository_License.m_Name, EJsonType_Object); pLicense && Repository.m_bCheckLicense)
+				{
+					Repository.m_License = *pLicense;
+
+					// License is a plain object, which lacks the Exclude default of CLicenseConfig.
+					if (!Repository.m_License.f_GetMember("Exclude"))
+						Repository.m_License["Exclude"] = _["LICENSE", "LICENSES/*", "REUSE.toml"];
+				}
+			}
+
+			if (fg_IsSet(_Flags, EGetRepoFlag::mc_IncludeRepoCommit))
+			{
+				if (auto *pRepoCommitJson = PerforceRootJson.f_GetMember(gc_ConstKey_Repository_RepoCommit.m_Name); pRepoCommitJson && pRepoCommitJson->f_IsObject())
+				{
+					CRepoCommitOptions Options;
+					Options.m_MessageHeader = (*pRepoCommitJson)[gc_ConstString_MessageHeader].f_String();
+					Options.m_TransformScript = (*pRepoCommitJson)[gc_ConstString_TransformScript].f_String();
+					Repository.m_RepoCommitOptions = fg_Move(Options);
+				}
+			}
+
+			return Repository;
 		}
 
 		void CRepoEditor::f_SetCommandLine(CStr const &_CommandLine)
@@ -4807,22 +4857,7 @@ namespace NMib::NBuildSystem
 					Repo.m_bExcludeFromSeen = bExcludeFromSeen;
 					Repo.m_bLeaveWhenRemoved = ReconcileRemovedStr == "Leave";
 					Repo.m_bFormat = bFormat;
-					if (TidyJson.f_IsObject())
-					{
-						if (auto pEnabled = TidyJson.f_GetMember(gc_ConstString_Enabled, EJsonType_Boolean))
-							Repo.m_bTidy = pEnabled->f_Boolean();
-						auto fGetFiles = [&](CStringAndHash const &_Member, TCVector<CStr> &o_Files)
-							{
-								if (auto pFiles = TidyJson.f_GetMember(_Member, EJsonType_Array))
-								{
-									for (auto &File : pFiles->f_Array())
-										o_Files.f_Insert(File.f_String());
-								}
-							}
-						;
-						fGetFiles(gc_ConstString_IncludeFiles, Repo.m_TidyIncludeFiles);
-						fGetFiles(gc_ConstString_ExcludeFiles, Repo.m_TidyExcludeFiles);
-					}
+					fg_ParseTidySettings(TidyJson, Repo);
 					Repo.m_bBootstrapSource = bBootstrapSource;
 
 					if (GitIgnoreTypeStr == "GitInfoExclude")
@@ -5097,6 +5132,28 @@ namespace NMib::NBuildSystem
 
 	using namespace NRepository;
 
+	// The variables of the environment generation uses that a Perforce root's settings are read with, those it sets: the ones read
+	// by name, and the charset p4 learned for each port, P4_<port>_CHARSET, as the port is the settings' of each directory.
+	TCMap<CStr, CStr> CBuildSystem::f_GetPerforceEnvironment() const
+	{
+		TCMap<CStr, CStr> Environment;
+		for (auto &Name : NPerforce::CPerforceIgnore::fs_GetEnvironmentVariables())
+		{
+			bool bExists = false;
+			CStr Value = f_GetEnvironmentVariable(Name, {}, &bExists);
+			if (bExists)
+				Environment[Name] = Value;
+		}
+
+		for (auto iVariable = mp_Environment.f_GetIterator(); iVariable; ++iVariable)
+		{
+			if (NPerforce::CPerforceIgnore::fs_IsLearnedCharsetVariable(iVariable.f_GetKey()))
+				Environment[iVariable.f_GetKey()] = *iVariable;
+		}
+
+		return Environment;
+	}
+
 	void CBuildSystem::f_PopulateAllRepositories(CBuildSystemData &_BuildSystemData) const
 	{
 		CEJsonSorted Repositories = EJsonType_Array;
@@ -5115,6 +5172,59 @@ namespace NMib::NBuildSystem
 		}
 
 		f_AddExternalProperty(fg_RemoveQualifiers(_BuildSystemData.m_RootEntity), gc_ConstKey_AllRepositories, fg_Move(Repositories));
+
+		// Shared_Compile_MalterlibTidy.MSettings declares PerforceRootTidyRules, so an MTool that doesn't set it leaves it empty.
+		CEJsonSorted PerforceRootTidyRules = EJsonType_Array;
+		CStr BaseDir = f_GetBaseDir();
+
+		// A checkout without git is a Perforce root when p4 opens a P4CONFIG file in it. Its settings are read with the environment
+		// generation uses, whose variables are used externals, and the files they come from are source files, also while missing,
+		// as the Perforce library resolves them (f_GetSettingsFiles), so a change of any generates again.
+		if (!CFile::fs_FileExists(BaseDir / ".git", EFileAttrib_Directory | EFileAttrib_File))
+		{
+			for (auto &Name : NPerforce::CPerforceIgnore::fs_GetEnvironmentVariables())
+				fp_UsedExternal(CPropertyKey(mp_StringCache, EPropertyType_Property, Name).f_Reference());
+
+			auto Settings = NPerforce::CPerforceIgnore::fs_GetSettings(BaseDir, f_GetPerforceEnvironment());
+			// Without P4CHARSET the charset p4 learned for the root's port, whose variable the port names.
+			if (Settings.m_LearnedCharsetVariable)
+				fp_UsedExternal(CPropertyKey(mp_StringCache, EPropertyType_Property, Settings.m_LearnedCharsetVariable).f_Reference());
+			auto SettingsFiles = Settings.f_GetSettingsFiles(BaseDir);
+			for (auto &File : SettingsFiles.m_Dependencies)
+				f_AddSourceFile(File, nullptr);
+
+			if (SettingsFiles.m_ConfigFile)
+			{
+				CEJsonSorted Tidy{"Enabled"_= false, "IncludeFiles"_= _[], "ExcludeFiles"_= _[]};
+				auto PerforceRoot = f_EvaluateEntityPropertyObject(_BuildSystemData.m_RootEntity, gc_ConstKey_PerforceRoot, CEJsonSorted()).f_Move();
+				if (PerforceRoot.f_IsObject())
+				{
+					if (auto *pTidy = PerforceRoot.f_GetMember(gc_ConstKey_Repository_Tidy.m_Name, EJsonType_Object))
+						Tidy = *pTidy;
+				}
+
+				// The plugin knows no P4IGNORE, so what mib tidy leaves out of the root is excluded by name.
+				if (Tidy[gc_ConstString_Enabled].f_Boolean())
+				{
+					DMibLock(mp_PerforceRootExcludedLock);
+					if (!mp_PerforceRootExcluded)
+					{
+						TCVector<CStr> RuleFiles;
+						mp_PerforceRootExcluded = NPerforce::CPerforceRootFiles(BaseDir, {}, Settings).f_ListExcluded(&RuleFiles);
+						for (auto &RuleFile : RuleFiles)
+							f_AddSourceFile(RuleFile, nullptr);
+					}
+
+					auto &ExcludeFiles = Tidy[gc_ConstString_ExcludeFiles].f_Array();
+					for (auto &Excluded : *mp_PerforceRootExcluded)
+						ExcludeFiles.f_Insert(CEJsonSorted(Excluded));
+				}
+
+				PerforceRootTidyRules.f_Insert(CEJsonSorted{"Location"_= BaseDir, "Tidy"_= fg_Move(Tidy)});
+			}
+		}
+
+		f_AddExternalProperty(fg_RemoveQualifiers(_BuildSystemData.m_RootEntity), gc_ConstKey_PerforceRootTidyRules, fg_Move(PerforceRootTidyRules));
 	}
 
 	bool CBuildSystem::fp_LfsDedupEnabled()

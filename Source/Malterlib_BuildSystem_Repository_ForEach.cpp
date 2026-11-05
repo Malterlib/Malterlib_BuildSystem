@@ -131,6 +131,8 @@ namespace NMib::NBuildSystem
 		co_return ERetry_None;
 	}
 
+	// The locations of the filtered repositories, in dependency order, and with o_pAllLocations, the locations of every repository,
+	// which tells what nests in them. o_pPerforceRoot gets the Perforce root's location among them, or empty.
 	auto CBuildSystem::f_Action_Repository_GetLocations
 		(
 			CGenerateOptions const &_GenerateOptions
@@ -138,6 +140,7 @@ namespace NMib::NBuildSystem
 			, TCVector<CStr> &o_Locations
 			, TCVector<CStr> *o_pAllLocations
 			, TCMap<CStr, CRepoTidyFiles> *o_pTidyFiles
+			, CStr *o_pPerforceRoot
 		)
 		-> TCUnsafeFuture<CBuildSystem::ERetry>
 	{
@@ -155,6 +158,8 @@ namespace NMib::NBuildSystem
 				o_Locations.f_Insert(pRepo->m_Location);
 				if (o_pTidyFiles)
 					(*o_pTidyFiles)[pRepo->m_Location] = CRepoTidyFiles{pRepo->m_TidyIncludeFiles, pRepo->m_TidyExcludeFiles};
+				if (o_pPerforceRoot && pRepo->m_bPerforceRoot)
+					*o_pPerforceRoot = pRepo->m_Location;
 			}
 		}
 

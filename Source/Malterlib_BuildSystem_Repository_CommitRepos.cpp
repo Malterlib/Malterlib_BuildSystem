@@ -1879,7 +1879,7 @@ namespace NMib::NBuildSystem
 		// path: they must be staged with the changelist but must not feed
 		// RootSeed parsing or fg_CollectChildCommits, where their duplicated
 		// hash entries would corrupt start-commit resolution.
-		bool bIsPerforceRoot = !CFile::fs_FileExists(f_GetBaseDir() + "/.git", EFileAttrib_Directory | EFileAttrib_File) && CPerforceClient::fs_HasP4Config(f_GetBaseDir());
+		bool bIsPerforceRoot = fg_IsPerforceRoot(*this);
 		TCSet<CStr> PerforceRootConfigFiles;
 		TCSet<CStr> PerforceRootMirrorFiles;
 		if (bIsPerforceRoot)
@@ -2318,18 +2318,14 @@ namespace NMib::NBuildSystem
 				)
 			;
 
-			// The Perforce root is not a %Repository entity, so the per-repo
-			// Repository.RepoCommit property cannot attach to it. Read the
-			// global PerforceRoot.RepoCommit property off the root entity
-			// via fg_GetPerforceRootRepoCommitOptions instead — the same
-			// helper drives list-commits, so the header configured here is
-			// also what list-commits uses to recognise repo-commit entries.
+			// The Perforce root has no %Repository, so its RepoCommit comes from PerforceRoot, which list-commits also
+			// uses to recognize repo-commit entries.
 			CStr RootMessageHeader;
 			CStr RootTransformScript;
-			if (auto RootOptions = fg_GetPerforceRootRepoCommitOptions(*this, mp_Data))
+			if (auto PerforceRoot = fg_GetPerforceRootRepository(*this, mp_Data, EGetRepoFlag::mc_IncludeRepoCommit); PerforceRoot && PerforceRoot->m_RepoCommitOptions)
 			{
-				RootMessageHeader = RootOptions->m_MessageHeader;
-				RootTransformScript = RootOptions->m_TransformScript;
+				RootMessageHeader = PerforceRoot->m_RepoCommitOptions->m_MessageHeader;
+				RootTransformScript = PerforceRoot->m_RepoCommitOptions->m_TransformScript;
 			}
 
 			CStr CommitMessage = fg_GenerateCommitMessage(PerforceRootCommits, DisplayNameStages, _Flags & ERepoCommitFlag_SkipCi, _MaxCommitsPerSection, RootMessageHeader);
