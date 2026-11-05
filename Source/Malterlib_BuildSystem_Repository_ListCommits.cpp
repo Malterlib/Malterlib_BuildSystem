@@ -345,7 +345,7 @@ namespace NMib::NBuildSystem
 				ShowRepos[fg_Get<0>(Repo).m_Location];
 		}
 
-		bool bIsPerforceRoot = !CFile::fs_FileExists(f_GetBaseDir() + "/.git", EFileAttrib_Directory | EFileAttrib_File) && CPerforceClient::fs_HasP4Config(f_GetBaseDir());
+		bool bIsPerforceRoot = fg_IsPerforceRoot(*this);
 
 		// Perforce root should always appear in the output
 		if (bIsPerforceRoot)
@@ -845,16 +845,13 @@ namespace NMib::NBuildSystem
 				}
 			;
 
-			// The Perforce root uses the global PerforceRoot.RepoCommit config
-			// (it has no %Repository and its RepositoryByLocation slot is a
-			// nullptr sentinel), so route it through the same helper that
-			// repo-commit uses when writing the outermost changelist. Every
-			// other repo keeps its per-%Repository m_RepoCommitOptions.
+			// The Perforce root's RepositoryByLocation entry is a nullptr sentinel, and its RepoCommit, which repo-commit
+			// writes the outermost changelist with, comes from PerforceRoot.
 			CStr CommitMessageHeader;
 			if (bIsPerforceRoot && Repo == f_GetBaseDir())
 			{
-				if (auto RootOptions = fg_GetPerforceRootRepoCommitOptions(*this, mp_Data))
-					CommitMessageHeader = RootOptions->m_MessageHeader;
+				if (auto PerforceRoot = fg_GetPerforceRootRepository(*this, mp_Data, EGetRepoFlag::mc_IncludeRepoCommit); PerforceRoot && PerforceRoot->m_RepoCommitOptions)
+					CommitMessageHeader = PerforceRoot->m_RepoCommitOptions->m_MessageHeader;
 			}
 			else if (auto *pRepo = RepositoryByLocation.f_FindEqual(Repo); pRepo && *pRepo)
 			{

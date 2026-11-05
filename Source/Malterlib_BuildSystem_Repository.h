@@ -170,6 +170,7 @@ namespace NMib::NBuildSystem::NRepository
 		EGitIgnoreType m_GitIgnoreType = EGitIgnoreType::mc_GitIgnore;
 		CEJsonSorted m_License;
 		bool m_bCheckLicense = false;
+		bool m_bPerforceRoot = false;      // The made-up entry of a Perforce root, whose files are listed without git
 		TCOptional<CHooksConfig> m_HookConfig;
 		TCOptional<CRepoCommitOptions> m_RepoCommitOptions;
 	};
@@ -675,7 +676,9 @@ namespace NMib::NBuildSystem::NRepository
 	TCUnsafeFuture<void> fg_TransferGitDirWorktreeToMain(CGitLaunches &_Launches, CStr const &_WorktreeSubRepoDir, CStr const &_MainSubRepoDir, CStr const &_WorktreeName);
 	TCVector<TCMap<CStr, CReposLocation>> fg_GetRepos(CBuildSystem &_BuildSystem, CBuildSystemData &_Data, EGetRepoFlag _Flags);
 	CRepoEditor fg_GetRepoEditor(CBuildSystem &_BuildSystem, CBuildSystemData &_Data);
-	NStorage::TCOptional<CRepoCommitOptions> fg_GetPerforceRootRepoCommitOptions(CBuildSystem &_BuildSystem, CBuildSystemData &_Data);
+	bool fg_IsPerforceRoot(CBuildSystem const &_BuildSystem);
+	NStorage::TCOptional<CRepository> fg_GetPerforceRootRepository(CBuildSystem &_BuildSystem, CBuildSystemData &_Data, EGetRepoFlag _Flags);
+	void fg_ParseTidySettings(CEJsonSorted const &_Tidy, CRepository &o_Repository);
 
 	TCFunctionMovable<CStr (CProcessLaunchActor::CSimpleLaunchResult const &_Result)> fg_LogAllFunctor();
 

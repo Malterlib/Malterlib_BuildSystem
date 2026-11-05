@@ -5,6 +5,7 @@
 
 #include <Mib/Concurrency/AsyncDestroy>
 #include <Mib/CommandLine/TableRenderer>
+#include <Mib/Perforce/Ignore>
 
 namespace NMib::NBuildSystem
 {
@@ -711,7 +712,20 @@ namespace NMib::NBuildSystem
 		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
 			co_return Retry;
 
-		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(_Filter, *this, mp_Data, EGetRepoFlag::mc_IncludeLicense);
+		CRepoFilter Filter = _Filter;
+		Filter.m_bIncludePerforceRoot = true;
+		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(Filter, *this, mp_Data, EGetRepoFlag::mc_IncludeLicense);
+
+		// A file of the Perforce root is not in a repository below it.
+		TCSet<CStr> AllLocations;
+		for (auto &Repos : FilteredRepositories.m_ReposOrdered)
+		{
+			for (auto &RepoLocation : Repos)
+			{
+				for (auto &Repo : RepoLocation.m_Repositories)
+					AllLocations[Repo.m_Location];
+			}
+		}
 
 		bool bFix = fg_IsSet(_Flags, CBuildSystem::ECheckLicenseFlag::mc_Fix);
 		bool bShowAll = fg_IsSet(_Flags, CBuildSystem::ECheckLicenseFlag::mc_ShowAll);
@@ -772,17 +786,51 @@ namespace NMib::NBuildSystem
 						CHeaderLookup HeaderLookup(License);
 						CCommentStyleLookup StyleLookup(License);
 
-						// Get tracked and untracked files via git ls-files
-						auto LsFilesResult = co_await Launches.f_Launch(Repo, {"ls-files", "--cached", "--others", "--exclude-standard"}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None);
-						if (LsFilesResult.m_ExitCode != 0)
+						TCVector<CStr> TrackedFiles;
+						if (Repo.m_bPerforceRoot)
 						{
-							Result.m_Messages.f_Insert("{}Error:{} Failed to list files"_f << AnsiEncoding.f_StatusError() << AnsiEncoding.f_Default());
-							++Result.m_Stats.m_nErrors;
-							fDone();
-							co_return {};
-						}
+							TCSet<CStr> OtherRepositories = AllLocations;
+							OtherRepositories.f_Remove(Repo.m_Location);
+							auto Listed = co_await
+								(
+									g_Dispatch(fg_BlockingActor()) / [Root = Repo.m_Location, OtherRepositories = fg_Move(OtherRepositories), Environment = f_GetPerforceEnvironment()]
+									() -> TCVector<CStr>
+									{
+										return NPerforce::CPerforceRootFiles(Root, OtherRepositories, NPerforce::CPerforceIgnore::fs_GetSettings(Root, Environment)).f_List();
+									}
+								)
+								.f_Wrap()
+							;
+							if (!Listed)
+							{
+								Result.m_Messages.f_Insert("{}Error:{} Failed to list files: {}"_f << AnsiEncoding.f_StatusError() << AnsiEncoding.f_Default() << Listed.f_GetExceptionStr());
+								++Result.m_Stats.m_nErrors;
+								fDone();
+								co_return {};
+							}
 
-						auto TrackedFiles = LsFilesResult.f_GetStdOut().f_SplitLine<true>();
+							TrackedFiles = fg_Move(*Listed);
+						}
+						else
+						{
+							auto LsFilesResult = co_await Launches.f_Launch
+								(
+									Repo
+									, {"ls-files", "--cached", "--others", "--exclude-standard"}
+									, {}
+									, CProcessLaunchActor::ESimpleLaunchFlag_None
+								)
+							;
+							if (LsFilesResult.m_ExitCode != 0)
+							{
+								Result.m_Messages.f_Insert("{}Error:{} Failed to list files"_f << AnsiEncoding.f_StatusError() << AnsiEncoding.f_Default());
+								++Result.m_Stats.m_nErrors;
+								fDone();
+								co_return {};
+							}
+
+							TrackedFiles = LsFilesResult.f_GetStdOut().f_SplitLine<true>();
+						}
 
 						// Check/copy license files
 						auto const *pLicenseFiles = License.f_GetMember("LicenseFiles");

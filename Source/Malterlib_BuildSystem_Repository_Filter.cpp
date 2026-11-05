@@ -30,6 +30,32 @@ namespace NMib::NBuildSystem::NRepository
 		CStr BaseDir = _BuildSystem.f_GetBaseDir();
 		auto MainBranchInfo = fg_GetMainRepoBranchInfo(BaseDir, FilteredRepos.m_ReposOrdered);
 
+		// First, as a repository at the base directory would be, unless there is one.
+		if (_Filter.m_bIncludePerforceRoot)
+		{
+			bool bHasRootRepository = false;
+			for (auto &Repos : FilteredRepos.m_ReposOrdered)
+			{
+				for (auto &RepoLocation : Repos)
+				{
+					for (auto &Repo : RepoLocation.m_Repositories)
+						bHasRootRepository = bHasRootRepository || Repo.m_Location == BaseDir;
+				}
+			}
+
+			if (!bHasRootRepository)
+			{
+				if (auto PerforceRoot = fg_GetPerforceRootRepository(_BuildSystem, _Data, _GetRepoFlags))
+				{
+					if (FilteredRepos.m_ReposOrdered.f_IsEmpty())
+						FilteredRepos.m_ReposOrdered.f_Insert();
+
+					auto &RepoLocation = FilteredRepos.m_ReposOrdered[0][CFile::fs_GetPath(BaseDir)];
+					*RepoLocation.m_Repositories(PerforceRoot->m_Name, PerforceRoot->m_Name) = *PerforceRoot;
+				}
+			}
+		}
+
 		umint nLaunchRepos = 0;
 		umint iStage = 0;
 		for (auto &Repos : FilteredRepos.m_ReposOrdered)
@@ -63,6 +89,15 @@ namespace NMib::NBuildSystem::NRepository
 
 					if (!_Filter.m_Tags.f_IsEmpty() && Repo.m_Tags.f_And(_Filter.m_Tags) != _Filter.m_Tags)
 						continue;
+
+					// A Perforce root has no git, so no branch and no changes that git tells.
+					if (Repo.m_bPerforceRoot)
+					{
+						if (_Filter.m_Branch.f_IsEmpty() && !_Filter.m_bOnlyChanged)
+							FilteredPerStage[iStage].f_Insert(&Repo);
+
+						continue;
+					}
 
 					if (_Flags & EFilterRepoFlag_IncludeNotCloned)
 					{

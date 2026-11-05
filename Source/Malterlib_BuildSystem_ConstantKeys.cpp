@@ -17,6 +17,7 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_MalterlibRepositoryEditorSleep(EPropertyType_Property, gc_Str<"MalterlibRepositoryEditorSleep">);
 	constexpr CPropertyKeyReference const gc_ConstKey_MalterlibRepositoryEditorWorkingDir(EPropertyType_Property, gc_Str<"MalterlibRepositoryEditorWorkingDir">);
 	constexpr CPropertyKeyReference const gc_ConstKey_PerforceRoot(EPropertyType_Property, gc_Str<"PerforceRoot">);
+	constexpr CPropertyKeyReference const gc_ConstKey_PerforceRootTidyRules(EPropertyType_Property, gc_Str<"PerforceRootTidyRules">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Platform(EPropertyType_Property, gc_Str<"Platform">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Disabled(EPropertyType_Property, gc_Str<"Disabled">);
 	constexpr CPropertyKeyReference const gc_ConstKey_HiddenGroup(EPropertyType_Property, gc_Str<"HiddenGroup">);
@@ -289,6 +290,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_MalterlibRepositoryEditorSleep);
 		o_StringCache.f_AddConstantString(gc_ConstKey_MalterlibRepositoryEditorWorkingDir);
 		o_StringCache.f_AddConstantString(gc_ConstKey_PerforceRoot);
+		o_StringCache.f_AddConstantString(gc_ConstKey_PerforceRootTidyRules);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Platform);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Disabled);
 		o_StringCache.f_AddConstantString(gc_ConstKey_HiddenGroup);

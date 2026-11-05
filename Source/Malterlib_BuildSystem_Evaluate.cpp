@@ -21,6 +21,18 @@ namespace NMib::NBuildSystem
 		}
 	}
 
+	// The value a used external is recorded and compared with. A variable that isn't set differs from one set empty, which for
+	// some, like P4IGNORE, outranks a value stored elsewhere.
+	CStr CBuildSystem::fp_GetUsedExternalValue(CStr const &_Name) const
+	{
+		bool bExists = false;
+		CStr Value = f_GetEnvironmentVariable(_Name, {}, &bExists);
+		if (!bExists)
+			return "\x1F" "unset";
+
+		return Value;
+	}
+
 	void CBuildSystem::fp_TracePropertyEval(bool _bSuccess, CEntity const &_Entity, CPropertyKey const &_PropertyKey, CProperty const &_Property, CEJsonSorted const &_Value) const
 	{
 		if (_Property.m_Flags & EPropertyFlag_TraceEval)
