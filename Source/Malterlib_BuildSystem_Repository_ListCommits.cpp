@@ -71,14 +71,14 @@ namespace NMib::NBuildSystem
 								{
 									if (Rev.m_ChangeList > 0)
 									{
-										uint32 CL = (uint32)Rev.m_ChangeList;
-										if (CL > HighestCL)
+										uint32 Changelist = (uint32)Rev.m_ChangeList;
+										if (Changelist > HighestCL)
 										{
 											SecondHighestCL = HighestCL;
-											HighestCL = CL;
+											HighestCL = Changelist;
 										}
-										else if (CL > SecondHighestCL && CL != HighestCL)
-											SecondHighestCL = CL;
+										else if (Changelist > SecondHighestCL && Changelist != HighestCL)
+											SecondHighestCL = Changelist;
 									}
 								}
 							}
@@ -186,13 +186,13 @@ namespace NMib::NBuildSystem
 								continue;
 
 							// Submitted changelists in range
-							TCVector<CPerforceClient::CChangeList> CLs;
-							Client.f_NoThrow().f_GetChangelists("{}@{},{}"_f << DepotPath << (FromChangelist + 1) << ToSpec, CLs, false);
+							TCVector<CPerforceClient::CChangeList> Changelists;
+							Client.f_NoThrow().f_GetChangelists("{}@{},{}"_f << DepotPath << (FromChangelist + 1) << ToSpec, Changelists, false);
 
-							for (auto &CL : CLs)
+							for (auto &Changelist : Changelists)
 							{
-								if (SeenCLs(CL.m_ChangeID).f_WasCreated())
-									AllChangelists.f_Insert(CL);
+								if (SeenCLs(Changelist.m_ChangeID).f_WasCreated())
+									AllChangelists.f_Insert(Changelist);
 							}
 
 							if (!bToIsWorkspace)
@@ -202,10 +202,10 @@ namespace NMib::NBuildSystem
 							TCVector<CPerforceClient::CChangeList> PendingCLs;
 							Client.f_NoThrow().f_GetChangelists(ConfigFile, PendingCLs, false, CStr(), "pending");
 
-							for (auto &CL : PendingCLs)
+							for (auto &Changelist : PendingCLs)
 							{
-								if (SeenCLs(CL.m_ChangeID).f_WasCreated())
-									AllChangelists.f_Insert(CL);
+								if (SeenCLs(Changelist.m_ChangeID).f_WasCreated())
+									AllChangelists.f_Insert(Changelist);
 							}
 
 							// Default changelist (CL 0) is not returned by p4 changes
@@ -225,22 +225,22 @@ namespace NMib::NBuildSystem
 						}
 
 						TCVector<CLogEntryFull> Entries;
-						for (auto &CL : AllChangelists)
+						for (auto &Changelist : AllChangelists)
 						{
 							CLogEntryFull Entry;
-							Entry.m_Commit = CL.m_Status == "pending" ? ("pending:" + CStr::fs_ToStr(CL.m_ChangeID)) : CStr::fs_ToStr(CL.m_ChangeID);
-							Entry.m_Author = CL.m_User;
-							// CL.m_Date is 0 for synthesized entries (e.g. the
+							Entry.m_Commit = Changelist.m_Status == "pending" ? ("pending:" + CStr::fs_ToStr(Changelist.m_ChangeID)) : CStr::fs_ToStr(Changelist.m_ChangeID);
+							Entry.m_Author = Changelist.m_User;
+							// Changelist.m_Date is 0 for synthesized entries (e.g. the
 							// default changelist) that have no real timestamp;
 							// leave the dates as the default invalid CTime in
 							// that case so the renderer doesn't show 1970.
-							if (CL.m_Date != 0)
+							if (Changelist.m_Date != 0)
 							{
-								Entry.m_AuthorDate = CTimeConvert::fs_FromUnixSeconds(CL.m_Date);
+								Entry.m_AuthorDate = CTimeConvert::fs_FromUnixSeconds(Changelist.m_Date);
 								Entry.m_CommitterDate = Entry.m_AuthorDate;
 							}
-							Entry.m_Committer = CL.m_User;
-							Entry.m_Message = CL.m_Description.f_Trim();
+							Entry.m_Committer = Changelist.m_User;
+							Entry.m_Message = Changelist.m_Description.f_Trim();
 							if (!Entry.m_Message.f_IsEmpty())
 								Entry.m_FirstLine = Entry.m_Message.f_SplitLine().f_GetFirst();
 							Entries.f_Insert(fg_Move(Entry));

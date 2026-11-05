@@ -1497,22 +1497,22 @@ namespace NMib::NBuildSystem
 							TCVector<CPerforceClient::CChangeList> PendingCLs;
 							Client.f_NoThrow().f_GetChangelists(CStr(), PendingCLs, false, ClientName, "pending");
 
-							for (auto &CL : PendingCLs)
+							for (auto &Changelist : PendingCLs)
 							{
-								if (CL.m_Description.f_Trim() == _CommitMessage)
+								if (Changelist.m_Description.f_Trim() == _CommitMessage)
 								{
-									UpdateReposCL = CL.m_ChangeID;
+									UpdateReposCL = Changelist.m_ChangeID;
 									break;
 								}
 							}
 
 							if (UpdateReposCL == 0)
 							{
-								for (auto &CL : PendingCLs)
+								for (auto &Changelist : PendingCLs)
 								{
-									if (CL.m_Description.f_Trim().f_StartsWith(ChangelistPrefix))
+									if (Changelist.m_Description.f_Trim().f_StartsWith(ChangelistPrefix))
 									{
-										UpdateReposCL = CL.m_ChangeID;
+										UpdateReposCL = Changelist.m_ChangeID;
 										break;
 									}
 								}
@@ -1642,11 +1642,11 @@ namespace NMib::NBuildSystem
 						// file exists we always fall through to add+open below.
 						if (bExistingDescriptionMatches && NewConfigFiles.f_IsEmpty() && ForeignFilesInCL.f_IsEmpty())
 						{
-							CPerforceClient::CChangeList CLData;
-							if (Client.f_NoThrow().f_GetChangelist(UpdateReposCL, CLData))
+							CPerforceClient::CChangeList ChangelistData;
+							if (Client.f_NoThrow().f_GetChangelist(UpdateReposCL, ChangelistData))
 							{
 								TCSet<CStr> FilesInCL;
-								for (auto &File : CLData.m_Files)
+								for (auto &File : ChangelistData.m_Files)
 									FilesInCL[File.m_Name];
 
 								bool bAllFilesInCL = true;
