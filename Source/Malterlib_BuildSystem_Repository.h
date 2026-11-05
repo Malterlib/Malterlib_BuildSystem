@@ -408,7 +408,7 @@ namespace NMib::NBuildSystem::NRepository
 		CGitLaunches(CGitLaunches const &_Other);
 		CGitLaunches(CGitLaunches &&_Other) = default;
 
-		TCUnsafeFuture<CAsyncDestroyAwaiter> f_Init();
+		DMibResultEndsBeforeObject TCUnsafeFuture<CAsyncDestroyAwaiter> f_Init();
 
 		void f_CheckInit() const;
 		void f_SetNumRepos(umint _nRepos, bool _bReport = true);
