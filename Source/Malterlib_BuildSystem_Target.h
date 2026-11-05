@@ -37,13 +37,13 @@ namespace NMib::NBuildSystem
 
 	struct CFileKey
 	{
-		NStr::CStr m_FileName;
-		NStr::CStr m_GroupPath;
-
 		template <typename tf_CStr>
 		void f_Format(tf_CStr &o_Str) const;
 
 		auto operator <=> (CFileKey const &_Other) const noexcept = default;
+
+		NStr::CStr m_FileName;
+		NStr::CStr m_GroupPath;
 	};
 
 	struct align_cacheline CTargetInfo : public CGroupMember

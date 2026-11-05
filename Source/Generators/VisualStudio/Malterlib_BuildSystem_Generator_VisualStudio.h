@@ -299,10 +299,10 @@ namespace NMib::NBuildSystem::NVisualStudio
 			inline_small CStr const &operator () (CSolution const &_Node) const;
 		};
 
+		CSolution(CStr const &_Name);
+
 		CStr const &f_GetName() const;
 		void f_FindRecursiveDependencies(CBuildSystem const &_BuildSystem);
-
-		CSolution(CStr const &_Name);
 
 		CStr m_Name;
 
@@ -357,14 +357,14 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 		struct CConfigValue
 		{
+			inline COrdering_Strong operator <=> (CConfigValue const &_Right) const noexcept;
+
 			CStr m_Parent;
 			CStr m_Entity;
 			CStr m_Property;
 			CStr m_Value;
 
 			bool m_bMainValue = false;
-
-			inline COrdering_Strong operator <=> (CConfigValue const &_Right) const noexcept;
 		};
 
 		struct CConfigResult

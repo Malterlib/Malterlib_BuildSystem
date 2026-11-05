@@ -14,53 +14,61 @@ namespace NMib::NBuildSystem
 		{
 			struct CFileState
 			{
+				template <typename tf_CStream>
+				void f_Stream(tf_CStream &_Stream);
+
 				CTime m_WriteTime;
 				TCSharedPointer<CHashDigest_SHA256> m_pDigest;
-
-				template <typename tf_CStream>
-				void f_Stream(tf_CStream &_Stream)
-				{
-					_Stream % m_WriteTime;
-
-					if (_Stream.f_GetVersion() >= 0x102)
-					{
-						bool bDigest = !!m_pDigest;
-						_Stream % bDigest;
-						if (bDigest)
-						{
-							if (!m_pDigest)
-								m_pDigest = fg_Construct();
-							_Stream % *m_pDigest;
-						}
-					}
-				}
 			};
+
+			template <typename tf_CStream>
+			void f_Stream(tf_CStream &_Stream);
+
+			void f_AddFile(CStr const &_FileName, TCSharedPointer<CHashDigest_SHA256> &&_pDigest);
 
 			TCMap<CStr, CFileState> m_States;
 			TCVector<CStr> m_Parameters;
-
-			template <typename tf_CStream>
-			void f_Stream(tf_CStream &_Stream)
-			{
-				uint32 Version = 0x102;
-				_Stream % Version;
-				if (Version < 0x101 || Version > 0x102)
-					DMibError("Invalid CExecuteCommandState version");
-
-				DBinaryStreamVersion(_Stream, Version);
-
-				_Stream % m_States;
-				_Stream % m_Parameters;
-			}
-
-			void f_AddFile(CStr const &_FileName, TCSharedPointer<CHashDigest_SHA256> &&_pDigest)
-			{
-				auto &State = m_States[_FileName];
-				State.m_WriteTime = CFile::fs_GetWriteTime(_FileName);
-
-				State.m_pDigest = fg_Move(_pDigest);
-			}
 		};
+
+		template <typename tf_CStream>
+		void CExecuteCommandState::CFileState::f_Stream(tf_CStream &_Stream)
+		{
+			_Stream % m_WriteTime;
+
+			if (_Stream.f_GetVersion() >= 0x102)
+			{
+				bool bDigest = !!m_pDigest;
+				_Stream % bDigest;
+				if (bDigest)
+				{
+					if (!m_pDigest)
+						m_pDigest = fg_Construct();
+					_Stream % *m_pDigest;
+				}
+			}
+		}
+
+		template <typename tf_CStream>
+		void CExecuteCommandState::f_Stream(tf_CStream &_Stream)
+		{
+			uint32 Version = 0x102;
+			_Stream % Version;
+			if (Version < 0x101 || Version > 0x102)
+				DMibError("Invalid CExecuteCommandState version");
+
+			DBinaryStreamVersion(_Stream, Version);
+
+			_Stream % m_States;
+			_Stream % m_Parameters;
+		}
+
+		void CExecuteCommandState::f_AddFile(CStr const &_FileName, TCSharedPointer<CHashDigest_SHA256> &&_pDigest)
+		{
+			auto &State = m_States[_FileName];
+			State.m_WriteTime = CFile::fs_GetWriteTime(_FileName);
+
+			State.m_pDigest = fg_Move(_pDigest);
+		}
 	}
 
 	void CBuildSystem::fp_RegisterBuiltinFunctions_Execute()

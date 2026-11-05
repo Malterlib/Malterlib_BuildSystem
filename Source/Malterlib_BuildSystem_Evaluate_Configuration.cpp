@@ -9,16 +9,17 @@ namespace NMib::NBuildSystem
 	{
 		struct CConfigKey
 		{
+			auto operator <=> (CConfigKey const &_Right) const noexcept = default;
+
 			CStr m_ConfigType;
 			CStr m_ConfigName;
-
-			auto operator <=> (CConfigKey const &_Right) const noexcept = default;
 		};
 
 		struct CConfigTuple
 		{
-			TCMap<CConfigKey, CBuildSystemConfiguration const *> m_Keys;
 			auto operator <=> (CConfigTuple const &_Right) const noexcept = default;
+
+			TCMap<CConfigKey, CBuildSystemConfiguration const *> m_Keys;
 		};
 	}
 

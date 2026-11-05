@@ -22,20 +22,15 @@ namespace
 
 	struct CImportTarget
 	{
-		template <typename tf_CStr>
-		void f_Format(tf_CStr &o_String) const
-		{
-			o_String += typename tf_CStr::CFormat("\n\tDependencies: {}") << m_Dependencies;
-			o_String += typename tf_CStr::CFormat("\n\tOutputs: {}") << m_Outputs;
-			o_String += typename tf_CStr::CFormat("\n\tInputs: {}") << m_Inputs;
-		}
-
 		struct CDependency
 		{
 			CBuildSystemSyntax::CValue *m_pValue = nullptr;
 			CBuildSystemRegistry *m_pBuildSystemRegistry = nullptr;
 			bool m_bIsOrdered = false;
 		};
+
+		template <typename tf_CStr>
+		void f_Format(tf_CStr &o_String) const;
 
 		TCMap<CStr, CDependency> m_Dependencies;
 		TCSet<CStr> m_Outputs;
@@ -44,6 +39,14 @@ namespace
 		CBuildSystemSyntax::CValue *m_pNameValue = nullptr;
 		CBuildSystemRegistry *m_pBaseName = nullptr;
 	};
+
+	template <typename tf_CStr>
+	void CImportTarget::f_Format(tf_CStr &o_String) const
+	{
+		o_String += typename tf_CStr::CFormat("\n\tDependencies: {}") << m_Dependencies;
+		o_String += typename tf_CStr::CFormat("\n\tOutputs: {}") << m_Outputs;
+		o_String += typename tf_CStr::CFormat("\n\tInputs: {}") << m_Inputs;
+	}
 }
 
 namespace NMib::NBuildSystem
