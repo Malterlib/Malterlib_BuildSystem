@@ -268,6 +268,7 @@ namespace NMib::NBuildSystem::NRepository
 	};
 #endif
 
+	// The guard it gives uses this object when it is destroyed, so it is kept in a local declared after the object.
 	TCUnsafeFuture<CAsyncDestroyAwaiter> CGitLaunches::f_Init()
 	{
 		auto pState = m_pState;
@@ -311,7 +312,7 @@ namespace NMib::NBuildSystem::NRepository
 
 		co_return fg_AsyncDestroyGeneric
 			(
-				[this]() -> TCFuture<void> // NOLINT(malterlib-coroutine-unsafe-this): every caller declares the guard after this object, so it is alive when the guard starts this
+				[this]() -> TCFuture<void>
 				{
 					auto This = fg_Move(*this);
 
