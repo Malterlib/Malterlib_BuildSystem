@@ -201,7 +201,7 @@ namespace NMib::NBuildSystem
 
 	void CBuildSystem::fsp_ThrowError(CBuildSystemRegistry const &_Registry, CStr const &_Error)
 	{
-		fsp_ThrowError(_Registry.f_GetLocation(), _Error);
+		fsp_ThrowError(_Registry.f_GetValueOrKeyLocation(), _Error);
 	}
 
 	void CBuildSystem::fs_ThrowError(CEvalPropertyValueContext &_Context, CFilePosition const &_Position, NStr::CStr const &_Error, NContainer::TCVector<CBuildSystemError> const &_Errors)

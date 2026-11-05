@@ -471,7 +471,7 @@ namespace NMib::NBuildSystem
 					, o_Entity
 					, _VariableName
 					, Type
-					, _Registry.f_GetLocation()
+					, _Registry.f_GetValueOrKeyLocation()
 					, _Registry.f_GetWhiteSpace(ERegistryWhiteSpaceLocation_After)
 					, fs_GetLeadingWhiteSpace(_Registry)
 					, pConditions
@@ -559,7 +559,7 @@ namespace NMib::NBuildSystem
 						if (!Value.m_Value.f_IsConstantString())
 							fsp_ThrowError(Registry, "Only strings are supported for debug pragma statements");
 
-						o_DebugFlags = fsp_ParseDebugFlags(Registry.f_GetLocation(), Value.m_Value.f_ConstantString());
+						o_DebugFlags = fsp_ParseDebugFlags(Registry.f_GetValueOrKeyLocation(), Value.m_Value.f_ConstantString());
 					}
 					, [&](CBuildSystemSyntax::CIdentifier const &_Identifier)
 					{
@@ -975,7 +975,7 @@ namespace NMib::NBuildSystem
 							if (!Value.m_Value.f_IsConstantString())
 								fsp_ThrowError(Registry, "Only strings are supported for debug pragma statements");
 
-							pEntity->f_DataWritable().m_DebugFlags = fsp_ParseDebugFlags(Registry.f_GetLocation(), Value.m_Value.f_ConstantString());
+							pEntity->f_DataWritable().m_DebugFlags = fsp_ParseDebugFlags(Registry.f_GetValueOrKeyLocation(), Value.m_Value.f_ConstantString());
 						}
 						else
 							fsp_ThrowError(Registry, "Unexpected prefix operator: {}"_f << _PrefixOperator.m_Operator);

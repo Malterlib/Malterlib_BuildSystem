@@ -8,7 +8,7 @@
 namespace NMib::NBuildSystem
 {
 	CFilePosition::CFilePosition(CBuildSystemRegistry const &_Position)
-		: NStr::CParseLocation(_Position.f_GetLocation())
+		: NStr::CParseLocation(_Position.f_GetValueOrKeyLocation())
 	{
 		m_FileHash = NStr::fg_StrHash(m_File);
 	}
@@ -23,7 +23,7 @@ namespace NMib::NBuildSystem
 
 	CFilePosition &CFilePosition::operator = (CBuildSystemRegistry const &_Position)
 	{
-		(NStr::CParseLocation &)*this = _Position.f_GetLocation();
+		(NStr::CParseLocation &)*this = _Position.f_GetValueOrKeyLocation();
 		m_FileHash = NStr::fg_StrHash(m_File);
 		return *this;
 	}

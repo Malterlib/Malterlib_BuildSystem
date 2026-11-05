@@ -1257,7 +1257,7 @@ namespace NMib::NBuildSystem
 
 								for (auto &Child : o_This.f_GetChildren())
 								{
-									auto Location = Child.f_GetLocation();
+									auto Location = Child.f_GetValueOrKeyLocation();
 									auto &Name = Child.f_GetName();
 
 									if (!Name.f_IsValue())
@@ -1377,7 +1377,7 @@ namespace NMib::NBuildSystem
 									}
 								}
 
-								auto Location = o_This.f_GetLocation();
+								auto Location = o_This.f_GetValueOrKeyLocation();
 
 								if (!WorkingDirectorySource)
 									return;
@@ -1551,7 +1551,7 @@ namespace NMib::NBuildSystem
 
 								do
 								{
-									auto Location = o_This.f_GetLocation();
+									auto Location = o_This.f_GetValueOrKeyLocation();
 									auto &Name = o_This.f_GetName();
 
 									if (!Name.f_IsValue())

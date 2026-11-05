@@ -24,7 +24,7 @@ namespace NMib::NBuildSystem
 
 	void CBuildSystemPreprocessor::fsp_ThrowError(CBuildSystemRegistry const &_Registry, CStr const &_Error)
 	{
-		DMibError(NStr::CStr::CFormat("{} {}") << _Registry.f_GetLocation() << _Error);
+		DMibError(NStr::CStr::CFormat("{} {}") << _Registry.f_GetValueOrKeyLocation() << _Error);
 	}
 
 	void CBuildSystemPreprocessor::fp_FindFilesRecursive(CBuildSystemRegistry &_Registry, TCVector<CStr> &o_Files, CStr const &_Path, CStr const &_ToFind)
