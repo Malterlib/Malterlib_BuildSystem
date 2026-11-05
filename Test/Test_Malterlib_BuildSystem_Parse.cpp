@@ -14,31 +14,39 @@ namespace
 
 	struct CBuildSystemRegistry_Tests : public NTest::CTest
 	{
-		CBuildSystemRegistry_Tests()
+		CBuildSystemRegistry_Tests();
+
+		void f_DoTests();
+
+	private:
+		NStr::CStr mp_TestFilePath;
+	};
+
+	CBuildSystemRegistry_Tests::CBuildSystemRegistry_Tests()
+	{
+	}
+
+	void CBuildSystemRegistry_Tests::f_DoTests()
+	{
+		DMibTestSuite("Parse")
 		{
-		}
+			auto fParseGenerate = [&](CStr const &_Source)
+				{
+					auto DebugFile = NFile::CFile::fs_GetProgramDirectory() / "TestBuildSystemParse.reg";
+					fg_TestAddCleanupPath(DebugFile);
 
-		void f_DoTests()
-		{
-			DMibTestSuite("Parse")
-			{
-				auto fParseGenerate = [&](CStr const &_Source)
-					{
-						auto DebugFile = NFile::CFile::fs_GetProgramDirectory() / "TestBuildSystemParse.reg";
-						fg_TestAddCleanupPath(DebugFile);
+					CBuildSystemRegistry RegistryTest;
+					NFile::CFile::fs_WriteStringToFile(DebugFile, _Source);
 
-						CBuildSystemRegistry RegistryTest;
-						NFile::CFile::fs_WriteStringToFile(DebugFile, _Source);
+					CStringCache StringCache;
+					CBuildSystemRegistryParseContext ParseContext(StringCache);
 
-						CStringCache StringCache;
-						CBuildSystemRegistryParseContext ParseContext(StringCache);
+					RegistryTest.f_ParseStrWithContext(ParseContext, _Source, DebugFile);
+					return RegistryTest.f_GenerateStr();
+				}
+			;
 
-						RegistryTest.f_ParseStrWithContext(ParseContext, _Source, DebugFile);
-						return RegistryTest.f_GenerateStr();
-					}
-				;
-
-				NStr::CStr RegistryStr = R"---(Root
+			NStr::CStr RegistryStr = R"---(Root
 {
 	TestStr /* Comment */ "Test Str" // Comment
 	TestMultilineStr "Line 1\n"\
@@ -330,13 +338,9 @@ namespace
 	]<[0].@(Value)>
 }
 )---";
-				DMibExpect(fParseGenerate(RegistryStr), ==, RegistryStr);
-			};
-		}
-
-	private:
-		NStr::CStr mp_TestFilePath;
-	};
+			DMibExpect(fParseGenerate(RegistryStr), ==, RegistryStr);
+		};
+	}
 
 	DMibTestRegister(CBuildSystemRegistry_Tests, Malterlib::BuildSystem);
 }

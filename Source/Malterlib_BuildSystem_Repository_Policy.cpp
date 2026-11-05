@@ -13,13 +13,7 @@ namespace NMib::NBuildSystem::NRepository
 {
 	struct CApplyPolicyOptions
 	{
-		CStr f_PretendDescription() const
-		{
-			if (fg_IsSet(m_Flags, EApplyPolicyFlag::mc_Pretend))
-				return "Would have: ";
-			else
-				return "";
-		}
+		CStr f_PretendDescription() const;
 
 		CStr m_Repository;
 		CStr m_Url;
@@ -27,6 +21,14 @@ namespace NMib::NBuildSystem::NRepository
 		TCFunction<void (EOutputType _OutputType, CStr const &_String)> m_fOutputInfo;
 		EApplyPolicyFlag m_Flags = EApplyPolicyFlag::mc_None;
 	};
+
+	CStr CApplyPolicyOptions::f_PretendDescription() const
+	{
+		if (fg_IsSet(m_Flags, EApplyPolicyFlag::mc_Pretend))
+			return "Would have: ";
+		else
+			return "";
+	}
 
 	TCFuture<bool> fg_ApplyPolicies_RepositorySettings(CApplyPolicyOptions _Options, CEJsonSorted _Policy)
 	{

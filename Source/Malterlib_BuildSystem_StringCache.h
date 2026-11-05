@@ -33,11 +33,10 @@ namespace NMib::NBuildSystem
 		constexpr CStringAndHash(CAssertAddedToStringCache _Dummy, NStr::CStr const &_String, uint32 _Hash);
 		template <umint tf_nChars>
 		constexpr CStringAndHash(NStr::TCStrConstDataAndStr<tf_nChars, ch8> const &_String);
-
-		constexpr operator NStr::CStr const & () const;
-
 		CStringAndHash(CStringAndHash &&_Other) = default;
 		CStringAndHash(CStringAndHash const &_Other) = default;
+
+		constexpr operator NStr::CStr const & () const;
 
 		auto operator <=> (CStringAndHash const &_Right) const noexcept = default;
 

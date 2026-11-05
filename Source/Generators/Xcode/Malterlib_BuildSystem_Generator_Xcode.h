@@ -169,6 +169,15 @@ namespace NMib::NBuildSystem::NXcode
 
 	struct CProjectFile
 	{
+		CStr const &f_GetName() const;
+		CStr const &f_GetNameGroupPath() const;
+		CStr f_GetGroupPath() const;
+		CStr const &f_GetFileRefGUID();
+		CStr const &f_GetBuildRefGUID(CConfiguration const &_Configuration);
+		CStr const &f_GetBuildRuleGUID(CConfiguration const &_Configuration);
+		CStr const &f_GetLastKnownFileType();
+		CStr const &f_GetCompileFlagsGUID();
+
 		TCPointer<CGroup> m_pGroup;
 		TCMap<CConfiguration, CEntityMutablePointer> m_EnabledConfigs;
 		TCMap<CConfiguration, CConfigResultCompile> m_CompileResults;
@@ -181,15 +190,6 @@ namespace NMib::NBuildSystem::NXcode
 		uint8 m_TabWidth = 0;    // 0 means unset
 		uint8 m_IndentWidth = 0; // 0 means unset
 		uint8 m_UsesTabs = 0;    // 0 means unset, 1 = uses tabs, 2 = uses spaces
-
-		CStr const &f_GetName() const;
-		CStr const &f_GetNameGroupPath() const;
-		CStr f_GetGroupPath() const;
-		CStr const &f_GetFileRefGUID();
-		CStr const &f_GetBuildRefGUID(CConfiguration const &_Configuration);
-		CStr const &f_GetBuildRuleGUID(CConfiguration const &_Configuration);
-		CStr const &f_GetLastKnownFileType();
-		CStr const &f_GetCompileFlagsGUID();
 
 	private:
 		CStr mp_FileRefGUID;
@@ -333,10 +333,10 @@ namespace NMib::NBuildSystem::NXcode
 			inline_always CStr const &operator () (CSolution const &_Node) const;
 		};
 
+		CSolution(CStr const &_Name);
+
 		CStr const &f_GetName() const;
 		void f_FindRecursiveDependencies(CBuildSystem const &_BuildSystem);
-
-		CSolution(CStr const &_Name);
 
 		CStr m_Name;
 

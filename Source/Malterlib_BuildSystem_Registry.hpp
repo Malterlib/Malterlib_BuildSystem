@@ -8,24 +8,8 @@ namespace NMib::NContainer
 	template <>
 	struct TCRegistry_CustomKeyValue<NBuildSystem::CBuildSystemSyntax::CRootKey, NBuildSystem::CBuildSystemSyntax::CRootValue>
 	{
-		static constexpr bool mc_bDefault = false;
-		static constexpr bool mc_bDefaultKey = false;
-		static constexpr bool mc_bRequireStartScopeOnSeparateLine = true;
-
 		struct CEJsonParseContext : public NEncoding::NJson::CParseContext
 		{
-			static constexpr bool mc_bCustomParse = true;
-			static constexpr bool mc_bCustomGenerate = true;
-			static constexpr bool mc_bAllowSingleQuote = true;
-			static constexpr bool mc_bAllowKeyWithoutQuote = true;
-			static constexpr NEncoding::NJson::EParseJsonStringFlag mc_ParseJsonStringFlags = NEncoding::NJson::EParseJsonStringFlag_AllowMultiLine;
-			static constexpr bool mc_bAllowDuplicateKeys = false;
-			static inline constexpr ch8 mc_AllowedControlCharacters[] = "\t";
-			static inline constexpr ch8 mc_AllowedKeyWithoutQuoteCharacters[] = "$_?.";
-			static inline constexpr ch8 mc_ConstantEndCharacters[] = ",}])-";
-			static inline constexpr ch8 mc_BinaryOperatorCharacters[] = "+-*/%<>=!&^|?";
-			static inline constexpr ch8 mc_PrefixOperatorCharacters[] = "+-!~";
-
 			CEJsonParseContext();
 
 			NContainer::CByteVector f_ParseBinary(uch8 const * &o_pParse, bool _bWithinParenthesis);
@@ -68,6 +52,18 @@ namespace NMib::NContainer
 
 			static bool fs_IsBinaryOperator(uch8 const *_pParse);
 			static bool fs_IsPrefixOperator(uch8 const *_pParse);
+
+			static constexpr bool mc_bCustomParse = true;
+			static constexpr bool mc_bCustomGenerate = true;
+			static constexpr bool mc_bAllowSingleQuote = true;
+			static constexpr bool mc_bAllowKeyWithoutQuote = true;
+			static constexpr NEncoding::NJson::EParseJsonStringFlag mc_ParseJsonStringFlags = NEncoding::NJson::EParseJsonStringFlag_AllowMultiLine;
+			static constexpr bool mc_bAllowDuplicateKeys = false;
+			static inline constexpr ch8 mc_AllowedControlCharacters[] = "\t";
+			static inline constexpr ch8 mc_AllowedKeyWithoutQuoteCharacters[] = "$_?.";
+			static inline constexpr ch8 mc_ConstantEndCharacters[] = ",}])-";
+			static inline constexpr ch8 mc_BinaryOperatorCharacters[] = "+-*/%<>=!&^|?";
+			static inline constexpr ch8 mc_PrefixOperatorCharacters[] = "+-!~";
 		};
 
 		enum EParseExpressionFlag
@@ -245,8 +241,6 @@ namespace NMib::NContainer
 
 		struct CJsonParseContextCatureStringMap : public CJsonParseContext
 		{
-			static constexpr bool mc_bRecordStringMap = true;
-
 			void f_MapCharacter(umint _iDestination, umint _iSource, umint _nChars);
 			void f_ThrowError(NStr::CStr const &_Error, uch8 const *_pLocation) const;
 
@@ -259,6 +253,8 @@ namespace NMib::NContainer
 				auto pParseInOriginal = m_pOriginalStartParse + m_StringMap[_pParse - m_pStartParse];
 				return NEncoding::NJson::CParseContext::fs_GetLocation<tf_CParseContext>(m_FileName, 0, 0, 0, m_pOriginalStartParse, pParseInOriginal);
 			}
+
+			static constexpr bool mc_bRecordStringMap = true;
 
 			CJsonParseContext const *m_pOriginalParseContext;
 			TCVector<umint> m_StringMap;
@@ -297,6 +293,10 @@ namespace NMib::NContainer
 
 		template <typename tf_CString>
 		static void fs_Generate(tf_CString &o_Output, NBuildSystem::CBuildSystemSyntax::CRootValue const &_Value, bool _bForceEscape, umint _Level, tf_CString const &_PreData);
+
+		static constexpr bool mc_bDefault = false;
+		static constexpr bool mc_bDefaultKey = false;
+		static constexpr bool mc_bRequireStartScopeOnSeparateLine = true;
 	};
 }
 

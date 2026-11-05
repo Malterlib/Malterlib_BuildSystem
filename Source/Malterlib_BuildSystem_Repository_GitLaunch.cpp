@@ -249,23 +249,25 @@ namespace NMib::NBuildSystem::NRepository
 	{
 		CTrackTimerDestruction() = default;
 		CTrackTimerDestruction(CTrackTimerDestruction const &_Other) = delete;
-
-		CTrackTimerDestruction(CTrackTimerDestruction &&_Other)
-			: m_bLastAlive(fg_Exchange(_Other.m_bLastAlive, false))
-		{
-		}
-
-		~CTrackTimerDestruction()
-		{
-			if (m_bLastAlive)
-			{
-				DMibLock(gs_TimerDestructionTrackerLock);
-				gs_TimerDestructionTrackerCallstack.f_Capture();
-			}
-		}
+		CTrackTimerDestruction(CTrackTimerDestruction &&_Other);
+		~CTrackTimerDestruction();
 
 		bool m_bLastAlive = true;
 	};
+
+	CTrackTimerDestruction::CTrackTimerDestruction(CTrackTimerDestruction &&_Other)
+		: m_bLastAlive(fg_Exchange(_Other.m_bLastAlive, false))
+	{
+	}
+
+	CTrackTimerDestruction::~CTrackTimerDestruction()
+	{
+		if (m_bLastAlive)
+		{
+			DMibLock(gs_TimerDestructionTrackerLock);
+			gs_TimerDestructionTrackerCallstack.f_Capture();
+		}
+	}
 #endif
 
 	// The guard it gives uses this object when it is destroyed, so it is kept in a local declared after the object.

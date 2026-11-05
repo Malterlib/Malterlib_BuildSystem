@@ -18,35 +18,43 @@ namespace NMib::NBuildSystem
 	{
 		struct CLocalGeneratorInteface : public ICGeneratorInterface
 		{
-			CLocalGeneratorInteface(CStr const &_OutputDir)
-				: m_OutputDir(_OutputDir)
-			{
-			}
+			CLocalGeneratorInteface(CStr const &_OutputDir);
 
-			CValuePotentiallyByRef f_GetBuiltin(CBuildSystemUniquePositions *_pStorePositions, CStr const &_Value, bool &o_bSuccess) const override
-			{
-				if (_Value == gc_ConstKey_Builtin_GeneratedBuildSystemDir.m_Name)
-				{
-					if (_pStorePositions)
-						_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.GeneratedBuildSystemDir")->f_AddValue(m_OutputDir, false);
-					o_bSuccess = true;
-					return CEJsonSorted(m_OutputDir);
-				}
-				return CEJsonSorted();
-			}
+			CValuePotentiallyByRef f_GetBuiltin(CBuildSystemUniquePositions *_pStorePositions, CStr const &_Value, bool &o_bSuccess) const override;
 
-			CStr f_GetExpandedPath(CStr const &_Path, CStr const &_Base) const override
-			{
-				return CFile::fs_GetExpandedPath(_Path, _Base);
-			}
+			CStr f_GetExpandedPath(CStr const &_Path, CStr const &_Base) const override;
 
-			CSystemEnvironment f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const override
-			{
-				return fg_GetSys()->f_Environment();
-			}
+			CSystemEnvironment f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const override;
 
 			CStr m_OutputDir;
 		};
+
+		CLocalGeneratorInteface::CLocalGeneratorInteface(CStr const &_OutputDir)
+			: m_OutputDir(_OutputDir)
+		{
+		}
+
+		CValuePotentiallyByRef CLocalGeneratorInteface::f_GetBuiltin(CBuildSystemUniquePositions *_pStorePositions, CStr const &_Value, bool &o_bSuccess) const
+		{
+			if (_Value == gc_ConstKey_Builtin_GeneratedBuildSystemDir.m_Name)
+			{
+				if (_pStorePositions)
+					_pStorePositions->f_AddPosition(DMibBuildSystemFilePosition, "Builtin.GeneratedBuildSystemDir")->f_AddValue(m_OutputDir, false);
+				o_bSuccess = true;
+				return CEJsonSorted(m_OutputDir);
+			}
+			return CEJsonSorted();
+		}
+
+		CStr CLocalGeneratorInteface::f_GetExpandedPath(CStr const &_Path, CStr const &_Base) const
+		{
+			return CFile::fs_GetExpandedPath(_Path, _Base);
+		}
+
+		CSystemEnvironment CLocalGeneratorInteface::f_GetBuildEnvironment(CStr const &_Platform, CStr const &_Architecture) const
+		{
+			return fg_GetSys()->f_Environment();
+		}
 
 		// The OS reports the program path with every symbolic link resolved, so a workspace reached through
 		// a symlink would refer to its own tools by the link target and generated command lines would mix

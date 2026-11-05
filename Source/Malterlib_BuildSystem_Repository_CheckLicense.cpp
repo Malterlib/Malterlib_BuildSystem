@@ -36,189 +36,197 @@ namespace NMib::NBuildSystem
 				CCommentStyleConfig m_Style;
 			};
 
-			CCommentStyleLookup(CEJsonSorted const &_License)
-			{
-				// Built-in styles
+			CCommentStyleLookup(CEJsonSorted const &_License);
 
-				fp_AddBuiltin
-					(
-						{.m_LinePrefix = gc_Str<"// ">}
-						,
-						{
-							gc_Str<"cpp">
-							, gc_Str<"h">
-							, gc_Str<"hpp">
-							, gc_Str<"c">
-							, gc_Str<"cxx">
-							, gc_Str<"hxx">
-							, gc_Str<"inl">
-							, gc_Str<"dox">
-							, gc_Str<"js">
-							, gc_Str<"mjs">
-							, gc_Str<"cjs">
-							, gc_Str<"ts">
-							, gc_Str<"tsx">
-							, gc_Str<"jsx">
-							, gc_Str<"swift">
-							, gc_Str<"java">
-							, gc_Str<"kt">
-							, gc_Str<"scala">
-							, gc_Str<"go">
-							, gc_Str<"rs">
-							, gc_Str<"cs">
-							, gc_Str<"m">
-							, gc_Str<"mm">
-							, gc_Str<"rc">
-						}
-					)
-				;
-				fp_AddBuiltin
-					(
-						{.m_LinePrefix = gc_Str<"// ">}
-						,
-						{
-							gc_Str<"MSettings">
-							, gc_Str<"MHeader">
-							, gc_Str<"MTarget">
-							, gc_Str<"MRepo">
-							, gc_Str<"MBuildSystem">
-							, gc_Str<"MConfig">
-							, gc_Str<"MRepoState">
-							, gc_Str<"MGeneratorSettings">
-							, gc_Str<"MInclude">
-							, gc_Str<"MLBuildOptions">
-						}
-					)
-				;
-				fp_AddBuiltin
-					(
-						{.m_LinePrefix = gc_Str<"# ">}
-						,
-						{
-							gc_Str<"doxygen">
-						}
-					)
-				;
-				fp_AddBuiltin({.m_LinePrefix = gc_Str<"# ">, .m_bDetectShebang = true, .m_bIsPython = true}, {gc_Str<"py">});
-				fp_AddBuiltin
-					(
-						{.m_LinePrefix = gc_Str<"# ">, .m_bDetectShebang = true}
-						,
-						{
-							gc_Str<"sh">
-							, gc_Str<"bash">
-							, gc_Str<"zsh">
-							, gc_Str<"cmake">
-							, gc_Str<"toml">
-							, gc_Str<"yml">
-							, gc_Str<"yaml">
-							, gc_Str<"rb">
-							, gc_Str<"pl">
-							, gc_Str<"r">
-							, gc_Str<"tcl">
-							, gc_Str<"conf">
-						}
-					)
-				;
-				fp_AddBuiltin({.m_LinePrefix = gc_Str<"; ">}, {gc_Str<"ini">, gc_Str<"asm">, gc_Str<"nasm">});
-				// Use @REM instead of REM so the license header stays silent even when
-				// inserted before @echo off (@ suppresses echo regardless of echo state).
-				fp_AddBuiltin({.m_LinePrefix = gc_Str<"@REM ">}, {gc_Str<"bat">, gc_Str<"cmd">});
-				fp_AddBuiltin({.m_LinePrefix = gc_Str<"/* ">, .m_LineSuffix = gc_Str<" */">}, {gc_Str<"css">, gc_Str<"scss">, gc_Str<"less">});
-				fp_AddBuiltin
-					(
-						{.m_LinePrefix = gc_Str<"<!-- ">, .m_LineSuffix = gc_Str<" -->">, .m_bIsXml = true}
-						, {gc_Str<"xml">, gc_Str<"xsl">, gc_Str<"xslt">, gc_Str<"xsd">, gc_Str<"svg">, gc_Str<"xhtml">, gc_Str<"plist">, gc_Str<"html">, gc_Str<"htm">, gc_Str<"natvis">}
-					)
-				;
-				fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">}, gc_Str<"CMakeLists.txt">);
-				fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">}, gc_Str<"Makefile">);
-				fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">, .m_bDetectShebang = true}, gc_Str<"Dockerfile">);
-				fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">}, gc_Str<".clangd">);
-				fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">}, gc_Str<".clang-format">);
-				fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">}, gc_Str<".clang-tidy">);
-				fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">}, gc_Str<".gitignore">);
-				fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">}, gc_Str<".lldbinit">);
-				fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">}, gc_Str<".gitattributes">);
-
-				// Parse config-defined styles
-				auto const *pStyles = _License.f_GetMember("CommentStyles");
-				if (pStyles && pStyles->f_IsArray())
-				{
-					for (auto &Style : pStyles->f_Array())
-					{
-						auto &Out = mp_PatternStyles.f_Insert();
-
-						auto const *pPaths = Style.f_GetMember("Path");
-						if (pPaths && pPaths->f_IsArray())
-							Out.m_PathPatterns = pPaths->f_StringArray();
-
-						auto const *pPrefix = Style.f_GetMember("LinePrefix");
-						if (pPrefix && pPrefix->f_IsString())
-							Out.m_Style.m_LinePrefix = pPrefix->f_String();
-
-						auto const *pSuffix = Style.f_GetMember("LineSuffix");
-						if (pSuffix && pSuffix->f_IsString())
-							Out.m_Style.m_LineSuffix = pSuffix->f_String();
-
-						auto const *pShebang = Style.f_GetMember("DetectShebang");
-						if (pShebang && pShebang->f_IsBoolean())
-							Out.m_Style.m_bDetectShebang = pShebang->f_Boolean();
-
-						auto const *pPython = Style.f_GetMember("IsPython");
-						if (pPython && pPython->f_IsBoolean())
-							Out.m_Style.m_bIsPython = pPython->f_Boolean();
-
-						auto const *pXml = Style.f_GetMember("IsXml");
-						if (pXml && pXml->f_IsBoolean())
-							Out.m_Style.m_bIsXml = pXml->f_Boolean();
-					}
-				}
-			}
-
-			CCommentStyleConfig const *f_GetStyle(CStr const &_RelativePath, CStr const &_Extension, CStr const &_FileName) const
-			{
-				// Check config-defined path pattern styles first
-				for (auto &Entry : mp_PatternStyles)
-				{
-					for (auto &Pattern : Entry.m_PathPatterns)
-					{
-						if (fg_StrMatchWildcard(_RelativePath.f_GetStr(), Pattern.f_GetStr()) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
-							return &Entry.m_Style;
-					}
-				}
-
-				// Fall back to built-in styles by extension
-				if (auto const *pStyle = mp_ExtensionMap.f_FindEqual(_Extension))
-					return *pStyle;
-
-				// Fall back to built-in styles by filename
-				if (auto const *pStyle = mp_FileNameMap.f_FindEqual(_FileName))
-					return *pStyle;
-
-				return nullptr;
-			}
+			CCommentStyleConfig const *f_GetStyle(CStr const &_RelativePath, CStr const &_Extension, CStr const &_FileName) const;
 
 		private:
-			void fp_AddBuiltin(CCommentStyleConfig &&_Style, std::initializer_list<CStr> _Extensions)
-			{
-				auto &Out = mp_BuiltinStyles.f_Insert(fg_Move(_Style));
+			void fp_AddBuiltin(CCommentStyleConfig &&_Style, std::initializer_list<CStr> _Extensions);
 
-				for (auto &Ext : _Extensions)
-					mp_ExtensionMap[Ext] = &Out;
-			}
-
-			void fp_AddBuiltinFileName(CCommentStyleConfig &&_Style, CStr const &_FileName)
-			{
-				auto &Out = mp_BuiltinStyles.f_Insert(fg_Move(_Style));
-				mp_FileNameMap[_FileName] = &Out;
-			}
+			void fp_AddBuiltinFileName(CCommentStyleConfig &&_Style, CStr const &_FileName);
 
 			TCVector<CPatternEntry> mp_PatternStyles;
 			TCLinkedList<CCommentStyleConfig> mp_BuiltinStyles;
 			TCMap<CStr, CCommentStyleConfig const *> mp_ExtensionMap;
 			TCMap<CStr, CCommentStyleConfig const *> mp_FileNameMap;
 		};
+
+		CCommentStyleLookup::CCommentStyleLookup(CEJsonSorted const &_License)
+		{
+			// Built-in styles
+
+			fp_AddBuiltin
+				(
+					{.m_LinePrefix = gc_Str<"// ">}
+					,
+					{
+						gc_Str<"cpp">
+						, gc_Str<"h">
+						, gc_Str<"hpp">
+						, gc_Str<"c">
+						, gc_Str<"cxx">
+						, gc_Str<"hxx">
+						, gc_Str<"inl">
+						, gc_Str<"dox">
+						, gc_Str<"js">
+						, gc_Str<"mjs">
+						, gc_Str<"cjs">
+						, gc_Str<"ts">
+						, gc_Str<"tsx">
+						, gc_Str<"jsx">
+						, gc_Str<"swift">
+						, gc_Str<"java">
+						, gc_Str<"kt">
+						, gc_Str<"scala">
+						, gc_Str<"go">
+						, gc_Str<"rs">
+						, gc_Str<"cs">
+						, gc_Str<"m">
+						, gc_Str<"mm">
+						, gc_Str<"rc">
+					}
+				)
+			;
+			fp_AddBuiltin
+				(
+					{.m_LinePrefix = gc_Str<"// ">}
+					,
+					{
+						gc_Str<"MSettings">
+						, gc_Str<"MHeader">
+						, gc_Str<"MTarget">
+						, gc_Str<"MRepo">
+						, gc_Str<"MBuildSystem">
+						, gc_Str<"MConfig">
+						, gc_Str<"MRepoState">
+						, gc_Str<"MGeneratorSettings">
+						, gc_Str<"MInclude">
+						, gc_Str<"MLBuildOptions">
+					}
+				)
+			;
+			fp_AddBuiltin
+				(
+					{.m_LinePrefix = gc_Str<"# ">}
+					,
+					{
+						gc_Str<"doxygen">
+					}
+				)
+			;
+			fp_AddBuiltin({.m_LinePrefix = gc_Str<"# ">, .m_bDetectShebang = true, .m_bIsPython = true}, {gc_Str<"py">});
+			fp_AddBuiltin
+				(
+					{.m_LinePrefix = gc_Str<"# ">, .m_bDetectShebang = true}
+					,
+					{
+						gc_Str<"sh">
+						, gc_Str<"bash">
+						, gc_Str<"zsh">
+						, gc_Str<"cmake">
+						, gc_Str<"toml">
+						, gc_Str<"yml">
+						, gc_Str<"yaml">
+						, gc_Str<"rb">
+						, gc_Str<"pl">
+						, gc_Str<"r">
+						, gc_Str<"tcl">
+						, gc_Str<"conf">
+					}
+				)
+			;
+			fp_AddBuiltin({.m_LinePrefix = gc_Str<"; ">}, {gc_Str<"ini">, gc_Str<"asm">, gc_Str<"nasm">});
+			// Use @REM instead of REM so the license header stays silent even when
+			// inserted before @echo off (@ suppresses echo regardless of echo state).
+			fp_AddBuiltin({.m_LinePrefix = gc_Str<"@REM ">}, {gc_Str<"bat">, gc_Str<"cmd">});
+			fp_AddBuiltin({.m_LinePrefix = gc_Str<"/* ">, .m_LineSuffix = gc_Str<" */">}, {gc_Str<"css">, gc_Str<"scss">, gc_Str<"less">});
+			fp_AddBuiltin
+				(
+					{.m_LinePrefix = gc_Str<"<!-- ">, .m_LineSuffix = gc_Str<" -->">, .m_bIsXml = true}
+					, {gc_Str<"xml">, gc_Str<"xsl">, gc_Str<"xslt">, gc_Str<"xsd">, gc_Str<"svg">, gc_Str<"xhtml">, gc_Str<"plist">, gc_Str<"html">, gc_Str<"htm">, gc_Str<"natvis">}
+				)
+			;
+			fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">}, gc_Str<"CMakeLists.txt">);
+			fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">}, gc_Str<"Makefile">);
+			fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">, .m_bDetectShebang = true}, gc_Str<"Dockerfile">);
+			fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">}, gc_Str<".clangd">);
+			fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">}, gc_Str<".clang-format">);
+			fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">}, gc_Str<".clang-tidy">);
+			fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">}, gc_Str<".gitignore">);
+			fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">}, gc_Str<".lldbinit">);
+			fp_AddBuiltinFileName({.m_LinePrefix = gc_Str<"# ">}, gc_Str<".gitattributes">);
+
+			// Parse config-defined styles
+			auto const *pStyles = _License.f_GetMember("CommentStyles");
+			if (pStyles && pStyles->f_IsArray())
+			{
+				for (auto &Style : pStyles->f_Array())
+				{
+					auto &Out = mp_PatternStyles.f_Insert();
+
+					auto const *pPaths = Style.f_GetMember("Path");
+					if (pPaths && pPaths->f_IsArray())
+						Out.m_PathPatterns = pPaths->f_StringArray();
+
+					auto const *pPrefix = Style.f_GetMember("LinePrefix");
+					if (pPrefix && pPrefix->f_IsString())
+						Out.m_Style.m_LinePrefix = pPrefix->f_String();
+
+					auto const *pSuffix = Style.f_GetMember("LineSuffix");
+					if (pSuffix && pSuffix->f_IsString())
+						Out.m_Style.m_LineSuffix = pSuffix->f_String();
+
+					auto const *pShebang = Style.f_GetMember("DetectShebang");
+					if (pShebang && pShebang->f_IsBoolean())
+						Out.m_Style.m_bDetectShebang = pShebang->f_Boolean();
+
+					auto const *pPython = Style.f_GetMember("IsPython");
+					if (pPython && pPython->f_IsBoolean())
+						Out.m_Style.m_bIsPython = pPython->f_Boolean();
+
+					auto const *pXml = Style.f_GetMember("IsXml");
+					if (pXml && pXml->f_IsBoolean())
+						Out.m_Style.m_bIsXml = pXml->f_Boolean();
+				}
+			}
+		}
+
+		CCommentStyleConfig const *CCommentStyleLookup::f_GetStyle(CStr const &_RelativePath, CStr const &_Extension, CStr const &_FileName) const
+		{
+			// Check config-defined path pattern styles first
+			for (auto &Entry : mp_PatternStyles)
+			{
+				for (auto &Pattern : Entry.m_PathPatterns)
+				{
+					if (fg_StrMatchWildcard(_RelativePath.f_GetStr(), Pattern.f_GetStr()) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
+						return &Entry.m_Style;
+				}
+			}
+
+			// Fall back to built-in styles by extension
+			if (auto const *pStyle = mp_ExtensionMap.f_FindEqual(_Extension))
+				return *pStyle;
+
+			// Fall back to built-in styles by filename
+			if (auto const *pStyle = mp_FileNameMap.f_FindEqual(_FileName))
+				return *pStyle;
+
+			return nullptr;
+		}
+
+		void CCommentStyleLookup::fp_AddBuiltin(CCommentStyleConfig &&_Style, std::initializer_list<CStr> _Extensions)
+		{
+			auto &Out = mp_BuiltinStyles.f_Insert(fg_Move(_Style));
+
+			for (auto &Ext : _Extensions)
+				mp_ExtensionMap[Ext] = &Out;
+		}
+
+		void CCommentStyleLookup::fp_AddBuiltinFileName(CCommentStyleConfig &&_Style, CStr const &_FileName)
+		{
+			auto &Out = mp_BuiltinStyles.f_Insert(fg_Move(_Style));
+			mp_FileNameMap[_FileName] = &Out;
+		}
 
 		struct CHeaderLookup
 		{
@@ -228,49 +236,9 @@ namespace NMib::NBuildSystem
 				TCVector<CStr> m_HeaderLines;
 			};
 
-			CHeaderLookup(CEJsonSorted const &_License)
-			{
-				auto const *pHeader = _License.f_GetMember("Header");
-				if (pHeader && pHeader->f_IsArray() && !pHeader->f_Array().f_IsEmpty())
-				{
-					m_DefaultHeaderLines = pHeader->f_StringArray();
-					m_bHasDefault = true;
-				}
+			CHeaderLookup(CEJsonSorted const &_License);
 
-				auto const *pOverrides = _License.f_GetMember("HeaderOverrides");
-				if (pOverrides && pOverrides->f_IsArray())
-				{
-					for (auto &Override : pOverrides->f_Array())
-					{
-						auto &Entry = mp_Overrides.f_Insert();
-
-						auto const *pPaths = Override.f_GetMember("Path");
-						if (pPaths && pPaths->f_IsArray())
-							Entry.m_PathPatterns = pPaths->f_StringArray();
-
-						auto const *pHeaderLines = Override.f_GetMember("Header");
-						if (pHeaderLines && pHeaderLines->f_IsArray())
-							Entry.m_HeaderLines = pHeaderLines->f_StringArray();
-					}
-				}
-			}
-
-			TCVector<CStr> const *f_GetHeaderLines(CStr const &_RelativePath) const
-			{
-				for (auto &Entry : mp_Overrides)
-				{
-					for (auto &Pattern : Entry.m_PathPatterns)
-					{
-						if (fg_StrMatchWildcard(_RelativePath.f_GetStr(), Pattern.f_GetStr()) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
-							return &Entry.m_HeaderLines;
-					}
-				}
-
-				if (m_bHasDefault)
-					return &m_DefaultHeaderLines;
-
-				return nullptr;
-			}
+			TCVector<CStr> const *f_GetHeaderLines(CStr const &_RelativePath) const;
 
 			bool m_bHasDefault = false;
 			TCVector<CStr> m_DefaultHeaderLines;
@@ -278,6 +246,50 @@ namespace NMib::NBuildSystem
 		private:
 			TCVector<COverrideEntry> mp_Overrides;
 		};
+
+		CHeaderLookup::CHeaderLookup(CEJsonSorted const &_License)
+		{
+			auto const *pHeader = _License.f_GetMember("Header");
+			if (pHeader && pHeader->f_IsArray() && !pHeader->f_Array().f_IsEmpty())
+			{
+				m_DefaultHeaderLines = pHeader->f_StringArray();
+				m_bHasDefault = true;
+			}
+
+			auto const *pOverrides = _License.f_GetMember("HeaderOverrides");
+			if (pOverrides && pOverrides->f_IsArray())
+			{
+				for (auto &Override : pOverrides->f_Array())
+				{
+					auto &Entry = mp_Overrides.f_Insert();
+
+					auto const *pPaths = Override.f_GetMember("Path");
+					if (pPaths && pPaths->f_IsArray())
+						Entry.m_PathPatterns = pPaths->f_StringArray();
+
+					auto const *pHeaderLines = Override.f_GetMember("Header");
+					if (pHeaderLines && pHeaderLines->f_IsArray())
+						Entry.m_HeaderLines = pHeaderLines->f_StringArray();
+				}
+			}
+		}
+
+		TCVector<CStr> const *CHeaderLookup::f_GetHeaderLines(CStr const &_RelativePath) const
+		{
+			for (auto &Entry : mp_Overrides)
+			{
+				for (auto &Pattern : Entry.m_PathPatterns)
+				{
+					if (fg_StrMatchWildcard(_RelativePath.f_GetStr(), Pattern.f_GetStr()) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
+						return &Entry.m_HeaderLines;
+				}
+			}
+
+			if (m_bHasDefault)
+				return &m_DefaultHeaderLines;
+
+			return nullptr;
+		}
 
 		CStr fg_FormatHeader(TCVector<CStr> const &_HeaderLines, CCommentStyleConfig const &_Style, CStr const &_LineEnding)
 		{
@@ -660,6 +672,8 @@ namespace NMib::NBuildSystem
 
 		struct CLicenseStats
 		{
+			CLicenseStats &operator += (CLicenseStats const &_Other);
+
 			umint m_nFilesChecked = 0;
 			umint m_nFilesFixed = 0;
 			umint m_nFilesNeedFix = 0;
@@ -670,22 +684,22 @@ namespace NMib::NBuildSystem
 			umint m_nReuseTomlIssues = 0;
 			umint m_nDisallowedFiles = 0;
 			umint m_nFilesCoveredByReuse = 0;
-
-			CLicenseStats &operator += (CLicenseStats const &_Other)
-			{
-				m_nFilesChecked += _Other.m_nFilesChecked;
-				m_nFilesFixed += _Other.m_nFilesFixed;
-				m_nFilesNeedFix += _Other.m_nFilesNeedFix;
-				m_nFilesSkipped += _Other.m_nFilesSkipped;
-				m_nFilesNoCommentStyle += _Other.m_nFilesNoCommentStyle;
-				m_nErrors += _Other.m_nErrors;
-				m_nLicenseFilesIssues += _Other.m_nLicenseFilesIssues;
-				m_nReuseTomlIssues += _Other.m_nReuseTomlIssues;
-				m_nDisallowedFiles += _Other.m_nDisallowedFiles;
-				m_nFilesCoveredByReuse += _Other.m_nFilesCoveredByReuse;
-				return *this;
-			}
 		};
+
+		CLicenseStats &CLicenseStats::operator += (CLicenseStats const &_Other)
+		{
+			m_nFilesChecked += _Other.m_nFilesChecked;
+			m_nFilesFixed += _Other.m_nFilesFixed;
+			m_nFilesNeedFix += _Other.m_nFilesNeedFix;
+			m_nFilesSkipped += _Other.m_nFilesSkipped;
+			m_nFilesNoCommentStyle += _Other.m_nFilesNoCommentStyle;
+			m_nErrors += _Other.m_nErrors;
+			m_nLicenseFilesIssues += _Other.m_nLicenseFilesIssues;
+			m_nReuseTomlIssues += _Other.m_nReuseTomlIssues;
+			m_nDisallowedFiles += _Other.m_nDisallowedFiles;
+			m_nFilesCoveredByReuse += _Other.m_nFilesCoveredByReuse;
+			return *this;
+		}
 
 		struct CRepoLicenseResult
 		{

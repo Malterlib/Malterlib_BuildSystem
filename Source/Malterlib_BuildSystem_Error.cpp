@@ -43,36 +43,42 @@ namespace NMib::NBuildSystem
 
 		struct CParseErrors
 		{
-			bool f_AddError(CSeparator *_pSeparator, CStr const &_Error, CFilePosition const &_Position = {})
-			{
-				if (!m_ReportedMessages(CReportedMessage{_Position, _Error}).f_WasCreated())
-					return false;
+			bool f_AddError(CSeparator *_pSeparator, CStr const &_Error, CFilePosition const &_Position = {});
 
-				if (_pSeparator && !_pSeparator->m_bAdded && _pSeparator->m_Name)
-				{
-					_pSeparator->m_bAdded = true;
-					m_ParseErrors.f_Insert().f_SetSeparator(_pSeparator->m_Name).m_IndentDepth = m_IndentDepth;
-				}
+			bool f_AddError(CStr const &_Error, CFilePosition const &_Position = {});
 
-				m_ParseErrors.f_Insert({_Error, _Position}).m_IndentDepth = m_IndentDepth + (_pSeparator ? 1 : 0);
-
-				return true;
-			}
-
-			bool f_AddError(CStr const &_Error, CFilePosition const &_Position = {})
-			{
-				return f_AddError(nullptr, _Error, _Position);
-			}
-
-			CStr f_ToString() const
-			{
-				return CParseError::fs_ToString(m_ParseErrors);
-			}
+			CStr f_ToString() const;
 
 			TCSet<CReportedMessage> m_ReportedMessages;
 			TCVector<CParseError> m_ParseErrors;
 			uint32 m_IndentDepth = 0;
 		};
+
+		bool CParseErrors::f_AddError(CSeparator *_pSeparator, CStr const &_Error, CFilePosition const &_Position)
+		{
+			if (!m_ReportedMessages(CReportedMessage{_Position, _Error}).f_WasCreated())
+				return false;
+
+			if (_pSeparator && !_pSeparator->m_bAdded && _pSeparator->m_Name)
+			{
+				_pSeparator->m_bAdded = true;
+				m_ParseErrors.f_Insert().f_SetSeparator(_pSeparator->m_Name).m_IndentDepth = m_IndentDepth;
+			}
+
+			m_ParseErrors.f_Insert({_Error, _Position}).m_IndentDepth = m_IndentDepth + (_pSeparator ? 1 : 0);
+
+			return true;
+		}
+
+		bool CParseErrors::f_AddError(CStr const &_Error, CFilePosition const &_Position)
+		{
+			return f_AddError(nullptr, _Error, _Position);
+		}
+
+		CStr CParseErrors::f_ToString() const
+		{
+			return CParseError::fs_ToString(m_ParseErrors);
+		}
 
 		CSeparator::CSeparator(CParseErrors &_ParseErrors, CStr const &_Name)
 			: m_ParseErrors(_ParseErrors)

@@ -20,10 +20,6 @@ namespace NMib::NBuildSystem
 
 	struct CGeneratorArchiveState
 	{
-		static constexpr uint32 mc_FileVersion = 0x123;
-		static constexpr uint32 mc_FileVersion_OldestReader = 0x123;
-		static constexpr uint32 mc_FileVersion_GeneratedFilesLast = 0x122;
-
 		struct CProcessedFile
 		{
 			CProcessedFile();
@@ -49,6 +45,10 @@ namespace NMib::NBuildSystem
 		void f_Feed(tf_CStream &_Stream) const;
 		template <typename tf_CStream>
 		void f_Consume(tf_CStream &_Stream);
+
+		static constexpr uint32 mc_FileVersion = 0x123;
+		static constexpr uint32 mc_FileVersion_OldestReader = 0x123;
+		static constexpr uint32 mc_FileVersion_GeneratedFilesLast = 0x122;
 
 		NContainer::TCMap<NStr::CStr, CProcessedFile> m_ExeFile;
 		NContainer::TCMap<NStr::CStr, CProcessedFile> m_SourceFiles;
