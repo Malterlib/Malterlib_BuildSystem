@@ -47,18 +47,6 @@ namespace NMib::NBuildSystem
 	// The member functions run to completion: the build system runs on concurrent actors, and each command joins what it starts
 	struct DMibRunsToCompletion CBuildSystem : public NConcurrency::CAllowUnsafeThis
 	{
-		CBuildSystem
-			(
-				NCommandLine::EAnsiEncodingFlag _AnsiFlags
-				, uint32 _TerminalWidth
-				, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
-				, NStorage::TCSharedPointer<NAtomic::TCAtomic<bool>> const &_pCancelled
-				, bool _bShowProgress = true
-			)
-		;
-		CBuildSystem(CBuildSystem const &_Other) = delete;
-		CBuildSystem(CBuildSystem &&_Other) = delete;
-
 		enum ERetry
 		{
 			ERetry_None
@@ -277,6 +265,25 @@ namespace NMib::NBuildSystem
 			, mc_Fix     = DMibBit(0)
 			, mc_ShowAll = DMibBit(1)
 		};
+
+		struct CUserSettingComment
+		{
+			NStr::CStr m_Section;
+			NStr::CStr m_DefaultValue;
+			NStr::CStr m_Description;
+		};
+
+		CBuildSystem
+			(
+				NCommandLine::EAnsiEncodingFlag _AnsiFlags
+				, uint32 _TerminalWidth
+				, NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &_fOutputConsole
+				, NStorage::TCSharedPointer<NAtomic::TCAtomic<bool>> const &_pCancelled
+				, bool _bShowProgress = true
+			)
+		;
+		CBuildSystem(CBuildSystem const &_Other) = delete;
+		CBuildSystem(CBuildSystem &&_Other) = delete;
 
 		void f_SetGeneratorInterface(ICGeneratorInterface *_pInterface) const;
 		auto f_GenerateBuildSystem
@@ -630,13 +637,6 @@ namespace NMib::NBuildSystem
 		void f_RegisterBuiltinVariables(NContainer::TCMap<CPropertyKey, CTypeWithPosition> &&_Variables) const;
 		void f_OutputConsole(NStr::CStr const &_Output, bool _bError = false) const;
 		NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> const &f_OutputConsoleFunctor() const;
-
-		struct CUserSettingComment
-		{
-			NStr::CStr m_Section;
-			NStr::CStr m_DefaultValue;
-			NStr::CStr m_Description;
-		};
 
 		static auto fs_ParseUserSettingComment(NStr::CStr const &_Whitespace, NStr::CStr const &_LeadingWhitespace) -> NStorage::TCOptional<CUserSettingComment>;
 		static NStr::CStr fs_GetLeadingWhiteSpace(CBuildSystemRegistry const &_Registry);

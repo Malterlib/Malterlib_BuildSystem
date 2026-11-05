@@ -295,51 +295,58 @@ namespace NMib::NBuildSystem
 
 	struct CBuildSystem::CApplyAccessorsHelper
 	{
+		CBuildSystemSyntax::CType const *f_GetCanonical(CBuildSystemSyntax::CType const *_pType) const;
+
+		template <typename tf_CType>
+		tf_CType const &f_GetType(CBuildSystemSyntax::CType const *_pType, ch8 const *_pTypeName) const;
+
+		auto f_GetCanonicalFunctor() const;
+
 		CBuildSystem const *m_pThis;
 		CEvalPropertyValueContext &m_Context;
 		CFilePosition const * &m_pTypePosition;
 		CBuildSystemSyntax::CType const *m_pType;
-
-		CBuildSystemSyntax::CType const *f_GetCanonical(CBuildSystemSyntax::CType const *_pType) const
-		{
-			return m_pThis->fp_GetCanonicalType(m_Context, _pType, m_pTypePosition);
-		}
-
-		template <typename tf_CType>
-		tf_CType const &f_GetType(CBuildSystemSyntax::CType const *_pType, ch8 const *_pTypeName) const
-		{
-			auto pType = f_GetCanonical(_pType);
-
-			if (pType->m_Type.f_IsOfType<CBuildSystemSyntax::CFunctionType>())
-				pType = f_GetCanonical(&pType->m_Type.f_GetAsType<CBuildSystemSyntax::CFunctionType>().m_Return.f_Get());
-
-			if (pType->m_Type.f_IsOfType<tf_CType>())
-				return pType->m_Type.f_GetAsType<tf_CType>();
-
-			if (pType->m_Type.f_IsOfType<CBuildSystemSyntax::COneOf>())
-			{
-				auto &OneOf = pType->m_Type.f_GetAsType<CBuildSystemSyntax::COneOf>();
-				for (auto &Type : OneOf.m_OneOf)
-				{
-					if (!Type.f_IsOfType<NStorage::TCIndirection<CBuildSystemSyntax::CType>>())
-						continue;
-					auto pCanonicalType = f_GetCanonical(&Type.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CType>>().f_Get());
-					if (pCanonicalType->m_Type.f_IsOfType<tf_CType>())
-						return pCanonicalType->m_Type.f_GetAsType<tf_CType>();
-				}
-			}
-			fs_ThrowError(m_Context, "Could not apply accessor to type. Type '{}' does not have a {}"_f << *_pType << _pTypeName);
-		}
-
-		auto f_GetCanonicalFunctor() const
-		{
-			return [this](CBuildSystemSyntax::CType const *_pType)
-				{
-					return f_GetCanonical(_pType);
-				}
-			;
-		}
 	};
+
+	CBuildSystemSyntax::CType const *CBuildSystem::CApplyAccessorsHelper::f_GetCanonical(CBuildSystemSyntax::CType const *_pType) const
+	{
+		return m_pThis->fp_GetCanonicalType(m_Context, _pType, m_pTypePosition);
+	}
+
+	template <typename tf_CType>
+	tf_CType const &CBuildSystem::CApplyAccessorsHelper::f_GetType(CBuildSystemSyntax::CType const *_pType, ch8 const *_pTypeName) const
+	{
+		auto pType = f_GetCanonical(_pType);
+
+		if (pType->m_Type.f_IsOfType<CBuildSystemSyntax::CFunctionType>())
+			pType = f_GetCanonical(&pType->m_Type.f_GetAsType<CBuildSystemSyntax::CFunctionType>().m_Return.f_Get());
+
+		if (pType->m_Type.f_IsOfType<tf_CType>())
+			return pType->m_Type.f_GetAsType<tf_CType>();
+
+		if (pType->m_Type.f_IsOfType<CBuildSystemSyntax::COneOf>())
+		{
+			auto &OneOf = pType->m_Type.f_GetAsType<CBuildSystemSyntax::COneOf>();
+			for (auto &Type : OneOf.m_OneOf)
+			{
+				if (!Type.f_IsOfType<NStorage::TCIndirection<CBuildSystemSyntax::CType>>())
+					continue;
+				auto pCanonicalType = f_GetCanonical(&Type.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CType>>().f_Get());
+				if (pCanonicalType->m_Type.f_IsOfType<tf_CType>())
+					return pCanonicalType->m_Type.f_GetAsType<tf_CType>();
+			}
+		}
+		fs_ThrowError(m_Context, "Could not apply accessor to type. Type '{}' does not have a {}"_f << *_pType << _pTypeName);
+	}
+
+	auto CBuildSystem::CApplyAccessorsHelper::f_GetCanonicalFunctor() const
+	{
+		return [this](CBuildSystemSyntax::CType const *_pType)
+			{
+				return f_GetCanonical(_pType);
+			}
+		;
+	}
 
 	auto CBuildSystem::fp_ApplyAccessorsToType
 		(

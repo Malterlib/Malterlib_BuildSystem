@@ -240,6 +240,13 @@ namespace NMib::NBuildSystem::NRepository
 			, EPhase_Count
 		};
 
+		struct CPhase
+		{
+			TCVector<CVerifyHookEntry> m_Entries;
+			TCVector<TCPromise<void>> m_Waiting;
+			umint m_nArrived = 0;
+		};
+
 		CVerifyHookLevel
 			(
 				CStr const &_Command
@@ -249,13 +256,6 @@ namespace NMib::NBuildSystem::NRepository
 				, umint _nRepositories
 			)
 		;
-
-		struct CPhase
-		{
-			TCVector<CVerifyHookEntry> m_Entries;
-			TCVector<TCPromise<void>> m_Waiting;
-			umint m_nArrived = 0;
-		};
 
 		CStr m_Command;
 		CStr m_BaseDir;
@@ -273,12 +273,12 @@ namespace NMib::NBuildSystem::NRepository
 	struct CVerifyHookRepository
 	{
 		CVerifyHookRepository(TCSharedPointer<CVerifyHookLevel> const &_pLevel);
+		CVerifyHookRepository(CVerifyHookRepository const &_Other) = delete;
 		~CVerifyHookRepository();
 
-		void f_Leave();
-
-		CVerifyHookRepository(CVerifyHookRepository const &_Other) = delete;
 		CVerifyHookRepository &operator = (CVerifyHookRepository const &_Other) = delete;
+
+		void f_Leave();
 
 		TCFuture<void> f_Verify(CVerifyHookLevel::EPhase _Phase, TCVector<CVerifyHookEntry> &&_Entries);
 
@@ -365,11 +365,11 @@ namespace NMib::NBuildSystem::NRepository
 	private:
 		struct CBranchTransition
 		{
+			auto operator <=> (CBranchTransition const &_Other) const = default;
+
 			CStr m_FromBranch;
 			CStr m_ToBranch;
 			bool m_bCreated = false;
-
-			auto operator <=> (CBranchTransition const &_Other) const = default;
 		};
 
 		CConfigFile const &fp_GetConfigFile(CStr const &_FileName, bool _bIsStateFile);
@@ -404,62 +404,11 @@ namespace NMib::NBuildSystem::NRepository
 
 	struct CGitLaunches
 	{
-		CGitLaunches(CBuildSystem::CGitLaunchOptions const &_Options, CStr const &_ProgressDescription);
-		CGitLaunches(CGitLaunches const &_Other);
-		CGitLaunches(CGitLaunches &&_Other) = default;
-
-		DMibResultEndsBeforeObject TCUnsafeFuture<CAsyncDestroyAwaiter> f_Init();
-
-		void f_CheckInit() const;
-		void f_SetNumRepos(umint _nRepos, bool _bReport = true);
-		void f_SetProgressDelay(fp64 _Delay);
-		void f_MeasureRepos(TCVector<TCVector<CRepository *>> const &_FilteredRepositories, bool _bReport = true);
-		void f_MeasureRepos(TCVector<TCMap<CStr, CReposLocation>> const &_Repositories, bool _bReport = true);
-
-		auto f_Launch
-			(
-				CRepository const &_Repo
-				, TCVector<CStr> const &_Params
-				, TCMap<CStr, CStr> const &_Environment
-				, CProcessLaunchActor::ESimpleLaunchFlag _Flags
-				, CStr const &_Application = "git"
-			)
-			const
-			-> TCUnsafeFuture<CProcessLaunchActor::CSimpleLaunchResult>
-		;
-		auto f_Launch
-			(
-				CStr const &_Directory
-				, TCVector<CStr> const &_Params
-				, TCMap<CStr, CStr> const &_Environment
-				, CProcessLaunchActor::ESimpleLaunchFlag _Flags
-				, CStr const &_Application = "git"
-			)
-			const
-			-> TCUnsafeFuture<CProcessLaunchActor::CSimpleLaunchResult>
-		;
-		auto f_Launch
-			(
-				CRepository _Repo
-				, TCVector<CStr> _Params
-				, TCFunctionMovable<CStr (CProcessLaunchActor::CSimpleLaunchResult const &_Result)> _fHandleResult
-				, CStr _Prefix = {}
-				, TCMap<CStr, CStr> _Environment = {}
-				, CStr _Application = "git"
-			)
-			const
-			-> TCUnsafeFuture<void>
-		;
-		TCUnsafeFuture<CProcessLaunchActor::CSimpleLaunchResult> f_OpenRepoEditor(CRepoEditor _Editor, CStr _Repo) const;
-
 		struct CDeferredOutput
 		{
 			TCVector<CStr> m_Lines;
 			EOutputType m_OutputType = EOutputType_Normal;
 		};
-
-		static uint32 fs_MaxProcesses();
-		static uint32 fs_GitConcurrency();
 
 		using CLaunchSequencer = TCSequencer<CProcessLaunchActor::CSimpleLaunchResult>;
 
@@ -518,6 +467,57 @@ namespace NMib::NBuildSystem::NRepository
 
 			TCSharedPointer<CState> m_pState;
 		};
+
+		CGitLaunches(CBuildSystem::CGitLaunchOptions const &_Options, CStr const &_ProgressDescription);
+		CGitLaunches(CGitLaunches const &_Other);
+		CGitLaunches(CGitLaunches &&_Other) = default;
+
+		DMibResultEndsBeforeObject TCUnsafeFuture<CAsyncDestroyAwaiter> f_Init();
+
+		void f_CheckInit() const;
+		void f_SetNumRepos(umint _nRepos, bool _bReport = true);
+		void f_SetProgressDelay(fp64 _Delay);
+		void f_MeasureRepos(TCVector<TCVector<CRepository *>> const &_FilteredRepositories, bool _bReport = true);
+		void f_MeasureRepos(TCVector<TCMap<CStr, CReposLocation>> const &_Repositories, bool _bReport = true);
+
+		auto f_Launch
+			(
+				CRepository const &_Repo
+				, TCVector<CStr> const &_Params
+				, TCMap<CStr, CStr> const &_Environment
+				, CProcessLaunchActor::ESimpleLaunchFlag _Flags
+				, CStr const &_Application = "git"
+			)
+			const
+			-> TCUnsafeFuture<CProcessLaunchActor::CSimpleLaunchResult>
+		;
+		auto f_Launch
+			(
+				CStr const &_Directory
+				, TCVector<CStr> const &_Params
+				, TCMap<CStr, CStr> const &_Environment
+				, CProcessLaunchActor::ESimpleLaunchFlag _Flags
+				, CStr const &_Application = "git"
+			)
+			const
+			-> TCUnsafeFuture<CProcessLaunchActor::CSimpleLaunchResult>
+		;
+		auto f_Launch
+			(
+				CRepository _Repo
+				, TCVector<CStr> _Params
+				, TCFunctionMovable<CStr (CProcessLaunchActor::CSimpleLaunchResult const &_Result)> _fHandleResult
+				, CStr _Prefix = {}
+				, TCMap<CStr, CStr> _Environment = {}
+				, CStr _Application = "git"
+			)
+			const
+			-> TCUnsafeFuture<void>
+		;
+		TCUnsafeFuture<CProcessLaunchActor::CSimpleLaunchResult> f_OpenRepoEditor(CRepoEditor _Editor, CStr _Repo) const;
+
+		static uint32 fs_MaxProcesses();
+		static uint32 fs_GitConcurrency();
 
 		CStr f_GetRepoName(CRepository const &_Repo) const;
 		void f_Output(EOutputType _OutputType, CRepository const &_Repo, CStr const &_Output, CStr const &_Prefix = {}) const;

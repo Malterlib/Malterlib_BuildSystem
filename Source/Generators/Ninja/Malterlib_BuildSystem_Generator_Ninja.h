@@ -27,11 +27,11 @@ namespace NMib::NBuildSystem::NNinja
 
 		bool f_IsPhony() const;
 
+		void f_MergeFrom(CBuildAndRuleEntry const &_Entry, CBuildAndRuleEntry &o_Entry);
+
 		CStr m_Command;
 		TCMap<CStr, CStr> m_Environment;
 		TCMap<CStr, CStr> m_OtherProperties;
-
-		void f_MergeFrom(CBuildAndRuleEntry const &_Entry, CBuildAndRuleEntry &o_Entry);
 	};
 
 	struct CBuild
@@ -155,9 +155,9 @@ namespace NMib::NBuildSystem::NNinja
 
 	struct align_cacheline CWorkspace
 	{
-		CStr const &f_GetName() const;
-
 		CWorkspace(CStr const &_Name);
+
+		CStr const &f_GetName() const;
 
 		CStr m_Name;
 

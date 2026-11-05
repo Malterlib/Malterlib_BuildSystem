@@ -70,6 +70,11 @@ namespace NMib::NBuildSystem
 
 	struct CPropertyKey
 	{
+		struct CCompareByString
+		{
+			inline_always COrdering_Strong operator () (CPropertyKey const &_Left, CPropertyKey const &_Right) const;
+		};
+
 		CPropertyKey();
 		CPropertyKey(CStringCache &o_StringCache, NStr::CStr const &_Name);
 		CPropertyKey(CStringCache &o_StringCache, EPropertyType _Type, NStr::CStr const &_Name);
@@ -88,11 +93,6 @@ namespace NMib::NBuildSystem
 		inline_always bool operator == (CPropertyKeyReference const &_Right) const noexcept;
 		inline_always COrdering_Strong operator <=> (CPropertyKey const &_Right) const noexcept;
 		inline_always COrdering_Strong operator <=> (CPropertyKeyReference const &_Right) const noexcept;
-
-		struct CCompareByString
-		{
-			inline_always COrdering_Strong operator () (CPropertyKey const &_Left, CPropertyKey const &_Right) const;
-		};
 
 		template <typename tf_CContext>
 		static CPropertyKey fs_FromString(CStringCache &o_StringCache, NStr::CStr const &_String, tf_CContext &&_Context);
@@ -575,13 +575,13 @@ namespace NMib::NBuildSystem
 		{
 			struct CMember
 			{
-				COrdering_Partial operator <=> (CMember const &_Right) const noexcept;
-				bool operator == (CMember const &_Right) const noexcept;
-
 				CMember();
 				CMember(CMember const &_Other);
 				CMember(CMember &&_Other);
 				CMember(CType const &_Type, bool _bOptional = false);
+
+				COrdering_Partial operator <=> (CMember const &_Right) const noexcept;
+				bool operator == (CMember const &_Right) const noexcept;
 
 				NStorage::TCIndirection<CType> m_Type;
 				bool m_bOptional = false;
@@ -680,6 +680,8 @@ namespace NMib::NBuildSystem
 
 		struct CType
 		{
+			using CVariant = NStorage::TCVariant<CDefaultType, CUserType, CClassType, CArrayType, COneOf, CFunctionType, CTypeDefaulted>;
+
 			template <typename tf_CStr>
 			void f_Format(tf_CStr &o_Str) const;
 			static CType fs_FromJson(CStringCache &o_StringCache, NEncoding::CEJsonSorted const &_Json, CFilePosition const &_Position);
@@ -690,8 +692,6 @@ namespace NMib::NBuildSystem
 			bool f_IsOptional() const;
 			bool f_IsDefaulted() const;
 			bool f_IsFunction() const;
-
-			using CVariant = NStorage::TCVariant<CDefaultType, CUserType, CClassType, CArrayType, COneOf, CFunctionType, CTypeDefaulted>;
 
 			CVariant m_Type;
 			bool m_bOptional = false;
@@ -858,6 +858,8 @@ namespace NMib::NBuildSystem
 
 		struct CRootKey
 		{
+			using CVariant = NStorage::TCVariant<CValue, CKeyPrefixOperator, CKeyLogicalOperator, CNamespace>;
+
 			template <typename tf_CStr>
 			void f_Format(tf_CStr &o_Str) const;
 			static CRootKey fs_FromJson(CStringCache &o_StringCache, NEncoding::CEJsonSorted const &_Json, CFilePosition const &_Position);
@@ -874,8 +876,6 @@ namespace NMib::NBuildSystem
 			bool f_IsValid() const;
 
 			aint f_Cmp(CRootKey const &_Right) const;
-
-			using CVariant = NStorage::TCVariant<CValue, CKeyPrefixOperator, CKeyLogicalOperator, CNamespace>;
 
 			CVariant m_Value;
 		};

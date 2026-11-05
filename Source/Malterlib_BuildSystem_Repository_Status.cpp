@@ -16,6 +16,8 @@ namespace NMib::NBuildSystem
 	{
 		struct CRepoStatusState
 		{
+			bool f_HasRemoteBranch(CStr const &_FullBranch) const;
+
 			bool m_bIsChange = false;
 			CStr m_ToPush;
 			CStr m_ToPull;
@@ -24,12 +26,12 @@ namespace NMib::NBuildSystem
 			TCVector<CStr> m_Remotes;
 			CGitBranches m_LocalBranches;
 			CGitBranches m_RemoteBranches;
-
-			bool f_HasRemoteBranch(CStr const &_FullBranch) const
-			{
-				return m_RemoteBranches.m_Branches.f_FindEqual(_FullBranch);
-			}
 		};
+
+		bool CRepoStatusState::f_HasRemoteBranch(CStr const &_FullBranch) const
+		{
+			return m_RemoteBranches.m_Branches.f_FindEqual(_FullBranch);
+		}
 
 		struct CMessage
 		{
