@@ -459,6 +459,7 @@ namespace NMib::NBuildSystem::NRepository
 		};
 
 		static uint32 fs_MaxProcesses();
+		static uint32 fs_GitConcurrency();
 
 		using CLaunchSequencer = TCSequencer<CProcessLaunchActor::CSimpleLaunchResult>;
 
@@ -489,7 +490,7 @@ namespace NMib::NBuildSystem::NRepository
 			TCMap<CStr, TCVector<CDeferredOutput>> m_DeferredOutput;
 			TCVector<TCSet<CStr>> m_OutputOrder;
 
-			CLaunchSequencer m_LaunchSequencer{"GitLaunches State LaunchSequencer", fg_Clamp(NSys::fg_Thread_GetVirtualCores() * 2u, 32u, fs_MaxProcesses())};
+			CLaunchSequencer m_LaunchSequencer{"GitLaunches State LaunchSequencer", fs_GitConcurrency()};
 
 			mutable CMutual m_ConsoleOutputLock;
 			mutable fp64 m_LastProgressOutputTime = 0.0;

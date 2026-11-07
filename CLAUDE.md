@@ -295,6 +295,8 @@ The BuildSystem includes integrated repository management:
 - Branch management
 - Synchronized operations across multiple repos
 - Git LFS support for binary dependencies
+- Repository commands run at most twice the virtual cores, and at least 32, git processes at once. `Malterlib_GitConcurrency`
+  in the environment sets another limit, for example a lower one where the network can't take that many clones at once.
 - `./mib list-repos [--json]` lists the repositories the checkout defines, the root included, with the `.MRepo` file, the key
   as it is written there and the commit that pin each; it updates nothing. `Binary` is whether a repository keeps its files
   in the LFS release store, whose files a review can't read, not whether it holds binaries.
