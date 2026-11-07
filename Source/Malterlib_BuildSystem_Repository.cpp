@@ -896,6 +896,8 @@ namespace NMib::NBuildSystem
 				{
 					return _Error.f_Find("RPC failed") >= 0
 						|| _Error.f_Find("Recv failure") >= 0
+						|| _Error.f_Find("Send failure") >= 0
+						|| _Error.f_Find("No buffer space available") >= 0
 						|| _Error.f_Find("Connection reset") >= 0
 						|| _Error.f_Find("Operation timed out") >= 0
 						|| _Error.f_Find("Failed to connect") >= 0
