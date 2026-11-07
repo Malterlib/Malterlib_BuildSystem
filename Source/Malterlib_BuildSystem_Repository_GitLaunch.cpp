@@ -594,6 +594,17 @@ namespace NMib::NBuildSystem::NRepository
 #endif
 	}
 
+	// How many git processes run at once: twice the virtual cores, at least 32, unless Malterlib_GitConcurrency in the
+	// environment gives a number of its own (limited to fs_MaxProcesses), so CI can lower it without a new MTool build.
+	uint32 CGitLaunches::fs_GitConcurrency()
+	{
+		uint32 Concurrency = fg_GetSys()->f_GetEnvironmentVariable("Malterlib_GitConcurrency", "").f_ToInt(uint32(0));
+		if (Concurrency == 0)
+			Concurrency = fg_Max(NSys::fg_Thread_GetVirtualCores() * 2u, 32u);
+
+		return fg_Clamp(Concurrency, 1u, fs_MaxProcesses());
+	}
+
 	auto CGitLaunches::f_Launch
 		(
 			CRepository _Repo
