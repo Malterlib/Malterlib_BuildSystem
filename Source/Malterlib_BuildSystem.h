@@ -530,6 +530,8 @@ namespace NMib::NBuildSystem
 				, NContainer::TCVector<NStr::CStr> *o_pAllLocations = nullptr
 				, NContainer::TCMap<NStr::CStr, CRepoTidyFiles> *o_pTidyFiles = nullptr
 				, NStr::CStr *o_pPerforceRoot = nullptr
+				, CRepoFilter const *_pSelectedFilter = nullptr
+				, NContainer::TCVector<NStr::CStr> *o_pSelectedLocations = nullptr
 			)
 			-> NConcurrency::TCUnsafeFuture<ERetry>
 		;

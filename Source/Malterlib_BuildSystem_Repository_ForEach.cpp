@@ -132,7 +132,9 @@ namespace NMib::NBuildSystem
 	}
 
 	// The locations of the filtered repositories, in dependency order, and with o_pAllLocations, the locations of every repository,
-	// which tells what nests in them. o_pPerforceRoot gets the Perforce root's location among them, or empty.
+	// which tells what nests in them. o_pPerforceRoot gets the Perforce root's location among them, or empty. With _pSelectedFilter,
+	// o_pSelectedLocations gets the locations of the repositories it filters, in dependency order: a build system is prepared once,
+	// so locations by two filters come from one call.
 	auto CBuildSystem::f_Action_Repository_GetLocations
 		(
 			CGenerateOptions const &_GenerateOptions
@@ -141,14 +143,28 @@ namespace NMib::NBuildSystem
 			, TCVector<CStr> *o_pAllLocations
 			, TCMap<CStr, CRepoTidyFiles> *o_pTidyFiles
 			, CStr *o_pPerforceRoot
+			, CRepoFilter const *_pSelectedFilter
+			, TCVector<CStr> *o_pSelectedLocations
 		)
 		-> TCUnsafeFuture<CBuildSystem::ERetry>
 	{
 		co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
+		DMibCheck(!_pSelectedFilter == !o_pSelectedLocations);
+
 		CGenerateEphemeralState GenerateState;
 		if (ERetry Retry = co_await fp_GeneratePrepare(_GenerateOptions, GenerateState, nullptr); Retry != ERetry_None)
 			co_return Retry;
+
+		if (_pSelectedFilter)
+		{
+			CFilteredRepos SelectedRepositories = co_await fg_GetFilteredRepos(*_pSelectedFilter, *this, mp_Data, EGetRepoFlag::mc_None);
+			for (auto &Repos : SelectedRepositories.m_FilteredRepositories)
+			{
+				for (auto *pRepo : Repos)
+					o_pSelectedLocations->f_Insert(pRepo->m_Location);
+			}
+		}
 
 		CFilteredRepos FilteredRepositories = co_await fg_GetFilteredRepos(_Filter, *this, mp_Data, EGetRepoFlag::mc_None);
 		for (auto &Repos : FilteredRepositories.m_FilteredRepositories)
