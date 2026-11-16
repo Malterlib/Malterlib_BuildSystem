@@ -266,10 +266,7 @@ namespace
 				DMibExpectException
 					(
 						fRead(Stream.f_MoveVector())
-						, DMibErrorInstance
-						(
-							CStr::CFormat("Generator state of version 0x{nh} is too old to read") << uint32(CGeneratorArchiveState::mc_FileVersion_GeneratedFilesLast - 1)
-						)
+						, DMibErrorInstance(CStr::CFormat("Generator state of version 0x{nh} is too old to read") << uint32(CGeneratorArchiveState::mc_FileVersion_GeneratedFilesLast - 1))
 					)
 				;
 			}
