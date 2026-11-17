@@ -510,7 +510,12 @@ namespace NMib::NBuildSystem
 		}
 
 		if (pCMakeGenerateState->m_bTried)
+		{
+			if (pCMakeGenerateState->m_pFailure)
+				std::rethrow_exception(pCMakeGenerateState->m_pFailure);
+
 			fsp_ThrowError(EntityData.m_Position, "CMake generation previously failed");
+		}
 
 		pCMakeGenerateState->m_bTried = true;
 
@@ -521,689 +526,588 @@ namespace NMib::NBuildSystem
 			}
 		;
 
-		CStr LastHashContentsFile = CmakeCacheDirectory / "MalterlibHashContents.txt";
-
-		if (!CmakeCacheDirectory.f_IsEmpty() && CFile::fs_FileExists(CmakeCacheDirectory / "Dependencies.sha512"))
+		// Later attempts of the same generation, such as of other configurations, report this error instead of that it failed
+		try
 		{
-			CFile::CFindFilesOptions FindOptions{CmakeCacheDirectory + "/*.dependencies", true};
-			FindOptions.m_AttribMask = EFileAttrib_File;
+			CStr LastHashContentsFile = CmakeCacheDirectory / "MalterlibHashContents.txt";
 
-			auto FoundFiles = CFile::fs_FindFiles(FindOptions);
-
-			TCSet<CStr> DependencyFiles;
-
-			for (auto &File : FoundFiles)
+			if (!CmakeCacheDirectory.f_IsEmpty() && CFile::fs_FileExists(CmakeCacheDirectory / "Dependencies.sha512"))
 			{
-				if (CFile::fs_GetExtension(File.m_Path) == "dependencies")
-				{
-					CStr FileContents = CFile::fs_ReadStringFromFile(File.m_Path, true);
-					ch8 const *pParse = FileContents;
-					while (*pParse)
-					{
-						auto pLineStart = pParse;
-						fg_ParseToEndOfLine(pParse);
-						CStr Line(pLineStart, pParse - pLineStart);
-						fg_ParseEndOfLine(pParse);
-						DependencyFiles[CFile::fs_GetExpandedPath(Line, CFile::fs_GetPath(File.m_Path))];
-					}
-				}
-			}
+				CFile::CFindFilesOptions FindOptions{CmakeCacheDirectory + "/*.dependencies", true};
+				FindOptions.m_AttribMask = EFileAttrib_File;
 
-			CHash_SHA512 DependenciesHash;
-			fInitHash(DependenciesHash, true);
+				auto FoundFiles = CFile::fs_FindFiles(FindOptions);
 
-			for (auto &File : DependencyFiles)
-			{
-				if (!CFile::fs_FileExists(File))
-				{
-					f_OutputConsole("Missing file in dependencies: {}\n"_f << File);
-					continue;
-				}
+				TCSet<CStr> DependencyFiles;
 
-				CStr FileContents = CFile::fs_ReadStringFromFile(File, true).f_Replace("\r\n", "\n");
-				if (bVerboseHash)
-					f_OutputConsole("{}: {}\n"_f << File << NCryptography::CHash_SHA256::fs_DigestFromData(FileContents.f_GetStr(), FileContents.f_GetLen()));
-
-				DependenciesHash.f_AddData(FileContents.f_GetStr(), FileContents.f_GetLen());
-			}
-
-			CStr LastDependenciesHash = CFile::fs_ReadStringFromFile(CmakeCacheDirectory + "/Dependencies.sha512", true);
-			CStr NewDependenciesHash = DependenciesHash.f_GetDigest().f_GetString();
-
-			if (bVerboseHash)
-				f_OutputConsole("Import hash string for '{}': {}\n"_f << LockDirectory << HashContents);
-
-			bool bCacheUpToDate = NewDependenciesHash == LastDependenciesHash;
-			if (bCacheUpToDate || !bUpdateCache)
-			{
-				if (!bCacheUpToDate)
-					f_OutputConsole("{}: WARNING: Import cache out of date (CMake), but updating has been disabled with Import.CMake_UpdateCache\n"_f << CmakeCacheDirectory);
-				{
-					DLock(mp_CMakeGenerateLock);
-					mp_CMakeGenerated[LockDirectory] = ConfigHashString;
-					mp_CMakeGeneratedContents[LockDirectory] = ConfigHashContents;
-				}
-				DUnlock(pCMakeGenerateState->m_Lock);
-				return fReturn(LockDirectory, ConfigHashString);
-			}
-			if (bDiffHash)
-			{
-				if (CFile::fs_FileExists(LastHashContentsFile))
-				{
-					CStr LastHashContents = CFile::fs_ReadStringFromFile(LastHashContentsFile, true);
-					if (HashContents != LastHashContents)
-						NSys::fg_Debug_DiffStrings(LastHashContents, HashContents, "Last Hash Contents", "New Hash Contents");
-				}
-			}
-
-			f_OutputConsole("{}: Import cache out of date (CMake)\n"_f << CmakeCacheDirectory);
-		}
-		else
-			f_OutputConsole("{}: Import cache missing (CMake)\n"_f << CmakeCacheDirectory);
-
-		CProcessLaunchParams LaunchParams;
-		LaunchParams.m_bAllowExecutableLocate = true;
-		LaunchParams.m_WorkingDirectory = TempDirectory;
-		LaunchParams.m_bSeparateStdErr = false;
-		LaunchParams.m_bMergeEnvironment = false;
-		LaunchParams.m_Environment = mp_pGeneratorInterface->f_GetBuildEnvironment(Platform, Architecture);
-		CStr HidePrefixes;
-		if (SharedTempDirectory)
-			fg_AddStrSep(HidePrefixes, SharedTempDirectory, ";");
-		fg_AddStrSep(HidePrefixes, CFile::fs_GetPath(FileName), ";");
-		LaunchParams.m_Environment["CMAKE_MALTERLIB_HIDEPREFIXES"] = HidePrefixes;
-		{
-			CStr PrefixesString;
-			for (auto const &Entry : CmakeReplacePrefixes.f_Array())
-				fg_AddStrSep(PrefixesString, "{}={}"_f << Entry[gc_ConstString_Find].f_String() << Entry[gc_ConstString_Replace].f_String(), ";");
-			LaunchParams.m_Environment["CMAKE_MALTERLIB_REPLACEPREFIXES"] = PrefixesString;
-		}
-		LaunchParams.m_Environment["CMAKE_MALTERLIB_TEMPDIR"] = TempDirectory;
-		for (auto &KeyValue : CmakeEnvironmentContents.f_Object())
-			LaunchParams.m_Environment[KeyValue.f_Name()] = KeyValue.f_Value().f_String();
-		{
-			CStr Path;
-			for (auto &CmakePath : CmakePaths)
-			{
-#ifdef DPlatformFamily_Windows
-				fg_AddStrSep(Path, CmakePath.f_ReplaceChar('/', '\\'), ";");
-#else
-				fg_AddStrSep(Path, CmakePath, ":");
-#endif
-			}
-			if (!Path.f_IsEmpty())
-			{
-#ifdef DPlatformFamily_Windows
-				LaunchParams.m_Environment["PATH"] = Path + ";" + LaunchParams.m_Environment["PATH"];
-#else
-				LaunchParams.m_Environment["PATH"] = Path + ":" + LaunchParams.m_Environment["PATH"];
-#endif
-			}
-		}
-		LaunchParams.m_Environment.f_Remove("PRODUCT_SPECIFIC_LDFLAGS");
-		LaunchParams.m_Environment.f_Remove("SDKROOT");
-		LaunchParams.m_Environment["CMAKE_MALTERLIB_BASEDIR"] = f_GetBaseDir();
-		{
-			for (auto &Laungage : CmakeLanguages.f_Array())
-			{
-				LaunchParams.m_Environment[fg_Format("CMAKE_MALTERLIB_LANGUAGE_{}", Laungage[gc_ConstString_CMakeLanguage].f_String())]
-					= Laungage[gc_ConstString_MalterlibLanguage].f_String()
-				;
-			}
-		}
-
-		CStr CmakeExecutable;
-		TCVector<CStr> Params;
-
-#ifdef DMalterlibBuildSystem_EmbedCMake
-		CmakeExecutable = CFile::fs_GetProgramDirectory() / "MToolCMake";
-#else
-		CmakeExecutable = CFile::fs_GetProgramDirectory() + "/cmake";
-#endif
-#ifdef DPlatformFamily_Windows
-		CmakeExecutable += ".exe";
-#endif
-
-		Params.f_Insert
-			(
-				{
-					"-G"
-					, "Malterlib - Ninja"
-					, CFile::fs_GetPath(FileName)
-				}
-			)
-		;
-
-		Params.f_Insert("-DCMAKE_BUILD_TYPE=" + CmakeConfig);
-
-		//Params.f_Insert("--debug-find");
-		//Params.f_Insert("--debug-output");
-
-		{
-			for (auto const *pVariables : {&CmakeVariables, &CmakeVariablesWithPaths})
-			{
-				for (auto &Variable : *pVariables)
-					Params.f_Insert("-D" + Variable);
-			}
-
-			if (!CmakeSystemName.f_IsEmpty())
-				Params.f_Insert("-DCMAKE_SYSTEM_NAME=" + CmakeSystemName);
-			if (!CmakeSystemProcessor.f_IsEmpty())
-				Params.f_Insert("-DCMAKE_SYSTEM_PROCESSOR=" + CmakeSystemProcessor);
-			if (!CmakeCompiler.f_IsEmpty())
-				Params.f_Insert("-DCMAKE_C_COMPILER=" + CmakeCompiler);
-			if (!CmakeCompilerTarget.f_IsEmpty())
-				Params.f_Insert("-DCMAKE_C_COMPILER_TARGET=" + CmakeCompilerTarget);
-			if (!CmakeCxxCompiler.f_IsEmpty())
-				Params.f_Insert("-DCMAKE_CXX_COMPILER=" + CmakeCxxCompiler);
-			if (!CmakeCxxCompilerTarget.f_IsEmpty())
-				Params.f_Insert("-DCMAKE_CXX_COMPILER_TARGET=" + CmakeCxxCompilerTarget);
-
-			Params.f_Insert("-DCMAKE_TOOLCHAIN_NO_PREFIX=1");
-
-			if (Platform != DMibStringize(DPlatform) || bForceCrossCompile)
-			{
-				CStr SysRoot = f_EvaluateEntityPropertyString(_Entity, gc_ConstKey_Import_CMake_SysRoot, CStr());
-				if (!SysRoot.f_IsEmpty())
-				{
-					Params.f_Insert("-DCMAKE_FIND_ROOT_PATH=" + SysRoot);
-					Params.f_Insert("-DCMAKE_SYSROOT=" + SysRoot);
-					LaunchParams.m_Environment["PKG_CONFIG_SYSROOT_DIR"] = SysRoot;
-					LaunchParams.m_Environment["PKG_CONFIG_LIBDIR"] = "{}:{}"_f << (SysRoot / "usr/lib/pkgconfig") << (SysRoot / "usr/share/pkgconfig");
-					LaunchParams.m_Environment["PKG_CONFIG_PATH"] = "";
-				}
-
-				CStr CompilerExternalToolchain = f_EvaluateEntityPropertyString(_Entity, gc_ConstKey_Import_CMake_CExternalToolChain, CStr());
-				if (!CompilerExternalToolchain.f_IsEmpty())
-					Params.f_Insert("-DCMAKE_C_COMPILER_EXTERNAL_TOOLCHAIN=" + CompilerExternalToolchain);
-
-				CStr CxxCompilerExternalToolchain = f_EvaluateEntityPropertyString(_Entity, gc_ConstKey_Import_CMake_CxxExternalToolChain, CStr());
-				if (!CxxCompilerExternalToolchain.f_IsEmpty())
-					Params.f_Insert("-DCMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN=" + CxxCompilerExternalToolchain);
-			}
-		}
-
-		CFile::fs_CreateDirectory(TempDirectory);
-
-		CStr FullRebuildVersionFile = TempDirectory + "/MalterlibFullRebuildVersion";
-
-		CStr LastFullRebuildVersion;
-		if (CFile::fs_FileExists(FullRebuildVersionFile))
-			LastFullRebuildVersion = CFile::fs_ReadStringFromFile(FullRebuildVersionFile, true);
-
-		bool bCmakeAlwaysFullRebuild = f_EvaluateEntityPropertyBool(_Entity, gc_ConstKey_Import_CMake_AlwaysFullRebuild, false);
-
-		if (bCmakeAlwaysFullRebuild || FullRebuildVersion != LastFullRebuildVersion || CFile::fs_FileExists(TempDirectory / "failed"))
-		{
-			CFile::fs_DeleteDirectoryRecursive(TempDirectory);
-			CFile::fs_CreateDirectory(TempDirectory);
-		}
-
-		LaunchParams.m_bShowLaunched = false;
-
-		CStopwatch Stopwatch{true};
-		uint32 ExitCode = 0;
-
-		CStr Output;
-		//f_OutputConsole("Launching CMake: {}\n"_f << CProcessLaunchParams::fs_GetParams(Params), false);
-
-		if
-		(
-			!CProcessLaunch::fs_LaunchBlock
-			(
-				CmakeExecutable
-				, Params
-				, [&](NStr::CStr const &_Output)
-				{
-					if (bVerbose)
-						f_OutputConsole(_Output, false);
-					Output += _Output;
-				}
-				, [&](NStr::CStr const &_Output)
-				{
-					if (bVerbose)
-						f_OutputConsole(_Output, true);
-					Output += _Output;
-				}
-				, ExitCode
-				, LaunchParams
-			)
-		)
-		{
-			CFile::fs_Touch(TempDirectory / "failed");
-
-			if (bVerbose)
-				DMibError(fg_Format("Failed to launch cmake"));
-			else
-				DMibError(fg_Format("Failed to launch cmake: {}", Output));
-		}
-
-		if (ExitCode)
-		{
-			CFile::fs_Touch(TempDirectory / "failed");
-
-			if (bVerbose)
-				DMibError(fg_Format("cmake failed"));
-			else
-				DMibError(fg_Format("cmake failed: {}", Output));
-		}
-
-		f_OutputConsole("{}: Running CMake took {fe1} s\n"_f << CmakeCacheDirectory << Stopwatch.f_GetTime());
-
-		if (!CmakeCacheDirectory.f_IsEmpty())
-		{
-			auto Cleanup = g_OnScopeExit / [&, StartTime = Stopwatch.f_GetTime()]
-				{
-					f_OutputConsole("{}: Creating CMake cache took {fe1} s\n"_f << CmakeCacheDirectory << (Stopwatch.f_GetTime() - StartTime));
-				}
-			;
-
-			CFile::fs_CreateDirectory(CmakeCacheDirectory);
-
-			// CMake_CacheIncludePatterns caches files of the excluded ones again
-			auto fIsExcludedFromCache = [&](CStr const &_Path) -> bool
-				{
-					if (fg_StrMatchesAnyWildcardInContainer(_Path, CacheIncludePatterns))
-						return false;
-
-					// An excluded directory excludes what is in it, as when finding files skips it
-					for (CStr Path = _Path; Path.f_GetLen() > TempDirectory.f_GetLen(); Path = CFile::fs_GetPath(Path))
-					{
-						if (fg_StrMatchesAnyWildcardInContainer(Path, CacheExcludePatterns))
-							return true;
-					}
-
-					return false;
-				}
-			;
-
-			CFile::CFindFilesOptions FindOptions{TempDirectory + "/*", true};
-			FindOptions.m_AttribMask = EFileAttrib_File;
-			// Excluding while finding skips excluded directories, which can contain files to include again
-			if (CacheIncludePatterns.f_IsEmpty())
-				FindOptions.m_ExcludePatterns = CacheExcludePatterns;
-
-			struct CReplaceContents
-			{
-				CStr m_Find;
-				CStr m_Replace;
-				TCSet<CStr> m_FilePatterns;
-				TCSet<CStr> m_ExcludeFilePatterns;
-				bool m_bApplyToPaths = false;
-			};
-
-			TCVector<CReplaceContents> ReplaceContents;
-			{
-				for (auto &Replace : CacheReplaceContents.f_Array())
-				{
-					ReplaceContents.f_Insert
-						(
-							{
-								Replace[gc_ConstString_Find].f_String()
-								, Replace[gc_ConstString_Replace].f_String()
-								, fg_ConvertContainer<TCSet<CStr>>(Replace[gc_ConstString_FilePatterns].f_StringArray())
-								, fg_ConvertContainer<TCSet<CStr>>(Replace[gc_ConstString_ExcludeFilePatterns].f_StringArray())
-								, Replace[gc_ConstString_ApplyToPaths].f_Boolean()
-							}
-						)
-					;
-				}
-			}
-
-			struct CDuplicateLine
-			{
-				CStr m_Match;
-				CStr m_Search;
-				CStr m_Replace;
-				TCSet<CStr> m_FilePatterns;
-				TCSet<CStr> m_ExcludeFilePatterns;
-			};
-
-			TCVector<CDuplicateLine> DuplicateLines;
-			{
-				for (auto &Replace : CacheDuplicateLines.f_Array())
-				{
-					DuplicateLines.f_Insert
-						(
-							{
-								Replace[gc_ConstString_Match].f_String()
-								, Replace[gc_ConstString_Find].f_String()
-								, Replace[gc_ConstString_Replace].f_String()
-								, fg_ConvertContainer<TCSet<CStr>>(Replace[gc_ConstString_FilePatterns].f_StringArray())
-							}
-						)
-					;
-				}
-			}
-
-			auto FoundFiles = CFile::fs_FindFiles(FindOptions);
-			if (!CacheIncludePatterns.f_IsEmpty())
-			{
-				TCVector<CFile::CFoundFile> IncludedFiles;
 				for (auto &File : FoundFiles)
 				{
-					if (!fIsExcludedFromCache(File.m_Path))
-						IncludedFiles.f_Insert(fg_Move(File));
-				}
-				FoundFiles = fg_Move(IncludedFiles);
-			}
-			umint PathPrefixLen = TempDirectory.f_GetLen() + 1;
-
-			CStr SourceBase = CFile::fs_GetPath(FileName);
-			CStr SourceBaseFind = SourceBase + "/";
-			CStr BaseDir = f_GetBaseDir();
-			CStr BaseDirFind = BaseDir + "/";
-			CStr TempDirectoryFind = TempDirectory + "/";
-			TCSet<CStr> WrittenFiles;
-			TCSet<CStr> DependencyFiles;
-
-			auto fMatchFile = [](CStr const &_File, TCSet<CStr> const &_Patterns, TCSet<CStr> const &_ExcludePatterns) -> bool
-				{
-					auto fCheckPattern = [&](TCSet<CStr> const &_Patterns, bool _bDefault)
+					if (CFile::fs_GetExtension(File.m_Path) == "dependencies")
+					{
+						CStr FileContents = CFile::fs_ReadStringFromFile(File.m_Path, true);
+						ch8 const *pParse = FileContents;
+						while (*pParse)
 						{
-							if (_Patterns.f_IsEmpty())
-								return _bDefault;
-
-							for (auto &Pattern : _Patterns)
-							{
-								if (fg_StrMatchWildcard(_File.f_GetStr(), Pattern.f_GetStr()) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
-									return true;
-							}
-
-							return false;
+							auto pLineStart = pParse;
+							fg_ParseToEndOfLine(pParse);
+							CStr Line(pLineStart, pParse - pLineStart);
+							fg_ParseEndOfLine(pParse);
+							DependencyFiles[CFile::fs_GetExpandedPath(Line, CFile::fs_GetPath(File.m_Path))];
 						}
+					}
+				}
+
+				CHash_SHA512 DependenciesHash;
+				fInitHash(DependenciesHash, true);
+
+				for (auto &File : DependencyFiles)
+				{
+					if (!CFile::fs_FileExists(File))
+					{
+						f_OutputConsole("Missing file in dependencies: {}\n"_f << File);
+						continue;
+					}
+
+					CStr FileContents = CFile::fs_ReadStringFromFile(File, true).f_Replace("\r\n", "\n");
+					if (bVerboseHash)
+						f_OutputConsole("{}: {}\n"_f << File << NCryptography::CHash_SHA256::fs_DigestFromData(FileContents.f_GetStr(), FileContents.f_GetLen()));
+
+					DependenciesHash.f_AddData(FileContents.f_GetStr(), FileContents.f_GetLen());
+				}
+
+				CStr LastDependenciesHash = CFile::fs_ReadStringFromFile(CmakeCacheDirectory + "/Dependencies.sha512", true);
+				CStr NewDependenciesHash = DependenciesHash.f_GetDigest().f_GetString();
+
+				if (bVerboseHash)
+					f_OutputConsole("Import hash string for '{}': {}\n"_f << LockDirectory << HashContents);
+
+				bool bCacheUpToDate = NewDependenciesHash == LastDependenciesHash;
+				if (bCacheUpToDate || !bUpdateCache)
+				{
+					if (!bCacheUpToDate)
+						f_OutputConsole("{}: WARNING: Import cache out of date (CMake), but updating has been disabled with Import.CMake_UpdateCache\n"_f << CmakeCacheDirectory);
+					{
+						DLock(mp_CMakeGenerateLock);
+						mp_CMakeGenerated[LockDirectory] = ConfigHashString;
+						mp_CMakeGeneratedContents[LockDirectory] = ConfigHashContents;
+					}
+					DUnlock(pCMakeGenerateState->m_Lock);
+					return fReturn(LockDirectory, ConfigHashString);
+				}
+				if (bDiffHash)
+				{
+					if (CFile::fs_FileExists(LastHashContentsFile))
+					{
+						CStr LastHashContents = CFile::fs_ReadStringFromFile(LastHashContentsFile, true);
+						if (HashContents != LastHashContents)
+							NSys::fg_Debug_DiffStrings(LastHashContents, HashContents, "Last Hash Contents", "New Hash Contents");
+					}
+				}
+
+				f_OutputConsole("{}: Import cache out of date (CMake)\n"_f << CmakeCacheDirectory);
+			}
+			else
+				f_OutputConsole("{}: Import cache missing (CMake)\n"_f << CmakeCacheDirectory);
+
+			CProcessLaunchParams LaunchParams;
+			LaunchParams.m_bAllowExecutableLocate = true;
+			LaunchParams.m_WorkingDirectory = TempDirectory;
+			LaunchParams.m_bSeparateStdErr = false;
+			LaunchParams.m_bMergeEnvironment = false;
+			LaunchParams.m_Environment = mp_pGeneratorInterface->f_GetBuildEnvironment(Platform, Architecture);
+			CStr HidePrefixes;
+			if (SharedTempDirectory)
+				fg_AddStrSep(HidePrefixes, SharedTempDirectory, ";");
+			fg_AddStrSep(HidePrefixes, CFile::fs_GetPath(FileName), ";");
+			LaunchParams.m_Environment["CMAKE_MALTERLIB_HIDEPREFIXES"] = HidePrefixes;
+			{
+				CStr PrefixesString;
+				for (auto const &Entry : CmakeReplacePrefixes.f_Array())
+					fg_AddStrSep(PrefixesString, "{}={}"_f << Entry[gc_ConstString_Find].f_String() << Entry[gc_ConstString_Replace].f_String(), ";");
+				LaunchParams.m_Environment["CMAKE_MALTERLIB_REPLACEPREFIXES"] = PrefixesString;
+			}
+			LaunchParams.m_Environment["CMAKE_MALTERLIB_TEMPDIR"] = TempDirectory;
+			for (auto &KeyValue : CmakeEnvironmentContents.f_Object())
+				LaunchParams.m_Environment[KeyValue.f_Name()] = KeyValue.f_Value().f_String();
+			{
+				CStr Path;
+				for (auto &CmakePath : CmakePaths)
+				{
+#ifdef DPlatformFamily_Windows
+					fg_AddStrSep(Path, CmakePath.f_ReplaceChar('/', '\\'), ";");
+#else
+					fg_AddStrSep(Path, CmakePath, ":");
+#endif
+				}
+				if (!Path.f_IsEmpty())
+				{
+#ifdef DPlatformFamily_Windows
+					LaunchParams.m_Environment["PATH"] = Path + ";" + LaunchParams.m_Environment["PATH"];
+#else
+					LaunchParams.m_Environment["PATH"] = Path + ":" + LaunchParams.m_Environment["PATH"];
+#endif
+				}
+			}
+			LaunchParams.m_Environment.f_Remove("PRODUCT_SPECIFIC_LDFLAGS");
+			LaunchParams.m_Environment.f_Remove("SDKROOT");
+			LaunchParams.m_Environment["CMAKE_MALTERLIB_BASEDIR"] = f_GetBaseDir();
+			{
+				for (auto &Laungage : CmakeLanguages.f_Array())
+				{
+					LaunchParams.m_Environment[fg_Format("CMAKE_MALTERLIB_LANGUAGE_{}", Laungage[gc_ConstString_CMakeLanguage].f_String())]
+						= Laungage[gc_ConstString_MalterlibLanguage].f_String()
 					;
-
-					bool bIncluded = fCheckPattern(_Patterns, true);
-					if (!bIncluded)
-						return false;
-
-					bool bExcluded = fCheckPattern(_ExcludePatterns, false);
-					return !bExcluded;
-				}
-			;
-
-			auto fReplacePath = [&](CStr const &_Path) -> CStr
-				{
-					CMultiReplace::CStringMap MultiReplaceMapPath;
-
-					for (auto &Replace : ReplaceContents)
-					{
-						if (!Replace.m_bApplyToPaths)
-							continue;
-
-						if (fMatchFile(_Path, Replace.m_FilePatterns, Replace.m_ExcludeFilePatterns))
-						{
-							if (Replace.m_bApplyToPaths)
-								MultiReplaceMapPath[Replace.m_Find] = Replace.m_Replace;
-						}
-					}
-
-					CMultiReplace MultiReplacePath(fg_Move(MultiReplaceMapPath));
-					return MultiReplacePath.f_Replace(_Path);
-				}
-			;
-
-			CMultiReplace::CStringMap OutputFilesMultiReplaceMap;
-			{
-				CStr FileContents = CFile::fs_ReadStringFromFile(TempDirectory / "OutputFiles.list", true);
-				ch8 const *pParse = FileContents;
-				while (*pParse)
-				{
-					auto pLineStart = pParse;
-					fg_ParseToEndOfLine(pParse);
-					CStr Line(pLineStart, pParse - pLineStart);
-					fg_ParseEndOfLine(pParse);
-
-					Line = fReplacePath(Line);
-
-					OutputFilesMultiReplaceMap[Line];
-#ifdef DPlatformFamily_Windows
-					OutputFilesMultiReplaceMap[Line.f_Replace("/", "\\")];
-					OutputFilesMultiReplaceMap[Line.f_Replace("/", "\\\\")];
-#endif
 				}
 			}
-			CMultiReplace OutputFilesMultiReplace(fg_Move(OutputFilesMultiReplaceMap));
 
-			CMultiReplace::CStringMap ProtectedFilesMultiReplaceMap;
-			{
-				CStr FileContents = CFile::fs_ReadStringFromFile(TempDirectory / "ProtectedFiles.list", true);
-				ch8 const *pParse = FileContents;
-				while (*pParse)
-				{
-					auto pLineStart = pParse;
-					fg_ParseToEndOfLine(pParse);
-					CStr Line(pLineStart, pParse - pLineStart);
-					fg_ParseEndOfLine(pParse);
+			CStr CmakeExecutable;
+			TCVector<CStr> Params;
 
-					Line = fReplacePath(Line);
-
-					ProtectedFilesMultiReplaceMap[Line];
-#ifdef DPlatformFamily_Windows
-					ProtectedFilesMultiReplaceMap[Line.f_Replace("/", "\\")];
-					ProtectedFilesMultiReplaceMap[Line.f_Replace("/", "\\\\")];
+#ifdef DMalterlibBuildSystem_EmbedCMake
+			CmakeExecutable = CFile::fs_GetProgramDirectory() / "MToolCMake";
+#else
+			CmakeExecutable = CFile::fs_GetProgramDirectory() + "/cmake";
 #endif
-				}
-			}
-			CMultiReplace ProtectedFilesMultiReplace(fg_Move(ProtectedFilesMultiReplaceMap));
+#ifdef DPlatformFamily_Windows
+			CmakeExecutable += ".exe";
+#endif
 
-			TCSet<CStr> CppExtensions = {"h", "hpp", "hxx", "ipp", "cpp", "c", "cxx"};
-
-			for (auto &File : FoundFiles)
-			{
-				CStr Extension = CFile::fs_GetExtension(File.m_Path);
-				CStr FileDirectory = CFile::fs_GetPath(File.m_Path);
-				bool bIsMHeader = Extension == "MHeader";
-				bool bIsCpp = !!CppExtensions.f_FindEqual(Extension);
-
-				CStr RelativePath = File.m_Path.f_Extract(PathPrefixLen);
-				CMultiReplace::CStringMap MultiReplaceMap;
-				{
-					CMultiReplace::CStringMap MultiReplaceMapPath;
-
-					for (auto &Replace : ReplaceContents)
+			Params.f_Insert
+				(
 					{
-						if (fMatchFile(File.m_Path, Replace.m_FilePatterns, Replace.m_ExcludeFilePatterns))
-						{
-							MultiReplaceMap[Replace.m_Find] = Replace.m_Replace;
-							if (Replace.m_bApplyToPaths)
-								MultiReplaceMapPath[Replace.m_Find] = Replace.m_Replace;
-						}
+						"-G"
+						, "Malterlib - Ninja"
+						, CFile::fs_GetPath(FileName)
+					}
+				)
+			;
+
+			Params.f_Insert("-DCMAKE_BUILD_TYPE=" + CmakeConfig);
+
+			//Params.f_Insert("--debug-find");
+			//Params.f_Insert("--debug-output");
+
+			{
+				for (auto const *pVariables : {&CmakeVariables, &CmakeVariablesWithPaths})
+				{
+					for (auto &Variable : *pVariables)
+						Params.f_Insert("-D" + Variable);
+				}
+
+				if (!CmakeSystemName.f_IsEmpty())
+					Params.f_Insert("-DCMAKE_SYSTEM_NAME=" + CmakeSystemName);
+				if (!CmakeSystemProcessor.f_IsEmpty())
+					Params.f_Insert("-DCMAKE_SYSTEM_PROCESSOR=" + CmakeSystemProcessor);
+				if (!CmakeCompiler.f_IsEmpty())
+					Params.f_Insert("-DCMAKE_C_COMPILER=" + CmakeCompiler);
+				if (!CmakeCompilerTarget.f_IsEmpty())
+					Params.f_Insert("-DCMAKE_C_COMPILER_TARGET=" + CmakeCompilerTarget);
+				if (!CmakeCxxCompiler.f_IsEmpty())
+					Params.f_Insert("-DCMAKE_CXX_COMPILER=" + CmakeCxxCompiler);
+				if (!CmakeCxxCompilerTarget.f_IsEmpty())
+					Params.f_Insert("-DCMAKE_CXX_COMPILER_TARGET=" + CmakeCxxCompilerTarget);
+
+				Params.f_Insert("-DCMAKE_TOOLCHAIN_NO_PREFIX=1");
+
+				if (Platform != DMibStringize(DPlatform) || bForceCrossCompile)
+				{
+					CStr SysRoot = f_EvaluateEntityPropertyString(_Entity, gc_ConstKey_Import_CMake_SysRoot, CStr());
+					if (!SysRoot.f_IsEmpty())
+					{
+						Params.f_Insert("-DCMAKE_FIND_ROOT_PATH=" + SysRoot);
+						Params.f_Insert("-DCMAKE_SYSROOT=" + SysRoot);
+						LaunchParams.m_Environment["PKG_CONFIG_SYSROOT_DIR"] = SysRoot;
+						LaunchParams.m_Environment["PKG_CONFIG_LIBDIR"] = "{}:{}"_f << (SysRoot / "usr/lib/pkgconfig") << (SysRoot / "usr/share/pkgconfig");
+						LaunchParams.m_Environment["PKG_CONFIG_PATH"] = "";
 					}
 
-					CMultiReplace MultiReplacePath(fg_Move(MultiReplaceMapPath));
-					RelativePath = MultiReplacePath.f_Replace(RelativePath);
+					CStr CompilerExternalToolchain = f_EvaluateEntityPropertyString(_Entity, gc_ConstKey_Import_CMake_CExternalToolChain, CStr());
+					if (!CompilerExternalToolchain.f_IsEmpty())
+						Params.f_Insert("-DCMAKE_C_COMPILER_EXTERNAL_TOOLCHAIN=" + CompilerExternalToolchain);
+
+					CStr CxxCompilerExternalToolchain = f_EvaluateEntityPropertyString(_Entity, gc_ConstKey_Import_CMake_CxxExternalToolChain, CStr());
+					if (!CxxCompilerExternalToolchain.f_IsEmpty())
+						Params.f_Insert("-DCMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN=" + CxxCompilerExternalToolchain);
 				}
+			}
 
-				CMultiReplace MultiReplace(fg_Move(MultiReplaceMap));
+			CFile::fs_CreateDirectory(TempDirectory);
 
-				CStr DestPath = CFile::fs_AppendPath(CmakeCacheDirectory, RelativePath);
-				CStr DestPathDirectory = CFile::fs_GetPath(DestPath);
-				CStr RelativeSource = CFile::fs_MakePathRelative(SourceBase, DestPathDirectory);
-				CStr RelativeDest = CFile::fs_MakePathRelative(CmakeCacheDirectory, DestPathDirectory);
-				CStr RelativeBase = CFile::fs_MakePathRelative(BaseDir, DestPathDirectory);
+			CStr FullRebuildVersionFile = TempDirectory + "/MalterlibFullRebuildVersion";
 
-				CStr RelativeSourceBare = RelativeSource;
-				CStr RelativeDestBare = RelativeDest;
-				CStr RelativeBaseBare = RelativeBase;
+			CStr LastFullRebuildVersion;
+			if (CFile::fs_FileExists(FullRebuildVersionFile))
+				LastFullRebuildVersion = CFile::fs_ReadStringFromFile(FullRebuildVersionFile, true);
 
-				if (RelativeSourceBare.f_IsEmpty())
-					RelativeSourceBare = ".";
-				if (RelativeDestBare.f_IsEmpty())
-					RelativeDestBare = ".";
-				if (RelativeBaseBare.f_IsEmpty())
-					RelativeBaseBare = ".";
+			bool bCmakeAlwaysFullRebuild = f_EvaluateEntityPropertyBool(_Entity, gc_ConstKey_Import_CMake_AlwaysFullRebuild, false);
 
-				if (bIsMHeader)
-				{
-					RelativeSourceBare = CStr("@('{}'->MakeAbsolute())"_f << RelativeSourceBare);
-					RelativeDestBare = CStr("@('{}'->MakeAbsolute())"_f << RelativeDestBare);
-					RelativeBaseBare = CStr("@('{}'->MakeAbsolute())"_f << RelativeBaseBare);
+			if (bCmakeAlwaysFullRebuild || FullRebuildVersion != LastFullRebuildVersion || CFile::fs_FileExists(TempDirectory / "failed"))
+			{
+				CFile::fs_DeleteDirectoryRecursive(TempDirectory);
+				CFile::fs_CreateDirectory(TempDirectory);
+			}
 
-					if (!RelativeSource.f_IsEmpty())
-						RelativeSource = CStr("@('{}'->MakeAbsolute())/"_f << RelativeSource);
-					else
-						RelativeSource = "@('.'->MakeAbsolute())/";
+			LaunchParams.m_bShowLaunched = false;
 
-					if (!RelativeDest.f_IsEmpty())
-						RelativeDest = CStr("@('{}'->MakeAbsolute())/"_f << RelativeDest);
-					else
-						RelativeDest = "@('.'->MakeAbsolute())/";
+			CStopwatch Stopwatch{true};
+			uint32 ExitCode = 0;
 
-					if (!RelativeBase.f_IsEmpty())
-						RelativeBase = CStr("@('{}'->MakeAbsolute())/"_f << RelativeBase);
-					else
-						RelativeBase = "@('.'->MakeAbsolute())/";
-				}
+			CStr Output;
+			//f_OutputConsole("Launching CMake: {}\n"_f << CProcessLaunchParams::fs_GetParams(Params), false);
+
+			if
+			(
+				!CProcessLaunch::fs_LaunchBlock
+				(
+					CmakeExecutable
+					, Params
+					, [&](NStr::CStr const &_Output)
+					{
+						if (bVerbose)
+							f_OutputConsole(_Output, false);
+						Output += _Output;
+					}
+					, [&](NStr::CStr const &_Output)
+					{
+						if (bVerbose)
+							f_OutputConsole(_Output, true);
+						Output += _Output;
+					}
+					, ExitCode
+					, LaunchParams
+				)
+			)
+			{
+				CFile::fs_Touch(TempDirectory / "failed");
+
+				if (bVerbose)
+					DMibError(fg_Format("Failed to launch cmake"));
 				else
-				{
-					if (!RelativeSource.f_IsEmpty())
-						RelativeSource += "/";
-					if (!RelativeDest.f_IsEmpty())
-						RelativeDest += "/";
-					if (!RelativeBase.f_IsEmpty())
-						RelativeBase += "/";
-				}
+					DMibError(fg_Format("Failed to launch cmake: {}", Output));
+			}
 
-				CStr FileContents = CFile::fs_ReadStringFromFile(File.m_Path, true);
+			if (ExitCode)
+			{
+				CFile::fs_Touch(TempDirectory / "failed");
 
-				bool bIsDependencies = Extension == "dependencies";
+				if (bVerbose)
+					DMibError(fg_Format("cmake failed"));
+				else
+					DMibError(fg_Format("cmake failed: {}", Output));
+			}
 
-				if (bIsDependencies)
-				{
-					CStr NewFileContents;
-					ch8 const *pParse = FileContents;
-					while (*pParse)
+			f_OutputConsole("{}: Running CMake took {fe1} s\n"_f << CmakeCacheDirectory << Stopwatch.f_GetTime());
+
+			if (!CmakeCacheDirectory.f_IsEmpty())
+			{
+				auto Cleanup = g_OnScopeExit / [&, StartTime = Stopwatch.f_GetTime()]
 					{
-						auto pLineStart = pParse;
-						fg_ParseToEndOfLine(pParse);
-						CStr Line(pLineStart, pParse - pLineStart);
-						fg_ParseEndOfLine(pParse);
-						if (fStartsWith(Line, TempDirectory))
+						f_OutputConsole("{}: Creating CMake cache took {fe1} s\n"_f << CmakeCacheDirectory << (Stopwatch.f_GetTime() - StartTime));
+					}
+				;
+
+				CFile::fs_CreateDirectory(CmakeCacheDirectory);
+
+				// CMake_CacheIncludePatterns caches files of the excluded ones again
+				auto fIsExcludedFromCache = [&](CStr const &_Path) -> bool
+					{
+						if (fg_StrMatchesAnyWildcardInContainer(_Path, CacheIncludePatterns))
+							return false;
+
+						// An excluded directory excludes what is in it, as when finding files skips it
+						for (CStr Path = _Path; Path.f_GetLen() > TempDirectory.f_GetLen(); Path = CFile::fs_GetPath(Path))
 						{
-							if (fIsExcludedFromCache(Line))
-								continue;
+							if (fg_StrMatchesAnyWildcardInContainer(Path, CacheExcludePatterns))
+								return true;
 						}
-						else if (Line.f_Find("/CMakeRoot/") >= 0)
-							continue;
 
-						NewFileContents += Line;
-						NewFileContents += "\n";
+						return false;
 					}
-					FileContents = fg_Move(NewFileContents);
-				}
+				;
 
-				FileContents = MultiReplace.f_Replace(FileContents);
+				CFile::CFindFilesOptions FindOptions{TempDirectory + "/*", true};
+				FindOptions.m_AttribMask = EFileAttrib_File;
+				// Excluding while finding skips excluded directories, which can contain files to include again
+				if (CacheIncludePatterns.f_IsEmpty())
+					FindOptions.m_ExcludePatterns = CacheExcludePatterns;
 
-				if (bIsCpp)
+				struct CReplaceContents
 				{
-					CStr NewFileContents;
-					auto *pParse = FileContents.f_GetStr();
-					while (*pParse)
+					CStr m_Find;
+					CStr m_Replace;
+					TCSet<CStr> m_FilePatterns;
+					TCSet<CStr> m_ExcludeFilePatterns;
+					bool m_bApplyToPaths = false;
+				};
+
+				TCVector<CReplaceContents> ReplaceContents;
+				{
+					for (auto &Replace : CacheReplaceContents.f_Array())
 					{
-						auto pLineStart = pParse;
-						fg_ParseToEndOfLine(pParse);
-						CStr Line(pLineStart, pParse - pLineStart);
-						fg_ParseEndOfLine(pParse);
-
-						auto Cleanup = g_OnScopeExit / [&, pParse]
-							{
-								NewFileContents.f_AddStr(pLineStart, pParse - pLineStart);
-							}
+						ReplaceContents.f_Insert
+							(
+								{
+									Replace[gc_ConstString_Find].f_String()
+									, Replace[gc_ConstString_Replace].f_String()
+									, fg_ConvertContainer<TCSet<CStr>>(Replace[gc_ConstString_FilePatterns].f_StringArray())
+									, fg_ConvertContainer<TCSet<CStr>>(Replace[gc_ConstString_ExcludeFilePatterns].f_StringArray())
+									, Replace[gc_ConstString_ApplyToPaths].f_Boolean()
+								}
+							)
 						;
-
-						Line = Line.f_Trim();
-						auto pParseLine = Line.f_GetStr();
-
-						if (*pParseLine != '#')
-							continue;
-
-						++pParseLine;
-
-						fg_ParseWhiteSpace(pParseLine);
-
-						if (!fg_StrStartsWith(pParseLine, "include"))
-							continue;
-
-						pParseLine += 7;
-
-						fg_ParseWhiteSpace(pParseLine);
-
-						if (*pParseLine != '"')
-							continue;
-
-						++pParseLine;
-
-						auto pStartFileName = pParseLine;
-
-						while (*pParseLine && *pParseLine != '"')
-							++pParseLine;
-
-						if (*pParseLine != '"')
-							continue;
-
-						CStr FileName(pStartFileName, pParseLine - pStartFileName);
-
-						if (fg_StrMatchesAnyWildcardInContainer(FileName, CmakeDisableIncludeReplace))
-							continue;
-
-						CStr ExpandedFileName = CFile::fs_GetExpandedPath(FileName, FileDirectory);
-						if (!fStartsWith(ExpandedFileName, TempDirectory))
-							continue;
-
-						CStr RelativePath = CFile::fs_MakePathRelative(ExpandedFileName, TempDirectory);
-
-						Cleanup.f_Clear();
-
-						NewFileContents += "#include \"{}\"\n"_f << RelativePath;
 					}
-
-					FileContents = fg_Move(NewFileContents);
 				}
 
-				if (!OutputFilesMultiReplace.f_IsEmpty() && !bIsDependencies)
+				struct CDuplicateLine
 				{
-					FileContents = OutputFilesMultiReplace.f_Replace
-						(
-							FileContents
-							, [&](CStr &o_String, ch8 const * &o_pParse, CStr const &_ToFind, CStr const &_ReplaceWith) -> bool
-							{
-								if (ProtectedFilesMultiReplace.f_StringMatches(o_pParse))
-									return false;
+					CStr m_Match;
+					CStr m_Search;
+					CStr m_Replace;
+					TCSet<CStr> m_FilePatterns;
+					TCSet<CStr> m_ExcludeFilePatterns;
+				};
 
-								auto pParseEnd = o_pParse + _ToFind.f_GetLen();
-								if (!*pParseEnd || fg_StrFindChar(CmakeOutputFilesParseTerminators, *pParseEnd) >= 0)
+				TCVector<CDuplicateLine> DuplicateLines;
+				{
+					for (auto &Replace : CacheDuplicateLines.f_Array())
+					{
+						DuplicateLines.f_Insert
+							(
 								{
-									auto RelativePath = CFile::fs_MakePathRelative(_ToFind, TempDirectory);
-									o_String += "{}(CMakeIntermediateDirectory)/{}/{}"_f << (bIsMHeader ? "@" : "#") << IntermediateName << RelativePath;
-									if (*pParseEnd)
-									{
-										o_String.f_AddChar(*pParseEnd);
-										o_pParse = pParseEnd + 1;
-									}
-									else
-										o_pParse = pParseEnd;
+									Replace[gc_ConstString_Match].f_String()
+									, Replace[gc_ConstString_Find].f_String()
+									, Replace[gc_ConstString_Replace].f_String()
+									, fg_ConvertContainer<TCSet<CStr>>(Replace[gc_ConstString_FilePatterns].f_StringArray())
+								}
+							)
+						;
+					}
+				}
 
-									return true;
+				auto FoundFiles = CFile::fs_FindFiles(FindOptions);
+				if (!CacheIncludePatterns.f_IsEmpty())
+				{
+					TCVector<CFile::CFoundFile> IncludedFiles;
+					for (auto &File : FoundFiles)
+					{
+						if (!fIsExcludedFromCache(File.m_Path))
+							IncludedFiles.f_Insert(fg_Move(File));
+					}
+					FoundFiles = fg_Move(IncludedFiles);
+				}
+				umint PathPrefixLen = TempDirectory.f_GetLen() + 1;
+
+				CStr SourceBase = CFile::fs_GetPath(FileName);
+				CStr SourceBaseFind = SourceBase + "/";
+				CStr BaseDir = f_GetBaseDir();
+				CStr BaseDirFind = BaseDir + "/";
+				CStr TempDirectoryFind = TempDirectory + "/";
+				TCSet<CStr> WrittenFiles;
+				TCSet<CStr> DependencyFiles;
+
+				auto fMatchFile = [](CStr const &_File, TCSet<CStr> const &_Patterns, TCSet<CStr> const &_ExcludePatterns) -> bool
+					{
+						auto fCheckPattern = [&](TCSet<CStr> const &_Patterns, bool _bDefault)
+							{
+								if (_Patterns.f_IsEmpty())
+									return _bDefault;
+
+								for (auto &Pattern : _Patterns)
+								{
+									if (fg_StrMatchWildcard(_File.f_GetStr(), Pattern.f_GetStr()) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
+										return true;
 								}
 
 								return false;
 							}
-						)
-					;
-				}
+						;
 
-				{
-					for (auto &DuplicateLine : DuplicateLines)
+						bool bIncluded = fCheckPattern(_Patterns, true);
+						if (!bIncluded)
+							return false;
+
+						bool bExcluded = fCheckPattern(_ExcludePatterns, false);
+						return !bExcluded;
+					}
+				;
+
+				auto fReplacePath = [&](CStr const &_Path) -> CStr
 					{
-						if (!fMatchFile(File.m_Path, DuplicateLine.m_FilePatterns, DuplicateLine.m_ExcludeFilePatterns))
-							continue;
+						CMultiReplace::CStringMap MultiReplaceMapPath;
 
-						CStr NewContents;
+						for (auto &Replace : ReplaceContents)
+						{
+							if (!Replace.m_bApplyToPaths)
+								continue;
 
+							if (fMatchFile(_Path, Replace.m_FilePatterns, Replace.m_ExcludeFilePatterns))
+							{
+								if (Replace.m_bApplyToPaths)
+									MultiReplaceMapPath[Replace.m_Find] = Replace.m_Replace;
+							}
+						}
+
+						CMultiReplace MultiReplacePath(fg_Move(MultiReplaceMapPath));
+						return MultiReplacePath.f_Replace(_Path);
+					}
+				;
+
+				CMultiReplace::CStringMap OutputFilesMultiReplaceMap;
+				{
+					CStr FileContents = CFile::fs_ReadStringFromFile(TempDirectory / "OutputFiles.list", true);
+					ch8 const *pParse = FileContents;
+					while (*pParse)
+					{
+						auto pLineStart = pParse;
+						fg_ParseToEndOfLine(pParse);
+						CStr Line(pLineStart, pParse - pLineStart);
+						fg_ParseEndOfLine(pParse);
+
+						Line = fReplacePath(Line);
+
+						OutputFilesMultiReplaceMap[Line];
+#ifdef DPlatformFamily_Windows
+						OutputFilesMultiReplaceMap[Line.f_Replace("/", "\\")];
+						OutputFilesMultiReplaceMap[Line.f_Replace("/", "\\\\")];
+#endif
+					}
+				}
+				CMultiReplace OutputFilesMultiReplace(fg_Move(OutputFilesMultiReplaceMap));
+
+				CMultiReplace::CStringMap ProtectedFilesMultiReplaceMap;
+				{
+					CStr FileContents = CFile::fs_ReadStringFromFile(TempDirectory / "ProtectedFiles.list", true);
+					ch8 const *pParse = FileContents;
+					while (*pParse)
+					{
+						auto pLineStart = pParse;
+						fg_ParseToEndOfLine(pParse);
+						CStr Line(pLineStart, pParse - pLineStart);
+						fg_ParseEndOfLine(pParse);
+
+						Line = fReplacePath(Line);
+
+						ProtectedFilesMultiReplaceMap[Line];
+#ifdef DPlatformFamily_Windows
+						ProtectedFilesMultiReplaceMap[Line.f_Replace("/", "\\")];
+						ProtectedFilesMultiReplaceMap[Line.f_Replace("/", "\\\\")];
+#endif
+					}
+				}
+				CMultiReplace ProtectedFilesMultiReplace(fg_Move(ProtectedFilesMultiReplaceMap));
+
+				TCSet<CStr> CppExtensions = {"h", "hpp", "hxx", "ipp", "cpp", "c", "cxx"};
+
+				for (auto &File : FoundFiles)
+				{
+					CStr Extension = CFile::fs_GetExtension(File.m_Path);
+					CStr FileDirectory = CFile::fs_GetPath(File.m_Path);
+					bool bIsMHeader = Extension == "MHeader";
+					bool bIsCpp = !!CppExtensions.f_FindEqual(Extension);
+
+					CStr RelativePath = File.m_Path.f_Extract(PathPrefixLen);
+					CMultiReplace::CStringMap MultiReplaceMap;
+					{
+						CMultiReplace::CStringMap MultiReplaceMapPath;
+
+						for (auto &Replace : ReplaceContents)
+						{
+							if (fMatchFile(File.m_Path, Replace.m_FilePatterns, Replace.m_ExcludeFilePatterns))
+							{
+								MultiReplaceMap[Replace.m_Find] = Replace.m_Replace;
+								if (Replace.m_bApplyToPaths)
+									MultiReplaceMapPath[Replace.m_Find] = Replace.m_Replace;
+							}
+						}
+
+						CMultiReplace MultiReplacePath(fg_Move(MultiReplaceMapPath));
+						RelativePath = MultiReplacePath.f_Replace(RelativePath);
+					}
+
+					CMultiReplace MultiReplace(fg_Move(MultiReplaceMap));
+
+					CStr DestPath = CFile::fs_AppendPath(CmakeCacheDirectory, RelativePath);
+					CStr DestPathDirectory = CFile::fs_GetPath(DestPath);
+					CStr RelativeSource = CFile::fs_MakePathRelative(SourceBase, DestPathDirectory);
+					CStr RelativeDest = CFile::fs_MakePathRelative(CmakeCacheDirectory, DestPathDirectory);
+					CStr RelativeBase = CFile::fs_MakePathRelative(BaseDir, DestPathDirectory);
+
+					CStr RelativeSourceBare = RelativeSource;
+					CStr RelativeDestBare = RelativeDest;
+					CStr RelativeBaseBare = RelativeBase;
+
+					if (RelativeSourceBare.f_IsEmpty())
+						RelativeSourceBare = ".";
+					if (RelativeDestBare.f_IsEmpty())
+						RelativeDestBare = ".";
+					if (RelativeBaseBare.f_IsEmpty())
+						RelativeBaseBare = ".";
+
+					if (bIsMHeader)
+					{
+						RelativeSourceBare = CStr("@('{}'->MakeAbsolute())"_f << RelativeSourceBare);
+						RelativeDestBare = CStr("@('{}'->MakeAbsolute())"_f << RelativeDestBare);
+						RelativeBaseBare = CStr("@('{}'->MakeAbsolute())"_f << RelativeBaseBare);
+
+						if (!RelativeSource.f_IsEmpty())
+							RelativeSource = CStr("@('{}'->MakeAbsolute())/"_f << RelativeSource);
+						else
+							RelativeSource = "@('.'->MakeAbsolute())/";
+
+						if (!RelativeDest.f_IsEmpty())
+							RelativeDest = CStr("@('{}'->MakeAbsolute())/"_f << RelativeDest);
+						else
+							RelativeDest = "@('.'->MakeAbsolute())/";
+
+						if (!RelativeBase.f_IsEmpty())
+							RelativeBase = CStr("@('{}'->MakeAbsolute())/"_f << RelativeBase);
+						else
+							RelativeBase = "@('.'->MakeAbsolute())/";
+					}
+					else
+					{
+						if (!RelativeSource.f_IsEmpty())
+							RelativeSource += "/";
+						if (!RelativeDest.f_IsEmpty())
+							RelativeDest += "/";
+						if (!RelativeBase.f_IsEmpty())
+							RelativeBase += "/";
+					}
+
+					CStr FileContents = CFile::fs_ReadStringFromFile(File.m_Path, true);
+
+					bool bIsDependencies = Extension == "dependencies";
+
+					if (bIsDependencies)
+					{
+						CStr NewFileContents;
+						ch8 const *pParse = FileContents;
+						while (*pParse)
+						{
+							auto pLineStart = pParse;
+							fg_ParseToEndOfLine(pParse);
+							CStr Line(pLineStart, pParse - pLineStart);
+							fg_ParseEndOfLine(pParse);
+							if (fStartsWith(Line, TempDirectory))
+							{
+								if (fIsExcludedFromCache(Line))
+									continue;
+							}
+							else if (Line.f_Find("/CMakeRoot/") >= 0)
+								continue;
+
+							NewFileContents += Line;
+							NewFileContents += "\n";
+						}
+						FileContents = fg_Move(NewFileContents);
+					}
+
+					FileContents = MultiReplace.f_Replace(FileContents);
+
+					if (bIsCpp)
+					{
+						CStr NewFileContents;
 						auto *pParse = FileContents.f_GetStr();
-
 						while (*pParse)
 						{
 							auto pLineStart = pParse;
@@ -1211,424 +1115,214 @@ namespace NMib::NBuildSystem
 							CStr Line(pLineStart, pParse - pLineStart);
 							fg_ParseEndOfLine(pParse);
 
-							NewContents += Line;
-							NewContents += "\n";
+							auto Cleanup = g_OnScopeExit / [&, pParse]
+								{
+									NewFileContents.f_AddStr(pLineStart, pParse - pLineStart);
+								}
+							;
 
-							if (fg_StrMatchWildcard(Line.f_GetStr(), DuplicateLine.m_Match.f_GetStr()) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
-							{
-								NewContents += Line.f_Replace(DuplicateLine.m_Search, DuplicateLine.m_Replace);
-								NewContents += "\n";
-							}
+							Line = Line.f_Trim();
+							auto pParseLine = Line.f_GetStr();
+
+							if (*pParseLine != '#')
+								continue;
+
+							++pParseLine;
+
+							fg_ParseWhiteSpace(pParseLine);
+
+							if (!fg_StrStartsWith(pParseLine, "include"))
+								continue;
+
+							pParseLine += 7;
+
+							fg_ParseWhiteSpace(pParseLine);
+
+							if (*pParseLine != '"')
+								continue;
+
+							++pParseLine;
+
+							auto pStartFileName = pParseLine;
+
+							while (*pParseLine && *pParseLine != '"')
+								++pParseLine;
+
+							if (*pParseLine != '"')
+								continue;
+
+							CStr FileName(pStartFileName, pParseLine - pStartFileName);
+
+							if (fg_StrMatchesAnyWildcardInContainer(FileName, CmakeDisableIncludeReplace))
+								continue;
+
+							CStr ExpandedFileName = CFile::fs_GetExpandedPath(FileName, FileDirectory);
+							if (!fStartsWith(ExpandedFileName, TempDirectory))
+								continue;
+
+							CStr RelativePath = CFile::fs_MakePathRelative(ExpandedFileName, TempDirectory);
+
+							Cleanup.f_Clear();
+
+							NewFileContents += "#include \"{}\"\n"_f << RelativePath;
 						}
 
-						FileContents = fg_Move(NewContents);
+						FileContents = fg_Move(NewFileContents);
 					}
-				}
 
-				{
+					if (!OutputFilesMultiReplace.f_IsEmpty() && !bIsDependencies)
 					{
-						CMultiReplace::CStringMap MultiReplaceMap;
-						MultiReplaceMap[TempDirectoryFind] = RelativeDest;
-						MultiReplaceMap[SourceBaseFind] = RelativeSource;
-						MultiReplaceMap[BaseDirFind] = RelativeBase;
-						MultiReplaceMap[TempDirectory] = RelativeDestBare;
-						MultiReplaceMap[SourceBase] = RelativeSourceBare;
-						MultiReplaceMap[BaseDir] = RelativeBaseBare;
-#ifdef DPlatformFamily_Windows
-						MultiReplaceMap[TempDirectoryFind.f_Replace("/", "\\")] = RelativeDest.f_Replace("/", "\\");
-						MultiReplaceMap[SourceBaseFind.f_Replace("/", "\\")] = RelativeSource.f_Replace("/", "\\");
-						MultiReplaceMap[BaseDirFind.f_Replace("/", "\\")] = RelativeBase.f_Replace("/", "\\");
-						MultiReplaceMap[TempDirectory.f_Replace("/", "\\")] = RelativeDestBare.f_Replace("/", "\\");
-						MultiReplaceMap[SourceBase.f_Replace("/", "\\")] = RelativeSourceBare.f_Replace("/", "\\");
-						MultiReplaceMap[BaseDir.f_Replace("/", "\\")] = RelativeBaseBare.f_Replace("/", "\\");
-						MultiReplaceMap[TempDirectoryFind.f_Replace("/", "\\\\")] = RelativeDest.f_Replace("/", "\\\\");
-						MultiReplaceMap[SourceBaseFind.f_Replace("/", "\\\\")] = RelativeSource.f_Replace("/", "\\\\");
-						MultiReplaceMap[BaseDirFind.f_Replace("/", "\\\\")] = RelativeBase.f_Replace("/", "\\\\");
-						MultiReplaceMap[TempDirectory.f_Replace("/", "\\\\")] = RelativeDestBare.f_Replace("/", "\\\\");
-						MultiReplaceMap[SourceBase.f_Replace("/", "\\\\")] = RelativeSourceBare.f_Replace("/", "\\\\");
-						MultiReplaceMap[BaseDir.f_Replace("/", "\\\\")] = RelativeBaseBare.f_Replace("/", "\\\\");
-#endif
-						CMultiReplace MultiReplace(fg_Move(MultiReplaceMap));
-						FileContents = MultiReplace.f_Replace(FileContents);
-					}
-				}
-
-				if (bIsMHeader)
-				{
-					auto fGetStripped = [&](CStr const &_String)
-						{
-							return CFile::fs_GetExpandedPath(_String, DestPathDirectory);
-						}
-					;
-
-					CBuildSystemRegistry Registry;
-					CStr PatchedFileName = File.m_Path + ".patched";
-					CFile::fs_WriteStringToFile(PatchedFileName, FileContents, false);
-
-					CBuildSystemRegistryParseContext Context(mp_StringCache);
-					Registry.f_ParseStrWithContext(Context, FileContents, PatchedFileName);
-#ifdef DPlatformFamily_Windows
-					TCMap<CStr, CBuildSystemSyntax::CValue, CCompareNoCase> RemappedOutputs;
-#else
-					TCMap<CStr, CBuildSystemSyntax::CValue> RemappedOutputs;
-#endif
-					auto fParseString = [&](CStr const &_String) -> CBuildSystemSyntax::CValue
-						{
-							return {fg_ParseEvalString(mp_StringCache, _String)};
-						}
-					;
-
-					Registry.f_TransformFunc
-						(
-							[&](CBuildSystemRegistry &o_This)
-							{
-								CStr WorkingDirectorySource;
-
-								TCVector<CBuildSystemSyntax::CParam *> OriginalOutputs;
-								TCVector<CBuildSystemSyntax::CParam *> CommandLine;
-
-								for (auto &Child : o_This.f_GetChildren())
+						FileContents = OutputFilesMultiReplace.f_Replace
+							(
+								FileContents
+								, [&](CStr &o_String, ch8 const * &o_pParse, CStr const &_ToFind, CStr const &_ReplaceWith) -> bool
 								{
-									auto Location = Child.f_GetValueOrKeyLocation();
-									auto &Name = Child.f_GetName();
+									if (ProtectedFilesMultiReplace.f_StringMatches(o_pParse))
+										return false;
 
-									if (!Name.f_IsValue())
-										continue;
-
-									auto &KeyValue = Name.m_Value.f_GetAsType<CBuildSystemSyntax::CValue>();
-
-									if (!KeyValue.f_IsIdentifier())
-										continue;
-
-									auto &Identifier = KeyValue.f_Identifier();
-
-									if (!Identifier.f_IsNameConstantString())
-										continue;
-
-									auto &Value = Child.f_GetThisValue();
-
-									if (Identifier.f_NameConstantString() == gc_ConstKey_Compile_Custom_WorkingDirectory.m_Name)
+									auto pParseEnd = o_pParse + _ToFind.f_GetLen();
+									if (!*pParseEnd || fg_StrFindChar(CmakeOutputFilesParseTerminators, *pParseEnd) >= 0)
 									{
-										if (!Value.m_Value.m_Value.f_IsOfType<CBuildSystemSyntax::CExpression>())
-											continue;
-
-										auto &Expression = Value.m_Value.m_Value.f_GetAsType<CBuildSystemSyntax::CExpression>();
-
-										if (!Expression.m_Expression.f_IsOfType<CBuildSystemSyntax::CFunctionCall>())
-											continue;
-
-										auto &FunctionCall = Expression.m_Expression.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
-										if (FunctionCall.m_Params.f_GetLen() != 1)
-											continue;
-
-										auto &Param = FunctionCall.m_Params[0];
-										if (!Param.m_Param.f_IsOfType<CEJsonSorted>())
-											continue;
-
-										if (!Param.f_IsJson() || !Param.f_Json().f_IsString())
-											continue;
-
-										auto &ParamValue = Param.m_Param.f_GetAsType<CEJsonSorted>();
-										WorkingDirectorySource = ParamValue.f_String();
-									}
-
-									if (Identifier.f_NameConstantString() == gc_ConstKey_Compile_Custom_Outputs.m_Name)
-									{
-										if (Child.f_GetThisValue().m_Value.f_IsArray())
+										auto RelativePath = CFile::fs_MakePathRelative(_ToFind, TempDirectory);
+										o_String += "{}(CMakeIntermediateDirectory)/{}/{}"_f << (bIsMHeader ? "@" : "#") << IntermediateName << RelativePath;
+										if (*pParseEnd)
 										{
-											for (auto &Output : Child.f_GetThisValue().m_Value.f_Array().m_Array)
-											{
-												if (!Output.f_Get().m_Value.f_IsOfType<CBuildSystemSyntax::CExpression>())
-													continue;
-
-												auto &Expression = Output.f_Get().m_Value.f_GetAsType<CBuildSystemSyntax::CExpression>();
-												if (!Expression.m_Expression.f_IsOfType<CBuildSystemSyntax::CFunctionCall>())
-													continue;
-
-												auto &FunctionCall = Expression.m_Expression.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
-												if (FunctionCall.m_Params.f_GetLen() != 1)
-													continue;
-
-												auto &Param = FunctionCall.m_Params[0];
-
-												if (!Param.f_IsJson() || !Param.f_Json().f_IsString())
-													continue;
-
-												OriginalOutputs.f_Insert(&fg_RemoveQualifiers(Param));
-											}
+											o_String.f_AddChar(*pParseEnd);
+											o_pParse = pParseEnd + 1;
 										}
+										else
+											o_pParse = pParseEnd;
+
+										return true;
 									}
 
-									if (Identifier.f_NameConstantString() == gc_ConstKey_Compile_Custom_CommandLine.m_Name)
-									{
-										for (auto &Token : Child.f_GetThisValue().m_Value.f_EvalString().m_Tokens)
-										{
-											if (Token.f_IsExpression())
-											{
-												auto &Expression = Token.f_Expression();
-												if (!Expression.f_IsParam())
-													continue;
-
-												auto &Param0 = Expression.f_Param();
-												if (!Param0.f_IsExpression())
-													continue;
-
-												auto &Expression0 = Param0.f_Expression();
-
-												if (!Expression0.f_IsFunctionCall())
-													continue;
-
-												auto &FunctionCall0 = Expression0.f_FunctionCall();
-
-												if (FunctionCall0.m_Params.f_GetLen() != 1)
-													continue;
-
-												auto &Param1 = FunctionCall0.m_Params[0];
-
-												if (!Param1.f_IsExpression())
-													continue;
-
-												auto &Expression1 = Param1.f_Expression();
-
-												if (!Expression1.f_IsFunctionCall())
-													continue;
-
-												auto &FunctionCall1 = Expression1.f_FunctionCall();
-
-												if (FunctionCall1.m_Params.f_GetLen() != 1)
-													continue;
-
-												auto &Param = FunctionCall1.m_Params[0];
-
-												if (!Param.f_IsJson() || !Param.f_Json().f_IsString())
-													continue;
-
-												CommandLine.f_Insert(&fg_RemoveQualifiers(Param));
-											}
-										}
-									}
+									return false;
 								}
+							)
+						;
+					}
 
-								auto Location = o_This.f_GetValueOrKeyLocation();
+					{
+						for (auto &DuplicateLine : DuplicateLines)
+						{
+							if (!fMatchFile(File.m_Path, DuplicateLine.m_FilePatterns, DuplicateLine.m_ExcludeFilePatterns))
+								continue;
 
-								if (!WorkingDirectorySource)
-									return;
+							CStr NewContents;
 
-								CStr RelativeWorkingDir = WorkingDirectorySource;
-								CStr WorkingDirectory = CFile::fs_GetExpandedPath(RelativeWorkingDir, DestPathDirectory);
+							auto *pParse = FileContents.f_GetStr();
 
-								if (WorkingDirectory == RelativeWorkingDir)
-									return;
+							while (*pParse)
+							{
+								auto pLineStart = pParse;
+								fg_ParseToEndOfLine(pParse);
+								CStr Line(pLineStart, pParse - pLineStart);
+								fg_ParseEndOfLine(pParse);
 
-								TCVector<CStr> Outputs;
-								for (auto &pOriginalOutput : OriginalOutputs)
-									Outputs.f_Insert(fGetStripped(pOriginalOutput->f_Json().f_String()));
+								NewContents += Line;
+								NewContents += "\n";
 
-								for (auto &pParam : CommandLine)
+								if (fg_StrMatchWildcard(Line.f_GetStr(), DuplicateLine.m_Match.f_GetStr()) == EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
 								{
-									auto &ParamString = pParam->f_Json().f_String();
-									if (ParamString.f_StartsWith("@("))
-										continue;
-
-									CStr WorkingDirParam = CFile::fs_GetExpandedPath(ParamString, WorkingDirectory);
-									CStr StrippedParam = fGetStripped(ParamString);
-									CStr *pWorkingDirOutput = nullptr;
-									CStr *pStrippedOutput = nullptr;
-									umint iOutput = 0;
-									for (auto &Output : Outputs)
-									{
-										if (StrippedParam == Output)
-										{
-											pStrippedOutput = &Output;
-											break;
-										}
-
-										if (WorkingDirParam == Output)
-										{
-											pWorkingDirOutput = &Output;
-											break;
-										}
-										++iOutput;
-									}
-									if (pStrippedOutput)
-									{
-										auto NewValue = fParseString(fg_Format("`@(CMakeIntermediateDirectory)/{}/{}`", IntermediateName, ParamString));
-										RemappedOutputs[StrippedParam] = NewValue;
-										*OriginalOutputs[iOutput] = *pParam = CBuildSystemSyntax::CParam{NewValue.f_EvalString()};
-									}
-									else if (pWorkingDirOutput)
-									{
-										auto NewValue = fParseString(fg_Format("`@(CMakeIntermediateDirectory)/{}/{}/{}`", IntermediateName, RelativeWorkingDir, ParamString));
-										RemappedOutputs[StrippedParam] = NewValue;
-										*OriginalOutputs[iOutput] = *pParam = CBuildSystemSyntax::CParam{NewValue.f_EvalString()};
-									}
+									NewContents += Line.f_Replace(DuplicateLine.m_Search, DuplicateLine.m_Replace);
+									NewContents += "\n";
 								}
 							}
-						)
-					;
 
-					TCMap<CStr, CImportTarget> Targets;
-					TCMap<CStr, TCLinkedList<CImportTarget *>> OutputToTarget;
-					TCMap<CStr, TCLinkedList<CImportTarget::CDependency *>> TargetToDependencies;
+							FileContents = fg_Move(NewContents);
+						}
+					}
 
-					CImportTarget NextTarget;
+					{
+						{
+							CMultiReplace::CStringMap MultiReplaceMap;
+							MultiReplaceMap[TempDirectoryFind] = RelativeDest;
+							MultiReplaceMap[SourceBaseFind] = RelativeSource;
+							MultiReplaceMap[BaseDirFind] = RelativeBase;
+							MultiReplaceMap[TempDirectory] = RelativeDestBare;
+							MultiReplaceMap[SourceBase] = RelativeSourceBare;
+							MultiReplaceMap[BaseDir] = RelativeBaseBare;
+#ifdef DPlatformFamily_Windows
+							MultiReplaceMap[TempDirectoryFind.f_Replace("/", "\\")] = RelativeDest.f_Replace("/", "\\");
+							MultiReplaceMap[SourceBaseFind.f_Replace("/", "\\")] = RelativeSource.f_Replace("/", "\\");
+							MultiReplaceMap[BaseDirFind.f_Replace("/", "\\")] = RelativeBase.f_Replace("/", "\\");
+							MultiReplaceMap[TempDirectory.f_Replace("/", "\\")] = RelativeDestBare.f_Replace("/", "\\");
+							MultiReplaceMap[SourceBase.f_Replace("/", "\\")] = RelativeSourceBare.f_Replace("/", "\\");
+							MultiReplaceMap[BaseDir.f_Replace("/", "\\")] = RelativeBaseBare.f_Replace("/", "\\");
+							MultiReplaceMap[TempDirectoryFind.f_Replace("/", "\\\\")] = RelativeDest.f_Replace("/", "\\\\");
+							MultiReplaceMap[SourceBaseFind.f_Replace("/", "\\\\")] = RelativeSource.f_Replace("/", "\\\\");
+							MultiReplaceMap[BaseDirFind.f_Replace("/", "\\\\")] = RelativeBase.f_Replace("/", "\\\\");
+							MultiReplaceMap[TempDirectory.f_Replace("/", "\\\\")] = RelativeDestBare.f_Replace("/", "\\\\");
+							MultiReplaceMap[SourceBase.f_Replace("/", "\\\\")] = RelativeSourceBare.f_Replace("/", "\\\\");
+							MultiReplaceMap[BaseDir.f_Replace("/", "\\\\")] = RelativeBaseBare.f_Replace("/", "\\\\");
+#endif
+							CMultiReplace MultiReplace(fg_Move(MultiReplaceMap));
+							FileContents = MultiReplace.f_Replace(FileContents);
+						}
+					}
 
-					Registry.f_TransformFunc
-						(
-							[&](CBuildSystemRegistry &o_This)
+					if (bIsMHeader)
+					{
+						auto fGetStripped = [&](CStr const &_String)
 							{
-								fg_MakeEvalStrings(mp_StringCache, o_This.f_GetThisValue());
+								return CFile::fs_GetExpandedPath(_String, DestPathDirectory);
+							}
+						;
 
-								do
+						CBuildSystemRegistry Registry;
+						CStr PatchedFileName = File.m_Path + ".patched";
+						CFile::fs_WriteStringToFile(PatchedFileName, FileContents, false);
+
+						CBuildSystemRegistryParseContext Context(mp_StringCache);
+						Registry.f_ParseStrWithContext(Context, FileContents, PatchedFileName);
+#ifdef DPlatformFamily_Windows
+						TCMap<CStr, CBuildSystemSyntax::CValue, CCompareNoCase> RemappedOutputs;
+#else
+						TCMap<CStr, CBuildSystemSyntax::CValue> RemappedOutputs;
+#endif
+						auto fParseString = [&](CStr const &_String) -> CBuildSystemSyntax::CValue
+							{
+								return {fg_ParseEvalString(mp_StringCache, _String)};
+							}
+						;
+
+						Registry.f_TransformFunc
+							(
+								[&](CBuildSystemRegistry &o_This)
 								{
-									auto &Name = o_This.f_GetName();
+									CStr WorkingDirectorySource;
 
-									if (!Name.f_IsKeyPrefixOperator())
-										break;
+									TCVector<CBuildSystemSyntax::CParam *> OriginalOutputs;
+									TCVector<CBuildSystemSyntax::CParam *> CommandLine;
 
-									auto &PrefixOperator = Name.f_KeyPrefixOperator();
-
-									if (PrefixOperator.m_Operator != CBuildSystemSyntax::CKeyPrefixOperator::EOperator_Entity)
-										break;
-
-									if (!PrefixOperator.m_Right.f_IsIdentifier())
-										break;
-
-									auto &Identifier = PrefixOperator.m_Right.f_Identifier();
-
-									if (!Identifier.f_IsNameConstantString())
-										break;
-
-									auto &Value = o_This.f_GetThisValue();
-
-									if (Identifier.f_NameConstantString() == gc_ConstString_Target.m_String)
+									for (auto &Child : o_This.f_GetChildren())
 									{
-										if (!Value.m_Value.f_IsConstantString())
-											break;
+										auto Location = Child.f_GetValueOrKeyLocation();
+										auto &Name = Child.f_GetName();
 
-										auto &Target = Targets[Value.m_Value.f_ConstantString()] = fg_Move(NextTarget);
-										Target.m_pBuildSystemRegistry = &o_This;
-										Target.m_pNameValue = &Value.m_Value;
-										Target.m_pBaseName = o_This.f_GetChildNoPath
-											(
-												CBuildSystemSyntax::CRootKey{CBuildSystemSyntax::CValue::fs_Identifier(mp_StringCache, "BaseName", EPropertyType_Target)}
-											)
-										;
-									}
-									else if (Identifier.f_NameConstantString() == gc_ConstString_Dependency.m_String)
-									{
-										if (!Value.m_Value.f_IsConstantString())
-											break;
+										if (!Name.f_IsValue())
+											continue;
 
-										auto &Dependency = NextTarget.m_Dependencies[Value.m_Value.f_ConstantString()];
-										Dependency.m_pValue = &Value.m_Value;
-										Dependency.m_pBuildSystemRegistry = &o_This;
-									}
-									else if (Identifier.f_NameConstantString() == gc_ConstString_File.m_String)
-										NextTarget.m_Inputs[CStr::fs_ToStr(Value.m_Value)];
-								}
-								while (false)
-									;
+										auto &KeyValue = Name.m_Value.f_GetAsType<CBuildSystemSyntax::CValue>();
 
-								do
-								{
-									auto &Name = o_This.f_GetName();
+										if (!KeyValue.f_IsIdentifier())
+											continue;
 
-									if (!Name.f_IsValue())
-										break;
+										auto &Identifier = KeyValue.f_Identifier();
 
-									auto &KeyValue = Name.m_Value.f_GetAsType<CBuildSystemSyntax::CValue>();
+										if (!Identifier.f_IsNameConstantString())
+											continue;
 
-									if (!KeyValue.f_IsIdentifier())
-										break;
+										auto &Value = Child.f_GetThisValue();
 
-									auto &Identifier = KeyValue.f_Identifier();
-
-									if (!Identifier.f_IsNameConstantString())
-										break;
-
-									auto &Value = o_This.f_GetThisValue();
-									if (!Value.m_Value.f_IsArray())
-										break;
-
-									if (Identifier.f_NameConstantString() == gc_ConstKey_Compile_Custom_Outputs.m_Name)
-									{
-										if (Value.m_Value.f_IsArray())
+										if (Identifier.f_NameConstantString() == gc_ConstKey_Compile_Custom_WorkingDirectory.m_Name)
 										{
-											for (auto &Entry : Value.m_Value.f_Array().m_Array)
-												NextTarget.m_Outputs[CStr::fs_ToStr(Entry)];
-										}
-										else if (Value.m_Value.f_IsConstant() && Value.m_Value.f_Constant().f_IsArray())
-										{
-											for (auto &Entry : Value.m_Value.f_Constant().f_Array())
-												NextTarget.m_Outputs[CStr::fs_ToStr(Entry)];
-										}
-									}
-									else if (Identifier.f_NameConstantString() == gc_ConstKey_Compile_Custom_Inputs.m_Name)
-									{
-										if (Value.m_Value.f_IsArray())
-										{
-											for (auto &Entry : Value.m_Value.f_Array().m_Array)
-												NextTarget.m_Inputs[CStr::fs_ToStr(Entry)];
-										}
-										else if (Value.m_Value.f_IsConstant() && Value.m_Value.f_Constant().f_IsArray())
-										{
-											for (auto &Entry : Value.m_Value.f_Constant().f_Array())
-												NextTarget.m_Inputs[CStr::fs_ToStr(Entry)];
-										}
-									}
-								}
-								while (false)
-									;
-
-								do
-								{
-									auto Location = o_This.f_GetValueOrKeyLocation();
-									auto &Name = o_This.f_GetName();
-
-									if (!Name.f_IsValue())
-										break;
-
-									auto &KeyValue = Name.m_Value.f_GetAsType<CBuildSystemSyntax::CValue>();
-
-									if (!KeyValue.f_IsIdentifier())
-										break;
-
-									auto &Identifier = KeyValue.f_Identifier();
-
-									if (!Identifier.f_IsNameConstantString())
-										break;
-
-									auto &Value = o_This.f_GetThisValue();
-
-									if (Identifier.f_NameConstantString() == gc_ConstKey_Compile_SearchPath.m_Name)
-									{
-										if (!Value.m_Value.m_Value.f_IsOfType<CBuildSystemSyntax::COperator>())
-											break;
-
-										auto &Operator = Value.m_Value.m_Value.f_GetAsType<CBuildSystemSyntax::COperator>();
-
-										if (!Operator.m_Right.f_Get().f_IsArray())
-											break;
-
-										auto &Array = Operator.m_Right.f_Get().m_Value.f_GetAsType<CBuildSystemSyntax::CArray>();
-
-										NContainer::TCVector<NStorage::TCIndirection<CBuildSystemSyntax::CValue>> NewValues;
-
-										for (auto &EntryIndirection : Array.m_Array)
-										{
-											auto AddEntryScope = g_OnScopeExit / [&]
-												{
-													NewValues.f_Insert(fg_Move(EntryIndirection));
-												}
-											;
-
-											auto &Entry = EntryIndirection.f_Get();
-											if (!Entry.f_IsExpression())
+											if (!Value.m_Value.m_Value.f_IsOfType<CBuildSystemSyntax::CExpression>())
 												continue;
 
-											auto &Expression = Entry.m_Value.f_GetAsType<CBuildSystemSyntax::CExpression>();
-											if (!Expression.f_IsFunctionCall())
+											auto &Expression = Value.m_Value.m_Value.f_GetAsType<CBuildSystemSyntax::CExpression>();
+
+											if (!Expression.m_Expression.f_IsOfType<CBuildSystemSyntax::CFunctionCall>())
 												continue;
 
 											auto &FunctionCall = Expression.m_Expression.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
@@ -1636,363 +1330,695 @@ namespace NMib::NBuildSystem
 												continue;
 
 											auto &Param = FunctionCall.m_Params[0];
-											if (!Param.f_IsEvalString())
+											if (!Param.m_Param.f_IsOfType<CEJsonSorted>())
 												continue;
 
-											auto &EvalString = Param.m_Param.f_GetAsType<CBuildSystemSyntax::CEvalString>();
-
-											if (EvalString.m_Tokens.f_GetLen() != 2)
+											if (!Param.f_IsJson() || !Param.f_Json().f_IsString())
 												continue;
 
-											auto &Token0 = EvalString.m_Tokens[0];
-											auto &Token1 = EvalString.m_Tokens[1];
+											auto &ParamValue = Param.m_Param.f_GetAsType<CEJsonSorted>();
+											WorkingDirectorySource = ParamValue.f_String();
+										}
 
-											if (!Token0.f_IsExpression() || !Token1.f_IsString())
-												continue;
-
-											auto &Token0Expression = Token0.m_Token.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CExpression>>().f_Get();
-
-											if (!Token0Expression.f_IsParam())
-												continue;
-
-											auto &Token0Param = Token0Expression.m_Expression.f_GetAsType<CBuildSystemSyntax::CParam>();
-											if (Token0Param.f_IsIdentifier())
+										if (Identifier.f_NameConstantString() == gc_ConstKey_Compile_Custom_Outputs.m_Name)
+										{
+											if (Child.f_GetThisValue().m_Value.f_IsArray())
 											{
-												auto &Identifier = Token0Param.m_Param.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CIdentifier>>().f_Get();
-												if (Identifier.m_Name != gc_ConstString_CMakeIntermediateDirectory)
-													continue;
-
-												CStr FullPath;
-
-												if (fStartsWith(Token1.f_String(), IntermediateNamePrefixDirectory))
-													FullPath = CmakeCacheDirectory / Token1.f_String().f_Extract(IntermediateNamePrefixDirectory.f_GetLen());
-												else if (Token1.f_String() == IntermediateNamePrefix)
-													FullPath = CmakeCacheDirectory;
-												else
-													continue;
-
-												NewValues.f_Insert(EntryIndirection);
-
-												CStr RelativePath = CFile::fs_MakePathRelative(FullPath, DestPathDirectory);
-
-												Expression = CBuildSystemSyntax::CExpression
-													{
-														CBuildSystemSyntax::CFunctionCall
-														{
-															{
-																CBuildSystemSyntax::CParam
-																{
-																	CEJsonSorted(RelativePath)
-																}
-															}
-															, CPropertyKey(mp_StringCache, EPropertyType_Property, gc_ConstString_MakeAbsolute)
-															, true
-															, true
-														}
-													}
-												;
-											}
-											else if (Token0Param.f_IsExpression())
-											{
-												auto &Token0InnerExpression = Token0Param.m_Param.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CExpression>>().f_Get();
-												if (!Token0InnerExpression.f_IsFunctionCall())
-													continue;
-
-												auto &InnerFunctionCall = Token0InnerExpression.m_Expression.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
-
-												if (InnerFunctionCall.m_Params.f_GetLen() != 1)
-													continue;
-
-												auto &InnerParam = InnerFunctionCall.m_Params[0];
-												if (!InnerParam.f_IsJson() || !InnerParam.f_Json().f_IsString())
-													continue;
-
-												auto &Path = InnerParam.f_Json().f_String();
-
-												auto StrippedPath = fGetStripped(Path);
-												if (fStartsWith(StrippedPath, CmakeCacheDirectory))
+												for (auto &Output : Child.f_GetThisValue().m_Value.f_Array().m_Array)
 												{
-													CStr FullPath = StrippedPath / Token1.f_String();
-													auto RelativePath = CFile::fs_MakePathRelative(FullPath, CmakeCacheDirectory);
+													if (!Output.f_Get().m_Value.f_IsOfType<CBuildSystemSyntax::CExpression>())
+														continue;
 
-													NewValues.f_Insert(EntryIndirection);
+													auto &Expression = Output.f_Get().m_Value.f_GetAsType<CBuildSystemSyntax::CExpression>();
+													if (!Expression.m_Expression.f_IsOfType<CBuildSystemSyntax::CFunctionCall>())
+														continue;
 
-													CBuildSystemSyntax::CIdentifier Identifier;
-													Identifier.m_Name = gc_ConstString_CMakeIntermediateDirectory;
+													auto &FunctionCall = Expression.m_Expression.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
+													if (FunctionCall.m_Params.f_GetLen() != 1)
+														continue;
 
-													Token0Expression.m_Expression = CBuildSystemSyntax::CParam{NStorage::TCIndirection<CBuildSystemSyntax::CIdentifier>{fg_Move(Identifier)}};
-													Token1.m_Token = CStr("/{}{}"_f << IntermediateName << RelativePath);
+													auto &Param = FunctionCall.m_Params[0];
+
+													if (!Param.f_IsJson() || !Param.f_Json().f_IsString())
+														continue;
+
+													OriginalOutputs.f_Insert(&fg_RemoveQualifiers(Param));
 												}
 											}
 										}
 
-										Array.m_Array = fg_Move(NewValues);
-									}
-								}
-								while (false)
-									;
-
-								if (o_This.f_GetThisValue().m_Value.f_IsConstantString())
-								{
-									auto &OriginalValue = o_This.f_GetThisValue().m_Value.f_ConstantString();
-
-									CStr ExpandedPath = fGetStripped(OriginalValue);
-
-									auto *pRemapped = RemappedOutputs.f_FindEqual(ExpandedPath);
-									if (pRemapped)
-										o_This.f_SetThisValue(CBuildSystemSyntax::CRootValue{*pRemapped});
-									else
-										fg_MakeEvalStrings(mp_StringCache, o_This.f_GetThisValue());
-								}
-							}
-						)
-					;
-
-					if (CFile::fs_GetPath(File.m_Path) == TempDirectory)
-					{
-						for (auto &Target : Targets)
-						{
-							for (auto &Output : Target.m_Outputs)
-								OutputToTarget[Output].f_Insert(&Target);
-						}
-
-						for (auto &Target : Targets)
-						{
-							TCSet<CStr> ResolvedInputs;
-							TCSet<CStr> CheckedDependencies;
-
-							auto fAddDependencies = [&](CImportTarget const &_Target, auto &&_fAddDependencies) -> void
-								{
-									ResolvedInputs += _Target.m_Outputs;
-
-									for (auto &Dependency : _Target.m_Dependencies)
-									{
-										auto &DependencyName = _Target.m_Dependencies.fs_GetKey(Dependency);
-										if (!CheckedDependencies(DependencyName).f_WasCreated())
-											continue;
-
-										auto *pDependency = Targets.f_FindEqual(DependencyName);
-										if (!pDependency)
-											fsp_ThrowError(EntityData.m_Position, "Colud not resolve dependency {} in target {}"_f << DependencyName << Targets.fs_GetKey(Target));
-										// Only consider direct dependencies
-										//_fAddDependencies(*pDependency, _fAddDependencies);
-									}
-								}
-							;
-
-							fAddDependencies(Target, fAddDependencies);
-
-							for (auto &Input : Target.m_Inputs)
-							{
-								if (ResolvedInputs.f_FindEqual(Input))
-									continue;
-
-								auto *pDependencyTargets = OutputToTarget.f_FindEqual(Input);
-								if (!pDependencyTargets)
-									continue;
-
-								for (auto &pDependencyTarget : *pDependencyTargets)
-								{
-									auto &TargetName = Targets.fs_GetKey(*pDependencyTarget);
-									if (TargetName == Targets.fs_GetKey(Target))
-										continue;
-
-									auto pExistingDependency = Target.m_Dependencies.f_FindEqual(TargetName);
-									if (pExistingDependency)
-									{
-										if (!pExistingDependency->m_bIsOrdered)
+										if (Identifier.f_NameConstantString() == gc_ConstKey_Compile_Custom_CommandLine.m_Name)
 										{
-											pExistingDependency->m_bIsOrdered = true;
-											if (pExistingDependency->m_pBuildSystemRegistry->f_GetChildNoPath({CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_Indirect)}))
+											for (auto &Token : Child.f_GetThisValue().m_Value.f_EvalString().m_Tokens)
 											{
-												pExistingDependency->m_pBuildSystemRegistry->f_CreateChildNoPath
-													(
-														{CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_IndirectOrdered)}
-													)
-													->f_SetThisValue({{true}})
-												;
-												pExistingDependency->m_pBuildSystemRegistry->f_CreateChildNoPath({CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_Link)})
-													->f_SetThisValue({{false}})
-												;
+												if (Token.f_IsExpression())
+												{
+													auto &Expression = Token.f_Expression();
+													if (!Expression.f_IsParam())
+														continue;
+
+													auto &Param0 = Expression.f_Param();
+													if (!Param0.f_IsExpression())
+														continue;
+
+													auto &Expression0 = Param0.f_Expression();
+
+													if (!Expression0.f_IsFunctionCall())
+														continue;
+
+													auto &FunctionCall0 = Expression0.f_FunctionCall();
+
+													if (FunctionCall0.m_Params.f_GetLen() != 1)
+														continue;
+
+													auto &Param1 = FunctionCall0.m_Params[0];
+
+													if (!Param1.f_IsExpression())
+														continue;
+
+													auto &Expression1 = Param1.f_Expression();
+
+													if (!Expression1.f_IsFunctionCall())
+														continue;
+
+													auto &FunctionCall1 = Expression1.f_FunctionCall();
+
+													if (FunctionCall1.m_Params.f_GetLen() != 1)
+														continue;
+
+													auto &Param = FunctionCall1.m_Params[0];
+
+													if (!Param.f_IsJson() || !Param.f_Json().f_IsString())
+														continue;
+
+													CommandLine.f_Insert(&fg_RemoveQualifiers(Param));
+												}
 											}
 										}
-										continue;
 									}
 
-									fAddDependencies(*pDependencyTarget, fAddDependencies);
+									auto Location = o_This.f_GetValueOrKeyLocation();
 
-									f_OutputConsole
-										(
-											"{}: Adding missing dependency:\n"
-											"	Target             : {}\n"
-											"	Missing Dependency : {}\n"
-											"	File               : {}\n"_f
-											<< CmakeCacheDirectory
-											<< Targets.fs_GetKey(Target)
-											<< TargetName
-											<< Input
-										)
-									;
+									if (!WorkingDirectorySource)
+										return;
 
-									Target.m_Dependencies[TargetName];
-									CBuildSystemSyntax::CRootKey Name = {CBuildSystemSyntax::CKeyPrefixOperator::fs_Entity(mp_StringCache, gc_ConstString_Dependency)};
+									CStr RelativeWorkingDir = WorkingDirectorySource;
+									CStr WorkingDirectory = CFile::fs_GetExpandedPath(RelativeWorkingDir, DestPathDirectory);
 
-									auto pNewDependency = Target.m_pBuildSystemRegistry->f_CreateChildNoPath(Name, true);
-									pNewDependency->f_SetThisValue(CBuildSystemSyntax::CRootValue{{TargetName}});
-									if (TargetName.f_StartsWith("Lib_"))
+									if (WorkingDirectory == RelativeWorkingDir)
+										return;
+
+									TCVector<CStr> Outputs;
+									for (auto &pOriginalOutput : OriginalOutputs)
+										Outputs.f_Insert(fGetStripped(pOriginalOutput->f_Json().f_String()));
+
+									for (auto &pParam : CommandLine)
 									{
-										pNewDependency->f_CreateChildNoPath({CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_IndirectOrdered)})->f_SetThisValue({{true}});
-										pNewDependency->f_CreateChildNoPath({CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_Link)})->f_SetThisValue({{false}});
-									}
+										auto &ParamString = pParam->f_Json().f_String();
+										if (ParamString.f_StartsWith("@("))
+											continue;
 
-									break;
+										CStr WorkingDirParam = CFile::fs_GetExpandedPath(ParamString, WorkingDirectory);
+										CStr StrippedParam = fGetStripped(ParamString);
+										CStr *pWorkingDirOutput = nullptr;
+										CStr *pStrippedOutput = nullptr;
+										umint iOutput = 0;
+										for (auto &Output : Outputs)
+										{
+											if (StrippedParam == Output)
+											{
+												pStrippedOutput = &Output;
+												break;
+											}
+
+											if (WorkingDirParam == Output)
+											{
+												pWorkingDirOutput = &Output;
+												break;
+											}
+											++iOutput;
+										}
+										if (pStrippedOutput)
+										{
+											auto NewValue = fParseString(fg_Format("`@(CMakeIntermediateDirectory)/{}/{}`", IntermediateName, ParamString));
+											RemappedOutputs[StrippedParam] = NewValue;
+											*OriginalOutputs[iOutput] = *pParam = CBuildSystemSyntax::CParam{NewValue.f_EvalString()};
+										}
+										else if (pWorkingDirOutput)
+										{
+											auto NewValue = fParseString(fg_Format("`@(CMakeIntermediateDirectory)/{}/{}/{}`", IntermediateName, RelativeWorkingDir, ParamString));
+											RemappedOutputs[StrippedParam] = NewValue;
+											*OriginalOutputs[iOutput] = *pParam = CBuildSystemSyntax::CParam{NewValue.f_EvalString()};
+										}
+									}
+								}
+							)
+						;
+
+						TCMap<CStr, CImportTarget> Targets;
+						TCMap<CStr, TCLinkedList<CImportTarget *>> OutputToTarget;
+						TCMap<CStr, TCLinkedList<CImportTarget::CDependency *>> TargetToDependencies;
+
+						CImportTarget NextTarget;
+
+						Registry.f_TransformFunc
+							(
+								[&](CBuildSystemRegistry &o_This)
+								{
+									fg_MakeEvalStrings(mp_StringCache, o_This.f_GetThisValue());
+
+									do
+									{
+										auto &Name = o_This.f_GetName();
+
+										if (!Name.f_IsKeyPrefixOperator())
+											break;
+
+										auto &PrefixOperator = Name.f_KeyPrefixOperator();
+
+										if (PrefixOperator.m_Operator != CBuildSystemSyntax::CKeyPrefixOperator::EOperator_Entity)
+											break;
+
+										if (!PrefixOperator.m_Right.f_IsIdentifier())
+											break;
+
+										auto &Identifier = PrefixOperator.m_Right.f_Identifier();
+
+										if (!Identifier.f_IsNameConstantString())
+											break;
+
+										auto &Value = o_This.f_GetThisValue();
+
+										if (Identifier.f_NameConstantString() == gc_ConstString_Target.m_String)
+										{
+											if (!Value.m_Value.f_IsConstantString())
+												break;
+
+											auto &Target = Targets[Value.m_Value.f_ConstantString()] = fg_Move(NextTarget);
+											Target.m_pBuildSystemRegistry = &o_This;
+											Target.m_pNameValue = &Value.m_Value;
+											Target.m_pBaseName = o_This.f_GetChildNoPath
+												(
+													CBuildSystemSyntax::CRootKey{CBuildSystemSyntax::CValue::fs_Identifier(mp_StringCache, "BaseName", EPropertyType_Target)}
+												)
+											;
+										}
+										else if (Identifier.f_NameConstantString() == gc_ConstString_Dependency.m_String)
+										{
+											if (!Value.m_Value.f_IsConstantString())
+												break;
+
+											auto &Dependency = NextTarget.m_Dependencies[Value.m_Value.f_ConstantString()];
+											Dependency.m_pValue = &Value.m_Value;
+											Dependency.m_pBuildSystemRegistry = &o_This;
+										}
+										else if (Identifier.f_NameConstantString() == gc_ConstString_File.m_String)
+											NextTarget.m_Inputs[CStr::fs_ToStr(Value.m_Value)];
+									}
+									while (false)
+										;
+
+									do
+									{
+										auto &Name = o_This.f_GetName();
+
+										if (!Name.f_IsValue())
+											break;
+
+										auto &KeyValue = Name.m_Value.f_GetAsType<CBuildSystemSyntax::CValue>();
+
+										if (!KeyValue.f_IsIdentifier())
+											break;
+
+										auto &Identifier = KeyValue.f_Identifier();
+
+										if (!Identifier.f_IsNameConstantString())
+											break;
+
+										auto &Value = o_This.f_GetThisValue();
+										if (!Value.m_Value.f_IsArray())
+											break;
+
+										if (Identifier.f_NameConstantString() == gc_ConstKey_Compile_Custom_Outputs.m_Name)
+										{
+											if (Value.m_Value.f_IsArray())
+											{
+												for (auto &Entry : Value.m_Value.f_Array().m_Array)
+													NextTarget.m_Outputs[CStr::fs_ToStr(Entry)];
+											}
+											else if (Value.m_Value.f_IsConstant() && Value.m_Value.f_Constant().f_IsArray())
+											{
+												for (auto &Entry : Value.m_Value.f_Constant().f_Array())
+													NextTarget.m_Outputs[CStr::fs_ToStr(Entry)];
+											}
+										}
+										else if (Identifier.f_NameConstantString() == gc_ConstKey_Compile_Custom_Inputs.m_Name)
+										{
+											if (Value.m_Value.f_IsArray())
+											{
+												for (auto &Entry : Value.m_Value.f_Array().m_Array)
+													NextTarget.m_Inputs[CStr::fs_ToStr(Entry)];
+											}
+											else if (Value.m_Value.f_IsConstant() && Value.m_Value.f_Constant().f_IsArray())
+											{
+												for (auto &Entry : Value.m_Value.f_Constant().f_Array())
+													NextTarget.m_Inputs[CStr::fs_ToStr(Entry)];
+											}
+										}
+									}
+									while (false)
+										;
+
+									do
+									{
+										auto Location = o_This.f_GetValueOrKeyLocation();
+										auto &Name = o_This.f_GetName();
+
+										if (!Name.f_IsValue())
+											break;
+
+										auto &KeyValue = Name.m_Value.f_GetAsType<CBuildSystemSyntax::CValue>();
+
+										if (!KeyValue.f_IsIdentifier())
+											break;
+
+										auto &Identifier = KeyValue.f_Identifier();
+
+										if (!Identifier.f_IsNameConstantString())
+											break;
+
+										auto &Value = o_This.f_GetThisValue();
+
+										if (Identifier.f_NameConstantString() == gc_ConstKey_Compile_SearchPath.m_Name)
+										{
+											if (!Value.m_Value.m_Value.f_IsOfType<CBuildSystemSyntax::COperator>())
+												break;
+
+											auto &Operator = Value.m_Value.m_Value.f_GetAsType<CBuildSystemSyntax::COperator>();
+
+											if (!Operator.m_Right.f_Get().f_IsArray())
+												break;
+
+											auto &Array = Operator.m_Right.f_Get().m_Value.f_GetAsType<CBuildSystemSyntax::CArray>();
+
+											NContainer::TCVector<NStorage::TCIndirection<CBuildSystemSyntax::CValue>> NewValues;
+
+											for (auto &EntryIndirection : Array.m_Array)
+											{
+												auto AddEntryScope = g_OnScopeExit / [&]
+													{
+														NewValues.f_Insert(fg_Move(EntryIndirection));
+													}
+												;
+
+												auto &Entry = EntryIndirection.f_Get();
+												if (!Entry.f_IsExpression())
+													continue;
+
+												auto &Expression = Entry.m_Value.f_GetAsType<CBuildSystemSyntax::CExpression>();
+												if (!Expression.f_IsFunctionCall())
+													continue;
+
+												auto &FunctionCall = Expression.m_Expression.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
+												if (FunctionCall.m_Params.f_GetLen() != 1)
+													continue;
+
+												auto &Param = FunctionCall.m_Params[0];
+												if (!Param.f_IsEvalString())
+													continue;
+
+												auto &EvalString = Param.m_Param.f_GetAsType<CBuildSystemSyntax::CEvalString>();
+
+												if (EvalString.m_Tokens.f_GetLen() != 2)
+													continue;
+
+												auto &Token0 = EvalString.m_Tokens[0];
+												auto &Token1 = EvalString.m_Tokens[1];
+
+												if (!Token0.f_IsExpression() || !Token1.f_IsString())
+													continue;
+
+												auto &Token0Expression = Token0.m_Token.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CExpression>>().f_Get();
+
+												if (!Token0Expression.f_IsParam())
+													continue;
+
+												auto &Token0Param = Token0Expression.m_Expression.f_GetAsType<CBuildSystemSyntax::CParam>();
+												if (Token0Param.f_IsIdentifier())
+												{
+													auto &Identifier = Token0Param.m_Param.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CIdentifier>>().f_Get();
+													if (Identifier.m_Name != gc_ConstString_CMakeIntermediateDirectory)
+														continue;
+
+													CStr FullPath;
+
+													if (fStartsWith(Token1.f_String(), IntermediateNamePrefixDirectory))
+														FullPath = CmakeCacheDirectory / Token1.f_String().f_Extract(IntermediateNamePrefixDirectory.f_GetLen());
+													else if (Token1.f_String() == IntermediateNamePrefix)
+														FullPath = CmakeCacheDirectory;
+													else
+														continue;
+
+													NewValues.f_Insert(EntryIndirection);
+
+													CStr RelativePath = CFile::fs_MakePathRelative(FullPath, DestPathDirectory);
+
+													Expression = CBuildSystemSyntax::CExpression
+														{
+															CBuildSystemSyntax::CFunctionCall
+															{
+																{
+																	CBuildSystemSyntax::CParam
+																	{
+																		CEJsonSorted(RelativePath)
+																	}
+																}
+																, CPropertyKey(mp_StringCache, EPropertyType_Property, gc_ConstString_MakeAbsolute)
+																, true
+																, true
+															}
+														}
+													;
+												}
+												else if (Token0Param.f_IsExpression())
+												{
+													auto &Token0InnerExpression = Token0Param.m_Param.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CExpression>>().f_Get();
+													if (!Token0InnerExpression.f_IsFunctionCall())
+														continue;
+
+													auto &InnerFunctionCall = Token0InnerExpression.m_Expression.f_GetAsType<CBuildSystemSyntax::CFunctionCall>();
+
+													if (InnerFunctionCall.m_Params.f_GetLen() != 1)
+														continue;
+
+													auto &InnerParam = InnerFunctionCall.m_Params[0];
+													if (!InnerParam.f_IsJson() || !InnerParam.f_Json().f_IsString())
+														continue;
+
+													auto &Path = InnerParam.f_Json().f_String();
+
+													auto StrippedPath = fGetStripped(Path);
+													if (fStartsWith(StrippedPath, CmakeCacheDirectory))
+													{
+														CStr FullPath = StrippedPath / Token1.f_String();
+														auto RelativePath = CFile::fs_MakePathRelative(FullPath, CmakeCacheDirectory);
+
+														NewValues.f_Insert(EntryIndirection);
+
+														CBuildSystemSyntax::CIdentifier Identifier;
+														Identifier.m_Name = gc_ConstString_CMakeIntermediateDirectory;
+
+														Token0Expression.m_Expression = CBuildSystemSyntax::CParam
+															{
+																NStorage::TCIndirection<CBuildSystemSyntax::CIdentifier>{fg_Move(Identifier)}
+															}
+														;
+														Token1.m_Token = CStr("/{}{}"_f << IntermediateName << RelativePath);
+													}
+												}
+											}
+
+											Array.m_Array = fg_Move(NewValues);
+										}
+									}
+									while (false)
+										;
+
+									if (o_This.f_GetThisValue().m_Value.f_IsConstantString())
+									{
+										auto &OriginalValue = o_This.f_GetThisValue().m_Value.f_ConstantString();
+
+										CStr ExpandedPath = fGetStripped(OriginalValue);
+
+										auto *pRemapped = RemappedOutputs.f_FindEqual(ExpandedPath);
+										if (pRemapped)
+											o_This.f_SetThisValue(CBuildSystemSyntax::CRootValue{*pRemapped});
+										else
+											fg_MakeEvalStrings(mp_StringCache, o_This.f_GetThisValue());
+									}
+								}
+							)
+						;
+
+						if (CFile::fs_GetPath(File.m_Path) == TempDirectory)
+						{
+							for (auto &Target : Targets)
+							{
+								for (auto &Output : Target.m_Outputs)
+									OutputToTarget[Output].f_Insert(&Target);
+							}
+
+							for (auto &Target : Targets)
+							{
+								TCSet<CStr> ResolvedInputs;
+								TCSet<CStr> CheckedDependencies;
+
+								auto fAddDependencies = [&](CImportTarget const &_Target, auto &&_fAddDependencies) -> void
+									{
+										ResolvedInputs += _Target.m_Outputs;
+
+										for (auto &Dependency : _Target.m_Dependencies)
+										{
+											auto &DependencyName = _Target.m_Dependencies.fs_GetKey(Dependency);
+											if (!CheckedDependencies(DependencyName).f_WasCreated())
+												continue;
+
+											auto *pDependency = Targets.f_FindEqual(DependencyName);
+											if (!pDependency)
+												fsp_ThrowError(EntityData.m_Position, "Colud not resolve dependency {} in target {}"_f << DependencyName << Targets.fs_GetKey(Target));
+											// Only consider direct dependencies
+											//_fAddDependencies(*pDependency, _fAddDependencies);
+										}
+									}
+								;
+
+								fAddDependencies(Target, fAddDependencies);
+
+								for (auto &Input : Target.m_Inputs)
+								{
+									if (ResolvedInputs.f_FindEqual(Input))
+										continue;
+
+									auto *pDependencyTargets = OutputToTarget.f_FindEqual(Input);
+									if (!pDependencyTargets)
+										continue;
+
+									for (auto &pDependencyTarget : *pDependencyTargets)
+									{
+										auto &TargetName = Targets.fs_GetKey(*pDependencyTarget);
+										if (TargetName == Targets.fs_GetKey(Target))
+											continue;
+
+										auto pExistingDependency = Target.m_Dependencies.f_FindEqual(TargetName);
+										if (pExistingDependency)
+										{
+											if (!pExistingDependency->m_bIsOrdered)
+											{
+												pExistingDependency->m_bIsOrdered = true;
+												if
+												(
+													pExistingDependency->m_pBuildSystemRegistry->f_GetChildNoPath
+													(
+														{CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_Indirect)}
+													)
+												)
+												{
+													pExistingDependency->m_pBuildSystemRegistry->f_CreateChildNoPath
+														(
+															{CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_IndirectOrdered)}
+														)
+														->f_SetThisValue({{true}})
+													;
+													pExistingDependency->m_pBuildSystemRegistry->f_CreateChildNoPath({CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_Link)})
+														->f_SetThisValue({{false}})
+													;
+												}
+											}
+											continue;
+										}
+
+										fAddDependencies(*pDependencyTarget, fAddDependencies);
+
+										f_OutputConsole
+											(
+												"{}: Adding missing dependency:\n"
+												"	Target             : {}\n"
+												"	Missing Dependency : {}\n"
+												"	File               : {}\n"_f
+												<< CmakeCacheDirectory
+												<< Targets.fs_GetKey(Target)
+												<< TargetName
+												<< Input
+											)
+										;
+
+										Target.m_Dependencies[TargetName];
+										CBuildSystemSyntax::CRootKey Name = {CBuildSystemSyntax::CKeyPrefixOperator::fs_Entity(mp_StringCache, gc_ConstString_Dependency)};
+
+										auto pNewDependency = Target.m_pBuildSystemRegistry->f_CreateChildNoPath(Name, true);
+										pNewDependency->f_SetThisValue(CBuildSystemSyntax::CRootValue{{TargetName}});
+										if (TargetName.f_StartsWith("Lib_"))
+										{
+											pNewDependency->f_CreateChildNoPath({CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_IndirectOrdered)})
+												->f_SetThisValue({{true}})
+											;
+											pNewDependency->f_CreateChildNoPath({CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_Link)})->f_SetThisValue({{false}});
+										}
+
+										break;
+									}
+								}
+							}
+
+							for (auto &Target : Targets)
+							{
+								for (auto &Dependency : Target.m_Dependencies)
+								{
+									auto &DependencyName = Target.m_Dependencies.fs_GetKey(Dependency);
+									TargetToDependencies[DependencyName].f_Insert(&Dependency);
+								}
+							}
+
+							TCSet<CStr, CCompareNoCase> TargetsNoCase;
+
+							for (auto &Target : Targets)
+							{
+								auto &TargetName = Targets.fs_GetKey(Target);
+
+								if (TargetsNoCase(TargetName).f_WasCreated())
+									continue;
+
+								CStr DisambiguatedName = TargetName;
+								umint DisambiguateNumber = 1;
+								while (TargetsNoCase.f_FindEqual(DisambiguatedName))
+									DisambiguatedName = "{}{}"_f << TargetName << DisambiguateNumber;
+
+								TargetsNoCase[DisambiguatedName];
+
+								*Target.m_pNameValue = {DisambiguatedName};
+
+								if (Target.m_pBaseName)
+									Target.m_pBaseName->f_SetThisValue({{CStr("{}{}"_f << Target.m_pBaseName->f_GetThisValue().m_Value.f_ConstantString() << DisambiguateNumber)}});
+								else
+									DMibConOut("Missing base name: {}\n", DisambiguatedName);
+
+								f_OutputConsole
+									(
+										"{}: Disambiguating target only differing by case:\n"
+										"	Old name: {}\n"
+										"	New name: {}\n"_f
+										<< CmakeCacheDirectory
+										<< TargetName
+										<< DisambiguatedName
+									)
+								;
+
+								auto *pDependencies = TargetToDependencies.f_FindEqual(TargetName);
+								if (pDependencies)
+								{
+									for (auto &pDependency : *pDependencies)
+										*pDependency->m_pValue = {DisambiguatedName};
 								}
 							}
 						}
 
-						for (auto &Target : Targets)
+						FileContents = Registry.f_GenerateStr();
+					}
+					else if (bIsDependencies)
+					{
+						CStr NewFileContents;
+						ch8 const *pParse = FileContents;
+						while (*pParse)
 						{
-							for (auto &Dependency : Target.m_Dependencies)
-							{
-								auto &DependencyName = Target.m_Dependencies.fs_GetKey(Dependency);
-								TargetToDependencies[DependencyName].f_Insert(&Dependency);
-							}
-						}
-
-						TCSet<CStr, CCompareNoCase> TargetsNoCase;
-
-						for (auto &Target : Targets)
-						{
-							auto &TargetName = Targets.fs_GetKey(Target);
-
-							if (TargetsNoCase(TargetName).f_WasCreated())
+							auto pLineStart = pParse;
+							fg_ParseToEndOfLine(pParse);
+							CStr Line(pLineStart, pParse - pLineStart);
+							fg_ParseEndOfLine(pParse);
+							CStr ExpandedLine = CFile::fs_GetExpandedPath(Line, DestPathDirectory);
+							if (fg_StrMatchesAnyWildcardInContainer(ExpandedLine, CacheExcludeDependenciesPatterns))
 								continue;
 
-							CStr DisambiguatedName = TargetName;
-							umint DisambiguateNumber = 1;
-							while (TargetsNoCase.f_FindEqual(DisambiguatedName))
-								DisambiguatedName = "{}{}"_f << TargetName << DisambiguateNumber;
+							DependencyFiles[ExpandedLine];
 
-							TargetsNoCase[DisambiguatedName];
-
-							*Target.m_pNameValue = {DisambiguatedName};
-
-							if (Target.m_pBaseName)
-								Target.m_pBaseName->f_SetThisValue({{CStr("{}{}"_f << Target.m_pBaseName->f_GetThisValue().m_Value.f_ConstantString() << DisambiguateNumber)}});
-							else
-								DMibConOut("Missing base name: {}\n", DisambiguatedName);
-
-							f_OutputConsole
-								(
-									"{}: Disambiguating target only differing by case:\n"
-									"	Old name: {}\n"
-									"	New name: {}\n"_f
-									<< CmakeCacheDirectory
-									<< TargetName
-									<< DisambiguatedName
-								)
-							;
-
-							auto *pDependencies = TargetToDependencies.f_FindEqual(TargetName);
-							if (pDependencies)
-							{
-								for (auto &pDependency : *pDependencies)
-									*pDependency->m_pValue = {DisambiguatedName};
-							}
+							NewFileContents += Line;
+							NewFileContents += "\n";
 						}
+						FileContents = fg_Move(NewFileContents);
 					}
 
-					FileContents = Registry.f_GenerateStr();
-				}
-				else if (bIsDependencies)
-				{
-					CStr NewFileContents;
-					ch8 const *pParse = FileContents;
-					while (*pParse)
 					{
-						auto pLineStart = pParse;
-						fg_ParseToEndOfLine(pParse);
-						CStr Line(pLineStart, pParse - pLineStart);
-						fg_ParseEndOfLine(pParse);
-						CStr ExpandedLine = CFile::fs_GetExpandedPath(Line, DestPathDirectory);
-						if (fg_StrMatchesAnyWildcardInContainer(ExpandedLine, CacheExcludeDependenciesPatterns))
-							continue;
-
-						DependencyFiles[ExpandedLine];
-
-						NewFileContents += Line;
-						NewFileContents += "\n";
+						CFile::fs_CreateDirectory(DestPathDirectory);
+						CByteVector BinaryFileContents;
+						CFile::fs_WriteStringToVector(BinaryFileContents, FileContents, false);
+						f_WriteFile(BinaryFileContents, DestPath, File.m_Attribs | EFileAttrib_UnixAttributesValid);
 					}
-					FileContents = fg_Move(NewFileContents);
+
+					WrittenFiles[DestPath];
+				}
+
+				CHash_SHA512 DependenciesHash;
+				fInitHash(DependenciesHash, true);
+
+				for (auto &File : DependencyFiles)
+				{
+					CStr FileContents = CFile::fs_ReadStringFromFile(File, true).f_Replace("\r\n", "\n");
+					DependenciesHash.f_AddData(FileContents.f_GetStr(), FileContents.f_GetLen());
 				}
 
 				{
-					CFile::fs_CreateDirectory(DestPathDirectory);
 					CByteVector BinaryFileContents;
-					CFile::fs_WriteStringToVector(BinaryFileContents, FileContents, false);
-					f_WriteFile(BinaryFileContents, DestPath, File.m_Attribs | EFileAttrib_UnixAttributesValid);
+					CFile::fs_WriteStringToVector(BinaryFileContents, DependenciesHash.f_GetDigest().f_GetString(), false);
+					f_WriteFile(BinaryFileContents, CmakeCacheDirectory + "/Dependencies.sha512");
+					WrittenFiles[CmakeCacheDirectory + "/Dependencies.sha512"];
 				}
 
-				WrittenFiles[DestPath];
-			}
+				EFileAttrib SupportedAttributes = CFile::fs_GetSupportedAttributes();
+				EFileAttrib ValidAttributes = CFile::fs_GetValidAttributes();
 
-			CHash_SHA512 DependenciesHash;
-			fInitHash(DependenciesHash, true);
-
-			for (auto &File : DependencyFiles)
-			{
-				CStr FileContents = CFile::fs_ReadStringFromFile(File, true).f_Replace("\r\n", "\n");
-				DependenciesHash.f_AddData(FileContents.f_GetStr(), FileContents.f_GetLen());
-			}
-
-			{
-				CByteVector BinaryFileContents;
-				CFile::fs_WriteStringToVector(BinaryFileContents, DependenciesHash.f_GetDigest().f_GetString(), false);
-				f_WriteFile(BinaryFileContents, CmakeCacheDirectory + "/Dependencies.sha512");
-				WrittenFiles[CmakeCacheDirectory + "/Dependencies.sha512"];
-			}
-
-			EFileAttrib SupportedAttributes = CFile::fs_GetSupportedAttributes();
-			EFileAttrib ValidAttributes = CFile::fs_GetValidAttributes();
-
-			{
-				CByteVector BinaryFileContents;
-				CFile::fs_WriteStringToVector(BinaryFileContents, HashContents, false);
-				f_WriteFile(BinaryFileContents, LastHashContentsFile);
-				WrittenFiles[LastHashContentsFile];
-			}
-
-			for (auto &File : CFile::fs_FindFiles(CmakeCacheDirectory + "/*", EFileAttrib_File, true))
-			{
-				if (!WrittenFiles.f_FindEqual(File))
 				{
-					EFileAttrib Attributes = CFile::fs_GetAttributes(File);
+					CByteVector BinaryFileContents;
+					CFile::fs_WriteStringToVector(BinaryFileContents, HashContents, false);
+					f_WriteFile(BinaryFileContents, LastHashContentsFile);
+					WrittenFiles[LastHashContentsFile];
+				}
 
-					if ((Attributes & EFileAttrib_ReadOnly) || (!(Attributes & EFileAttrib_UserWrite) && (SupportedAttributes & EFileAttrib_UserWrite)))
+				for (auto &File : CFile::fs_FindFiles(CmakeCacheDirectory + "/*", EFileAttrib_File, true))
+				{
+					if (!WrittenFiles.f_FindEqual(File))
 					{
-						try
+						EFileAttrib Attributes = CFile::fs_GetAttributes(File);
+
+						if ((Attributes & EFileAttrib_ReadOnly) || (!(Attributes & EFileAttrib_UserWrite) && (SupportedAttributes & EFileAttrib_UserWrite)))
 						{
-							CPerforceClientThrow Client;
-							if (CPerforceClientThrow::fs_GetFromP4Config(File, Client))
+							try
 							{
-								Client.f_Delete(File);
-								f_OutputConsole("Deleted file in Perforce: {}{\n}"_f << File);
-								continue;
+								CPerforceClientThrow Client;
+								if (CPerforceClientThrow::fs_GetFromP4Config(File, Client))
+								{
+									Client.f_Delete(File);
+									f_OutputConsole("Deleted file in Perforce: {}{\n}"_f << File);
+									continue;
+								}
 							}
+							catch (NException::CException const &_Error)
+							{
+								CStr Error = _Error.f_GetErrorStr();
+								f_OutputConsole("Failed delete file in Perforce:{\n}{}{\n}"_f << Error, true);
+							}
+							CFile::fs_SetAttributes(File, (Attributes & ~EFileAttrib_ReadOnly) | (SupportedAttributes & EFileAttrib_UserWrite) | ValidAttributes);
 						}
-						catch (NException::CException const &_Error)
-						{
-							CStr Error = _Error.f_GetErrorStr();
-							f_OutputConsole("Failed delete file in Perforce:{\n}{}{\n}"_f << Error, true);
-						}
-						CFile::fs_SetAttributes(File, (Attributes & ~EFileAttrib_ReadOnly) | (SupportedAttributes & EFileAttrib_UserWrite) | ValidAttributes);
+						CFile::fs_DeleteFile(File);
 					}
-					CFile::fs_DeleteFile(File);
 				}
 			}
-		}
 
-		CFile::fs_WriteStringToFile(FullRebuildVersionFile, FullRebuildVersion, false);
+			CFile::fs_WriteStringToFile(FullRebuildVersionFile, FullRebuildVersion, false);
+		}
+		catch ([[maybe_unused]] NException::CException const &)
+		{
+			pCMakeGenerateState->m_pFailure = NException::fg_CurrentException();
+			throw;
+		}
 
 		{
 			{
