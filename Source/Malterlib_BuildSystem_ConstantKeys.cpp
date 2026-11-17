@@ -142,6 +142,7 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_Import_CMake_CacheDuplicateLines(EPropertyType_Import, gc_Str<"CMake_CacheDuplicateLines">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Import_CMake_CacheExcludePatterns(EPropertyType_Import, gc_Str<"CMake_CacheExcludePatterns">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Import_CMake_CacheExcludeDependenciesPatterns(EPropertyType_Import, gc_Str<"CMake_CacheExcludeDependenciesPatterns">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Import_CMake_CacheIncludePatterns(EPropertyType_Import, gc_Str<"CMake_CacheIncludePatterns">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Import_CMake_CacheIgnoreInputs(EPropertyType_Import, gc_Str<"CMake_CacheIgnoreInputs">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Import_CMake_CacheReplaceContents(EPropertyType_Import, gc_Str<"CMake_CacheReplaceContents">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Import_CMake_CCompiler(EPropertyType_Import, gc_Str<"CMake_CCompiler">);
@@ -414,6 +415,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_Import_CMake_CacheDuplicateLines);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Import_CMake_CacheExcludePatterns);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Import_CMake_CacheExcludeDependenciesPatterns);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Import_CMake_CacheIncludePatterns);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Import_CMake_CacheIgnoreInputs);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Import_CMake_CacheReplaceContents);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Import_CMake_CCompiler);
