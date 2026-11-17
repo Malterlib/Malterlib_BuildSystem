@@ -280,6 +280,7 @@ namespace NMib::NBuildSystem
 					, {CPropertyKey(gc_ConstKey_Import_CMake_FullRebuildVersion), DMibBuildSystemTypeWithPosition(fg_Defaulted(g_String, "0"))}
 					, {CPropertyKey(gc_ConstKey_Import_CMake_CacheExcludePatterns), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
 					, {CPropertyKey(gc_ConstKey_Import_CMake_CacheExcludeDependenciesPatterns), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
+					, {CPropertyKey(gc_ConstKey_Import_CMake_CacheIncludePatterns), DMibBuildSystemTypeWithPosition(g_StringArrayDefaultedEmpty)}
 					,
 					{
 						CPropertyKey(gc_ConstKey_Import_CMake_CacheReplaceContents)

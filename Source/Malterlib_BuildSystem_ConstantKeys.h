@@ -141,6 +141,7 @@ namespace NMib::NBuildSystem
 	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_CacheDuplicateLines;
 	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_CacheExcludePatterns;
 	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_CacheExcludeDependenciesPatterns;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_CacheIncludePatterns;
 	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_CacheIgnoreInputs;
 	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_CacheReplaceContents;
 	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_CCompiler;

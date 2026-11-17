@@ -355,6 +355,7 @@ namespace NMib::NBuildSystem
 		CStr FullRebuildVersion = "{}-{}"_f << f_EvaluateEntityPropertyString(_Entity, gc_ConstKey_Import_CMake_FullRebuildVersion) << GeneratorFullRebuildVersion;
 		TCVector<CStr> CacheExcludePatterns = f_EvaluateEntityPropertyStringArray(_Entity, gc_ConstKey_Import_CMake_CacheExcludePatterns, TCVector<CStr>());
 		TCVector<CStr> CacheExcludeDependenciesPatterns = f_EvaluateEntityPropertyStringArray(_Entity, gc_ConstKey_Import_CMake_CacheExcludeDependenciesPatterns, TCVector<CStr>());
+		TCVector<CStr> CacheIncludePatterns = f_EvaluateEntityPropertyStringArray(_Entity, gc_ConstKey_Import_CMake_CacheIncludePatterns, TCVector<CStr>());
 		CEJsonSorted CacheReplaceContents = f_EvaluateEntityProperty(_Entity, gc_ConstKey_Import_CMake_CacheReplaceContents).f_Move();
 		CEJsonSorted CacheDuplicateLines = f_EvaluateEntityProperty(_Entity, gc_ConstKey_Import_CMake_CacheDuplicateLines).f_Move();
 		CEJsonSorted CmakeEnvironmentContents = f_EvaluateEntityProperty(_Entity, gc_ConstKey_Import_CMake_Environment).f_Move();
@@ -409,6 +410,8 @@ namespace NMib::NBuildSystem
 					fAddStringHash(o_DependenciesHash, "{}"_f << CmakeDisableIncludeReplace, "Import.CMake_DisableIncludeReplace", _bPerformExclude);
 				if (!CacheExcludeDependenciesPatterns.f_IsEmpty())
 					fAddStringHash(o_DependenciesHash, "{}"_f << CacheExcludeDependenciesPatterns, "Import.CMake_CacheExcludeDependenciesPatterns", _bPerformExclude);
+				if (!CacheIncludePatterns.f_IsEmpty())
+					fAddStringHash(o_DependenciesHash, "{}"_f << CacheIncludePatterns, "Import.CMake_CacheIncludePatterns", _bPerformExclude);
 			}
 		;
 
@@ -797,12 +800,28 @@ namespace NMib::NBuildSystem
 
 			CFile::fs_CreateDirectory(CmakeCacheDirectory);
 
+			// CMake_CacheIncludePatterns caches files of the excluded ones again
+			auto fIsExcludedFromCache = [&](CStr const &_Path) -> bool
+				{
+					if (fg_StrMatchesAnyWildcardInContainer(_Path, CacheIncludePatterns))
+						return false;
+
+					// An excluded directory excludes what is in it, as when finding files skips it
+					for (CStr Path = _Path; Path.f_GetLen() > TempDirectory.f_GetLen(); Path = CFile::fs_GetPath(Path))
+					{
+						if (fg_StrMatchesAnyWildcardInContainer(Path, CacheExcludePatterns))
+							return true;
+					}
+
+					return false;
+				}
+			;
+
 			CFile::CFindFilesOptions FindOptions{TempDirectory + "/*", true};
 			FindOptions.m_AttribMask = EFileAttrib_File;
-			{
-				for (auto &ExcludePattern : CacheExcludePatterns)
-					FindOptions.m_ExcludePatterns.f_Insert(ExcludePattern);
-			}
+			// Excluding while finding skips excluded directories, which can contain files to include again
+			if (CacheIncludePatterns.f_IsEmpty())
+				FindOptions.m_ExcludePatterns = CacheExcludePatterns;
 
 			struct CReplaceContents
 			{
@@ -858,6 +877,16 @@ namespace NMib::NBuildSystem
 			}
 
 			auto FoundFiles = CFile::fs_FindFiles(FindOptions);
+			if (!CacheIncludePatterns.f_IsEmpty())
+			{
+				TCVector<CFile::CFoundFile> IncludedFiles;
+				for (auto &File : FoundFiles)
+				{
+					if (!fIsExcludedFromCache(File.m_Path))
+						IncludedFiles.f_Insert(fg_Move(File));
+				}
+				FoundFiles = fg_Move(IncludedFiles);
+			}
 			umint PathPrefixLen = TempDirectory.f_GetLen() + 1;
 
 			CStr SourceBase = CFile::fs_GetPath(FileName);
@@ -1053,7 +1082,7 @@ namespace NMib::NBuildSystem
 						fg_ParseEndOfLine(pParse);
 						if (fStartsWith(Line, TempDirectory))
 						{
-							if (fg_StrMatchesAnyWildcardInContainer(Line, FindOptions.m_ExcludePatterns))
+							if (fIsExcludedFromCache(Line))
 								continue;
 						}
 						else if (Line.f_Find("/CMakeRoot/") >= 0)
