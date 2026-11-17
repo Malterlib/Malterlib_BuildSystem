@@ -844,6 +844,7 @@ namespace NMib::NBuildSystem
 		struct CCMakeGenerateState
 		{
 			NThread::CMutual m_Lock;
+			NException::CExceptionPointer m_pFailure; // The error of the generation that m_bTried, which later attempts report
 			bool m_bTried = false;
 		};
 
