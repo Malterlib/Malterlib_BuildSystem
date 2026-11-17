@@ -244,7 +244,7 @@ namespace NMib::NBuildSystem::NRepository
 	{
 		co_await ECoroutineFlag_CaptureExceptions;
 
-		NWeb::NHTTP::CURL Url(_Url);
+		NWeb::NHTTP::CUrl Url(_Url);
 		CStr Provider = fg_GetHostingProviderClassName(_Url);
 		if (Provider.f_IsEmpty())
 			co_return DMibErrorInstance("Unsupported hosting provider for '{}'"_f << Url.f_GetHost());

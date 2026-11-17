@@ -1833,7 +1833,7 @@ namespace NMib::NBuildSystem
 					// Exceptions from the credential helper or provider propagate to the caller,
 					// which wraps via f_Wrap() and collects the exception into its error
 					// collector so the user sees why the probe couldn't classify origin.
-					NWeb::NHTTP::CURL ProbeUrl(_OriginUrl);
+					NWeb::NHTTP::CUrl ProbeUrl(_OriginUrl);
 					CStr Slug = CStr::fs_Join(ProbeUrl.f_GetPath(), "/").f_RemoveSuffix(".git");
 
 					auto HostingProvider = CGitHostingProvider::fs_CreateHostingProvider(ProviderClass);
@@ -1915,7 +1915,7 @@ namespace NMib::NBuildSystem
 					if (ProviderClass.f_IsEmpty())
 						co_return false;
 
-					NWeb::NHTTP::CURL ProbeUrl(_Url);
+					NWeb::NHTTP::CUrl ProbeUrl(_Url);
 					CStr Slug = CStr::fs_Join(ProbeUrl.f_GetPath(), "/").f_RemoveSuffix(".git");
 
 					auto HostingProvider = CGitHostingProvider::fs_CreateHostingProvider(ProviderClass);
@@ -2282,7 +2282,7 @@ namespace NMib::NBuildSystem
 					co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
 					// Captured so success messages below can reference them without re-parsing.
-					NWeb::NHTTP::CURL SourceUrlOuter(_SourceRemote.m_Properties.m_URL);
+					NWeb::NHTTP::CUrl SourceUrlOuter(_SourceRemote.m_Properties.m_URL);
 					CStr SourceSlugOuter = CStr::fs_Join(SourceUrlOuter.f_GetPath(), "/").f_RemoveSuffix(".git");
 					CStr OriginDefaultOuter = _Repo.m_OriginProperties.m_DefaultBranch;
 
@@ -2297,12 +2297,12 @@ namespace NMib::NBuildSystem
 							{
 								co_await ECoroutineFlag_CaptureMalterlibExceptions;
 
-								NWeb::NHTTP::CURL OriginUrl(_Repo.m_OriginProperties.m_URL);
+								NWeb::NHTTP::CUrl OriginUrl(_Repo.m_OriginProperties.m_URL);
 								CStr OriginSlug = CStr::fs_Join(OriginUrl.f_GetPath(), "/").f_RemoveSuffix(".git");
 								CStr TargetOrganization = CFile::fs_GetPath(OriginSlug);
 								CStr TargetName = CFile::fs_GetFile(OriginSlug);
 
-								NWeb::NHTTP::CURL SourceUrl(_SourceRemote.m_Properties.m_URL);
+								NWeb::NHTTP::CUrl SourceUrl(_SourceRemote.m_Properties.m_URL);
 								CStr SourceSlug = CStr::fs_Join(SourceUrl.f_GetPath(), "/").f_RemoveSuffix(".git");
 
 								CStr ProviderClass = fg_GetHostingProviderClassName(_Repo.m_OriginProperties.m_URL);

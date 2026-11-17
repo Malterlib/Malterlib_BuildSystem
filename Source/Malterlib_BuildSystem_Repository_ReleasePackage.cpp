@@ -249,7 +249,7 @@ namespace NMib::NBuildSystem
 		{
 			DMibRequire(_RemoteProperties.m_ReleasePackage);
 
-			NWeb::NHTTP::CURL Url(_RemoteProperties.m_URL);
+			NWeb::NHTTP::CUrl Url(_RemoteProperties.m_URL);
 			CStr Provider;
 			auto &HostName = Url.f_GetHost();
 			if (HostName == "github.com")
