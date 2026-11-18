@@ -1609,7 +1609,13 @@ namespace NMib::NBuildSystem
 
 										auto &Value = o_This.f_GetThisValue();
 
-										if (Identifier.f_NameConstantString() == gc_ConstKey_Compile_SearchPath.m_Name)
+										// A directory of the build tree is searched in the import cache, for what CMake generated, and in the
+										// intermediate directory, for what the build generates
+										if
+										(
+											Identifier.f_NameConstantString() == gc_ConstKey_Compile_SearchPath.m_Name
+											|| Identifier.f_NameConstantString() == gc_ConstKey_Compile_SystemSearchPath.m_Name
+										)
 										{
 											if (!Value.m_Value.m_Value.f_IsOfType<CBuildSystemSyntax::COperator>())
 												break;
@@ -1720,7 +1726,8 @@ namespace NMib::NBuildSystem
 													auto StrippedPath = fGetStripped(Path);
 													if (fStartsWith(StrippedPath, CmakeCacheDirectory))
 													{
-														CStr FullPath = StrippedPath / Token1.f_String();
+														CStr SubPath = Token1.f_String().f_RemovePrefix("/");
+														CStr FullPath = SubPath.f_IsEmpty() ? StrippedPath : StrippedPath / SubPath;
 														auto RelativePath = CFile::fs_MakePathRelative(FullPath, CmakeCacheDirectory);
 
 														NewValues.f_Insert(EntryIndirection);
@@ -1733,7 +1740,10 @@ namespace NMib::NBuildSystem
 																NStorage::TCIndirection<CBuildSystemSyntax::CIdentifier>{fg_Move(Identifier)}
 															}
 														;
-														Token1.m_Token = CStr("/{}{}"_f << IntermediateName << RelativePath);
+														if (RelativePath.f_IsEmpty())
+															Token1.m_Token = CStr("/{}"_f << IntermediateName);
+														else
+															Token1.m_Token = CStr("/{}/{}"_f << IntermediateName << RelativePath);
 													}
 												}
 											}
