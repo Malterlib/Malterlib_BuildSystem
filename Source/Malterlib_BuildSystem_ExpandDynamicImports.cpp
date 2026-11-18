@@ -1609,7 +1609,13 @@ namespace NMib::NBuildSystem
 
 										auto &Value = o_This.f_GetThisValue();
 
-										if (Identifier.f_NameConstantString() == gc_ConstKey_Compile_SearchPath.m_Name)
+										// A directory of the build tree is searched in the import cache, for what CMake generated, and in the
+										// intermediate directory, for what the build generates
+										if
+										(
+											Identifier.f_NameConstantString() == gc_ConstKey_Compile_SearchPath.m_Name
+											|| Identifier.f_NameConstantString() == gc_ConstKey_Compile_SystemSearchPath.m_Name
+										)
 										{
 											if (!Value.m_Value.m_Value.f_IsOfType<CBuildSystemSyntax::COperator>())
 												break;
@@ -1649,14 +1655,25 @@ namespace NMib::NBuildSystem
 
 												auto &EvalString = Param.m_Param.f_GetAsType<CBuildSystemSyntax::CEvalString>();
 
-												if (EvalString.m_Tokens.f_GetLen() != 2)
+												// The path of a directory of the build tree, and a subdirectory unless it's the root of the build tree
+												umint const nTokens = EvalString.m_Tokens.f_GetLen();
+												if (nTokens != 1 && nTokens != 2)
 													continue;
 
 												auto &Token0 = EvalString.m_Tokens[0];
-												auto &Token1 = EvalString.m_Tokens[1];
 
-												if (!Token0.f_IsExpression() || !Token1.f_IsString())
+												if (!Token0.f_IsExpression() || (nTokens == 2 && !EvalString.m_Tokens[1].f_IsString()))
 													continue;
+
+												CStr const SubPath = nTokens == 2 ? EvalString.m_Tokens[1].f_String() : CStr();
+												auto fSetSubPath = [&](CStr const &_SubPath)
+													{
+														if (nTokens == 2)
+															EvalString.m_Tokens[1].m_Token = _SubPath;
+														else
+															EvalString.m_Tokens.f_Insert(CBuildSystemSyntax::CEvalStringToken{_SubPath});
+													}
+												;
 
 												auto &Token0Expression = Token0.m_Token.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CExpression>>().f_Get();
 
@@ -1672,9 +1689,9 @@ namespace NMib::NBuildSystem
 
 													CStr FullPath;
 
-													if (fStartsWith(Token1.f_String(), IntermediateNamePrefixDirectory))
-														FullPath = CmakeCacheDirectory / Token1.f_String().f_Extract(IntermediateNamePrefixDirectory.f_GetLen());
-													else if (Token1.f_String() == IntermediateNamePrefix)
+													if (fStartsWith(SubPath, IntermediateNamePrefixDirectory))
+														FullPath = CmakeCacheDirectory / SubPath.f_Extract(IntermediateNamePrefixDirectory.f_GetLen());
+													else if (SubPath == IntermediateNamePrefix)
 														FullPath = CmakeCacheDirectory;
 													else
 														continue;
@@ -1720,7 +1737,8 @@ namespace NMib::NBuildSystem
 													auto StrippedPath = fGetStripped(Path);
 													if (fStartsWith(StrippedPath, CmakeCacheDirectory))
 													{
-														CStr FullPath = StrippedPath / Token1.f_String();
+														CStr SubDirectory = SubPath.f_RemovePrefix("/");
+														CStr FullPath = SubDirectory.f_IsEmpty() ? StrippedPath : StrippedPath / SubDirectory;
 														auto RelativePath = CFile::fs_MakePathRelative(FullPath, CmakeCacheDirectory);
 
 														NewValues.f_Insert(EntryIndirection);
@@ -1733,7 +1751,10 @@ namespace NMib::NBuildSystem
 																NStorage::TCIndirection<CBuildSystemSyntax::CIdentifier>{fg_Move(Identifier)}
 															}
 														;
-														Token1.m_Token = CStr("/{}{}"_f << IntermediateName << RelativePath);
+														if (RelativePath.f_IsEmpty())
+															fSetSubPath(CStr("/{}"_f << IntermediateName));
+														else
+															fSetSubPath(CStr("/{}/{}"_f << IntermediateName << RelativePath));
 													}
 												}
 											}
