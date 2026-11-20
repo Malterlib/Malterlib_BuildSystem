@@ -25,12 +25,22 @@ namespace NMib::NBuildSystem
 				{
 					CStr OutputFile;
 
+					CStr DefaultFileName = "{} {}.xcconfig"_f << Configuration.m_Platform << Configuration.m_Configuration;
 					if (NativeTarget.m_bDefaultTarget)
-						OutputFile = CFile::fs_AppendPath(OutputFileDirectory, "{} {}.xcconfig"_f << Configuration.m_Platform << Configuration.m_Configuration);
+						OutputFile = CFile::fs_AppendPath(OutputFileDirectory, DefaultFileName);
+					else if (NativeTarget.m_bPreBuildTarget)
+					{
+						// In a directory of its own, apart from the files of the configurations, as of one named "Debug PreBuild"
+						OutputFile = CFile::fs_AppendPath(CFile::fs_AppendPath(OutputFileDirectory, "PreBuild"), DefaultFileName);
+					}
 					else
 						OutputFile = CFile::fs_AppendPath(OutputFileDirectory, "{} {} {}.xcconfig"_f << Configuration.m_Platform << Configuration.m_Configuration << NativeTarget.m_CType);
 
-					fp_GenerateBuildConfigurationFile(_ProjectState, _Project, Configuration, OutputFile, _OutputDir, NativeTarget);
+					// The settings of the default target, in a file of its own, as the objects of a configuration are named by its file
+					if (NativeTarget.m_bPreBuildTarget)
+						fp_WriteGeneratedFile(_Project, OutputFile, CStr("#include \"../{}\"\n"_f << DefaultFileName));
+					else
+						fp_GenerateBuildConfigurationFile(_ProjectState, _Project, Configuration, OutputFile, _OutputDir, NativeTarget);
 
 					CBuildConfiguration &BuildConfig = NativeTarget.m_BuildConfiguration;
 					BuildConfig.m_ConfigName = "{} {}"_f << Configuration.m_Platform << Configuration.m_Configuration;
@@ -1034,17 +1044,22 @@ namespace NMib::NBuildSystem
 				//	FileData += "LIBRARY_SEARCH_PATHS = $DependencySearchPaths\n";
 			}
 
-			{
-				bool bWasCreated;
-				if (!m_BuildSystem.f_AddGeneratedFile(_OutputFile, FileData, _Project.m_pSolution->f_GetName(), bWasCreated))
-					DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << _OutputFile));
+			fp_WriteGeneratedFile(_Project, _OutputFile, FileData);
+		}
 
-				if (bWasCreated)
-				{
-					CByteVector FileDataVector;
-					CFile::fs_WriteStringToVector(FileDataVector, CStr(FileData), false);
-					m_BuildSystem.f_WriteFile(FileDataVector, _OutputFile);
-				}
+		void CGeneratorInstance::fp_WriteGeneratedFile(CProject &_Project, CStr const &_OutputFile, CStr const &_FileData) const
+		{
+			bool bWasCreated;
+			if (!m_BuildSystem.f_AddGeneratedFile(_OutputFile, _FileData, _Project.m_pSolution->f_GetName(), bWasCreated))
+				DError(CStr(CStr::CFormat("File '{}' already generated with other contents") << _OutputFile));
+
+			if (bWasCreated)
+			{
+				CByteVector FileDataVector;
+				CFile::fs_WriteStringToVector(FileDataVector, _FileData, false);
+				// The files of the pre-build scripts are in a directory of their own
+				CFile::fs_CreateDirectory(CFile::fs_GetPath(_OutputFile));
+				m_BuildSystem.f_WriteFile(FileDataVector, _OutputFile);
 			}
 		}
 	}

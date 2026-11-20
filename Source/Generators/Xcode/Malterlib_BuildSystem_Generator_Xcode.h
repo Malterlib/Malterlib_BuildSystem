@@ -55,11 +55,11 @@ namespace NMib::NBuildSystem::NXcode
 		CStr m_Script;
 		TCVector<CStr> m_Inputs;
 		TCVector<CStr> m_Outputs;
-		TCSet<CStr> m_OutputTypes;
 
 		bool m_bPostBuild = false;
 		bool m_bPreBuild = false;
 		bool m_bCustom = false;
+		bool m_bDefaultTargetOnly = false; // A pre-build script that stays in the default target when its other C types are split off
 
 	private:
 		mutable CStr mp_BuildSetting;
@@ -73,6 +73,7 @@ namespace NMib::NBuildSystem::NXcode
 		CStr const &f_GetFrameworksBuildPhaseGUID();
 		CStr const &f_GetProductReferenceGUID();
 		CStr const &f_GetBuildConfigurationListGUID();
+		CBuildScript &f_LinkDependenciesScript();
 #if 0
 		CStr const &f_GetHeadersBuildPhaseGUID();
 #endif
@@ -87,6 +88,7 @@ namespace NMib::NBuildSystem::NXcode
 		CStr m_CType;
 
 		TCVector<CNativeTarget *> m_CTargets;
+		CNativeTarget *m_pPreBuildTarget = nullptr; // Of a default target with other C types, which runs its pre-build and custom scripts
 
 		CBuildConfiguration m_BuildConfiguration;
 		TCMap<CStr, CBuildScript> m_BuildScripts;
@@ -99,6 +101,7 @@ namespace NMib::NBuildSystem::NXcode
 		int32 m_BuildActionMask;
 		bool m_bGeneratedBuildScript = false;
 		bool m_bDefaultTarget = false;
+		bool m_bPreBuildTarget = false; // An aggregate target with the settings of the default target, which its other targets build after
 		bool m_bGenerateScheme = false;
 
 	private:
@@ -470,6 +473,7 @@ namespace NMib::NBuildSystem::NXcode
 			)
 			const
 		;
+		void fp_WriteGeneratedFile(CProject &_Project, CStr const &_OutputFile, CStr const &_FileData) const;
 		void fp_GenerateCompilerFlags(CProjectState &_ProjectState, CProject &_Project) const;
 		CStr fp_MakeNiceSharedFlagValue(CStr const &_Type) const;
 		void fp_GeneratePBXSourcesBuildPhaseSection(CProject &_Project, CStr &_Output) const;

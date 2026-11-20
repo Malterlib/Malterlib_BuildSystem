@@ -61,6 +61,25 @@ namespace NMib::NBuildSystem::NXcode
 						NativeTarget.m_CTargets.f_Insert(&NewNativeTarget);
 					}
 
+					// The pre-build and custom scripts run before every compile, also those of the other C types, which build before the
+					// default target, in an aggregate target of their own that has the settings of the default target, as the scripts
+					// see them in a target that isn't split
+					bool bPreBuildScripts = !NativeTarget.m_CustomBuildScripts.f_IsEmpty();
+					for (auto &Script : NativeTarget.m_BuildScripts)
+						bPreBuildScripts = bPreBuildScripts || (Script.m_bPreBuild && !Script.m_bDefaultTargetOnly);
+
+					if (bPreBuildScripts)
+					{
+						auto &PreBuildTarget = NativeTargets.f_Insert(NativeTarget);
+						PreBuildTarget.m_Name = "{}PreBuild {}"_f << _Project.f_GetName() << Configuration.f_GetFullName();
+						PreBuildTarget.m_CType.f_Clear();
+						PreBuildTarget.m_BuildScripts.f_Clear();
+						PreBuildTarget.m_CustomBuildScripts.f_Clear();
+						PreBuildTarget.m_CTargets.f_Clear();
+						PreBuildTarget.m_bPreBuildTarget = true;
+						NativeTarget.m_pPreBuildTarget = &PreBuildTarget;
+					}
+
 					NativeTarget.m_ExcludedTypes = UsedCTypes;
 				}
 				else if (!UsedCTypes.f_IsEmpty())
@@ -91,6 +110,16 @@ namespace NMib::NBuildSystem::NXcode
 			{
 				NativeTarget.m_Type = EvaluatedSettings.m_TargetType.m_Value;
 				NativeTarget.m_ProductName = EvaluatedSettings.m_Name.m_Value;
+
+				// An aggregate target builds no product
+				if (NativeTarget.m_bPreBuildTarget)
+				{
+					NativeTarget.m_ProductName = "{}PreBuild"_f << _Project.f_GetName();
+					NativeTarget.m_ProductType.f_Clear();
+					NativeTarget.m_BuildActionMask = 0;
+					continue;
+				}
+
 				NativeTarget.m_XcodeProductName = EvaluatedSettings.m_Element[gc_ConstString_PRODUCT_NAME.m_String].f_GetValue();
 				if (!NativeTarget.m_bDefaultTarget)
 				{
@@ -146,6 +175,22 @@ namespace NMib::NBuildSystem::NXcode
 					fAddScript(fAddScript, &CustomScript);
 
 				NativeTarget.m_CustomBuildScripts = fg_Move(NewCustomBuildScripts);
+			}
+
+			// The default target and its other C types build after the pre-build target, which they don't link
+			if (auto *pPreBuildTarget = NativeTarget.m_pPreBuildTarget)
+			{
+				auto DepMap = _Project.m_DependenciesMap(pPreBuildTarget->m_ProductName);
+				auto &NewDependency = DepMap.f_GetResult();
+				if (DepMap.f_WasCreated())
+				{
+					_Project.m_DependenciesOrdered.f_Insert(NewDependency);
+					NewDependency.m_bInternal = true;
+				}
+
+				NewDependency.m_Position = _Project.m_Position;
+				NewDependency.m_EnabledConfigs[Configuration] = nullptr;
+				NewDependency.m_PerConfig[Configuration];
 			}
 
 			for (auto *pDependentTarget : NativeTarget.m_CTargets)
@@ -210,9 +255,10 @@ namespace NMib::NBuildSystem::NXcode
 				CStr DummyPath = "{}/Dummy.o"_f << ObjectPath;
 				CStr LibraryPath = "{}/{}"_f << fConvertEnvVars(PerConfig.m_SearchPath) << PerConfig.m_CalculatedPath;
 
-				auto &PreBuildScript = NativeTarget.m_BuildScripts[gc_ConstString_PreBuildScript.m_String];
-				PreBuildScript.m_Inputs.f_Insert(LibraryPath);
-				PreBuildScript.m_Script += R"-----(
+				// Relinks the default target when the library of another C type changes
+				auto &LinkDependenciesScript = NativeTarget.f_LinkDependenciesScript();
+				LinkDependenciesScript.m_Inputs.f_Insert(LibraryPath);
+				LinkDependenciesScript.m_Script += R"-----(
 if [ -e "{0}" ]; then
 	MTool CopyWriteTimeIfNewer "{1}" "{0}"
 fi
@@ -782,7 +828,6 @@ fi
 										.f_Get()
 										.f_String()
 									;
-									Script.m_OutputTypes[OutputType];
 
 									if (FileType == EBuildFileType_CCompile || FileType == EBuildFileType_CCompileInitEarly)
 									{
@@ -813,7 +858,6 @@ fi
 										EnabledConfigs[Configuration] = fg_Explicit(pNewEntity);
 
 										CStr OutputType = fp_GetConfigValue(EnabledConfigs, Configuration, gc_ConstKey_Compile_Type, EEJsonType_String, false).m_Value.f_Get().f_String();
-										Script.m_OutputTypes[OutputType];
 
 										if (FileType == EBuildFileType_CCompile || FileType == EBuildFileType_CCompileInitEarly)
 										{
@@ -1620,7 +1664,8 @@ fi
 					_Output += CStr::CFormat("\t\t\tshellScript = \"{}\";\n") << _Script.f_GetScriptSetting();
 					_Output += "\t\t\tshowEnvVarsInLog = 0;\n";
 
-					if (!_Script.m_bCustom && !_Script.m_bPreBuild && !_Script.m_bPostBuild)
+					// Tool and link dependency scripts run in every build
+					if ((!_Script.m_bCustom && !_Script.m_bPreBuild && !_Script.m_bPostBuild) || _Script.m_bDefaultTargetOnly)
 						_Output += "\t\t\talwaysOutOfDate = 1;\n";
 
 					_Output += "\t\t};\n";
@@ -1802,69 +1847,93 @@ fi
 		bool bBegin = false;
 		for (auto &NativeTargets : _Project.m_NativeTargets)
 		{
-			auto &NativeTarget = NativeTargets.f_GetFirst();
-
-			if (!NativeTarget.m_ProductType.f_IsEmpty())
-				continue;
-
-			if (!bBegin)
-			{
-				bBegin = true;
-				_Output += "/* Begin PBXAggregateTarget section */\n";
-			}
-
 			auto &Configuration = _Project.m_NativeTargets.fs_GetKey(NativeTargets);
+			auto &DefaultNativeTarget = NativeTargets.f_GetFirst();
 
-			_Output += CStr::CFormat("\t\t{} /* {} */ = ") << NativeTarget.f_GetGUID() << NativeTarget.m_Name;
-			_Output += "{\n\t\t\tisa = PBXAggregateTarget;\n";
-
-			_Output
-				+= CStr::CFormat("\t\t\tbuildConfigurationList = {} /* Build configuration list for PBXAggregateTarget \"{}\" */;\n")
-				<< NativeTarget.f_GetBuildConfigurationListGUID()
-				<< NativeTarget.m_Name
-			;
-
-			_Output += "\t\t\tbuildPhases = (\n";
-
-			for (auto iScript = NativeTarget.m_BuildScripts.f_GetIterator(); iScript; ++iScript)
+			for (auto &NativeTarget : NativeTargets)
 			{
-				if (iScript->m_bPreBuild)
-					_Output += CStr::CFormat("\t\t\t\t{} /* {} */,\n") << iScript->f_GetGUID(Configuration) << iScript->m_Name;
-			}
-			for (auto iScript = NativeTarget.m_BuildScripts.f_GetIterator(); iScript; ++iScript)
-			{
-				if (!iScript->m_bPreBuild && !iScript->m_bPostBuild)
-					_Output += CStr::CFormat("\t\t\t\t{} /* {} */,\n") << iScript->f_GetGUID(Configuration) << iScript->m_Name;
-			}
-			for (auto iScript = NativeTarget.m_CustomBuildScripts.f_GetIterator(); iScript; ++iScript)
-				_Output += CStr::CFormat("\t\t\t\t{} /* {} */,\n") << iScript->f_GetGUID(Configuration) << iScript->m_Name;
-
-			for (auto iScript = NativeTarget.m_BuildScripts.f_GetIterator(); iScript; ++iScript)
-			{
-				if (iScript->m_bPostBuild)
-					_Output += CStr::CFormat("\t\t\t\t{} /* {} */,\n") << iScript->f_GetGUID(Configuration) << iScript->m_Name;
-			}
-
-			_Output += "\t\t\t);\n";
-
-			// Dependencies
-			_Output += "\n\t\t\tdependencies = (\n";
-			for (auto &Dependency : _Project.m_DependenciesOrdered)
-			{
-				if (Dependency.m_bExternal)
+				// A target that builds nothing, or the pre-build target of a default target with other C types
+				bool const bPreBuildTarget = NativeTarget.m_bPreBuildTarget;
+				if (!bPreBuildTarget && (&NativeTarget != &DefaultNativeTarget || !NativeTarget.m_ProductType.f_IsEmpty()))
 					continue;
 
-				if (!NativeTarget.m_bDefaultTarget && Dependency.m_bInternal)
-					continue;
+				if (!bBegin)
+				{
+					bBegin = true;
+					_Output += "/* Begin PBXAggregateTarget section */\n";
+				}
 
-				auto pPerConfig = Dependency.m_PerConfig.f_FindEqual(Configuration);
-				if (!pPerConfig)
-					continue;
+				_Output += CStr::CFormat("\t\t{} /* {} */ = ") << NativeTarget.f_GetGUID() << NativeTarget.m_Name;
+				_Output += "{\n\t\t\tisa = PBXAggregateTarget;\n";
 
-				_Output += CStr::CFormat("\t\t\t\t{} /* PBXTargetDependency */,\n") << pPerConfig->f_GetTargetGUID(Dependency);
+				_Output
+					+= CStr::CFormat("\t\t\tbuildConfigurationList = {} /* Build configuration list for PBXAggregateTarget \"{}\" */;\n")
+					<< NativeTarget.f_GetBuildConfigurationListGUID()
+					<< NativeTarget.m_Name
+				;
+
+				_Output += "\t\t\tbuildPhases = (\n";
+
+				auto fOutputScript = [&](CBuildScript &_Script)
+					{
+						_Output += CStr::CFormat("\t\t\t\t{} /* {} */,\n") << _Script.f_GetGUID(Configuration) << _Script.m_Name;
+					}
+				;
+
+				if (bPreBuildTarget)
+				{
+					// The scripts of the default target that run before every compile
+					for (auto iScript = DefaultNativeTarget.m_BuildScripts.f_GetIterator(); iScript; ++iScript)
+					{
+						if (iScript->m_bPreBuild && !iScript->m_bDefaultTargetOnly)
+							fOutputScript(*iScript);
+					}
+					for (auto &Script : DefaultNativeTarget.m_CustomBuildScripts)
+						fOutputScript(Script);
+				}
+				else
+				{
+					for (auto iScript = NativeTarget.m_BuildScripts.f_GetIterator(); iScript; ++iScript)
+					{
+						if (iScript->m_bPreBuild)
+							fOutputScript(*iScript);
+					}
+					for (auto iScript = NativeTarget.m_BuildScripts.f_GetIterator(); iScript; ++iScript)
+					{
+						if (!iScript->m_bPreBuild && !iScript->m_bPostBuild)
+							fOutputScript(*iScript);
+					}
+					for (auto iScript = NativeTarget.m_CustomBuildScripts.f_GetIterator(); iScript; ++iScript)
+						fOutputScript(*iScript);
+
+					for (auto iScript = NativeTarget.m_BuildScripts.f_GetIterator(); iScript; ++iScript)
+					{
+						if (iScript->m_bPostBuild)
+							fOutputScript(*iScript);
+					}
+				}
+
+				_Output += "\t\t\t);\n";
+
+				// Dependencies, of other projects: the pre-build target is the one that builds first in its project
+				_Output += "\n\t\t\tdependencies = (\n";
+				for (auto &Dependency : _Project.m_DependenciesOrdered)
+				{
+					if (Dependency.m_bExternal)
+						continue;
+
+					if (!NativeTarget.m_bDefaultTarget && Dependency.m_bInternal)
+						continue;
+
+					auto pPerConfig = Dependency.m_PerConfig.f_FindEqual(Configuration);
+					if (!pPerConfig)
+						continue;
+
+					_Output += CStr::CFormat("\t\t\t\t{} /* PBXTargetDependency */,\n") << pPerConfig->f_GetTargetGUID(Dependency);
+				}
+				_Output += CStr::CFormat("\t\t\t);\n\t\t\tname = \"{}\";\n\t\t\tproductName = {};\n") << NativeTarget.m_Name << NativeTarget.m_ProductName;
+				_Output += "\t\t};\n";
 			}
-			_Output += CStr::CFormat("\t\t\t);\n\t\t\tname = \"{}\";\n\t\t\tproductName = {};\n") << NativeTarget.m_Name << NativeTarget.m_ProductName;
-			_Output += "\t\t};\n";
 		}
 		if (bBegin)
 			_Output += "/* End PBXAggregateTarget section */\n\n";
@@ -1892,45 +1961,23 @@ fi
 				;
 				_Output += "\t\t\tbuildPhases = (\n";
 
-				// Pre build scripts
-				for (auto iScript = NativeTarget.m_BuildScripts.f_GetIterator(); iScript; ++iScript)
+				// The pre-build target of a default target with other C types, which they all build after, runs its pre-build and
+				// custom scripts. Only the default target runs those that only it runs.
+				if (NativeTarget.m_bDefaultTarget)
 				{
-					if (iScript->m_bPreBuild)
-						_Output += CStr::CFormat("\t\t\t\t{} /* {} */,\n") << iScript->f_GetGUID(Configuration) << iScript->m_Name;
-				}
-
-				for (auto &Script : DefaultNativeTarget.m_CustomBuildScripts)
-				{
-					if (!NativeTarget.m_IncludedTypes.f_IsEmpty())
+					bool const bPreBuildTarget = NativeTarget.m_pPreBuildTarget != nullptr;
+					for (auto iScript = NativeTarget.m_BuildScripts.f_GetIterator(); iScript; ++iScript)
 					{
-						bool bFoundIncluded = false;
-						for (auto &Type : Script.m_OutputTypes)
-						{
-							if (NativeTarget.m_IncludedTypes.f_FindEqual(Type))
-							{
-								bFoundIncluded = true;
-								break;
-							}
-						}
-						if (!bFoundIncluded)
-							continue;
-					}
-					if (!NativeTarget.m_ExcludedTypes.f_IsEmpty())
-					{
-						bool bFoundExcluded = false;
-						for (auto &Type : Script.m_OutputTypes)
-						{
-							if (NativeTarget.m_ExcludedTypes.f_FindEqual(Type))
-							{
-								bFoundExcluded = true;
-								break;
-							}
-						}
-						if (bFoundExcluded)
-							continue;
+						if (iScript->m_bPreBuild && (!bPreBuildTarget || iScript->m_bDefaultTargetOnly))
+							_Output += CStr::CFormat("\t\t\t\t{} /* {} */,\n") << iScript->f_GetGUID(Configuration) << iScript->m_Name;
 					}
 
-					_Output += CStr::CFormat("\t\t\t\t{} /* {} */,\n") << Script.f_GetGUID(Configuration) << Script.m_Name;
+					// In the order of their inputs, as m_CustomBuildScripts has them
+					if (!bPreBuildTarget)
+					{
+						for (auto &Script : NativeTarget.m_CustomBuildScripts)
+							_Output += CStr::CFormat("\t\t\t\t{} /* {} */,\n") << Script.f_GetGUID(Configuration) << Script.m_Name;
+					}
 				}
 
 				// Sources, Frameworks, Headers
@@ -1994,12 +2041,14 @@ fi
 
 				// Dependencies
 				_Output += "\t\t\tdependencies = (\n";
+				CNativeTarget const *pPreBuildTarget = DefaultNativeTarget.m_pPreBuildTarget;
 				for (auto &Dependency : _Project.m_DependenciesOrdered)
 				{
 					if (Dependency.m_bExternal)
 						continue;
 
-					if (!NativeTarget.m_bDefaultTarget && Dependency.m_bInternal)
+					// The other C types build after the pre-build target, as the default target does, and link nothing of the project
+					if (!NativeTarget.m_bDefaultTarget && Dependency.m_bInternal && (!pPreBuildTarget || Dependency.f_GetName() != pPreBuildTarget->m_ProductName))
 						continue;
 
 					auto pPerConfig = Dependency.m_PerConfig.f_FindEqual(Configuration);

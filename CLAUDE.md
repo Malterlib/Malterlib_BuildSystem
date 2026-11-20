@@ -272,6 +272,14 @@ GeneratorSetting
 }
 ```
 
+### Build Scripts
+The pre-build, pre-link, post-build and custom scripts of a target get what they use from the DSL, as
+`@(Target.IntermediateDirectory)`, which is the same with every generator. The variables that an IDE sets for its scripts
+aren't part of that: Ninja and Visual Studio set none of Xcode's. Xcode runs the pre-build and custom scripts of a target
+that it splits into a target per C type in an aggregate target with the settings of the target, so they see the settings
+that the generator writes, as `PRODUCT_NAME` and `TARGET_TEMP_DIR`, but not those that Xcode derives from the type of the
+product, as `EXECUTABLE_PATH` and `FULL_PRODUCT_NAME`, and `TARGET_NAME` is that of the aggregate target.
+
 ## Repository Management
 
 The BuildSystem includes integrated repository management:
