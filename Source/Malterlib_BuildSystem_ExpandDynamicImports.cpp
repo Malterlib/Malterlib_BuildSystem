@@ -1933,13 +1933,16 @@ namespace NMib::NBuildSystem
 											)
 										;
 
-										Target.m_Dependencies[TargetName];
+										auto &NewDependency = Target.m_Dependencies[TargetName];
 										CBuildSystemSyntax::CRootKey Name = {CBuildSystemSyntax::CKeyPrefixOperator::fs_Entity(mp_StringCache, gc_ConstString_Dependency)};
 
 										// A dependency for a file that it generates orders the build, and isn't linked, as an executable whose build
 										// events generate a file isn't
 										auto pNewDependency = Target.m_pBuildSystemRegistry->f_CreateChildNoPath(Name, true);
 										pNewDependency->f_SetThisValue(CBuildSystemSyntax::CRootValue{{TargetName}});
+										// As for the dependencies that the import has, which the disambiguation of names renames
+										NewDependency.m_pValue = &pNewDependency->f_GetThisValue().m_Value;
+										NewDependency.m_pBuildSystemRegistry = pNewDependency;
 										if (TargetName.f_StartsWith("Lib_"))
 										{
 											pNewDependency->f_CreateChildNoPath({CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_IndirectOrdered)})
