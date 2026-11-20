@@ -1925,6 +1925,16 @@ namespace NMib::NBuildSystem
 							}
 
 							TCSet<CStr, CCompareNoCase> TargetsNoCase;
+							// The paths that the expressions of the files of targets name the dependencies by, as CEntity::f_GetPathForGetProperty
+							auto fDependencyPath = [](CStr const &_TargetName) -> CStr
+								{
+									CStr Path = "Dependency:" + _TargetName;
+									if (_TargetName.f_FindChars(".\"") >= 0)
+										return Path.f_EscapeStr();
+									return Path;
+								}
+							;
+							TCMap<CStr, CStr> RenamedDependencyPaths;
 
 							for (auto &Target : Targets)
 							{
@@ -1964,6 +1974,29 @@ namespace NMib::NBuildSystem
 									for (auto &pDependency : *pDependencies)
 										*pDependency->m_pValue = {DisambiguatedName};
 								}
+								RenamedDependencyPaths[fDependencyPath(TargetName)] = fDependencyPath(DisambiguatedName);
+							}
+
+							// The files of renamed targets that commands use, as $<TARGET_FILE> of CMake
+							if (!RenamedDependencyPaths.f_IsEmpty())
+							{
+								Registry.f_TransformFunc
+									(
+										[&](CBuildSystemRegistry &o_This)
+										{
+											fg_OperateOnStrings
+												(
+													o_This.f_GetThisValue()
+													, [&](CStr const &_String, auto &o_Value)
+													{
+														if (auto *pRenamed = RenamedDependencyPaths.f_FindEqual(_String))
+															o_Value = NEncoding::CEJsonSorted(*pRenamed);
+													}
+												)
+											;
+										}
+									)
+								;
 							}
 						}
 
