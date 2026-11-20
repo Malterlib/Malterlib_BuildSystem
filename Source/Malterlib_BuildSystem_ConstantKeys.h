@@ -101,6 +101,12 @@ namespace NMib::NBuildSystem
 	extern CPropertyKeyReference const gc_ConstKey_Dependency_IndirectOrdered;
 	extern CPropertyKeyReference const gc_ConstKey_Dependency_IndirectEvaluated;
 	extern CPropertyKeyReference const gc_ConstKey_Dependency_IndirectOrderedEvaluated;
+	extern CPropertyKeyReference const gc_ConstKey_Dependency_Ordered;
+	extern CPropertyKeyReference const gc_ConstKey_Dependency_CompileAfterGenerated;
+	extern CPropertyKeyReference const gc_ConstKey_Dependency_StageEvaluated;
+	extern CPropertyKeyReference const gc_ConstKey_Dependency_LinkEvaluated;
+	extern CPropertyKeyReference const gc_ConstKey_Dependency_CompileAfterGeneratedEvaluated;
+	extern CPropertyKeyReference const gc_ConstKey_Dependency_OrderedEvaluated;
 	extern CPropertyKeyReference const gc_ConstKey_Dependency_TargetPropertyPath;
 	extern CPropertyKeyReference const gc_ConstKey_Dependency_Link;
 	extern CPropertyKeyReference const gc_ConstKey_Dependency_Type;
@@ -108,6 +114,7 @@ namespace NMib::NBuildSystem
 	extern CPropertyKeyReference const gc_ConstKey_Dependency_Target;
 	extern CPropertyKeyReference const gc_ConstKey_Dependency_TargetProperties;
 	extern CPropertyKeyReference const gc_ConstKey_Dependency_ObjectLibrary;
+	extern CPropertyKeyReference const gc_ConstKey_Dependency_Stage;
 
 	extern CPropertyKeyReference const gc_ConstKey_GenerateFile_BeforeImports;
 	extern CPropertyKeyReference const gc_ConstKey_GenerateFile_Contents;

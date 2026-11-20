@@ -407,6 +407,12 @@ namespace NMib::NBuildSystem
 								if (DependencyInfo.m_bIndirect && !DependencyInfo.m_bIndirectOrdered)
 									continue;
 
+								if (!DependencyInfo.m_bOrdered)
+								{
+									DebugConfig.m_pUnorderedEntity = DependencyInfo.m_pEntity;
+									continue;
+								}
+
 								Dep.m_EnabledConfigs[Config] = DependencyInfo.m_pEntity;
 
 								if (DepMap.f_WasCreated())
@@ -433,6 +439,23 @@ namespace NMib::NBuildSystem
 									if (pGroup)
 										File.m_pGroup = *pGroup;
 								}
+							}
+						}
+					}
+
+					// Visual Studio can't vary the dependencies of a project per configuration, so a dependency that orders the build in
+					// one configuration orders it in all where the project has it
+					for (auto &Project : pSolution->m_Projects)
+					{
+						for (auto &Dependency : Project.m_Dependencies)
+						{
+							if (Dependency.m_EnabledConfigs.f_IsEmpty())
+								continue;
+
+							for (auto &Debug : Dependency.m_PerConfigDebug.f_Entries())
+							{
+								if (Debug.f_Value().m_pUnorderedEntity)
+									Dependency.m_EnabledConfigs[Debug.f_Key()] = Debug.f_Value().m_pUnorderedEntity;
 							}
 						}
 					}

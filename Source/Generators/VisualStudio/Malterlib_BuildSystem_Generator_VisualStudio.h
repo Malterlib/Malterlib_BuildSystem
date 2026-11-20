@@ -225,6 +225,7 @@ namespace NMib::NBuildSystem::NVisualStudio
 
 	struct CProjectDependencyDebug
 	{
+		CEntityMutablePointer m_pUnorderedEntity; // Of a dependency that doesn't order the build in the configuration, as of the stage None
 		bool m_bIndirect;
 		bool m_bIndirectOrdered;
 	};

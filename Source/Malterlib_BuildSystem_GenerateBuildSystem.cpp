@@ -5,6 +5,22 @@
 
 namespace NMib::NBuildSystem
 {
+	namespace
+	{
+		// How much a stage of a dependency orders the build: Compile orders the compiles of the target after the dependency, Link its
+		// link, Runtime only the validation after the build, and None nothing
+		auto fg_DependencyStageRestriction(CStr const &_Stage) -> umint
+		{
+			if (_Stage == "Compile")
+				return 3;
+			if (_Stage == "Link")
+				return 2;
+			if (_Stage == "Runtime")
+				return 1;
+			return 0;
+		}
+	}
+
 	void CBuildSystem::f_GenerateBuildSystem_Workspace
 		(
 			CConfiguration const &_Config
@@ -196,6 +212,49 @@ namespace NMib::NBuildSystem
 
 				TCSet<CTargetInfo *> NewTargetsToProcess;
 
+				// The properties that the build system gives a declaration of a dependency, which its own properties can depend on, as
+				// Dependency.Link Dependency.ObjectLibrary, so they are set before the declaration is merged
+				auto fSetDeclarationProperties = [&](CEntity &_Declaration, CTargetInfo const &_DependentTarget, bool _bIndirect, bool _bIndirectOrdered)
+					{
+						f_AddExternalProperty(_Declaration, gc_ConstKey_Dependency_ObjectLibrary, _DependentTarget.m_bObjectLibrary);
+						f_AddExternalProperty(_Declaration, gc_ConstKey_Dependency_IndirectEvaluated, _bIndirect);
+						f_AddExternalProperty(_Declaration, gc_ConstKey_Dependency_IndirectOrderedEvaluated, _bIndirectOrdered);
+						f_AddExternalProperty(_Declaration, gc_ConstKey_Dependency_TargetPropertyPath, _DependentTarget.m_pInnerEntity->f_GetPathForGetProperty());
+					}
+				;
+
+				// The most restrictive of the stages of the declarations of a dependency, and linked or compiled after generated files where any
+				// of them is, also in a build system without the settings that declare them, as those of the tests. A declaration that links the
+				// dependency needs it when the target links, so it counts as the stage Link at least, whatever stage it declares. The dependency
+				// passes its injections and dependencies on where any declaration does: one of the stage None that doesn't link it doesn't, also
+				// where it orders the build to compile after the files that the dependency generates.
+				auto fMergeDeclaration = [&](CTargetDependencyInfo &o_Dependency, CEntity &_Declaration)
+					{
+						CBuildSystemPropertyInfo StageInfo;
+						auto Stage = f_EvaluateEntityPropertyNoDefault(_Declaration, gc_ConstKey_Dependency_Stage, StageInfo);
+						CStr DeclaredStage = Stage.f_Get().f_IsString() ? Stage.f_Get().f_String() : CStr("Link");
+
+						bool const bLink = f_EvaluateEntityPropertyBool(_Declaration, gc_ConstKey_Dependency_Link, true);
+						if (bLink || DeclaredStage != "None")
+							o_Dependency.m_bPassesOn = true;
+
+						if (bLink)
+						{
+							o_Dependency.m_bMergedLink = true;
+							if (fg_DependencyStageRestriction(DeclaredStage) < fg_DependencyStageRestriction("Link"))
+								DeclaredStage = "Link";
+						}
+
+						if (o_Dependency.m_MergedStage.f_IsEmpty() || fg_DependencyStageRestriction(DeclaredStage) > fg_DependencyStageRestriction(o_Dependency.m_MergedStage))
+							o_Dependency.m_MergedStage = fg_Move(DeclaredStage);
+
+						CBuildSystemPropertyInfo CompileAfterGeneratedInfo;
+						auto CompileAfterGenerated = f_EvaluateEntityPropertyNoDefault(_Declaration, gc_ConstKey_Dependency_CompileAfterGenerated, CompileAfterGeneratedInfo);
+						if (CompileAfterGenerated.f_Get().f_IsBoolean() && CompileAfterGenerated.f_Get().f_Boolean())
+							o_Dependency.m_bMergedCompileAfterGenerated = true;
+					}
+				;
+
 				auto fGetTarget = [&](CStr const &_EntityName, CStr const &_TargetName, CFilePosition const &_Position, CEJsonSorted &&_Properties) -> CTargetInfo *
 					{
 						CTargetInfo *pDependentTarget;
@@ -337,8 +396,41 @@ namespace NMib::NBuildSystem
 							_pTarget->m_bIsExpanded = true;
 
 							TCMap<CTargetInfo *, zbool> ToProcess;
-							TCSet<CEntity *> CreatedThisTime;
+							// The copies that the dependency that is processed has added to the target, with what each is a copy of
+							TCMap<CEntity *, CEntity const *> CreatedThisTime;
 							CEntity *pDistinguisher = nullptr;
+							// The dependencies of a dependency that passes them on to the target are processed for the target too
+							auto fFollowDependencies = [&](CTargetInfo *_pDependentTarget, bool _bIndirect)
+								{
+									ToProcess[_pDependentTarget] = _bIndirect;
+								}
+							;
+							// A declaration that a dependency passes on merges into the dependency that the target already has. As where the
+							// target declares it more than once, the dependency is indirect only where each declaration that orders the build is.
+							// It can make one that only ordered the build, as of the stage None that compiles after the files that the dependency
+							// generates, pass its dependencies on too, and an indirect one direct. Its dependencies are followed then, again where
+							// they were followed as those of an indirect dependency, as they are direct dependencies of the target where it is.
+							auto fMergePassedOn = [&](CTargetDependencyInfo &o_Dependency, CEntity &_Declaration, CTargetInfo *_pDependentTarget, bool _bIndirect)
+								{
+									bool const bIndirectBefore = o_Dependency.m_bIndirect;
+									bool const bPassedOnBefore = o_Dependency.m_bPassesOn;
+
+									CBuildSystemPropertyInfo OrderedInfo;
+									auto Ordered = f_EvaluateEntityPropertyNoDefault(_Declaration, gc_ConstKey_Dependency_Ordered, OrderedInfo);
+									if (!Ordered.f_Get().f_IsValid() || Ordered.f_Get().f_Boolean())
+										o_Dependency.m_bIndirect = o_Dependency.m_bIndirect && _bIndirect;
+
+									fMergeDeclaration(o_Dependency, _Declaration);
+									if (!o_Dependency.m_bPassesOn || !_pDependentTarget)
+										return;
+
+									if (bPassedOnBefore && o_Dependency.m_bIndirect == bIndirectBefore)
+										return;
+
+									if (f_EvaluateEntityPropertyBool(*_pDependentTarget->m_pInnerEntity, gc_ConstKey_Target_FollowIndirectDependencies, false))
+										fFollowDependencies(_pDependentTarget, o_Dependency.m_bIndirect);
+								}
+							;
 							TCFunction<void (CEntity &_Entity, bool _bRecursive, bool _bIndirect)> fFindDependencies = [&](CEntity &_Entity, bool _bRecursive, bool _bIndirect)
 								{
 									TCLinkedList<TCTuple<CEntity *, zbool>> Dependencies;
@@ -390,8 +482,26 @@ namespace NMib::NBuildSystem
 										bool bIndirect = true;
 										if (_bRecursive)
 										{
-											if (_pTarget->m_DependenciesMap.f_FindEqual(TargetName))
-												continue; // We already have dependency
+											// A dependency that orders the build already only merges what the one that a dependency passes on asks for, as
+											// to link it or compile after it, and keeps its declaration. One of the stage None is replaced, as the target then
+											// links it.
+											CTargetDependencyInfo *pMergeInto = nullptr;
+											if (auto *pExisting = _pTarget->m_DependenciesMap.f_FindEqual(TargetName); pExisting && pExisting->m_bOrdered)
+											{
+												// External dependencies have no stages or links to merge
+												if (bExternal)
+													continue;
+
+												// A declaration is merged once, as the dependency that declares it can be followed again, and once
+												// more where it was merged as that of an indirect dependency and the dependency became direct
+												auto MappedMerged = pExisting->m_MergedPassedOn(&ChildEntity);
+												bool &bMergedIndirect = MappedMerged.f_GetResult();
+												if (!MappedMerged.f_WasCreated() && (!bMergedIndirect || _bIndirect))
+													continue;
+
+												bMergedIndirect = _bIndirect;
+												pMergeInto = pExisting;
+											}
 
 											if (!bExpandedDependency)
 											{
@@ -410,39 +520,60 @@ namespace NMib::NBuildSystem
 												TCVector<CEntity *> ToDelete;
 												CEntity *pParent = _pTarget->m_pInnerEntity.f_Get();
 
-												bool bCreatedDistinguisher = false;
-												if (auto pRoot = pParent->m_ChildEntitiesMap.f_FindEqual(Parents.f_GetFirst()->f_GetKey()))
-												{
-													if (!CreatedThisTime.f_FindEqual(pRoot))
+												// The copy needs another place where an entity of the target itself is in its place, or the copy of
+												// another entity of the dependency that is processed: its target and what the workspace adds to it can
+												// have groups and dependencies of the same names. Copies only share the copy of a group that they are
+												// both in, as a group gives what is in it its settings.
+												auto fCopyCollides = [&](CEntity &_Parent) -> bool
 													{
-														if (!pDistinguisher)
+														auto *pCopyParent = &_Parent;
+														for (auto &pSourceParent : Parents)
 														{
-															CEntityKey Key;
-															Key.m_Type = EEntityType_Group;
-															umint iDistinguish = 0;
-															Key.m_Name.m_Value = fg_Format("Dependency Distinguisher {}", iDistinguish);
-															while (auto *pOldDistinguisher = pParent->m_ChildEntitiesMap.f_FindEqual(Key))
-															{
-																if (pOldDistinguisher->f_HasOnlyGroups())
-																{
-																	pParent->m_ChildEntitiesMap.f_Remove(Key);
-																	break;
-																}
-																else
-																{
-																	++iDistinguish;
-																	Key.m_Name.m_Value = fg_Format("Dependency Distinguisher {}", iDistinguish);
-																}
-															}
-															auto Mapped = pParent->m_ChildEntitiesMap(Key, pParent);
-															auto &NewDependency = Mapped.f_GetResult();
-															NewDependency.f_DataWritable().m_Position = pParent->f_Data().m_Position;
-															pDistinguisher = &NewDependency;
-															ToDelete.f_Insert(&NewDependency);
-															bCreatedDistinguisher = true;
+															auto *pCopy = pCopyParent->m_ChildEntitiesMap.f_FindEqual(pSourceParent->f_GetKey());
+															if (!pCopy)
+																return false;
+
+															auto *pCopyOf = CreatedThisTime.f_FindEqual(pCopy);
+															if (!pCopyOf || *pCopyOf != pSourceParent)
+																return true;
+
+															pCopyParent = pCopy;
 														}
-														pParent = pDistinguisher;
+
+														return true;
 													}
+												;
+
+												bool bCreatedDistinguisher = false;
+												if (fCopyCollides(*pParent))
+												{
+													if (!pDistinguisher || fCopyCollides(*pDistinguisher))
+													{
+														CEntityKey Key;
+														Key.m_Type = EEntityType_Group;
+														umint iDistinguish = 0;
+														Key.m_Name.m_Value = fg_Format("Dependency Distinguisher {}", iDistinguish);
+														while (auto *pOldDistinguisher = pParent->m_ChildEntitiesMap.f_FindEqual(Key))
+														{
+															if (pOldDistinguisher->f_HasOnlyGroups())
+															{
+																pParent->m_ChildEntitiesMap.f_Remove(Key);
+																break;
+															}
+															else
+															{
+																++iDistinguish;
+																Key.m_Name.m_Value = fg_Format("Dependency Distinguisher {}", iDistinguish);
+															}
+														}
+														auto Mapped = pParent->m_ChildEntitiesMap(Key, pParent);
+														auto &NewDependency = Mapped.f_GetResult();
+														NewDependency.f_DataWritable().m_Position = pParent->f_Data().m_Position;
+														pDistinguisher = &NewDependency;
+														ToDelete.f_Insert(&NewDependency);
+														bCreatedDistinguisher = true;
+													}
+													pParent = pDistinguisher;
 												}
 
 												CEntity *pRootCreated = nullptr;
@@ -473,7 +604,7 @@ namespace NMib::NBuildSystem
 															}
 														}
 
-														CreatedThisTime[&NewDependency];
+														CreatedThisTime[&NewDependency] = pSourceParent;
 														ToDelete.f_Insert(&NewDependency);
 														pParent = &NewDependency;
 														if (!pRootCreated)
@@ -483,7 +614,7 @@ namespace NMib::NBuildSystem
 													{
 														pParent = &Mapped.f_GetResult();
 														DCheck(pSourceParent->f_GetKey().m_Type != EEntityType_Dependency);
-														DCheck(CreatedThisTime.f_FindEqual(&Mapped.f_GetResult()));
+														DCheck(CreatedThisTime.f_FindEqual(pParent) && CreatedThisTime[pParent] == pSourceParent);
 													}
 												}
 
@@ -499,7 +630,20 @@ namespace NMib::NBuildSystem
 													fp_EvaluateDataRecursive(*pRootCreated, Deleted);
 												pEntity = pParent;
 
-												if (Deleted.f_FindEqual(pEntity) || !(bExternal || f_EvaluateEntityPropertyBool(*pEntity, gc_ConstKey_Dependency_Indirect, false)))
+												bool const bPassedOn
+													= !Deleted.f_FindEqual(pEntity) && (bExternal || f_EvaluateEntityPropertyBool(*pEntity, gc_ConstKey_Dependency_Indirect, false))
+												;
+												// The copy in the target, where its conditions are evaluated, is only kept for a dependency that the target
+												// doesn't order the build by already, as it would add a declaration in every pass
+												if (bPassedOn && pMergeInto)
+												{
+													auto *pDependentTarget = Workspace.m_Targets.f_FindEqual(TargetName);
+													if (pDependentTarget)
+														fSetDeclarationProperties(*pEntity, *pDependentTarget, _bIndirect, false);
+													fMergePassedOn(*pMergeInto, *pEntity, pDependentTarget, _bIndirect);
+												}
+
+												if (!bPassedOn || pMergeInto)
 												{
 													ToDelete = ToDelete.f_Reverse();
 													for (auto &pToDelete : ToDelete)
@@ -521,6 +665,15 @@ namespace NMib::NBuildSystem
 												{
 													CreatedThisTime.f_Remove(pEntity);
 													pEntity->m_pParent->m_ChildEntitiesMap.f_Remove(pEntity);
+													continue;
+												}
+
+												if (pMergeInto)
+												{
+													auto *pDependentTarget = Workspace.m_Targets.f_FindEqual(TargetName);
+													if (pDependentTarget)
+														fSetDeclarationProperties(*pEntity, *pDependentTarget, _bIndirect, false);
+													fMergePassedOn(*pMergeInto, *pEntity, pDependentTarget, _bIndirect);
 													continue;
 												}
 											}
@@ -548,20 +701,43 @@ namespace NMib::NBuildSystem
 											if (pDependentTarget->m_TriedDependenciesMap(pDependentTarget->f_GetName()).f_WasCreated())
 												bDependencyAdded = true;
 
-											auto &Dep = _pTarget->m_DependenciesMap(pDependentTarget->f_GetName()).f_GetResult();
+											auto MappedDep = _pTarget->m_DependenciesMap(pDependentTarget->f_GetName());
+											auto &Dep = MappedDep.f_GetResult();
+											bool const bDeclarationIndirect = (bIndirect && !_bRecursive) || _bIndirect;
+											bool const bDeclarationIndirectOrdered = !_bRecursive && f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Dependency_IndirectOrdered, false);
+											// Before the declaration is evaluated, as whether it orders the build can depend on them through its link
+											fSetDeclarationProperties(*pEntity, *pDependentTarget, bDeclarationIndirect, bDeclarationIndirectOrdered);
+
+											// Evaluated in the target, which the dependency that another target passes on has its conditions in. Every
+											// dependency orders the build in a build system without the settings that declare it, as those of the tests.
+											CBuildSystemPropertyInfo OrderedInfo;
+											auto Ordered = f_EvaluateEntityPropertyNoDefault(*pEntity, gc_ConstKey_Dependency_Ordered, OrderedInfo);
+											bool const bOrdered = !Ordered.f_Get().f_IsValid() || Ordered.f_Get().f_Boolean();
+
+											fMergeDeclaration(Dep, *pEntity);
 
 											_pTarget->m_DependenciesOrdered.f_Insert(Dep);
+											// The generators read the declaration that orders the build. One of the stage None that it replaces, or
+											// that comes after it, still names the target, as for its properties.
+											if (!MappedDep.f_WasCreated() && Dep.m_pEntity.f_Get() && Dep.m_pEntity.f_Get() != pEntity)
+											{
+												if (Dep.m_bOrdered && !bOrdered)
+												{
+													Dep.m_ReplacedEntities.f_Insert(fg_Explicit(pEntity));
+													continue;
+												}
+												Dep.m_ReplacedEntities.f_Insert(Dep.m_pEntity);
+											}
+											// A dependency that declarations order the build by is indirect only where each of them is, and ordered as
+											// indirect where any is, also where the last of them, which the generators read, isn't
+											bool const bMergeIndirect = !MappedDep.f_WasCreated() && Dep.m_bOrdered && bOrdered;
 											Dep.m_pEntity = fg_Explicit(pEntity);
 											Dep.m_Position = pEntity->f_Data().m_Position;
-											Dep.m_bIndirect = (bIndirect && !_bRecursive) || _bIndirect;
-											Dep.m_bIndirectOrdered = !_bRecursive && f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Dependency_IndirectOrdered, false);
+											Dep.m_bIndirect = bMergeIndirect ? Dep.m_bIndirect && bDeclarationIndirect : bDeclarationIndirect;
+											Dep.m_bIndirectOrdered = bMergeIndirect ? Dep.m_bIndirectOrdered || bDeclarationIndirectOrdered : bDeclarationIndirectOrdered;
 											Dep.m_bObjectLibrary = pDependentTarget->m_bObjectLibrary;
-
-											f_AddExternalProperty(*Dep.m_pEntity, gc_ConstKey_Dependency_ObjectLibrary, Dep.m_bObjectLibrary);
-
-											f_AddExternalProperty(*Dep.m_pEntity, gc_ConstKey_Dependency_IndirectEvaluated, Dep.m_bIndirect);
-
-											f_AddExternalProperty(*Dep.m_pEntity, gc_ConstKey_Dependency_IndirectOrderedEvaluated, Dep.m_bIndirectOrdered);
+											// Also where another dependency, as of a library that the target links, reaches the same target
+											Dep.m_bOrdered = bOrdered || (!MappedDep.f_WasCreated() && Dep.m_bOrdered);
 
 											bool bFollowIndirectDependencies = f_EvaluateEntityPropertyBool
 												(
@@ -577,7 +753,12 @@ namespace NMib::NBuildSystem
 											if (!TargetsAlreadyProcessed.f_FindEqual(pDependentTarget))
 												NewTargetsToProcess[pDependentTarget];
 
-											ToProcess[pDependentTarget] = Dep.m_bIndirect;
+											// The dependencies of a dependency of the stage None that the target doesn't link, which only gives the target
+											// its properties or orders its compiles after the files that the dependency generates, aren't dependencies of
+											// the target. The declarations of the dependency merged decide it, as one that doesn't pass them on can make a
+											// dependency direct whose dependencies an earlier declaration follows as those of an indirect one.
+											if (Dep.m_bOrdered && Dep.m_bPassesOn)
+												fFollowDependencies(pDependentTarget, Dep.m_bIndirect);
 										}
 									}
 								}
@@ -608,6 +789,8 @@ namespace NMib::NBuildSystem
 							TCVector<CStr> ExternalDependencies;
 							TCVector<CStr> DependencyInjectionGroups;
 
+							// The entities of the dependencies are new in each evaluation, so the merged values are compared with those of the last one
+							CEJsonSorted MergedDependencies = EJsonType_Object;
 							for (auto &Dependency : _pTarget->m_DependenciesOrdered)
 							{
 								Dependencies.f_Insert(Dependency.m_pEntity->f_GetPathForGetProperty());
@@ -624,18 +807,47 @@ namespace NMib::NBuildSystem
 								if (!pDependentTarget)
 									fs_ThrowError(Dependency.m_pEntity->f_Data().m_Position, "Internal error dependency not found: '{}'"_f << TargetName);
 
-								DependencyInjectionGroups.f_Insert
-									(
-										f_EvaluateEntityPropertyStringArray(*pDependentTarget->m_pInnerEntity, gc_ConstKey_Target_DependencyInjectionGroups, TCVector<CStr>())
-									)
-								;
+								// A dependency of the stage None that the target doesn't link injects nothing, also where it orders the build, as
+								// what it injects can need its library, as the sources of Lib_Malterlib do
+								if (Dependency.m_bOrdered && Dependency.m_bPassesOn)
+								{
+									DependencyInjectionGroups.f_Insert
+										(
+											f_EvaluateEntityPropertyStringArray(*pDependentTarget->m_pInnerEntity, gc_ConstKey_Target_DependencyInjectionGroups, TCVector<CStr>())
+										)
+									;
+								}
+
+								auto TargetPropertyPath = pDependentTarget->m_pInnerEntity->f_GetPathForGetProperty();
+								for (auto &pReplacedEntity : Dependency.m_ReplacedEntities)
+									f_AddExternalProperty(*pReplacedEntity, gc_ConstKey_Dependency_TargetPropertyPath, TargetPropertyPath);
+								// Also for an indirect dependency that doesn't order the build, whose properties the target can read
+								f_AddExternalProperty(*Dependency.m_pEntity, gc_ConstKey_Dependency_TargetPropertyPath, TargetPropertyPath);
+
+								f_AddExternalProperty(*Dependency.m_pEntity, gc_ConstKey_Dependency_StageEvaluated, Dependency.m_MergedStage);
+								f_AddExternalProperty(*Dependency.m_pEntity, gc_ConstKey_Dependency_LinkEvaluated, Dependency.m_bMergedLink);
+								f_AddExternalProperty(*Dependency.m_pEntity, gc_ConstKey_Dependency_CompileAfterGeneratedEvaluated, Dependency.m_bMergedCompileAfterGenerated);
+								// Whether its declarations order the build as they were merged: the declaration that is left can evaluate another
+								// way with the merged values below, as one that only links or compiles after generated files while indirect
+								f_AddExternalProperty(*Dependency.m_pEntity, gc_ConstKey_Dependency_OrderedEvaluated, Dependency.m_bOrdered);
+								// The declaration was evaluated with its own, which the generators read merged as the other values
+								f_AddExternalProperty(*Dependency.m_pEntity, gc_ConstKey_Dependency_IndirectEvaluated, Dependency.m_bIndirect);
+								f_AddExternalProperty(*Dependency.m_pEntity, gc_ConstKey_Dependency_IndirectOrderedEvaluated, Dependency.m_bIndirectOrdered);
+
+								// The merged values can depend on what an evaluation of the target changes, so they settle as its lists do
+								auto &Merged = MergedDependencies[TargetName];
+								Merged = EJsonType_Array;
+								Merged.f_Insert(Dependency.m_MergedStage);
+								Merged.f_Insert(Dependency.m_bMergedLink);
+								Merged.f_Insert(Dependency.m_bMergedCompileAfterGenerated);
+								Merged.f_Insert(Dependency.m_bIndirect);
+								Merged.f_Insert(Dependency.m_bIndirectOrdered);
+								Merged.f_Insert(Dependency.m_bOrdered);
 
 								if (Dependency.m_bIndirect && !Dependency.m_bIndirectOrdered)
 									continue;
 
-								bool bDoLink = f_EvaluateEntityPropertyBool(*Dependency.m_pEntity, gc_ConstKey_Dependency_Link, true);
-
-								if (bDoLink)
+								if (Dependency.m_bMergedLink)
 								{
 									Dependency.m_bLink = true;
 
@@ -646,10 +858,9 @@ namespace NMib::NBuildSystem
 											DependencyFiles.f_Insert(FileToAdd);
 									}
 								}
-								auto TargetPropertyPath = pDependentTarget->m_pInnerEntity->f_GetPathForGetProperty();
-								DependencyTargets.f_Insert(TargetPropertyPath);
-
-								f_AddExternalProperty(*Dependency.m_pEntity, gc_ConstKey_Dependency_TargetPropertyPath, TargetPropertyPath);
+								// The targets that the target builds after, as the pre-build script of Xcode does after their dependency files
+								if (Dependency.m_bOrdered)
+									DependencyTargets.f_Insert(TargetPropertyPath);
 							}
 
 							auto fAddNameList = [&](CPropertyKeyReference const &_Key, TCVector<CStr> &&_Names) -> bool
@@ -663,7 +874,9 @@ namespace NMib::NBuildSystem
 								}
 							;
 
-							bool bChanged = false;
+							bool bChanged = MergedDependencies != _pTarget->m_MergedDependencies;
+							if (bChanged)
+								_pTarget->m_MergedDependencies = fg_Move(MergedDependencies);
 
 							if (!_DependencyFilesName.f_IsEmpty())
 							{

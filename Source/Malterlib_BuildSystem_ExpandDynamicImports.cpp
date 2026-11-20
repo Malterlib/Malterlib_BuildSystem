@@ -1898,19 +1898,24 @@ namespace NMib::NBuildSystem
 											if (!pExistingDependency->m_bIsOrdered)
 											{
 												pExistingDependency->m_bIsOrdered = true;
-												if
-												(
-													pExistingDependency->m_pBuildSystemRegistry->f_GetChildNoPath
-													(
-														{CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_Indirect)}
-													)
-												)
+												auto &DependencyRegistry = *pExistingDependency->m_pBuildSystemRegistry;
+												// A dependency of the stage None, as for a working directory in the directory of the dependency, orders the
+												// build as a dependency that is added for the file does, as the target needs the file
+												auto *pStage = DependencyRegistry.f_GetChildNoPath({CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_Stage)});
+												if (pStage && pStage->f_GetThisValue().m_Value.f_IsConstantString() && pStage->f_GetThisValue().m_Value.f_ConstantString() == "None")
+												{
+													pStage->f_SetThisValue(CBuildSystemSyntax::CRootValue{{CStr("Link")}});
+													if (TargetName.f_StartsWith("Lib_"))
+													{
+														DependencyRegistry.f_CreateChildNoPath({CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_IndirectOrdered)})
+															->f_SetThisValue({{true}})
+														;
+													}
+												}
+												if (DependencyRegistry.f_GetChildNoPath({CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_Indirect)}))
 												{
 													// Orders the target after the dependency too, which it still links
-													pExistingDependency->m_pBuildSystemRegistry->f_CreateChildNoPath
-														(
-															{CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_IndirectOrdered)}
-														)
+													DependencyRegistry.f_CreateChildNoPath({CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_IndirectOrdered)})
 														->f_SetThisValue({{true}})
 													;
 												}

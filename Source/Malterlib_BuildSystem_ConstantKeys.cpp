@@ -102,6 +102,12 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_IndirectOrdered(EPropertyType_Dependency, gc_Str<"IndirectOrdered">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_IndirectEvaluated(EPropertyType_Dependency, gc_Str<"IndirectEvaluated">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_IndirectOrderedEvaluated(EPropertyType_Dependency, gc_Str<"IndirectOrderedEvaluated">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_Ordered(EPropertyType_Dependency, gc_Str<"Ordered">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_CompileAfterGenerated(EPropertyType_Dependency, gc_Str<"CompileAfterGenerated">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_StageEvaluated(EPropertyType_Dependency, gc_Str<"StageEvaluated">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_LinkEvaluated(EPropertyType_Dependency, gc_Str<"LinkEvaluated">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_CompileAfterGeneratedEvaluated(EPropertyType_Dependency, gc_Str<"CompileAfterGeneratedEvaluated">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_OrderedEvaluated(EPropertyType_Dependency, gc_Str<"OrderedEvaluated">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_TargetPropertyPath(EPropertyType_Dependency, gc_Str<"TargetPropertyPath">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_Link(EPropertyType_Dependency, gc_Str<"Link">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_Type(EPropertyType_Dependency, gc_Str<"Type">);
@@ -109,6 +115,7 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_Target(EPropertyType_Dependency, gc_Str<"Target">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_TargetProperties(EPropertyType_Dependency, gc_Str<"TargetProperties">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_ObjectLibrary(EPropertyType_Dependency, gc_Str<"ObjectLibrary">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_Stage(EPropertyType_Dependency, gc_Str<"Stage">);
 
 	constexpr CPropertyKeyReference const gc_ConstKey_GenerateFile_BeforeImports(EPropertyType_GenerateFile, gc_Str<"BeforeImports">);
 	constexpr CPropertyKeyReference const gc_ConstKey_GenerateFile_Contents(EPropertyType_GenerateFile, gc_Str<"Contents">);
@@ -376,6 +383,12 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_IndirectOrdered);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_IndirectEvaluated);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_IndirectOrderedEvaluated);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_Ordered);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_CompileAfterGenerated);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_StageEvaluated);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_LinkEvaluated);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_CompileAfterGeneratedEvaluated);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_OrderedEvaluated);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_TargetPropertyPath);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_Link);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_Type);
@@ -383,6 +396,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_Target);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_TargetProperties);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_ObjectLibrary);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_Stage);
 
 		o_StringCache.f_AddConstantString(gc_ConstKey_GenerateFile_BeforeImports);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GenerateFile_Contents);
