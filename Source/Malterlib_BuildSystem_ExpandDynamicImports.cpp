@@ -1868,14 +1868,12 @@ namespace NMib::NBuildSystem
 													)
 												)
 												{
+													// Orders the target after the dependency too, which it still links
 													pExistingDependency->m_pBuildSystemRegistry->f_CreateChildNoPath
 														(
 															{CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_IndirectOrdered)}
 														)
 														->f_SetThisValue({{true}})
-													;
-													pExistingDependency->m_pBuildSystemRegistry->f_CreateChildNoPath({CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_Link)})
-														->f_SetThisValue({{false}})
 													;
 												}
 											}
