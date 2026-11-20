@@ -60,6 +60,7 @@ namespace NMib::NBuildSystem::NXcode
 						NewNativeTarget.m_CustomBuildScripts.f_Clear();
 						NativeTarget.m_CTargets.f_Insert(&NewNativeTarget);
 					}
+					NativeTarget.m_CTargets[0]->m_bFirstCTarget = true;
 
 					NativeTarget.m_ExcludedTypes = UsedCTypes;
 				}
@@ -210,9 +211,18 @@ namespace NMib::NBuildSystem::NXcode
 				CStr DummyPath = "{}/Dummy.o"_f << ObjectPath;
 				CStr LibraryPath = "{}/{}"_f << fConvertEnvVars(PerConfig.m_SearchPath) << PerConfig.m_CalculatedPath;
 
-				auto &PreBuildScript = NativeTarget.m_BuildScripts[gc_ConstString_PreBuildScript.m_String];
-				PreBuildScript.m_Inputs.f_Insert(LibraryPath);
-				PreBuildScript.m_Script += R"-----(
+				// Relinks the default target when the library of another C type changes. It stays in the default target, as the
+				// pre-build script runs in the first target of another C type, before these libraries are built.
+				auto &LinkDependenciesScript = NativeTarget.m_BuildScripts[gc_Str<"LinkDependenciesScript">.m_Str];
+				if (LinkDependenciesScript.m_Name.f_IsEmpty())
+				{
+					LinkDependenciesScript.m_Name = gc_Str<"LinkDependenciesScript">.m_Str;
+					LinkDependenciesScript.m_Script = "#!/bin/bash\nexport PATH=$MalterlibBuildSystemExecutablePath:$PATH\nset -eo pipefail\n";
+					LinkDependenciesScript.m_bPreBuild = true;
+					LinkDependenciesScript.m_bDefaultTargetOnly = true;
+				}
+				LinkDependenciesScript.m_Inputs.f_Insert(LibraryPath);
+				LinkDependenciesScript.m_Script += R"-----(
 if [ -e "{0}" ]; then
 	MTool CopyWriteTimeIfNewer "{1}" "{0}"
 fi
@@ -782,7 +792,6 @@ fi
 										.f_Get()
 										.f_String()
 									;
-									Script.m_OutputTypes[OutputType];
 
 									if (FileType == EBuildFileType_CCompile || FileType == EBuildFileType_CCompileInitEarly)
 									{
@@ -813,7 +822,6 @@ fi
 										EnabledConfigs[Configuration] = fg_Explicit(pNewEntity);
 
 										CStr OutputType = fp_GetConfigValue(EnabledConfigs, Configuration, gc_ConstKey_Compile_Type, EEJsonType_String, false).m_Value.f_Get().f_String();
-										Script.m_OutputTypes[OutputType];
 
 										if (FileType == EBuildFileType_CCompile || FileType == EBuildFileType_CCompileInitEarly)
 										{
@@ -1620,7 +1628,8 @@ fi
 					_Output += CStr::CFormat("\t\t\tshellScript = \"{}\";\n") << _Script.f_GetScriptSetting();
 					_Output += "\t\t\tshowEnvVarsInLog = 0;\n";
 
-					if (!_Script.m_bCustom && !_Script.m_bPreBuild && !_Script.m_bPostBuild)
+					// Tool and link dependency scripts run in every build
+					if ((!_Script.m_bCustom && !_Script.m_bPreBuild && !_Script.m_bPostBuild) || _Script.m_bDefaultTargetOnly)
 						_Output += "\t\t\talwaysOutOfDate = 1;\n";
 
 					_Output += "\t\t};\n";
@@ -1892,45 +1901,32 @@ fi
 				;
 				_Output += "\t\t\tbuildPhases = (\n";
 
+				// When the default target has other C types in targets of their own, which are built before it, the first of them
+				// runs the pre-build scripts of the default target, so that they run before every compile
+				bool const bSplitDefaultTarget = NativeTarget.m_bDefaultTarget && !NativeTarget.m_CTargets.f_IsEmpty();
+
 				// Pre build scripts
-				for (auto iScript = NativeTarget.m_BuildScripts.f_GetIterator(); iScript; ++iScript)
+				for (auto iScript = DefaultNativeTarget.m_BuildScripts.f_GetIterator(); iScript; ++iScript)
 				{
-					if (iScript->m_bPreBuild)
+					if (!iScript->m_bPreBuild)
+						continue;
+
+					bool bRuns;
+					if (NativeTarget.m_bDefaultTarget)
+						bRuns = !bSplitDefaultTarget || iScript->m_bDefaultTargetOnly;
+					else
+						bRuns = NativeTarget.m_bFirstCTarget && !iScript->m_bDefaultTargetOnly;
+
+					if (bRuns)
 						_Output += CStr::CFormat("\t\t\t\t{} /* {} */,\n") << iScript->f_GetGUID(Configuration) << iScript->m_Name;
 				}
 
+				// When the default target is split, the first of its other C types runs all its custom scripts, before every compile and
+				// in the order of their inputs, as m_CustomBuildScripts has them
 				for (auto &Script : DefaultNativeTarget.m_CustomBuildScripts)
 				{
-					if (!NativeTarget.m_IncludedTypes.f_IsEmpty())
-					{
-						bool bFoundIncluded = false;
-						for (auto &Type : Script.m_OutputTypes)
-						{
-							if (NativeTarget.m_IncludedTypes.f_FindEqual(Type))
-							{
-								bFoundIncluded = true;
-								break;
-							}
-						}
-						if (!bFoundIncluded)
-							continue;
-					}
-					if (!NativeTarget.m_ExcludedTypes.f_IsEmpty())
-					{
-						bool bFoundExcluded = false;
-						for (auto &Type : Script.m_OutputTypes)
-						{
-							if (NativeTarget.m_ExcludedTypes.f_FindEqual(Type))
-							{
-								bFoundExcluded = true;
-								break;
-							}
-						}
-						if (bFoundExcluded)
-							continue;
-					}
-
-					_Output += CStr::CFormat("\t\t\t\t{} /* {} */,\n") << Script.f_GetGUID(Configuration) << Script.m_Name;
+					if (DefaultNativeTarget.m_CTargets.f_IsEmpty() || NativeTarget.m_bFirstCTarget)
+						_Output += CStr::CFormat("\t\t\t\t{} /* {} */,\n") << Script.f_GetGUID(Configuration) << Script.m_Name;
 				}
 
 				// Sources, Frameworks, Headers
@@ -1994,13 +1990,20 @@ fi
 
 				// Dependencies
 				_Output += "\t\t\tdependencies = (\n";
+				CNativeTarget const *pFirstCTarget = DefaultNativeTarget.m_CTargets.f_IsEmpty() ? nullptr : DefaultNativeTarget.m_CTargets[0];
 				for (auto &Dependency : _Project.m_DependenciesOrdered)
 				{
 					if (Dependency.m_bExternal)
 						continue;
 
-					if (!NativeTarget.m_bDefaultTarget && Dependency.m_bInternal)
+					// The other targets of other C types build after the first one, which runs the pre-build and custom scripts
+					if
+					(
+						!NativeTarget.m_bDefaultTarget && Dependency.m_bInternal && (NativeTarget.m_bFirstCTarget || !pFirstCTarget || Dependency.f_GetName() != pFirstCTarget->m_ProductName)
+					)
+					{
 						continue;
+					}
 
 					auto pPerConfig = Dependency.m_PerConfig.f_FindEqual(Configuration);
 					if (!pPerConfig)

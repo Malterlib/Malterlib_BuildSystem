@@ -55,11 +55,11 @@ namespace NMib::NBuildSystem::NXcode
 		CStr m_Script;
 		TCVector<CStr> m_Inputs;
 		TCVector<CStr> m_Outputs;
-		TCSet<CStr> m_OutputTypes;
 
 		bool m_bPostBuild = false;
 		bool m_bPreBuild = false;
 		bool m_bCustom = false;
+		bool m_bDefaultTargetOnly = false; // A pre-build script that stays in the default target when its other C types are split off
 
 	private:
 		mutable CStr mp_BuildSetting;
@@ -99,6 +99,7 @@ namespace NMib::NBuildSystem::NXcode
 		int32 m_BuildActionMask;
 		bool m_bGeneratedBuildScript = false;
 		bool m_bDefaultTarget = false;
+		bool m_bFirstCTarget = false; // Of another C type, built first, where the pre-build and custom scripts of the default target run
 		bool m_bGenerateScheme = false;
 
 	private:
