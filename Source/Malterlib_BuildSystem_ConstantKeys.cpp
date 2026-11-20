@@ -109,6 +109,7 @@ namespace NMib::NBuildSystem
 	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_Target(EPropertyType_Dependency, gc_Str<"Target">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_TargetProperties(EPropertyType_Dependency, gc_Str<"TargetProperties">);
 	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_ObjectLibrary(EPropertyType_Dependency, gc_Str<"ObjectLibrary">);
+	constexpr CPropertyKeyReference const gc_ConstKey_Dependency_Stage(EPropertyType_Dependency, gc_Str<"Stage">);
 
 	constexpr CPropertyKeyReference const gc_ConstKey_GenerateFile_BeforeImports(EPropertyType_GenerateFile, gc_Str<"BeforeImports">);
 	constexpr CPropertyKeyReference const gc_ConstKey_GenerateFile_Contents(EPropertyType_GenerateFile, gc_Str<"Contents">);
@@ -383,6 +384,7 @@ namespace NMib::NBuildSystem
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_Target);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_TargetProperties);
 		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_ObjectLibrary);
+		o_StringCache.f_AddConstantString(gc_ConstKey_Dependency_Stage);
 
 		o_StringCache.f_AddConstantString(gc_ConstKey_GenerateFile_BeforeImports);
 		o_StringCache.f_AddConstantString(gc_ConstKey_GenerateFile_Contents);

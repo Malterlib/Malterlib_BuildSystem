@@ -108,6 +108,7 @@ namespace NMib::NBuildSystem
 	extern CPropertyKeyReference const gc_ConstKey_Dependency_Target;
 	extern CPropertyKeyReference const gc_ConstKey_Dependency_TargetProperties;
 	extern CPropertyKeyReference const gc_ConstKey_Dependency_ObjectLibrary;
+	extern CPropertyKeyReference const gc_ConstKey_Dependency_Stage;
 
 	extern CPropertyKeyReference const gc_ConstKey_GenerateFile_BeforeImports;
 	extern CPropertyKeyReference const gc_ConstKey_GenerateFile_Contents;

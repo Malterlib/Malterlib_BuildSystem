@@ -24,6 +24,7 @@ namespace NMib::NBuildSystem
 		bool m_bIndirect = false;
 		bool m_bIndirectOrdered = false;
 		bool m_bObjectLibrary = false;
+		bool m_bOrdered = true; // A dependency of the stage None only gives the target the properties of its target
 	};
 
 	struct CTargetFileInfo : public CGroupMember

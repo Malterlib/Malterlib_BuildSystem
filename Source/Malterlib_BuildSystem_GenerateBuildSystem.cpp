@@ -390,8 +390,10 @@ namespace NMib::NBuildSystem
 										bool bIndirect = true;
 										if (_bRecursive)
 										{
-											if (_pTarget->m_DependenciesMap.f_FindEqual(TargetName))
-												continue; // We already have dependency
+											// We already have dependency, unless only of the stage None, which a dependency that a dependency passes on
+											// replaces, as the target then links it
+											if (auto *pExisting = _pTarget->m_DependenciesMap.f_FindEqual(TargetName); pExisting && pExisting->m_bOrdered)
+												continue;
 
 											if (!bExpandedDependency)
 											{
@@ -548,7 +550,9 @@ namespace NMib::NBuildSystem
 											if (pDependentTarget->m_TriedDependenciesMap(pDependentTarget->f_GetName()).f_WasCreated())
 												bDependencyAdded = true;
 
-											auto &Dep = _pTarget->m_DependenciesMap(pDependentTarget->f_GetName()).f_GetResult();
+											auto MappedDep = _pTarget->m_DependenciesMap(pDependentTarget->f_GetName());
+											auto &Dep = MappedDep.f_GetResult();
+											bool const bOrdered = f_EvaluateEntityPropertyString(ChildEntity, gc_ConstKey_Dependency_Stage, CStr()) != "None";
 
 											_pTarget->m_DependenciesOrdered.f_Insert(Dep);
 											Dep.m_pEntity = fg_Explicit(pEntity);
@@ -556,6 +560,8 @@ namespace NMib::NBuildSystem
 											Dep.m_bIndirect = (bIndirect && !_bRecursive) || _bIndirect;
 											Dep.m_bIndirectOrdered = !_bRecursive && f_EvaluateEntityPropertyBool(ChildEntity, gc_ConstKey_Dependency_IndirectOrdered, false);
 											Dep.m_bObjectLibrary = pDependentTarget->m_bObjectLibrary;
+											// Also where another dependency, as of a library that the target links, reaches the same target
+											Dep.m_bOrdered = bOrdered || (!MappedDep.f_WasCreated() && Dep.m_bOrdered);
 
 											f_AddExternalProperty(*Dep.m_pEntity, gc_ConstKey_Dependency_ObjectLibrary, Dep.m_bObjectLibrary);
 
@@ -577,7 +583,10 @@ namespace NMib::NBuildSystem
 											if (!TargetsAlreadyProcessed.f_FindEqual(pDependentTarget))
 												NewTargetsToProcess[pDependentTarget];
 
-											ToProcess[pDependentTarget] = Dep.m_bIndirect;
+											// The dependencies of a dependency of the stage None, which only gives the target its properties, aren't
+											// dependencies of the target
+											if (bOrdered)
+												ToProcess[pDependentTarget] = Dep.m_bIndirect;
 										}
 									}
 								}
@@ -647,7 +656,9 @@ namespace NMib::NBuildSystem
 									}
 								}
 								auto TargetPropertyPath = pDependentTarget->m_pInnerEntity->f_GetPathForGetProperty();
-								DependencyTargets.f_Insert(TargetPropertyPath);
+								// The targets that the target builds after, as the pre-build script of Xcode does after their dependency files
+								if (Dependency.m_bOrdered)
+									DependencyTargets.f_Insert(TargetPropertyPath);
 
 								f_AddExternalProperty(*Dependency.m_pEntity, gc_ConstKey_Dependency_TargetPropertyPath, TargetPropertyPath);
 							}

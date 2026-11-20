@@ -324,7 +324,7 @@ namespace NMib::NBuildSystem
 								for (auto iDependency = TargetInfo.m_DependenciesOrdered.f_GetIterator(); iDependency; ++iDependency)
 								{
 									auto const &DependencyInfo = *iDependency;
-									if (DependencyInfo.m_bIndirect && !DependencyInfo.m_bIndirectOrdered)
+									if ((DependencyInfo.m_bIndirect && !DependencyInfo.m_bIndirectOrdered) || !DependencyInfo.m_bOrdered)
 										continue;
 
 									auto const &DependencyName = iDependency->f_GetName();

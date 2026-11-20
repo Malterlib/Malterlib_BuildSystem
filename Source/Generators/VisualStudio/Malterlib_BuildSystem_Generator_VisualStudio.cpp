@@ -404,7 +404,7 @@ namespace NMib::NBuildSystem
 								DebugConfig.m_bIndirect = DependencyInfo.m_bIndirect;
 								DebugConfig.m_bIndirectOrdered = DependencyInfo.m_bIndirectOrdered;
 
-								if (DependencyInfo.m_bIndirect && !DependencyInfo.m_bIndirectOrdered)
+								if ((DependencyInfo.m_bIndirect && !DependencyInfo.m_bIndirectOrdered) || !DependencyInfo.m_bOrdered)
 									continue;
 
 								Dep.m_EnabledConfigs[Config] = DependencyInfo.m_pEntity;
