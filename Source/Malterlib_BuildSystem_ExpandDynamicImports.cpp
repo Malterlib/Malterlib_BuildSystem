@@ -282,7 +282,28 @@ namespace NMib::NBuildSystem
 		if (o_Value.f_IsConstantString())
 			_fFunctor(o_Value.f_ConstantString(), o_Value.m_Value);
 		else if (o_Value.f_IsConstant())
-			;
+		{
+			// The parser keeps an array of constants as one constant, whose strings can't be replaced with other values, so the
+			// functor operates on an array of its elements, which replaces the constant when an element is no longer constant
+			auto &Constant = o_Value.f_Constant();
+			if (!Constant.f_IsArray())
+				return;
+
+			CBuildSystemSyntax::CArray Array;
+			for (auto &Element : Constant.f_Array())
+				Array.m_Array.f_Insert(CBuildSystemSyntax::CValue{Element});
+
+			fg_OperateOnStrings(Array, _fFunctor);
+
+			for (auto &Element : Array.m_Array)
+			{
+				if (!Element.f_Get().f_IsConstant())
+				{
+					o_Value.m_Value = fg_Move(Array);
+					return;
+				}
+			}
+		}
 		else if (o_Value.f_IsArray())
 			fg_OperateOnStrings(o_Value.m_Value.f_GetAsType<CBuildSystemSyntax::CArray>(), _fFunctor);
 		else if (o_Value.f_IsEvalString())
