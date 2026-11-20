@@ -210,6 +210,12 @@ namespace NMib::NBuildSystem
 	void fg_OperateOnStrings(CBuildSystemSyntax::CDefine &o_Value, tf_FFunctor &&_fFunctor);
 	template <typename tf_FFunctor>
 	void fg_OperateOnStrings(CBuildSystemSyntax::CTypeDefaulted &o_Value, tf_FFunctor &&_fFunctor);
+	template <typename tf_FFunctor>
+	void fg_OperateOnStrings(CBuildSystemSyntax::CTernary &o_Value, tf_FFunctor &&_fFunctor);
+	template <typename tf_FFunctor>
+	void fg_OperateOnStrings(CBuildSystemSyntax::CBinaryOperator &o_Value, tf_FFunctor &&_fFunctor);
+	template <typename tf_FFunctor>
+	void fg_OperateOnStrings(CBuildSystemSyntax::CPrefixOperator &o_Value, tf_FFunctor &&_fFunctor);
 
 	template <typename tf_FFunctor>
 	void fg_OperateOnStrings(CBuildSystemSyntax::CEvalString &o_Value, tf_FFunctor &&_fFunctor)
@@ -241,6 +247,38 @@ namespace NMib::NBuildSystem
 			fg_OperateOnStrings(o_Value.m_Param.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CExpression>>().f_Get(), _fFunctor);
 		else if (o_Value.f_IsArray())
 			fg_OperateOnStrings(o_Value.m_Param.f_GetAsType<CBuildSystemSyntax::CArray>(), _fFunctor);
+		else if (o_Value.f_IsExpressionAppend())
+		{
+			CBuildSystemSyntax::CExpression &Expression = o_Value.m_Param.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CExpressionAppend>>().f_Get();
+			fg_OperateOnStrings(Expression, _fFunctor);
+		}
+		else if (o_Value.f_IsTernary())
+			fg_OperateOnStrings(o_Value.m_Param.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CTernary>>().f_Get(), _fFunctor);
+		else if (o_Value.f_IsBinaryOperator())
+			fg_OperateOnStrings(o_Value.m_Param.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CBinaryOperator>>().f_Get(), _fFunctor);
+		else if (o_Value.f_IsPrefixOperator())
+			fg_OperateOnStrings(o_Value.m_Param.f_GetAsType<NStorage::TCIndirection<CBuildSystemSyntax::CPrefixOperator>>().f_Get(), _fFunctor);
+	}
+
+	template <typename tf_FFunctor>
+	void fg_OperateOnStrings(CBuildSystemSyntax::CTernary &o_Value, tf_FFunctor &&_fFunctor)
+	{
+		fg_OperateOnStrings(o_Value.m_Conditional, _fFunctor);
+		fg_OperateOnStrings(o_Value.m_Left, _fFunctor);
+		fg_OperateOnStrings(o_Value.m_Right, _fFunctor);
+	}
+
+	template <typename tf_FFunctor>
+	void fg_OperateOnStrings(CBuildSystemSyntax::CBinaryOperator &o_Value, tf_FFunctor &&_fFunctor)
+	{
+		fg_OperateOnStrings(o_Value.m_Left, _fFunctor);
+		fg_OperateOnStrings(o_Value.m_Right, _fFunctor);
+	}
+
+	template <typename tf_FFunctor>
+	void fg_OperateOnStrings(CBuildSystemSyntax::CPrefixOperator &o_Value, tf_FFunctor &&_fFunctor)
+	{
+		fg_OperateOnStrings(o_Value.m_Right, _fFunctor);
 	}
 
 	template <typename tf_FFunctor>
@@ -1925,6 +1963,16 @@ namespace NMib::NBuildSystem
 							}
 
 							TCSet<CStr, CCompareNoCase> TargetsNoCase;
+							// The paths that the expressions of the files of targets name the dependencies by, as CEntity::f_GetPathForGetProperty
+							auto fDependencyPath = [](CStr const &_TargetName) -> CStr
+								{
+									CStr Path = "Dependency:" + _TargetName;
+									if (_TargetName.f_FindChars(".\"") >= 0)
+										return Path.f_EscapeStr();
+									return Path;
+								}
+							;
+							TCMap<CStr, CStr> RenamedDependencyPaths;
 
 							for (auto &Target : Targets)
 							{
@@ -1964,6 +2012,29 @@ namespace NMib::NBuildSystem
 									for (auto &pDependency : *pDependencies)
 										*pDependency->m_pValue = {DisambiguatedName};
 								}
+								RenamedDependencyPaths[fDependencyPath(TargetName)] = fDependencyPath(DisambiguatedName);
+							}
+
+							// The files of renamed targets that commands use, as $<TARGET_FILE> of CMake
+							if (!RenamedDependencyPaths.f_IsEmpty())
+							{
+								Registry.f_TransformFunc
+									(
+										[&](CBuildSystemRegistry &o_This)
+										{
+											fg_OperateOnStrings
+												(
+													o_This.f_GetThisValue()
+													, [&](CStr const &_String, auto &o_Value)
+													{
+														if (auto *pRenamed = RenamedDependencyPaths.f_FindEqual(_String))
+															o_Value = NEncoding::CEJsonSorted(*pRenamed);
+													}
+												)
+											;
+										}
+									)
+								;
 							}
 						}
 
