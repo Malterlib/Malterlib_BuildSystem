@@ -1576,35 +1576,38 @@ namespace NMib::NBuildSystem
 										if (!Identifier.f_IsNameConstantString())
 											break;
 
-										auto &Value = o_This.f_GetThisValue();
-										if (!Value.m_Value.f_IsArray())
+										// Also an array that is added to, as the outputs of the build events of CMake are
+										CBuildSystemSyntax::CValue const *pArray = &o_This.f_GetThisValue().m_Value;
+										if (pArray->m_Value.f_IsOfType<CBuildSystemSyntax::COperator>())
+											pArray = &pArray->m_Value.f_GetAsType<CBuildSystemSyntax::COperator>().m_Right.f_Get();
+										if (!pArray->f_IsArray())
 											break;
 
-										if (Identifier.f_NameConstantString() == gc_ConstKey_Compile_Custom_Outputs.m_Name)
+										auto &PropertyName = Identifier.f_NameConstantString();
+										bool const bTargetProperty = Identifier.f_IsPropertyTypeConstant() && Identifier.f_PropertyTypeConstant() == EPropertyType_Target;
+
+										// The outputs of the commands of the target and of its build events, as the byproducts of POST_BUILD
+										if
+										(
+											PropertyName == gc_ConstKey_Compile_Custom_Outputs.m_Name
+											||
+											(
+												bTargetProperty
+												&&
+												(
+													PropertyName == gc_ConstKey_Target_PostBuildScriptOutputs.m_Name
+													|| PropertyName == gc_Str<"PreLinkScriptOutputs">.m_Str
+												)
+											)
+										)
 										{
-											if (Value.m_Value.f_IsArray())
-											{
-												for (auto &Entry : Value.m_Value.f_Array().m_Array)
-													NextTarget.m_Outputs[CStr::fs_ToStr(Entry)];
-											}
-											else if (Value.m_Value.f_IsConstant() && Value.m_Value.f_Constant().f_IsArray())
-											{
-												for (auto &Entry : Value.m_Value.f_Constant().f_Array())
-													NextTarget.m_Outputs[CStr::fs_ToStr(Entry)];
-											}
+											for (auto &Entry : pArray->f_Array().m_Array)
+												NextTarget.m_Outputs[CStr::fs_ToStr(Entry)];
 										}
-										else if (Identifier.f_NameConstantString() == gc_ConstKey_Compile_Custom_Inputs.m_Name)
+										else if (PropertyName == gc_ConstKey_Compile_Custom_Inputs.m_Name)
 										{
-											if (Value.m_Value.f_IsArray())
-											{
-												for (auto &Entry : Value.m_Value.f_Array().m_Array)
-													NextTarget.m_Inputs[CStr::fs_ToStr(Entry)];
-											}
-											else if (Value.m_Value.f_IsConstant() && Value.m_Value.f_Constant().f_IsArray())
-											{
-												for (auto &Entry : Value.m_Value.f_Constant().f_Array())
-													NextTarget.m_Inputs[CStr::fs_ToStr(Entry)];
-											}
+											for (auto &Entry : pArray->f_Array().m_Array)
+												NextTarget.m_Inputs[CStr::fs_ToStr(Entry)];
 										}
 									}
 									while (false)
@@ -1897,6 +1900,8 @@ namespace NMib::NBuildSystem
 										Target.m_Dependencies[TargetName];
 										CBuildSystemSyntax::CRootKey Name = {CBuildSystemSyntax::CKeyPrefixOperator::fs_Entity(mp_StringCache, gc_ConstString_Dependency)};
 
+										// A dependency for a file that it generates orders the build, and isn't linked, as an executable whose build
+										// events generate a file isn't
 										auto pNewDependency = Target.m_pBuildSystemRegistry->f_CreateChildNoPath(Name, true);
 										pNewDependency->f_SetThisValue(CBuildSystemSyntax::CRootValue{{TargetName}});
 										if (TargetName.f_StartsWith("Lib_"))
@@ -1904,8 +1909,8 @@ namespace NMib::NBuildSystem
 											pNewDependency->f_CreateChildNoPath({CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_IndirectOrdered)})
 												->f_SetThisValue({{true}})
 											;
-											pNewDependency->f_CreateChildNoPath({CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_Link)})->f_SetThisValue({{false}});
 										}
+										pNewDependency->f_CreateChildNoPath({CBuildSystemSyntax::CValue::fs_Identifier(gc_ConstKey_Dependency_Link)})->f_SetThisValue({{false}});
 
 										break;
 									}
