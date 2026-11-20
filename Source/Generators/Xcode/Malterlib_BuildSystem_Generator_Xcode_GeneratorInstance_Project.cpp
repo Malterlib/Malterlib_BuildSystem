@@ -211,16 +211,8 @@ namespace NMib::NBuildSystem::NXcode
 				CStr DummyPath = "{}/Dummy.o"_f << ObjectPath;
 				CStr LibraryPath = "{}/{}"_f << fConvertEnvVars(PerConfig.m_SearchPath) << PerConfig.m_CalculatedPath;
 
-				// Relinks the default target when the library of another C type changes. It stays in the default target, as the
-				// pre-build script runs in the first target of another C type, before these libraries are built.
-				auto &LinkDependenciesScript = NativeTarget.m_BuildScripts[gc_Str<"LinkDependenciesScript">.m_Str];
-				if (LinkDependenciesScript.m_Name.f_IsEmpty())
-				{
-					LinkDependenciesScript.m_Name = gc_Str<"LinkDependenciesScript">.m_Str;
-					LinkDependenciesScript.m_Script = "#!/bin/bash\nexport PATH=$MalterlibBuildSystemExecutablePath:$PATH\nset -eo pipefail\n";
-					LinkDependenciesScript.m_bPreBuild = true;
-					LinkDependenciesScript.m_bDefaultTargetOnly = true;
-				}
+				// Relinks the default target when the library of another C type changes
+				auto &LinkDependenciesScript = NativeTarget.f_LinkDependenciesScript();
 				LinkDependenciesScript.m_Inputs.f_Insert(LibraryPath);
 				LinkDependenciesScript.m_Script += R"-----(
 if [ -e "{0}" ]; then

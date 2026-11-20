@@ -830,8 +830,38 @@ namespace NMib::NBuildSystem
 				FileData += "MOC_OUTPUT_PATTERN_NOLINK = $(MOC_OUTPUT_PATTERN)\nMOC_OUTPUT_PATTERN_CPP_NOLINK = $(MOC_OUTPUT_PATTERN_CPP)\n";
 			}
 
+			// The pre-link script of a target runs in the command that links or archives the default target, from a script that runs it
+			// before the tool, as the build system of Xcode doesn't order the link after the build phases that come before it
+			auto &TargetSettings = _ProjectState.m_EvaluatedTargetSettings[_Configuration].m_Element;
+			auto fLinkTool = [&](ch8 const *_pKey) -> CStr
+				{
+					if (!_NativeTarget.m_bDefaultTarget)
+						return {};
+					auto *pSetting = TargetSettings.f_FindEqual(CStr(_pKey));
+					if (!pSetting)
+						return {};
+					return pSetting->f_GetCombinedValue();
+				}
+			;
+
 			auto fOutputConfigValue = [&](CStr const &_Key, CStr const &_Value)
 				{
+					if (_Key == "MALTERLIB_LINK_LIBTOOL")
+					{
+						if (_NativeTarget.m_bDefaultTarget)
+							FileData += "LIBTOOL = {}\n"_f << fEscVar(_Value);
+						return;
+					}
+					else if (_Key == "MALTERLIB_LINK_LD" || _Key == "MALTERLIB_LINK_LDPLUSPLUS")
+					{
+						// Replace the tools that MALTERLIB_GENERATOR_CLANG sets, or those of Xcode
+						if (_NativeTarget.m_bDefaultTarget && !TargetSettings.f_FindEqual(gc_Str<"MALTERLIB_GENERATOR_CLANG">.m_Str))
+							FileData += "{} = {}\n"_f << (_Key == "MALTERLIB_LINK_LD" ? "LD" : "LDPLUSPLUS") << fEscVar(_Value);
+						return;
+					}
+					else if (_Key == "LIBTOOL" && !fLinkTool("MALTERLIB_LINK_LIBTOOL").f_IsEmpty())
+						return;
+
 					if (_Key == "MALTERLIB_GENERATOR_CLANG")
 					{
 						CStr Value = fEscVar(_Value);
@@ -839,11 +869,18 @@ namespace NMib::NBuildSystem
 						if (CFile::fs_GetFileNoExt(Value) == "MTool")
 							ValuePlusPlus = Value;
 
+						CStr LinkValue = Value;
+						CStr LinkValuePlusPlus = ValuePlusPlus;
+						if (CStr LinkTool = fLinkTool("MALTERLIB_LINK_LD"); !LinkTool.f_IsEmpty())
+							LinkValue = fEscVar(LinkTool);
+						if (CStr LinkTool = fLinkTool("MALTERLIB_LINK_LDPLUSPLUS"); !LinkTool.f_IsEmpty())
+							LinkValuePlusPlus = fEscVar(LinkTool);
+
 						FileData += "MALTERLIB_GENERATOR_CLANG = {}\n"_f << Value;
 						FileData += "CC = {}\n"_f << Value;
 						FileData += "CPLUSPLUS = {}\n"_f << ValuePlusPlus;
-						FileData += "LD = {}\n"_f << Value;
-						FileData += "LDPLUSPLUS = {}\n"_f << ValuePlusPlus;
+						FileData += "LD = {}\n"_f << LinkValue;
+						FileData += "LDPLUSPLUS = {}\n"_f << LinkValuePlusPlus;
 						FileData += "CLANG = {}\n"_f << Value;
 						FileData += "CLANG_ANALYZER_EXEC = {}\n"_f << Value;
 					}

@@ -73,6 +73,7 @@ namespace NMib::NBuildSystem::NXcode
 		CStr const &f_GetFrameworksBuildPhaseGUID();
 		CStr const &f_GetProductReferenceGUID();
 		CStr const &f_GetBuildConfigurationListGUID();
+		CBuildScript &f_LinkDependenciesScript();
 #if 0
 		CStr const &f_GetHeadersBuildPhaseGUID();
 #endif

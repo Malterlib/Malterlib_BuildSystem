@@ -119,6 +119,21 @@ namespace NMib::NBuildSystem::NXcode
 		return mp_DependencyTargetGUID;
 	}
 
+	// Relinks the default target when the library of another C type changes. It runs in every build, in the default target, as
+	// the pre-build script runs in the first target of another C type, before these libraries are built.
+	CBuildScript &CNativeTarget::f_LinkDependenciesScript()
+	{
+		auto &Script = m_BuildScripts[gc_Str<"LinkDependenciesScript">.m_Str];
+		if (Script.m_Name.f_IsEmpty())
+		{
+			Script.m_Name = gc_Str<"LinkDependenciesScript">.m_Str;
+			Script.m_Script = "#!/bin/bash\nexport PATH=$MalterlibBuildSystemExecutablePath:$PATH\nset -eo pipefail\n";
+			Script.m_bPreBuild = true;
+			Script.m_bDefaultTargetOnly = true;
+		}
+		return Script;
+	}
+
 	CStr const &CNativeTarget::f_GetBuildConfigurationListGUID()
 	{
 		if (!mp_BuildConfigurationListGUID.f_IsEmpty())
