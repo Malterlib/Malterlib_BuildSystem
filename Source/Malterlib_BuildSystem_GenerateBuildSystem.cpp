@@ -396,13 +396,20 @@ namespace NMib::NBuildSystem
 							_pTarget->m_bIsExpanded = true;
 
 							TCMap<CTargetInfo *, zbool> ToProcess;
+							// The order that the dependencies to process are found in, which orders their dependencies the same in every
+							// generation, as the order of the targets in memory changes
+							TCVector<CTargetInfo *> ToProcessOrder;
 							// The copies that the dependency that is processed has added to the target, with what each is a copy of
 							TCMap<CEntity *, CEntity const *> CreatedThisTime;
 							CEntity *pDistinguisher = nullptr;
-							// The dependencies of a dependency that passes them on to the target are processed for the target too
+							// The dependencies of a dependency that passes them on to the target are processed for the target too. One that is
+							// followed again while it waits is processed once, as the last asks for, and again after it was processed.
 							auto fFollowDependencies = [&](CTargetInfo *_pDependentTarget, bool _bIndirect)
 								{
-									ToProcess[_pDependentTarget] = _bIndirect;
+									auto MappedToProcess = ToProcess(_pDependentTarget);
+									if (MappedToProcess.f_WasCreated())
+										ToProcessOrder.f_Insert(_pDependentTarget);
+									MappedToProcess.f_GetResult() = _bIndirect;
 								}
 							;
 							// A declaration that a dependency passes on merges into the dependency that the target already has. As where the
@@ -766,21 +773,18 @@ namespace NMib::NBuildSystem
 
 							fFindDependencies(*_pTarget->m_pOuterEntity, false, false);
 
-							while (!ToProcess.f_IsEmpty())
+							for (umint iToProcess = 0; iToProcess < ToProcessOrder.f_GetLen(); ++iToProcess)
 							{
-								auto ThisTime = fg_Move(ToProcess);
-								DMibMovedFromValid(ToProcess);
+								CTargetInfo *pDependency = ToProcessOrder[iToProcess];
+								bool const bIndirect = *ToProcess.f_FindEqual(pDependency);
+								ToProcess.f_Remove(pDependency);
 
-								for (auto &bIndirect : ThisTime)
-								{
-									auto &Depenency = *ThisTime.fs_GetKey(bIndirect);
-									if (!Depenency.m_bIsExpanded)
-										continue;
+								if (!pDependency->m_bIsExpanded)
+									continue;
 
-									fFindDependencies(*Depenency.m_pOuterEntity, true, bIndirect);
-									pDistinguisher = nullptr;
-									CreatedThisTime.f_Clear();
-								}
+								fFindDependencies(*pDependency->m_pOuterEntity, true, bIndirect);
+								pDistinguisher = nullptr;
+								CreatedThisTime.f_Clear();
 							}
 
 							TCVector<CStr> DependencyFiles;
