@@ -729,7 +729,8 @@ fi
 							}
 						;
 
-						auto ScriptContents = fReplaceVariables(CustomCommandLine.m_Value.f_Get().f_String()).f_EscapeStrNoQuotes("\\'\r\n\t", "\\'rnt");
+						// As it is: the project escapes the script itself (CBuildScript::f_GetScriptSetting)
+						auto ScriptContents = fReplaceVariables(CustomCommandLine.m_Value.f_Get().f_String());
 						CStr WorkingDirectory = fp_GetConfigValue(File.m_EnabledConfigs, Configuration, gc_ConstKey_Compile_Custom_WorkingDirectory, EEJsonType_String, false)
 							.m_Value
 							.f_Get()
