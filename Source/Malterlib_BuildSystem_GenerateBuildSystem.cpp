@@ -337,6 +337,9 @@ namespace NMib::NBuildSystem
 							_pTarget->m_bIsExpanded = true;
 
 							TCMap<CTargetInfo *, zbool> ToProcess;
+							// The order that the dependencies to process are found in, which orders their dependencies the same in every
+							// generation, as the order of the targets in memory changes
+							TCVector<CTargetInfo *> ToProcessOrder;
 							TCSet<CEntity *> CreatedThisTime;
 							CEntity *pDistinguisher = nullptr;
 							TCFunction<void (CEntity &_Entity, bool _bRecursive, bool _bIndirect)> fFindDependencies = [&](CEntity &_Entity, bool _bRecursive, bool _bIndirect)
@@ -586,7 +589,12 @@ namespace NMib::NBuildSystem
 											// The dependencies of a dependency of the stage None, which only gives the target its properties, aren't
 											// dependencies of the target
 											if (bOrdered)
-												ToProcess[pDependentTarget] = Dep.m_bIndirect;
+											{
+												auto MappedToProcess = ToProcess(pDependentTarget);
+												if (MappedToProcess.f_WasCreated())
+													ToProcessOrder.f_Insert(pDependentTarget);
+												MappedToProcess.f_GetResult() = Dep.m_bIndirect;
+											}
 										}
 									}
 								}
@@ -594,18 +602,20 @@ namespace NMib::NBuildSystem
 
 							fFindDependencies(*_pTarget->m_pOuterEntity, false, false);
 
-							while (!ToProcess.f_IsEmpty())
+							while (!ToProcessOrder.f_IsEmpty())
 							{
 								auto ThisTime = fg_Move(ToProcess);
 								DMibMovedFromValid(ToProcess);
+								auto ThisTimeOrder = fg_Move(ToProcessOrder);
+								DMibMovedFromValid(ToProcessOrder);
 
-								for (auto &bIndirect : ThisTime)
+								for (CTargetInfo *pDependency : ThisTimeOrder)
 								{
-									auto &Depenency = *ThisTime.fs_GetKey(bIndirect);
+									auto &Depenency = *pDependency;
 									if (!Depenency.m_bIsExpanded)
 										continue;
 
-									fFindDependencies(*Depenency.m_pOuterEntity, true, bIndirect);
+									fFindDependencies(*Depenency.m_pOuterEntity, true, *ThisTime.f_FindEqual(pDependency));
 									pDistinguisher = nullptr;
 									CreatedThisTime.f_Clear();
 								}
