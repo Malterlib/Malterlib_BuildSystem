@@ -1540,6 +1540,11 @@ namespace NMib::NBuildSystem
 
 						CImportTarget NextTarget;
 
+						// The compile blocks with inputs of commands, and those with commands, as a command that runs nothing in the configuration
+						// only gives the files that what depends on its outputs waits for, which the inference of dependencies below uses
+						TCSet<CBuildSystemRegistry *> CompilesWithInputs;
+						TCSet<CBuildSystemRegistry *> CompilesWithCommands;
+
 						Registry.f_TransformFunc
 							(
 								[&](CBuildSystemRegistry &o_This)
@@ -1646,7 +1651,30 @@ namespace NMib::NBuildSystem
 										{
 											for (auto &Entry : pArray->f_Array().m_Array)
 												NextTarget.m_Inputs[CStr::fs_ToStr(Entry)];
+											if (auto *pCompile = o_This.f_GetParent())
+												CompilesWithInputs[pCompile];
 										}
+									}
+									while (false)
+										;
+
+									do
+									{
+										auto &Name = o_This.f_GetName();
+
+										if (!Name.f_IsValue())
+											break;
+
+										auto &KeyValue = Name.m_Value.f_GetAsType<CBuildSystemSyntax::CValue>();
+
+										if (!KeyValue.f_IsIdentifier() || !KeyValue.f_Identifier().f_IsNameConstantString())
+											break;
+
+										if (KeyValue.f_Identifier().f_NameConstantString() != gc_ConstKey_Compile_Custom_CommandLine.m_Name)
+											break;
+
+										if (auto *pCompile = o_This.f_GetParent())
+											CompilesWithCommands[pCompile];
 									}
 									while (false)
 										;
@@ -2043,6 +2071,24 @@ namespace NMib::NBuildSystem
 										}
 									)
 								;
+							}
+						}
+
+						// The inputs of commands that run nothing are left out of the cache, once the dependencies of the targets are
+						// inferred from them: nothing builds them. So are their files and groups that nothing else is left in.
+						for (auto *pCompile : CompilesWithInputs)
+						{
+							if (CompilesWithCommands.f_FindEqual(pCompile))
+								continue;
+							auto *pEmpty = pCompile;
+							auto *pParent = pEmpty->f_GetParent();
+							while (pParent)
+							{
+								pParent->f_DeleteChild(pEmpty);
+								if (pParent->f_HasChildren() || !pParent->f_GetParent())
+									break;
+								pEmpty = pParent;
+								pParent = pEmpty->f_GetParent();
 							}
 						}
 
