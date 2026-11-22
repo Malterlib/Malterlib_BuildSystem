@@ -70,12 +70,18 @@ namespace NMib::NBuildSystem::NXcode
 		return "{} {}{}"_f << _Dependency.f_GetName() << f_Configuration().f_GetFullName() << _pIdentifier;
 	}
 
+	// What the objects of the dependency in a configuration are named from (CProjectDependency::f_GetIdentity)
+	CStr CProjectDependency::CPerConfig::fp_GetIdentity(CProjectDependency const &_Dependency, ch8 const *_pIdentifier) const
+	{
+		return "{} {}{}"_f << _Dependency.f_GetIdentity() << f_Configuration().f_GetFullName() << _pIdentifier;
+	}
+
 	CStr const &CProjectDependency::f_GetFileRefGUID()
 	{
 		if (!mp_DependencyFileRefGUID.f_IsEmpty())
 			return mp_DependencyFileRefGUID;
 
-		mp_DependencyFileRefGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, f_GetName() + "dependencyName")
+		mp_DependencyFileRefGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, f_GetIdentity() + "dependencyName")
 			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
 		;
 		return mp_DependencyFileRefGUID;
@@ -86,7 +92,7 @@ namespace NMib::NBuildSystem::NXcode
 		if (!mp_DependencyProductRefGroupGUID.f_IsEmpty())
 			return mp_DependencyProductRefGroupGUID;
 
-		mp_DependencyProductRefGroupGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, f_GetName() + "productReference")
+		mp_DependencyProductRefGroupGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, f_GetIdentity() + "productReference")
 			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
 		;
 		return mp_DependencyProductRefGroupGUID;
@@ -101,7 +107,7 @@ namespace NMib::NBuildSystem::NXcode
 			(
 				EUniversallyUniqueIdentifierGenerate_StringHash
 				, gc_GeneratorUUIDNamespace
-				, f_GetName(_Dependency, "PBXContainerItemProxy")
+				, fp_GetIdentity(_Dependency, "PBXContainerItemProxy")
 			)
 			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
 		;
@@ -113,7 +119,7 @@ namespace NMib::NBuildSystem::NXcode
 		if (!mp_DependencyTargetGUID.f_IsEmpty())
 			return mp_DependencyTargetGUID;
 
-		mp_DependencyTargetGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, f_GetName(_Dependency, "PBXTargetDependency"))
+		mp_DependencyTargetGUID = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, fp_GetIdentity(_Dependency, "PBXTargetDependency"))
 			.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
 		;
 		return mp_DependencyTargetGUID;
@@ -307,7 +313,27 @@ namespace NMib::NBuildSystem::NXcode
 
 	CStr const &CProjectDependency::f_GetName() const
 	{
-		return TCMap<CStr, CProjectDependency>::fs_GetKey(*this);
+		return TCMap<CProjectDependencyKey, CProjectDependency>::fs_GetKey(*this).m_Name;
+	}
+
+	bool CProjectDependency::f_IsInternal() const
+	{
+		return TCMap<CProjectDependencyKey, CProjectDependency>::fs_GetKey(*this).m_bInternal;
+	}
+
+	// What the objects of the dependency are named from, which is the name of the target, also with the first 8 hex digits of a hash
+	// of the name for a target that the generator adds, which tells it from a target of the build system with the same name
+	CStr CProjectDependency::f_GetIdentity() const
+	{
+		if (f_IsInternal())
+		{
+			CStr Hash = CUniversallyUniqueIdentifier(EUniversallyUniqueIdentifierGenerate_StringHash, gc_GeneratorUUIDNamespace, f_GetName())
+				.f_GetAsString(EUniversallyUniqueIdentifierFormat_AlphaNum)
+			;
+			return "{} {}"_f << f_GetName() << Hash.f_Left(8);
+		}
+
+		return f_GetName();
 	}
 
 	CStr const &CProject::f_GetName() const
@@ -433,12 +459,12 @@ namespace NMib::NBuildSystem::NXcode
 
 		for (auto iDepend = m_DependenciesMap.f_GetIterator(); iDepend; ++iDepend)
 		{
-			if (iDepend->m_bExternal)
+			if (iDepend->m_bExternal || iDepend->f_IsInternal())
 				continue;
 
-			auto pProject = _Projects.f_FindEqual(iDepend.f_GetKey());
+			auto pProject = _Projects.f_FindEqual(iDepend->f_GetName());
 			if (!pProject)
-				_BuildSystem.fs_ThrowError(iDepend->m_Position, CStr::CFormat("Dependency {} not found in workspace") << iDepend.f_GetKey());
+				_BuildSystem.fs_ThrowError(iDepend->m_Position, CStr::CFormat("Dependency {} not found in workspace") << iDepend->f_GetName());
 			pProject->f_FindRecursiveDependencies(_BuildSystem, _Stack, iDepend, _Projects);
 		}
 

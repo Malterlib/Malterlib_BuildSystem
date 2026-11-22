@@ -202,6 +202,16 @@ namespace NMib::NBuildSystem::NXcode
 		CStr mp_CompileFlagsGUID;
 	};
 
+	// A dependency of a project on a target of the build system, or on a target that the generator adds to the project, as for
+	// another C type, which can have the name of a target of the build system
+	struct CProjectDependencyKey
+	{
+		auto operator <=> (CProjectDependencyKey const &_Other) const = default;
+
+		CStr m_Name;
+		bool m_bInternal = false; // Added to the project by the generator
+	};
+
 	struct CProjectDependency
 	{
 		struct CPerConfig
@@ -222,11 +232,15 @@ namespace NMib::NBuildSystem::NXcode
 			bool m_bObjectLibrary = false;
 
 		private:
+			CStr fp_GetIdentity(CProjectDependency const &_Dependency, ch8 const *_pIdentifier) const;
+
 			CStr mp_DependencyContainerItemGUID;
 			CStr mp_DependencyTargetGUID;
 		};
 
 		CStr const &f_GetName() const;
+		bool f_IsInternal() const;
+		CStr f_GetIdentity() const;
 		CStr const &f_GetProductRefGroupGUID();
 		CStr const &f_GetFileRefGUID();
 
@@ -236,7 +250,6 @@ namespace NMib::NBuildSystem::NXcode
 
 		CStr m_Type;
 		TCMap<CConfiguration, CPerConfig> m_PerConfig;
-		bool m_bInternal = false;
 		bool m_bExternal = false;
 
 	private:
@@ -289,7 +302,7 @@ namespace NMib::NBuildSystem::NXcode
 
 		TCMap<CFileKey, CProjectFile> m_Files;
 		TCMap<CStr, CGroup> m_Groups;
-		TCMap<CStr, CProjectDependency> m_DependenciesMap;
+		TCMap<CProjectDependencyKey, CProjectDependency> m_DependenciesMap;
 		DLinkDS_List(CProjectDependency, m_Link) m_DependenciesOrdered;
 
 		TCMap<CConfiguration, TCLinkedList<CNativeTarget>> m_NativeTargets;

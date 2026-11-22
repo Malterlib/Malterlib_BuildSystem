@@ -328,7 +328,7 @@ namespace NMib::NBuildSystem
 										continue;
 
 									auto const &DependencyName = iDependency->f_GetName();
-									auto DepMap = Target.m_DependenciesMap(DependencyName);
+									auto DepMap = Target.m_DependenciesMap(CProjectDependencyKey{.m_Name = DependencyName});
 									auto &Dep = DepMap.f_GetResult();
 									Target.m_DependenciesOrdered.f_Insert(Dep);
 

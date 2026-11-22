@@ -1033,7 +1033,7 @@ namespace NMib::NBuildSystem
 						}
 						CLinkConfig LinkConfig;
 						LinkConfig.m_pPerConfig = &PerConfig;
-						LinkConfig.m_bInternal = Dependency.m_bInternal;
+						LinkConfig.m_bInternal = Dependency.f_IsInternal();
 						Group.m_Configs.f_Insert(LinkConfig);
 						LinkSearchPaths += (CStr::CFormat("\"{}\" ") << PerConfig.m_SearchPath);
 					}

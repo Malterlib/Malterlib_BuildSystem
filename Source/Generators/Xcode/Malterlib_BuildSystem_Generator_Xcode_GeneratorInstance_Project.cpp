@@ -180,13 +180,10 @@ namespace NMib::NBuildSystem::NXcode
 			// The default target and its other C types build after the pre-build target, which they don't link
 			if (auto *pPreBuildTarget = NativeTarget.m_pPreBuildTarget)
 			{
-				auto DepMap = _Project.m_DependenciesMap(pPreBuildTarget->m_ProductName);
+				auto DepMap = _Project.m_DependenciesMap(CProjectDependencyKey{.m_Name = pPreBuildTarget->m_ProductName, .m_bInternal = true});
 				auto &NewDependency = DepMap.f_GetResult();
 				if (DepMap.f_WasCreated())
-				{
 					_Project.m_DependenciesOrdered.f_Insert(NewDependency);
-					NewDependency.m_bInternal = true;
-				}
 
 				NewDependency.m_Position = _Project.m_Position;
 				NewDependency.m_EnabledConfigs[Configuration] = nullptr;
@@ -197,13 +194,10 @@ namespace NMib::NBuildSystem::NXcode
 			{
 				auto &DependentTarget = *pDependentTarget;
 
-				auto DepMap = _Project.m_DependenciesMap(DependentTarget.m_ProductName);
+				auto DepMap = _Project.m_DependenciesMap(CProjectDependencyKey{.m_Name = DependentTarget.m_ProductName, .m_bInternal = true});
 				auto &NewDependency = DepMap.f_GetResult();
 				if (DepMap.f_WasCreated())
-				{
 					_Project.m_DependenciesOrdered.f_Insert(NewDependency);
-					NewDependency.m_bInternal = true;
-				}
 
 				NewDependency.m_Position = _Project.m_Position;
 				NewDependency.m_EnabledConfigs[Configuration] = nullptr;
@@ -1217,7 +1211,7 @@ fi
 		{
 			for (auto &Dependency : _Project.m_DependenciesOrdered)
 			{
-				if (Dependency.m_bInternal || Dependency.m_bExternal)
+				if (Dependency.f_IsInternal() || Dependency.m_bExternal)
 					continue;
 
 				auto pDependency = &Dependency;
@@ -1379,7 +1373,7 @@ fi
 
 			for (auto &Dependency : _Project.m_DependenciesOrdered)
 			{
-				if (Dependency.m_bInternal || Dependency.m_bExternal)
+				if (Dependency.f_IsInternal() || Dependency.m_bExternal)
 					continue;
 
 				CGroupChild &Child = ProjectDependencies.f_Insert();
@@ -1496,7 +1490,7 @@ fi
 		TCSortedPerform<CStr const &> ToPerform;
 		for (auto &Dependency : _Project.m_DependenciesOrdered)
 		{
-			if (Dependency.m_bInternal || Dependency.m_bExternal)
+			if (Dependency.f_IsInternal() || Dependency.m_bExternal)
 				continue;
 
 			auto *pDependency = &Dependency;
@@ -1785,7 +1779,7 @@ fi
 							auto &PerConfig = *pPerConfig;
 
 							CStr ContainerGUID;
-							if (Dependency.m_bInternal)
+							if (Dependency.f_IsInternal())
 								ContainerGUID = _Project.f_GetGUID();
 							else
 								ContainerGUID = Dependency.f_GetFileRefGUID();
@@ -1923,7 +1917,7 @@ fi
 					if (Dependency.m_bExternal)
 						continue;
 
-					if (!NativeTarget.m_bDefaultTarget && Dependency.m_bInternal)
+					if (!NativeTarget.m_bDefaultTarget && Dependency.f_IsInternal())
 						continue;
 
 					auto pPerConfig = Dependency.m_PerConfig.f_FindEqual(Configuration);
@@ -2049,7 +2043,7 @@ fi
 						continue;
 
 					// The other C types build after the pre-build target, as the default target does, and link nothing of the project
-					if (!NativeTarget.m_bDefaultTarget && Dependency.m_bInternal && (!pPreBuildTarget || Dependency.f_GetName() != pPreBuildTarget->m_ProductName))
+					if (!NativeTarget.m_bDefaultTarget && Dependency.f_IsInternal() && (!pPreBuildTarget || Dependency.f_GetName() != pPreBuildTarget->m_ProductName))
 						continue;
 
 					auto pPerConfig = Dependency.m_PerConfig.f_FindEqual(Configuration);
