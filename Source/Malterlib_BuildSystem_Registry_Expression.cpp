@@ -1351,6 +1351,7 @@ namespace NMib::NContainer
 			, umint _Depth
 		)
 	{
+		umint const iQuote = o_String.f_GetStrLen();
 		o_String += "`";
 		for (auto &Token : _Token.f_Array())
 		{
@@ -1364,7 +1365,7 @@ namespace NMib::NContainer
 				auto pValue = Token.f_GetMember(gc_ConstString_Value, EJsonType_String);
 				if (!pValue)
 					DMibError("String token does not have valid Value member");
-				fg_GenerateJsonString<'`', CJsonParseContext, false>(o_String, pValue->f_String().f_Replace("@", "@@"));
+				fg_GenerateJsonString<'`', CJsonParseContext, false>(o_String, pValue->f_String().f_Replace("@", "@@"), iQuote);
 			}
 			else
 			{

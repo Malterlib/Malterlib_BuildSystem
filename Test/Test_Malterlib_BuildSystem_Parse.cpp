@@ -53,6 +53,9 @@ namespace
 	                 "Line 2\n"\
 	                 "Line 3\n"\
 	                 ""
+	TestMultilineEvalStr `@(TestStr) Line 1\n`\
+	                     `@(TestStr) Line 2\n`\
+	                     `@(TestStr) Line 3`
 	TestInt 65 // Comment
 	Type
 	{
