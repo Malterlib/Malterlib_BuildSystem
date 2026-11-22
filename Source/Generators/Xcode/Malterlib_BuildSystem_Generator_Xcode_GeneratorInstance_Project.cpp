@@ -985,7 +985,7 @@ fi
 										.f_Replace("$(InputFilePath)", "${INPUT_FILE_PATH}")
 									;
 
-									fg_AddStrSep(OutputFiles, "\t\t\t\t\t\t\"{}\""_f << OutputReplaced, ",\n");
+									fg_AddStrSep(OutputFiles, "\t\t\t\t\t\t{}"_f << OutputReplaced.f_EscapeStr(), ",\n");
 									OutputDirs[CFile::fs_GetPath(OutputReplaced)];
 								}
 
@@ -996,7 +996,7 @@ fi
 										.f_Replace("$(InputFilePath)", "${INPUT_FILE_PATH}")
 									;
 
-									fg_AddStrSep(InputFiles, "\t\t\t\t\t\t\"{}\""_f << InputReplaced, ",\n");
+									fg_AddStrSep(InputFiles, "\t\t\t\t\t\t{}"_f << InputReplaced.f_EscapeStr(), ",\n");
 								}
 
 								for (auto &OutputDir : OutputDirs)
@@ -1170,10 +1170,10 @@ fi
 							, [&]
 							{
 								_Output
-									+= CStr::CFormat("\t\t{} /* {} */ = {{isa = PBXFileReference; includeInIndex = 0; path = \"{}\"; sourceTree = {}; };\n")
+									+= CStr::CFormat("\t\t{} /* {} */ = {{isa = PBXFileReference; includeInIndex = 0; path = {}; sourceTree = {}; };\n")
 									<< NativeTarget.f_GetProductReferenceGUID()
 									<< NativeTarget.m_ProductName
-									<< NativeTarget.m_ProductPath
+									<< NativeTarget.m_ProductPath.f_EscapeStr()
 									<< NativeTarget.m_ProductSourceTree
 								;
 							}
@@ -1195,11 +1195,11 @@ fi
 						, [&, pConfig]
 						{
 							_Output
-								+= CStr::CFormat("\t\t{} /* {} */ = {{isa = PBXFileReference; explicitFileType = text.xcconfig; name = \"{}\"; path = \"{}\"; sourceTree = \"<group>\"; };\n")
+								+= CStr::CFormat("\t\t{} /* {} */ = {{isa = PBXFileReference; explicitFileType = text.xcconfig; name = {}; path = {}; sourceTree = \"<group>\"; };\n")
 								<< pConfig->f_GetFileRefGUID()
 								<< pConfig->f_GetFileNoExt()
-								<< pConfig->m_ConfigFileName
-								<< CFile::fs_MakePathRelative(pConfig->m_Path, _OutputDir)
+								<< pConfig->m_ConfigFileName.f_EscapeStr()
+								<< CStr(CFile::fs_MakePathRelative(pConfig->m_Path, _OutputDir)).f_EscapeStr()
 							;
 						}
 					)
@@ -1647,13 +1647,13 @@ fi
 					for (CStr const &Input : _Script.m_Inputs)
 					{
 						if (!Outputs.f_FindEqual(Input))
-							_Output += CStr::CFormat("\t\t\t\t\"{}\",\n") << Input;
+							_Output += CStr::CFormat("\t\t\t\t{},\n") << Input.f_EscapeStr();
 					}
 
 					_Output += CStr::CFormat("\t\t\t);\n\t\t\tname = {};\n\t\t\toutputPaths = (\n") << fg_EscapeXcodeProjectVar(_Script.m_Name);
 
 					for (CStr const &Output : _Script.m_Outputs)
-						_Output += CStr::CFormat("\t\t\t\t\"{}\",\n") << Output;
+						_Output += CStr::CFormat("\t\t\t\t{},\n") << Output.f_EscapeStr();
 
 					_Output += "\t\t\t);\n\t\t\trunOnlyForDeploymentPostprocessing = 0;\n\t\t\tshellPath = /bin/bash;\n";
 					_Output += CStr::CFormat("\t\t\tshellScript = \"{}\";\n") << _Script.f_GetScriptSetting();
@@ -1688,7 +1688,7 @@ fi
 					_Output += CStr::CFormat("\t\t\t\t{} /* {} */,\n") << iConfig->f_GetGUID() << iConfig->m_ConfigName;
 				_Output += "\t\t\t);\n";
 				_Output += "\t\t\tdefaultConfigurationIsVisible = 0;\n";
-				_Output += CStr::CFormat("\t\t\tdefaultConfigurationName = \"{}\";\n") << _ConfigList.f_GetFirst().m_ConfigName;
+				_Output += CStr::CFormat("\t\t\tdefaultConfigurationName = {};\n") << CStr(_ConfigList.f_GetFirst().m_ConfigName).f_EscapeStr();
 				_Output += "\t\t};\n";
 			}
 		;
@@ -1739,7 +1739,7 @@ fi
 							if (_bUseReference)
 								_Output += CStr::CFormat("\t\t\tbaseConfigurationReference = {} /* {} */;\n") << Config.f_GetFileRefGUID() << CFile::fs_GetFileNoExt(Config.f_GetFile());
 							_Output += "\t\t\tbuildSettings = {\n\t\t\t};\n";
-							_Output += CStr::CFormat("\t\t\tname = \"{}\";\n") << Config.m_ConfigName;
+							_Output += CStr::CFormat("\t\t\tname = {};\n") << Config.m_ConfigName.f_EscapeStr();
 							_Output += "\t\t};\n";
 						}
 					)
@@ -1790,7 +1790,9 @@ fi
 
 							CNativeTarget TargetDummy;
 							TargetDummy.m_Name = PerConfig.f_GetName(Dependency, "");
-							_Output += "\t\t\tproxyType = 1;\n\t\t\tremoteGlobalIDString = {};\n\t\t\tremoteInfo = \"{}\";\n\t\t};\n"_f << TargetDummy.f_GetGUID() << TargetDummy.m_Name;
+							_Output
+								+= "\t\t\tproxyType = 1;\n\t\t\tremoteGlobalIDString = {};\n\t\t\tremoteInfo = {};\n\t\t};\n"_f << TargetDummy.f_GetGUID() << TargetDummy.m_Name.f_EscapeStr()
+							;
 						}
 					)
 				;
@@ -1823,8 +1825,8 @@ fi
 							_Output += "\t\t{} /* PBXTargetDependency */ = "_f << PerConfig.f_GetTargetGUID(Dependency);
 							_Output += "{\n\t\t\tisa = PBXTargetDependency;\n";
 							_Output
-								+= "\t\t\tname = \"{}\";\n\t\t\ttargetProxy = {} /* PBXContainerItemProxy */;\n"_f
-								<< PerConfig.f_GetName(Dependency, "")
+								+= "\t\t\tname = {};\n\t\t\ttargetProxy = {} /* PBXContainerItemProxy */;\n"_f
+								<< CStr(PerConfig.f_GetName(Dependency, "")).f_EscapeStr()
 								<< PerConfig.f_GetContainerItemGUID(Dependency)
 							;
 							_Output += "\t\t};\n";
@@ -1926,7 +1928,9 @@ fi
 
 					_Output += CStr::CFormat("\t\t\t\t{} /* PBXTargetDependency */,\n") << pPerConfig->f_GetTargetGUID(Dependency);
 				}
-				_Output += CStr::CFormat("\t\t\t);\n\t\t\tname = \"{}\";\n\t\t\tproductName = {};\n") << NativeTarget.m_Name << NativeTarget.m_ProductName;
+				_Output
+					+= CStr::CFormat("\t\t\t);\n\t\t\tname = {};\n\t\t\tproductName = {};\n") << NativeTarget.m_Name.f_EscapeStr() << fg_EscapeXcodeProjectVar(NativeTarget.m_ProductName)
+				;
 				_Output += "\t\t};\n";
 			}
 		}
