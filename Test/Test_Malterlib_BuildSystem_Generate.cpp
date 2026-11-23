@@ -330,6 +330,18 @@ namespace
 			DMibExpectException(fp_TestGenerate("FunctionCallWithCondition"), DMibExceptionInstanceParse(CParseError::fs_ToString(ExpectedParseErrors), {}));
 		};
 
+		DMibTestSuite("QuotedConfiguration")
+		{
+			CStr BuildSystemFile = CFile::fs_GetProgramDirectory() / "BuildSystemTests/QuotedConfiguration/Test.MBuildSystem";
+			TCVector<CParseError> ExpectedParseErrors =
+				{
+					{"error: The name of a Configuration can't contain a double quote", {BuildSystemFile, 0, 5, 15}, 0}
+				}
+			;
+
+			DMibExpectException(fp_TestGenerate("QuotedConfiguration"), DMibExceptionInstanceParse(CParseError::fs_ToString(ExpectedParseErrors), {}));
+		};
+
 		DMibTestSuite("TypeWithCondition")
 		{
 			CStr TempDirectory = CFile::fs_GetProgramDirectory() / "BuildSystemTests/TypeWithCondition";

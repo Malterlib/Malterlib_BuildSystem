@@ -271,6 +271,9 @@ namespace NMib::NBuildSystem
 		{
 			CBuildSystemRegistry &Registry = *iReg;
 			auto Name = fs_GetNameIdentifierString(Registry);
+			// The generators write the names into files and file names without quoting them, as the #include of an .xcconfig
+			if (Name.f_Find("\"") >= 0)
+				fsp_ThrowError(Registry, "The name of a {} can't contain a double quote"_f << _Name);
 			auto const &Value = Registry.f_GetThisValue();
 			if (!Value.m_Value.f_IsConstantString())
 				fsp_ThrowError(Registry, "Configuration needs to specify description as a constant string");

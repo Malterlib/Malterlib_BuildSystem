@@ -1,0 +1,16 @@
+
+*Configuration
+{
+	Debug "Debug Config"
+	Debug\"Local "Local Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
