@@ -306,11 +306,20 @@ namespace NMib::NBuildSystem
 		{
 		}
 
-		bool CStateHandler::fp_IsPerforceRoot()
+		bool CStateHandler::fp_IsPerforceRoot(CBuildSystem const &_BuildSystem)
 		{
 			DLock(mp_IsPerforceRootLock);
 			if (!mp_IsPerforceRoot)
-				mp_IsPerforceRoot = CPerforceClient::fs_HasP4Config(mp_BasePath);
+			{
+				mp_IsPerforceRoot = CPerforceClient::fs_HasP4Config
+					(
+						mp_BasePath
+						, _BuildSystem.f_GetGenerationEnvironment()
+						, _BuildSystem.f_GetPerforceRegistry()
+						, _BuildSystem.f_GetBaseDir()
+					)
+				;
+			}
 			return *mp_IsPerforceRoot;
 		}
 
@@ -475,13 +484,13 @@ namespace NMib::NBuildSystem
 				// Fall back to .gitignore/.p4ignore if no .git directory found
 				if (IgnoreFile.f_IsEmpty())
 				{
-					IgnoreFile = CFile::fs_GetPath(_FileName) / (fp_IsPerforceRoot() ? ".p4ignore" : ".gitignore");
+					IgnoreFile = CFile::fs_GetPath(_FileName) / (fp_IsPerforceRoot(_BuildSystem) ? ".p4ignore" : ".gitignore");
 					GitRoot.f_Clear();
 				}
 			}
 			else
 			{
-				bool bUseP4Ignore = fp_IsPerforceRoot();
+				bool bUseP4Ignore = fp_IsPerforceRoot(_BuildSystem);
 				if (bUseP4Ignore)
 				{
 					// Check if the file is inside a child git repository
@@ -4631,15 +4640,18 @@ namespace NMib::NBuildSystem
 			co_return bChanged;
 		}
 
-		// A base directory without git where p4 opens a P4CONFIG file, from the environment generation uses.
-		bool fg_IsPerforceRoot(CBuildSystem const &_BuildSystem)
+		// The base directory's .p4config and enviro file, and the registry, which the build system reads once under its lock, are read
+		// on a blocking actor. The build system outlives the command that asks.
+		TCFuture<bool> fg_IsPerforceRoot(CBuildSystem const &_BuildSystem)
 		{
-			CStr BaseDir = _BuildSystem.f_GetBaseDir();
-			if (CFile::fs_FileExists(BaseDir / ".git", EFileAttrib_Directory | EFileAttrib_File))
-				return false;
+			return g_Dispatch(fg_BlockingActor()) / [pBuildSystem = &_BuildSystem, BaseDir = _BuildSystem.f_GetBaseDir(), Environment = _BuildSystem.f_GetPerforceEnvironment()]() -> bool
+				{
+					if (CFile::fs_FileExists(BaseDir / ".git", EFileAttrib_Directory | EFileAttrib_File))
+						return false;
 
-			auto Settings = NPerforce::CPerforceIgnore::fs_GetSettings(BaseDir, _BuildSystem.f_GetPerforceEnvironment());
-			return !Settings.f_GetSettingsFiles(BaseDir).m_ConfigFile.f_IsEmpty();
+					return CPerforceClient::fs_HasP4Config(BaseDir, Environment, pBuildSystem->f_GetPerforceRegistry(), BaseDir);
+				}
+			;
 		}
 
 		void fg_ParseTidySettings(CEJsonSorted const &_Tidy, CRepository &o_Repository)
@@ -4665,11 +4677,13 @@ namespace NMib::NBuildSystem
 
 		// The made-up entry of the Perforce root, or empty. A %Repository would be cloned and updated as git, so its settings are
 		// the PerforceRoot property.
-		NStorage::TCOptional<CRepository> fg_GetPerforceRootRepository(CBuildSystem &_BuildSystem, CBuildSystemData &_Data, EGetRepoFlag _Flags)
+		TCUnsafeFuture<NStorage::TCOptional<CRepository>> fg_GetPerforceRootRepository(CBuildSystem &_BuildSystem, CBuildSystemData &_Data, EGetRepoFlag _Flags)
 		{
+			co_await ECoroutineFlag_CaptureMalterlibExceptions;
+
 			CStr BaseDir = _BuildSystem.f_GetBaseDir();
-			if (!fg_IsPerforceRoot(_BuildSystem))
-				return {};
+			if (!co_await fg_IsPerforceRoot(_BuildSystem))
+				co_return {};
 
 			CRepository Repository(CFile::fs_GetFile(BaseDir));
 			Repository.m_Identity = gc_ConstKey_PerforceRoot.m_Name;
@@ -4679,7 +4693,7 @@ namespace NMib::NBuildSystem
 
 			auto const PerforceRootJson = _BuildSystem.f_EvaluateEntityPropertyObject(_Data.m_RootEntity, gc_ConstKey_PerforceRoot, CEJsonSorted()).f_Move();
 			if (!PerforceRootJson.f_IsValid() || !PerforceRootJson.f_IsObject())
-				return Repository;
+				co_return Repository;
 
 			// The members are optional, while the members of one that is set get their defaults.
 			if (auto *pFormat = PerforceRootJson.f_GetMember(gc_ConstKey_Repository_Format.m_Name, EJsonType_Boolean))
@@ -4715,7 +4729,7 @@ namespace NMib::NBuildSystem
 				}
 			}
 
-			return Repository;
+			co_return Repository;
 		}
 
 		void CRepoEditor::f_SetCommandLine(CStr const &_CommandLine)
@@ -5156,6 +5170,31 @@ namespace NMib::NBuildSystem
 		return Environment;
 	}
 
+	// The environment generation uses, the cached or overridden one too, as the Perforce API reads it in place of the process's, so
+	// a connection to a Perforce root uses the settings that found the root.
+	TCMap<CStr, CStr> CBuildSystem::f_GetGenerationEnvironment() const
+	{
+		return TCMap<CStr, CStr>(mp_Environment);
+	}
+
+	// The registry's Perforce settings, read once per run with the environment generation uses, so the dependency check and the
+	// generation see the same values.
+	NPerforce::CPerforceIgnore::CRegistrySettings CBuildSystem::f_GetPerforceRegistry() const
+	{
+		DMibLock(mp_PerforceRegistryLock);
+		if (!mp_PerforceRegistry)
+			mp_PerforceRegistry = NPerforce::CPerforceIgnore::fs_ReadRegistry(f_GetPerforceEnvironment());
+
+		return *mp_PerforceRegistry;
+	}
+
+	// A setting whose values in the registry generation used, so that a change of them generates again, as a used external does.
+	void CBuildSystem::fp_UsedPerforceRegistrySetting(CStr const &_Name) const
+	{
+		DMibLock(mp_PerforceRegistryLock);
+		mp_UsedPerforceRegistrySettings[_Name];
+	}
+
 	void CBuildSystem::f_PopulateAllRepositories(CBuildSystemData &_BuildSystemData) const
 	{
 		CEJsonSorted Repositories = EJsonType_Array;
@@ -5179,18 +5218,22 @@ namespace NMib::NBuildSystem
 		CEJsonSorted PerforceRootTidyRules = EJsonType_Array;
 		CStr BaseDir = f_GetBaseDir();
 
-		// A checkout without git is a Perforce root when p4 opens a P4CONFIG file in it. Its settings are read with the environment
-		// generation uses, whose variables are used externals, and the files they come from are source files, also while missing,
-		// as the Perforce library resolves them (f_GetSettingsFiles), so a change of any generates again.
+		// A checkout without git becomes a Perforce root when its .p4config appears or its settings change, so their inputs are tracked
+		// also before then, their files also while missing.
 		if (!CFile::fs_FileExists(BaseDir / ".git", EFileAttrib_Directory | EFileAttrib_File))
 		{
 			for (auto &Name : NPerforce::CPerforceIgnore::fs_GetEnvironmentVariables())
 				fp_UsedExternal(CPropertyKey(mp_StringCache, EPropertyType_Property, Name).f_Reference());
+			for (auto &Name : NPerforce::CPerforceIgnore::fs_GetRegistryVariables())
+				fp_UsedPerforceRegistrySetting(Name);
 
-			auto Settings = NPerforce::CPerforceIgnore::fs_GetSettings(BaseDir, f_GetPerforceEnvironment());
+			auto Settings = NPerforce::CPerforceIgnore::fs_GetSettings(BaseDir, f_GetPerforceEnvironment(), f_GetPerforceRegistry(), BaseDir);
 			// Without P4CHARSET the charset p4 learned for the root's port, whose variable the port names.
 			if (Settings.m_LearnedCharsetVariable)
+			{
 				fp_UsedExternal(CPropertyKey(mp_StringCache, EPropertyType_Property, Settings.m_LearnedCharsetVariable).f_Reference());
+				fp_UsedPerforceRegistrySetting(Settings.m_LearnedCharsetVariable);
+			}
 			auto SettingsFiles = Settings.f_GetSettingsFiles(BaseDir);
 			for (auto &File : SettingsFiles.m_Dependencies)
 				f_AddSourceFile(File, nullptr);

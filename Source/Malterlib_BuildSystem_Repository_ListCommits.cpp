@@ -40,15 +40,15 @@ namespace NMib::NBuildSystem
 		// Checks if workspace files differ from the latest submitted version:
 		//   - If changes: from=latest CL, to="" (workspace)
 		//   - If no changes: from=second-latest CL, to=latest CL
-		TCFuture<TCTuple<CStr, CStr>> fg_PerforceAutoDetectChangelists(TCVector<CStr> _ConfigFilePaths, CStr _BaseDir)
+		TCFuture<TCTuple<CStr, CStr>> fg_PerforceAutoDetectChangelists(TCVector<CStr> _ConfigFilePaths, CPerforceClient::CConnectionInfo _Connection)
 		{
 			auto BlockingActorCheckout = fg_BlockingActor();
 			co_return co_await
 				(
-					g_Dispatch(BlockingActorCheckout) / [_ConfigFilePaths, _BaseDir]() -> TCTuple<CStr, CStr>
+					g_Dispatch(BlockingActorCheckout) / [_ConfigFilePaths, _Connection]() -> TCTuple<CStr, CStr>
 					{
-						CPerforceClientThrow Client;
-						auto DepotPaths = fg_PerforceConnectAndResolveDepotPaths(_ConfigFilePaths, _BaseDir, Client);
+						CPerforceClientThrow Client(_Connection);
+						auto DepotPaths = fg_PerforceConnectAndResolveDepotPaths(_ConfigFilePaths, Client);
 
 						// DepotPaths is aligned 1:1 with _ConfigFilePaths and may contain
 						// empty entries for brand-new files; filter them out before asking
@@ -163,15 +163,15 @@ namespace NMib::NBuildSystem
 
 		// Convert Perforce changelists to CLogEntryFull entries.
 		// Get changelists between from and to. Empty _ToCL means up to #head + pending + unreconciled.
-		TCFuture<TCVector<CLogEntryFull>> fg_PerforceGetLogEntries(TCVector<CStr> _ConfigFilePaths, CStr _FromCL, CStr _ToCL, CStr _BaseDir)
+		TCFuture<TCVector<CLogEntryFull>> fg_PerforceGetLogEntries(TCVector<CStr> _ConfigFilePaths, CStr _FromCL, CStr _ToCL, CPerforceClient::CConnectionInfo _Connection)
 		{
 			auto BlockingActorCheckout = fg_BlockingActor();
 			co_return co_await
 				(
-					g_Dispatch(BlockingActorCheckout) / [_ConfigFilePaths, _FromCL, _ToCL, _BaseDir]() -> TCVector<CLogEntryFull>
+					g_Dispatch(BlockingActorCheckout) / [_ConfigFilePaths, _FromCL, _ToCL, _Connection]() -> TCVector<CLogEntryFull>
 					{
-						CPerforceClientThrow Client;
-						fg_PerforceConnectAndResolveDepotPaths(_ConfigFilePaths, _BaseDir, Client);
+						CPerforceClientThrow Client(_Connection);
+						fg_PerforceConnectAndResolveDepotPaths(_ConfigFilePaths, Client);
 
 						uint32 FromChangelist = _FromCL.f_ToInt(uint32(0));
 						bool bToIsWorkspace = _ToCL.f_IsEmpty();
@@ -271,7 +271,7 @@ namespace NMib::NBuildSystem
 		};
 
 		// Resolve Perforce from/to references, replacing git defaults and auto-detecting changelists.
-		TCFuture<CPerforceResolvedRefs> fg_PerforceResolveRefs(CStr _From, CStr _To, TCSet<CStr> _PerforceRootConfigFiles, CStr _BaseDir)
+		TCFuture<CPerforceResolvedRefs> fg_PerforceResolveRefs(CStr _From, CStr _To, TCSet<CStr> _PerforceRootConfigFiles, CPerforceClient::CConnectionInfo _Connection)
 		{
 			CStr PerforceFrom = _From;
 			CStr PerforceTo = _To;
@@ -299,12 +299,12 @@ namespace NMib::NBuildSystem
 
 				if (bToDefault)
 				{
-					auto [AutoFrom, AutoTo] = co_await fg_PerforceAutoDetectChangelists(ConfigFilePaths, _BaseDir);
+					auto [AutoFrom, AutoTo] = co_await fg_PerforceAutoDetectChangelists(ConfigFilePaths, _Connection);
 					PerforceFrom = AutoFrom;
 					PerforceTo = AutoTo;
 				}
 				else
-					PerforceFrom = co_await fg_PerforceGetLatestChangelist(ConfigFilePaths, _BaseDir);
+					PerforceFrom = co_await fg_PerforceGetLatestChangelist(ConfigFilePaths, _Connection);
 			}
 
 			CPerforceResolvedRefs Result;
@@ -345,10 +345,11 @@ namespace NMib::NBuildSystem
 				ShowRepos[fg_Get<0>(Repo).m_Location];
 		}
 
-		bool bIsPerforceRoot = fg_IsPerforceRoot(*this);
+		bool bIsPerforceRoot = co_await fg_IsPerforceRoot(*this);
 
-		// Perforce root should always appear in the output
-		if (bIsPerforceRoot)
+		// The Perforce root is listed where the name filter selects it, as ".".
+		bool bListPerforceRoot = bIsPerforceRoot && _Filter.f_MatchesName(".");
+		if (bListPerforceRoot)
 			ShowRepos[f_GetBaseDir()];
 
 		TCSharedPointer<CFilteredRepos> pFilteredRepositories = fg_Construct(co_await fg_GetFilteredRepos(CRepoFilter(), *this, mp_Data, EGetRepoFlag::mc_IncludeRepoCommit));
@@ -397,9 +398,43 @@ namespace NMib::NBuildSystem
 		if (bIsPerforceRoot && !RepositoryByLocation.f_FindEqual(f_GetBaseDir()))
 			RepositoryByLocation[f_GetBaseDir()] = nullptr;
 
-		CPerforceResolvedRefs PerforceRefs;
+		// Perforce is asked only where a repository listed, or the root, is pinned in a file of the root, also through the repositories
+		// that pin it, so a selection without one needs no server. The others then start and end where nothing pins them.
+		auto fPinnedInRoot = [&](CStr const &_Location) -> bool
+			{
+				for (CStr Location = _Location;;)
+				{
+					auto *pRepository = RepositoryByLocation.f_FindEqual(Location);
+					if (!pRepository || !*pRepository)
+						return false;
+
+					auto &ConfigFile = (*pRepository)->m_ConfigFile;
+					if (PerforceRootConfigFiles.f_FindEqual(ConfigFile))
+						return true;
+
+					CStr OwnerLocation;
+					if (!CBuildSystem::fs_FindContainingPath(RepositoryByLocation, CFile::fs_GetPath(ConfigFile), OwnerLocation) || OwnerLocation == Location)
+						return false;
+
+					Location = OwnerLocation;
+				}
+			}
+		;
+
+		bool bUsePerforce = false;
 		if (bIsPerforceRoot)
-			PerforceRefs = co_await fg_PerforceResolveRefs(_From, _To, PerforceRootConfigFiles, f_GetBaseDir());
+		{
+			for (auto &Location : ShowRepos)
+				bUsePerforce = bUsePerforce || Location == f_GetBaseDir() || fPinnedInRoot(Location);
+		}
+
+		CPerforceResolvedRefs PerforceRefs;
+		CPerforceClient::CConnectionInfo PerforceConnection;
+		if (bUsePerforce)
+		{
+			PerforceConnection = co_await fg_PerforceRootConnection(*this);
+			PerforceRefs = co_await fg_PerforceResolveRefs(_From, _To, PerforceRootConfigFiles, PerforceConnection);
+		}
 
 		CStr From = _From;
 		CStr BaseBranch;
@@ -530,7 +565,10 @@ namespace NMib::NBuildSystem
 
 					if (bIsPerforceRoot && PerforceRootConfigFiles.f_FindEqual(ConfigFile))
 					{
-						auto [StartContent, EndContent] = co_await fg_PerforceGetConfigFileContents(ConfigFile, *pStartCommit, *pEndCommit);
+						if (!bUsePerforce)
+							continue;
+
+						auto [StartContent, EndContent] = co_await fg_PerforceGetConfigFileContents(ConfigFile, *pStartCommit, *pEndCommit, PerforceConnection);
 						auto &State = *pState;
 
 						{
@@ -585,8 +623,8 @@ namespace NMib::NBuildSystem
 		TCSet<CStr> NoStartCommits;
 		TCSet<CStr> NoEndCommits;
 
-		// Handle Perforce root log entries separately (base dir has no CRepository object)
-		if (bIsPerforceRoot)
+		// Handle Perforce root log entries separately (base dir has no CRepository object), which only a listed root needs
+		if (bListPerforceRoot)
 		{
 			auto *pStartCommit = State.m_StartCommits.f_FindEqual(f_GetBaseDir());
 			auto *pEndCommit = State.m_EndCommits.f_FindEqual(f_GetBaseDir());
@@ -599,7 +637,7 @@ namespace NMib::NBuildSystem
 
 				CStr ToCL = pEndCommit ? *pEndCommit : CStr();
 
-				fg_PerforceGetLogEntries(ConfigFilePaths, *pStartCommit, ToCL, f_GetBaseDir()) > CommitsResults[f_GetBaseDir()];
+				fg_PerforceGetLogEntries(ConfigFilePaths, *pStartCommit, ToCL, PerforceConnection) > CommitsResults[f_GetBaseDir()];
 			}
 			else
 			{
@@ -850,7 +888,7 @@ namespace NMib::NBuildSystem
 			CStr CommitMessageHeader;
 			if (bIsPerforceRoot && Repo == f_GetBaseDir())
 			{
-				if (auto PerforceRoot = fg_GetPerforceRootRepository(*this, mp_Data, EGetRepoFlag::mc_IncludeRepoCommit); PerforceRoot && PerforceRoot->m_RepoCommitOptions)
+				if (auto PerforceRoot = co_await fg_GetPerforceRootRepository(*this, mp_Data, EGetRepoFlag::mc_IncludeRepoCommit); PerforceRoot && PerforceRoot->m_RepoCommitOptions)
 					CommitMessageHeader = PerforceRoot->m_RepoCommitOptions->m_MessageHeader;
 			}
 			else if (auto *pRepo = RepositoryByLocation.f_FindEqual(Repo); pRepo && *pRepo)

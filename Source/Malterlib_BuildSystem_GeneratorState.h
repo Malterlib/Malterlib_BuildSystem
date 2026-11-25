@@ -46,8 +46,9 @@ namespace NMib::NBuildSystem
 		template <typename tf_CStream>
 		void f_Consume(tf_CStream &_Stream);
 
-		static constexpr uint32 mc_FileVersion = 0x123;
+		static constexpr uint32 mc_FileVersion = 0x124;
 		static constexpr uint32 mc_FileVersion_OldestReader = 0x123;
+		static constexpr uint32 mc_FileVersion_PerforceRegistry = 0x124; // The first version with m_PerforceRegistry
 		static constexpr uint32 mc_FileVersion_GeneratedFilesLast = 0x122;
 
 		NContainer::TCMap<NStr::CStr, CProcessedFile> m_ExeFile;
@@ -56,6 +57,7 @@ namespace NMib::NBuildSystem
 		NContainer::TCMap<NStr::CStr, CProcessedFile> m_GeneratedFiles;
 		NContainer::TCMap<CFindOptions, NContainer::TCVector<NFile::CFile::CFoundFile>> m_SourceSearches;
 		NContainer::TCMap<NStr::CStr, NStr::CStr> m_Environment;
+		NContainer::TCMap<NStr::CStr, NStr::CStr> m_PerforceRegistry; // The registry's values of the Perforce settings used, by name (CRegistrySettings::f_GetState)
 		NContainer::TCMap<NStr::CStr, uint32> m_NumWorkspaceTargets;
 		EGenerationFlag m_GenerationFlags = EGenerationFlag_None;
 	};

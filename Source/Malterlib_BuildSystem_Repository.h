@@ -373,7 +373,7 @@ namespace NMib::NBuildSystem::NRepository
 		};
 
 		CConfigFile const &fp_GetConfigFile(CStr const &_FileName, bool _bIsStateFile);
-		bool fp_IsPerforceRoot();
+		bool fp_IsPerforceRoot(CBuildSystem const &_BuildSystem);
 
 		CStr const mp_BasePath;
 		CStr const mp_OutputDir;
@@ -677,8 +677,8 @@ namespace NMib::NBuildSystem::NRepository
 	TCUnsafeFuture<void> fg_TransferGitDirWorktreeToMain(CGitLaunches &_Launches, CStr const &_WorktreeSubRepoDir, CStr const &_MainSubRepoDir, CStr const &_WorktreeName);
 	TCVector<TCMap<CStr, CReposLocation>> fg_GetRepos(CBuildSystem &_BuildSystem, CBuildSystemData &_Data, EGetRepoFlag _Flags);
 	CRepoEditor fg_GetRepoEditor(CBuildSystem &_BuildSystem, CBuildSystemData &_Data);
-	bool fg_IsPerforceRoot(CBuildSystem const &_BuildSystem);
-	NStorage::TCOptional<CRepository> fg_GetPerforceRootRepository(CBuildSystem &_BuildSystem, CBuildSystemData &_Data, EGetRepoFlag _Flags);
+	TCFuture<bool> fg_IsPerforceRoot(CBuildSystem const &_BuildSystem);
+	TCUnsafeFuture<NStorage::TCOptional<CRepository>> fg_GetPerforceRootRepository(CBuildSystem &_BuildSystem, CBuildSystemData &_Data, EGetRepoFlag _Flags);
 	void fg_ParseTidySettings(CEJsonSorted const &_Tidy, CRepository &o_Repository);
 
 	TCFunctionMovable<CStr (CProcessLaunchActor::CSimpleLaunchResult const &_Result)> fg_LogAllFunctor();

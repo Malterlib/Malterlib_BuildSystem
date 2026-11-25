@@ -46,6 +46,7 @@ namespace NMib::NBuildSystem
 		_Stream << m_Environment;
 		_Stream << m_NumWorkspaceTargets;
 		_Stream << m_GenerationFlags;
+		_Stream << m_PerforceRegistry;
 	}
 
 	template <typename tf_CStream>
@@ -67,7 +68,7 @@ namespace NMib::NBuildSystem
 			return;
 		}
 
-		if (Version < mc_FileVersion)
+		if (Version < mc_FileVersion_GeneratedFilesLast)
 			DMibError(NStr::CStr::CFormat("Generator state of version 0x{nh} is too old to read") << Version);
 
 		uint32 OldestReader;
@@ -83,5 +84,7 @@ namespace NMib::NBuildSystem
 		_Stream >> m_Environment;
 		_Stream >> m_NumWorkspaceTargets;
 		_Stream >> m_GenerationFlags;
+		if (Version >= mc_FileVersion_PerforceRegistry)
+			_Stream >> m_PerforceRegistry;
 	}
 }

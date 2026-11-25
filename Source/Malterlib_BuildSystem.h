@@ -12,6 +12,7 @@
 #include <Mib/Concurrency/ParallellForEach>
 #include <Mib/Concurrency/DistributedApp>
 #include <Mib/CommandLine/AnsiEncoding>
+#include <Mib/Perforce/Ignore>
 
 namespace NMib::NBuildSystem
 {
@@ -495,6 +496,8 @@ namespace NMib::NBuildSystem
 
 		NStr::CStr f_GetEnvironmentVariable(NStr::CStr const &_Name, NStr::CStr const &_Default = {}, bool *o_pExists = nullptr) const;
 		NContainer::TCMap<NStr::CStr, NStr::CStr> f_GetPerforceEnvironment() const;
+		NContainer::TCMap<NStr::CStr, NStr::CStr> f_GetGenerationEnvironment() const;
+		NPerforce::CPerforceIgnore::CRegistrySettings f_GetPerforceRegistry() const;
 
 		void f_NoReconcileOptions();
 		void f_ForceUpdate();
@@ -1104,6 +1107,7 @@ namespace NMib::NBuildSystem
 		void fp_EvaluateWorkspace(CBuildSystemData &_Destination, CEntity &_Entity) const;
 		void fp_UsedExternal(CPropertyKeyReference const &_PropertyKey) const;
 		NStr::CStr fp_GetUsedExternalValue(NStr::CStr const &_Name) const;
+		void fp_UsedPerforceRegistrySetting(NStr::CStr const &_Name) const;
 		auto fp_GenerateFiles
 			(
 				CBuildSystemData &_BuildSystemData
@@ -1192,6 +1196,10 @@ namespace NMib::NBuildSystem
 
 		mutable NThread::CLowLevelLock mp_PerforceRootExcludedLock;
 		mutable NStorage::TCOptional<NContainer::TCVector<NStr::CStr>> mp_PerforceRootExcluded; // Listed once per run
+
+		mutable NThread::CLowLevelLock mp_PerforceRegistryLock;
+		mutable NStorage::TCOptional<NPerforce::CPerforceIgnore::CRegistrySettings> mp_PerforceRegistry; // Read once per run
+		mutable NContainer::TCSet<NStr::CStr> mp_UsedPerforceRegistrySettings;                           // Under mp_PerforceRegistryLock
 
 		NFunction::TCFunction<void (NStr::CStr const &_Output, bool _bError)> mp_fOutputConsole;
 

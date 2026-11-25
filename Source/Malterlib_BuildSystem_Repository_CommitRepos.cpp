@@ -1374,15 +1374,15 @@ namespace NMib::NBuildSystem
 		// (i.e. were previously tracked in Perforce, regardless of content).
 		// Used to distinguish "file existed at last submitted CL but happened
 		// to be empty" from "file is newly added on this branch".
-		TCFuture<TCSet<CStr>> fg_PerforceGetSubmittedConfigFiles(TCVector<CStr> _ConfigFilePaths, CStr _BaseDir)
+		TCFuture<TCSet<CStr>> fg_PerforceGetSubmittedConfigFiles(TCVector<CStr> _ConfigFilePaths, CPerforceClient::CConnectionInfo _Connection)
 		{
 			auto BlockingActorCheckout = fg_BlockingActor();
 			co_return co_await
 				(
-					g_Dispatch(BlockingActorCheckout) / [_ConfigFilePaths, _BaseDir]() -> TCSet<CStr>
+					g_Dispatch(BlockingActorCheckout) / [_ConfigFilePaths, _Connection]() -> TCSet<CStr>
 					{
-						CPerforceClientThrow Client;
-						auto DepotPaths = fg_PerforceConnectAndResolveDepotPaths(_ConfigFilePaths, _BaseDir, Client);
+						CPerforceClientThrow Client(_Connection);
+						auto DepotPaths = fg_PerforceConnectAndResolveDepotPaths(_ConfigFilePaths, Client);
 
 						TCSet<CStr> Submitted;
 						for (umint iConfigFile = 0; iConfigFile < _ConfigFilePaths.f_GetLen(); ++iConfigFile)
@@ -1398,15 +1398,16 @@ namespace NMib::NBuildSystem
 
 		// Create or update a Perforce changelist with the given description for config files.
 		// Does NOT submit the changelist. Moves files from other pending changelists if needed.
-		TCFuture<void> fg_PerforceUpdateChangelist(CGitLaunches _Launches, TCVector<CStr> _ConfigFilePaths, CStr _BaseDir, CStr _CommitMessage, CStr _MessageHeader)
+		auto fg_PerforceUpdateChangelist(CGitLaunches _Launches, TCVector<CStr> _ConfigFilePaths, CPerforceClient::CConnectionInfo _Connection, CStr _CommitMessage, CStr _MessageHeader)
+			-> TCFuture<void>
 		{
 			auto BlockingActorCheckout = fg_BlockingActor();
 			co_await
 				(
-					g_Dispatch(BlockingActorCheckout) / [_Launches, _ConfigFilePaths, _BaseDir, _CommitMessage, _MessageHeader]()
+					g_Dispatch(BlockingActorCheckout) / [_Launches, _ConfigFilePaths, _Connection, _CommitMessage, _MessageHeader]()
 					{
-						CPerforceClientThrow Client;
-						auto DepotPaths = fg_PerforceConnectAndResolveDepotPaths(_ConfigFilePaths, _BaseDir, Client);
+						CPerforceClientThrow Client(_Connection);
+						auto DepotPaths = fg_PerforceConnectAndResolveDepotPaths(_ConfigFilePaths, Client);
 
 						// Get the latest submitted CL to compare against. Brand-new files have no
 						// depot path yet, so filter them out before querying revisions.
@@ -1879,7 +1880,7 @@ namespace NMib::NBuildSystem
 		// path: they must be staged with the changelist but must not feed
 		// RootSeed parsing or fg_CollectChildCommits, where their duplicated
 		// hash entries would corrupt start-commit resolution.
-		bool bIsPerforceRoot = fg_IsPerforceRoot(*this);
+		bool bIsPerforceRoot = co_await fg_IsPerforceRoot(*this);
 		TCSet<CStr> PerforceRootConfigFiles;
 		TCSet<CStr> PerforceRootMirrorFiles;
 		if (bIsPerforceRoot)
@@ -1969,10 +1970,11 @@ namespace NMib::NBuildSystem
 			TCVector<CStr> ConfigFilePaths;
 			for (auto &ConfigFile : PerforceRootConfigFiles)
 				ConfigFilePaths.f_Insert(ConfigFile);
+			auto PerforceConnection = co_await fg_PerforceRootConnection(*this);
 
 			auto [LatestCL, SubmittedConfigFiles] = co_await
 				(
-					fg_PerforceGetLatestChangelist(ConfigFilePaths, f_GetBaseDir()) + fg_PerforceGetSubmittedConfigFiles(ConfigFilePaths, f_GetBaseDir())
+					fg_PerforceGetLatestChangelist(ConfigFilePaths, PerforceConnection) + fg_PerforceGetSubmittedConfigFiles(ConfigFilePaths, PerforceConnection)
 				)
 			;
 
@@ -1982,7 +1984,7 @@ namespace NMib::NBuildSystem
 			{
 				for (auto &ConfigFile : PerforceRootConfigFilesAtStart)
 				{
-					auto [SubmittedContent, Unused] = co_await fg_PerforceGetConfigFileContents(ConfigFile, LatestCL, LatestCL);
+					auto [SubmittedContent, Unused] = co_await fg_PerforceGetConfigFileContents(ConfigFile, LatestCL, LatestCL, PerforceConnection);
 
 					if (!SubmittedContent.f_IsEmpty())
 					{
@@ -2322,7 +2324,7 @@ namespace NMib::NBuildSystem
 			// uses to recognize repo-commit entries.
 			CStr RootMessageHeader;
 			CStr RootTransformScript;
-			if (auto PerforceRoot = fg_GetPerforceRootRepository(*this, mp_Data, EGetRepoFlag::mc_IncludeRepoCommit); PerforceRoot && PerforceRoot->m_RepoCommitOptions)
+			if (auto PerforceRoot = co_await fg_GetPerforceRootRepository(*this, mp_Data, EGetRepoFlag::mc_IncludeRepoCommit); PerforceRoot && PerforceRoot->m_RepoCommitOptions)
 			{
 				RootMessageHeader = PerforceRoot->m_RepoCommitOptions->m_MessageHeader;
 				RootTransformScript = PerforceRoot->m_RepoCommitOptions->m_TransformScript;
@@ -2339,7 +2341,8 @@ namespace NMib::NBuildSystem
 			for (auto &MirrorFile : PerforceRootMirrorFiles)
 				ConfigFilePaths.f_Insert(MirrorFile);
 
-			co_await fg_PerforceUpdateChangelist(Launches, ConfigFilePaths, f_GetBaseDir(), CommitMessage, RootMessageHeader);
+			auto PerforceConnection = co_await fg_PerforceRootConnection(*this);
+			co_await fg_PerforceUpdateChangelist(Launches, ConfigFilePaths, PerforceConnection, CommitMessage, RootMessageHeader);
 		}
 
 		co_return ERetry_None;

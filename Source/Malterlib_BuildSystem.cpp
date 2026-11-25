@@ -291,10 +291,9 @@ namespace NMib::NBuildSystem
 							// Perforce checkout
 							try
 							{
-								CPerforceClientThrow Client;
-								if (CPerforceClientThrow::fs_GetFromP4Config(_Destination, Client))
+								if (auto pClient = CPerforceClientThrow::fs_GetFromP4Config(_Destination, f_GetGenerationEnvironment(), f_GetPerforceRegistry()))
 								{
-									Client.f_OpenForEdit(_Destination);
+									pClient->f_OpenForEdit(_Destination);
 									f_OutputConsole("Opened file for edit in Perforce: {}{\n}"_f << _Destination);
 									bSuccess = true;
 								}

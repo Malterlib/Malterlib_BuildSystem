@@ -40,10 +40,35 @@ namespace NMib::NBuildSystem::NRepository
 		return PerforceRootConfigFiles;
 	}
 
-	TCVector<CStr> fg_PerforceConnectAndResolveDepotPaths(TCVector<CStr> const &_ConfigFilePaths, CStr const &_BaseDir, CPerforceClientThrow &o_Client)
+	namespace
 	{
-		if (!CPerforceClientThrow::fs_GetFromP4Config(_BaseDir + "/.", o_Client))
-			DMibError("Failed to connect to Perforce");
+		TCFuture<CPerforceClient::CConnectionInfo> fg_ReadPerforceRootConnection(CStr _BaseDir, TCMap<CStr, CStr> _Environment, NPerforce::CPerforceIgnore::CRegistrySettings _Registry)
+		{
+			co_return co_await
+				(
+					g_Dispatch(fg_BlockingActor()) / [_BaseDir, _Environment, _Registry]() -> CPerforceClient::CConnectionInfo
+					{
+						auto Settings = NPerforce::CPerforceIgnore::fs_GetSettings(_BaseDir, _Environment, _Registry);
+						return CPerforceClient::fs_GetConnectionInfo(_BaseDir, Settings, _Environment);
+					}
+				)
+			;
+		}
+	}
+
+	// The connection of p4 run in the Perforce root, with the settings of the generation environment that made it a root. The
+	// settings are read from the root's .p4config and the enviro file on a blocking actor.
+	TCFuture<CPerforceClient::CConnectionInfo> fg_PerforceRootConnection(CBuildSystem const &_BuildSystem)
+	{
+		return fg_ReadPerforceRootConnection(_BuildSystem.f_GetBaseDir(), _BuildSystem.f_GetGenerationEnvironment(), _BuildSystem.f_GetPerforceRegistry());
+	}
+
+	// Logs in _Client, made with the root's connection (fg_PerforceRootConnection), on a blocking actor. The depot paths are aligned
+	// with _ConfigFilePaths, empty for a file without a submitted revision, so callers tell a new file by its index. Throws where the
+	// login fails.
+	TCVector<CStr> fg_PerforceConnectAndResolveDepotPaths(TCVector<CStr> const &_ConfigFilePaths, CPerforceClientThrow &_Client)
+	{
+		_Client.f_Login(CStr(), _Client.f_GetConnectionInfo().m_WorkingDirectory);
 
 		TCVector<CStr> DepotPaths;
 		DepotPaths.f_SetLen(_ConfigFilePaths.f_GetLen());
@@ -63,22 +88,22 @@ namespace NMib::NBuildSystem::NRepository
 			// A stray `p4 add` on such files during a rerun is a silent
 			// no-op (Perforce refuses to re-add an already-opened file).
 			CStr DepotPath;
-			if (o_Client.f_NoThrow().f_GetDepotPath(_ConfigFilePaths[iConfigFile], DepotPath) && o_Client.f_NoThrow().f_FileExistsInDepot(_ConfigFilePaths[iConfigFile]))
+			if (_Client.f_NoThrow().f_GetDepotPath(_ConfigFilePaths[iConfigFile], DepotPath) && _Client.f_NoThrow().f_FileExistsInDepot(_ConfigFilePaths[iConfigFile]))
 				DepotPaths[iConfigFile] = fg_Move(DepotPath);
 		}
 
 		return DepotPaths;
 	}
 
-	TCFuture<CStr> fg_PerforceGetLatestChangelist(TCVector<CStr> _ConfigFilePaths, CStr _BaseDir)
+	TCFuture<CStr> fg_PerforceGetLatestChangelist(TCVector<CStr> _ConfigFilePaths, CPerforceClient::CConnectionInfo _Connection)
 	{
 		auto BlockingActorCheckout = fg_BlockingActor();
 		co_return co_await
 			(
-				g_Dispatch(BlockingActorCheckout) / [_ConfigFilePaths, _BaseDir]() -> CStr
+				g_Dispatch(BlockingActorCheckout) / [_ConfigFilePaths, _Connection]() -> CStr
 				{
-					CPerforceClientThrow Client;
-					auto DepotPaths = fg_PerforceConnectAndResolveDepotPaths(_ConfigFilePaths, _BaseDir, Client);
+					CPerforceClientThrow Client(_Connection);
+					auto DepotPaths = fg_PerforceConnectAndResolveDepotPaths(_ConfigFilePaths, Client);
 
 					TCVector<CStr> TrackedDepotPaths;
 					for (auto &DepotPath : DepotPaths)
@@ -108,12 +133,12 @@ namespace NMib::NBuildSystem::NRepository
 		;
 	}
 
-	TCFuture<TCTuple<CStr, CStr>> fg_PerforceGetConfigFileContents(CStr _ConfigFile, CStr _StartCL, CStr _EndCL)
+	TCFuture<TCTuple<CStr, CStr>> fg_PerforceGetConfigFileContents(CStr _ConfigFile, CStr _StartCL, CStr _EndCL, CPerforceClient::CConnectionInfo _Connection)
 	{
 		auto BlockingActorCheckout = fg_BlockingActor();
 		co_return co_await
 			(
-				g_Dispatch(BlockingActorCheckout) / [_ConfigFile, _StartCL, _EndCL]() -> TCTuple<CStr, CStr>
+				g_Dispatch(BlockingActorCheckout) / [_ConfigFile, _StartCL, _EndCL, _Connection]() -> TCTuple<CStr, CStr>
 				{
 					CStr StartContent;
 					CStr EndContent;
@@ -122,9 +147,8 @@ namespace NMib::NBuildSystem::NRepository
 						StartContent = CFile::fs_ReadStringFromFile(_ConfigFile);
 					else
 					{
-						CPerforceClientThrow Client;
-						if (!CPerforceClientThrow::fs_GetFromP4Config(_ConfigFile, Client))
-							DMibError("Failed to connect to Perforce");
+						CPerforceClientThrow Client(_Connection);
+						Client.f_Login(CStr(), _Connection.m_WorkingDirectory);
 
 						CStr DepotPath;
 						if (!Client.f_NoThrow().f_GetDepotPath(_ConfigFile, DepotPath))

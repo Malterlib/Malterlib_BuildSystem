@@ -177,6 +177,7 @@ namespace
 			State.m_GeneratedFiles["Generated.txt"].m_Workspaces["Workspace"];
 			State.m_SourceFiles["Source.MHeader"];
 			State.m_Environment["Variable"] = "Value";
+			State.m_PerforceRegistry["P4IGNORE"] = "HKEY_CURRENT_USER: type 1 .p4ignore\\0, HKEY_LOCAL_MACHINE: unset";
 
 			auto fRead = [](CByteVector const &_Data)
 				{
@@ -210,6 +211,27 @@ namespace
 				DMibExpectTrue(Read.m_GeneratedFiles.f_FindEqual("Generated.txt"));
 				DMibExpect(Read.m_SourceFiles.f_GetLen(), ==, 1u);
 				DMibExpect(Read.m_Environment, ==, State.m_Environment);
+				DMibExpect(Read.m_PerforceRegistry, ==, State.m_PerforceRegistry);
+			}
+			{
+				// An archive from before the registry's Perforce settings were recorded reads without them.
+				DMibTestPath("BeforePerforceRegistryVersion");
+				TCBinaryStreamMemory<> Stream;
+				Stream << uint32(CGeneratorArchiveState::mc_FileVersion_PerforceRegistry - 1);
+				Stream << uint32(CGeneratorArchiveState::mc_FileVersion_OldestReader);
+				Stream << State.m_GeneratedFiles;
+				Stream << State.m_ExeFile;
+				Stream << State.m_SourceFiles;
+				Stream << State.m_ReferencedFiles;
+				Stream << State.m_SourceSearches;
+				Stream << State.m_Environment;
+				Stream << State.m_NumWorkspaceTargets;
+				Stream << State.m_GenerationFlags;
+
+				auto Read = fRead(Stream.f_MoveVector());
+				DMibExpectTrue(Read.m_GeneratedFiles.f_FindEqual("Generated.txt"));
+				DMibExpect(Read.m_Environment, ==, State.m_Environment);
+				DMibExpectTrue(Read.m_PerforceRegistry.f_IsEmpty());
 			}
 			{
 				DMibTestPath("GeneratedFilesLastVersion");
@@ -243,6 +265,7 @@ namespace
 				DMibExpectTrue(Read.m_GeneratedFiles.f_FindEqual("Generated.txt"));
 				DMibExpect(Read.m_SourceFiles.f_GetLen(), ==, 1u);
 				DMibExpect(Read.m_Environment, ==, State.m_Environment);
+				DMibExpect(Read.m_PerforceRegistry, ==, State.m_PerforceRegistry);
 			}
 			{
 				DMibTestPath("UnreadableLaterVersion");

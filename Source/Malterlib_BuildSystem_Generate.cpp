@@ -772,6 +772,27 @@ namespace NMib::NBuildSystem
 								}
 							}
 
+							if (!GenerateState.m_bDependenciesChanged && !State.m_PerforceRegistry.f_IsEmpty())
+							{
+								auto Registry = f_GetPerforceRegistry();
+								for (auto iSetting = State.m_PerforceRegistry.f_GetIterator(); iSetting; ++iSetting)
+								{
+									if (Registry.f_GetState(iSetting.f_GetKey()) != *iSetting)
+									{
+										f_OutputConsole
+											(
+												"Dependency check: Regenerating build system because the registry's '{}' changed: now '{}', was '{}'{\n}"_f
+												<< iSetting.f_GetKey()
+												<< Registry.f_GetDescription(iSetting.f_GetKey())
+												<< *iSetting
+											)
+										;
+										GenerateState.m_bDependenciesChanged = true;
+										break;
+									}
+								}
+							}
+
 							EGenerationFlag InterestingGenerationFlags = EGenerationFlag_AbsoluteFilePaths | EGenerationFlag_DisableUserSettings;
 
 							if ((mp_GenerateOptions.m_Settings.m_GenerationFlags & InterestingGenerationFlags) != (State.m_GenerationFlags & InterestingGenerationFlags))
@@ -1007,6 +1028,20 @@ namespace NMib::NBuildSystem
 
 			for (auto iEnv = mp_UsedExternals.f_GetIterator(); iEnv; ++iEnv)
 				State.m_Environment[iEnv->m_Name] = fp_GetUsedExternalValue(iEnv->m_Name);
+
+			{
+				TCSet<CStr> UsedRegistrySettings;
+				{
+					DMibLock(mp_PerforceRegistryLock);
+					UsedRegistrySettings = mp_UsedPerforceRegistrySettings;
+				}
+				if (!UsedRegistrySettings.f_IsEmpty())
+				{
+					auto Registry = f_GetPerforceRegistry();
+					for (auto &Name : UsedRegistrySettings)
+						State.m_PerforceRegistry[Name] = Registry.f_GetState(Name);
+				}
+			}
 
 			GenerateState.m_GlobalState.m_GenerationFlags = mp_GenerateOptions.m_Settings.m_GenerationFlags;
 

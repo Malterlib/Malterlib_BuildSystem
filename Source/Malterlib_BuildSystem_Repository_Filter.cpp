@@ -45,7 +45,7 @@ namespace NMib::NBuildSystem::NRepository
 
 			if (!bHasRootRepository)
 			{
-				if (auto PerforceRoot = fg_GetPerforceRootRepository(_BuildSystem, _Data, _GetRepoFlags))
+				if (auto PerforceRoot = co_await fg_GetPerforceRootRepository(_BuildSystem, _Data, _GetRepoFlags))
 				{
 					if (FilteredRepos.m_ReposOrdered.f_IsEmpty())
 						FilteredRepos.m_ReposOrdered.f_Insert();
