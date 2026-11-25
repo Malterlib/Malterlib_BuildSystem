@@ -199,6 +199,20 @@ namespace NMib::NBuildSystem::NRepository
 
 					co_return {};
 				}
+				, .m_fOnUnmanageable = g_ActorFunctor / [=](CStr _Name, CStr _Reasons) -> TCFuture<void>
+				{
+					_Options.m_fOutputInfo
+						(
+							EOutputType_Warning
+							, "Applying policy skipped generic ruleset '{}' on '{}', since updating it would lose what the policy can't express:\n{}"_f
+							<< _Name
+							<< _Options.m_Url
+							<< _Reasons.f_Indent("    ", true)
+						)
+					;
+
+					co_return {};
+				}
 				, .m_bPretend = fg_IsSet(_Options.m_Flags, EApplyPolicyFlag::mc_Pretend)
 			}
 		;
