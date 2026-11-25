@@ -199,18 +199,20 @@ namespace NMib::NBuildSystem
 			bDependencyAdded = false;
 			f_CheckCancelledException();
 
-			TCSet<CTargetInfo *> TargetsToProcess;
+			// Targets are processed in the order of their names: what their dependencies inject into them is added in the order that
+			// the dependencies are found in, which the order of the targets in memory would change between generations
+			TCSet<CTargetInfo *, CTargetInfo::CCompareByName> TargetsToProcess;
 			for (auto &TargetInfo : Workspace.m_Targets)
 				TargetsToProcess[&TargetInfo];
 
-			TCSet<CTargetInfo *> TargetsAlreadyProcessed;
+			TCSet<CTargetInfo *, CTargetInfo::CCompareByName> TargetsAlreadyProcessed;
 
 			while (!TargetsToProcess.f_IsEmpty())
 			{
 				TargetsAlreadyProcessed += TargetsToProcess;
 				f_CheckCancelledException();
 
-				TCSet<CTargetInfo *> NewTargetsToProcess;
+				TCSet<CTargetInfo *, CTargetInfo::CCompareByName> NewTargetsToProcess;
 
 				// The properties that the build system gives a declaration of a dependency, which its own properties can depend on, as
 				// Dependency.Link Dependency.ObjectLibrary, so they are set before the declaration is merged

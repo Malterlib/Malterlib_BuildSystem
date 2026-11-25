@@ -56,6 +56,11 @@ namespace NMib::NBuildSystem
 
 	struct align_cacheline CTargetInfo : public CGroupMember
 	{
+		struct CCompareByName
+		{
+			COrdering_Strong operator () (CTargetInfo const *_pLeft, CTargetInfo const *_pRight) const;
+		};
+
 		CTargetInfo(CWorkspaceInfo *_pSolution);
 		CTargetInfo();
 		~CTargetInfo();

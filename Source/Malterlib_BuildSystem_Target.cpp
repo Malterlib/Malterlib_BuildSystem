@@ -22,6 +22,12 @@ namespace NMib::NBuildSystem
 		return CStr();
 	}
 
+	// The order of the targets in their workspace, which is the same in every generation, as the order of their addresses isn't
+	COrdering_Strong CTargetInfo::CCompareByName::operator () (CTargetInfo const *_pLeft, CTargetInfo const *_pRight) const
+	{
+		return _pLeft->f_GetName() <=> _pRight->f_GetName();
+	}
+
 	CTargetInfo::CTargetInfo() = default;
 
 	CTargetInfo::CTargetInfo(CWorkspaceInfo *_pWorkspace)
