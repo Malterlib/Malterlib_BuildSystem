@@ -120,12 +120,9 @@ namespace NMib::NBuildSystem::NRepository
 		co_return {};
 	}
 
-	TCFuture<void> fg_ApplyPolicies_BranchProtection(CApplyPolicyOptions _Options, CEJsonSorted _Policy)
+	CGitPolicyActor::CApplyPolicyContext fg_BranchProtectionContext(CApplyPolicyOptions const &_Options)
 	{
-		TCActor<CGitPolicyActor> PolicyActor = fg_Construct();
-		auto DestroyPolicyActor = co_await fg_AsyncDestroy(PolicyActor);
-
-		CGitPolicyActor::CApplyPolicyContext Context
+		return CGitPolicyActor::CApplyPolicyContext
 			{
 				.m_Repository = _Options.m_Repository
 				, .m_HostingProvider = _Options.m_HostingProvider
@@ -155,21 +152,25 @@ namespace NMib::NBuildSystem::NRepository
 
 					co_return {};
 				}
+				, .m_fOnDelete = g_ActorFunctor / [=](CStr _Name, CStr _DeletedValues) -> TCFuture<void>
+				{
+					_Options.m_fOutputInfo
+						(
+							EOutputType_Warning
+							, "{}Applying policy resulted in deleted branch protection rule for branch pattern '{}' on '{}'"_f << _Options.f_PretendDescription() << _Name << _Options.m_Url
+						)
+					;
+
+					co_return {};
+				}
 				, .m_bPretend = fg_IsSet(_Options.m_Flags, EApplyPolicyFlag::mc_Pretend)
 			}
 		;
-
-		co_await PolicyActor(&CGitPolicyActor::f_ApplyPolicy_BranchProtection, fg_Move(Context), fg_Move(_Policy));
-
-		co_return {};
 	}
 
-	TCFuture<void> fg_ApplyPolicies_GenericRules(CApplyPolicyOptions _Options, CEJsonSorted _Policy)
+	CGitPolicyActor::CApplyPolicyContext fg_GenericRulesContext(CApplyPolicyOptions const &_Options)
 	{
-		TCActor<CGitPolicyActor> PolicyActor = fg_Construct();
-		auto DestroyPolicyActor = co_await fg_AsyncDestroy(PolicyActor);
-
-		CGitPolicyActor::CApplyPolicyContext Context
+		return CGitPolicyActor::CApplyPolicyContext
 			{
 				.m_Repository = _Options.m_Repository
 				, .m_HostingProvider = _Options.m_HostingProvider
@@ -199,6 +200,17 @@ namespace NMib::NBuildSystem::NRepository
 
 					co_return {};
 				}
+				, .m_fOnDelete = g_ActorFunctor / [=](CStr _Name, CStr _DeletedValues) -> TCFuture<void>
+				{
+					_Options.m_fOutputInfo
+						(
+							EOutputType_Warning
+							, "{}Applying policy resulted in deleted generic ruleset '{}' on '{}'"_f << _Options.f_PretendDescription() << _Name << _Options.m_Url
+						)
+					;
+
+					co_return {};
+				}
 				, .m_fOnUnmanageable = g_ActorFunctor / [=](CStr _Name, CStr _Reasons) -> TCFuture<void>
 				{
 					_Options.m_fOutputInfo
@@ -216,8 +228,14 @@ namespace NMib::NBuildSystem::NRepository
 				, .m_bPretend = fg_IsSet(_Options.m_Flags, EApplyPolicyFlag::mc_Pretend)
 			}
 		;
+	}
 
-		co_await PolicyActor(&CGitPolicyActor::f_ApplyPolicy_GenericRules, fg_Move(Context), fg_Move(_Policy));
+	TCFuture<void> fg_ApplyPolicies_Rules(CApplyPolicyOptions _Options, CEJsonSorted _Policy)
+	{
+		TCActor<CGitPolicyActor> PolicyActor = fg_Construct();
+		auto DestroyPolicyActor = co_await fg_AsyncDestroy(PolicyActor);
+
+		co_await PolicyActor(&CGitPolicyActor::f_ApplyPolicy_Rules, fg_BranchProtectionContext(_Options), fg_GenericRulesContext(_Options), fg_Move(_Policy));
 
 		co_return {};
 	}
@@ -307,11 +325,8 @@ namespace NMib::NBuildSystem::NRepository
 		if (auto pPermissions = _Policy.f_GetMember("Permissions"))
 			co_await (fg_ApplyPolicies_Permissions(Options, *pPermissions) % fErrorContext("Permissions"));
 
-		if (auto pBranchProtection = _Policy.f_GetMember("BranchProtection"))
-			co_await (fg_ApplyPolicies_BranchProtection(Options, *pBranchProtection) % fErrorContext("BranchProtection"));
-
-		if (auto pGenericRules = _Policy.f_GetMember("GenericRules"))
-			co_await (fg_ApplyPolicies_GenericRules(Options, *pGenericRules) % fErrorContext("GenericRules"));
+		if (_Policy.f_GetMember("BranchProtection") || _Policy.f_GetMember("GenericRules") || _Policy.f_GetMember("RemoveOther"))
+			co_await (fg_ApplyPolicies_Rules(Options, _Policy) % fErrorContext("BranchProtection and GenericRules"));
 
 		if (auto pActions = _Policy.f_GetMember("ActionsSettings"))
 			co_await (fg_ApplyPolicies_ActionsSettings(Options, *pActions) % fErrorContext("ActionsSettings"));
