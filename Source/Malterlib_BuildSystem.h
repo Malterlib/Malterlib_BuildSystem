@@ -64,16 +64,18 @@ namespace NMib::NBuildSystem
 			static CRepoFilter fs_ParseParams(NEncoding::CEJsonSorted const &_Params);
 
 			bool f_IsEmpty() const;
+			bool f_MatchesAllNames() const;
+			bool f_MatchesName(NStr::CStr const &_Name) const;
 
-			NStr::CStr m_NameWildcard;
+			NContainer::TCVector<NStr::CStr> m_NameWildcards; // A repository matches when its name matches any; none matches all
 			NStr::CStr m_Type;
 			NStr::CStr m_Branch;
 			NContainer::TCSet<NStr::CStr> m_Tags;
 			bool m_bOnlyChanged = false;
 			bool m_bIncludePull = false;
-			bool m_bFormat = false;              // Only repositories with Repository.Format.
-			bool m_bTidy = false;                // Only repositories with Repository.Tidy.Enabled.
-			bool m_bIncludePerforceRoot = false; // The Perforce root's entry; branch and only-changed filters leave it out
+			bool m_bFormat = false;                           // Only repositories with Repository.Format.
+			bool m_bTidy = false;                             // Only repositories with Repository.Tidy.Enabled.
+			bool m_bIncludePerforceRoot = false;              // The Perforce root's entry; branch and only-changed filters leave it out
 		};
 
 		// The files of a repository that 'mib tidy' and the checks plugin check: wildcards matched against the paths

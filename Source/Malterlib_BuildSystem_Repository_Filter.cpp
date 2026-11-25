@@ -65,7 +65,7 @@ namespace NMib::NBuildSystem::NRepository
 			{
 				for (auto &Repo : RepoLocation.m_Repositories)
 				{
-					if (!_Filter.m_NameWildcard.f_IsEmpty() && _Filter.m_NameWildcard != "*")
+					if (!_Filter.f_MatchesAllNames())
 					{
 						auto RelativePath = CFile::fs_MakePathRelative(Repo.m_Location, BaseDir);
 						CStr Name;
@@ -74,7 +74,7 @@ namespace NMib::NBuildSystem::NRepository
 						else
 							Name = ".";
 
-						if (NStr::fg_StrMatchWildcard(Name.f_GetStr(), _Filter.m_NameWildcard.f_GetStr()) != NStr::EMatchWildcardResult_WholeStringMatchedAndPatternExhausted)
+						if (!_Filter.f_MatchesName(Name))
 							continue;
 					}
 

@@ -115,15 +115,102 @@ namespace NMib::NBuildSystem
 
 	bool CBuildSystem::CRepoFilter::f_IsEmpty() const
 	{
-		return (m_NameWildcard.f_IsEmpty() || m_NameWildcard == "*") && m_Type.f_IsEmpty() && m_Branch.f_IsEmpty() && m_Tags.f_IsEmpty() && !m_bOnlyChanged && !m_bFormat && !m_bTidy;
+		return f_MatchesAllNames() && m_Type.f_IsEmpty() && m_Branch.f_IsEmpty() && m_Tags.f_IsEmpty() && !m_bOnlyChanged && !m_bFormat && !m_bTidy;
+	}
+
+	bool CBuildSystem::CRepoFilter::f_MatchesAllNames() const
+	{
+		return m_NameWildcards.f_IsEmpty() || m_NameWildcards.f_Contains("*") >= 0;
+	}
+
+	// _Name is the repository's path relative to the base directory, and "." for the base directory itself.
+	bool CBuildSystem::CRepoFilter::f_MatchesName(NStr::CStr const &_Name) const
+	{
+		if (f_MatchesAllNames())
+			return true;
+
+		return NStr::fg_StrMatchesAnyWildcardInContainer<NStr::EMatchWildcardResult_WholeStringMatchedAndPatternExhausted>(_Name, m_NameWildcards);
 	}
 
 	CBuildSystem::CRepoFilter CBuildSystem::CRepoFilter::fs_ParseParams(NEncoding::CEJsonSorted const &_Params)
 	{
 		CBuildSystem::CRepoFilter Filter;
 
+		// An omitted name filter is the option's default, "*". An empty one is what a script passes when it selected nothing, so it is an
+		// error rather than no filter, which would let a command such as 'branch -f' act on every repository.
 		if (auto pValue = _Params.f_GetMember(gc_ConstString_RepoName))
-			Filter.m_NameWildcard = pValue->f_String();
+		{
+			// A wildcard can start with a '[', so the value is JSON only where it parses as an array, whose entries must then be strings.
+			auto fJsonArray = [](CStr const &_Value) -> NStorage::TCOptional<TCVector<CStr>>
+				{
+					if (!_Value.f_Trim().f_StartsWith("["))
+						return {};
+
+					CEJsonSorted Json;
+					try
+					{
+						Json = CEJsonSorted::fs_FromString(_Value);
+					}
+					catch (NException::CException const &)
+					{
+						return {};
+					}
+
+					if (!Json.f_IsArray())
+						return {};
+
+					try
+					{
+						return Json.f_StringArray();
+					}
+					catch (NException::CException const &_Exception)
+					{
+						DMibError("The repository name filter (-n, --repo-name) is a JSON array with an entry that is no string: {}: {}"_f << Json << _Exception);
+					}
+				}
+			;
+
+			TCVector<CStr> Wildcards;
+			if (pValue->f_IsArray())
+				Wildcards = pValue->f_StringArray();
+			else if (auto Strings = fJsonArray(pValue->f_String()))
+				Wildcards = fg_Move(*Strings);
+			else if (!pValue->f_String().f_IsEmpty())
+			{
+				// Only '\,' is an escape, a comma of a wildcard: another backslash stays, so '\*' remains no '*' that matches
+				// every repository.
+				CStr const &Text = pValue->f_String();
+				CStr Wildcard;
+				for (umint iChar = 0; iChar < Text.f_GetLen(); ++iChar)
+				{
+					ch8 Char = Text[iChar];
+					if (Char == '\\' && iChar + 1 < Text.f_GetLen() && Text[iChar + 1] == ',')
+					{
+						Wildcard.f_AddChar(',');
+						++iChar;
+					}
+					else if (Char == ',')
+					{
+						Wildcards.f_Insert(Wildcard);
+						Wildcard.f_Clear();
+					}
+					else
+						Wildcard.f_AddChar(Char);
+				}
+				Wildcards.f_Insert(fg_Move(Wildcard));
+			}
+
+			for (auto &Wildcard : Wildcards)
+			{
+				if (Wildcard.f_IsEmpty())
+					DMibError("An empty wildcard in the repository name filter (-n, --repo-name) would match no repository");
+
+				Filter.m_NameWildcards.f_Insert(Wildcard);
+			}
+
+			if (Filter.m_NameWildcards.f_IsEmpty())
+				DMibError("The repository name filter (-n, --repo-name) is empty, so it would match no repository. Leave it out, or use '*', to match all");
+		}
 		if (auto pValue = _Params.f_GetMember(gc_ConstString_RepoType))
 			Filter.m_Type = pValue->f_String();
 		if (auto pValue = _Params.f_GetMember(gc_ConstString_RepoBranch))

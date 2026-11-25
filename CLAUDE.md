@@ -305,6 +305,12 @@ The BuildSystem includes integrated repository management:
 - Git LFS support for binary dependencies
 - Repository commands run at most twice the virtual cores, and at least 32, git processes at once. `Malterlib_GitConcurrency`
   in the environment sets another limit, for example a lower one where the network can't take that many clones at once.
+- The repository commands, such as `status`, `push`, `git`, `branch -f`, `list-commits`, `format`, `validate` and `tidy`,
+  take `-n` (`--repo-name`): a wildcard matched against each repository's path relative to the root, `.` for the root
+  itself, or several separated by commas, of which a repository has to match one, as in `./mib push -n 'SharedPackages/*,.' -p`.
+  A comma of a wildcard is written `\,`, and another backslash is itself. A JSON array of wildcards works too. A repeated
+  `-n` replaces the earlier one. An empty `-n`, such as `''` or `'[]'`, or an empty wildcard among several, is an error
+  rather than no filter; leave `-n` out, or use `*`, for all.
 - `./mib list-repos [--json]` lists the repositories the checkout defines, the root included, with the `.MRepo` file, the key
   as it is written there and the commit that pin each; it updates nothing. `Binary` is whether a repository keeps its files
   in the LFS release store, whose files a review can't read, not whether it holds binaries.

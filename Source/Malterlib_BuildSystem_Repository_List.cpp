@@ -103,13 +103,11 @@ namespace NMib::NBuildSystem
 		auto fRootMatchesFilter = [&]() -> bool
 			{
 				CRepoFilter WithoutName = _Filter;
-				WithoutName.m_NameWildcard.f_Clear();
+				WithoutName.m_NameWildcards.f_Clear();
 				if (!WithoutName.f_IsEmpty())
 					return false;
 
-				return _Filter.m_NameWildcard.f_IsEmpty()
-					|| NStr::fg_StrMatchWildcard(".", _Filter.m_NameWildcard.f_GetStr()) == NStr::EMatchWildcardResult_WholeStringMatchedAndPatternExhausted
-				;
+				return _Filter.f_MatchesName(".");
 			}
 		;
 
