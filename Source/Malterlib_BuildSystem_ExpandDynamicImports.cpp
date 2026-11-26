@@ -790,6 +790,12 @@ namespace NMib::NBuildSystem
 				}
 			}
 
+			// CMake spells its build directory as PWD does when PWD names the working directory, and otherwise as the OS reports the working
+			// directory, with the symbolic links in it resolved. The Malterlib generator recognizes the build directory as CMAKE_MALTERLIB_TEMPDIR
+			// spells it, and the import cache maps the directories as the build system spells them, so the environment of the import doesn't
+			// replace it
+			LaunchParams.m_Environment["PWD"] = TempDirectory;
+
 			CFile::fs_CreateDirectory(TempDirectory);
 
 			CStr FullRebuildVersionFile = TempDirectory + "/MalterlibFullRebuildVersion";
@@ -864,8 +870,6 @@ namespace NMib::NBuildSystem
 						f_OutputConsole("{}: Creating CMake cache took {fe1} s\n"_f << CmakeCacheDirectory << (Stopwatch.f_GetTime() - StartTime));
 					}
 				;
-
-				CFile::fs_CreateDirectory(CmakeCacheDirectory);
 
 				// CMake_CacheIncludePatterns caches files of the excluded ones again
 				auto fIsExcludedFromCache = [&](CStr const &_Path) -> bool
@@ -954,6 +958,93 @@ namespace NMib::NBuildSystem
 					}
 					FoundFiles = fg_Move(IncludedFiles);
 				}
+				// CMake keeps the build system's spellings of the directories that the cache maps, but an import that resolves symbolic links
+				// itself, as get_filename_component(REALPATH) does, writes their real spellings, which the cache can't map. The files of the
+				// cache are only written when no file that CMake wrote names a real path that differs from the build system's spelling
+				struct CLinkedDirectory
+				{
+					CStr m_RealDirectory;
+					CStr m_Directory;
+				};
+
+				TCVector<CLinkedDirectory> LinkedDirectories;
+#ifndef DPlatformFamily_Windows
+				for
+				(
+					CStr const &Directory :
+					{
+						f_GetBaseDir()
+						, CFile::fs_GetPath(FileName)
+						, TempDirectory
+						, SharedTempDirectory
+						, CmakeCacheDirectory
+						, CFile::fs_GetPath(mp_MToolExe.f_String())
+					}
+				)
+				{
+					// A directory that doesn't exist yet, as a new cache directory, is resolved from the directory that holds it
+					CStr ExistingDirectory = Directory;
+					CStr RealDirectory;
+					CStr Failed;
+					TCSet<CStr> Dependencies;
+					while (!ExistingDirectory.f_IsEmpty() && !CFile::fs_ResolveDirectory(ExistingDirectory, RealDirectory, Failed, Dependencies))
+					{
+						CStr Parent = CFile::fs_GetPath(ExistingDirectory);
+						ExistingDirectory = Parent == ExistingDirectory ? CStr() : Parent;
+					}
+
+					if (!ExistingDirectory.f_IsEmpty())
+						RealDirectory = CFile::fs_AppendPath(RealDirectory, CFile::fs_MakePathRelative(Directory, ExistingDirectory));
+
+					if (!ExistingDirectory.f_IsEmpty() && RealDirectory != Directory)
+						LinkedDirectories.f_Insert({RealDirectory, Directory});
+				}
+#endif
+
+				auto fCheckRealPaths = [&](CStr const &_File, CStr const &_CacheFile, CStr const &_Contents)
+					{
+						ch8 const *pContents = _Contents.f_GetStr();
+						for (auto &LinkedDirectory : LinkedDirectories)
+						{
+							CStr const &RealDirectory = LinkedDirectory.m_RealDirectory;
+							for (aint iFound = fg_StrFind(0, _Contents, RealDirectory); iFound >= 0; iFound = fg_StrFind(iFound + 1, _Contents, RealDirectory))
+							{
+								// The real directory itself, not another one whose name starts with its last name
+								ch8 After = pContents[iFound + RealDirectory.f_GetLen()];
+								if (After != 0 && (fg_CharIsAlphabetical(After) || fg_CharIsNumber(After) || fg_StrFindChar("._-+~@", After) >= 0))
+									continue;
+
+								fsp_ThrowError
+									(
+										EntityData.m_Position
+										, CStr
+										(
+											"{}:{}: CMake wrote {}, the real path of {}, for {} of the import cache. The import resolved symbolic links itself, so "
+											"its import cache can't be generated through a checkout or build directory reached through symbolic links: generate it "
+											"through the real path of {}. The import cache was left as it was"_f
+											<< _File
+											<< _Contents.f_Left(iFound).f_SplitLine().f_GetLen()
+											<< RealDirectory
+											<< LinkedDirectory.m_Directory
+											<< _CacheFile
+											<< LinkedDirectory.m_Directory
+										)
+									)
+								;
+							}
+						}
+					}
+				;
+
+				struct CCacheFile
+				{
+					CStr m_Path;
+					CByteVector m_Contents;
+					EFileAttrib m_Attributes;
+				};
+
+				TCVector<CCacheFile> CacheFiles;
+
 				umint PathPrefixLen = TempDirectory.f_GetLen() + 1;
 
 				CStr SourceBase = CFile::fs_GetPath(FileName);
@@ -1134,6 +1225,7 @@ namespace NMib::NBuildSystem
 					}
 
 					CStr FileContents = CFile::fs_ReadStringFromFile(File.m_Path, true);
+					fCheckRealPaths(File.m_Path, DestPath, FileContents);
 
 					bool bIsDependencies = Extension == "dependencies";
 
@@ -2116,14 +2208,18 @@ namespace NMib::NBuildSystem
 						FileContents = fg_Move(NewFileContents);
 					}
 
-					{
-						CFile::fs_CreateDirectory(DestPathDirectory);
-						CByteVector BinaryFileContents;
-						CFile::fs_WriteStringToVector(BinaryFileContents, FileContents, false);
-						f_WriteFile(BinaryFileContents, DestPath, File.m_Attribs | EFileAttrib_UnixAttributesValid);
-					}
+					auto &CacheFile = CacheFiles.f_Insert();
+					CacheFile.m_Path = DestPath;
+					CFile::fs_WriteStringToVector(CacheFile.m_Contents, FileContents, false);
+					CacheFile.m_Attributes = File.m_Attribs | EFileAttrib_UnixAttributesValid;
+				}
 
-					WrittenFiles[DestPath];
+				CFile::fs_CreateDirectory(CmakeCacheDirectory);
+				for (auto &CacheFile : CacheFiles)
+				{
+					CFile::fs_CreateDirectoryForFile(CacheFile.m_Path);
+					f_WriteFile(CacheFile.m_Contents, CacheFile.m_Path, CacheFile.m_Attributes);
+					WrittenFiles[CacheFile.m_Path];
 				}
 
 				CHash_SHA512 DependenciesHash;
