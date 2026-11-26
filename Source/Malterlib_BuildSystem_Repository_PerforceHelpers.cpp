@@ -48,7 +48,7 @@ namespace NMib::NBuildSystem::NRepository
 				(
 					g_Dispatch(fg_BlockingActor()) / [_BaseDir, _Environment, _Registry]() -> CPerforceClient::CConnectionInfo
 					{
-						auto Settings = NPerforce::CPerforceIgnore::fs_GetSettings(_BaseDir, _Environment, _Registry);
+						auto Settings = NPerforce::CPerforceIgnore::fs_GetSettings(_BaseDir, _Environment, _Registry, _BaseDir);
 						return CPerforceClient::fs_GetConnectionInfo(_BaseDir, Settings, _Environment);
 					}
 				)

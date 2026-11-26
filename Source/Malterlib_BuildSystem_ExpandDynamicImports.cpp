@@ -2162,7 +2162,7 @@ namespace NMib::NBuildSystem
 						{
 							try
 							{
-								if (auto pClient = CPerforceClientThrow::fs_GetFromP4Config(File, f_GetGenerationEnvironment(), f_GetPerforceRegistry()))
+								if (auto pClient = CPerforceClientThrow::fs_GetFromP4Config(File, f_GetGenerationEnvironment(), f_GetPerforceRegistry(), f_GetBaseDir()))
 								{
 									pClient->f_Delete(File);
 									f_OutputConsole("Deleted file in Perforce: {}{\n}"_f << File);

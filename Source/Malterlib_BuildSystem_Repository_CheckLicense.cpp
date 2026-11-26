@@ -807,11 +807,18 @@ namespace NMib::NBuildSystem
 							OtherRepositories.f_Remove(Repo.m_Location);
 							auto Listed = co_await
 								(
-									g_Dispatch(fg_BlockingActor())
-									/ [Root = Repo.m_Location, OtherRepositories = fg_Move(OtherRepositories), Environment = f_GetPerforceEnvironment(), Registry = f_GetPerforceRegistry()]
+									g_Dispatch(fg_BlockingActor()) /
+									[
+										Root = Repo.m_Location
+										, OtherRepositories = fg_Move(OtherRepositories)
+										, Environment = f_GetPerforceEnvironment()
+										, Registry = f_GetPerforceRegistry()
+										, ProjectRoot = f_GetBaseDir()
+									]
 									() -> TCVector<CStr>
 									{
-										return NPerforce::CPerforceRootFiles(Root, OtherRepositories, NPerforce::CPerforceIgnore::fs_GetSettings(Root, Environment, Registry)).f_List();
+										auto Settings = NPerforce::CPerforceIgnore::fs_GetSettings(Root, Environment, Registry, ProjectRoot);
+										return NPerforce::CPerforceRootFiles(Root, OtherRepositories, Settings).f_List();
 									}
 								)
 								.f_Wrap()
