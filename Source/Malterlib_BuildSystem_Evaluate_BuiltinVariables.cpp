@@ -338,6 +338,11 @@ namespace NMib::NBuildSystem
 					}
 					,
 					{
+						CPropertyKey(gc_ConstKey_Import_CMake_EnvironmentWithPaths)
+						, DMibBuildSystemTypeWithPosition(fg_Defaulted(CBuildSystemSyntax::CType{CBuildSystemSyntax::CClassType({}, g_String)}, EJsonType_Object))
+					}
+					,
+					{
 						CPropertyKey(gc_ConstKey_Import_CMake_CacheIgnoreInputs)
 						, DMibBuildSystemTypeWithPosition(fg_Defaulted(g_StringArray, EJsonType_Array))
 					}

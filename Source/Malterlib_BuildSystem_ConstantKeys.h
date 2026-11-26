@@ -162,6 +162,7 @@ namespace NMib::NBuildSystem
 	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_DiffHash;
 	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_ForceCrossCompile;
 	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_Environment;
+	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_EnvironmentWithPaths;
 	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_ExcludeFromHash;
 	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_DisableIncludeReplace;
 	extern CPropertyKeyReference const gc_ConstKey_Import_CMake_FullRebuildVersion;

@@ -482,6 +482,7 @@ namespace NMib::NBuildSystem
 		CStr Architecture = f_EvaluateEntityPropertyString(_Entity, gc_ConstKey_Architecture);
 		TCVector<CStr> CmakePaths = f_EvaluateEntityPropertyStringArray(_Entity, gc_ConstKey_Import_CMake_Path, TCVector<CStr>());
 		TCVector<CStr> CmakeVariablesWithPaths = f_EvaluateEntityPropertyStringArray(_Entity, gc_ConstKey_Import_CMake_VariablesWithPaths, TCVector<CStr>());
+		CEJsonSorted CmakeEnvironmentWithPaths = f_EvaluateEntityProperty(_Entity, gc_ConstKey_Import_CMake_EnvironmentWithPaths).f_Move();
 		CStr CmakeSystemName = f_EvaluateEntityPropertyString(_Entity, gc_ConstKey_Import_CMake_SystemName, CStr());
 		CStr CmakeSystemProcessor = f_EvaluateEntityPropertyString(_Entity, gc_ConstKey_Import_CMake_SystemProcessor, CStr());
 		CStr CmakeCompiler = f_EvaluateEntityPropertyString(_Entity, gc_ConstKey_Import_CMake_CCompiler, CStr());
@@ -499,6 +500,7 @@ namespace NMib::NBuildSystem
 				fAddStringHash(o_DependenciesHash, Architecture, gc_ConstString_Architecture.m_String, false);
 				fAddStringHash(o_DependenciesHash, "{}"_f << CmakePaths, "Import.CMake_Path", false);
 				fAddStringHash(o_DependenciesHash, "{}"_f << CmakeVariablesWithPaths, "Import.CMake_VariablesWithPaths", false);
+				fAddStringHash(o_DependenciesHash, "{}"_f << CmakeEnvironmentWithPaths, "Import.CMake_EnvironmentWithPaths", false);
 				fAddStringHash(o_DependenciesHash, CmakeSystemName, "Import.CMake_SystemName", false);
 				fAddStringHash(o_DependenciesHash, CmakeSystemProcessor, "Import.CMake_SystemProcessor", false);
 				fAddStringHash(o_DependenciesHash, CmakeCompiler, "Import.CMake_CCompiler", false);
@@ -793,6 +795,21 @@ namespace NMib::NBuildSystem
 				}
 			}
 
+			// Each value of Import.CMake_EnvironmentWithPaths is a search path that comes first in the variable's value, before what the
+			// environment, Import.CMake_Environment, Import.CMake_Path and the defaults of a sysroot give. An empty entry of a search path is
+			// the working directory, so an empty value adds none
+			for (auto &KeyValue : CmakeEnvironmentWithPaths.f_Object())
+			{
+				if (KeyValue.f_Value().f_String().f_IsEmpty())
+					continue;
+
+				auto &Value = LaunchParams.m_Environment[KeyValue.f_Name()];
+#ifdef DPlatformFamily_Windows
+				Value = Value.f_IsEmpty() ? KeyValue.f_Value().f_String() : KeyValue.f_Value().f_String() + ";" + Value;
+#else
+				Value = Value.f_IsEmpty() ? KeyValue.f_Value().f_String() : KeyValue.f_Value().f_String() + ":" + Value;
+#endif
+			}
 			// CMake spells its build directory as PWD does when PWD names the working directory, and otherwise as the OS reports the working
 			// directory, with the symbolic links in it resolved. The Malterlib generator recognizes the build directory as CMAKE_MALTERLIB_TEMPDIR
 			// spells it, and the import cache maps the directories as the build system spells them, so the environment of the import doesn't
