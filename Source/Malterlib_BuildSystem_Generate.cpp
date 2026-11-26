@@ -63,29 +63,11 @@ namespace NMib::NBuildSystem
 		// this holds however the two paths are spelled, and a program outside the workspace is left alone.
 		auto fg_RebaseProgramDirectory(CStr const &_ProgramDirectory, CStr const &_BaseDir) -> CStr
 		{
-			if (!CFile::fs_FileExists(_BaseDir, EFileAttrib_Directory))
+			CStr Relative;
+			if (!CFile::fs_FindAncestorByIdentity(_ProgramDirectory, _BaseDir, Relative))
 				return _ProgramDirectory;
 
-			auto BaseIdentifier = CFile::fs_GetUniqueIdentifier(_BaseDir);
-
-			CStr Suffix;
-			CStr Directory = _ProgramDirectory;
-
-			while (Directory)
-			{
-				if (CFile::fs_FileExists(Directory, EFileAttrib_Directory) && CFile::fs_GetUniqueIdentifier(Directory) == BaseIdentifier)
-					return Suffix ? (_BaseDir / Suffix) : _BaseDir;
-
-				CStr Parent = CFile::fs_GetPath(Directory);
-				if (!Parent || Parent == Directory)
-					break;
-
-				CStr Name = CFile::fs_GetFile(Directory);
-				Suffix = Suffix ? (Name / Suffix) : Name;
-				Directory = Parent;
-			}
-
-			return _ProgramDirectory;
+			return _BaseDir / Relative;
 		}
 	}
 
