@@ -722,10 +722,13 @@ namespace NMib::NBuildSystem
 			CStr CmakeExecutable;
 			TCVector<CStr> Params;
 
+			// CMake names itself as it was started, in the commands it generates, and the import cache only maps the program directory as
+			// Builtin.MToolExe spells it. The program directory that the OS reports has the symbolic links in it resolved
+			CStr ProgramDirectory = CFile::fs_GetPath(mp_MToolExe.f_String());
 #ifdef DMalterlibBuildSystem_EmbedCMake
-			CmakeExecutable = CFile::fs_GetProgramDirectory() / "MToolCMake";
+			CmakeExecutable = ProgramDirectory / "MToolCMake";
 #else
-			CmakeExecutable = CFile::fs_GetProgramDirectory() + "/cmake";
+			CmakeExecutable = ProgramDirectory / "cmake";
 #endif
 #ifdef DPlatformFamily_Windows
 			CmakeExecutable += ".exe";
