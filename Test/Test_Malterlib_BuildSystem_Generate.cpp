@@ -288,6 +288,43 @@ namespace
 			DMibAssertTrue(CFile::fs_FileExists(TestGenerate.m_OutputDirectory / "TestGenerateFile.txt"));
 			DMibExpect(CFile::fs_ReadStringFromFile(TestGenerate.m_OutputDirectory / "TestGenerateFile.txt"), ==, TestGenerate.m_ExpectedContents);
 		};
+		// The directories of a recursive wildcard are groups named as the directories are, spaces included
+		DMibTestSuite("RecursiveGroups")
+		{
+			CStr SourceDirectory = CFile::fs_GetProgramDirectory() / "BuildSystemTests/RecursiveGroups";
+			fg_TestAddCleanupPath(SourceDirectory);
+			fg_TestAddCleanupPath(CFile::fs_GetProgramDirectory() / "BuildSystemTestsOutput/RecursiveGroups");
+
+			fp_Generate("RecursiveGroups", {});
+			CFile::fs_CreateDirectory(SourceDirectory / "Sources/ Leading");
+			CFile::fs_WriteStringToFile(SourceDirectory / "Sources/ Leading/Inner.cpp", "", false);
+#ifndef DPlatformFamily_Windows
+			CFile::fs_CreateDirectory(SourceDirectory / "Sources/ Leading/Trailing ");
+			CFile::fs_WriteStringToFile(SourceDirectory / "Sources/ Leading/Trailing /Deep.cpp", "", false);
+#endif
+
+			auto BuildSystemData = fp_Generate("RecursiveGroups", {}, false);
+			auto &Target = BuildSystemData["Workspaces"]["TestWorkspace"]["Targets"]["TestTarget"];
+
+			auto fGroupFiles = [&](CStr const &_Group) -> TCVector<CStr>
+				{
+					TCVector<CStr> Files;
+					if (auto *pFiles = Target["Files"].f_GetMember(_Group))
+					{
+						for (auto &File : pFiles->f_Object())
+							Files.f_Insert(File.f_Name());
+					}
+					return Files;
+				}
+			;
+
+			DMibExpect(fGroupFiles("Plain"), ==, TCVector<CStr>{SourceDirectory / "Sources/Plain/File.cpp"});
+			DMibExpect(fGroupFiles(" Leading"), ==, TCVector<CStr>{SourceDirectory / "Sources/ Leading/Inner.cpp"});
+			DMibExpect(fGroupFiles("Leading"), ==, TCVector<CStr>{});
+#ifndef DPlatformFamily_Windows
+			DMibExpect(fGroupFiles(" Leading/Trailing "), ==, TCVector<CStr>{SourceDirectory / "Sources/ Leading/Trailing /Deep.cpp"});
+#endif
+		};
 		DMibTestSuite("Ternary")
 		{
 			auto TestGenerate = fp_TestGenerate("Ternary");

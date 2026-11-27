@@ -1,0 +1,34 @@
+*Configuration
+{
+	Debug "Debug Config"
+}
+
+*Platform
+{
+	TestPlatform "Test platform"
+}
+
+*Architecture
+{
+	TestArch "Test architecture"
+}
+
+%Target ["TestTarget"]
+{
+	Target
+	{
+		Name "TestTarget"
+	}
+
+	%File "Sources/^*"
+}
+
+%Workspace ["TestWorkspace"]
+{
+	Workspace
+	{
+		Name "TestWorkspace"
+	}
+
+	%Target ["TestTarget"]
+}

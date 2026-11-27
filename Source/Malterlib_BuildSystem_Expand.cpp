@@ -759,7 +759,7 @@ namespace NMib::NBuildSystem
 						CStr Path = CFile::fs_GetPath(FullFileName.f_Extract(RecursiveStart));
 						while (!Path.f_IsEmpty())
 						{
-							CStr ThisPath = fg_GetStrSep(Path, "/");
+							CStr ThisPath = fg_GetStrSepNoTrim(Path, "/");
 
 							CEntityKey Key;
 							Key.m_Type = EEntityType_Group;
