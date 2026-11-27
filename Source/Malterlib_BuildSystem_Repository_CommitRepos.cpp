@@ -1407,7 +1407,8 @@ namespace NMib::NBuildSystem
 					g_Dispatch(BlockingActorCheckout) / [_Launches, _ConfigFilePaths, _Connection, _CommitMessage, _MessageHeader]()
 					{
 						CPerforceClientThrow Client(_Connection);
-						auto DepotPaths = fg_PerforceConnectAndResolveDepotPaths(_ConfigFilePaths, Client);
+						NPerforce::CPerforceRootSpelling Spelling;
+						auto DepotPaths = fg_PerforceConnectAndResolveDepotPaths(_ConfigFilePaths, Client, &Spelling);
 
 						// Get the latest submitted CL to compare against. Brand-new files have no
 						// depot path yet, so filter them out before querying revisions.
@@ -1464,12 +1465,16 @@ namespace NMib::NBuildSystem
 								DMibError(Message);
 							}
 
+							// A file without a revision at the changelist has no submitted content; a read that fails throws.
 							CStr SubmittedContent;
 							if (LatestCL > 0)
-								Client.f_NoThrow().f_GetTextFileContents("{}@{}"_f << DepotPaths[iConfigFile] << LatestCL, SubmittedContent);
+							{
+								if (auto Content = Client.f_GetTextFileContentsIfExists("{}@{}"_f << DepotPaths[iConfigFile] << LatestCL))
+									SubmittedContent = fg_Move(*Content);
+							}
 
 							CStr WorkspaceContent = CFile::fs_ReadStringFromFile(_ConfigFilePaths[iConfigFile]);
-							if (WorkspaceContent != SubmittedContent)
+							if (!fg_PerforceConfigContentEquals(WorkspaceContent, SubmittedContent))
 							{
 								ChangedConfigFiles.f_Insert(_ConfigFilePaths[iConfigFile]);
 								ChangedDepotPaths.f_Insert(DepotPaths[iConfigFile]);
@@ -1492,11 +1497,7 @@ namespace NMib::NBuildSystem
 
 						uint32 UpdateReposCL = 0;
 						{
-							CStr ClientName;
-							Client.f_NoThrow().f_GetClientName(ClientName);
-
-							TCVector<CPerforceClient::CChangeList> PendingCLs;
-							Client.f_NoThrow().f_GetChangelists(CStr(), PendingCLs, false, ClientName, "pending");
+							auto PendingCLs = Client.f_GetChangelists(CStr(), false, Client.f_GetActiveClient(), "pending");
 
 							for (auto &Changelist : PendingCLs)
 							{
@@ -1520,72 +1521,103 @@ namespace NMib::NBuildSystem
 							}
 						}
 
-						// Fetch the matched pending CL once so we can both identify
-						// which config files are already in it (and therefore don't
-						// need reclaiming) and later derive bExistingDescriptionMatches
-						// / ForeignFilesInCL without a second Perforce query.
+						// Fetch the matched pending CL once so we can later derive
+						// bExistingDescriptionMatches / ForeignFilesInCL without a
+						// second Perforce query.
 						CPerforceClient::CChangeList ExistingCLData;
 						bool bHasExistingCLData = false;
 						if (UpdateReposCL != 0)
-							bHasExistingCLData = Client.f_NoThrow().f_GetChangelist(UpdateReposCL, ExistingCLData);
-
-						TCSet<CStr> OurCLFiles;
-						if (bHasExistingCLData)
 						{
-							for (auto &File : ExistingCLData.m_Files)
-								OurCLFiles[File.m_Name];
+							ExistingCLData = Client.f_GetChangelist(UpdateReposCL);
+							bHasExistingCLData = true;
+						}
+
+						// Each config file repo-commit keeps, tracked or new, as p4 opened tells it by its name, so the
+						// server's own case rules and mapping tell the file. A query that fails stops here, before any
+						// changelist changes. A config file opened for delete or move/delete, in any changelist, also
+						// ours, would be submitted as a delete, so it is refused here too: the user resolves it by hand
+						// (typically `p4 revert`).
+						TCMap<CStr, CPerforceClient::COpenedFile> OpenedConfigFiles;
+						for (umint iConfigFile = 0; iConfigFile < _ConfigFilePaths.f_GetLen(); ++iConfigFile)
+						{
+							CStr const &ConfigFile = _ConfigFilePaths[iConfigFile];
+							if (DepotPaths[iConfigFile].f_IsEmpty() && NewConfigFiles.f_Contains(ConfigFile) < 0)
+								continue;
+
+							TCVector<CPerforceClient::COpenedFile> Opened;
+							if (!Client.f_NoThrow().f_GetOpenedFiles(Spelling.f_ServerFileName(ConfigFile), CStr(), Opened))
+								DMibError("Failed to ask Perforce whether '{}' is opened: {}"_f << ConfigFile << Client.f_NoThrow().f_GetLastError());
+
+							for (auto &File : Opened)
+							{
+								if (File.m_Action == "delete" || File.m_Action == "move/delete")
+									DMibError("'{}' is opened for {} in Perforce. Revert it before repo-commit opens it for edit"_f << ConfigFile << File.m_Action);
+							}
+
+							if (!Opened.f_IsEmpty())
+								OpenedConfigFiles[ConfigFile] = Opened[0];
+						}
+
+						// An opened config file is named by its open record's depot file, which the changelists list.
+						for (umint iChanged = 0; iChanged < ChangedConfigFiles.f_GetLen(); ++iChanged)
+						{
+							if (auto *pOpened = OpenedConfigFiles.f_FindEqual(ChangedConfigFiles[iChanged]))
+								ChangedDepotPaths[iChanged] = pOpened->m_DepotFile;
 						}
 
 						// Reclaim tracked config files that the user has opened in a
-						// pending CL other than UpdateReposCL, even when workspace
-						// content matches the submitted version. Without this, such
-						// files stay stranded in the foreign CL and a later submit of
-						// the "Update repositories" CL would silently omit them. Files
-						// already in our own CL (OurCLFiles) are skipped because the
-						// later MoveToChangelist would be a no-op for them.
+						// pending CL other than UpdateReposCL, the default one too, even
+						// when workspace content matches the submitted version. Without
+						// this, such files stay stranded in the other CL and a later
+						// submit of the "Update repositories" CL would silently omit
+						// them. Files already in our own CL are skipped because the later
+						// MoveToChangelist would be a no-op for them.
 						{
-							TCVector<CStr> OpenedList;
-							Client.f_NoThrow().f_GetOpened(CStr(), CStr(), OpenedList);
-
-							TCSet<CStr> OpenedElsewhere;
-							for (auto &DepotPath : OpenedList)
-							{
-								if (!OurCLFiles.f_FindEqual(DepotPath))
-									OpenedElsewhere[DepotPath];
-							}
-
 							TCSet<CStr> AlreadyIncluded;
-							for (auto &DepotPath : ChangedDepotPaths)
-								AlreadyIncluded[DepotPath];
+							for (auto &ConfigFile : ChangedConfigFiles)
+								AlreadyIncluded[ConfigFile];
 
 							for (umint iConfigFile = 0; iConfigFile < _ConfigFilePaths.f_GetLen(); ++iConfigFile)
 							{
-								if (DepotPaths[iConfigFile].f_IsEmpty())
+								CStr const &ConfigFile = _ConfigFilePaths[iConfigFile];
+								auto *pOpened = OpenedConfigFiles.f_FindEqual(ConfigFile);
+								if (DepotPaths[iConfigFile].f_IsEmpty() || !pOpened || AlreadyIncluded.f_FindEqual(ConfigFile))
 									continue;
-								if (AlreadyIncluded.f_FindEqual(DepotPaths[iConfigFile]))
-									continue;
-								if (!OpenedElsewhere.f_FindEqual(DepotPaths[iConfigFile]))
+								if (UpdateReposCL != 0 && pOpened->m_Change == CStr::fs_ToStr(UpdateReposCL))
 									continue;
 
-								ChangedConfigFiles.f_Insert(_ConfigFilePaths[iConfigFile]);
-								ChangedDepotPaths.f_Insert(DepotPaths[iConfigFile]);
+								ChangedConfigFiles.f_Insert(ConfigFile);
+								ChangedDepotPaths.f_Insert(pOpened->m_DepotFile);
 							}
 						}
 
+						// A new config file its record already has opened in our CL, as
+						// for add before its first submit, has nothing left to do, so a
+						// run that finds only such files is up to date.
+						if (UpdateReposCL != 0)
+						{
+							TCVector<CStr> PendingNewConfigFiles;
+							for (auto &NewFile : NewConfigFiles)
+							{
+								auto *pOpened = OpenedConfigFiles.f_FindEqual(NewFile);
+								if (!pOpened || pOpened->m_Change != CStr::fs_ToStr(UpdateReposCL))
+									PendingNewConfigFiles.f_Insert(NewFile);
+							}
+							NewConfigFiles = fg_Move(PendingNewConfigFiles);
+						}
+
 						// Build the set of depot paths that legitimately belong in the
-						// "Update repositories" changelist. Both already-tracked config
-						// files being edited and brand-new config files about to be
-						// `p4 add`ed are computed here so we can recognise any OTHER
-						// files the user may have parked in a reused CL and evict them.
+						// "Update repositories" changelist, so we can recognise any OTHER
+						// files the user may have parked in a reused CL and evict them:
+						// the tracked config files being edited, and every config file
+						// already opened, by its record's depot file, also one in our CL
+						// that is unchanged, which stays in it. A config file not opened
+						// yet is in no CL.
 						TCSet<CStr> ConfigDepotPathSet;
 						for (auto &DepotPath : ChangedDepotPaths)
 							ConfigDepotPathSet[DepotPath];
-						for (auto &NewFile : NewConfigFiles)
-						{
-							CStr NewDepotPath;
-							if (Client.f_NoThrow().f_GetDepotPath(NewFile, NewDepotPath) && !NewDepotPath.f_IsEmpty())
-								ConfigDepotPathSet[NewDepotPath];
-						}
+						for (auto &Opened : OpenedConfigFiles)
+							ConfigDepotPathSet[Opened.m_DepotFile];
 
 						// Collect any non-config files a previous repo-commit run left in
 						// the reused CL so we can evict them back to the default
@@ -1632,7 +1664,7 @@ namespace NMib::NBuildSystem
 						// creating or touching the description of any CL.
 						if (bExistingDescriptionMatches && ChangedConfigFiles.f_IsEmpty() && NewConfigFiles.f_IsEmpty())
 						{
-							Client.f_NoThrow().f_MoveToChangelist(ForeignFilesInCL, 0);
+							Client.f_MoveToChangelist(ForeignFilesInCL, 0);
 							_Launches.f_Output(EOutputType_Normal, ".", "Evicted {} foreign file(s) from changelist {}"_f << ForeignFilesInCL.f_GetLen() << UpdateReposCL);
 							return;
 						}
@@ -1643,28 +1675,24 @@ namespace NMib::NBuildSystem
 						// file exists we always fall through to add+open below.
 						if (bExistingDescriptionMatches && NewConfigFiles.f_IsEmpty() && ForeignFilesInCL.f_IsEmpty())
 						{
-							CPerforceClient::CChangeList ChangelistData;
-							if (Client.f_NoThrow().f_GetChangelist(UpdateReposCL, ChangelistData))
+							TCSet<CStr> FilesInCL;
+							for (auto &File : ExistingCLData.m_Files)
+								FilesInCL[File.m_Name];
+
+							bool bAllFilesInCL = true;
+							for (auto &DepotPath : ChangedDepotPaths)
 							{
-								TCSet<CStr> FilesInCL;
-								for (auto &File : ChangelistData.m_Files)
-									FilesInCL[File.m_Name];
-
-								bool bAllFilesInCL = true;
-								for (auto &DepotPath : ChangedDepotPaths)
+								if (!FilesInCL.f_FindEqual(DepotPath))
 								{
-									if (!FilesInCL.f_FindEqual(DepotPath))
-									{
-										bAllFilesInCL = false;
-										break;
-									}
+									bAllFilesInCL = false;
+									break;
 								}
+							}
 
-								if (bAllFilesInCL)
-								{
-									_Launches.f_Output(EOutputType_Normal, ".", "Already up to date");
-									return;
-								}
+							if (bAllFilesInCL)
+							{
+								_Launches.f_Output(EOutputType_Normal, ".", "Already up to date");
+								return;
 							}
 						}
 
@@ -1681,6 +1709,37 @@ namespace NMib::NBuildSystem
 							return;
 						}
 
+						// Open already-tracked files for edit, and add the new ones,
+						// once there is work to do and before any changelist is
+						// created, described or emptied, so a refusal leaves the
+						// changelists as they were; all are moved to our changelist
+						// below. ChangedConfigFiles and ChangedDepotPaths are aligned
+						// 1:1 here.
+						//
+						// `p4 edit` is a no-op for files already opened for edit (in
+						// our CL or a foreign one — the subsequent f_MoveToChangelist
+						// migrates them) and combines cleanly with pending
+						// integrate/branch actions. Files opened for delete or
+						// move/delete were refused above; f_OpenForWrite fails for any
+						// other state p4 edit leaves as it is.
+						for (umint iConfigFile = 0; iConfigFile < ChangedConfigFiles.f_GetLen(); ++iConfigFile)
+							Client.f_OpenForWrite(Spelling.f_ServerFileName(ChangedConfigFiles[iConfigFile]));
+
+						// `p4 add` a brand-new file. If it's already opened from a
+						// previous run, skip the call so the throwing variant only
+						// fires on real failures (file outside client view, denied
+						// by protections, etc.) — a blanket f_NoThrow would silently
+						// swallow those and leave the config file outside the CL.
+						for (auto &NewFile : NewConfigFiles)
+						{
+							if (OpenedConfigFiles.f_FindEqual(NewFile))
+								continue;
+
+							// p4 add takes a name with wildcard characters literally only with -f, and escapes it itself
+							CStr ServerPath = Spelling.f_ServerPath(NewFile);
+							Client.f_Add(ServerPath, Spelling.f_ServerFileName(NewFile) != ServerPath);
+						}
+
 						// Create a brand new CL when no prefix match was found, or
 						// refresh the description of the prefix-matched CL to the
 						// newly generated message (covering both no-op description
@@ -1692,67 +1751,27 @@ namespace NMib::NBuildSystem
 						// so they end up in this fresh CL. The old CL is left
 						// empty for the user to discard (or repurpose) manually.
 						if (UpdateReposCL == 0)
-							Client.f_NoThrow().f_CreateChangelist(_CommitMessage, {}, {}, UpdateReposCL);
+							UpdateReposCL = Client.f_CreateChangelist(_CommitMessage, {}, {});
 						else
-							Client.f_NoThrow().f_SetChangelistDescription(UpdateReposCL, _CommitMessage);
+							Client.f_SetChangelistDescription(UpdateReposCL, _CommitMessage);
 
-						// Move foreign files out before we start adding our own, so
+						// Move foreign files out before we move our own in, so
 						// a later `f_MoveToChangelist` call for the config files
 						// doesn't accidentally undo the eviction if depot paths
 						// overlap. `p4 reopen -c 0` moves files to the default CL.
 						if (!ForeignFilesInCL.f_IsEmpty())
-							Client.f_NoThrow().f_MoveToChangelist(ForeignFilesInCL, 0);
+							Client.f_MoveToChangelist(ForeignFilesInCL, 0);
 
-						// Open already-tracked files for edit, then move all to our
-						// changelist. ChangedConfigFiles and ChangedDepotPaths are
-						// aligned 1:1 here. Brand-new files go through `p4 add`
-						// below instead.
-						//
-						// `p4 edit` is a no-op for files already opened for edit (in
-						// our CL or a foreign one — the subsequent f_MoveToChangelist
-						// migrates them) and combines cleanly with pending
-						// integrate/branch actions. For delete/add/move/* we let the
-						// throwing variant surface the Perforce error: the user needs
-						// to resolve that state by hand (typically `p4 revert`) before
-						// repo-commit can take over, otherwise the generated CL would
-						// carry the wrong action.
-						for (umint iConfigFile = 0; iConfigFile < ChangedConfigFiles.f_GetLen(); ++iConfigFile)
-							Client.f_OpenForEdit(ChangedConfigFiles[iConfigFile]);
-
-						// `p4 add` a brand-new file. If it's already opened from a
-						// previous run, skip the call so the throwing variant only
-						// fires on real failures (file outside client view, denied
-						// by protections, etc.) — a blanket f_NoThrow would silently
-						// swallow those and leave the config file outside the CL.
+						// The config files are moved by their names, so p4 reopen takes
+						// the file each has opened, also an add under an overlay mapping,
+						// rather than a depot path looked up again.
+						TCVector<CStr> FilesToMove;
+						for (auto &ConfigFile : ChangedConfigFiles)
+							FilesToMove.f_Insert(Spelling.f_ServerFileName(ConfigFile));
 						for (auto &NewFile : NewConfigFiles)
-						{
-							bool bAlreadyOpened = false;
-							CStr NewDepotPath;
-							if (Client.f_NoThrow().f_GetDepotPath(NewFile, NewDepotPath))
-							{
-								TCVector<CStr> Opened;
-								Client.f_NoThrow().f_GetOpened(NewDepotPath, CStr(), Opened);
-								bAlreadyOpened = !Opened.f_IsEmpty();
-							}
-							if (!bAlreadyOpened)
-								Client.f_Add(NewFile);
-						}
-
-						if (!ChangedDepotPaths.f_IsEmpty())
-							Client.f_MoveToChangelist(ChangedDepotPaths, UpdateReposCL);
-
-						if (!NewConfigFiles.f_IsEmpty())
-						{
-							TCVector<CStr> NewDepotPaths;
-							for (auto &NewFile : NewConfigFiles)
-							{
-								CStr NewDepotPath;
-								if (Client.f_NoThrow().f_GetDepotPath(NewFile, NewDepotPath) && !NewDepotPath.f_IsEmpty())
-									NewDepotPaths.f_Insert(NewDepotPath);
-							}
-							if (!NewDepotPaths.f_IsEmpty())
-								Client.f_MoveToChangelist(NewDepotPaths, UpdateReposCL);
-						}
+							FilesToMove.f_Insert(Spelling.f_ServerFileName(NewFile));
+						if (!FilesToMove.f_IsEmpty())
+							Client.f_MoveToChangelist(FilesToMove, UpdateReposCL);
 
 						_Launches.f_Output(EOutputType_Normal, ".", "Updated changelist {}"_f << UpdateReposCL);
 					}

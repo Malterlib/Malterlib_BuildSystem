@@ -151,6 +151,12 @@ To show current status without reconciling use:
 
 namespace NMib::NBuildSystem::NRepository
 {
+	// The text with LF for every line end, CRLF and a lone CR alike.
+	CStr fg_NormalizeLineEndings(CStr const &_Content)
+	{
+		return _Content.f_Replace("\r\n", "\n").f_Replace("\r", "\n");
+	}
+
 	CStr const &CReposLocation::f_GetPath() const
 	{
 		return TCMap<CStr, CReposLocation>::fs_GetKey(*this);

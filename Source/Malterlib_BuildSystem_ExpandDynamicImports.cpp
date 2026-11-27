@@ -8,6 +8,7 @@
 #include <Mib/File/MalterlibFS>
 #include <Mib/File/VirtualFSs/MalterlibFS>
 #include <Mib/Cryptography/Hashes/SHA>
+#include <Mib/Perforce/FileNames>
 #include <Mib/Perforce/Wrapper>
 #include <Mib/Container/Convert>
 #include <Mib/String/MultiReplace>
@@ -2278,9 +2279,10 @@ namespace NMib::NBuildSystem
 						{
 							try
 							{
-								if (auto pClient = CPerforceClientThrow::fs_GetFromP4Config(File, f_GetGenerationEnvironment(), f_GetPerforceRegistry(), f_GetBaseDir()))
+								CStr FileName;
+								if (auto pClient = CPerforceClientThrow::fs_GetFromP4ConfigForFile(File, f_GetGenerationEnvironment(), f_GetPerforceRegistry(), f_GetBaseDir(), FileName))
 								{
-									pClient->f_Delete(File);
+									pClient->f_Delete(FileName);
 									f_OutputConsole("Deleted file in Perforce: {}{\n}"_f << File);
 									continue;
 								}

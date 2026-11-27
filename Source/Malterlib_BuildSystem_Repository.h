@@ -660,6 +660,7 @@ namespace NMib::NBuildSystem::NRepository
 		, mc_IncludeRepoCommit     = DMibBit(3)
 	};
 
+	CStr fg_NormalizeLineEndings(CStr const &_Content);
 	TCUnsafeFuture<CGitVersion> fg_GetGitVersion(CGitLaunches &_Launches);
 	CStr fg_GetGitRoot(CStr const &_Directory);
 	CStr fg_GetGitDataDir(CStr const &_GitRoot, CFilePosition const &_Position);

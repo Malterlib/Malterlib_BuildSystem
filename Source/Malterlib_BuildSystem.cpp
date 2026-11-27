@@ -6,6 +6,7 @@
 
 #include "Malterlib_BuildSystem_GeneratorState.h"
 
+#include <Mib/Perforce/FileNames>
 #include <Mib/Perforce/Wrapper>
 
 namespace NMib::NBuildSystem
@@ -285,15 +286,23 @@ namespace NMib::NBuildSystem
 					{
 						EFileAttrib Attributes = CFile::fs_GetAttributes(_Destination);
 
-						if ((Attributes & EFileAttrib_ReadOnly) || (!(Attributes & EFileAttrib_UserWrite) && (mp_SupportedAttributes & EFileAttrib_UserWrite)))
+						if (!CFile::fs_IsFileWritable(Attributes))
 						{
 							bool bSuccess = false;
-							// Perforce checkout
+							// Perforce checkout. A file whose open state Perforce keeps from taking what is written, as one opened for
+							// delete, stops the write. Without a workspace for the file, a connection, or a file p4 edit can open, as
+							// one outside the workspace, the write protection is removed instead.
+							bool bRefused = false;
 							try
 							{
-								if (auto pClient = CPerforceClientThrow::fs_GetFromP4Config(_Destination, f_GetGenerationEnvironment(), f_GetPerforceRegistry(), f_GetBaseDir()))
+								CStr FileName;
+								if
+								(
+									auto pClient
+									= CPerforceClientThrow::fs_GetFromP4ConfigForFile(_Destination, f_GetGenerationEnvironment(), f_GetPerforceRegistry(), f_GetBaseDir(), FileName)
+								)
 								{
-									pClient->f_OpenForEdit(_Destination);
+									pClient->f_OpenForWrite(FileName, &bRefused);
 									f_OutputConsole("Opened file for edit in Perforce: {}{\n}"_f << _Destination);
 									bSuccess = true;
 								}
@@ -301,6 +310,9 @@ namespace NMib::NBuildSystem
 							catch (NException::CException const &_Error)
 							{
 								CStr Error = _Error.f_GetErrorStr();
+								if (bRefused)
+									DMibError("Perforce can't open {} for edit, which is left as it is:{\n}{}"_f << _Destination << Error);
+
 								f_OutputConsole("Failed to checkout via Perforce:{\n}{}{\n}"_f << Error, true);
 							}
 

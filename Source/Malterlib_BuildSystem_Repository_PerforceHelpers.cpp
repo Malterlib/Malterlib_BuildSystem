@@ -63,33 +63,45 @@ namespace NMib::NBuildSystem::NRepository
 		return fg_ReadPerforceRootConnection(_BuildSystem.f_GetBaseDir(), _BuildSystem.f_GetGenerationEnvironment(), _BuildSystem.f_GetPerforceRegistry());
 	}
 
+	// The spelling of the Perforce root, the connection's working directory, in _Client's workspace, whose client spec can spell it
+	// otherwise, as when the root is reached through a symbolic link.
+	NPerforce::CPerforceRootSpelling fg_PerforceRootSpelling(CPerforceClientThrow &_Client)
+	{
+		return NPerforce::CPerforceRootSpelling::fs_Find(_Client.f_GetConnectionInfo().m_WorkingDirectory, _Client.f_GetClientRoot());
+	}
+
+	// Whether a config file in the workspace holds the submitted content. p4 writes a text file with the line ends of the workspace's
+	// LineEnd, CRLF for win, and for local on Windows, and CR for mac, while the depot holds LF, so the line ends don't count.
+	bool fg_PerforceConfigContentEquals(CStr const &_WorkspaceContent, CStr const &_SubmittedContent)
+	{
+		return fg_NormalizeLineEndings(_WorkspaceContent) == fg_NormalizeLineEndings(_SubmittedContent);
+	}
+
 	// Logs in _Client, made with the root's connection (fg_PerforceRootConnection), on a blocking actor. The depot paths are aligned
 	// with _ConfigFilePaths, empty for a file without a submitted revision, so callers tell a new file by its index. Throws where the
-	// login fails.
-	TCVector<CStr> fg_PerforceConnectAndResolveDepotPaths(TCVector<CStr> const &_ConfigFilePaths, CPerforceClientThrow &_Client)
+	// login or a file's lookup fails. o_pSpelling, when given, is the root's spelling in the workspace, for the other paths given p4 on the connection.
+	TCVector<CStr> fg_PerforceConnectAndResolveDepotPaths(TCVector<CStr> const &_ConfigFilePaths, CPerforceClientThrow &_Client, NPerforce::CPerforceRootSpelling *o_pSpelling)
 	{
 		_Client.f_Login(CStr(), _Client.f_GetConnectionInfo().m_WorkingDirectory);
+		auto Spelling = fg_PerforceRootSpelling(_Client);
+		if (o_pSpelling)
+			*o_pSpelling = Spelling;
 
 		TCVector<CStr> DepotPaths;
 		DepotPaths.f_SetLen(_ConfigFilePaths.f_GetLen());
 		for (umint iConfigFile = 0; iConfigFile < _ConfigFilePaths.f_GetLen(); ++iConfigFile)
 		{
-			// `p4 where` (used by f_GetDepotPath) just maps a client-view
-			// path to its depot spelling; it succeeds for any path that
-			// falls inside the client's view whether or not the file has
-			// actually been `p4 add`ed. Callers use an empty depot path as
-			// "this file is not yet submitted in Perforce", so we gate on
-			// f_FileExistsInDepot (via `p4 fstat`) — which is true only
-			// for files with a committed head revision. Files that are
-			// only opened for pending add get an empty depot path here
-			// and flow through the "new file" path on the caller side;
-			// feeding them to `p4 filelog` / f_GetFileRevisions would
-			// otherwise error because they have no submitted history.
-			// A stray `p4 add` on such files during a rerun is a silent
-			// no-op (Perforce refuses to re-add an already-opened file).
-			CStr DepotPath;
-			if (_Client.f_NoThrow().f_GetDepotPath(_ConfigFilePaths[iConfigFile], DepotPath) && _Client.f_NoThrow().f_FileExistsInDepot(_ConfigFilePaths[iConfigFile]))
-				DepotPaths[iConfigFile] = fg_Move(DepotPath);
+			// The depot file of the file's fstat record where it has a
+			// submitted head revision, so the path and the revision come from
+			// one record. Callers use an empty depot path as "this file is not
+			// yet submitted in Perforce": files the depot or the view doesn't
+			// have, and files that are only opened for pending add, which have
+			// no head revision, flow through the "new file" path on the caller
+			// side, where `p4 filelog` / f_GetFileRevisions would otherwise
+			// error because they have no submitted history.
+			auto Stats = _Client.f_DepotFileStats(Spelling.f_ServerFileName(_ConfigFilePaths[iConfigFile]));
+			if (Stats.m_HeadRev != 0)
+				DepotPaths[iConfigFile] = Stats.m_DepotFile;
 		}
 
 		return DepotPaths;
@@ -140,28 +152,43 @@ namespace NMib::NBuildSystem::NRepository
 			(
 				g_Dispatch(BlockingActorCheckout) / [_ConfigFile, _StartCL, _EndCL, _Connection]() -> TCTuple<CStr, CStr>
 				{
+					// An empty content is an absent snapshot: a workspace file that is missing, as one never submitted or a pending p4
+					// delete leaves it, as well as a revision that isn't there. A read that fails throws.
+					auto fReadWorkspace = [&]() -> CStr
+						{
+							if (!CFile::fs_FileExists(_ConfigFile))
+								return {};
+
+							return CFile::fs_ReadStringFromFile(_ConfigFile);
+						}
+					;
+
 					CStr StartContent;
 					CStr EndContent;
 
 					if (_StartCL.f_IsEmpty())
-						StartContent = CFile::fs_ReadStringFromFile(_ConfigFile);
+						StartContent = fReadWorkspace();
 					else
 					{
+						// The depot path the other lookups of the config file use. A file without a submitted revision has no
+						// earlier content.
 						CPerforceClientThrow Client(_Connection);
-						Client.f_Login(CStr(), _Connection.m_WorkingDirectory);
+						if (CStr DepotPath = fg_PerforceConnectAndResolveDepotPaths({_ConfigFile}, Client)[0])
+						{
+							// A revision that isn't there has no content; a read that fails throws.
+							if (auto Content = Client.f_GetTextFileContentsIfExists("{}@{}"_f << DepotPath << _StartCL))
+								StartContent = fg_Move(*Content);
 
-						CStr DepotPath;
-						if (!Client.f_NoThrow().f_GetDepotPath(_ConfigFile, DepotPath))
-							DMibError("Failed to get depot path for: {}"_f << _ConfigFile);
-
-						Client.f_NoThrow().f_GetTextFileContents("{}@{}"_f << DepotPath << _StartCL, StartContent);
-
-						if (!_EndCL.f_IsEmpty())
-							Client.f_NoThrow().f_GetTextFileContents("{}@{}"_f << DepotPath << _EndCL, EndContent);
+							if (!_EndCL.f_IsEmpty())
+							{
+								if (auto Content = Client.f_GetTextFileContentsIfExists("{}@{}"_f << DepotPath << _EndCL))
+									EndContent = fg_Move(*Content);
+							}
+						}
 					}
 
 					if (_EndCL.f_IsEmpty())
-						EndContent = CFile::fs_ReadStringFromFile(_ConfigFile);
+						EndContent = fReadWorkspace();
 
 					return {StartContent, EndContent};
 				}

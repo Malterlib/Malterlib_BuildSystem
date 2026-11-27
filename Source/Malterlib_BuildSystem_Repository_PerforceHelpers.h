@@ -5,6 +5,7 @@
 
 #include "Malterlib_BuildSystem_Repository.h"
 
+#include <Mib/Perforce/FileNames>
 #include <Mib/Perforce/Wrapper>
 
 namespace NMib::NBuildSystem::NRepository
@@ -13,7 +14,9 @@ namespace NMib::NBuildSystem::NRepository
 	TCSet<CStr> fg_CollectPerforceRootConfigFiles(TCMap<CStr, CRepository *> const &_RepositoryByLocation, CStr const &_BaseDir);
 
 	TCFuture<CPerforceClient::CConnectionInfo> fg_PerforceRootConnection(CBuildSystem const &_BuildSystem);
-	TCVector<CStr> fg_PerforceConnectAndResolveDepotPaths(TCVector<CStr> const &_ConfigFilePaths, CPerforceClientThrow &_Client);
+	TCVector<CStr> fg_PerforceConnectAndResolveDepotPaths(TCVector<CStr> const &_ConfigFilePaths, CPerforceClientThrow &_Client, NPerforce::CPerforceRootSpelling *o_pSpelling = nullptr);
+	NPerforce::CPerforceRootSpelling fg_PerforceRootSpelling(CPerforceClientThrow &_Client);
+	bool fg_PerforceConfigContentEquals(CStr const &_WorkspaceContent, CStr const &_SubmittedContent);
 
 	// Find the highest changelist where any config files were modified.
 	TCFuture<CStr> fg_PerforceGetLatestChangelist(TCVector<CStr> _ConfigFilePaths, CPerforceClient::CConnectionInfo _Connection);
