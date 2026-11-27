@@ -14,11 +14,6 @@ namespace NMib::NBuildSystem
 
 	namespace
 	{
-		CStr fg_NormalizeLicenseLineEndings(CStr const &_Content)
-		{
-			return _Content.f_Replace("\r\n", "\n").f_Replace("\r", "\n");
-		}
-
 		struct CCommentStyleConfig
 		{
 			CStr m_LinePrefix;
@@ -896,7 +891,7 @@ namespace NMib::NBuildSystem
 										(
 											g_Dispatch(BlockingActorCheckout) / [SourcePath]() -> CStr
 											{
-												return fg_NormalizeLicenseLineEndings(CFile::fs_ReadStringFromFile(SourcePath, true));
+												return fg_NormalizeLineEndings(CFile::fs_ReadStringFromFile(SourcePath, true));
 											}
 										)
 									;
@@ -937,7 +932,7 @@ namespace NMib::NBuildSystem
 											(
 												g_Dispatch(BlockingActorCheckout) / [SourcePath]() -> CStr
 												{
-													return fg_NormalizeLicenseLineEndings(CFile::fs_ReadStringFromFile(SourcePath, true));
+													return fg_NormalizeLineEndings(CFile::fs_ReadStringFromFile(SourcePath, true));
 												}
 											)
 										;
@@ -960,7 +955,7 @@ namespace NMib::NBuildSystem
 									continue;
 
 								// Use LF for generated output and ignore checkout line-ending differences when comparing.
-								ExpectedContent = fg_NormalizeLicenseLineEndings(ExpectedContent);
+								ExpectedContent = fg_NormalizeLineEndings(ExpectedContent);
 								auto BlockingActorCheckout = fg_BlockingActor();
 								bool bMatch = co_await
 									(
@@ -969,7 +964,7 @@ namespace NMib::NBuildSystem
 											if (!CFile::fs_FileExists(DestPath))
 												return false;
 											CStr DestContent = CFile::fs_ReadStringFromFile(DestPath, true);
-											return fg_NormalizeLicenseLineEndings(DestContent) == ExpectedContent;
+											return fg_NormalizeLineEndings(DestContent) == ExpectedContent;
 										}
 									)
 								;
@@ -1017,7 +1012,7 @@ namespace NMib::NBuildSystem
 										if (!CFile::fs_FileExists(ReuseTomlPath))
 											return false;
 										CStr Existing = CFile::fs_ReadStringFromFile(ReuseTomlPath, true);
-										return fg_NormalizeLicenseLineEndings(Existing) == ExpectedReuseToml;
+										return fg_NormalizeLineEndings(Existing) == ExpectedReuseToml;
 									}
 								)
 							;
