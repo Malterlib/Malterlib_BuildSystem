@@ -99,12 +99,20 @@ namespace NMib::NBuildSystem
 								continue;
 							}
 
-							CStr SubmittedContent;
-							if (!Client.f_NoThrow().f_GetTextFileContents("{}@{}"_f << DepotPaths[iConfigFile] << HighestCL, SubmittedContent))
+							// A file without a revision at the changelist has nothing to compare; a read that fails throws.
+							auto SubmittedContent = Client.f_GetTextFileContentsIfExists("{}@{}"_f << DepotPaths[iConfigFile] << HighestCL);
+							if (!SubmittedContent)
 								continue;
 
+							// A submitted file missing from the workspace, as a pending p4 delete leaves it, is a change.
+							if (!CFile::fs_FileExists(_ConfigFilePaths[iConfigFile]))
+							{
+								bWorkspaceHasChanges = true;
+								break;
+							}
+
 							CStr WorkspaceContent = CFile::fs_ReadStringFromFile(_ConfigFilePaths[iConfigFile]);
-							if (WorkspaceContent != SubmittedContent)
+							if (!fg_PerforceConfigContentEquals(WorkspaceContent, *SubmittedContent))
 							{
 								bWorkspaceHasChanges = true;
 								break;
@@ -122,29 +130,26 @@ namespace NMib::NBuildSystem
 			;
 		}
 
-		// Collect Perforce changelists into AllChangelists, deduplicating by CL ID.
-		// Check for workspace files that differ from head but aren't opened in any changelist.
-		bool fg_PerforceHasUnreconciledChanges(CPerforceClientThrow &_Client, NPerforce::CPerforceRootSpelling const &_Spelling, TCVector<CStr> const &_ConfigFilePaths)
+		// Check for workspace files that differ from head but aren't opened in any changelist. _DepotPaths are the submitted depot
+		// files (fg_PerforceConnectAndResolveDepotPaths) and _Opened whether this workspace has each file opened, both aligned with
+		// _ConfigFilePaths.
+		bool fg_PerforceHasUnreconciledChanges(CPerforceClientThrow &_Client, TCVector<CStr> const &_ConfigFilePaths, TCVector<CStr> const &_DepotPaths, TCVector<bool> const &_Opened)
 		{
-			for (auto &ConfigFile : _ConfigFilePaths)
+			for (umint iConfigFile = 0; iConfigFile < _ConfigFilePaths.f_GetLen(); ++iConfigFile)
 			{
-				CStr DepotPath;
-				bool bHasMapping = _Client.f_NoThrow().f_GetDepotPath(_Spelling.f_ServerFileName(ConfigFile), DepotPath);
+				CStr const &ConfigFile = _ConfigFilePaths[iConfigFile];
 
 				// Files already opened in any pending CL surface through the
 				// CL-based log collection above, so they're not "unreconciled".
-				if (bHasMapping)
-				{
-					TCVector<CStr> Opened;
-					_Client.f_NoThrow().f_GetOpened(DepotPath, CStr(), Opened);
-					if (!Opened.f_IsEmpty())
-						continue;
-				}
+				if (_Opened[iConfigFile])
+					continue;
 
-				CStr HeadContent;
-				bool bHasHeadRevision = bHasMapping && _Client.f_NoThrow().f_GetTextFileContents(DepotPath, HeadContent);
+				// A read that fails throws.
+				NStorage::TCOptional<CStr> HeadContent;
+				if (_DepotPaths[iConfigFile])
+					HeadContent = _Client.f_GetTextFileContentsIfExists(_DepotPaths[iConfigFile]);
 
-				if (!bHasHeadRevision)
+				if (!HeadContent)
 				{
 					// No submitted revision (and not currently opened): a
 					// brand-new config file that exists locally is an
@@ -154,8 +159,12 @@ namespace NMib::NBuildSystem
 					continue;
 				}
 
+				// A submitted file missing from the workspace without being opened differs from its head.
+				if (!CFile::fs_FileExists(ConfigFile))
+					return true;
+
 				CStr WorkspaceContent = CFile::fs_ReadStringFromFile(ConfigFile);
-				if (WorkspaceContent != HeadContent)
+				if (!fg_PerforceConfigContentEquals(WorkspaceContent, *HeadContent))
 					return true;
 			}
 			return false;
@@ -172,7 +181,8 @@ namespace NMib::NBuildSystem
 					{
 						CPerforceClientThrow Client(_Connection);
 						NPerforce::CPerforceRootSpelling Spelling;
-						fg_PerforceConnectAndResolveDepotPaths(_ConfigFilePaths, Client, &Spelling);
+						auto DepotPaths = fg_PerforceConnectAndResolveDepotPaths(_ConfigFilePaths, Client, &Spelling);
+						CStr ActiveClient = Client.f_GetActiveClient(); // p4 changes lists the changelists of every workspace without it
 
 						uint32 FromChangelist = _FromCL.f_ToInt(uint32(0));
 						bool bToIsWorkspace = _ToCL.f_IsEmpty();
@@ -180,29 +190,34 @@ namespace NMib::NBuildSystem
 
 						TCSet<uint32> SeenCLs;
 						TCVector<CPerforceClient::CChangeList> AllChangelists;
-						for (auto &ConfigFile : _ConfigFilePaths)
+						TCVector<bool> OpenedConfigFiles;
+						for (umint iConfigFile = 0; iConfigFile < _ConfigFilePaths.f_GetLen(); ++iConfigFile)
+							OpenedConfigFiles.f_Insert(false);
+						for (umint iConfigFile = 0; iConfigFile < _ConfigFilePaths.f_GetLen(); ++iConfigFile)
 						{
-							CStr FileSpec = Spelling.f_ServerFileName(ConfigFile);
-							CStr DepotPath;
-							if (!Client.f_NoThrow().f_GetDepotPath(FileSpec, DepotPath))
+							// A config file that isn't submitted and isn't in the workspace has nothing to list or reconcile.
+							if (DepotPaths[iConfigFile].f_IsEmpty() && !CFile::fs_FileExists(_ConfigFilePaths[iConfigFile]))
 								continue;
 
-							// Submitted changelists in range
-							TCVector<CPerforceClient::CChangeList> Changelists;
-							Client.f_NoThrow().f_GetChangelists("{}@{},{}"_f << DepotPath << (FromChangelist + 1) << ToSpec, Changelists, false);
+							CStr FileSpec = Spelling.f_ServerFileName(_ConfigFilePaths[iConfigFile]);
 
-							for (auto &Changelist : Changelists)
+							// Submitted changelists in range, of the submitted depot file. Each query that fails throws.
+							if (CStr const &DepotPath = DepotPaths[iConfigFile])
 							{
-								if (SeenCLs(Changelist.m_ChangeID).f_WasCreated())
-									AllChangelists.f_Insert(Changelist);
+								auto Changelists = Client.f_GetChangelists("{}@{},{}"_f << DepotPath << (FromChangelist + 1) << ToSpec, false);
+
+								for (auto &Changelist : Changelists)
+								{
+									if (SeenCLs(Changelist.m_ChangeID).f_WasCreated())
+										AllChangelists.f_Insert(Changelist);
+								}
 							}
 
 							if (!bToIsWorkspace)
 								continue;
 
 							// Pending changelists with this file open in this workspace
-							TCVector<CPerforceClient::CChangeList> PendingCLs;
-							Client.f_NoThrow().f_GetChangelists(FileSpec, PendingCLs, false, CStr(), "pending");
+							auto PendingCLs = Client.f_GetChangelists(FileSpec, false, ActiveClient, "pending");
 
 							for (auto &Changelist : PendingCLs)
 							{
@@ -210,9 +225,22 @@ namespace NMib::NBuildSystem
 									AllChangelists.f_Insert(Changelist);
 							}
 
-							// Default changelist (CL 0) is not returned by p4 changes
-							TCVector<CStr> Opened;
-							if (Client.f_NoThrow().f_GetOpened(FileSpec, CStr(), Opened) && !Opened.f_IsEmpty())
+							// The default changelist (CL 0), which p4 changes doesn't list, holds the file when this workspace's open record of
+							// it (p4 opened lists this workspace's files) is in it, also where a numbered changelist holds a shelved copy
+							TCVector<CPerforceClient::COpenedFile> Opened;
+							if (!Client.f_NoThrow().f_GetOpenedFiles(FileSpec, CStr(), Opened))
+								DMibError("Failed to ask Perforce whether '{}' is opened: {}"_f << _ConfigFilePaths[iConfigFile] << Client.f_NoThrow().f_GetLastError());
+
+							OpenedConfigFiles[iConfigFile] = !Opened.f_IsEmpty();
+							bool bInDefault = Opened.f_Some
+								(
+									[](CPerforceClient::COpenedFile const &_File)
+									{
+										return _File.m_Change == "default";
+									}
+								)
+							;
+							if (bInDefault)
 							{
 								if (SeenCLs(0u).f_WasCreated())
 								{
@@ -220,7 +248,7 @@ namespace NMib::NBuildSystem
 									DefaultCL.m_ChangeID = 0;
 									DefaultCL.m_Status = "pending";
 									DefaultCL.m_Description = "Default changelist";
-									Client.f_NoThrow().f_GetUserName(DefaultCL.m_User);
+									DefaultCL.m_User = Client.f_GetActiveUser();
 									AllChangelists.f_Insert(DefaultCL);
 								}
 							}
@@ -248,7 +276,7 @@ namespace NMib::NBuildSystem
 							Entries.f_Insert(fg_Move(Entry));
 						}
 
-						if (bToIsWorkspace && fg_PerforceHasUnreconciledChanges(Client, Spelling, _ConfigFilePaths))
+						if (bToIsWorkspace && fg_PerforceHasUnreconciledChanges(Client, _ConfigFilePaths, DepotPaths, OpenedConfigFiles))
 						{
 							CLogEntryFull Entry;
 							Entry.m_Commit = "unreconciled";
