@@ -1495,13 +1495,22 @@ namespace NMib::NBuildSystem
 						// to return first.
 						CStr const &ChangelistPrefix = fg_EvalMessageHeader(_MessageHeader);
 
+						// A description p4 gives can end its lines with CRLF, as on Windows, where the generated message ends them with LF. Both
+						// are trimmed, as a message a TransformScript gives can end in a line break, which p4 doesn't keep.
+						CStr const CommitMessage = fg_NormalizeLineEndings(_CommitMessage).f_Trim();
+						auto fIsCommitMessage = [&](CStr const &_Description)
+							{
+								return fg_NormalizeLineEndings(_Description).f_Trim() == CommitMessage;
+							}
+						;
+
 						uint32 UpdateReposCL = 0;
 						{
 							auto PendingCLs = Client.f_GetChangelists(CStr(), false, Client.f_GetActiveClient(), "pending");
 
 							for (auto &Changelist : PendingCLs)
 							{
-								if (Changelist.m_Description.f_Trim() == _CommitMessage)
+								if (fIsCommitMessage(Changelist.m_Description))
 								{
 									UpdateReposCL = Changelist.m_ChangeID;
 									break;
@@ -1638,7 +1647,7 @@ namespace NMib::NBuildSystem
 						// fallthrough — we just can't claim "already up to date".
 						bool bExistingDescriptionMatches = false;
 						TCVector<CStr> ForeignFilesInCL;
-						if (bHasExistingCLData && ExistingCLData.m_Description.f_Trim() == _CommitMessage)
+						if (bHasExistingCLData && fIsCommitMessage(ExistingCLData.m_Description))
 						{
 							bExistingDescriptionMatches = true;
 							for (auto &File : ExistingCLData.m_Files)
