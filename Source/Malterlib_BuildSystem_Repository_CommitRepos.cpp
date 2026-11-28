@@ -539,8 +539,8 @@ namespace NMib::NBuildSystem
 					fg_GetLogEntries(_Launches, **pChildRepo, NewHash, OldHash, false) > ReverseResults[ChildLocation];
 				}
 
-				auto AllForward = co_await fg_AllDone(ForwardResults);
-				auto AllReverse = co_await fg_AllDone(ReverseResults);
+				// Both maps finish before either fails the command: a log still running holds the launches, which may not outlive it.
+				auto [AllForward, AllReverse] = co_await (fg_AllDone(ForwardResults) + fg_AllDone(ReverseResults));
 
 				for (auto &Query : Queries)
 				{
@@ -593,8 +593,7 @@ namespace NMib::NBuildSystem
 				_Launches.f_Launch(_Repo, {"diff-tree", "--no-commit-id", "--name-only", "-r", "{}^1"_f << Hash, Hash}, {}, CProcessLaunchActor::ESimpleLaunchFlag_None) > DiffResults[Hash];
 			}
 
-			auto AllSubjects = co_await fg_AllDone(SubjectResults);
-			auto AllDiffs = co_await fg_AllDone(DiffResults);
+			auto [AllSubjects, AllDiffs] = co_await (fg_AllDone(SubjectResults) + fg_AllDone(DiffResults));
 
 			TCVector<CCommitAnalysis> Analyses;
 			for (auto &Hash : _CommitHashes)

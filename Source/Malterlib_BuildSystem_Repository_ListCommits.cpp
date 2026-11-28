@@ -707,8 +707,8 @@ namespace NMib::NBuildSystem
 			fg_GetLogEntriesFull(Launches, *pRepository, *pEndCommit, *pStartCommit) > ReverseCommitsResults[Location];
 		}
 
-		auto LogEntriesPerRepo = co_await fg_AllDone(CommitsResults);
-		auto ReverseLogEntriesPerRepo = co_await fg_AllDone(ReverseCommitsResults);
+		// Both maps finish before either fails the command: a log still running holds the launches, which may not outlive it.
+		auto [LogEntriesPerRepo, ReverseLogEntriesPerRepo] = co_await (fg_AllDone(CommitsResults) + fg_AllDone(ReverseCommitsResults));
 
 		struct CWildcardColumn
 		{
