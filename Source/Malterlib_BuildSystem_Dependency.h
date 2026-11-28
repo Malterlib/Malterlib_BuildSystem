@@ -11,16 +11,16 @@ namespace NMib::NBuildSystem
 	{
 		CMalterlibDependencyTracker(bool _bUseHash = false);
 
-		void f_AddInputFile(CStr const &_File);
-		void f_AddOutputFile(CStr const &_File);
+		void f_AddInputFile(NStr::CStr const &_File);
+		void f_AddOutputFile(NStr::CStr const &_File);
 		void f_AddFind
 			(
-				CStr const &_SearchPattern
+				NStr::CStr const &_SearchPattern
 				, bool _bRecurse
 				, bool _bFollowLinks
-				, EFileAttrib _Attributes
-				, TCVector<CStr> const &_Results
-				, TCVector<CStr> const &_Excluded = fg_Default()
+				, NFile::EFileAttrib _Attributes
+				, NContainer::TCVector<NStr::CStr> const &_Results
+				, NContainer::TCVector<NStr::CStr> const &_Excluded = fg_Default()
 			)
 		;
 
@@ -35,29 +35,29 @@ namespace NMib::NBuildSystem
 		//   - If using hash mode: skip depfile (MalterlibDependency handles it)
 		//   - If not using hash mode: write depfile with inputs,
 		//     write MalterlibDependency only if there are Finds
-		void f_WriteDependencyFile(CStr const &_File, CStr const &_DepFile);
+		void f_WriteDependencyFile(NStr::CStr const &_File, NStr::CStr const &_DepFile);
 
 	private:
 		struct CDependencyFile
 		{
-			CStr m_Path;
-			CTime m_Time;
-			CHashDigest_MD5 m_Digest;
+			NStr::CStr m_Path;
+			NTime::CTime m_Time;
+			NCryptography::CHashDigest_MD5 m_Digest;
 		};
 
 		struct CFind : public CDependencyFile
 		{
-			CStr m_Pattern;
-			EFileAttrib m_Attributes;
+			NStr::CStr m_Pattern;
+			NFile::EFileAttrib m_Attributes;
 			uint32 m_bRecurse;
 			uint32 m_bFollowLinks;
-			TCVector<CStr> m_Excluded;
-			TCVector<CStr> m_Results;
+			NContainer::TCVector<NStr::CStr> m_Excluded;
+			NContainer::TCVector<NStr::CStr> m_Results;
 		};
 
-		TCVector<CStr> mp_Outputs;
-		TCVector<CDependencyFile> mp_Inputs;
-		TCVector<CFind> mp_Finds;
+		NContainer::TCVector<NStr::CStr> mp_Outputs;
+		NContainer::TCVector<CDependencyFile> mp_Inputs;
+		NContainer::TCVector<CFind> mp_Finds;
 		bool mp_bUseHash = false;
 	};
 }

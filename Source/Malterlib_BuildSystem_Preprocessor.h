@@ -13,32 +13,32 @@ namespace NMib::NBuildSystem
 		CBuildSystemPreprocessor
 			(
 				CBuildSystemRegistry &_ResultRegistry
-				, TCMap<CStr, TCSharedPointer<CHashDigest_SHA256>> &_SourceFiles
+				, NContainer::TCMap<NStr::CStr, NStorage::TCSharedPointer<NCryptography::CHashDigest_SHA256>> &_SourceFiles
 				, CFindCache const &_FindCache
-				, TCMap<CStr, CStr> const &_Environment
+				, NContainer::TCMap<NStr::CStr, NStr::CStr> const &_Environment
 				, CStringCache &_StringCache
 			)
 		;
 
-		void f_ReadFile(CStr const &_Path);
-		CStr const &f_GetFileLocation();
+		void f_ReadFile(NStr::CStr const &_Path);
+		NStr::CStr const &f_GetFileLocation();
 
 	private:
 		struct CError
 		{
 			CBuildSystemRegistry *m_pRootRegistry;
-			CStr m_Error;
+			NStr::CStr m_Error;
 		};
 
-		static void fsp_ThrowError(CBuildSystemRegistry const &_Registry, CStr const &_Error);
-		void fp_HandleIncludes(CBuildSystemRegistry &_Registry, CStr const &_Path, TCVector<CError> &o_Errors);
-		void fp_FindFilesRecursive(CBuildSystemRegistry &_Registry, TCVector<CStr> &o_Files, CStr const &_Path, CStr const &_ToFind);
+		static void fsp_ThrowError(CBuildSystemRegistry const &_Registry, NStr::CStr const &_Error);
+		void fp_HandleIncludes(CBuildSystemRegistry &_Registry, NStr::CStr const &_Path, NContainer::TCVector<CError> &o_Errors);
+		void fp_FindFilesRecursive(CBuildSystemRegistry &_Registry, NContainer::TCVector<NStr::CStr> &o_Files, NStr::CStr const &_Path, NStr::CStr const &_ToFind);
 
 		CBuildSystemRegistry &mp_ResultRegistry;
-		TCMap<CStr, TCSharedPointer<CHashDigest_SHA256>> &mp_SourceFiles;
+		NContainer::TCMap<NStr::CStr, NStorage::TCSharedPointer<NCryptography::CHashDigest_SHA256>> &mp_SourceFiles;
 		CFindCache const &mp_FindCache;
 		CStringCache &mp_StringCache;
-		TCMap<CStr, CStr> const &mp_Environment;
-		CStr mp_FileLocation;
+		NContainer::TCMap<NStr::CStr, NStr::CStr> const &mp_Environment;
+		NStr::CStr mp_FileLocation;
 	};
 }
