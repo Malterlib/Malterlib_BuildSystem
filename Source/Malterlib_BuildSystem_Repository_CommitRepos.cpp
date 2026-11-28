@@ -1401,6 +1401,9 @@ namespace NMib::NBuildSystem
 			-> TCFuture<void>
 		{
 			auto BlockingActorCheckout = fg_BlockingActor();
+			// The dispatched function holds a copy of _Launches, which must be released before the caller destroys the launches
+			auto SynchronizeWithActor = co_await fg_SynchronizeOnExit(BlockingActorCheckout);
+
 			co_await
 				(
 					g_Dispatch(BlockingActorCheckout) / [_Launches, _ConfigFilePaths, _Connection, _CommitMessage, _MessageHeader]()
